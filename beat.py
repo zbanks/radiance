@@ -2,10 +2,12 @@
 
 import pygame
 from recorder import Recorder
-from pll import PLL
+from timebase import TimeBase
 from seq import Sequencer
-from bespeckle import SingleBespeckleDevice,FakeSingleBespeckleDevice
+from bespeckle import OutputAdapter
+from devices import SingleBespeckleDevice,FakeSingleBespeckleDevice
 from pattern import Pattern
+from effect import Effect
 import time
 import numpy
 import scipy.signal
@@ -111,18 +113,20 @@ class Beat:
 		self.rec_pat=None
 
 		self.r=Recorder()
-		self.pll=PLL()
-		self.pll.register_tickfn(self.tick)
+		self.tb=TimeBase()
+		self.tb.register_tickfn(self.tick)
 		if len(sys.argv)>=2 and sys.argv[1]=='fake':
-			self.oa=FakeSingleBespeckleDevice('/dev/ttyUSB0',115200)
+			b=FakeSingleBespeckleDevice('/dev/ttyUSB0',115200)
 		else:
-			self.oa=SingleBespeckleDevice('/dev/ttyUSB0',115200)
-		self.seq=Sequencer(self.pll,self.oa)
+			b=SingleBespeckleDevice('/dev/ttyUSB0',115200)
 
-		self.oa.reset()
+		self.oa=OutputAdapter(b,self.tb)
 
+		self.seq=Sequencer(self.tb,self.oa)
+
+		self.oa.start()
 		self.r.start()
-		self.pll.start()
+		self.tb.start()
 		self.seq.start()
 
 		while True:
@@ -166,7 +170,7 @@ class Beat:
 				break
 
 			font = pygame.font.Font(None, 36)
-			text = font.render("TEMPO:"+str(self.pll.get_tempo())+" BPM", 1, self.fg)
+			text = font.render("TEMPO:"+str(self.tb.get_tempo())+" BPM", 1, self.fg)
 			if self.recording:
 				msg='recording'
 			elif self.rec_pat is not None:
@@ -186,14 +190,14 @@ class Beat:
 
 			pygame.display.flip()
 
-			self.oa.tick((0,int((240*self.pll.get_tick())%240)))
-
 		self.seq.stop()
 		self.r.stop()
-		self.pll.stop()
+		self.tb.stop()
+		self.oa.stop()
 		self.seq.join()
 		self.r.join()
-		self.pll.join()
+		self.tb.join()
+		self.oa.join()
 
 	def audio_widget(self,height=100):
 		data=self.r.get_chunks()
@@ -213,7 +217,7 @@ class Beat:
 				else:
 					pygame.draw.line(audio,beatline_color,(i,0),(i,height))
 
-		scaler=1.-self.pll.get_fractick()
+		scaler=1.-self.tb.get_fractick()
 		bg_color=(255,255,255)
 		beat_c=[int(c*scaler) for c in bg_color]
 		right=self.r.CAPTURE_CHUNKS-1
@@ -224,9 +228,9 @@ class Beat:
 	def pattern_timeline_widget(self,height=100,width=400):
 		timeline=pygame.Surface((width,height))
 		seconds_per_pixel=float(self.r.CHUNK)/self.r.RATE
-		seconds_per_beat=self.pll.period
+		seconds_per_beat=self.tb.period
 		pixels_per_beat=seconds_per_beat/seconds_per_pixel
-		now=self.pll.get_tick()
+		now=self.tb.get_tick()
 		occupied_space=[]
 		patterns=self.seq.get_patterns()
 
@@ -269,11 +273,12 @@ class Beat:
 	def tick(self,num):
 		self.r.set_beatline()
 		self.last_tick=time.time()
+		self.oa.add_tick()
 
 	def tempo_adjust(self,amt):
-		tempo=round(self.pll.get_tempo(),0)
+		tempo=round(self.tb.get_tempo(),0)
 		tempo+=amt
-		self.pll.set_tempo(tempo)
+		self.tb.set_tempo(tempo)
 
 	def tap(self):
 		t=time.time()
@@ -282,12 +287,12 @@ class Beat:
 			self.clicks=0
 		else:
 			self.clicks+=1
-			self.pll.sync_period((t-self.first_click)/self.clicks)
+			self.tb.sync_period((t-self.first_click)/self.clicks)
 		self.last_click=t
 
 	def phase(self):
 		t=time.time()
-		self.pll.sync_phase(t)
+		self.tb.sync_phase(t)
 
 	#def add_test_pattern(self):
 	#	eff=0x10,self.effect_color+(0xFF,)
@@ -297,17 +302,19 @@ class Beat:
 
 	def effect_map(self,coord):
 		if coord[0]>=len(self.COLORS):
-			return
+			return None
 		if coord[1]==0:
-			return 0x10,self.COLORS[coord[0]]+(0xFF,)
+			return Effect(0x41,self.COLORS[coord[0]]+(0xFF,0x01,0x00),False)
 		elif coord[1]==1:
-			return 0x16,self.COLORS[coord[0]]+(0xFF,0x00,0x02)
+			return Effect(0x10,self.COLORS[coord[0]]+(0xFF,))
+		elif coord[1]==2:
+			return Effect(0x40,self.COLORS[coord[0]]+(0xFF,0x00,0x10),False)
 		return None
 
 	def pattern_map(self,p_num):
 		if p_num in self.saved_patterns:
 			p=self.saved_patterns[p_num]
-			return p,p.length
+			return p
 		return None
 
 	def save_pattern(self,p_num):
@@ -319,15 +326,26 @@ class Beat:
 		if eff is None:
 			return
 		if self.recording:
-			start=self.align(self.pll.get_tick(),self.fine_grain)-self.recording_start
+			#cur_time=self.align(self.pll.get_tick(),self.fine_grain)
+			cur_time=self.tb.get_tick()
+			start=cur_time-self.recording_start
 			self.recorded[coord]=(start,eff)
-		self.effects[coord]=self.oa.bespeckle_add_effect(*eff)
+
+		if eff.persistent:
+			self.effects[coord]=self.oa.add_persistent_effect(eff.cmd,eff.data)
+		else:
+			self.oa.add_transient_effect(eff.cmd,eff.data)
+			self.effects[coord]=None
 
 	def effect_release(self,coord):
 		if coord in self.effects:
-			self.oa.bespeckle_pop_effect(self.effects[coord])
+			if self.effects[coord] is not None:
+				self.oa.remove_effect(self.effects[coord])
+			self.effects.pop(coord)
 		if coord in self.recorded:
-			stop=self.align(self.pll.get_tick(),self.fine_grain)-self.recording_start
+			#cur_time=self.align(self.pll.get_tick(),self.fine_grain)
+			cur_time=self.tb.get_tick()
+			stop=cur_time-self.recording_start
 			start,eff=self.recorded[coord]
 			self.record.append((start,stop-start,eff))
 			self.recorded.pop(coord)
@@ -339,39 +357,37 @@ class Beat:
 		self.record=[]
 		self.recording=True
 		self.recorded={}
-		self.recording_start=self.align(self.pll.get_tick(),self.coarse_grain)
+		self.recording_start=self.align(self.tb.get_tick(),self.coarse_grain)
 		for coord in self.effects:
 			eff=self.effect_map(coord)
 			self.recorded[coord]=(0,eff)
 
 	def stop_recording(self):
-		stop=round(self.pll.get_tick()*self.coarse_grain,0)/self.coarse_grain
+		stop=round(self.tb.get_tick()*self.coarse_grain,0)/self.coarse_grain
 		duration=stop-self.recording_start
 
  		for start,eff in self.recorded.values():
 			self.record.append((start,stop-start,eff))
 		self.recorded={}
 		self.recording=False
-		self.rec_pat=Pattern(self.oa,duration,self.record)
-		print self.record
+		self.rec_pat=(duration,self.record)
+		self.record=[]
+		print self.rec_pat
 
 	def add_pattern(self,num):
-		a=self.pattern_map(num)
-		if a is None:
-			return
-		p,l=a
-		start=round(self.pll.get_tick()*self.coarse_grain,0)/self.coarse_grain
+		p=self.pattern_map(num)
+		start=round(self.tb.get_tick()*self.coarse_grain,0)/self.coarse_grain
 		if self.stack and self.last_stop>start:
 			start=self.last_stop
 		if self.forever:
 			if num in self.forever_patterns:
 				self.seq.remove_pattern(self.forever_patterns[num])
 				self.forever_patterns.pop(num)
-			else:
-				p,l=self.pattern_map(num)
-				self.forever_patterns[num]=self.seq.add_pattern(p,start,None)
-		else:
-			self.seq.add_pattern(p,start,start+l)
+			elif p is not None:
+				self.forever_patterns[num]=self.seq.add_pattern(Pattern(self.oa,*p),start,None)
+		elif p is not None:
+			l=p[0]
+			self.seq.add_pattern(Pattern(self.oa,*p),start,start+l)
 			self.last_stop=start+l
 
 Beat()

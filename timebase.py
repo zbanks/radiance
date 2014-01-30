@@ -1,7 +1,7 @@
 import threading
 import time
 
-class PLL(threading.Thread):
+class TimeBase(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		self.daemon=True
@@ -27,8 +27,9 @@ class PLL(threading.Thread):
 				self.beat+=1
 				for fn in self.tickfn:
 					fn(self.beat)
-				self.last_time=self.next_time
+				temp=self.next_time
 				self.next_time+=self.period
+				self.last_time=temp
 
 	def get_fractick(self):
 		t=time.time()
