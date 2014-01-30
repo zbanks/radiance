@@ -11,6 +11,7 @@ class Recorder(threading.Thread):
 	RATE = 48000
 	CHUNK_TIME = float(CHUNK)/RATE
 	CAPTURE_CHUNKS = 512
+	FRAME_DELAY = 3
 
 	RANGES = [(50,200),(200,800),(800,2400)]
 
@@ -49,9 +50,13 @@ class Recorder(threading.Thread):
 				high_bucket=-int(self.RATE/2./high)
 				result=sum(fft[low_bucket:high_bucket])
 				out.append(result)
-			self.chunk_buffer.append((out,self.beatline))
+			bl=False
+			if self.beatline>0:
+				self.beatline-=1
+				if self.beatline==0:
+					bl=True
+			self.chunk_buffer.append((out,bl))
 			self.chunk_buffer.popleft()
-			self.beatline=False
 
 		self.over()
 
@@ -59,7 +64,7 @@ class Recorder(threading.Thread):
 		return list(self.chunk_buffer)
 
 	def set_beatline(self):
-		self.beatline=True
+		self.beatline=self.FRAME_DELAY
 
 	def over(self):
 		self.stream.stop_stream()
