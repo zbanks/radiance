@@ -10,6 +10,7 @@ class TimeBase(threading.Thread):
 		self.last_time=0
 		self.period=0.5
 		self.beat=0
+		self.lock=threading.Semaphore()
 
 	def register_tickfn(self,tickfn):
 		self.tickfn.append(tickfn)
@@ -24,29 +25,34 @@ class TimeBase(threading.Thread):
 			if t<self.next_time:
 				time.sleep(self.next_time-t)
 			else:
+				self.lock.acquire()
 				self.beat+=1
-				for fn in self.tickfn:
-					fn(self.beat)
 				self.last_time=self.next_time
 				self.next_time+=self.period
+				self.lock.release()
+				for fn in self.tickfn:
+					fn(self.beat)
 
 	def get_fractick(self):
+		self.lock.acquire()
 		t=time.time()
 		denom=self.next_time-self.last_time
-		if denom == 0:
-			return 1.
-		return max(min((t-self.last_time)/denom,1.),0.)
+		res=max(min((t-self.last_time)/denom,1.),0.)
+		self.lock.release()
+		return res
 
 	def get_tick(self):
 		return self.beat+self.get_fractick()
 
 	def sync_phase(self,t):
+		self.lock.acquire()
 		behind=self.next_time-t
 		ahead=t-self.last_time
 		if behind < ahead:
 			self.next_time-=behind
 		else:
 			self.next_time+=ahead
+		self.lock.release()
 
 	def sync_period(self,period):
 		self.period=period

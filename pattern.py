@@ -12,6 +12,8 @@ class Pattern:
 		self.active_events=[]
 
 	def process(self,tick):
+		if tick<=self.last_tick:
+			return
 		prev_iter=int(self.last_tick / self.length)
 		cur_iter=int(tick / self.length)
 
@@ -31,3 +33,4 @@ class Pattern:
 					else:
 						res=self.oa.add_transient_effect(eff.cmd,eff.data)
 		self.last_tick=tick
+

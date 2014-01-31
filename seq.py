@@ -33,7 +33,6 @@ class Sequencer(threading.Thread):
 		self.go=True
 		while self.go:
 			t=self.timebase.get_tick()
-			ids_to_remove=[]
 			ids_to_remove=[pat_id for (pat_id,(start,stop,p)) in self.patterns.iteritems() if stop is not None and stop < t]
 			for pat_id in ids_to_remove:
 				self.remove_pattern(pat_id)
@@ -41,7 +40,7 @@ class Sequencer(threading.Thread):
 			for start,stop,p in self.patterns.values():
 				if start < t:
 					p.process(t-start)
-			time.sleep(0.01)
+			time.sleep(0)
 
 class PrintingOutputAdapter:
 	def __init__(self):

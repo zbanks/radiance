@@ -128,6 +128,7 @@ class Beat:
 		self.shift=False
 		self.forever=False
 		self.forever_patterns={}
+		self.forever_fn={}
 		self.last_stop=0
 		self.recording=False
 		self.recorded={}
@@ -136,6 +137,7 @@ class Beat:
 		self.saved_patterns={}
 		self.rec_pat=None
 		self.kb_map=[0,1,2]
+		self.last_effect=None
 
 		self.r=Recorder()
 		self.tb=TimeBase()
@@ -172,11 +174,30 @@ class Beat:
 					elif event.key==pygame.K_TAB:
 						self.start_recording()
 					elif event.key in self.PATTERN_KEYS:
-						p=self.PATTERN_KEYS[event.key]
+						k=self.PATTERN_KEYS[event.key]
 						if self.rec_pat is not None:
-							self.save_pattern(p)
+							self.save_pattern(k)
 						else:
-							self.add_pattern(p)
+							p=self.pattern_map(k)
+							if self.forever:
+								if k in self.forever_patterns:
+									self.remove_pattern(self.forever_patterns[k])
+									self.forever_patterns.pop(k)
+								elif p is not None:
+									self.forever_patterns[k]=self.add_pattern(p,self.shift,self.forever)
+							elif p is not None:
+								self.add_pattern(p,self.shift,self.forever)
+					elif event.key in self.FUNCTION_KEYS:
+						k=self.FUNCTION_KEYS[event.key]
+						p=self.function_map(k)
+						if self.forever:
+							if k in self.forever_fn:
+								self.remove_pattern(self.forever_fn[k])
+								self.forever_fn.pop(k)
+							elif p is not None:
+								self.forever_fn[k]=self.add_pattern(p,self.shift,self.forever)
+						elif p is not None:
+							self.add_pattern(p,self.shift,self.forever)
 					elif event.key in self.KB_REMAP:
 						self.kb_remap(*self.KB_REMAP[event.key])
 					elif event.key==pygame.K_LSHIFT:
@@ -380,12 +401,29 @@ class Beat:
 			return p
 		return None
 
+	def function_map(self,f_num):
+		if self.last_effect is None:
+			return None
+		e=self.last_effect
+		if f_num==1:
+			return (4,[(0,1,e),(1,1,e),(2,1,e),(3,1,e)])
+		if f_num==2:
+			return (4,[(0,2,e),(2,2,e)])
+		if f_num==3:
+			return (4,[(0,4,e)])
+		if f_num==4:
+			return (4,[(0,0.5,e),(0.5,0.5,e),(1,0.5,e),(1.5,0.5,e),(2,0.5,e),(2.5,0.5,e),(3,0.5,e),(3.5,0.5,e)])
+		if f_num==5:
+			return (4,[(1,1,e),(3,1,e)])
+		return None
+
 	def save_pattern(self,p_num):
 		self.saved_patterns[p_num]=self.rec_pat
 		self.rec_pat=None
 
 	def effect(self,coord):
 		eff=self.effect_map(coord)
+		self.last_effect=eff
 		if eff is None:
 			return
 		if self.recording:
@@ -437,20 +475,23 @@ class Beat:
 		self.record=[]
 		print self.rec_pat
 
-	def add_pattern(self,num):
-		p=self.pattern_map(num)
+	def remove_pattern(self,p_id):
+		self.seq.remove_pattern(p_id)
+
+	def add_pattern(self,p,stack,forever):
 		start=round(self.tb.get_tick()*self.coarse_grain,0)/self.coarse_grain
-		if self.shift and self.last_stop>start:
+		if stack and self.last_stop>start:
 			start=self.last_stop
-		if self.forever:
-			if num in self.forever_patterns:
-				self.seq.remove_pattern(self.forever_patterns[num])
-				self.forever_patterns.pop(num)
-			elif p is not None:
-				self.forever_patterns[num]=self.seq.add_pattern(Pattern(self.oa,*p),start,None)
-		elif p is not None:
-			l=p[0]
-			self.seq.add_pattern(Pattern(self.oa,*p),start,start+l)
-			self.last_stop=start+l
+
+		l=p[0]
+		if forever:
+			return self.seq.add_pattern(Pattern(self.oa,*p),start,None)
+		self.last_stop=start+l
+		return self.seq.add_pattern(Pattern(self.oa,*p),start,start+l)
+
+			#if num in self.forever_patterns:
+			#	self.seq.remove_pattern(self.forever_patterns[num])
+			#	self.forever_patterns.pop(num)
+			#elif p is not None:
 
 Beat()

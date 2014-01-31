@@ -53,7 +53,7 @@ class OutputAdapter(threading.Thread):
 		while self.go:
 			while not self.q.empty():
 				data=self.q.get()
-				print ' '.join([hex(d) for d in data])
+				#print ' '.join([hex(d) for d in data])
 				self.b.framed_packet(data)
 			cur_time=self.timebase.get_tick()
 			fractick=int(240*cur_time)%240
