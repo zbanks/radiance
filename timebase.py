@@ -27,13 +27,15 @@ class TimeBase(threading.Thread):
 				self.beat+=1
 				for fn in self.tickfn:
 					fn(self.beat)
-				temp=self.next_time
+				self.last_time=self.next_time
 				self.next_time+=self.period
-				self.last_time=temp
 
 	def get_fractick(self):
 		t=time.time()
-		return max(min((t-self.last_time)/(self.next_time-self.last_time),1.),0.)
+		denom=self.next_time-self.last_time
+		if denom == 0:
+			return 1.
+		return max(min((t-self.last_time)/denom,1.),0.)
 
 	def get_tick(self):
 		return self.beat+self.get_fractick()

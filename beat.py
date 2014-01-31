@@ -27,8 +27,6 @@ class Beat:
 		pygame.K_y:(5,0),
 		pygame.K_u:(6,0),
 		pygame.K_i:(7,0),
-		pygame.K_o:(8,0),
-		pygame.K_p:(9,0),
 		pygame.K_a:(0,1),
 		pygame.K_s:(1,1),
 		pygame.K_d:(2,1),
@@ -37,8 +35,6 @@ class Beat:
 		pygame.K_h:(5,1),
 		pygame.K_j:(6,1),
 		pygame.K_k:(7,1),
-		pygame.K_l:(8,1),
-		pygame.K_SEMICOLON:(9,1),
 		pygame.K_z:(0,2),
 		pygame.K_x:(1,2),
 		pygame.K_c:(2,2),
@@ -47,8 +43,6 @@ class Beat:
 		pygame.K_n:(5,2),
 		pygame.K_m:(6,2),
 		pygame.K_COMMA:(7,2),
-		pygame.K_PERIOD:(8,2),
-		pygame.K_SLASH:(9,2),
 	}
 
 	FUNCTION_KEYS={
@@ -79,11 +73,41 @@ class Beat:
 		pygame.K_0:0,
 	}
 
+	KB_REMAP={
+		pygame.K_RIGHTBRACKET:(0,1),
+		pygame.K_QUOTE:(1,1),
+		pygame.K_SLASH:(2,1),
+		pygame.K_LEFTBRACKET:(0,-1),
+		pygame.K_SEMICOLON:(1,-1),
+		pygame.K_PERIOD:(2,-1),
+	}
+
 	COLORS=[
-		(255,255,255),
-		(255,0,0),
-		(0,255,0),
-		(0,0,255),
+		(255,255,255), # white
+		(255,0,0), # red
+		(255,20,0), # orange
+		(255,50,0), # yellow
+		(50,100,0), # green
+		(0,30,80), # blue
+		(255,0,50), # purple
+		(0,0,0), # black
+	]
+
+	EFFECT_NAMES=[
+		'on',
+		'strobe',
+		'sweep',
+		'rev sweep',
+		'fast sweep',
+		'fast rev sweep',
+		'pulse',
+		'rev pulse',
+		'fast pulse',
+		'fast rev pulse',
+		'fade in',
+		'fade out',
+		'fast fade in',
+		'fast fade out',
 	]
 
 	def __init__(self):
@@ -101,7 +125,7 @@ class Beat:
 
 		self.effects={}
 		self.function=1
-		self.stack=False
+		self.shift=False
 		self.forever=False
 		self.forever_patterns={}
 		self.last_stop=0
@@ -111,6 +135,7 @@ class Beat:
 		self.fine_grain=4
 		self.saved_patterns={}
 		self.rec_pat=None
+		self.kb_map=[0,1,2]
 
 		self.r=Recorder()
 		self.tb=TimeBase()
@@ -152,15 +177,17 @@ class Beat:
 							self.save_pattern(p)
 						else:
 							self.add_pattern(p)
+					elif event.key in self.KB_REMAP:
+						self.kb_remap(*self.KB_REMAP[event.key])
 					elif event.key==pygame.K_LSHIFT:
-						self.stack=True
+						self.shift=True
 					elif event.key==pygame.K_LCTRL:
 						self.forever=True
 				elif event.type==pygame.KEYUP:
 					if event.key in self.KEYBOARD:
 						self.effect_release(self.KEYBOARD[event.key])
 					elif event.key==pygame.K_LSHIFT:
-						self.stack=False
+						self.shift=False
 					elif event.key==pygame.K_LCTRL:
 						self.forever=False
 					elif event.key==pygame.K_TAB:
@@ -187,6 +214,11 @@ class Beat:
 			self.screen.blit(text2, (0,30))
 			self.screen.blit(audio, (0,60))
 			self.screen.blit(pattern_timeline, (audio.get_width(),60))
+
+			kb=[font.render(self.EFFECT_NAMES[self.kb_map[row]],1,self.fg) for row in range(3)]
+			self.screen.blit(kb[0], (0,200))
+			self.screen.blit(kb[1], (0,230))
+			self.screen.blit(kb[2], (0,260))
 
 			pygame.display.flip()
 
@@ -300,15 +332,46 @@ class Beat:
 	#	self.seq.add_pattern(p,round(self.pll.get_tick(),0)+4)
 	#	self.seq.add_pattern(p,round(self.pll.get_tick(),0)+4,round(self.pll.get_tick(),0)+8)
 
-	def effect_map(self,coord):
-		if coord[0]>=len(self.COLORS):
+	def kb_remap(self,remap_row,increment):
+		self.kb_map[remap_row]=(self.kb_map[remap_row]+increment)%len(self.EFFECT_NAMES)
+
+	def effect_map(self,(c,r)):
+		if c>=len(self.COLORS):
 			return None
-		if coord[1]==0:
-			return Effect(0x41,self.COLORS[coord[0]]+(0xFF,0x01,0x00),False)
-		elif coord[1]==1:
-			return Effect(0x10,self.COLORS[coord[0]]+(0xFF,))
-		elif coord[1]==2:
-			return Effect(0x40,self.COLORS[coord[0]]+(0xFF,0x00,0x10),False)
+		en=self.EFFECT_NAMES[self.kb_map[r]]
+		opacity=0xFF
+		if self.shift:
+			opacity/=2
+
+		color=self.COLORS[c]+(opacity,)
+		if en=='on':
+			return Effect(0x10,color)
+		if en=='strobe':
+			return Effect(0x40,color+(0x00,0x10),False)
+		if en=='sweep':
+			return Effect(0x41,color+(0x02,0x00))
+		if en=='rev sweep':
+			return Effect(0x41,color+(0x82,0x00))
+		if en=='pulse':
+			return Effect(0x42,color+(0x02,0x00),False)
+		if en=='rev pulse':
+			return Effect(0x42,color+(0x82,0x00),False)
+		if en=='fast sweep':
+			return Effect(0x41,color+(0x01,0x00))
+		if en=='fast rev sweep':
+			return Effect(0x41,color+(0x81,0x00))
+		if en=='fast pulse':
+			return Effect(0x42,color+(0x01,0x00),False)
+		if en=='fast rev pulse':
+			return Effect(0x42,color+(0x081,0x00),False)
+		if en=='fade in':
+			return Effect(0x43,color+(0x02,0x00))
+		if en=='fade out':
+			return Effect(0x43,color+(0x82,0x00))
+		if en=='fast fade in':
+			return Effect(0x43,color+(0x01,0x00))
+		if en=='fast fade out':
+			return Effect(0x43,color+(0x81,0x00))
 		return None
 
 	def pattern_map(self,p_num):
@@ -326,8 +389,8 @@ class Beat:
 		if eff is None:
 			return
 		if self.recording:
-			#cur_time=self.align(self.pll.get_tick(),self.fine_grain)
-			cur_time=self.tb.get_tick()
+			cur_time=self.align(self.tb.get_tick(),self.fine_grain)
+			#cur_time=self.tb.get_tick()
 			start=cur_time-self.recording_start
 			self.recorded[coord]=(start,eff)
 
@@ -343,8 +406,8 @@ class Beat:
 				self.oa.remove_effect(self.effects[coord])
 			self.effects.pop(coord)
 		if coord in self.recorded:
-			#cur_time=self.align(self.pll.get_tick(),self.fine_grain)
-			cur_time=self.tb.get_tick()
+			cur_time=self.align(self.tb.get_tick(),self.fine_grain)
+			#cur_time=self.tb.get_tick()
 			stop=cur_time-self.recording_start
 			start,eff=self.recorded[coord]
 			self.record.append((start,stop-start,eff))
@@ -377,7 +440,7 @@ class Beat:
 	def add_pattern(self,num):
 		p=self.pattern_map(num)
 		start=round(self.tb.get_tick()*self.coarse_grain,0)/self.coarse_grain
-		if self.stack and self.last_stop>start:
+		if self.shift and self.last_stop>start:
 			start=self.last_stop
 		if self.forever:
 			if num in self.forever_patterns:
