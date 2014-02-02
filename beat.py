@@ -8,6 +8,7 @@ from bespeckle import OutputAdapter
 from devices import SingleBespeckleDevice,FakeSingleBespeckleDevice
 from pattern import Pattern
 from effect import Effect
+import graphics
 import time
 import numpy
 import scipy.signal
@@ -18,6 +19,7 @@ class Beat:
 
 	KEY_TAP=pygame.K_SPACE
 	KEY_PHASE=pygame.K_RETURN
+	KEY_RESET=pygame.K_ESCAPE
 
 	EFFECT_HISTORY_LENGTH=2
 
@@ -208,6 +210,8 @@ class Beat:
 						self.shift=True
 					elif event.key==pygame.K_LCTRL:
 						self.forever=True
+					elif event.key==self.KEY_RESET:
+						self.oa.add_reset()
 				elif event.type==pygame.KEYUP:
 					if event.key in self.KEYBOARD:
 						self.effect_release(self.KEYBOARD[event.key])
@@ -231,8 +235,8 @@ class Beat:
 				msg='not recording'
 			text2 = font.render(msg,1,self.fg)
 
-			audio=self.audio_widget()
-			pattern_timeline=self.pattern_timeline_widget()
+			audio=graphics.audio_widget(self.r,self.tb)
+			pattern_timeline=graphics.pattern_timeline_widget(self.tb,self.seq,float(self.r.CHUNK)/self.r.RATE)
 
 			self.screen.fill(self.bg)
 			self.screen.blit(text, (0,0))
@@ -256,100 +260,6 @@ class Beat:
 		self.r.join()
 		self.tb.join()
 		self.oa.join()
-
-	def audio_widget(self,height=100):
-		data=self.r.get_chunks()
-
-		audio=pygame.Surface((self.r.CAPTURE_CHUNKS,height))
-
-		colors=[(0,0,255),(100,100,255),(200,200,255)]
-		beatline_color=(255,0,0)
-		for j in range(len(self.r.RANGES)):
-			scaling_factor=max([d[0][j] for d in data])
-			if scaling_factor<1: scaling_factor=1
-			for i in range(self.r.CAPTURE_CHUNKS):
-				beatline=data[i][1]
-				if not beatline:
-					val=float(data[i][0][j])/scaling_factor
-					pygame.draw.line(audio,colors[j],(i,(height-height*val)/2),(i,(height+height*val)/2))
-				else:
-					pygame.draw.line(audio,beatline_color,(i,0),(i,height))
-
-		scaler=1.-self.tb.get_fractick()
-		bg_color=(255,255,255)
-		beat_c=[int(c*scaler) for c in bg_color]
-		right=self.r.CAPTURE_CHUNKS-1
-		pygame.draw.line(audio,beat_c,(right,0),(right,height))
-
-		return audio
-
-	def pattern_timeline_widget(self,height=100,width=400):
-		timeline=pygame.Surface((width,height))
-		seconds_per_pixel=float(self.r.CHUNK)/self.r.RATE
-		seconds_per_beat=self.tb.period
-		pixels_per_beat=seconds_per_beat/seconds_per_pixel
-		now=self.tb.get_tick()
-		occupied_space=[]
-		patterns=self.seq.get_patterns()
-
-		def overlaps(a,b,c,d):
-			if b is None and d is None:
-				return True
-			if b is None:
-				return d>a
-			if d is None:
-				return b>c
-			return (c<a and a<d) or (c<b and b<d) or (a<c and c<b) or (a<d and d<b) or a == c or b == d
-
-		def render_pattern(surface,pat,start,start_px,stop_px,slot):
-			pygame.draw.rect(surface,(50,50,50),((start_px,1+slot*20),(stop_px-start_px-2,18)))
-
-			for start,duration,effect in pat.get_events((start_px-(start-now)*pixels_per_beat)/pixels_per_beat,(stop_px-(start-now)*pixels_per_beat)/pixels_per_beat):
-				if effect.render is None:
-					continue
-				eff_start_px=start_px+start*pixels_per_beat
-				eff_stop_px=eff_start_px+duration*pixels_per_beat
-				if eff_stop_px <= start_px or eff_start_px >= stop_px:
-					continue
-				effect.render(surface,eff_start_px,eff_stop_px,start_px,stop_px,slot)
-
-			font = pygame.font.Font(None, 16)
-			text = font.render(pat.name, 1, (255,255,255))
-			x=min(max(5,start_px+5),stop_px-text.get_width()-8)
-			surface.blit(text,(x,2+slot*20))
-
-			pygame.draw.rect(surface,(255,255,255),((start_px,1+slot*20),(stop_px-start_px-2,18)),1)
-
-		for start,stop,p in patterns:
-			slot=-1
-			for i in range(len(occupied_space)):
-				wontfit=False
-				for o_start,o_stop in occupied_space[i]:
-					if overlaps(start,stop,o_start,o_stop):
-						wontfit=True
-						break
-				if not wontfit:
-					occupied_space[i].append((start,stop))
-					slot=i
-					break
-			if slot<0:
-				slot=len(occupied_space)
-				occupied_space.append([(start,stop)])
-
-			start_px=(start-now)*pixels_per_beat
-			if stop is None:
-				stop_px=width
-			else:
-				stop_px=(stop-now)*pixels_per_beat
-
-			render_pattern(timeline,p,start,start_px,stop_px,slot)
-
-		return timeline
-
-	def full_color(self,surface,eff_start_px,eff_stop_px,start_px,stop_px,slot):
-		start=max(eff_start_px,start_px)
-		stop=min(eff_stop_px,stop_px)
-		pygame.draw.rect(surface,(0,0,50),((start,1+slot*20),(stop-start-2,18)))
 
 	def tick(self,num):
 		self.r.set_beatline()
@@ -375,11 +285,6 @@ class Beat:
 		t=time.time()
 		self.tb.sync_phase(t)
 
-	#def add_test_pattern(self):
-	#	eff=0x10,self.effect_color+(0xFF,)
-	#	p=Pattern(self.oa,4,[(0,1,eff)])
-	#	self.seq.add_pattern(p,round(self.pll.get_tick(),0)+4)
-	#	self.seq.add_pattern(p,round(self.pll.get_tick(),0)+4,round(self.pll.get_tick(),0)+8)
 
 	def kb_remap(self,remap_row,increment):
 		self.kb_map[remap_row]=(self.kb_map[remap_row]+increment)%len(self.EFFECT_NAMES)
@@ -394,33 +299,33 @@ class Beat:
 
 		color=self.COLORS[c]+(opacity,)
 		if en=='on':
-			return Effect(0x10,color,render=self.full_color)
+			return Effect(0x10,color,render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='strobe':
-			return Effect(0x40,color+(0x00,0x10),False)
+			return Effect(0x40,color+(0x00,0x10),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='sweep':
-			return Effect(0x41,color+(0x02,0x00))
+			return Effect(0x41,color+(0x02,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='rev sweep':
-			return Effect(0x41,color+(0x82,0x00))
+			return Effect(0x41,color+(0x82,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='pulse':
-			return Effect(0x42,color+(0x02,0x00),False)
+			return Effect(0x42,color+(0x02,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='rev pulse':
-			return Effect(0x42,color+(0x82,0x00),False)
+			return Effect(0x42,color+(0x82,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='fast sweep':
-			return Effect(0x41,color+(0x01,0x00))
+			return Effect(0x41,color+(0x01,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast rev sweep':
-			return Effect(0x41,color+(0x81,0x00))
+			return Effect(0x41,color+(0x81,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast pulse':
-			return Effect(0x42,color+(0x01,0x00),False)
+			return Effect(0x42,color+(0x01,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='fast rev pulse':
-			return Effect(0x42,color+(0x081,0x00),False)
+			return Effect(0x42,color+(0x081,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='fade in':
-			return Effect(0x43,color+(0x02,0x00))
+			return Effect(0x43,color+(0x02,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fade out':
-			return Effect(0x43,color+(0x82,0x00))
+			return Effect(0x43,color+(0x82,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast fade in':
-			return Effect(0x43,color+(0x01,0x00))
+			return Effect(0x43,color+(0x01,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast fade out':
-			return Effect(0x43,color+(0x81,0x00))
+			return Effect(0x43,color+(0x81,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		return None
 
 	def pattern_map(self,p_num):
