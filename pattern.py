@@ -1,8 +1,9 @@
 class Pattern:
-	def __init__(self,oa,length=4,events=[]):
+	def __init__(self,oa,length=4,events=[],name='unnamed'):
 		self.length=length
 		self.events=events
 		self.oa=oa
+		self.name=name
 		self.active_events=[]
 		self.last_tick=0.
 

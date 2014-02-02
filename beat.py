@@ -19,6 +19,8 @@ class Beat:
 	KEY_TAP=pygame.K_SPACE
 	KEY_PHASE=pygame.K_RETURN
 
+	EFFECT_HISTORY_LENGTH=2
+
 	KEYBOARD={
 		pygame.K_q:(0,0),
 		pygame.K_w:(1,0),
@@ -322,6 +324,10 @@ class Beat:
 				stop_px=(stop-now)*pixels_per_beat
 			pygame.draw.rect(timeline,(50,50,50),((start_px,1+slot*20),(stop_px-start_px-2,18)))
 			pygame.draw.rect(timeline,(255,255,255),((start_px,1+slot*20),(stop_px-start_px-2,18)),1)
+			font = pygame.font.Font(None, 16)
+			text = font.render(p.name, 1, (255,255,255))
+			print text.width()
+			timeline.blit(text,(5,2+slot*20))
 
 		return timeline
 
@@ -398,27 +404,34 @@ class Beat:
 		return None
 
 	def pattern_map(self,p_num):
+		p=None
 		if p_num in self.saved_patterns:
 			p=self.saved_patterns[p_num]
-			return p
-		return None
+		if p is None:
+			return None
+		p_name='{0}'.format(p_num)
+		return p+(p_name,)
 
 	def function_map(self,f_num):
-		if len(self.last_effect)<2:
+		if len(self.last_effect)<self.EFFECT_HISTORY_LENGTH:
 			return None
 		e1=self.last_effect[0]
 		e2=self.last_effect[1]
+		p=None
 		if f_num==1:
-			return (4,[(0,4,e1),(1,4,e2),(2,4,e1),(3,4,e2)])
-		if f_num==2:
-			return (4,[(0,4,e1),(2,4,e2)])
-		if f_num==3:
-			return (8,[(0,8,e1),(4,8,e2)])
-		if f_num==4:
-			return (4,[(0,0.5,e1),(0.5,0.5,e2),(1,0.5,e1),(1.5,0.5,e2),(2,0.5,e1),(2.5,0.5,e2),(3,0.5,e1),(3.5,0.5,e2)])
-		if f_num==5:
-			return (4,[(1,4,e1),(3,4,e2)])
-		return None
+			p=(4,[(0,4,e1),(1,4,e2),(2,4,e1),(3,4,e2)])
+		elif f_num==2:
+			p=(4,[(0,4,e1),(2,4,e2)])
+		elif f_num==3:
+			p=(8,[(0,8,e1),(4,8,e2)])
+		elif f_num==4:
+			p=(4,[(0,0.5,e1),(0.5,0.5,e2),(1,0.5,e1),(1.5,0.5,e2),(2,0.5,e1),(2.5,0.5,e2),(3,0.5,e1),(3.5,0.5,e2)])
+		elif f_num==5:
+			p=(4,[(1,4,e1),(3,4,e2)])
+		if p is None:
+			return None
+		p_name='F{0}'.format(f_num)
+		return p+(p_name,)
 
 	def save_pattern(self,p_num):
 		self.saved_patterns[p_num]=self.rec_pat
@@ -427,7 +440,7 @@ class Beat:
 	def effect(self,coord):
 		eff=self.effect_map(coord)
 		self.last_effect.appendleft(eff)
-		if len(self.last_effect)>2:
+		if len(self.last_effect)>self.EFFECT_HISTORY_LENGTH:
 			self.last_effect.pop()
 		if eff is None:
 			return
@@ -494,9 +507,5 @@ class Beat:
 		self.last_stop=start+l
 		return self.seq.add_pattern(Pattern(self.oa,*p),start,start+l)
 
-			#if num in self.forever_patterns:
-			#	self.seq.remove_pattern(self.forever_patterns[num])
-			#	self.forever_patterns.pop(num)
-			#elif p is not None:
 
 Beat()
