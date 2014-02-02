@@ -42,6 +42,9 @@ class OutputAdapter(threading.Thread):
 		self.q.put([CMD_STOP,eff_id])
 		self.id_allocation.remove(eff_id)
 
+	def add_reset(self):
+		self.q.put([CMD_RESET])
+
 	def add_tick(self):
 		self.q.put([CMD_TICK])
 
@@ -53,7 +56,7 @@ class OutputAdapter(threading.Thread):
 		while self.go:
 			while not self.q.empty():
 				data=self.q.get()
-				#print ' '.join([hex(d) for d in data])
+				print ' '.join([hex(d) for d in data])
 				self.b.framed_packet(data)
 			cur_time=self.timebase.get_tick()
 			fractick=int(240*cur_time)%240

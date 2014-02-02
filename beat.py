@@ -11,6 +11,7 @@ from effect import Effect
 import time
 import numpy
 import scipy.signal
+import collections
 import sys
 
 class Beat:
@@ -86,7 +87,7 @@ class Beat:
 		(255,255,255), # white
 		(255,0,0), # red
 		(255,20,0), # orange
-		(255,50,0), # yellow
+		(255,80,0), # yellow
 		(50,100,0), # green
 		(0,30,80), # blue
 		(255,0,50), # purple
@@ -137,7 +138,7 @@ class Beat:
 		self.saved_patterns={}
 		self.rec_pat=None
 		self.kb_map=[0,1,2]
-		self.last_effect=None
+		self.last_effect=collections.deque()
 
 		self.r=Recorder()
 		self.tb=TimeBase()
@@ -148,6 +149,7 @@ class Beat:
 			b=SingleBespeckleDevice('/dev/ttyUSB0',115200)
 
 		self.oa=OutputAdapter(b,self.tb)
+		self.oa.add_reset()
 
 		self.seq=Sequencer(self.tb,self.oa)
 
@@ -402,19 +404,20 @@ class Beat:
 		return None
 
 	def function_map(self,f_num):
-		if self.last_effect is None:
+		if len(self.last_effect)<2:
 			return None
-		e=self.last_effect
+		e1=self.last_effect[0]
+		e2=self.last_effect[1]
 		if f_num==1:
-			return (4,[(0,1,e),(1,1,e),(2,1,e),(3,1,e)])
+			return (4,[(0,4,e1),(1,4,e2),(2,4,e1),(3,4,e2)])
 		if f_num==2:
-			return (4,[(0,2,e),(2,2,e)])
+			return (4,[(0,4,e1),(2,4,e2)])
 		if f_num==3:
-			return (4,[(0,4,e)])
+			return (8,[(0,8,e1),(4,8,e2)])
 		if f_num==4:
-			return (4,[(0,0.5,e),(0.5,0.5,e),(1,0.5,e),(1.5,0.5,e),(2,0.5,e),(2.5,0.5,e),(3,0.5,e),(3.5,0.5,e)])
+			return (4,[(0,0.5,e1),(0.5,0.5,e2),(1,0.5,e1),(1.5,0.5,e2),(2,0.5,e1),(2.5,0.5,e2),(3,0.5,e1),(3.5,0.5,e2)])
 		if f_num==5:
-			return (4,[(1,1,e),(3,1,e)])
+			return (4,[(1,4,e1),(3,4,e2)])
 		return None
 
 	def save_pattern(self,p_num):
@@ -423,7 +426,9 @@ class Beat:
 
 	def effect(self,coord):
 		eff=self.effect_map(coord)
-		self.last_effect=eff
+		self.last_effect.appendleft(eff)
+		if len(self.last_effect)>2:
+			self.last_effect.pop()
 		if eff is None:
 			return
 		if self.recording:
