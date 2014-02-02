@@ -12,6 +12,11 @@ class Pattern:
 			self.oa.remove_effect(res)
 		self.active_events=[]
 
+	def get_events(self,begin,end):
+		prev_iter=int(begin / self.length)
+		cur_iter=int(end / self.length)
+		return [(timestamp+self.length*i,duration,eff) for i in range(prev_iter,cur_iter+1) for timestamp,duration,eff in self.events]
+
 	def process(self,tick):
 		if tick<=self.last_tick:
 			return
@@ -23,10 +28,12 @@ class Pattern:
 				self.oa.remove_effect(res)
 		self.active_events=[(event_stop,res) for event_stop,res in self.active_events if tick <= event_stop]
 
-		for i in range(prev_iter,cur_iter+1):
-			for timestamp,duration,eff in self.events:
-				start=timestamp+self.length*i
-				stop=timestamp+self.length*i+duration
+		#for i in range(prev_iter,cur_iter+1):
+		#	for timestamp,duration,eff in self.events:
+		#		start=timestamp+self.length*i
+		#		stop=timestamp+self.length*i+duration
+		for start,duration,eff in self.get_events(self.last_tick,tick):
+				stop=start+duration
 				if start >= self.last_tick and start < tick and stop > tick:
 					if eff.persistent:
 						res=self.oa.add_persistent_effect(eff.cmd,eff.data)

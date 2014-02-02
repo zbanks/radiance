@@ -42,7 +42,13 @@ class TimeBase(threading.Thread):
 		return res
 
 	def get_tick(self):
-		return self.beat+self.get_fractick()
+		self.lock.acquire()
+		t=time.time()
+		b=self.beat
+		denom=self.next_time-self.last_time
+		ft=max(min((t-self.last_time)/denom,1.),0.)
+		self.lock.release()
+		return b+ft
 
 	def sync_phase(self,t):
 		self.lock.acquire()
@@ -55,11 +61,18 @@ class TimeBase(threading.Thread):
 		self.lock.release()
 
 	def sync_period(self,period):
+		self.lock.acquire()
 		self.period=period
+		self.lock.release()
 
 	def get_tempo(self):
-		return 60./self.period
+		self.lock.acquire()
+		tempo=60./self.period
+		self.lock.release()
+		return tempo
 
 	def set_tempo(self,tempo):
+		self.lock.acquire()
 		self.period=60./tempo
+		self.lock.release()
 

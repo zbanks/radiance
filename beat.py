@@ -246,6 +246,7 @@ class Beat:
 			self.screen.blit(kb[2], (0,260))
 
 			pygame.display.flip()
+			time.sleep(0)
 
 		self.seq.stop()
 		self.r.stop()
@@ -300,13 +301,24 @@ class Beat:
 				return b>c
 			return (c<a and a<d) or (c<b and b<d) or (a<c and c<b) or (a<d and d<b) or a == c or b == d
 
-		def render_pattern(surface,pat,start_px,stop_px,slot):
+		def render_pattern(surface,pat,start,start_px,stop_px,slot):
 			pygame.draw.rect(surface,(50,50,50),((start_px,1+slot*20),(stop_px-start_px-2,18)))
-			pygame.draw.rect(surface,(255,255,255),((start_px,1+slot*20),(stop_px-start_px-2,18)),1)
+
+			for start,duration,effect in pat.get_events((start_px-(start-now)*pixels_per_beat)/pixels_per_beat,(stop_px-(start-now)*pixels_per_beat)/pixels_per_beat):
+				if effect.render is None:
+					continue
+				eff_start_px=start_px+start*pixels_per_beat
+				eff_stop_px=eff_start_px+duration*pixels_per_beat
+				if eff_stop_px <= start_px or eff_start_px >= stop_px:
+					continue
+				effect.render(surface,eff_start_px,eff_stop_px,start_px,stop_px,slot)
+
 			font = pygame.font.Font(None, 16)
 			text = font.render(pat.name, 1, (255,255,255))
-			x=min(max(5,start_px+5),stop_px-text.get_width()-5)
+			x=min(max(5,start_px+5),stop_px-text.get_width()-8)
 			surface.blit(text,(x,2+slot*20))
+
+			pygame.draw.rect(surface,(255,255,255),((start_px,1+slot*20),(stop_px-start_px-2,18)),1)
 
 		for start,stop,p in patterns:
 			slot=-1
@@ -330,9 +342,14 @@ class Beat:
 			else:
 				stop_px=(stop-now)*pixels_per_beat
 
-			render_pattern(timeline,p,start_px,stop_px,slot)
+			render_pattern(timeline,p,start,start_px,stop_px,slot)
 
 		return timeline
+
+	def full_color(self,surface,eff_start_px,eff_stop_px,start_px,stop_px,slot):
+		start=max(eff_start_px,start_px)
+		stop=min(eff_stop_px,stop_px)
+		pygame.draw.rect(surface,(0,0,50),((start,1+slot*20),(stop-start-2,18)))
 
 	def tick(self,num):
 		self.r.set_beatline()
@@ -377,7 +394,7 @@ class Beat:
 
 		color=self.COLORS[c]+(opacity,)
 		if en=='on':
-			return Effect(0x10,color)
+			return Effect(0x10,color,render=self.full_color)
 		if en=='strobe':
 			return Effect(0x40,color+(0x00,0x10),False)
 		if en=='sweep':
@@ -418,8 +435,8 @@ class Beat:
 	def function_map(self,f_num):
 		if len(self.last_effect)<self.EFFECT_HISTORY_LENGTH:
 			return None
-		e1=self.last_effect[0]
-		e2=self.last_effect[1]
+		e1=self.last_effect[1]
+		e2=self.last_effect[0]
 		p=None
 		if f_num==1:
 			p=(4,[(0,4,e1),(1,4,e2),(2,4,e1),(3,4,e2)])
