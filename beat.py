@@ -300,12 +300,19 @@ class Beat:
 				return b>c
 			return (c<a and a<d) or (c<b and b<d) or (a<c and c<b) or (a<d and d<b) or a == c or b == d
 
+		def render_pattern(surface,pat,start_px,stop_px,slot):
+			pygame.draw.rect(surface,(50,50,50),((start_px,1+slot*20),(stop_px-start_px-2,18)))
+			pygame.draw.rect(surface,(255,255,255),((start_px,1+slot*20),(stop_px-start_px-2,18)),1)
+			font = pygame.font.Font(None, 16)
+			text = font.render(pat.name, 1, (255,255,255))
+			x=min(max(5,start_px+5),stop_px-text.get_width()-5)
+			surface.blit(text,(x,2+slot*20))
+
 		for start,stop,p in patterns:
 			slot=-1
 			for i in range(len(occupied_space)):
 				wontfit=False
 				for o_start,o_stop in occupied_space[i]:
-					#print "checking",(start,stop,o_start,o_stop)
 					if overlaps(start,stop,o_start,o_stop):
 						wontfit=True
 						break
@@ -322,12 +329,8 @@ class Beat:
 				stop_px=width
 			else:
 				stop_px=(stop-now)*pixels_per_beat
-			pygame.draw.rect(timeline,(50,50,50),((start_px,1+slot*20),(stop_px-start_px-2,18)))
-			pygame.draw.rect(timeline,(255,255,255),((start_px,1+slot*20),(stop_px-start_px-2,18)),1)
-			font = pygame.font.Font(None, 16)
-			text = font.render(p.name, 1, (255,255,255))
-			print text.width()
-			timeline.blit(text,(5,2+slot*20))
+
+			render_pattern(timeline,p,start_px,stop_px,slot)
 
 		return timeline
 
