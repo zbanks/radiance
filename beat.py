@@ -148,9 +148,14 @@ class Beat:
 		self.tb=TimeBase()
 		self.tb.register_tickfn(self.tick)
 		if len(sys.argv)>=2 and sys.argv[1]=='fake':
-			b=FakeSingleBespeckleDevice('/dev/ttyUSB0',115200)
+			b=[FakeSingleBespeckleDevice('/dev/ttyUSB0',115200)]
 		else:
-			b=SingleBespeckleDevice('/dev/ttyUSB0',115200)
+			b=[
+				SingleBespeckleDevice('/dev/ttyUSB0',115200),
+				SingleBespeckleDevice('/dev/ttyUSB1',115200),
+				SingleBespeckleDevice('/dev/ttyUSB2',115200),
+				SingleBespeckleDevice('/dev/ttyUSB3',115200),
+			]
 
 		self.oa=OutputAdapter(b,self.tb)
 		self.oa.add_reset()
@@ -344,15 +349,22 @@ class Beat:
 		e2=self.last_effect[0]
 		p=None
 		if f_num==1:
-			p=(4,[(0,4,e1),(1,4,e2),(2,4,e1),(3,4,e2)])
+			p=(4,[(0,1,e1),(1,1,e2),(2,1,e1),(3,1,e2)])
 		elif f_num==2:
-			p=(4,[(0,4,e1),(2,4,e2)])
+			p=(4,[(0,2,e1),(2,2,e2)])
 		elif f_num==3:
-			p=(8,[(0,8,e1),(4,8,e2)])
+			p=(8,[(0,4,e1),(4,4,e2)])
 		elif f_num==4:
 			p=(4,[(0,0.5,e1),(0.5,0.5,e2),(1,0.5,e1),(1.5,0.5,e2),(2,0.5,e1),(2.5,0.5,e2),(3,0.5,e1),(3.5,0.5,e2)])
 		elif f_num==5:
-			p=(4,[(1,4,e1),(3,4,e2)])
+			p=(4,[(0,1,e1),(1,1,e2),(2,1,e1),(3,1,e2)])
+		elif f_num==6:
+			p=(4,[(0,4,e1),(2,4,e2)])
+		elif f_num==7:
+			p=(8,[(0,8,e1),(4,8,e2)])
+		elif f_num==8:
+			p=(4,[(0,2,e1),(0.5,2,e2),(1,2,e1),(1.5,2,e2),(2,2,e1),(2.5,2,e2),(3,2,e1),(3.5,2,e2)])
+
 		if p is None:
 			return None
 		p_name='F{0}'.format(f_num)
