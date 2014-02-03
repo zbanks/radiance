@@ -76,7 +76,9 @@ class SingleBespeckleDevice(object):
         logger.debug("Serial Data: %s", ';'.join(map(lambda x: "{:02x}".format(x), data)))
         #print ("Serial Data: %s", ';'.join(map(lambda x: "{:02x}".format(x), data)))
         self.ser.write("".join([chr(d) for d in data]))
-	self.ser.flush()
+
+    def flush(self):
+        self.ser.flush()
 
     def cobs_packet(self, data):
         #print ("Not encoded: %s", ';'.join(map(lambda x: "{:02x}".format(x), data)))

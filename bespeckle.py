@@ -56,11 +56,13 @@ class OutputAdapter(threading.Thread):
 		while self.go:
 			while not self.q.empty():
 				data=self.q.get()
-				print ' '.join([hex(d) for d in data])
+				#print ' '.join([hex(d) for d in data])
 				for d in self.b:
 					d.framed_packet(data)
 			cur_time=self.timebase.get_tick()
 			fractick=int(240*cur_time)%240
 			for d in self.b:
 				d.framed_packet([CMD_SYNC,fractick])
+			for d in self.b:
+				d.flush()
 			time.sleep(0)

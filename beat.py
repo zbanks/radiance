@@ -113,6 +113,7 @@ class Beat:
 		'fade out',
 		'fast fade in',
 		'fast fade out',
+		'rainbow!',
 	]
 
 	def __init__(self):
@@ -150,12 +151,14 @@ class Beat:
 		if len(sys.argv)>=2 and sys.argv[1]=='fake':
 			b=[FakeSingleBespeckleDevice('/dev/ttyUSB0',115200)]
 		else:
-			b=[
-				SingleBespeckleDevice('/dev/ttyUSB0',115200),
-				SingleBespeckleDevice('/dev/ttyUSB1',115200),
-				SingleBespeckleDevice('/dev/ttyUSB2',115200),
-				SingleBespeckleDevice('/dev/ttyUSB3',115200),
-			]
+			b = []
+			for i in range(10):
+				try:
+					b.append(SingleBespeckleDevice('/dev/ttyUSB%d' % i, 3000000))
+					if len(b) >= 4:
+						break
+				except:
+					pass
 
 		self.oa=OutputAdapter(b,self.tb)
 		self.oa.add_reset()
@@ -312,17 +315,17 @@ class Beat:
 		if en=='rev sweep':
 			return Effect(0x41,color+(0x82,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='pulse':
-			return Effect(0x42,color+(0x02,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
+			return Effect(0x42,color+(0x04,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='rev pulse':
-			return Effect(0x42,color+(0x82,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
+			return Effect(0x42,color+(0x84,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='fast sweep':
 			return Effect(0x41,color+(0x01,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast rev sweep':
 			return Effect(0x41,color+(0x81,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast pulse':
-			return Effect(0x42,color+(0x01,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
+			return Effect(0x42,color+(0x02,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='fast rev pulse':
-			return Effect(0x42,color+(0x081,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
+			return Effect(0x42,color+(0x082,0x00),False,render=lambda *x:graphics.strobe(graphics.strip2screen(color),*x))
 		if en=='fade in':
 			return Effect(0x43,color+(0x02,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fade out':
@@ -331,6 +334,8 @@ class Beat:
 			return Effect(0x43,color+(0x01,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		if en=='fast fade out':
 			return Effect(0x43,color+(0x81,0x00),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
+		if en=='rainbow!':
+			return Effect(0x03,(0x00, 0x04, 0x04),render=lambda *x:graphics.full_color(graphics.strip2screen(color),*x))
 		return None
 
 	def pattern_map(self,p_num):
@@ -348,23 +353,26 @@ class Beat:
 		e1=self.last_effect[1]
 		e2=self.last_effect[0]
 		p=None
-		if f_num==1:
+		# p = (length_of_period, [(timestamp, duration, effect), ...])
+		if f_num==1: # 4 Quarter Notes
 			p=(4,[(0,1,e1),(1,1,e2),(2,1,e1),(3,1,e2)])
-		elif f_num==2:
+		elif f_num==2: # 2 Half Notes
 			p=(4,[(0,2,e1),(2,2,e2)])
-		elif f_num==3:
+		elif f_num==3: # 2 Whole Notes
 			p=(8,[(0,4,e1),(4,4,e2)])
-		elif f_num==4:
+		elif f_num==4: # 8 Eighth Notes
 			p=(4,[(0,0.5,e1),(0.5,0.5,e2),(1,0.5,e1),(1.5,0.5,e2),(2,0.5,e1),(2.5,0.5,e2),(3,0.5,e1),(3.5,0.5,e2)])
-		elif f_num==5:
-			p=(4,[(0,1,e1),(1,1,e2),(2,1,e1),(3,1,e2)])
-		elif f_num==6:
+		elif f_num==5: # 4 Quarter Notes overlapping
+			p=(4,[(0,2,e1),(1,2,e2),(2,2,e1),(3,2,e2)])
+		elif f_num==6: # 2 Half Notes overlapping
 			p=(4,[(0,4,e1),(2,4,e2)])
-		elif f_num==7:
+		elif f_num==7: # 2 Whole notes overlapping
 			p=(8,[(0,8,e1),(4,8,e2)])
-		elif f_num==8:
+		elif f_num==8: # 8 Eighth Notes very overlapping
 			p=(4,[(0,2,e1),(0.5,2,e2),(1,2,e1),(1.5,2,e2),(2,2,e1),(2.5,2,e2),(3,2,e1),(3.5,2,e2)])
-
+		elif f_num==9: # 8 Eighth Notes very overlapping
+			p=(4,[(0,2,e1),(0.25,2,e2),(0.5,2,e1),(0.75,2,e2),(1,2,e1),(1.25,2,e2),(1.5,2,e1),(1.75,2,e2),
+				  (2,2,e1),(2.25,2,e2),(2.5,2,e1),(2.75,2,e2),(3,2,e1),(3.25,2,e2),(3.5,2,e1),(3.75,2,e2) ])
 		if p is None:
 			return None
 		p_name='F{0}'.format(f_num)
