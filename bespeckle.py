@@ -38,6 +38,9 @@ class OutputAdapter(threading.Thread):
 		my_id=self.get_id()
 		self.q.put([cmd,my_id]+list(data))
 
+	def add_message(self,to,data):
+		self.q.put([CMD_MSG,to]+list(data))
+
 	def remove_effect(self,eff_id):
 		self.q.put([CMD_STOP,eff_id])
 		self.id_allocation.remove(eff_id)
@@ -56,7 +59,7 @@ class OutputAdapter(threading.Thread):
 		while self.go:
 			while not self.q.empty():
 				data=self.q.get()
-				#print ' '.join([hex(d) for d in data])
+				print ' '.join([hex(d) for d in data])
 				for d in self.b:
 					d.framed_packet(data)
 			cur_time=self.timebase.get_tick()

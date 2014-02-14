@@ -16,7 +16,7 @@ class Recorder(threading.Thread):
 
 	RANGES = [(50,200),(200,800),(800,2400)]
 
-	def __init__(self):
+	def __init__(self,out=True):
 		threading.Thread.__init__(self)
 		self.daemon=True
 		self.chunk_buffer=collections.deque()
@@ -31,15 +31,17 @@ class Recorder(threading.Thread):
 			input=True,
 			frames_per_buffer=self.CHUNK)
 
-		self.out_stream = self.pa.open(format=self.FORMAT,
-			channels=self.CHANNELS,
-			rate=self.RATE,
-			output=True,
-			frames_per_buffer=self.CHUNK)
+		self.out=out
+		if out:
+			self.out_stream = self.pa.open(format=self.FORMAT,
+				channels=self.CHANNELS,
+				rate=self.RATE,
+				output=True,
+				frames_per_buffer=self.CHUNK)
 
-		self.out_buf=collections.deque()
-		self.default_out=struct.pack('h',0)
-		self.default_out_buf=self.default_out*self.CHUNK
+			self.out_buf=collections.deque()
+			self.default_out=struct.pack('h',0)
+			self.default_out_buf=self.default_out*self.CHUNK
 
 		print "LATENCY",1000*self.CHUNK_TIME,"ms"
 		print "CAPTURE_CHUNKS",self.CAPTURE_CHUNKS
@@ -59,9 +61,10 @@ class Recorder(threading.Thread):
 		self.go=True
 		self.beatline=False
 
-		self.playback=threading.Thread(target=self.run2)
-		self.playback.daemon=True
-		self.playback.start()
+		if self.out:
+			self.playback=threading.Thread(target=self.run2)
+			self.playback.daemon=True
+			self.playback.start()
 
 		while self.go:
 			data = self.in_stream.read(self.CHUNK)

@@ -97,6 +97,7 @@ class SingleBespeckleDevice(object):
     def framed_packet(self, data=None, flags=0x00, addr=0x00):
         if data is None or len(data) > 250:
             raise Exception("invalid data")
+        data=list(data)
         while len(data) < 8:
             data.append(0)
         crc_frame = [flags, addr] + data
