@@ -72,6 +72,9 @@ class SingleBespeckleDevice(object):
         self.addresses = {}
         self.bespeckle_ids = set()
 
+    def close(self):
+        self.ser.close()
+
     def raw_packet(self, data):
         logger.debug("Serial Data: %s", ';'.join(map(lambda x: "{:02x}".format(x), data)))
         #print ("Serial Data: %s", ';'.join(map(lambda x: "{:02x}".format(x), data)))
