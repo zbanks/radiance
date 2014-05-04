@@ -31,7 +31,6 @@ class Visualizer(threading.Thread):
     TAU_LPF = .1
     COLOR_PERIOD = 60
 
-    TAU_HUE = .01
 
     def __init__(self):
         self.b = []
@@ -87,7 +86,7 @@ class Visualizer(threading.Thread):
         audio, fft = self.analyze_audio()
         dom_freq = maxat(fft[4:]) + 4
 
-        dom_freq = self.smooth("dom_freq", dom_freq, self.TAU_HUE)
+        dom_freq = self.smooth("dom_freq", dom_freq, 0.05)
 
         octave = 2.0 ** math.floor(math.log(dom_freq) / math.log(2))
         self.hue = (dom_freq - octave) / octave
@@ -104,7 +103,7 @@ class Visualizer(threading.Thread):
         bass_val = max(min((levels[0]-0.1)/0.9,1.), 0.0)
         bass_val = self.smooth("bass_val", bass_val, 0.4)
         bass_hue = self.hue
-        if bass_val < 0.7: # Switch colors for low bass values
+        if bass_val < 0.2: # Switch colors for low bass values
             bass_hue = (bass_hue + 0.90) % 1.0
             bass_val *= 1.2
 
