@@ -10,6 +10,8 @@ import colorsys
 import threading
 import traceback
 import math
+import sys
+from pygame import midi
 
 CMD_SYNC = 0x80
 CMD_TICK = 0x88
@@ -27,7 +29,7 @@ class Visualizer(threading.Thread):
     RATE = 48000
     HISTORY_SIZE = 500
 
-    RANGES = [(50,200),(200,800),(800,2400),(2400,1200)]
+    RANGES = [(20,200),(200,1200),(1200,2400),(2400,1200)]
     TAU_LPF = .1
     COLOR_PERIOD = 60
 
@@ -48,6 +50,15 @@ class Visualizer(threading.Thread):
         self.mute = 1.0
         self.whiteout_delta = 0
         self.whiteout = 1.0
+        midi.init()
+        self.mi = None
+        try:
+            self.mi = midi.Input(3)
+        except:
+            traceback.print_exc()
+            print "Can't find midi, oh well"
+        self.mstat = {}
+        self.hueoff = 0
         super(Visualizer, self).__init__()
 
     def stop(self):
@@ -55,6 +66,13 @@ class Visualizer(threading.Thread):
 
     def restart(self):
         self.stopped = False
+
+    def read_midi_events(self):
+        if not self.mi:
+            return
+        for ev in self.mi.read(100):
+            if len(ev[0]) == 4 and ev[0][0] == 176:
+                self.mstat[ev[0][1]] = ev[0][2]
 
     def run(self):
         self.stopped = False
@@ -80,16 +98,29 @@ class Visualizer(threading.Thread):
         for i in range(self.HISTORY_SIZE):
             self.history.append(h)
 
+
+    def inp(self, name, default=0):
+        if name in self.mstat:
+            return self.mstat[name]
+        return default
+
     def step(self):
         def maxat(a): return max(enumerate(a), key=lambda x: x[1])[0] 
+        self.read_midi_events()
 
         audio, fft = self.analyze_audio()
-        dom_freq = maxat(fft[4:]) + 4
+        mind = self.inp(24, 4)
+        dom_freq = maxat(fft[mind:-mind]) + mind
+        #self.dom_freq = dom_freq
 
-        dom_freq = self.smooth("dom_freq", dom_freq, 0.05)
+        dom_freq = self.smooth("dom_freq", dom_freq, self.inp(14, 10) / 500.0)
+        #sys.stdout.write("\rdom_freq %d" % dom_freq)
 
         octave = 2.0 ** math.floor(math.log(dom_freq) / math.log(2))
-        self.hue = (dom_freq - octave) / octave
+        self.octave = octave
+        self.hue = ((dom_freq - octave) / octave + self.hueoff)
+        self.hue += self.inp(14, 0) / 127.0
+        self.hue = self.hue % 1.0
 
         self.lpf_audio=[self.lpf(float(data),mem,self.alpha) for data,mem in zip(audio,self.lpf_audio)]
 
@@ -101,22 +132,26 @@ class Visualizer(threading.Thread):
 
         levels=[a/f for a,f in zip(self.lpf_audio,scaling_factor)]
         bass_val = max(min((levels[0]-0.1)/0.9,1.), 0.0)
-        bass_val = self.smooth("bass_val", bass_val, 0.4)
-        bass_hue = self.hue
-        if bass_val < 0.2: # Switch colors for low bass values
-            bass_hue = (bass_hue + 0.90) % 1.0
-            bass_val *= 1.2
+        bass_val = self.smooth("bass_val", bass_val, 0.6)
+        bass_hue = (self.hue + 0.95) % 1.0
+        if bass_val < 0.1: # Switch colors for low bass values
+            bass_hue = (bass_hue + 0.9) % 1.0
+            bass_val *= 1.1
+
+        bass_val = max(bass_val ** 0.9 , 0.1)
 
         bass_color=self.makecolor(colorsys.hsv_to_rgb(bass_hue,1. * self.whiteout,bass_val * self.mute))
         treble_color=self.makecolor(colorsys.hsv_to_rgb(self.hue,0.7 * self.whiteout,1. * self.mute))
 
-        treble_size = (0.5-0.3*levels[1])
-        treble_size = self.smooth("treble_size", treble_size, 0.4)
+        treble_size = (0.5-0.3*levels[1]) 
+        treble_size = self.smooth("treble_size", treble_size, 0.3)
 
         self.mute += self.mute_delta
         self.mute = max(min(self.mute, 1.0), 0.0)
         self.whiteout += self.whiteout_delta
-        self.whiteout = max(min(self.whiteout, 1.0), 0.0)
+        #self.whiteout = max(min(self.whiteout, 1.0), 0.0)
+        self.mute = self.inp(11, 0) / 127.0
+
 
         self.update_strip([
             (0x10,0x00)+bass_color+(0xFF,),
@@ -125,11 +160,13 @@ class Visualizer(threading.Thread):
         ])
         #print self.analyze_audio()
 
-    def fade_out(self, tau=0.01):
+    def fade_out(self, tau=0.05):
         self.mute_delta = -tau
-    def fade_in(self, tau=0.01):
+    def fade_in(self, tau=0.1):
+        self.unsaturate()
         self.mute_delta = tau
     def white_out(self, tau=0.01):
+        self.unsaturate()
         self.whiteout_delta = -tau
     def white_in(self, tau=0.01):
         self.whiteout_delta = tau
@@ -235,7 +272,7 @@ def refresh(mod, vis):
                 vis.__dict__[key] = item.__get__(vis, mod.Visualizer)
             else:
                 vis.__dict__[key] = item
-        vis.stepfns.append(vis.step)
+    vis.stepfns.append(vis.step)
 
     vis.restart()
     return vis
