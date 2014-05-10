@@ -1,17 +1,20 @@
 #!/usr/bin/python
 
+import collections
+import colorsys
+import math
 import numpy
 import pyaudio
-import time
+import pyfftw
 import struct
-import collections
-from devices import SingleBespeckleDevice
-import colorsys
-import threading
-import traceback
-import math
 import sys
+import threading
+import time
+import traceback
+
+from devices import SingleBespeckleDevice
 from pygame import midi
+from doitlive.refreshable import SafeRefreshableLoop
 
 CMD_SYNC = 0x80
 CMD_TICK = 0x88
@@ -21,7 +24,7 @@ CMD_MSG = 0x81
 CMD_STOP = 0x82
 CMD_PARAM = 0x85
 
-class Visualizer(threading.Thread):
+class Visualizer(SafeRefreshableLoop):
     STRIP_LENGTH=50
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
@@ -33,6 +36,9 @@ class Visualizer(threading.Thread):
     TAU_LPF = .1
     COLOR_PERIOD = 60
 
+    MIDI_NAMES = {
+        11: 'knob1'
+    }
 
     def __init__(self):
         self.b = []
@@ -56,41 +62,20 @@ class Visualizer(threading.Thread):
             self.mi = midi.Input(3)
         except:
             traceback.print_exc()
-            print "Can't find midi, oh well"
+            print "Can't find midi. Continuing..."
         self.mstat = {}
         self.hueoff = 0
         super(Visualizer, self).__init__()
-
-    def stop(self):
-        self.stopped = True
-
-    def restart(self):
-        self.stopped = False
 
     def read_midi_events(self):
         if not self.mi:
             return
         for ev in self.mi.read(100):
             if len(ev[0]) == 4 and ev[0][0] == 176:
-                self.mstat[ev[0][1]] = ev[0][2]
-
-    def run(self):
-        self.stopped = False
-        while True:
-            if self.stopped:
-                time.sleep(0.05)
-            else:
-                # Tolerate errors in step()
-                try: 
-                    self.stepfns[-1]()
-                except:
-                    print "Error running fn step()"
-                    traceback.print_exc()
-                    if len(self.stepfns) > 1:
-                        self.stepfns.pop()
-                    else:
-                        print "Failed to step! Fix your shit!"
-                        self.stopped = True
+                if ev[0][1] in MIDI_NAMES:
+                    self.mstat[MIDI_NAMES[ev[0][1]]] = ev[0][2]
+                else:
+                    self.mstat[ev[0][1]] = ev[0][2]
 
     def unsaturate(self):
         h = self.history[-1]
@@ -98,19 +83,45 @@ class Visualizer(threading.Thread):
         for i in range(self.HISTORY_SIZE):
             self.history.append(h)
 
-
     def inp(self, name, default=0):
         if name in self.mstat:
             return self.mstat[name]
         return default
 
+    def pre_refresh(self):
+        #self.free_devices()
+        pass
+
+    def post_refresh(self):
+        #self.enumerate_devices()
+        pass
+
+    def write_spectrum(self, fft):
+        mval = max(fft)
+        ranges = [mval * x  for x in [0.6, 0.4, 0.2, 0.1, 0.05]]
+        spec_max = 80
+        spec_range = fft[0:spec_max]
+        with open('/tmp/sp', 'w') as f:
+            for r in ranges:
+                f.write("".join([' ' if v < r else '#' for v in spec_range]))
+                f.write("\n")
+            for s in range(spec_max)[::7]:
+                freq = int(self.RATE * s / self.CHUNK)
+                f.write("|{: <6}".format(freq))
+            f.write('\n\n')
+
+            
+
     def step(self):
         def maxat(a): return max(enumerate(a), key=lambda x: x[1])[0] 
-        self.read_midi_events()
+        #self.read_midi_events()
 
         audio, fft = self.analyze_audio()
+        self.write_spectrum(fft)
+
         mind = self.inp(24, 4)
-        dom_freq = maxat(fft[mind:-mind]) + mind
+        dom_chk = maxat(fft[mind:-mind]) + mind
+        dom_freq = self.RATE * dom_chk / self.CHUNK
         #self.dom_freq = dom_freq
 
         dom_freq = self.smooth("dom_freq", dom_freq, self.inp(14, 10) / 500.0)
@@ -143,8 +154,9 @@ class Visualizer(threading.Thread):
         bass_color=self.makecolor(colorsys.hsv_to_rgb(bass_hue,1. * self.whiteout,bass_val * self.mute))
         treble_color=self.makecolor(colorsys.hsv_to_rgb(self.hue,0.7 * self.whiteout,1. * self.mute))
 
-        treble_size = (0.5-0.3*levels[1]) 
-        treble_size = self.smooth("treble_size", treble_size, 0.3)
+        #treble_size = (0.5-0.3*levels[1]) 
+        #treble_size = self.smooth("treble_size", levels[1], 0.3)
+        treble_size = levels[1]
 
         self.mute += self.mute_delta
         self.mute = max(min(self.mute, 1.0), 0.0)
@@ -154,11 +166,32 @@ class Visualizer(threading.Thread):
 
 
         self.update_strip([
-            (0x10,0x00)+bass_color+(0xFF,),
-            (0x05,0x01)+treble_color+(0xFF,self.makebyte(self.STRIP_LENGTH*treble_size),self.makebyte(self.STRIP_LENGTH*(0.5+0.3*levels[1]))),
+            #self.solid_color(bass_color, alpha=0xff, id=0x00),
+            (0x10, 0x00)+bass_color+(0xFF,),
+            (0x05,0x01)+treble_color+(0xFF,self.makebyte(self.STRIP_LENGTH*(0.5-0.3*treble_size)),self.makebyte(self.STRIP_LENGTH*(0.5+0.3*treble_size))),
+            #self.vu_stripe(treble_color, 0.5 - 0.3 * treble_size,  0.5 + 0.3 * treble_size),
             #(0x05,0x02,0x00,0xFF,0xFF,0xFF,self.makebyte(self.STRIP_LENGTH*(0.5-0.2*levels[2])),self.makebyte(self.STRIP_LENGTH*(0.5+0.2*levels[2]))),
         ])
         #print self.analyze_audio()
+
+    def solid_color(self, color, alpha=0xff, id=0x00):
+        return (0x10, id) + color + (alpha,)
+    
+    def vu_stripe(self, color, start, end, alpha=0xff, id=0x01):
+        return (0x05, id) + color + (alpha, self.makebyte(self.STRIP_LENGTH * start), self.makebyte(self.STRIP_LENGTH *end))
+
+    def rainbow(self, id=0x03, omega=1, phi=1, k=10):
+        return (0x03, id, omega, phi, k, 0x00)
+
+    def rainbow_start(self):
+        self.update_strip([
+            self.rainbow(omega=1, phi=1, k=10)
+        ])
+
+    def rainbow_stop(self):
+        self.update_strip([
+            (CMD_STOP, 0x03)
+        ])
 
     def fade_out(self, tau=0.05):
         self.mute_delta = -tau
@@ -220,6 +253,7 @@ class Visualizer(threading.Thread):
     def analyze_audio(self):
         data = self.in_stream.read(self.CHUNK)
         samples = struct.unpack('h'*self.CHUNK,data)
+        #fft = pyfftw.interfaces.numpy_fft.rfft(samples)
         fft=numpy.fft.rfft(samples)
         fft=abs(fft)**2
         out=[]
@@ -252,36 +286,3 @@ class Visualizer(threading.Thread):
     def lpf(self,data,mem,alpha):
         return mem+alpha*(data-mem)
 
-def setup():
-    vis = Visualizer()
-    vis.start()
-    return vis
-
-
-def refresh(mod, vis):
-    try: 
-        reload(mod)
-    except:
-        traceback.print_exc()
-        print "Didn't reload"
-        return vis
-
-    for key, item in mod.Visualizer.__dict__.items():
-        if key not in ("run", "stepfns"):
-            if hasattr(item, '__call__'): # need to re-bind methods first
-                vis.__dict__[key] = item.__get__(vis, mod.Visualizer)
-            else:
-                vis.__dict__[key] = item
-    vis.stepfns.append(vis.step)
-
-    vis.restart()
-    return vis
-
-"""
-import visualizer
-v = visualizer.setup()
-visualizer.refresh(visualizer, v)
-"""
-
-if __name__ == "__main__":
-    setup()

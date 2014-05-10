@@ -1,0 +1,3 @@
+[submodule "doitlive"]
+	path = doitlive
+	url = git@github.com:zbanks/doitlive
