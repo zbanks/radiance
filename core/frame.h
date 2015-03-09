@@ -11,10 +11,20 @@ typedef struct color
 
 typedef void* pat_state_pt;
 
-typedef void (*pat_init_fn_pt)(pat_state_pt state);
-typedef void (*pat_update_fn_pt)(float t, pat_state_pt state);
-typedef color_t (*pat_render_fn_pt)(float x, float y, pat_state_pt state);
+struct slot;
+
+typedef pat_state_pt (*pat_init_fn_pt)();
+typedef void (*pat_update_fn_pt)(struct slot* slot, float t);
+typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
 typedef void (*pat_del_fn_pt)(pat_state_pt state);
+typedef void (*param_val_to_str_fn_pt)(float val, char* buf, int n);
+
+typedef struct parameter
+{
+    char* name;
+    param_val_to_str_fn_pt val_to_str;
+    float default_val;
+} parameter_t;
 
 typedef struct pattern
 {
@@ -22,18 +32,22 @@ typedef struct pattern
     pat_update_fn_pt update;
     pat_render_fn_pt render;
     pat_del_fn_pt del;
+    int n_params;
+    parameter_t* parameters;
 } pattern_t;
 
 typedef struct slot
 {
     const pattern_t* pattern;
     void* state;
+    float* param_values;
 } slot_t;
 
 extern const int n_slots;
 
 extern slot_t slots[];
 
+void update_patterns(float t);
 color_t render_composite(float x, float y);
 
 #endif

@@ -16,7 +16,7 @@ color_t render_composite(float x, float y)
     {
         if(slots[i].pattern)
         {
-            color_t c = (*slots[i].pattern->render)(x, y, slots[i].state);
+            color_t c = (*slots[i].pattern->render)(&slots[i], x, y);
             result.r = result.r * (1 - c.a) + c.r * c.a;
             result.g = result.g * (1 - c.a) + c.g * c.a;
             result.b = result.b * (1 - c.a) + c.b * c.a;
@@ -24,3 +24,15 @@ color_t render_composite(float x, float y)
     }
     return result;
 }
+
+void update_patterns(float t)
+{
+    for(int i=0; i < n_slots; i++)
+    {
+        if(slots[i].pattern)
+        {
+            (*slots[i].pattern->update)(&slots[i], t);
+        }
+    }
+}
+
