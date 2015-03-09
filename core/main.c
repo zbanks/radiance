@@ -32,13 +32,18 @@ color_t pixel_at2(float x, float y, void* state)
     return result;
 }
 
+const pattern_t ball = {
+    .render = &pixel_at,
+};
+
+const pattern_t stripe = {
+    .render = &pixel_at2,
+};
+
 int main()
 {
-    pat_render_fns[0] = &pixel_at2;
-    pat_states[0] = 0;
-
-    pat_render_fns[1] = &pixel_at;
-    pat_states[1] = 0;
+    slots[0].pattern = &stripe;
+    slots[1].pattern = &ball;
 
     if(ui_init())
     {

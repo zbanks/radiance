@@ -9,6 +9,8 @@ static SDL_Surface* screen;
 static SDL_Surface* master;
 static SDL_Surface* pattern;
 
+
+
 int ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
@@ -81,9 +83,9 @@ static void update_master()
     SDL_UnlockSurface(master);
 }
 
-static void update_pattern(pat_render_fn_pt render, pat_state_pt state_p)
+static void update_pattern(slot_t* slot)
 {
-    if(render)
+    if(slot->pattern)
     {
         SDL_LockSurface(pattern);
 
@@ -93,7 +95,7 @@ static void update_pattern(pat_render_fn_pt render, pat_state_pt state_p)
             {
                 float xf = ((float)x / (pattern->w - 1)) * 2 - 1;
                 float yf = ((float)y / (pattern->h - 1)) * 2 - 1;
-                color_t pixel = (*render)(xf, yf, state_p);
+                color_t pixel = (*slot->pattern->render)(xf, yf, slot->state);
                 ((uint32_t*)(pattern->pixels))[x + pattern->w * y] = SDL_MapRGB(
                     pattern->format,
                     (uint8_t)roundf(255 * pixel.r * pixel.a),
@@ -131,7 +133,7 @@ void ui_render()
     r.h = pattern->h;
     for(int i=0; i<n_slots; i++)
     {
-        update_pattern(pat_render_fns[i], pat_states[i]);
+        update_pattern(&slots[i]);
         r.x = 30+120*i;
         r.y = 250;
         SDL_BlitSurface(pattern, 0, screen, &r);
