@@ -29,7 +29,7 @@ color_t pixel_at(slot_t* slot, float x, float y)
     if(n < 0) n = 0;
 
     result.r = 1;
-    result.g = 0;
+    result.g = slot->param_values[0];
     result.b = 0;
     result.a = n;
 
@@ -85,11 +85,14 @@ int main()
         return 1;
     }
 
+    float val = 0.5;
+
     slots[0].pattern = &stripe;
     slots[0].state = (*slots[0].pattern->init)();
 
     slots[1].pattern = &ball;
     slots[1].state = (*slots[1].pattern->init)();
+    slots[1].param_values = &val;
 
     for(int i = 0; i < n_slots; i++)
     {
