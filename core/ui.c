@@ -1,7 +1,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "err.h"
-#include "frame.h"
+#include "slot.h"
 #include <stdint.h>
 #include <math.h>
 
@@ -83,72 +83,44 @@ static struct
     float initial_value;
 } active_param_slider;
 
-int ui_init()
+void ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
     {
-        ERROR("SDL_Init Error: %s\n", SDL_GetError());
-        return 1;
+        FAIL("SDL_Init Error: %s\n", SDL_GetError());
     }
 
     if (TTF_Init())
     {
-        ERROR("TTF_Init Error: %s\n", SDL_GetError());
-        return 1;
+        FAIL("TTF_Init Error: %s\n", SDL_GetError());
     }
 
     win = SDL_CreateWindow("Hello World!", 100, 100, 1024, 600, SDL_WINDOW_SHOWN);
-    if (!win){
-        ERROR("SDL_CreateWindow Error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if (!win) FAIL("SDL_CreateWindow Error: %s\n", SDL_GetError());
 
     screen = SDL_GetWindowSurface(win);
 
-    if (!screen)
-    {
-        SDL_DestroyWindow(win);
-        ERROR("SDL_GetWindowSurface Error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if (!screen) FAIL("SDL_GetWindowSurface Error: %s\n", SDL_GetError());
 
     master_preview = SDL_CreateRGBSurface(0, layout.master_width, layout.master_height, 32, 0, 0, 0, 0);
 
-    if(!master_preview)
-    {
-        ERROR("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if(!master_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     pattern_preview = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
 
-    if(!pattern_preview)
-    {
-        ERROR("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if(!pattern_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
    slot_pane = SDL_CreateRGBSurface(0, layout.slot_width, layout.slot_height, 32, 0, 0, 0, 0);
 
-    if(!slot_pane)
-    {
-        ERROR("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
 
-    if(!font)
-    {
-        ERROR("TTF_OpenFont Error: %s\n", SDL_GetError());
-        return 1;
-    }
+    if(!font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
     mouse_drop_fn_p = 0;
-
-    return 0;
 }
 
 void ui_quit()

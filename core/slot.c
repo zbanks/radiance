@@ -1,6 +1,8 @@
-#include "frame.h"
+#include "slot.h"
+#include "err.h"
 
 #define N_SLOTS 8
+
 const int n_slots = N_SLOTS;
 slot_t slots[N_SLOTS];
 
@@ -34,5 +36,25 @@ void update_patterns(float t)
             (*slots[i].pattern->update)(&slots[i], t);
         }
     }
+}
+
+void pat_load(slot_t* slot, pattern_t* pattern)
+{
+    slot->pattern = pattern;
+    slot->state = (*pattern->init)();
+    if(!slot->state) FAIL("Could not malloc pattern state\n");
+    slot->param_values = malloc(sizeof(float) * pattern->n_params);
+    if(!slot->param_values) FAIL("Could not malloc param values\n");
+    for(int i=0; i < pattern->n_params; i++)
+    {
+        slot->param_values[i] = pattern->parameters[i].default_val;
+    }
+}
+
+void pat_unload(slot_t* slot)
+{
+    (*slot->pattern->del)(slot->state);
+    free(slot->param_values);
+    slot->pattern = 0;
 }
 

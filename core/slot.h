@@ -1,5 +1,5 @@
-#ifndef __FRAME_H
-#define __FRAME_H
+#ifndef __SLOT_H
+#define __SLOT_H
 
 typedef struct color
 {
@@ -9,10 +9,9 @@ typedef struct color
     float a;
 } color_t;
 
-typedef void* pat_state_pt;
-
 struct slot;
 
+typedef void* pat_state_pt;
 typedef pat_state_pt (*pat_init_fn_pt)();
 typedef void (*pat_update_fn_pt)(struct slot* slot, float t);
 typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
@@ -49,5 +48,8 @@ extern slot_t slots[];
 
 void update_patterns(float t);
 color_t render_composite(float x, float y);
+
+void pat_load(slot_t* slot, pattern_t* pattern);
+void pat_unload(slot_t* slot);
 
 #endif
