@@ -23,8 +23,6 @@ int main()
         // TODO rate-limit
     }
 
-    pat_unload(&slots[0]);
-    pat_unload(&slots[1]);
     ui_quit();
 
     return 0;

@@ -21,6 +21,11 @@ static int mouse_drag_start_y;
 
 static const struct
 {
+    int win_x;
+    int win_y;
+    int win_width;
+    int win_height;
+
     int master_x;
     int master_y;
     int master_width;
@@ -56,6 +61,11 @@ static const struct
     int pattern_text_x;
     int pattern_text_y;
 } layout = {
+    .win_x = 100,
+    .win_y = 100,
+    .win_width = 1024,
+    .win_height = 600,
+
     .master_x = 30,
     .master_y = 30,
     .master_width = 200,
@@ -102,6 +112,13 @@ static struct
     float initial_value;
 } active_param_slider;
 
+static struct
+{
+    int index;
+    int dx;
+    int dy;
+} active_pattern;
+
 void ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
@@ -114,7 +131,7 @@ void ui_init()
         FAIL("TTF_Init Error: %s\n", SDL_GetError());
     }
 
-    win = SDL_CreateWindow("Hello World!", 100, 100, 1024, 600, SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("Hello World!", layout.win_x, layout.win_y, layout.win_width, layout.win_height, SDL_WINDOW_SHOWN);
     if (!win) FAIL("SDL_CreateWindow Error: %s\n", SDL_GetError());
 
     screen = SDL_GetWindowSurface(win);
@@ -143,14 +160,19 @@ void ui_init()
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
-
     mouse_down = 0;
     mouse_drag_fn_p = 0;
     mouse_drop_fn_p = 0;
+    active_pattern.index = -1;
 }
 
 void ui_quit()
 {
+    for(int i=0; i<n_slots; i++)
+    {
+        pat_unload(&slots[i]);
+    }
+
     SDL_FreeSurface(master_preview);
     SDL_FreeSurface(pattern_preview);
     SDL_FreeSurface(slot_pane);
@@ -272,6 +294,7 @@ static void ui_update_pattern(pattern_t* pattern)
     SDL_Surface* msg = TTF_RenderText_Solid(pattern_font, pattern->name, white);
     r.x = layout.pattern_text_x;
     r.y = layout.pattern_text_y;
+
     r.w = msg->w;
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, pattern_pane, &r);
@@ -281,6 +304,12 @@ static void ui_update_pattern(pattern_t* pattern)
 void ui_render()
 {
     SDL_Rect r;
+
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.win_width;
+    r.h = layout.win_height;
+    SDL_FillRect(screen, &r, SDL_MapRGB(screen->format, 0, 0, 0));
 
     update_master_preview();
     r.x = layout.master_x;
@@ -306,6 +335,12 @@ void ui_render()
         r.h = layout.pattern_height;
         r.x = layout.pattern_start_x + layout.pattern_pitch * i;
         r.y = layout.pattern_start_y;
+        if(active_pattern.index == i)
+        {
+            r.x += active_pattern.dx;
+            r.y += active_pattern.dy;
+        }
+
         SDL_BlitSurface(pattern_pane, 0, screen, &r);
     }
 
@@ -329,22 +364,47 @@ static void mouse_drag_param_slider(int x, int y)
     active_param_slider.slot->param_values[active_param_slider.index] = val;
 }
 
-static int mouse_click_slot(slot_t* slot, int x, int y)
+static void mouse_drag_pattern(int x, int y)
+{
+    active_pattern.dx = x;
+    active_pattern.dy = y;
+}
+
+static void mouse_drop_pattern()
+{
+    int x = mouse_drag_start_x + active_pattern.dx;
+    int y = mouse_drag_start_y + active_pattern.dy;
+
+    for(int i = 0; i < n_slots; i++)
+    {
+        if(in_rect(x,y,
+                   layout.slot_start_x + layout.slot_pitch * i,
+                   layout.slot_start_y,
+                   layout.slot_width, layout.slot_height))
+        {
+            pat_unload(&slots[i]);
+            pat_load(&slots[i],patterns[active_pattern.index]);
+        }
+    }
+    active_pattern.index = -1;
+}
+
+static int mouse_click_slot(int index, int x, int y)
 {
     // See if the click is on a parameter slider
-    for(int i = 0; i < slot->pattern->n_params; i++)
+    for(int i = 0; i < slots[index].pattern->n_params; i++)
     {
         if(in_rect(x, y,
                    layout.param_handle_start_x +
-                     slot->param_values[i] *
+                     slots[index].param_values[i] *
                      (layout.param_slider_width - layout.param_handle_width),
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
-            active_param_slider.slot = slot;
+            active_param_slider.slot = &slots[index];
             active_param_slider.index = i;
-            active_param_slider.initial_value = slot->param_values[i];
+            active_param_slider.initial_value = slots[index].param_values[i];
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
@@ -353,7 +413,7 @@ static int mouse_click_slot(slot_t* slot, int x, int y)
     return 0;
 }
 
-static int mouse_click_master(int x, int y)
+static int mouse_click(int x, int y)
 {
     // See if click is in a slot
     for(int i=0; i<n_slots; i++)
@@ -364,9 +424,26 @@ static int mouse_click_master(int x, int y)
                    layout.slot_width, layout.slot_height))
         {
             // If it is, see if that slot wants to handle it
-            return mouse_click_slot(&slots[i],
+            return mouse_click_slot(i,
                                     x - (layout.slot_start_x + layout.slot_pitch * i),
                                     y - layout.slot_start_y);
+        }
+    }
+
+    // See if click is in a pattern
+    for(int i=0; i<n_slots; i++)
+    {
+        if(in_rect(x, y, 
+                   layout.pattern_start_x + layout.pattern_pitch * i,
+                   layout.pattern_start_y,
+                   layout.pattern_width, layout.pattern_height))
+        {
+            active_pattern.index = i;
+            active_pattern.dx = 0;
+            active_pattern.dy = 0;
+            mouse_drag_fn_p = &mouse_drag_pattern;
+            mouse_drop_fn_p = &mouse_drop_pattern;
+            return 1;
         }
     }
 
@@ -384,7 +461,7 @@ int ui_poll()
             case SDL_QUIT:
                 return 1;
             case SDL_MOUSEBUTTONDOWN:
-                mouse_click_master(e.button.x, e.button.y);
+                mouse_click(e.button.x, e.button.y);
                 mouse_down = 1;
                 mouse_drag_start_x = e.button.x;
                 mouse_drag_start_y = e.button.y;

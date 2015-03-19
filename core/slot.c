@@ -53,6 +53,7 @@ void pat_load(slot_t* slot, pattern_t* pattern)
 
 void pat_unload(slot_t* slot)
 {
+    if(!slot->pattern) return;
     (*slot->pattern->del)(slot->state);
     free(slot->param_values);
     slot->pattern = 0;
