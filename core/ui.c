@@ -4,13 +4,16 @@
 #include "slot.h"
 #include <stdint.h>
 #include <math.h>
+#include <pattern.h>
 
 static SDL_Window* win;
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;
 static SDL_Surface* pattern_preview;
 static SDL_Surface* slot_pane;
-static TTF_Font* font;
+static SDL_Surface* pattern_pane;
+static TTF_Font* param_font;
+static TTF_Font* pattern_font;
 
 static int mouse_down;
 static int mouse_drag_start_x;
@@ -29,10 +32,10 @@ static const struct
     int slot_height;
     int slot_pitch;
 
-    int pattern_x;
-    int pattern_y;
-    int pattern_width;
-    int pattern_height;
+    int preview_x;
+    int preview_y;
+    int preview_width;
+    int preview_height;
 
     int param_text_start_x;
     int param_text_start_y;
@@ -44,6 +47,14 @@ static const struct
     int param_handle_start_y;
     int param_handle_width;
     int param_handle_height;
+
+    int pattern_start_x;
+    int pattern_start_y;
+    int pattern_pitch;
+    int pattern_width;
+    int pattern_height;
+    int pattern_text_x;
+    int pattern_text_y;
 } layout = {
     .master_x = 30,
     .master_y = 30,
@@ -56,10 +67,10 @@ static const struct
     .slot_height = 250,
     .slot_pitch = 125,
 
-    .pattern_x = 5,
-    .pattern_y = 5,
-    .pattern_width = 100,
-    .pattern_height = 100,
+    .preview_x = 5,
+    .preview_y = 5,
+    .preview_width = 100,
+    .preview_height = 100,
 
     .param_text_start_x = 3,
     .param_text_start_y = 110,
@@ -71,6 +82,14 @@ static const struct
     .param_handle_start_y = 120,
     .param_handle_width = 10,
     .param_handle_height = 10,
+
+    .pattern_start_x = 10,
+    .pattern_start_y = 520,
+    .pattern_width = 100,
+    .pattern_height = 30,
+    .pattern_pitch = 120,
+    .pattern_text_x = 5,
+    .pattern_text_y = 3,
 };
 
 static void (*mouse_drag_fn_p)(int x, int y);
@@ -106,17 +125,24 @@ void ui_init()
 
     if(!master_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    pattern_preview = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
+    pattern_preview = SDL_CreateRGBSurface(0, layout.preview_width, layout.preview_height, 32, 0, 0, 0, 0);
 
     if(!pattern_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-   slot_pane = SDL_CreateRGBSurface(0, layout.slot_width, layout.slot_height, 32, 0, 0, 0, 0);
+    slot_pane = SDL_CreateRGBSurface(0, layout.slot_width, layout.slot_height, 32, 0, 0, 0, 0);
 
     if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
+    pattern_pane = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
 
-    if(!font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+    if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+
+    param_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
+    if(!param_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+
+    pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
+    if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -128,7 +154,8 @@ void ui_quit()
     SDL_FreeSurface(master_preview);
     SDL_FreeSurface(pattern_preview);
     SDL_FreeSurface(slot_pane);
-    TTF_CloseFont(font);
+    TTF_CloseFont(param_font);
+    TTF_CloseFont(pattern_font);
     SDL_DestroyWindow(win);
     SDL_Quit();
 }
@@ -159,14 +186,14 @@ static void update_pattern_preview(slot_t* slot)
 {
     SDL_LockSurface(pattern_preview);
 
-    for(int x = 0; x < layout.pattern_width; x++)
+    for(int x = 0; x < layout.preview_width; x++)
     {
-        for(int y=0 ;y < layout.pattern_height; y++)
+        for(int y=0 ;y < layout.preview_height; y++)
         {
-            float xf = ((float)x / (layout.pattern_width - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.pattern_height - 1)) * 2 - 1;
+            float xf = ((float)x / (layout.preview_width - 1)) * 2 - 1;
+            float yf = ((float)y / (layout.preview_height - 1)) * 2 - 1;
             color_t pixel = (*slot->pattern->render)(slot, xf, yf);
-            ((uint32_t*)(pattern_preview->pixels))[x + layout.pattern_width * y] = SDL_MapRGB(
+            ((uint32_t*)(pattern_preview->pixels))[x + layout.preview_width * y] = SDL_MapRGB(
                 pattern_preview->format,
                 (uint8_t)roundf(255 * pixel.r * pixel.a),
                 (uint8_t)roundf(255 * pixel.g * pixel.a),
@@ -177,29 +204,29 @@ static void update_pattern_preview(slot_t* slot)
     SDL_UnlockSurface(pattern_preview);
 }
 
-void ui_update_slot(slot_t* slot)
+static void ui_update_slot(slot_t* slot)
 {
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
     r.w = layout.slot_width;
     r.h = layout.slot_height;
-    SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 20, 20, 20));
+    SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
     if(slot->pattern)
     {
         update_pattern_preview(slot);
-        r.w = layout.pattern_width;
-        r.h = layout.pattern_height;
-        r.x = layout.pattern_x;
-        r.y = layout.pattern_y;
+        r.w = layout.preview_width;
+        r.h = layout.preview_height;
+        r.x = layout.preview_x;
+        r.y = layout.preview_y;
         SDL_BlitSurface(pattern_preview, 0, slot_pane, &r);
 
         SDL_Color white = {255, 255, 255};
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
-            SDL_Surface* msg = TTF_RenderText_Solid(font, slot->pattern->parameters[i].name, white);
+            SDL_Surface* msg = TTF_RenderText_Solid(param_font, slot->pattern->parameters[i].name, white);
             r.x = layout.param_text_start_x;
             r.y = layout.param_text_start_y+layout.param_pitch*i;
             r.w = msg->w;
@@ -219,7 +246,7 @@ void ui_update_slot(slot_t* slot)
             r.w = layout.param_handle_width;
             r.h = layout.param_handle_height;
 
-            SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 0, 0, 80));
+            SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
         }
     }
     else
@@ -230,6 +257,25 @@ void ui_update_slot(slot_t* slot)
         r.h = layout.slot_height-2;
         SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 0, 0, 0));
     }
+}
+
+static void ui_update_pattern(pattern_t* pattern)
+{
+    SDL_Rect r;
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.pattern_width;
+    r.h = layout.pattern_height;
+    SDL_FillRect(pattern_pane, &r, SDL_MapRGB(pattern_pane->format, 20, 20, 20));
+
+    SDL_Color white = {255, 255, 255};
+    SDL_Surface* msg = TTF_RenderText_Solid(pattern_font, pattern->name, white);
+    r.x = layout.pattern_text_x;
+    r.y = layout.pattern_text_y;
+    r.w = msg->w;
+    r.h = msg->h;
+    SDL_BlitSurface(msg, 0, pattern_pane, &r);
+    SDL_FreeSurface(msg);
 }
 
 void ui_render()
@@ -251,6 +297,16 @@ void ui_render()
         r.x = layout.slot_start_x+layout.slot_pitch*i;
         r.y = layout.slot_start_y;
         SDL_BlitSurface(slot_pane, 0, screen, &r);
+    }
+
+    for(int i=0; i<n_patterns; i++)
+    {
+        ui_update_pattern(patterns[i]);
+        r.w = layout.pattern_width;
+        r.h = layout.pattern_height;
+        r.x = layout.pattern_start_x + layout.pattern_pitch * i;
+        r.y = layout.pattern_start_y;
+        SDL_BlitSurface(pattern_pane, 0, screen, &r);
     }
 
     SDL_UpdateWindowSurface(win);

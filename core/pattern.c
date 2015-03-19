@@ -1,6 +1,15 @@
 #include "pattern.h"
 #include "slot.h"
 #include <stdlib.h>
+#include <math.h>
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
+#define N_PATTERNS 2
+
+const int n_patterns = N_PATTERNS;
+const pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave};
 
 static color_t param_to_color(float param)
 {
@@ -47,7 +56,57 @@ const pattern_t pat_full = {
     .update = &pat_full_update,
     .n_params = 1,
     .parameters = pat_full_params,
+    .name = "Full",
 };
+
+typedef struct
+{
+    color_t color;
+    float phase;
+} pat_wave_state_t;
+
+pat_state_pt pat_wave_init()
+{
+    return malloc(sizeof(pat_wave_state_t));
+}
+
+void pat_wave_del(pat_state_pt state)
+{
+    free(state);
+}
+
+void pat_wave_update(slot_t* slot, float t)
+{
+    pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
+    state->color = param_to_color(slot->param_values[0]);
+    state->phase = t;
+}
+
+color_t pat_wave_pixel(slot_t* slot, float x, float y)
+{
+    pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
+    color_t result = state->color;
+    result.a = (sin((state->phase + y) * 4 * M_PI) + 1) / 2;
+    return result;
+}
+
+const parameter_t pat_wave_params[1] = {
+    {
+        .name = "Color",
+        .default_val = 0.5,
+    },
+};
+
+const pattern_t pat_wave = {
+    .render = &pat_wave_pixel,
+    .init = &pat_wave_init,
+    .del = &pat_wave_del,
+    .update = &pat_wave_update,
+    .n_params = 1,
+    .parameters = pat_wave_params,
+    .name = "Wave",
+};
+
 
 /*
 pat_state_pt init()

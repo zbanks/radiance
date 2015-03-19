@@ -11,11 +11,7 @@ int main()
     ui_init();
 
     pat_load(&slots[0], &pat_full);
-
-    for(int i = 0; i < n_slots; i++)
-    {
-        ui_update_slot(&slots[i]);
-    }
+    pat_load(&slots[1], &pat_wave);
 
     for(;;)
     {
@@ -28,6 +24,7 @@ int main()
     }
 
     pat_unload(&slots[0]);
+    pat_unload(&slots[1]);
     ui_quit();
 
     return 0;

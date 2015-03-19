@@ -33,6 +33,7 @@ typedef struct pattern
     pat_del_fn_pt del;
     int n_params;
     parameter_t* parameters;
+    const char* name;
 } pattern_t;
 
 typedef struct slot
