@@ -119,6 +119,13 @@ static struct
     int dy;
 } active_pattern;
 
+static struct
+{
+    int index;
+    int dx;
+    int dy;
+} active_slot;
+
 void ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
@@ -164,6 +171,7 @@ void ui_init()
     mouse_drag_fn_p = 0;
     mouse_drop_fn_p = 0;
     active_pattern.index = -1;
+    active_slot.index = -1;
 }
 
 void ui_quit()
@@ -271,14 +279,6 @@ static void ui_update_slot(slot_t* slot)
             SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
         }
     }
-    else
-    {
-        r.x = 1;
-        r.y = 1;
-        r.w = layout.slot_width-2;
-        r.h = layout.slot_height-2;
-        SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 0, 0, 0));
-    }
 }
 
 static void ui_update_pattern(pattern_t* pattern)
@@ -320,12 +320,21 @@ void ui_render()
 
     for(int i=0; i<n_slots; i++)
     {
-        ui_update_slot(&slots[i]);
-        r.w = slot_pane->w;
-        r.h = slot_pane->h;
-        r.x = layout.slot_start_x+layout.slot_pitch*i;
-        r.y = layout.slot_start_y;
-        SDL_BlitSurface(slot_pane, 0, screen, &r);
+        if(slots[i].pattern)
+        {
+            ui_update_slot(&slots[i]);
+            r.w = slot_pane->w;
+            r.h = slot_pane->h;
+            r.x = layout.slot_start_x + layout.slot_pitch * i;
+            r.y = layout.slot_start_y;
+            if(active_slot.index == i)
+            {
+                r.x += active_slot.dx;
+                r.y += active_slot.dy;
+            }
+
+            SDL_BlitSurface(slot_pane, 0, screen, &r);
+        }
     }
 
     for(int i=0; i<n_patterns; i++)
@@ -370,6 +379,13 @@ static void mouse_drag_pattern(int x, int y)
     active_pattern.dy = y;
 }
 
+static void mouse_drag_slot(int x, int y)
+{
+    active_slot.dx = x;
+    active_slot.dy = y;
+}
+
+
 static void mouse_drop_pattern()
 {
     int x = mouse_drag_start_x + active_pattern.dx;
@@ -387,6 +403,26 @@ static void mouse_drop_pattern()
         }
     }
     active_pattern.index = -1;
+}
+
+static void mouse_drop_slot()
+{
+    int x = mouse_drag_start_x + active_slot.dx;
+    int y = mouse_drag_start_y + active_slot.dy;
+
+    for(int i = 0; i < n_slots; i++)
+    {
+        if(in_rect(x,y,
+                   layout.slot_start_x + layout.slot_pitch * i,
+                   layout.slot_start_y,
+                   layout.slot_width, layout.slot_height))
+        {
+            slot_t temp_slot = slots[i];
+            slots[i] = slots[active_slot.index];
+            slots[active_slot.index] = temp_slot;
+        }
+    }
+    active_slot.index = -1;
 }
 
 static int mouse_click_slot(int index, int x, int y)
@@ -410,7 +446,15 @@ static int mouse_click_slot(int index, int x, int y)
         }
     }
 
-    return 0;
+    // Else, drag the slot
+    active_slot.index = index;
+    active_slot.dx = 0;
+    active_slot.dy = 0;
+
+    mouse_drag_fn_p = &mouse_drag_slot;
+    mouse_drop_fn_p = &mouse_drop_slot;
+    return 1;
+
 }
 
 static int mouse_click(int x, int y)
