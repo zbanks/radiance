@@ -1,12 +1,13 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#include <SDL/SDL.h>
+#include <SDL/SDL_ttf.h>
+#include <SDL/SDL_gfxPrimitives.h>
 #include "err.h"
 #include "slot.h"
 #include <stdint.h>
 #include <math.h>
 #include <pattern.h>
+#include <slice.h>
 
-static SDL_Window* win;
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;
 static SDL_Surface* pattern_preview;
@@ -21,8 +22,6 @@ static int mouse_drag_start_y;
 
 static const struct
 {
-    int win_x;
-    int win_y;
     int win_width;
     int win_height;
 
@@ -61,8 +60,6 @@ static const struct
     int pattern_text_x;
     int pattern_text_y;
 } layout = {
-    .win_x = 100,
-    .win_y = 100,
     .win_width = 1024,
     .win_height = 600,
 
@@ -138,12 +135,9 @@ void ui_init()
         FAIL("TTF_Init Error: %s\n", SDL_GetError());
     }
 
-    win = SDL_CreateWindow("Hello World!", layout.win_x, layout.win_y, layout.win_width, layout.win_height, SDL_WINDOW_SHOWN);
-    if (!win) FAIL("SDL_CreateWindow Error: %s\n", SDL_GetError());
+    screen = SDL_SetVideoMode(layout.win_width, layout.win_height, 0, SDL_DOUBLEBUF);
 
-    screen = SDL_GetWindowSurface(win);
-
-    if (!screen) FAIL("SDL_GetWindowSurface Error: %s\n", SDL_GetError());
+    if (!screen) FAIL("SDL_SetVideoMode Error: %s\n", SDL_GetError());
 
     master_preview = SDL_CreateRGBSurface(0, layout.master_width, layout.master_height, 32, 0, 0, 0, 0);
 
@@ -186,8 +180,25 @@ void ui_quit()
     SDL_FreeSurface(slot_pane);
     TTF_CloseFont(param_font);
     TTF_CloseFont(pattern_font);
-    SDL_DestroyWindow(win);
     SDL_Quit();
+}
+
+static int x_to_px(float x)
+{
+    return (int)(((x + 1) / 2) * layout.master_width);
+}
+
+static int y_to_px(float y)
+{
+    return (int)(((y + 1) / 2) * layout.master_height);
+}
+
+static int SDL_line(SDL_Surface* dst, int16_t x1, int16_t y1, int16_t x2, int16_t y2,
+                    uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+{
+    if(x1 == x2) return vlineRGBA(dst, x1, y1, y2, r, g, b, a);
+    if(y1 == y2) return hlineRGBA(dst, x1, x2, y1, r, g, b, a);
+    return lineRGBA(dst, x1, y1, x2, y2, r, g, b, a);
 }
 
 static void update_master_preview()
@@ -203,13 +214,35 @@ static void update_master_preview()
             color_t pixel = render_composite(xf, yf);
             ((uint32_t*)(master_preview->pixels))[x + layout.master_width * y] = SDL_MapRGB(
                 master_preview->format,
-                (uint8_t)roundf(255*pixel.r),
-                (uint8_t)roundf(255*pixel.g),
-                (uint8_t)roundf(255*pixel.b));
+                (uint8_t)roundf(255 * pixel.r),
+                (uint8_t)roundf(255 * pixel.g),
+                (uint8_t)roundf(255 * pixel.b));
         }
     }
 
     SDL_UnlockSurface(master_preview);
+
+    for(int i=0; i<n_output_strips; i++)
+    {
+        int x1;
+        int y1;
+        output_vertex_t* v = output_strips[i].first;
+
+        int x2 = x_to_px(v->x);
+        int y2 = y_to_px(v->y);
+        for(v = v->next; v; v = v->next)
+        {
+            x1 = x2;
+            y1 = y2;
+            x2 = x_to_px(v->x);
+            y2 = y_to_px(v->y);
+
+            SDL_line(master_preview,
+                     x1, y1,
+                     x2, y2,
+                     255,255,0,255);
+        }
+    }
 }
 
 static void update_pattern_preview(slot_t* slot)
@@ -218,7 +251,7 @@ static void update_pattern_preview(slot_t* slot)
 
     for(int x = 0; x < layout.preview_width; x++)
     {
-        for(int y=0 ;y < layout.preview_height; y++)
+        for(int y = 0; y < layout.preview_height; y++)
         {
             float xf = ((float)x / (layout.preview_width - 1)) * 2 - 1;
             float yf = ((float)y / (layout.preview_height - 1)) * 2 - 1;
@@ -353,7 +386,7 @@ void ui_render()
         SDL_BlitSurface(pattern_pane, 0, screen, &r);
     }
 
-    SDL_UpdateWindowSurface(win);
+    SDL_Flip(screen);
 }
 
 static int in_rect(int x, int y, int rx, int ry, int rw, int rh)
