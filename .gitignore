@@ -1,2 +1,6 @@
 *.o
 beat-off
+*.swp
+*.swm
+*.swn
+*.swo

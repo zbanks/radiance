@@ -6,7 +6,7 @@ C_INC  = $(wildcard core/*.h)
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 
 INC  = -Icore
-LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm
+LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread
 
 # Assembler, compiler, and linker flags
 CFLAGS  = -g -O0 $(INC) -std=c99 -Wall
