@@ -55,6 +55,8 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
 
 void output_to_buffer(output_strip_t* strip, color_t* buffer)
 {
+    pthread_mutex_lock(&patterns_updating);
+
     output_vertex_t* vert = strip->first;
 
     for(int i=0; i<strip->length; i++)
@@ -71,5 +73,7 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
 
         buffer[i] = render_composite(x, y);
     }
+
+    pthread_mutex_unlock(&patterns_updating);
 }
 

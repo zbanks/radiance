@@ -1,11 +1,12 @@
 #include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <pthread.h>
 #include "err.h"
 #include "slot.h"
 #include "pattern.h"
 #include "ui.h"
-#include <math.h>
-#include <stdlib.h>
-#include <slice.h>
+#include "slice.h"
 
 int main()
 {
@@ -14,7 +15,9 @@ int main()
     pat_load(&slots[0], &pat_full);
     pat_load(&slots[1], &pat_wave);
 
-    color_t buffer[200];
+    pthread_mutex_init(&patterns_updating, 0);
+
+    output_start();
 
     for(;;)
     {
@@ -23,9 +26,12 @@ int main()
         if(ui_poll()) break;
         update_patterns(t);
         ui_render();
-        //output_to_buffer(&output_strips[0], buffer);
         // TODO rate-limit
     }
+
+    output_stop();
+
+    pthread_mutex_destroy(&patterns_updating);
 
     ui_quit();
 

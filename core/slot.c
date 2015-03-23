@@ -6,6 +6,8 @@
 const int n_slots = N_SLOTS;
 slot_t slots[N_SLOTS];
 
+pthread_mutex_t patterns_updating;
+
 color_t render_composite(float x, float y)
 {
     color_t result;
@@ -29,6 +31,8 @@ color_t render_composite(float x, float y)
 
 void update_patterns(float t)
 {
+    pthread_mutex_lock(&patterns_updating);
+
     for(int i=0; i < n_slots; i++)
     {
         if(slots[i].pattern)
@@ -36,6 +40,8 @@ void update_patterns(float t)
             (*slots[i].pattern->update)(&slots[i], t);
         }
     }
+
+    pthread_mutex_unlock(&patterns_updating);    
 }
 
 void pat_load(slot_t* slot, pattern_t* pattern)
