@@ -18,11 +18,6 @@ color_t** output_buffers = 0;
 
 static SDL_Thread* output_thread;
 
-static int serial_set_attribs (int, int, int);
-static void serial_set_blocking (int, int);
-
-static int ser;
- 
 static int output_run(void* args)
 {
     while(output_running)

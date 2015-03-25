@@ -1,11 +1,15 @@
 # Files to include
 C_SRC  = $(wildcard core/*.c)
+C_SRC += $(wildcard lib/*.c)
+C_SRC += $(wildcard lib/lux/src*.c)
 
 C_INC  = $(wildcard core/*.h)
+C_INC += $(wildcard lib/*.h)
+C_INC += $(wildcard lib/lux/inc*.h)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 
-INC  = -Icore
+INC  = -Icore -Ilib/lux/inc -Ilib
 LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread
 
 # Assembler, compiler, and linker flags
@@ -17,6 +21,6 @@ all: beat-off
 clean:
 	-rm -f $(OBJECTS) beat-off
 beat-off: $(OBJECTS)
-	gcc $(LFLAGS) -o beat-off $(OBJECTS) $(LIB)
+	gcc $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
 %.o: %.c $(C_INC)
 	gcc $(CFLAGS) -c -o $@ $<
