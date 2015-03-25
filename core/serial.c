@@ -123,14 +123,14 @@ int serial_set_attribs (int fd, int speed, int parity)
         printf("speed: %d\n", closestSpeed);
         
         fcntl(fd, F_SETFL, 0);
-        tcgetattr(fd, &options);
-        cfsetispeed(&options, speed ?: B38400);
-        cfsetospeed(&options, speed ?: B38400);
-        cfmakeraw(&options);
-        options.c_cflag |= (CLOCAL | CREAD);
-        options.c_cflag &= ~CRTSCTS;
-        if (tcsetattr(fd, TCSANOW, &options) != 0)
-            return -1;
+        //tcgetattr(fd, &options);
+        //cfsetispeed(&options, speed ?: B38400);
+        //cfsetospeed(&options, speed ?: B38400);
+        //cfmakeraw(&options);
+        //options.c_cflag |= (CLOCAL | CREAD);
+        //options.c_cflag &= ~CRTSCTS;
+        //if (tcsetattr(fd, TCSANOW, &options) != 0)
+        //    return -1;
 
         ioctl(ser, TIOCSSERIAL, &serinfo);
 

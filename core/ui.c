@@ -460,6 +460,8 @@ static void mouse_drop_slot()
 
 static int mouse_click_slot(int index, int x, int y)
 {
+    if(!slots[index].pattern) return 0;
+
     // See if the click is on a parameter slider
     for(int i = 0; i < slots[index].pattern->n_params; i++)
     {
