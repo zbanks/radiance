@@ -1,6 +1,4 @@
 #include "output.h"
-#define _BSD_SOURCE
-#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -9,16 +7,23 @@
 #include "slot.h"
 #include "err.h"
 #include "serial.h"
+#include "crc.h"
+#include "lux.h"
+#include <SDL/SDL_thread.h>
+#include <SDL/SDL_timer.h>
 
 int output_running;
 
 color_t** output_buffers = 0;
 
-static pthread_t output_thread;
+static SDL_Thread* output_thread;
 
-static pthread_attr_t attr;
+static int serial_set_attribs (int, int, int);
+static void serial_set_blocking (int, int);
+
+static int ser;
  
-static void* output_run(void* args)
+static int output_run(void* args)
 {
     while(output_running)
     {
@@ -28,7 +33,7 @@ static void* output_run(void* args)
         }
         // TODO: Lux goes here
         write(ser, "\x00\x94\xff\xff\xff\xff\x91\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x02\xff_\x83\x00", 150);
-        usleep(1000);
+        SDL_Delay(1);
     }
     return 0;
 }
@@ -48,20 +53,15 @@ void output_start()
     serial_init();
     output_running = 1;
 
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-    if(pthread_create(&output_thread, &attr, &output_run, 0)) FAIL("Could not create output thread");
-
+    output_thread = SDL_CreateThread(&output_run, 0);
+    if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
 }
 
 void output_stop()
 {
     output_running = 0;
 
-    pthread_join(output_thread, 0);
-
-    pthread_attr_destroy(&attr);
+    SDL_WaitThread(output_thread, 0);
 
     for(int i=0; i<n_output_strips; i++)
     {

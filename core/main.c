@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#include <pthread.h>
+#include <SDL/SDL_thread.h>
 #include "err.h"
 #include "slot.h"
 #include "pattern.h"
@@ -15,7 +15,7 @@ int main()
     pat_load(&slots[0], &pat_full);
     pat_load(&slots[1], &pat_wave);
 
-    pthread_mutex_init(&patterns_updating, 0);
+    patterns_updating = SDL_CreateMutex();
 
     output_start();
 
@@ -31,7 +31,7 @@ int main()
 
     output_stop();
 
-    pthread_mutex_destroy(&patterns_updating);
+    SDL_DestroyMutex(patterns_updating);
 
     ui_quit();
 
