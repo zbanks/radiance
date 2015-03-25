@@ -1,7 +1,7 @@
 #ifndef __SLOT_H
 #define __SLOT_H
 
-#include <pthread.h>
+#include <SDL/SDL_mutex.h>
 
 typedef struct color
 {
@@ -55,6 +55,6 @@ color_t render_composite(float x, float y);
 void pat_load(slot_t* slot, pattern_t* pattern);
 void pat_unload(slot_t* slot);
 
-extern pthread_mutex_t patterns_updating;
+extern SDL_mutex* patterns_updating;
 
 #endif

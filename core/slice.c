@@ -1,5 +1,7 @@
 #include "slice.h"
 #include "slot.h"
+#include "err.h"
+#include <SDL/SDL_thread.h>
 
 output_vertex_t s1v2 = {
     .x = 0.3,
@@ -55,7 +57,7 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
 
 void output_to_buffer(output_strip_t* strip, color_t* buffer)
 {
-    pthread_mutex_lock(&patterns_updating);
+    if(SDL_LockMutex(patterns_updating)) FAIL("Unable to lock update mutex: %s\n", SDL_GetError());
 
     output_vertex_t* vert = strip->first;
 
@@ -74,6 +76,6 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
         buffer[i] = render_composite(x, y);
     }
 
-    pthread_mutex_unlock(&patterns_updating);
+    SDL_UnlockMutex(patterns_updating);
 }
 
