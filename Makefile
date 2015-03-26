@@ -9,8 +9,8 @@ C_INC += $(wildcard lib/lux/inc/*.h)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 
-INC  = -Icore -Ilib/lux/inc -Ilib
-LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread
+INC  = -Icore -Ilib/lux/inc -Ilib -L/usr/local/lib
+LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio
 
 # Assembler, compiler, and linker flags
 CFLAGS  = -g -O0 $(INC) -std=c99 -Wall

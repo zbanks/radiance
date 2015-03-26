@@ -2,11 +2,14 @@
 #include <math.h>
 #include <stdlib.h>
 #include <SDL/SDL_thread.h>
+#include <SDL/SDL_timer.h>
+#include "audio.h"
 #include "err.h"
-#include "slot.h"
+#include "output.h"
 #include "pattern.h"
-#include "ui.h"
 #include "slice.h"
+#include "slot.h"
+#include "ui.h"
 
 int main()
 {
@@ -18,6 +21,7 @@ int main()
     patterns_updating = SDL_CreateMutex();
 
     output_start();
+    audio_start();
 
     for(;;)
     {
@@ -29,6 +33,7 @@ int main()
         // TODO rate-limit
     }
 
+    audio_stop();
     output_stop();
 
     SDL_DestroyMutex(patterns_updating);

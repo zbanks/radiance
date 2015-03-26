@@ -8,32 +8,32 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/serial.h>
+#include <SDL/SDL_timer.h>
 
 #include "crc.h"
 #include "err.h"
 #include "lux.h"
+#include "lux.h"
 
 int ser;
+static char lux_is_transmitting;
 static crc_t crc;
-//uint8_t lux_packet[1024];
 
 uint8_t match_destination(uint8_t* dest){
     uint32_t addr = *(uint32_t *)dest;
     return addr == 0;
 }
 
-
 void rx_packet() {
-    lux_packet_in_memory = 0;
 }
 
 char serial_init(){
     char dbuf[32];
     for(int i = 0; i < 9; i++){
         sprintf(dbuf, "/dev/ttyUSB%d", i);
-        ser = open("/dev/ttyUSB3", O_RDWR | O_NOCTTY | O_SYNC);
+        ser = open(dbuf, O_RDWR | O_NOCTTY | O_SYNC);
         if(ser > 0){
-            printf("Found output on '%s'\n", dbuf);
+            printf("Found output on '%s', %d\n", dbuf, ser);
             break;
         }
         //if(ser < 0) FAIL("error opening port: %d", ser);
@@ -44,23 +44,105 @@ char serial_init(){
     lux_init();
 
     if(ser > 0){
-        serial_set_attribs(ser, 3000000, 1);
+        serial_set_attribs(ser, 3000000);
         serial_set_blocking(ser, 1);
         return 1;
     }
     return 0;
 }
 
+char lux_command_response(struct lux_frame *cmd, struct lux_frame *response){
+    // Transmits command `*cmd`, and waits for response and saves it to `*response`
+    // Returns 0 on success 
+    char r;
+    
+    if((r = lux_tx_packet(cmd)))
+        return r;
+
+    if(response){
+        if((r = lux_rx_packet(response)))
+            return r;
+
+        if(response->destination != 0)
+            return -10;
+    }
+    return 0;
+}
+
+char lux_command_ack(struct lux_frame *cmd){
+    // Transmits command `*cmd`, and waits for ack response
+    // Returns 0 on success
+    char r;
+    struct lux_frame response;
+
+    if((r = lux_command_response(cmd, &response)))
+        return r;
+
+    if(response.destination != 0)
+        return -20;
+
+    if(response.length != 1)
+        return -21;
+
+    return response.data.raw[0];
+}
+
+char lux_tx_packet(struct lux_frame *cmd){
+    lux_hal_disable_rx();
+
+    if(!cmd)
+        return -30;
+
+    *(uint32_t*)lux_destination = cmd->destination;
+    if(cmd->length > LUX_PACKET_MAX_SIZE)
+        return -31;
+    lux_packet_length = cmd->length;
+    memcpy(lux_packet, &cmd->data, cmd->length);
+
+    lux_packet_in_memory = 0;
+    lux_start_tx();
+    while(lux_is_transmitting) lux_codec();
+    return 0;
+}
+
+char lux_rx_packet(struct lux_frame *response){
+    // Attempts for 10ms to rx a packet
+    // Returns 0 on success
+    if(!response)
+        return -40;
+
+    for(int j = 0; j < 100; j++){
+        for(int i = 0; i < 1100; i++) lux_codec();   
+        SDL_Delay(1);
+        if(lux_packet_in_memory)
+            break;
+    }
+
+    if(!lux_packet_in_memory)
+        return -41;
+
+    response->length = lux_packet_length;
+    response->destination = *(uint32_t *) lux_destination;
+    memset(&response->data, 0, LUX_PACKET_MAX_SIZE);
+    memcpy(&response->data, lux_packet, lux_packet_length);
+
+    lux_packet_in_memory = 0;
+
+    return 0;
+}
+
 void lux_hal_enable_rx(){
-    int status;
     const int r = TIOCM_RTS;
-    //ioctl(ser, TIOCMBIS, &r);
+    lux_is_transmitting = 0;
+    SDL_Delay(1);
+    ioctl(ser, TIOCMBIS, &r);
 };
 
 void lux_hal_disable_rx(){
-    int status;
     const int r = TIOCM_RTS;
+    lux_is_transmitting = 1;
     ioctl(ser, TIOCMBIC, &r);
+    SDL_Delay(1);
 };
 
 void lux_hal_enable_tx(){};
@@ -108,69 +190,25 @@ void lux_hal_write_crc(uint8_t* ptr){
     memcpy(ptr, &crc, 4);
 }
 
-int serial_set_attribs (int fd, int speed, int parity)
+int serial_set_attribs (int fd, int speed)
 {
         struct termios tty;
-        struct serial_struct serinfo;
-        int closestSpeed;
+
         memset (&tty, 0, sizeof tty);
-        /*
-        if (tcgetattr (fd, &tty) != 0) FAIL("error %d from tcgetattr", errno);
-
         
-        tty.c_cflag = (tty.c_cflag & ~CSIZE ) | CS8 ;     // 8-bit chars
-        // disable IGNBRK for mismatched speed tests; otherwise receive break
-        // as \000 chars
-        tty.c_iflag &= ~IGNBRK;         // disable break processing
-        tty.c_lflag = 0;                // no signaling chars, no echo,
-                                        // no canonical processing
-        tty.c_oflag = 0;                // no remapping, no delays
-        tty.c_cc[VMIN]  = 0;            // read doesn't block
-        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
-
-        tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
-
-        tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
-                                        // enable reading
-        tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
-        tty.c_cflag |= parity;
-        tty.c_cflag &= ~CSTOPB;
-        //tty.c_cflag &= ~CRTSCTS;
-
-        if (tcsetattr (fd, TCSANOW, &tty) != 0) FAIL("error %d from tcsetattr", errno);
-        */
-
-        
-
-        ioctl(ser, TIOCGSERIAL, &serinfo);
-
-        /*
-        serinfo.flags = (serinfo.flags & ~ASYNC_SPD_MASK) | ASYNC_SPD_CUST;
-        serinfo.custom_divisor = (serinfo.baud_base + (speed / 2)) / speed;
-        closestSpeed = serinfo.baud_base / serinfo.custom_divisor;
-        printf("speed: %d\n", closestSpeed);
-        */
-        
-        //fcntl(fd, F_SETFL, 0);
         tcgetattr(fd, &tty);
         cfsetispeed(&tty, speed ?: 0010015);
         cfsetospeed(&tty, speed ?: 0010015);
-        //cfmakeraw(&tty);
+
         tty.c_cflag &= ~CSIZE;     // 8-bit chars
         tty.c_cflag |= CS8;     // 8-bit chars
         tty.c_cflag |= (CLOCAL | CREAD);
         tty.c_cflag &= ~CSTOPB; // 1 stop bit
         tty.c_cflag &= ~(PARENB|PARODD);
         tty.c_iflag &= ~(INPCK|ISTRIP);
-        //tty.c_cflag |=  (CRTSCTS);
-        //options.c_cflag &= ~CRTSCTS;
+
         if (tcsetattr(fd, TCSANOW, &tty) != 0)
             return -1;
-
-        ioctl(ser, TIOCSSERIAL, &serinfo);
-
-        //cfsetospeed (&tty, B38400);
-        //cfsetispeed (&tty, B38400);
 
         lux_hal_disable_rx();
 

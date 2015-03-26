@@ -20,32 +20,30 @@ static SDL_Thread* output_thread;
 
 static int output_run(void* args)
 {
-    unsigned char x;
+//    unsigned char x;
+    struct lux_frame lf;
+    char r;
+    
     while(output_running)
     {
         for(int i=0; i<n_output_strips; i++)
         {
             output_to_buffer(&output_strips[i], output_buffers[i]);
 
-            lux_hal_disable_rx();
-            lux_packet_in_memory = 0;
-
-            *(uint32_t*)lux_destination = output_strips[i].id;
 
             int j = 0;
-            lux_packet[j++] = 0x90;
 
             for(int k = 0; k < output_strips[i].length; k++){
-                lux_packet[j++] = output_buffers[i][k].r * 20;
-                lux_packet[j++] = output_buffers[i][k].g * 20;
-                lux_packet[j++] = output_buffers[i][k].b * 20;
+                lf.data.carray.data[j++] = output_buffers[i][k].r * 20;
+                lf.data.carray.data[j++] = output_buffers[i][k].g * 20;
+                lf.data.carray.data[j++] = output_buffers[i][k].b * 20;
             }
-            //lux_packet_length = 3 * output_strips[i].length + 1;
-            lux_packet_length = j;
-            lux_start_tx();
-            for(int i = 0; i < 1500; i++) lux_codec(); //FIXME
+            lf.data.carray.cmd = 0x90;// j++;
+            lf.destination = output_strips[i].id;
+            lf.length = j+1;
 
-            SDL_Delay(2);
+            if((r = lux_tx_packet(&lf)))
+                printf("failed cmd: %d\n", r);
         }
     }
     return 0;
