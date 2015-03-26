@@ -15,7 +15,7 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 
 INC  = -Icore -Ilib/lux/inc -Ilib -L/usr/local/lib
-LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio
+LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio -lvamp-hostsdk
 
 # Assembler, compiler, and linker flags
 CXXFLAGS  = -g -O0 $(INC) -Wall 
