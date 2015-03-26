@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <portaudio.h>
 
+//#include <vamp-hostsdk/PluginHostAdapter.h>
+//#include <vamp-hostsdk/PluginInputDomainAdapter.h>
+//#include <vamp-hostsdk/PluginLoader.h>
+
 #include "err.h"
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
