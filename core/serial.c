@@ -1,14 +1,14 @@
 #include "serial.h"
+#include <SDL/SDL_timer.h>
 #include <errno.h>
 #include <fcntl.h> 
+#include <linux/serial.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/serial.h>
-#include <SDL/SDL_timer.h>
 
 #include "crc.h"
 #include "err.h"
@@ -18,6 +18,8 @@
 int ser;
 static char lux_is_transmitting;
 static crc_t crc;
+int serial_set_attribs (int, int);
+void serial_set_blocking (int, int);
 
 uint8_t match_destination(uint8_t* dest){
     uint32_t addr = *(uint32_t *)dest;
@@ -25,9 +27,15 @@ uint8_t match_destination(uint8_t* dest){
 }
 
 void rx_packet() {
+
 }
 
 char serial_init(){
+    /* 
+     * Initialize the serial port (if it exists)
+     * Returns 0 if successful
+     * Returns nonzero if there are no available ports or there is an error
+     */
     char dbuf[32];
     for(int i = 0; i < 9; i++){
         sprintf(dbuf, "/dev/ttyUSB%d", i);
@@ -51,9 +59,15 @@ char serial_init(){
     return 0;
 }
 
+void serial_close(){
+    close(ser);
+}
+
 char lux_command_response(struct lux_frame *cmd, struct lux_frame *response){
-    // Transmits command `*cmd`, and waits for response and saves it to `*response`
-    // Returns 0 on success 
+    /* 
+     * Transmits command `*cmd`, and waits for response and saves it to `*response`
+     * Returns 0 on success 
+     */
     char r;
     
     if((r = lux_tx_packet(cmd)))
@@ -70,8 +84,10 @@ char lux_command_response(struct lux_frame *cmd, struct lux_frame *response){
 }
 
 char lux_command_ack(struct lux_frame *cmd){
-    // Transmits command `*cmd`, and waits for ack response
-    // Returns 0 on success
+    /*
+     * Transmits command `*cmd`, and waits for ack response
+     * Returns 0 on success
+     */
     char r;
     struct lux_frame response;
 
@@ -88,6 +104,10 @@ char lux_command_ack(struct lux_frame *cmd){
 }
 
 char lux_tx_packet(struct lux_frame *cmd){
+    /*
+     * Transmits command `*cmd`
+     * Returns 0 on success
+     */
     lux_hal_disable_rx();
 
     if(!cmd)
@@ -106,8 +126,11 @@ char lux_tx_packet(struct lux_frame *cmd){
 }
 
 char lux_rx_packet(struct lux_frame *response){
-    // Attempts for 10ms to rx a packet
-    // Returns 0 on success
+    /* 
+     * Attempts to recieve a packet (with 10ms timeout)
+     * Puts recieved packet into `*response`
+     * Returns 0 on success
+     */
     if(!response)
         return -40;
 

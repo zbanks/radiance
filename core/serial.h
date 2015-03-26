@@ -8,8 +8,7 @@
 extern int ser;
 
 char serial_init();
-int serial_set_attribs (int, int);
-void serial_set_blocking (int, int);
+void serial_close();
 
 struct lux_frame {
     int destination;

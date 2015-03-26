@@ -20,7 +20,6 @@ static SDL_Thread* output_thread;
 
 static int output_run(void* args)
 {
-//    unsigned char x;
     struct lux_frame lf;
     char r;
     
@@ -29,7 +28,6 @@ static int output_run(void* args)
         for(int i=0; i<n_output_strips; i++)
         {
             output_to_buffer(&output_strips[i], output_buffers[i]);
-
 
             int j = 0;
 
@@ -84,5 +82,7 @@ void output_stop()
     }
 
     free(output_buffers);
+
+    serial_close();
 }
 
