@@ -11,12 +11,35 @@
 const int n_patterns = N_PATTERNS;
 const pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave};
 
+static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v );
+
 static color_t param_to_color(float param)
 {
+    /*
+    def mkcolor(h,s=1.,v=1.):
+    #return mk_yiq_color(h)
+    ENDSZ = 0.07
+    if h < ENDSZ:
+        return (h / ENDSZ, 0., 0.)
+    elif h > (1.0 - ENDSZ):
+        return (1., (h - (1.0 - ENDSZ)) / ENDSZ, 1.)
+    h = (h - ENDSZ) / (1.0 - 2 * ENDSZ)
+    return colorsys.hsv_to_rgb(h,s,v)
+    */
     color_t result;
-    result.r = param;
-    result.g = param;
-    result.b = param;
+#define ENDSZ 0.07
+    if(param < ENDSZ){
+        result.r = param / ENDSZ;
+        result.g = 0;
+        result.b = 0;
+    }else if(param > (1.0 - ENDSZ)){
+        result.r = 1.0;
+        result.g = (param - 1.0 + ENDSZ) / ENDSZ;
+        result.b = 1.0;
+    }else{
+        param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
+        HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
+    }
     result.a = 1;
     return result;
 }
@@ -86,7 +109,7 @@ color_t pat_wave_pixel(slot_t* slot, float x, float y)
 {
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
-    result.a = (sin((state->phase + y) * 4 * M_PI) + 1) / 2;
+    result.a = (sin((state->phase + y) * 1 * M_PI) + 1) / 2;
     return result;
 }
 
@@ -180,3 +203,56 @@ const pattern_t stripe = {
     .n_params = 0,
 };
 */
+
+// r,g,b values are from 0 to 1
+// h = [0,360], s = [0,1], v = [0,1]
+//		if s == 0, then h = -1 (undefined)
+static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v )
+{
+	int i;
+	float f, p, q, t;
+	if( s == 0 ) {
+		// achromatic (grey)
+		*r = *g = *b = v;
+		return;
+	}
+	h /= 60;			// sector 0 to 5
+	i = floor( h );
+	f = h - i;			// factorial part of h
+	p = v * ( 1 - s );
+	q = v * ( 1 - s * f );
+	t = v * ( 1 - s * ( 1 - f ) );
+	switch( i ) {
+		case 0:
+			*r = v;
+			*g = t;
+			*b = p;
+			break;
+		case 1:
+			*r = q;
+			*g = v;
+			*b = p;
+			break;
+		case 2:
+			*r = p;
+			*g = v;
+			*b = t;
+			break;
+		case 3:
+			*r = p;
+			*g = q;
+			*b = v;
+			break;
+		case 4:
+			*r = t;
+			*g = p;
+			*b = v;
+			break;
+		default:		// case 5:
+			*r = v;
+			*g = p;
+			*b = q;
+			break;
+	}
+}
+
