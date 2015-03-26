@@ -7,6 +7,7 @@
 #include "pattern.h"
 #include "ui.h"
 #include "slice.h"
+#include "audio.h"
 
 int main()
 {
@@ -18,6 +19,7 @@ int main()
     patterns_updating = SDL_CreateMutex();
 
     output_start();
+    audio_start();
 
     for(;;)
     {
@@ -29,6 +31,7 @@ int main()
         // TODO rate-limit
     }
 
+    audio_stop();
     output_stop();
 
     SDL_DestroyMutex(patterns_updating);
