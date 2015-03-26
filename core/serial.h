@@ -6,7 +6,7 @@
 
 extern int ser;
 
-void serial_init();
+char serial_init();
 int serial_set_attribs (int, int, int);
 void serial_set_blocking (int, int);
 

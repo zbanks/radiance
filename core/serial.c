@@ -15,27 +15,52 @@
 
 int ser;
 static crc_t crc;
+//uint8_t lux_packet[1024];
 
-void serial_init(){
-    ser = open("/dev/ttyUSB0", O_RDWR | O_NOCTTY | O_SYNC);
-    if(ser < 0) FAIL("error opening port: %d", ser);
+uint8_t match_destination(uint8_t* dest){
+    uint32_t addr = *(uint32_t *)dest;
+    return addr == 0;
+}
 
-    serial_set_attribs(ser, 3000000, 1);
-    serial_set_blocking(ser, 1);
+
+void rx_packet() {
+    lux_packet_in_memory = 0;
+}
+
+char serial_init(){
+    char dbuf[32];
+    for(int i = 0; i < 9; i++){
+        sprintf(dbuf, "/dev/ttyUSB%d", i);
+        ser = open("/dev/ttyUSB3", O_RDWR | O_NOCTTY | O_SYNC);
+        if(ser > 0){
+            printf("Found output on '%s'\n", dbuf);
+            break;
+        }
+        //if(ser < 0) FAIL("error opening port: %d", ser);
+    }
+
+    lux_fn_match_destination = &match_destination;
+    lux_fn_rx = &rx_packet;
+    lux_init();
+
+    if(ser > 0){
+        serial_set_attribs(ser, 3000000, 1);
+        serial_set_blocking(ser, 1);
+        return 1;
+    }
+    return 0;
 }
 
 void lux_hal_enable_rx(){
     int status;
-    ioctl(ser, TIOCMGET, &status);
-    status &= ~TIOCM_RTS;
-    ioctl(ser, TIOCMSET, status);
+    const int r = TIOCM_RTS;
+    //ioctl(ser, TIOCMBIS, &r);
 };
 
 void lux_hal_disable_rx(){
     int status;
-    ioctl(ser, TIOCMGET, &status);
-    status |= TIOCM_RTS;
-    ioctl(ser, TIOCMSET, status);
+    const int r = TIOCM_RTS;
+    ioctl(ser, TIOCMBIC, &r);
 };
 
 void lux_hal_enable_tx(){};
@@ -79,6 +104,7 @@ uint8_t lux_hal_crc_ok(){
 }
 
 void lux_hal_write_crc(uint8_t* ptr){
+    crc = crc_finalize(crc);
     memcpy(ptr, &crc, 4);
 }
 
@@ -117,25 +143,34 @@ int serial_set_attribs (int fd, int speed, int parity)
         
 
         ioctl(ser, TIOCGSERIAL, &serinfo);
+
+        /*
         serinfo.flags = (serinfo.flags & ~ASYNC_SPD_MASK) | ASYNC_SPD_CUST;
         serinfo.custom_divisor = (serinfo.baud_base + (speed / 2)) / speed;
         closestSpeed = serinfo.baud_base / serinfo.custom_divisor;
         printf("speed: %d\n", closestSpeed);
+        */
         
-        fcntl(fd, F_SETFL, 0);
-        tcgetattr(fd, &options);
-        cfsetispeed(&options, speed ?: B38400);
-        cfsetospeed(&options, speed ?: B38400);
-        cfmakeraw(&options);
-        options.c_cflag |= (CLOCAL | CREAD);
-        options.c_cflag &= ~CRTSCTS;
-        if (tcsetattr(fd, TCSANOW, &options) != 0)
+        //fcntl(fd, F_SETFL, 0);
+        tcgetattr(fd, &tty);
+        cfsetispeed(&tty, speed ?: 0010015);
+        cfsetospeed(&tty, speed ?: 0010015);
+        //cfmakeraw(&tty);
+        tty.c_cflag &= ~CSIZE;     // 8-bit chars
+        tty.c_cflag |= CS8;     // 8-bit chars
+        tty.c_cflag |= (CLOCAL | CREAD);
+        tty.c_cflag &= ~CSTOPB; // 1 stop bit
+        tty.c_cflag &= ~(PARENB|PARODD);
+        tty.c_iflag &= ~(INPCK|ISTRIP);
+        //tty.c_cflag |=  (CRTSCTS);
+        //options.c_cflag &= ~CRTSCTS;
+        if (tcsetattr(fd, TCSANOW, &tty) != 0)
             return -1;
 
         ioctl(ser, TIOCSSERIAL, &serinfo);
 
-        cfsetospeed (&tty, B38400);
-        cfsetispeed (&tty, B38400);
+        //cfsetospeed (&tty, B38400);
+        //cfsetispeed (&tty, B38400);
 
         lux_hal_disable_rx();
 

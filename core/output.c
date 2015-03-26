@@ -20,15 +20,33 @@ static SDL_Thread* output_thread;
 
 static int output_run(void* args)
 {
+    unsigned char x;
     while(output_running)
     {
         for(int i=0; i<n_output_strips; i++)
         {
             output_to_buffer(&output_strips[i], output_buffers[i]);
+
+            lux_hal_disable_rx();
+            lux_packet_in_memory = 0;
+
+            *(uint32_t*)lux_destination = output_strips[i].id;
+
+            int j = 0;
+            lux_packet[j++] = 0x90;
+
+            for(int k = 0; k < output_strips[i].length; k++){
+                lux_packet[j++] = output_buffers[i][k].r * 20;
+                lux_packet[j++] = output_buffers[i][k].g * 20;
+                lux_packet[j++] = output_buffers[i][k].b * 20;
+            }
+            //lux_packet_length = 3 * output_strips[i].length + 1;
+            lux_packet_length = j;
+            lux_start_tx();
+            for(int i = 0; i < 1500; i++) lux_codec(); //FIXME
+
+            SDL_Delay(2);
         }
-        // TODO: Lux goes here
-        write(ser, "\x00\x94\xff\xff\xff\xff\x91\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x01\x02\x03\x02\xff_\x83\x00", 150);
-        SDL_Delay(1);
     }
     return 0;
 }
@@ -45,11 +63,15 @@ void output_start()
         if(!output_buffers[i]) FAIL("Could not allocate output buffer");
     }
 
-    serial_init();
-    output_running = 1;
+    if(serial_init()){
+        printf("Serial initialized\n");
+        output_running = 1;
 
-    output_thread = SDL_CreateThread(&output_run, 0);
-    if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
+        output_thread = SDL_CreateThread(&output_run, 0);
+        if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
+    }else{
+        printf("No serial initialized\n");
+    }
 }
 
 void output_stop()

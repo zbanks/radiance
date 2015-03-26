@@ -44,13 +44,13 @@ int n_output_strips = N_OUTPUT_STRIPS;
 
 output_strip_t output_strips[N_OUTPUT_STRIPS] = {
     {
-        .id = 1,
-        .length = 200,
+        .id = 0xFFFFFFFF,
+        .length = 46,
         .first = &s1v1,
     },
     {
         .id = 2,
-        .length = 200,
+        .length = 20,
         .first = &s2v1,
     },
 };

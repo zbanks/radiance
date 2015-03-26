@@ -1,11 +1,11 @@
 # Files to include
 C_SRC  = $(wildcard core/*.c)
 C_SRC += $(wildcard lib/*.c)
-C_SRC += $(wildcard lib/lux/src*.c)
+C_SRC += $(wildcard lib/lux/src/*.c)
 
 C_INC  = $(wildcard core/*.h)
 C_INC += $(wildcard lib/*.h)
-C_INC += $(wildcard lib/lux/inc*.h)
+C_INC += $(wildcard lib/lux/inc/*.h)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 
