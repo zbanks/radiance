@@ -94,7 +94,12 @@ void output_start()
                         printf("...length mis-match! %d in file, %d from strip\n", output_strips[i].length, resp.data.ssingle_r.data);
                 }
             }
+        }else{
+            for(int i = 0; i < n_output_strips; i++){
+                output_strips[i].bus = -1;
+            }
         }
+
 
         output_thread = SDL_CreateThread(&output_run, 0);
         if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
