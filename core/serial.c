@@ -27,7 +27,6 @@ uint8_t match_destination(uint8_t* dest){
 }
 
 void rx_packet() {
-
 }
 
 char serial_init(){
@@ -60,10 +59,11 @@ char serial_init(){
 }
 
 void serial_close(){
-    close(ser);
+    //TODO
+    //close(ser);
 }
 
-char lux_command_response(struct lux_frame *cmd, struct lux_frame *response){
+char lux_command_response(struct lux_frame *cmd, struct lux_frame *response, int timeout_ms){
     /* 
      * Transmits command `*cmd`, and waits for response and saves it to `*response`
      * Returns 0 on success 
@@ -74,7 +74,7 @@ char lux_command_response(struct lux_frame *cmd, struct lux_frame *response){
         return r;
 
     if(response){
-        if((r = lux_rx_packet(response)))
+        if((r = lux_rx_packet(response, timeout_ms)))
             return r;
 
         if(response->destination != 0)
@@ -83,7 +83,7 @@ char lux_command_response(struct lux_frame *cmd, struct lux_frame *response){
     return 0;
 }
 
-char lux_command_ack(struct lux_frame *cmd){
+char lux_command_ack(struct lux_frame *cmd, int timeout_ms){
     /*
      * Transmits command `*cmd`, and waits for ack response
      * Returns 0 on success
@@ -91,7 +91,7 @@ char lux_command_ack(struct lux_frame *cmd){
     char r;
     struct lux_frame response;
 
-    if((r = lux_command_response(cmd, &response)))
+    if((r = lux_command_response(cmd, &response, timeout_ms)))
         return r;
 
     if(response.destination != 0)
@@ -125,31 +125,35 @@ char lux_tx_packet(struct lux_frame *cmd){
     return 0;
 }
 
-char lux_rx_packet(struct lux_frame *response){
+char lux_rx_packet(struct lux_frame *response, int timeout_ms){
     /* 
-     * Attempts to recieve a packet (with 10ms timeout)
+     * Attempts to recieve a packet (with a timeout)
      * Puts recieved packet into `*response`
      * Returns 0 on success
      */
-    if(!response)
-        return -40;
 
-    for(int j = 0; j < 100; j++){
-        for(int i = 0; i < 1100; i++) lux_codec();   
+    for(int j = 0; j <= timeout_ms; j++){
+        for(int i = 0; i < 1100; i++)
+            lux_codec();   
         SDL_Delay(1);
-        if(lux_packet_in_memory)
+        if(lux_packet_in_memory){
+            //printf("rx packet @t=%d\n", j);
             break;
+        }
     }
 
     if(!lux_packet_in_memory)
+        return -40;
+
+    lux_packet_in_memory = 0;
+
+    if(!response)
         return -41;
 
     response->length = lux_packet_length;
     response->destination = *(uint32_t *) lux_destination;
     memset(&response->data, 0, LUX_PACKET_MAX_SIZE);
     memcpy(&response->data, lux_packet, lux_packet_length);
-
-    lux_packet_in_memory = 0;
 
     return 0;
 }

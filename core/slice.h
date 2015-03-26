@@ -16,6 +16,7 @@ typedef struct output_strip
     int id;
     int length;
     output_vertex_t* first;
+    int bus;
 } output_strip_t;
 
 extern int n_output_strips;

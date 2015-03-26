@@ -17,8 +17,8 @@ struct lux_frame {
 };
 
 char lux_tx_packet(struct lux_frame *);
-char lux_rx_packet(struct lux_frame *);
-char lux_command_ack(struct lux_frame *cmd);
-char lux_command_response(struct lux_frame *cmd, struct lux_frame *response);
+char lux_rx_packet(struct lux_frame *, int timeout_ms);
+char lux_command_ack(struct lux_frame *cmd, int timeout_ms);
+char lux_command_response(struct lux_frame *cmd, struct lux_frame *response, int timeout_ms);
 
 #endif

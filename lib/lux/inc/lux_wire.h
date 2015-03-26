@@ -75,6 +75,18 @@ union lux_command_frame {
         enum lux_command cmd;
         uint32_t data;
 	} wsingle;
+	struct __attribute__((__packed__)) resp_warray {
+        uint32_t data[LUX_PACKET_MAX_SIZE / sizeof(uint32_t)];
+	} warray_r;
+	struct __attribute__((__packed__)) resp_csingle {
+        uint8_t data;
+	} csingle_r;
+	struct __attribute__((__packed__)) resp_ssingle {
+        uint16_t data;
+	} ssingle_r;
+	struct __attribute__((__packed__)) resp_wsingle {
+        uint32_t data;
+	} wsingle_r;
     uint8_t raw[LUX_PACKET_MAX_SIZE];
 };
 
