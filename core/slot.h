@@ -42,6 +42,7 @@ typedef struct slot
 {
     const pattern_t* pattern;
     void* state;
+    float alpha;
     float* param_values;
 } slot_t;
 

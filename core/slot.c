@@ -22,6 +22,7 @@ color_t render_composite(float x, float y)
         if(slots[i].pattern)
         {
             color_t c = (*slots[i].pattern->render)(&slots[i], x, y);
+            c.a *= slots[i].alpha;
             result.r = result.r * (1 - c.a) + c.r * c.a;
             result.g = result.g * (1 - c.a) + c.g * c.a;
             result.b = result.b * (1 - c.a) + c.b * c.a;
@@ -50,6 +51,7 @@ void pat_load(slot_t* slot, pattern_t* pattern)
     slot->pattern = pattern;
     slot->state = (*pattern->init)();
     if(!slot->state) FAIL("Could not malloc pattern state\n");
+    slot->alpha = 0;
     slot->param_values = malloc(sizeof(float) * pattern->n_params);
     if(!slot->param_values) FAIL("Could not malloc param values\n");
     for(int i=0; i < pattern->n_params; i++)

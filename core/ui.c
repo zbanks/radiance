@@ -41,6 +41,16 @@ static const struct
     int preview_width;
     int preview_height;
 
+    int alpha_pitch;
+    int alpha_slider_x;
+    int alpha_slider_y;
+    int alpha_slider_height;
+    int alpha_handle_x;
+    int alpha_handle_y;
+    int alpha_handle_width;
+    int alpha_handle_height;
+
+
     int param_text_start_x;
     int param_text_start_y;
     int param_pitch;
@@ -74,19 +84,27 @@ static const struct
     .slot_height = 250,
     .slot_pitch = 125,
 
-    .preview_x = 5,
+    .preview_x = 25,
     .preview_y = 5,
-    .preview_width = 100,
-    .preview_height = 100,
+    .preview_width = 80,
+    .preview_height = 80,
+
+    .alpha_slider_x = 9,
+    .alpha_slider_y = 5,
+    .alpha_slider_height = 80,
+    .alpha_handle_x = 5,
+    .alpha_handle_y = 5,
+    .alpha_handle_width = 10,
+    .alpha_handle_height = 10,
 
     .param_text_start_x = 3,
-    .param_text_start_y = 110,
+    .param_text_start_y = 90,
     .param_pitch = 30,
     .param_slider_start_x = 3,
-    .param_slider_start_y = 125,
+    .param_slider_start_y = 103,
     .param_slider_width = 70,
     .param_handle_start_x = 3,
-    .param_handle_start_y = 120,
+    .param_handle_start_y = 100,
     .param_handle_width = 10,
     .param_handle_height = 10,
 
@@ -101,6 +119,12 @@ static const struct
 
 static void (*mouse_drag_fn_p)(int x, int y);
 static void (*mouse_drop_fn_p)();
+
+static struct
+{
+    slot_t* slot;
+    float initial_value;
+} active_alpha_slider;
 
 static struct
 {
@@ -285,6 +309,20 @@ static void ui_update_slot(slot_t* slot)
         r.y = layout.preview_y;
         SDL_BlitSurface(pattern_preview, 0, slot_pane, &r);
 
+        r.x = layout.alpha_slider_x;
+        r.y = layout.alpha_slider_y;
+        r.w = 3;
+        r.h = layout.alpha_slider_height;
+        SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 80, 80, 80));
+
+        r.x = layout.alpha_handle_x;
+        r.y = layout.alpha_handle_y +
+              (1 - slot->alpha) * (layout.alpha_slider_height - layout.param_handle_height);
+        r.w = layout.alpha_handle_width;
+        r.h = layout.alpha_handle_height;
+
+        SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
+
         SDL_Color white = {255, 255, 255};
 
         for(int i = 0; i < slot->pattern->n_params; i++)
@@ -395,6 +433,17 @@ static int in_rect(int x, int y, int rx, int ry, int rw, int rh)
            x < rx + rw && y < ry + rh;
 }
 
+static void mouse_drag_alpha_slider(int x, int y)
+{
+    float val = active_alpha_slider.initial_value -
+                (float)y / (layout.alpha_slider_height - layout.alpha_handle_height);
+
+    if(val < 0) val = 0;
+    else if(val > 1) val = 1;
+
+    active_alpha_slider.slot->alpha = val;
+}
+
 static void mouse_drag_param_slider(int x, int y)
 {
     float val = active_param_slider.initial_value +
@@ -461,6 +510,21 @@ static void mouse_drop_slot()
 static int mouse_click_slot(int index, int x, int y)
 {
     if(!slots[index].pattern) return 0;
+
+    // See if the click is on the alpha slider
+    if(in_rect(x, y,
+               layout.alpha_handle_x,
+               layout.alpha_handle_y +
+                 (1 - slots[index].alpha) *
+                 (layout.alpha_slider_height - layout.alpha_handle_height),
+               layout.alpha_handle_width,
+               layout.alpha_handle_height))
+    {
+        active_alpha_slider.slot = &slots[index];
+        active_alpha_slider.initial_value = slots[index].alpha;
+        mouse_drag_fn_p = &mouse_drag_alpha_slider;
+        return 1;
+    }
 
     // See if the click is on a parameter slider
     for(int i = 0; i < slots[index].pattern->n_params; i++)
