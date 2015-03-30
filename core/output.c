@@ -12,7 +12,7 @@
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
 
-int output_running;
+static int output_running;
 
 color_t** output_buffers = 0;
 

@@ -22,6 +22,7 @@ int main()
 
     output_start();
     audio_start();
+    midi_start();
 
     for(;;)
     {
@@ -33,6 +34,7 @@ int main()
         // TODO rate-limit
     }
 
+    midi_stop();
     audio_stop();
     output_stop();
 

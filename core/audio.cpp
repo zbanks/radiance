@@ -11,7 +11,7 @@
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
 
-int audio_running;
+static int audio_running;
 
 static SDL_Thread* audio_thread;
 
@@ -54,7 +54,7 @@ static int audio_run(void* args)
     key = loader->composePluginKey(VAMP_PLUGIN_SO, VAMP_PLUGIN_ID);
     plugin = loader->loadPlugin(key, SAMPLE_RATE, PluginLoader::ADAPT_ALL_SAFE);
     if(!plugin){
-        printf("Unable to load vamp plugin");
+        printf("Unable to load vamp plugin\n");
         return 1;
     }
     printf("Loaded vamp plugin: %s\n", plugin->getIdentifier().c_str());
