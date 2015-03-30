@@ -2,71 +2,82 @@
 
 #include "err.h"
 #include "portmidi.h"
-#include "porttime.h"
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
+#include "controllers.h"
 
 #define MIDI_BUFFER_SIZE 64
 
 static int midi_running;
 static SDL_Thread* midi_thread;
 
+static PortMidiStream** streams;
+static PmEvent events[MIDI_BUFFER_SIZE];
+
 static int midi_run(void* args)
 {
     PmError err;
-    //PtError terr;
 
     err = Pm_Initialize();
     if(err != pmNoError) FAIL("Could not initialize PortMIDI: %s\n", Pm_GetErrorText(err));
 
-    //terr = Pt_Start(1, 0, 0);
-    //if(terr != ptNoError) FAIL("Could not start PortTime: %d\n", terr);
+    streams = malloc(sizeof(PortMidiStream*) * n_controllers_enabled);
+    if(!streams) FAIL("Could not allocate MIDI controller streams");
 
-    PortMidiStream* nk;
-    PmEvent nk_events[MIDI_BUFFER_SIZE];
+    for(int i = 0; i < n_controllers_enabled; i++)
+    {
+        streams[i] = 0;
+    }
 
     int n = Pm_CountDevices();
-    printf("%d midi devices found\n",n);
     for(int i = 0; i < n; i++)
     {
         PmDeviceInfo* device = Pm_GetDeviceInfo(i);
         if(device->input)
         {
-            printf("%d: %s\n", i, device->name);
+            for(int j = 0; j < n_controllers_enabled; j++)
+            {
+                if(strcmp(device->name, controllers_enabled[j]) == 0)
+                {
+                    err = Pm_OpenInput(&streams[j], i, 0, MIDI_BUFFER_SIZE, 0, 0);
+                    if(err != pmNoError) FAIL("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
+                }
+            }
         }
-        if(device->input && strcmp(device->name,"nanoPAD2 MIDI 1") == 0)
+    }
+
+    for(int i = 0; i < n_controllers_enabled; i++)
+    {
+        if(!streams[i])
         {
-            err = Pm_OpenInput(&nk,
-                               i,
-                               0,
-                               MIDI_BUFFER_SIZE,
-                               0,
-                               0);
-            if(err != pmNoError) FAIL("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
-
-
-            printf("found nanokontrol\n");
+            printf("WARNING: Could not find MIDI device \"%s\"\n", controllers_enabled[i]);
         }
     }
 
     while(midi_running)
     {
-        int n = Pm_Read(nk, nk_events, MIDI_BUFFER_SIZE);
-        for(int i = 0; i < n; i++)
+        for(int i = 0; i < n_controllers_enabled; i++)
         {
-            printf("Event %d\n", nk_events[i].message);
+            if(!streams[i]) continue;
+            int n = Pm_Read(streams[i], events, MIDI_BUFFER_SIZE);
+            for(int j = 0; j < n; j++)
+            {
+                PmMessage m = events[j].message;
+                printf("Device %d event %d %d %d\n", i, Pm_MessageStatus(m), Pm_MessageData1(m), Pm_MessageData2(m));
+            }
         }
-        SDL_Delay(1);
+        SDL_Delay(1); // TODO SDL rate limiting
     }
 
-    err = Pm_Close(nk);
-    if(err != pmNoError) FAIL("Could not close MIDI device: %s\n", Pm_GetErrorText(err));
+    for(int i = 0; i < n_controllers_enabled; i++)
+    {
+        if(!streams[i]) continue;
+        err = Pm_Close(streams[i]);
+        if(err != pmNoError) FAIL("Could not close MIDI device: %s\n", Pm_GetErrorText(err));
+    }
 
     err = Pm_Terminate();
     if(err != pmNoError) FAIL("Could not terminate PortMIDI: %s\n", Pm_GetErrorText(err));
-
-    //terr = Pt_Stop();
-    //if(terr != ptNoError) FAIL("Could not stop PortTime: %d\n", terr);
 
     return 0;
 }
