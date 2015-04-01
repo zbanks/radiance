@@ -13,6 +13,7 @@ C_INC += $(wildcard lib/lux/inc/*.h)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
+DEPS = $(OBJECTS:.o=.d)
 
 INC  = -Icore -Ilib/lux/inc -Ilib -L/usr/local/lib
 LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio -lvamp-hostsdk -lportmidi -lporttime
@@ -22,10 +23,20 @@ CXXFLAGS  = -g -O0 $(INC) -Wall
 CFLAGS = $(CXXFLAGS) -std=c99
 LFLAGS  = $(CXXFLAGS)
 
+-include $(DEPS)
+%.d : %.c
+	@$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
+%.d : %.cpp
+	@$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
 # Targets
+.PHONY: all
 all: beat-off
+
+.PHONY: clean
 clean:
 	-rm -f $(OBJECTS) beat-off
+
 beat-off: $(OBJECTS)
 	$(CXX) $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
 
@@ -34,3 +45,5 @@ beat-off: $(OBJECTS)
 #	gcc $(CFLAGS) -std=c99 -c -o $@ $<
 #%.o: %.cpp
 #	g++ $(CFLAGS) -c -o $@ $<
+
+.DEFAULT_GOAL := beat-off
