@@ -388,7 +388,10 @@ static void ui_update_slot(slot_t* slot)
             r.w = layout.param_handle_width;
             r.h = layout.param_handle_height;
 
-            SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
+            if((slot_t *) slot->param_values[i]->owner == slot)
+                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
+            else
+                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 200, 180, 180));
 
 
             r.x = layout.param_source_start_x;
@@ -466,7 +469,10 @@ static void ui_update_input(input_t* input)
         r.w = layout.param_handle_width;
         r.h = layout.param_handle_height;
 
-        SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 0, 0, 80));
+        if((input_t *) input->param_values[i]->owner == input)
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 0, 0, 80));
+        else
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 30, 30, 30));
 
         r.x = layout.param_source_start_x;
         r.y = layout.param_source_start_y + layout.param_pitch * i;
@@ -670,6 +676,8 @@ static int mouse_click_slot(int index, int x, int y)
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
+            if((slot_t *) slots[index].param_values[i]->owner != &slots[index])
+                return 1;
             active_param_slider.value = slots[index].param_values[i];
             active_param_slider.initial_value = slots[index].param_values[i]->v;
             mouse_drag_fn_p = &mouse_drag_param_slider;
@@ -722,6 +730,8 @@ static int mouse_click_input(int index, int x, int y)
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height)) {
+            if((parameter_t *) inputs[index].param_values[i]->owner != inputs[index].parameters)
+                return 1;
             active_param_slider.value = inputs[index].param_values[i];
             active_param_slider.initial_value = inputs[index].param_values[i]->v;
             mouse_drag_fn_p = &mouse_drag_param_slider;

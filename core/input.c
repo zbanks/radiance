@@ -33,6 +33,10 @@ const parameter_t inp_lfo_parameters[] = {
         .name = "Amp",
         .default_val = 1.0,
     },
+    {
+        .name = "Offset",
+        .default_val = 0.5,
+    },
 };
 
 void inp_lfo_init(input_t * input){
@@ -53,7 +57,8 @@ void inp_lfo_update(input_t * input, float t){
     switch(state->type){
         case OSC_SINE:
         default:
-            input->value->v = (sin(state->phase * M_PI) + 1.0) / 2.0 * input->param_values[2]->v;
+            input->value->v = (sin(state->phase * 2 * M_PI) + 1.0) / 2.0 * input->param_values[2]->v
+                              + (1.0 - input->param_values[2]->v) * input->param_values[3]->v ;
     }
 }
 
