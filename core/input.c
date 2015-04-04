@@ -13,7 +13,6 @@ typedef struct
 {
     float phase;
     enum osc_type type;
-    float * param_values;
 } inp_lfo_state_t;
 
 const parameter_t inp_lfo_parameters[] = {
@@ -34,9 +33,9 @@ const parameter_t inp_lfo_parameters[] = {
 void inp_lfo_init(input_t * input){
     input->state = malloc(sizeof(inp_lfo_state_t));
 
-    input->param_values = malloc(sizeof(float) * input->n_params);
+    input->param_values = malloc(sizeof(float *) * input->n_params);
     for(int i = 0; i < input->n_params; i++){
-        input->param_values[i] = input->parameters[i].default_val;
+        input->param_values[i] = pval_new(input->parameters[i].default_val);
     }
 }
 
@@ -45,6 +44,9 @@ void inp_lfo_update(input_t * input, float t){
 }
 
 void inp_lfo_del(input_t * input){
+    for(int i = 0; i < input->n_params; i++){
+        pval_free(input->param_values[i]);
+    }
     free(input->param_values);
     free(input->state);
 }
@@ -62,6 +64,15 @@ input_t inputs[N_INPUTS] = {
         .del = inp_lfo_del,
     }
 };
+
+void update_inputs(float t)
+{
+    for(int i=0; i < n_inputs; i++)
+    {
+        (*inputs[i].update)(&inputs[i], t);
+    }
+}
+
 
 void input_start(){
     for(int i = 0; i < n_inputs; i++){

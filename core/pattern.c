@@ -17,7 +17,7 @@ static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v );
 static int get_param_by_name(slot_t * slot, const char * name, float * param){
     for(int i = 0; i < slot->pattern->n_params; i++){
         if(strcmp(slot->pattern->parameters[i].name,  name) == 0){
-            *param = slot->param_values[i];
+            *param = *slot->param_values[i];
             return 0;
         }
     }
@@ -59,7 +59,7 @@ void pat_full_del(pat_state_pt state)
 void pat_full_update(slot_t* slot, float t)
 {
     color_t* color = (color_t*)slot->state;
-    *color = param_to_color(slot->param_values[0]);
+    *color = param_to_color(*slot->param_values[0]);
 }
 
 void pat_full_prevclick(slot_t * slot, float x, float y){
@@ -116,20 +116,20 @@ void pat_wave_update(slot_t* slot, float t)
     float k_ang;
 
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
-    state->color = param_to_color(slot->param_values[0]);
+    state->color = param_to_color(*slot->param_values[0]);
 
-    state->phase += (t - state->last_t) * slot->param_values[1];
+    state->phase += (t - state->last_t) * *slot->param_values[1];
     state->last_t = t;
 
-    k_mag = slot->param_values[2] * 3 + 0.5;
-    k_ang = slot->param_values[3] * 2 * M_PI;
+    k_mag = *slot->param_values[2] * 3 + 0.5;
+    k_ang = *slot->param_values[3] * 2 * M_PI;
     state->kx = cos(k_ang) * k_mag;
     state->ky = sin(k_ang) * k_mag;
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){
-    slot->param_values[2] = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
-    slot->param_values[3] = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
+    *slot->param_values[2] = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
+    *slot->param_values[3] = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
 }
 
 color_t pat_wave_pixel(slot_t* slot, float x, float y)
@@ -194,16 +194,16 @@ void pat_bubble_del(pat_state_pt state)
 void pat_bubble_update(slot_t* slot, float t)
 {
     pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
-    state->color = param_to_color(slot->param_values[0]);
-    state->r = slot->param_values[1];
-    state->rho = slot->param_values[2] * 1.3 + 0.3;
-    state->cx = slot->param_values[3] * 2 - 1.0;
-    state->cy = slot->param_values[4] * 2 - 1.0;
+    state->color = param_to_color(*slot->param_values[0]);
+    state->r = *slot->param_values[1];
+    state->rho = *slot->param_values[2] * 1.3 + 0.3;
+    state->cx = *slot->param_values[3] * 2 - 1.0;
+    state->cy = *slot->param_values[4] * 2 - 1.0;
 }
 
 void pat_bubble_prevclick(slot_t * slot, float x, float y){
-    slot->param_values[3] = (x + 1.0) / 2;
-    slot->param_values[4] = (y + 1.0) / 2;
+    *slot->param_values[3] = (x + 1.0) / 2;
+    *slot->param_values[4] = (y + 1.0) / 2;
 }
 
 color_t pat_bubble_pixel(slot_t* slot, float x, float y)

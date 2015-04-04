@@ -11,6 +11,12 @@ typedef struct color
     float a;
 } color_t;
 
+#define PVAL_STACK_SIZE 2048
+
+void pval_init_stack();
+float * pval_new(float v);
+void pval_free(float * pval);
+
 struct slot;
 
 typedef void* pat_state_pt;
@@ -45,7 +51,7 @@ typedef struct slot
     const pattern_t* pattern;
     void* state;
     float alpha;
-    float* param_values;
+    float** param_values;
 } slot_t;
 
 extern const int n_slots;

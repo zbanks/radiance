@@ -26,7 +26,7 @@ typedef struct input
     float value;
     int n_params;
     parameter_t * parameters;
-    float * param_values;
+    float ** param_values;
     inp_state_pt state;
     inp_init_fn_pt init;
     inp_update_fn_pt update;

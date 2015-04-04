@@ -363,7 +363,7 @@ static void ui_update_slot(slot_t* slot)
             SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 80));
 
             r.x = layout.param_handle_start_x +
-                  slot->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
+                  *slot->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
             r.y = layout.param_handle_start_y + layout.param_pitch * i;
             r.w = layout.param_handle_width;
             r.h = layout.param_handle_height;
@@ -429,7 +429,7 @@ static void ui_update_input(input_t* input)
         SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 80));
 
         r.x = layout.param_handle_start_x +
-                input->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
+                *input->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
         r.y = layout.param_handle_start_y + layout.param_pitch * i;
         r.w = layout.param_handle_width;
         r.h = layout.param_handle_height;
@@ -621,14 +621,14 @@ static int mouse_click_slot(int index, int x, int y)
     {
         if(in_rect(x, y,
                    layout.param_handle_start_x +
-                     slots[index].param_values[i] *
+                     *slots[index].param_values[i] *
                      (layout.param_slider_width - layout.param_handle_width),
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
-            active_param_slider.value = &slots[index].param_values[i];
-            active_param_slider.initial_value = slots[index].param_values[i];
+            active_param_slider.value = slots[index].param_values[i];
+            active_param_slider.initial_value = *slots[index].param_values[i];
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
@@ -652,14 +652,14 @@ static int mouse_click_input(int index, int x, int y)
     {
         if(in_rect(x, y,
                    layout.param_handle_start_x +
-                     inputs[index].param_values[i] *
+                     *inputs[index].param_values[i] *
                      (layout.param_slider_width - layout.param_handle_width),
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
-            active_param_slider.value = &inputs[index].param_values[i];
-            active_param_slider.initial_value = inputs[index].param_values[i];
+            active_param_slider.value = inputs[index].param_values[i];
+            active_param_slider.initial_value = *inputs[index].param_values[i];
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
