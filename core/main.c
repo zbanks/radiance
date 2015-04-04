@@ -5,6 +5,7 @@
 #include <SDL/SDL_timer.h>
 #include "audio.h"
 #include "err.h"
+#include "input.h"
 #include "output.h"
 #include "pattern.h"
 #include "slice.h"

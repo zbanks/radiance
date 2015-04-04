@@ -23,10 +23,12 @@ typedef struct input
 {
     const char * name;
     enum input_type type;
-    float value;
+    pval_t * value;
+    float default_val;
     int n_params;
     parameter_t * parameters;
-    float ** param_values;
+    pval_t ** param_values;
+    color_t * color;
     inp_state_pt state;
     inp_init_fn_pt init;
     inp_update_fn_pt update;
@@ -38,5 +40,6 @@ extern input_t inputs[];
 
 void input_start();
 void input_stop();
+void update_inputs(float t);
 
 #endif

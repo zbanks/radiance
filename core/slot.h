@@ -13,9 +13,16 @@ typedef struct color
 
 #define PVAL_STACK_SIZE 2048
 
+struct pval;
+typedef struct pval {
+    float v;
+    void * owner;
+    struct pval * next;
+} pval_t;
+
 void pval_init_stack();
-float * pval_new(float v);
-void pval_free(float * pval);
+pval_t * pval_new(float v, void * owner);
+void pval_free(pval_t * pval, void * owner);
 
 struct slot;
 
@@ -51,7 +58,7 @@ typedef struct slot
     const pattern_t* pattern;
     void* state;
     float alpha;
-    float** param_values;
+    pval_t ** param_values;
 } slot_t;
 
 extern const int n_slots;

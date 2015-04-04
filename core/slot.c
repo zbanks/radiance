@@ -8,13 +8,9 @@ const int n_slots = N_SLOTS;
 slot_t slots[N_SLOTS];
 
 // Parameter value pointer allocation
-struct pval;
-static struct pval {
-    float v;
-    struct pval * next;
-} pvals[PVAL_STACK_SIZE];
+pval_t pvals[PVAL_STACK_SIZE];
 
-static struct pval * next_pval = 0;
+static pval_t * next_pval = 0;
 static int free_pvals = PVAL_STACK_SIZE;
 
 void pval_init_stack(){
@@ -24,7 +20,7 @@ void pval_init_stack(){
     }
 }
 
-float * pval_new(float v){
+pval_t * pval_new(float v, void * owner){
     struct pval * pv;
     if(!free_pvals)
         return 0;
@@ -33,15 +29,19 @@ float * pval_new(float v){
     pv = next_pval;
     next_pval = next_pval->next;
     pv->v = v;
+    pv->owner = owner;
     free_pvals--;
-    return &pv->v;
+    printf("free pvals-- %d\n", free_pvals);
+    return pv;
 }
 
-void pval_free(float * v){
-    struct pval * pv = (struct pval *) v;
+void pval_free(pval_t * pv, void * owner){
+    if(pv->owner != owner)
+        return;
     pv->next = next_pval;
     next_pval = pv;
     free_pvals++;
+    printf("free pvals++: %d\n", free_pvals);
 }
 
 SDL_mutex* patterns_updating;
@@ -91,7 +91,7 @@ void pat_load(slot_t* slot, pattern_t* pattern)
     if(!slot->param_values) FAIL("Could not malloc param values\n");
     for(int i=0; i < pattern->n_params; i++)
     {
-        slot->param_values[i] = pval_new(pattern->parameters[i].default_val);
+        slot->param_values[i] = pval_new(pattern->parameters[i].default_val, slot);
     }
     slot->state = (*pattern->init)();
     if(!slot->state) FAIL("Could not malloc pattern state\n");
@@ -101,7 +101,7 @@ void pat_unload(slot_t* slot)
 {
     if(!slot->pattern) return;
     for(int i=0; i < slot->pattern->n_params; i++){
-        pval_free(slot->param_values[i]);
+        pval_free(slot->param_values[i], slot);
     }
     (*slot->pattern->del)(slot->state);
     free(slot->param_values);

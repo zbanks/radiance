@@ -56,13 +56,20 @@ static const struct
     int param_text_start_x;
     int param_text_start_y;
     int param_pitch;
+
     int param_slider_start_x;
     int param_slider_start_y;
     int param_slider_width;
+
     int param_handle_start_x;
     int param_handle_start_y;
     int param_handle_width;
     int param_handle_height;
+
+    int param_source_start_x;
+    int param_source_start_y;
+    int param_source_width;
+    int param_source_height;
 
     int pattern_start_x;
     int pattern_start_y;
@@ -117,6 +124,10 @@ static const struct
     .param_handle_start_y = 100,
     .param_handle_width = 10,
     .param_handle_height = 10,
+    .param_source_start_x = 80,
+    .param_source_start_y = 100,
+    .param_source_width = 10,
+    .param_source_height = 10,
 
     .pattern_start_x = 10,
     .pattern_start_y = 520,
@@ -163,6 +174,15 @@ static struct
     int dx;
     int dy;
 } active_slot;
+
+static float ** active_param_source;
+
+static uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
+    return SDL_MapRGB(format, 
+                      (uint8_t) roundf(255 * color.r),
+                      (uint8_t) roundf(255 * color.g),
+                      (uint8_t) roundf(255 * color.b));
+}
 
 void ui_init()
 {
@@ -363,12 +383,22 @@ static void ui_update_slot(slot_t* slot)
             SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 80));
 
             r.x = layout.param_handle_start_x +
-                  *slot->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
+                  slot->param_values[i]->v * (layout.param_slider_width - layout.param_handle_width);
             r.y = layout.param_handle_start_y + layout.param_pitch * i;
             r.w = layout.param_handle_width;
             r.h = layout.param_handle_height;
 
             SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
+
+
+            r.x = layout.param_source_start_x;
+            r.y = layout.param_source_start_y + layout.param_pitch * i;
+            r.w = layout.param_source_width;
+            r.h = layout.param_source_height;
+            if(active_param_source == &slot->param_values[i])
+                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 0, 100));
+            else
+                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 0));
         }
     }
 }
@@ -429,12 +459,21 @@ static void ui_update_input(input_t* input)
         SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 80));
 
         r.x = layout.param_handle_start_x +
-                *input->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
+                input->param_values[i]->v * (layout.param_slider_width - layout.param_handle_width);
         r.y = layout.param_handle_start_y + layout.param_pitch * i;
         r.w = layout.param_handle_width;
         r.h = layout.param_handle_height;
 
         SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 0, 0, 80));
+
+        r.x = layout.param_source_start_x;
+        r.y = layout.param_source_start_y + layout.param_pitch * i;
+        r.w = layout.param_source_width;
+        r.h = layout.param_source_height;
+        if(active_param_source == &input->param_values[i])
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 0, 100));
+        else
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 0));
     }
 }
 
@@ -621,17 +660,39 @@ static int mouse_click_slot(int index, int x, int y)
     {
         if(in_rect(x, y,
                    layout.param_handle_start_x +
-                     *slots[index].param_values[i] *
+                     slots[index].param_values[i]->v *
                      (layout.param_slider_width - layout.param_handle_width),
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
             active_param_slider.value = slots[index].param_values[i];
-            active_param_slider.initial_value = *slots[index].param_values[i];
+            active_param_slider.initial_value = slots[index].param_values[i]->v;
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
+
+        // See if the click is on the parameter source button
+
+        if(in_rect(x, y,
+                   layout.param_source_start_x,
+                   layout.param_source_start_y + layout.param_pitch * i,
+                   layout.param_source_width,
+                   layout.param_source_height)) {
+            if(active_param_source == &slots[index].param_values[i]){
+                printf("reused\n");
+                pval_free(*active_param_source, &slots[index]);
+                *active_param_source = pval_new(**active_param_source, &slots[index]);
+                active_param_source = 0;
+            }else{
+                printf("diff\n");
+                active_param_source = &slots[index].param_values[i];
+                pval_free(*active_param_source, &slots[index]);
+                *active_param_source = pval_new(**active_param_source, &slots[index]);
+            }
+            return 1;
+        }
+
     }
 
     // Else, drag the slot
@@ -652,19 +713,41 @@ static int mouse_click_input(int index, int x, int y)
     {
         if(in_rect(x, y,
                    layout.param_handle_start_x +
-                     *inputs[index].param_values[i] *
+                     inputs[index].param_values[i]->v *
                      (layout.param_slider_width - layout.param_handle_width),
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
-                   layout.param_handle_height))
-        {
+                   layout.param_handle_height)) {
             active_param_slider.value = inputs[index].param_values[i];
-            active_param_slider.initial_value = *inputs[index].param_values[i];
+            active_param_slider.initial_value = inputs[index].param_values[i]->v;
             mouse_drag_fn_p = &mouse_drag_param_slider;
+            return 1;
+        }
+
+        if(in_rect(x, y,
+                   layout.param_source_start_x,
+                   layout.param_source_start_y + layout.param_pitch * i,
+                   layout.param_source_width,
+                   layout.param_source_height)) {
+            if(active_param_source == &inputs[index].param_values[i]){
+                pval_free(*active_param_source, &inputs[index]);
+                *active_param_source = pval_new(**active_param_source, &inputs[index]);
+                active_param_source = 0;
+            }else{
+                active_param_source = &inputs[index].param_values[i];
+                pval_free(*active_param_source, &inputs[index]);
+                *active_param_source = pval_new(**active_param_source, &inputs[index]);
+            }
             return 1;
         }
     }
 
+    // Are we trying to set active_param_source and we clicked on the box?
+    if(active_param_source){
+        pval_free(*active_param_source, &inputs[index]);
+        *active_param_source = inputs[index].value;
+        active_param_source = 0;
+    }
     return 0;
 }
 
