@@ -526,6 +526,19 @@ static int mouse_click_slot(int index, int x, int y)
         return 1;
     }
 
+    // See if the click is on the preview 
+    if(in_rect(x, y,
+               layout.preview_x,
+               layout.preview_y,
+               layout.preview_width,
+               layout.preview_height)){
+        slots[index].pattern->prevclick(
+                &slots[index],
+                -1.0 + 2.0 * (x - layout.preview_x) / (float) layout.preview_width,
+                -1.0 + 2.0 * (y - layout.preview_y) / (float) layout.preview_width);
+        return 1; 
+    }
+
     // See if the click is on a parameter slider
     for(int i = 0; i < slots[index].pattern->n_params; i++)
     {

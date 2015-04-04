@@ -6,28 +6,28 @@
     #define M_PI 3.14159265358979323846
 #endif
 
-#define N_PATTERNS 2
+#define N_PATTERNS 3
 
 const int n_patterns = N_PATTERNS;
-const pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave};
+const pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble};
 
 static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v );
 
+// Do we actually want this? -@zbanks, 4/4/15
+static int get_param_by_name(slot_t * slot, const char * name, float * param){
+    for(int i = 0; i < slot->pattern->n_params; i++){
+        if(strcmp(slot->pattern->parameters[i].name,  name) == 0){
+            *param = slot->param_values[i];
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static color_t param_to_color(float param)
 {
-    /*
-    def mkcolor(h,s=1.,v=1.):
-    #return mk_yiq_color(h)
-    ENDSZ = 0.07
-    if h < ENDSZ:
-        return (h / ENDSZ, 0., 0.)
-    elif h > (1.0 - ENDSZ):
-        return (1., (h - (1.0 - ENDSZ)) / ENDSZ, 1.)
-    h = (h - ENDSZ) / (1.0 - 2 * ENDSZ)
-    return colorsys.hsv_to_rgb(h,s,v)
-    */
-    color_t result;
 #define ENDSZ 0.07
+    color_t result;
     if(param < ENDSZ){
         result.r = param / ENDSZ;
         result.g = 0;
@@ -43,6 +43,8 @@ static color_t param_to_color(float param)
     result.a = 1;
     return result;
 }
+
+// --------- Pattern: Full -----------
 
 pat_state_pt pat_full_init()
 {
@@ -60,12 +62,16 @@ void pat_full_update(slot_t* slot, float t)
     *color = param_to_color(slot->param_values[0]);
 }
 
+void pat_full_prevclick(slot_t * slot, float x, float y){
+
+}
+
 color_t pat_full_pixel(slot_t* slot, float x, float y)
 {
     return *(color_t*)slot->state;
 }
 
-const parameter_t pat_full_params[1] = {
+const parameter_t pat_full_params[] = {
     {
         .name = "Color",
         .default_val = 0.5,
@@ -77,15 +83,21 @@ const pattern_t pat_full = {
     .init = &pat_full_init,
     .del = &pat_full_del,
     .update = &pat_full_update,
-    .n_params = 1,
+    .prevclick = &pat_full_prevclick,
+    .n_params = sizeof(pat_full_params) / sizeof(parameter_t),
     .parameters = pat_full_params,
     .name = "Full",
 };
+
+// --------- Pattern: Wave -----------
 
 typedef struct
 {
     color_t color;
     float phase;
+    float last_t;
+    float kx;
+    float ky;
 } pat_wave_state_t;
 
 pat_state_pt pat_wave_init()
@@ -100,22 +112,49 @@ void pat_wave_del(pat_state_pt state)
 
 void pat_wave_update(slot_t* slot, float t)
 {
+    float k_mag;
+    float k_ang;
+
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     state->color = param_to_color(slot->param_values[0]);
-    state->phase = t;
+
+    state->phase += (t - state->last_t) * slot->param_values[1];
+    state->last_t = t;
+
+    k_mag = slot->param_values[2] * 3 + 0.5;
+    k_ang = slot->param_values[3] * 2 * M_PI;
+    state->kx = cos(k_ang) * k_mag;
+    state->ky = sin(k_ang) * k_mag;
+}
+
+void pat_wave_prevclick(slot_t * slot, float x, float y){
+    slot->param_values[2] = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
+    slot->param_values[3] = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
 }
 
 color_t pat_wave_pixel(slot_t* slot, float x, float y)
 {
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
-    result.a = (sin((state->phase + y) * 1 * M_PI) + 1) / 2;
+    result.a = (sin((state->phase + y * state->ky + x * state->kx) * 1 * M_PI) + 1) / 2;
     return result;
 }
 
-const parameter_t pat_wave_params[1] = {
+const parameter_t pat_wave_params[] = {
     {
         .name = "Color",
+        .default_val = 0.5,
+    },
+    {
+        .name = "\\omega",
+        .default_val = 0.5,
+    },
+    {
+        .name = "|k|",
+        .default_val = 0.5,
+    },
+    {
+        .name = "<)k",
         .default_val = 0.5,
     },
 };
@@ -125,9 +164,95 @@ const pattern_t pat_wave = {
     .init = &pat_wave_init,
     .del = &pat_wave_del,
     .update = &pat_wave_update,
-    .n_params = 1,
+    .prevclick = &pat_wave_prevclick,
+    .n_params = sizeof(pat_wave_params) / sizeof(parameter_t),
     .parameters = pat_wave_params,
     .name = "Wave",
+};
+
+// --------- Pattern: Bubble -----------
+
+typedef struct
+{
+    color_t color;
+    float r;
+    float rho;
+    float cx;
+    float cy;
+} pat_bubble_state_t;
+
+pat_state_pt pat_bubble_init()
+{
+    return malloc(sizeof(pat_bubble_state_t));
+}
+
+void pat_bubble_del(pat_state_pt state)
+{
+    free(state);
+}
+
+void pat_bubble_update(slot_t* slot, float t)
+{
+    pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
+    state->color = param_to_color(slot->param_values[0]);
+    state->r = slot->param_values[1];
+    state->rho = slot->param_values[2] * 1.3 + 0.3;
+    state->cx = slot->param_values[3] * 2 - 1.0;
+    state->cy = slot->param_values[4] * 2 - 1.0;
+}
+
+void pat_bubble_prevclick(slot_t * slot, float x, float y){
+    slot->param_values[3] = (x + 1.0) / 2;
+    slot->param_values[4] = (y + 1.0) / 2;
+}
+
+color_t pat_bubble_pixel(slot_t* slot, float x, float y)
+{
+    float d;
+    pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
+    color_t result = state->color;
+
+    d = sqrt(pow(state->cx - x, 2) + pow(state->cy - y, 2)) / state->r;
+    
+    if(d < 1.0)
+        result.a = pow(1.0 - pow(d, state->rho), 1.0 / state->rho);
+    else
+        result.a = 0.0;
+    return result;
+}
+
+const parameter_t pat_bubble_params[] = {
+    {
+        .name = "Color",
+        .default_val = 0.5,
+    },
+    {
+        .name = "r",
+        .default_val = 0.5,
+    },
+    {
+        .name = "\\rho",
+        .default_val = 0.5,
+    },
+    {
+        .name = "cx",
+        .default_val = 0.5,
+    },
+    {
+        .name = "cy",
+        .default_val = 0.5,
+    },
+};
+
+const pattern_t pat_bubble = {
+    .render = &pat_bubble_pixel,
+    .init = &pat_bubble_init,
+    .del = &pat_bubble_del,
+    .update = &pat_bubble_update,
+    .prevclick = &pat_bubble_prevclick,
+    .n_params = sizeof(pat_bubble_params) / sizeof(parameter_t),
+    .parameters = pat_bubble_params,
+    .name = "Bubble",
 };
 
 

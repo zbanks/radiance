@@ -8,5 +8,6 @@ extern const pattern_t* patterns[];
 
 extern const pattern_t pat_full;
 extern const pattern_t pat_wave;
+extern const pattern_t pat_bubble;
 
 #endif

@@ -49,8 +49,6 @@ void update_patterns(float t)
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
-    slot->state = (*pattern->init)();
-    if(!slot->state) FAIL("Could not malloc pattern state\n");
     slot->alpha = 0;
     slot->param_values = malloc(sizeof(float) * pattern->n_params);
     if(!slot->param_values) FAIL("Could not malloc param values\n");
@@ -58,6 +56,8 @@ void pat_load(slot_t* slot, pattern_t* pattern)
     {
         slot->param_values[i] = pattern->parameters[i].default_val;
     }
+    slot->state = (*pattern->init)();
+    if(!slot->state) FAIL("Could not malloc pattern state\n");
 }
 
 void pat_unload(slot_t* slot)
