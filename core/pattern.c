@@ -44,6 +44,40 @@ static color_t param_to_color(float param)
     return result;
 }
 
+// Function Generator
+
+const quant_labels_t osc_quant_labels = {
+    "Sine",
+    "Triangle",
+    "Sawtooth",
+    "Square",
+    LABELS_END
+};
+
+float osc_fn_gen(enum osc_type type, float phase){
+    switch(type){
+        case OSC_SINE:
+        default:
+            return (sin(phase * 2 * M_PI) + 1.0) / 2.0;
+        case OSC_TRIANGLE:
+            return fabs(fmod(phase, 1.0) - 0.5) * 2;
+        case OSC_SAWTOOTH:
+            return fmod(phase, 1.0);
+        case OSC_SQUARE:
+            return (fmod(phase, 1.0) > 0.5 ? 1.0 : 0.0);
+    }
+}
+
+int quantize_parameter(quant_labels_t l, float p){ 
+    int i = 0;
+    int r;
+    while(l[++i]);
+    r = floor(p * i);
+    if(r >= i) r = i - 1;
+    return r;
+}
+
+
 // --------- Pattern: Full -----------
 
 pat_state_pt pat_full_init()
@@ -95,6 +129,7 @@ typedef struct
 {
     color_t color;
     float phase;
+    enum osc_type type;
     float last_t;
     float kx;
     float ky;
@@ -117,26 +152,30 @@ void pat_wave_update(slot_t* slot, float t)
 
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     state->color = param_to_color(slot->param_values[0]->v);
+    state->type = quantize_parameter(osc_quant_labels, slot->param_values[1]->v);
 
-    state->phase += (t - state->last_t) * slot->param_values[1]->v;
+    state->phase += (t - state->last_t) * slot->param_values[2]->v;
     state->last_t = t;
 
-    k_mag = slot->param_values[2]->v * 3 + 0.5;
-    k_ang = slot->param_values[3]->v * 2 * M_PI;
+    k_mag = slot->param_values[3]->v * 2 + 0.2;
+    k_ang = slot->param_values[4]->v * 2 * M_PI;
     state->kx = cos(k_ang) * k_mag;
     state->ky = sin(k_ang) * k_mag;
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){
-    slot->param_values[2]->v = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
-    slot->param_values[3]->v = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
+    if(slot->param_values[3]->owner == slot)
+        slot->param_values[3]->v = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
+    if(slot->param_values[4]->owner == slot)
+        slot->param_values[4]->v = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
 }
 
 color_t pat_wave_pixel(slot_t* slot, float x, float y)
 {
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
-    result.a = (sin((state->phase + y * state->ky + x * state->kx) * 1 * M_PI) + 1) / 2;
+    //result.a = (sin((state->phase + y * state->ky + x * state->kx) * 1 * M_PI) + 1) / 2;
+    result.a = osc_fn_gen(state->type, state->phase + y * state->ky + x * state->kx);
     return result;
 }
 
@@ -144,6 +183,10 @@ const parameter_t pat_wave_params[] = {
     {
         .name = "Color",
         .default_val = 0.5,
+    },
+    {
+        .name = "Wave Type",
+        .default_val = 0.0,
     },
     {
         .name = "\\omega",
@@ -202,8 +245,10 @@ void pat_bubble_update(slot_t* slot, float t)
 }
 
 void pat_bubble_prevclick(slot_t * slot, float x, float y){
-    slot->param_values[3]->v = (x + 1.0) / 2;
-    slot->param_values[4]->v = (y + 1.0) / 2;
+    if(slot->param_values[3]->owner == slot)
+        slot->param_values[3]->v = (x + 1.0) / 2;
+    if(slot->param_values[4]->owner == slot)
+        slot->param_values[4]->v = (y + 1.0) / 2;
 }
 
 color_t pat_bubble_pixel(slot_t* slot, float x, float y)

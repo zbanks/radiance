@@ -12,11 +12,18 @@ typedef struct color
 } color_t;
 
 #define PVAL_STACK_SIZE 2048
+#define PVAL_STACK_DEBUG 
 
+// Forward definitions
 struct pval;
+struct input;
+
 typedef struct pval {
     float v;
-    void * owner;
+    union {
+        void * owner;
+        struct input * input;
+    };
     struct pval * next;
 } pval_t;
 

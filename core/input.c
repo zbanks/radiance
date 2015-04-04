@@ -1,17 +1,11 @@
 #include <math.h>
 #include "input.h"
+#include "pattern.h"
 
-#define N_INPUTS 1
+#define N_INPUTS 3
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
-
-enum osc_type {
-    OSC_SINE,
-    OSC_SQUARE,
-    OSC_TRIANGLE,
-    OSC_SAWTOOTH,
-};
 
 typedef struct
 {
@@ -54,12 +48,9 @@ void inp_lfo_update(input_t * input, float t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) input->state;
     state->phase += (t - state->last_t) * input->param_values[1]->v;
     state->last_t = t;
-    switch(state->type){
-        case OSC_SINE:
-        default:
-            input->value->v = (sin(state->phase * 2 * M_PI) + 1.0) / 2.0 * input->param_values[2]->v
-                              + (1.0 - input->param_values[2]->v) * input->param_values[3]->v ;
-    }
+    state->type = quantize_parameter(osc_quant_labels, input->param_values[0]->v);
+    input->value->v = osc_fn_gen(state->type, state->phase) * input->param_values[2]->v
+                      + (1.0 - input->param_values[2]->v) * input->param_values[3]->v;
 }
 
 void inp_lfo_del(input_t * input){
@@ -71,13 +62,6 @@ void inp_lfo_del(input_t * input){
     free(input->state);
 }
 
-color_t green = {
-    .r = 0.1,
-    .g = 1.0,
-    .b = 0.0,
-    .a = 0.0
-};
-
 const int n_inputs = N_INPUTS;
 input_t inputs[N_INPUTS] = {
     {
@@ -86,7 +70,29 @@ input_t inputs[N_INPUTS] = {
         .default_val = 0.5,
         .n_params = sizeof(inp_lfo_parameters) / sizeof(parameter_t),
         .parameters = inp_lfo_parameters,
-        .color = &green,
+        .color = {1.0, 0.0, 0.0, 0.0},
+        .init = inp_lfo_init,
+        .update = inp_lfo_update,
+        .del = inp_lfo_del,
+    },
+    {
+        .name = "LFO 2",
+        .type = INPUT_LFO,
+        .default_val = 0.5,
+        .n_params = sizeof(inp_lfo_parameters) / sizeof(parameter_t),
+        .parameters = inp_lfo_parameters,
+        .color = {0.9, 0.3, 0.0, 0.0},
+        .init = inp_lfo_init,
+        .update = inp_lfo_update,
+        .del = inp_lfo_del,
+    },
+    {
+        .name = "LFO 3",
+        .type = INPUT_LFO,
+        .default_val = 0.5,
+        .n_params = sizeof(inp_lfo_parameters) / sizeof(parameter_t),
+        .parameters = inp_lfo_parameters,
+        .color = {0.9, 0.9, 0.0, 0.0},
         .init = inp_lfo_init,
         .update = inp_lfo_update,
         .del = inp_lfo_del,

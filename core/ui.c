@@ -184,6 +184,12 @@ static uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
                       (uint8_t) roundf(255 * color.b));
 }
 
+static SDL_Color color_to_SDL(color_t color){
+    return (SDL_Color) {(uint8_t) roundf(255 * color.r),
+                        (uint8_t) roundf(255 * color.g),
+                        (uint8_t) roundf(255 * color.b)};
+}
+
 void ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
@@ -388,7 +394,7 @@ static void ui_update_slot(slot_t* slot)
             r.w = layout.param_handle_width;
             r.h = layout.param_handle_height;
 
-            if((slot_t *) slot->param_values[i]->owner == slot)
+            if(slot->param_values[i]->owner == slot)
                 SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
             else
                 SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 200, 180, 180));
@@ -399,11 +405,11 @@ static void ui_update_slot(slot_t* slot)
             r.w = layout.param_source_width;
             r.h = layout.param_source_height;
             if(active_param_source == &slot->param_values[i])
-                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 0, 100));
+                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 220, 220, 220));
             else if(slot->param_values[i]->owner != slot)
-                SDL_FillRect(slot_pane, &r, color_to_MapRGB(slot_pane->format, *((input_t *) slot->param_values[i]->owner)->color));
+                SDL_FillRect(slot_pane, &r, color_to_MapRGB(slot_pane->format, slot->param_values[i]->input->color));
             else
-                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 0));
+                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 40, 40, 40));
         }
     }
 }
@@ -439,7 +445,7 @@ static void ui_update_input(input_t* input)
 
     SDL_Color white = {255, 255, 255};
 
-    SDL_Surface* msg = TTF_RenderText_Solid(input_font, input->name, white);
+    SDL_Surface* msg = TTF_RenderText_Solid(input_font, input->name, color_to_SDL(input->color));
     r.x = layout.input_text_x;
     r.y = layout.input_text_y;
 
@@ -469,21 +475,21 @@ static void ui_update_input(input_t* input)
         r.w = layout.param_handle_width;
         r.h = layout.param_handle_height;
 
-        if((input_t *) input->param_values[i]->owner == input)
+        if(input->param_values[i]->owner == input->parameters)
             SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 0, 0, 80));
         else
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 30, 30, 30));
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 180, 180, 180));
 
         r.x = layout.param_source_start_x;
         r.y = layout.param_source_start_y + layout.param_pitch * i;
         r.w = layout.param_source_width;
         r.h = layout.param_source_height;
         if(active_param_source == &input->param_values[i])
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 0, 100));
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 220, 220, 220));
         else if(input->param_values[i]->owner != input->parameters)
-            SDL_FillRect(input_pane, &r, color_to_MapRGB(input_pane->format, *((input_t *) input->param_values[i]->owner)->color));
+            SDL_FillRect(input_pane, &r, color_to_MapRGB(input_pane->format, input->param_values[i]->input->color));
         else
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 0));
+            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 40, 40, 40));
     }
 }
 
@@ -676,7 +682,7 @@ static int mouse_click_slot(int index, int x, int y)
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
-            if((slot_t *) slots[index].param_values[i]->owner != &slots[index])
+            if(slots[index].param_values[i]->owner != &slots[index])
                 return 1;
             active_param_slider.value = slots[index].param_values[i];
             active_param_slider.initial_value = slots[index].param_values[i]->v;
@@ -692,12 +698,10 @@ static int mouse_click_slot(int index, int x, int y)
                    layout.param_source_width,
                    layout.param_source_height)) {
             if(active_param_source == &slots[index].param_values[i]){
-                printf("reused\n");
                 pval_free(*active_param_source, &slots[index]);
                 *active_param_source = pval_new((**active_param_source).v, &slots[index]);
                 active_param_source = 0;
             }else{
-                printf("diff\n");
                 active_param_source = &slots[index].param_values[i];
                 pval_free(*active_param_source, &slots[index]);
                 *active_param_source = pval_new((**active_param_source).v, &slots[index]);
@@ -730,7 +734,7 @@ static int mouse_click_input(int index, int x, int y)
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height)) {
-            if((parameter_t *) inputs[index].param_values[i]->owner != inputs[index].parameters)
+            if(inputs[index].param_values[i]->owner != inputs[index].parameters)
                 return 1;
             active_param_slider.value = inputs[index].param_values[i];
             active_param_slider.initial_value = inputs[index].param_values[i]->v;

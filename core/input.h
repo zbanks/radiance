@@ -28,7 +28,7 @@ typedef struct input
     int n_params;
     parameter_t * parameters;
     pval_t ** param_values;
-    color_t * color;
+    color_t color;
     inp_state_pt state;
     inp_init_fn_pt init;
     inp_update_fn_pt update;
@@ -41,5 +41,7 @@ extern input_t inputs[];
 void input_start();
 void input_stop();
 void update_inputs(float t);
+
+
 
 #endif

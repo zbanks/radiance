@@ -31,7 +31,9 @@ pval_t * pval_new(float v, void * owner){
     pv->v = v;
     pv->owner = owner;
     free_pvals--;
+#ifdef PVAL_STACK_DEBUG
     printf("free pvals-- %d\n", free_pvals);
+#endif
     return pv;
 }
 
@@ -41,7 +43,9 @@ void pval_free(pval_t * pv, void * owner){
     pv->next = next_pval;
     next_pval = pv;
     free_pvals++;
+#ifdef PVAL_STACK_DEBUG
     printf("free pvals++: %d\n", free_pvals);
+#endif
 }
 
 SDL_mutex* patterns_updating;
