@@ -157,7 +157,7 @@ static struct
 
 static struct
 {
-    float * value;
+    pval_t * value;
     float initial_value;
 } active_param_slider;
 
@@ -175,7 +175,7 @@ static struct
     int dy;
 } active_slot;
 
-static float ** active_param_source;
+static pval_t ** active_param_source;
 
 static uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
     return SDL_MapRGB(format, 
@@ -397,6 +397,8 @@ static void ui_update_slot(slot_t* slot)
             r.h = layout.param_source_height;
             if(active_param_source == &slot->param_values[i])
                 SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 0, 100));
+            else if(slot->param_values[i]->owner != slot)
+                SDL_FillRect(slot_pane, &r, color_to_MapRGB(slot_pane->format, *((input_t *) slot->param_values[i]->owner)->color));
             else
                 SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 0));
         }
@@ -472,6 +474,8 @@ static void ui_update_input(input_t* input)
         r.h = layout.param_source_height;
         if(active_param_source == &input->param_values[i])
             SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 0, 100));
+        else if(input->param_values[i]->owner != input->parameters)
+            SDL_FillRect(input_pane, &r, color_to_MapRGB(input_pane->format, *((input_t *) input->param_values[i]->owner)->color));
         else
             SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 0));
     }
@@ -568,7 +572,7 @@ static void mouse_drag_param_slider(int x, int y)
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    *active_param_slider.value = val;
+    active_param_slider.value->v = val;
 }
 
 static void mouse_drag_pattern(int x, int y)
@@ -682,13 +686,13 @@ static int mouse_click_slot(int index, int x, int y)
             if(active_param_source == &slots[index].param_values[i]){
                 printf("reused\n");
                 pval_free(*active_param_source, &slots[index]);
-                *active_param_source = pval_new(**active_param_source, &slots[index]);
+                *active_param_source = pval_new((**active_param_source).v, &slots[index]);
                 active_param_source = 0;
             }else{
                 printf("diff\n");
                 active_param_source = &slots[index].param_values[i];
                 pval_free(*active_param_source, &slots[index]);
-                *active_param_source = pval_new(**active_param_source, &slots[index]);
+                *active_param_source = pval_new((**active_param_source).v, &slots[index]);
             }
             return 1;
         }
@@ -730,13 +734,13 @@ static int mouse_click_input(int index, int x, int y)
                    layout.param_source_width,
                    layout.param_source_height)) {
             if(active_param_source == &inputs[index].param_values[i]){
-                pval_free(*active_param_source, &inputs[index]);
-                *active_param_source = pval_new(**active_param_source, &inputs[index]);
+                pval_free(*active_param_source, inputs[index].parameters);
+                *active_param_source = pval_new((**active_param_source).v, inputs[index].parameters);
                 active_param_source = 0;
             }else{
                 active_param_source = &inputs[index].param_values[i];
-                pval_free(*active_param_source, &inputs[index]);
-                *active_param_source = pval_new(**active_param_source, &inputs[index]);
+                pval_free(*active_param_source, inputs[index].parameters);
+                *active_param_source = pval_new((**active_param_source).v, inputs[index].parameters);
             }
             return 1;
         }
@@ -744,7 +748,7 @@ static int mouse_click_input(int index, int x, int y)
 
     // Are we trying to set active_param_source and we clicked on the box?
     if(active_param_source){
-        pval_free(*active_param_source, &inputs[index]);
+        pval_free(*active_param_source, 0);
         *active_param_source = inputs[index].value;
         active_param_source = 0;
     }

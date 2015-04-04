@@ -36,7 +36,7 @@ pval_t * pval_new(float v, void * owner){
 }
 
 void pval_free(pval_t * pv, void * owner){
-    if(pv->owner != owner)
+    if(owner && (pv->owner != owner))
         return;
     pv->next = next_pval;
     next_pval = pv;

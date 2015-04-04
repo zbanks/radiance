@@ -40,7 +40,7 @@ void inp_lfo_init(input_t * input){
 
     input->param_values = malloc(sizeof(float *) * input->n_params);
     for(int i = 0; i < input->n_params; i++){
-        input->param_values[i] = pval_new(input->parameters[i].default_val, input);
+        input->param_values[i] = pval_new(input->parameters[i].default_val, input->parameters);
     }
 
     input->value = pval_new(input->default_val, input);
@@ -59,7 +59,7 @@ void inp_lfo_update(input_t * input, float t){
 
 void inp_lfo_del(input_t * input){
     for(int i = 0; i < input->n_params; i++){
-        pval_free(input->param_values[i], input);
+        pval_free(input->param_values[i], input->parameters);
     }
     pval_free(input->value, input);
     free(input->param_values);
