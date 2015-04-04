@@ -1,20 +1,23 @@
 #include <SDL/SDL.h>
-#include <SDL/SDL_ttf.h>
 #include <SDL/SDL_gfxPrimitives.h>
-#include "err.h"
-#include "slot.h"
-#include <stdint.h>
+#include <SDL/SDL_ttf.h>
 #include <math.h>
-#include <pattern.h>
-#include <slice.h>
+#include <stdint.h>
+#include "err.h"
+#include "input.h"
+#include "pattern.h"
+#include "slot.h"
+#include "slice.h"
 
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;
 static SDL_Surface* pattern_preview;
 static SDL_Surface* slot_pane;
 static SDL_Surface* pattern_pane;
+static SDL_Surface* input_pane;
 static TTF_Font* param_font;
 static TTF_Font* pattern_font;
+static TTF_Font* input_font;
 
 static int mouse_down;
 static int mouse_drag_start_x;
@@ -50,7 +53,6 @@ static const struct
     int alpha_handle_width;
     int alpha_handle_height;
 
-
     int param_text_start_x;
     int param_text_start_y;
     int param_pitch;
@@ -69,6 +71,14 @@ static const struct
     int pattern_height;
     int pattern_text_x;
     int pattern_text_y;
+
+    int input_start_x;
+    int input_start_y;
+    int input_pitch;
+    int input_width;
+    int input_height;
+    int input_text_x;
+    int input_text_y;
 } layout = {
     .win_width = 1024,
     .win_height = 600,
@@ -115,6 +125,14 @@ static const struct
     .pattern_pitch = 120,
     .pattern_text_x = 5,
     .pattern_text_y = 3,
+
+    .input_start_x = 260,
+    .input_start_y = 30,
+    .input_width = 110,
+    .input_height = 200,
+    .input_pitch = 125,
+    .input_text_x = 5,
+    .input_text_y = 3,
 };
 
 static void (*mouse_drag_fn_p)(int x, int y);
@@ -128,8 +146,7 @@ static struct
 
 static struct
 {
-    slot_t* slot;
-    int index;
+    float * value;
     float initial_value;
 } active_param_slider;
 
@@ -168,22 +185,25 @@ void ui_init()
     if(!master_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     pattern_preview = SDL_CreateRGBSurface(0, layout.preview_width, layout.preview_height, 32, 0, 0, 0, 0);
-
     if(!pattern_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     slot_pane = SDL_CreateRGBSurface(0, layout.slot_width, layout.slot_height, 32, 0, 0, 0, 0);
-
     if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     pattern_pane = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
-
     if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+
+    input_pane = SDL_CreateRGBSurface(0, layout.input_width, layout.input_height, 32, 0, 0, 0, 0);
+    if(!input_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     param_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
     if(!param_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+
+    input_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
+    if(!input_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -202,6 +222,7 @@ void ui_quit()
     SDL_FreeSurface(master_preview);
     SDL_FreeSurface(pattern_preview);
     SDL_FreeSurface(slot_pane);
+    SDL_FreeSurface(input_pane);
     TTF_CloseFont(param_font);
     TTF_CloseFont(pattern_font);
     SDL_Quit();
@@ -339,7 +360,7 @@ static void ui_update_slot(slot_t* slot)
             r.y = layout.param_slider_start_y + layout.param_pitch*i;
             r.w = layout.param_slider_width;
             r.h = 3;
-            SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 80, 80, 80));
+            SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 80));
 
             r.x = layout.param_handle_start_x +
                   slot->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
@@ -372,6 +393,51 @@ static void ui_update_pattern(pattern_t* pattern)
     SDL_FreeSurface(msg);
 }
 
+static void ui_update_input(input_t* input)
+{
+    SDL_Rect r;
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.input_width;
+    r.h = layout.input_height;
+    SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 20, 20, 20));
+
+    SDL_Color white = {255, 255, 255};
+
+    SDL_Surface* msg = TTF_RenderText_Solid(input_font, input->name, white);
+    r.x = layout.input_text_x;
+    r.y = layout.input_text_y;
+
+    r.w = msg->w;
+    r.h = msg->h;
+    SDL_BlitSurface(msg, 0, input_pane, &r);
+
+    for(int i = 0; i < input->n_params; i++)
+    {
+        SDL_Surface* msg = TTF_RenderText_Solid(param_font, input->parameters[i].name, white);
+        r.x = layout.param_text_start_x;
+        r.y = layout.param_text_start_y+layout.param_pitch*i;
+        r.w = msg->w;
+        r.h = msg->h;
+        SDL_BlitSurface(msg, 0, input_pane, &r);
+        SDL_FreeSurface(msg);
+
+        r.x = layout.param_slider_start_x;
+        r.y = layout.param_slider_start_y + layout.param_pitch*i;
+        r.w = layout.param_slider_width;
+        r.h = 3;
+        SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 80));
+
+        r.x = layout.param_handle_start_x +
+                input->param_values[i] * (layout.param_slider_width - layout.param_handle_width);
+        r.y = layout.param_handle_start_y + layout.param_pitch * i;
+        r.w = layout.param_handle_width;
+        r.h = layout.param_handle_height;
+
+        SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 0, 0, 80));
+    }
+}
+
 void ui_render()
 {
     SDL_Rect r;
@@ -388,6 +454,17 @@ void ui_render()
     r.w = layout.master_width;
     r.h = layout.master_height;
     SDL_BlitSurface(master_preview, 0, screen, &r);
+
+    for(int i = 0; i < n_inputs; i++)
+    {
+        ui_update_input(&inputs[i]);
+        r.w = input_pane->w;
+        r.h = input_pane->h;
+        r.x = layout.input_start_x + layout.input_pitch * i;
+        r.y = layout.input_start_y;
+
+        SDL_BlitSurface(input_pane, 0, screen, &r);
+    }
 
     for(int i=0; i<n_slots; i++)
     {
@@ -452,7 +529,7 @@ static void mouse_drag_param_slider(int x, int y)
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    active_param_slider.slot->param_values[active_param_slider.index] = val;
+    *active_param_slider.value = val;
 }
 
 static void mouse_drag_pattern(int x, int y)
@@ -550,8 +627,7 @@ static int mouse_click_slot(int index, int x, int y)
                    layout.param_handle_width,
                    layout.param_handle_height))
         {
-            active_param_slider.slot = &slots[index];
-            active_param_slider.index = i;
+            active_param_slider.value = &slots[index].param_values[i];
             active_param_slider.initial_value = slots[index].param_values[i];
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
@@ -567,6 +643,29 @@ static int mouse_click_slot(int index, int x, int y)
     mouse_drop_fn_p = &mouse_drop_slot;
     return 1;
 
+}
+
+static int mouse_click_input(int index, int x, int y)
+{
+    // See if the click is on a parameter slider
+    for(int i = 0; i < inputs[index].n_params; i++)
+    {
+        if(in_rect(x, y,
+                   layout.param_handle_start_x +
+                     inputs[index].param_values[i] *
+                     (layout.param_slider_width - layout.param_handle_width),
+                   layout.param_handle_start_y + layout.param_pitch * i,
+                   layout.param_handle_width,
+                   layout.param_handle_height))
+        {
+            active_param_slider.value = &inputs[index].param_values[i];
+            active_param_slider.initial_value = inputs[index].param_values[i];
+            mouse_drag_fn_p = &mouse_drag_param_slider;
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 static int mouse_click(int x, int y)
@@ -600,6 +699,19 @@ static int mouse_click(int x, int y)
             mouse_drag_fn_p = &mouse_drag_pattern;
             mouse_drop_fn_p = &mouse_drop_pattern;
             return 1;
+        }
+    }
+
+    // See if click is in an input
+    for(int i = 0; i < n_inputs; i++){
+        if(in_rect(x, y,
+                   layout.input_start_x + layout.input_pitch * i,
+                   layout.input_start_y,
+                   layout.input_width,
+                   layout.input_height)){
+            return mouse_click_input(i,
+                                     x - (layout.input_start_x + layout.input_pitch * i),
+                                     y - layout.input_start_y);
         }
     }
 
