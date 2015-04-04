@@ -1,4 +1,5 @@
 *.o
+*.d
 beat-off
 *.swp
 *.swm
