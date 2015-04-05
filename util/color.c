@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "util/color.h"
 
 // r,g,b values are from 0 to 1

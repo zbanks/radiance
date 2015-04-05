@@ -1,6 +1,6 @@
-#include "slider.h"
-#include "err.h"
-#include "ui.h"
+#include "ui/slider.h"
+#include "core/err.h"
+#include "ui/ui.h"
 
 #include <SDL/SDL_ttf.h>
 

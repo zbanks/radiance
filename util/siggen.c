@@ -1,4 +1,11 @@
+#include <math.h>
+
 #include "util/siggen.h"
+#include "core/parameter.h"
+
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
 
 quant_labels_t osc_quant_labels = {
     "Sine",

@@ -1,4 +1,4 @@
-#include "audio.h"
+#include "filters/audio.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <portaudio.h>
@@ -7,7 +7,7 @@
 #include <vamp-hostsdk/PluginInputDomainAdapter.h>
 #include <vamp-hostsdk/PluginLoader.h>
 
-#include "err.h"
+#include "core/err.h"
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
 
