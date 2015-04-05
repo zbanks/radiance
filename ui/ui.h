@@ -1,7 +1,7 @@
 #ifndef __UI_H
 #define __UI_H
 
-#include "slot.h"
+#include "core/slot.h"
 
 typedef struct {
     int win_width;

@@ -2,7 +2,7 @@
 #define __SLIDER_H
 
 #include <SDL/SDL.h>
-#include "parameter.h"
+#include "core/parameter.h"
 
 extern SDL_Surface* slider_surface;
 
