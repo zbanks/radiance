@@ -1,25 +1,5 @@
 #include "util/color.h"
 
-color_t param_to_color(float param)
-{
-#define ENDSZ 0.07
-    color_t result;
-    if(param < ENDSZ){
-        result.r = param / ENDSZ;
-        result.g = 0;
-        result.b = 0;
-    }else if(param > (1.0 - ENDSZ)){
-        result.r = 1.0;
-        result.g = (param - 1.0 + ENDSZ) / ENDSZ;
-        result.b = 1.0;
-    }else{
-        param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
-        HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
-    }
-    result.a = 1;
-    return result;
-}
-
 // r,g,b values are from 0 to 1
 // h = [0,360], s = [0,1], v = [0,1]
 //		if s == 0, then h = -1 (undefined)
@@ -71,4 +51,25 @@ static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v )
 			break;
 	}
 }
+
+color_t param_to_color(float param)
+{
+#define ENDSZ 0.07
+    color_t result;
+    if(param < ENDSZ){
+        result.r = param / ENDSZ;
+        result.g = 0;
+        result.b = 0;
+    }else if(param > (1.0 - ENDSZ)){
+        result.r = 1.0;
+        result.g = (param - 1.0 + ENDSZ) / ENDSZ;
+        result.b = 1.0;
+    }else{
+        param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
+        HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
+    }
+    result.a = 1;
+    return result;
+}
+
 

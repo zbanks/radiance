@@ -5,11 +5,14 @@
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_ttf.h>
 
+#include "ui/ui.h"
+#include "ui/slider.h"
 #include "core/err.h"
 #include "core/slot.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
+#include "core/parameter.h"
 
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;
@@ -17,7 +20,6 @@ static SDL_Surface* pattern_preview;
 static SDL_Surface* slot_pane;
 static SDL_Surface* pattern_pane;
 static SDL_Surface* signal_pane;
-static TTF_Font* param_font;
 static TTF_Font* pattern_font;
 static TTF_Font* signal_font;
 
@@ -25,70 +27,7 @@ static int mouse_down;
 static int mouse_drag_start_x;
 static int mouse_drag_start_y;
 
-static const struct
-{
-    int win_width;
-    int win_height;
-
-    int master_x;
-    int master_y;
-    int master_width;
-    int master_height;
-
-    int slot_start_x;
-    int slot_start_y;
-    int slot_width;
-    int slot_height;
-    int slot_pitch;
-
-    int preview_x;
-    int preview_y;
-    int preview_width;
-    int preview_height;
-
-    int alpha_pitch;
-    int alpha_slider_x;
-    int alpha_slider_y;
-    int alpha_slider_height;
-    int alpha_handle_x;
-    int alpha_handle_y;
-    int alpha_handle_width;
-    int alpha_handle_height;
-
-    int param_text_start_x;
-    int param_text_start_y;
-    int param_pitch;
-
-    int param_slider_start_x;
-    int param_slider_start_y;
-    int param_slider_width;
-
-    int param_handle_start_x;
-    int param_handle_start_y;
-    int param_handle_width;
-    int param_handle_height;
-
-    int param_source_start_x;
-    int param_source_start_y;
-    int param_source_width;
-    int param_source_height;
-
-    int pattern_start_x;
-    int pattern_start_y;
-    int pattern_pitch;
-    int pattern_width;
-    int pattern_height;
-    int pattern_text_x;
-    int pattern_text_y;
-
-    int signal_start_x;
-    int signal_start_y;
-    int signal_pitch;
-    int signal_width;
-    int signal_height;
-    int signal_text_x;
-    int signal_text_y;
-} layout = {
+layout_t layout = {
     .win_width = 1024,
     .win_height = 600,
 
@@ -116,20 +55,27 @@ static const struct
     .alpha_handle_width = 10,
     .alpha_handle_height = 10,
 
-    .param_text_start_x = 3,
-    .param_text_start_y = 90,
-    .param_pitch = 30,
-    .param_slider_start_x = 3,
-    .param_slider_start_y = 103,
-    .param_slider_width = 70,
-    .param_handle_start_x = 3,
-    .param_handle_start_y = 100,
-    .param_handle_width = 10,
-    .param_handle_height = 10,
-    .param_source_start_x = 80,
-    .param_source_start_y = 100,
-    .param_source_width = 10,
-    .param_source_height = 10,
+    .pattern = {
+        .slider_start_x = 0,
+        .slider_start_y = 100,
+        .slider_pitch = 30,
+    },
+
+    .slider = {
+        .width = 100,
+        .height = 30,
+        .name_x = 3,
+        .name_y = 3,
+        .source_x = 20,
+        .source_y = 3,
+        .track_x = 3,
+        .track_y = 10,
+        .track_width = 94,
+        .handle_start_x = 3,
+        .handle_y = 15,
+        .handle_width = 10,
+        .handle_height = 10, 
+    },
 
     .pattern_start_x = 10,
     .pattern_start_y = 520,
@@ -157,11 +103,13 @@ static struct
     float initial_value;
 } active_alpha_slider;
 
+/*
 static struct
 {
     pval_t * value;
     float initial_value;
 } active_param_slider;
+*/
 
 static struct
 {
@@ -177,7 +125,7 @@ static struct
     int dy;
 } active_slot;
 
-static pval_t ** active_param_source;
+//static pval_t ** active_param_source;
 
 static uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
     return SDL_MapRGB(format, 
@@ -224,9 +172,6 @@ void ui_init()
     signal_pane = SDL_CreateRGBSurface(0, layout.signal_width, layout.signal_height, 32, 0, 0, 0, 0);
     if(!signal_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    param_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
-    if(!param_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
-
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
@@ -251,7 +196,6 @@ void ui_quit()
     SDL_FreeSurface(pattern_preview);
     SDL_FreeSurface(slot_pane);
     SDL_FreeSurface(signal_pane);
-    TTF_CloseFont(param_font);
     TTF_CloseFont(pattern_font);
     SDL_Quit();
 }
@@ -366,53 +310,27 @@ static void ui_update_slot(slot_t* slot)
 
         r.x = layout.alpha_handle_x;
         r.y = layout.alpha_handle_y +
-              (1 - slot->alpha) * (layout.alpha_slider_height - layout.param_handle_height);
+              (1 - slot->alpha) * (layout.alpha_slider_height - layout.alpha_handle_height);
         r.w = layout.alpha_handle_width;
         r.h = layout.alpha_handle_height;
 
         SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
 
-        SDL_Color white = {255, 255, 255};
-
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
-            SDL_Surface* msg = TTF_RenderText_Solid(param_font, slot->pattern->parameters[i].name, white);
-            r.x = layout.param_text_start_x;
-            r.y = layout.param_text_start_y+layout.param_pitch*i;
-            r.w = msg->w;
-            r.h = msg->h;
-            SDL_BlitSurface(msg, 0, slot_pane, &r);
-            SDL_FreeSurface(msg);
+            parameter_t test_slider_p = {.name = "name"};
+            param_state_t test_slider_ps = {.value = 0.3, .handle_color = {0,0,80}, .label_color = {255,255,0}, .label = "src"};
+            SDL_Color c = {255, 255, 255};
+            slider_render(&test_slider_p, &test_slider_ps, c);
 
-            r.x = layout.param_slider_start_x;
-            r.y = layout.param_slider_start_y + layout.param_pitch*i;
-            r.w = layout.param_slider_width;
-            r.h = 3;
-            SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 80, 80, 80));
+            r.x = layout.pattern.slider_start_x;
+            r.y = layout.pattern.slider_start_y + layout.pattern.slider_pitch * i;
+            r.w = layout.slider.width;
+            r.h = layout.slider.height;
 
-            r.x = layout.param_handle_start_x +
-                  slot->param_values[i]->v * (layout.param_slider_width - layout.param_handle_width);
-            r.y = layout.param_handle_start_y + layout.param_pitch * i;
-            r.w = layout.param_handle_width;
-            r.h = layout.param_handle_height;
-
-            if(slot->param_values[i]->owner == slot)
-                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
-            else
-                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 200, 180, 180));
-
-
-            r.x = layout.param_source_start_x;
-            r.y = layout.param_source_start_y + layout.param_pitch * i;
-            r.w = layout.param_source_width;
-            r.h = layout.param_source_height;
-            if(active_param_source == &slot->param_values[i])
-                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 220, 220, 220));
-            else if(slot->param_values[i]->owner != slot)
-                SDL_FillRect(slot_pane, &r, color_to_MapRGB(slot_pane->format, slot->param_values[i]->signal->color));
-            else
-                SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 40, 40, 40));
+            SDL_BlitSurface(slot_pane, 0, slider_surface, &r);
         }
+        
     }
 }
 
@@ -445,8 +363,6 @@ static void ui_update_signal(signal_t* signal)
     r.h = layout.signal_height;
     SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 20, 20, 20));
 
-    SDL_Color white = {255, 255, 255};
-
     SDL_Surface* msg = TTF_RenderText_Solid(signal_font, signal->name, color_to_SDL(signal->color));
     r.x = layout.signal_text_x;
     r.y = layout.signal_text_y;
@@ -457,6 +373,7 @@ static void ui_update_signal(signal_t* signal)
 
     for(int i = 0; i < signal->n_params; i++)
     {
+/*
         SDL_Surface* msg = TTF_RenderText_Solid(param_font, signal->parameters[i].name, white);
         r.x = layout.param_text_start_x;
         r.y = layout.param_text_start_y+layout.param_pitch*i;
@@ -492,6 +409,7 @@ static void ui_update_signal(signal_t* signal)
             SDL_FillRect(signal_pane, &r, color_to_MapRGB(signal_pane->format, signal->param_values[i]->signal->color));
         else
             SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 40, 40, 40));
+*/
     }
 }
 
@@ -580,6 +498,7 @@ static void mouse_drag_alpha_slider(int x, int y)
 
 static void mouse_drag_param_slider(int x, int y)
 {
+/*
     float val = active_param_slider.initial_value +
                 (float)x / (layout.param_slider_width - layout.param_handle_width);
 
@@ -587,6 +506,7 @@ static void mouse_drag_param_slider(int x, int y)
     else if(val > 1) val = 1;
 
     active_param_slider.value->v = val;
+*/
 }
 
 static void mouse_drag_pattern(int x, int y)
@@ -676,6 +596,7 @@ static int mouse_click_slot(int index, int x, int y)
     // See if the click is on a parameter slider
     for(int i = 0; i < slots[index].pattern->n_params; i++)
     {
+/*
         if(in_rect(x, y,
                    layout.param_handle_start_x +
                      slots[index].param_values[i]->v *
@@ -691,9 +612,10 @@ static int mouse_click_slot(int index, int x, int y)
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
-
+*/
         // See if the click is on the parameter source button
 
+/*
         if(in_rect(x, y,
                    layout.param_source_start_x,
                    layout.param_source_start_y + layout.param_pitch * i,
@@ -710,6 +632,7 @@ static int mouse_click_slot(int index, int x, int y)
             }
             return 1;
         }
+*/
 
     }
 
@@ -726,6 +649,7 @@ static int mouse_click_slot(int index, int x, int y)
 
 static int mouse_click_signal(int index, int x, int y)
 {
+/*
     // See if the click is on a parameter slider
     for(int i = 0; i < signals[index].n_params; i++)
     {
@@ -768,6 +692,7 @@ static int mouse_click_signal(int index, int x, int y)
         *active_param_source = signals[index].value;
         active_param_source = 0;
     }
+*/
     return 0;
 }
 
