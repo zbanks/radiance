@@ -3,11 +3,21 @@ CXX = g++
 
 # Files to include
 C_SRC  = $(wildcard core/*.c)
+C_SRC += $(wildcard ui/*.c)
+C_SRC += $(wildcard midi/*.c)
+C_SRC += $(wildcard signals/*.c)
+C_SRC += $(wildcard filters/*.c)
+C_SRC += $(wildcard output/*.c)
 C_SRC += $(wildcard lib/*.c)
 C_SRC += $(wildcard lib/lux/src/*.c)
-CPP_SRC += $(wildcard core/*.cpp)
+CPP_SRC += $(wildcard filters/*.cpp)
 
 C_INC  = $(wildcard core/*.h)
+C_INC += $(wildcard ui/*.h)
+C_INC += $(wildcard midi/*.h)
+C_INC += $(wildcard signals/*.h)
+C_INC += $(wildcard filters/*.h)
+C_INC += $(wildcard output/*.h)
 C_INC += $(wildcard lib/*.h)
 C_INC += $(wildcard lib/lux/inc/*.h)
 
@@ -15,7 +25,7 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -Icore -Ilib/lux/inc -Ilib -L/usr/local/lib
+INC  = -Icore -Iui -Imidi -Isignals -Ifilters -Ioutput -Ilib/lux/inc -Ilib -L/usr/local/lib
 LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio -lvamp-hostsdk -lportmidi -lporttime
 
 # Assembler, compiler, and linker flags
