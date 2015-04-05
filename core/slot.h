@@ -16,13 +16,13 @@ typedef struct color
 
 // Forward definitions
 struct pval;
-struct input;
+struct signal;
 
 typedef struct pval {
     float v;
     union {
         void * owner;
-        struct input * input;
+        struct signal * signal;
     };
     struct pval * next;
 } pval_t;

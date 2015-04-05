@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdint.h>
 #include "err.h"
-#include "input.h"
+#include "signal.h"
 #include "pattern.h"
 #include "slot.h"
 #include "slice.h"
@@ -14,10 +14,10 @@ static SDL_Surface* master_preview;
 static SDL_Surface* pattern_preview;
 static SDL_Surface* slot_pane;
 static SDL_Surface* pattern_pane;
-static SDL_Surface* input_pane;
+static SDL_Surface* signal_pane;
 static TTF_Font* param_font;
 static TTF_Font* pattern_font;
-static TTF_Font* input_font;
+static TTF_Font* signal_font;
 
 static int mouse_down;
 static int mouse_drag_start_x;
@@ -79,13 +79,13 @@ static const struct
     int pattern_text_x;
     int pattern_text_y;
 
-    int input_start_x;
-    int input_start_y;
-    int input_pitch;
-    int input_width;
-    int input_height;
-    int input_text_x;
-    int input_text_y;
+    int signal_start_x;
+    int signal_start_y;
+    int signal_pitch;
+    int signal_width;
+    int signal_height;
+    int signal_text_x;
+    int signal_text_y;
 } layout = {
     .win_width = 1024,
     .win_height = 600,
@@ -137,13 +137,13 @@ static const struct
     .pattern_text_x = 5,
     .pattern_text_y = 3,
 
-    .input_start_x = 260,
-    .input_start_y = 30,
-    .input_width = 110,
-    .input_height = 200,
-    .input_pitch = 125,
-    .input_text_x = 5,
-    .input_text_y = 3,
+    .signal_start_x = 260,
+    .signal_start_y = 30,
+    .signal_width = 110,
+    .signal_height = 200,
+    .signal_pitch = 125,
+    .signal_text_x = 5,
+    .signal_text_y = 3,
 };
 
 static void (*mouse_drag_fn_p)(int x, int y);
@@ -219,8 +219,8 @@ void ui_init()
     pattern_pane = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
     if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    input_pane = SDL_CreateRGBSurface(0, layout.input_width, layout.input_height, 32, 0, 0, 0, 0);
-    if(!input_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+    signal_pane = SDL_CreateRGBSurface(0, layout.signal_width, layout.signal_height, 32, 0, 0, 0, 0);
+    if(!signal_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     param_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
     if(!param_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
@@ -228,8 +228,8 @@ void ui_init()
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
-    input_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
-    if(!input_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+    signal_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
+    if(!signal_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -248,7 +248,7 @@ void ui_quit()
     SDL_FreeSurface(master_preview);
     SDL_FreeSurface(pattern_preview);
     SDL_FreeSurface(slot_pane);
-    SDL_FreeSurface(input_pane);
+    SDL_FreeSurface(signal_pane);
     TTF_CloseFont(param_font);
     TTF_CloseFont(pattern_font);
     SDL_Quit();
@@ -407,7 +407,7 @@ static void ui_update_slot(slot_t* slot)
             if(active_param_source == &slot->param_values[i])
                 SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 220, 220, 220));
             else if(slot->param_values[i]->owner != slot)
-                SDL_FillRect(slot_pane, &r, color_to_MapRGB(slot_pane->format, slot->param_values[i]->input->color));
+                SDL_FillRect(slot_pane, &r, color_to_MapRGB(slot_pane->format, slot->param_values[i]->signal->color));
             else
                 SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 40, 40, 40));
         }
@@ -434,62 +434,62 @@ static void ui_update_pattern(pattern_t* pattern)
     SDL_FreeSurface(msg);
 }
 
-static void ui_update_input(input_t* input)
+static void ui_update_signal(signal_t* signal)
 {
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
-    r.w = layout.input_width;
-    r.h = layout.input_height;
-    SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 20, 20, 20));
+    r.w = layout.signal_width;
+    r.h = layout.signal_height;
+    SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 20, 20, 20));
 
     SDL_Color white = {255, 255, 255};
 
-    SDL_Surface* msg = TTF_RenderText_Solid(input_font, input->name, color_to_SDL(input->color));
-    r.x = layout.input_text_x;
-    r.y = layout.input_text_y;
+    SDL_Surface* msg = TTF_RenderText_Solid(signal_font, signal->name, color_to_SDL(signal->color));
+    r.x = layout.signal_text_x;
+    r.y = layout.signal_text_y;
 
     r.w = msg->w;
     r.h = msg->h;
-    SDL_BlitSurface(msg, 0, input_pane, &r);
+    SDL_BlitSurface(msg, 0, signal_pane, &r);
 
-    for(int i = 0; i < input->n_params; i++)
+    for(int i = 0; i < signal->n_params; i++)
     {
-        SDL_Surface* msg = TTF_RenderText_Solid(param_font, input->parameters[i].name, white);
+        SDL_Surface* msg = TTF_RenderText_Solid(param_font, signal->parameters[i].name, white);
         r.x = layout.param_text_start_x;
         r.y = layout.param_text_start_y+layout.param_pitch*i;
         r.w = msg->w;
         r.h = msg->h;
-        SDL_BlitSurface(msg, 0, input_pane, &r);
+        SDL_BlitSurface(msg, 0, signal_pane, &r);
         SDL_FreeSurface(msg);
 
         r.x = layout.param_slider_start_x;
         r.y = layout.param_slider_start_y + layout.param_pitch*i;
         r.w = layout.param_slider_width;
         r.h = 3;
-        SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 80, 80, 80));
+        SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 80, 80, 80));
 
         r.x = layout.param_handle_start_x +
-                input->param_values[i]->v * (layout.param_slider_width - layout.param_handle_width);
+                signal->param_values[i]->v * (layout.param_slider_width - layout.param_handle_width);
         r.y = layout.param_handle_start_y + layout.param_pitch * i;
         r.w = layout.param_handle_width;
         r.h = layout.param_handle_height;
 
-        if(input->param_values[i]->owner == input->parameters)
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 0, 0, 80));
+        if(signal->param_values[i]->owner == signal->parameters)
+            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 0, 0, 80));
         else
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 180, 180, 180));
+            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 180, 180, 180));
 
         r.x = layout.param_source_start_x;
         r.y = layout.param_source_start_y + layout.param_pitch * i;
         r.w = layout.param_source_width;
         r.h = layout.param_source_height;
-        if(active_param_source == &input->param_values[i])
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 220, 220, 220));
-        else if(input->param_values[i]->owner != input->parameters)
-            SDL_FillRect(input_pane, &r, color_to_MapRGB(input_pane->format, input->param_values[i]->input->color));
+        if(active_param_source == &signal->param_values[i])
+            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 220, 220, 220));
+        else if(signal->param_values[i]->owner != signal->parameters)
+            SDL_FillRect(signal_pane, &r, color_to_MapRGB(signal_pane->format, signal->param_values[i]->signal->color));
         else
-            SDL_FillRect(input_pane, &r, SDL_MapRGB(input_pane->format, 40, 40, 40));
+            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 40, 40, 40));
     }
 }
 
@@ -510,15 +510,15 @@ void ui_render()
     r.h = layout.master_height;
     SDL_BlitSurface(master_preview, 0, screen, &r);
 
-    for(int i = 0; i < n_inputs; i++)
+    for(int i = 0; i < n_signals; i++)
     {
-        ui_update_input(&inputs[i]);
-        r.w = input_pane->w;
-        r.h = input_pane->h;
-        r.x = layout.input_start_x + layout.input_pitch * i;
-        r.y = layout.input_start_y;
+        ui_update_signal(&signals[i]);
+        r.w = signal_pane->w;
+        r.h = signal_pane->h;
+        r.x = layout.signal_start_x + layout.signal_pitch * i;
+        r.y = layout.signal_start_y;
 
-        SDL_BlitSurface(input_pane, 0, screen, &r);
+        SDL_BlitSurface(signal_pane, 0, screen, &r);
     }
 
     for(int i=0; i<n_slots; i++)
@@ -722,22 +722,22 @@ static int mouse_click_slot(int index, int x, int y)
 
 }
 
-static int mouse_click_input(int index, int x, int y)
+static int mouse_click_signal(int index, int x, int y)
 {
     // See if the click is on a parameter slider
-    for(int i = 0; i < inputs[index].n_params; i++)
+    for(int i = 0; i < signals[index].n_params; i++)
     {
         if(in_rect(x, y,
                    layout.param_handle_start_x +
-                     inputs[index].param_values[i]->v *
+                     signals[index].param_values[i]->v *
                      (layout.param_slider_width - layout.param_handle_width),
                    layout.param_handle_start_y + layout.param_pitch * i,
                    layout.param_handle_width,
                    layout.param_handle_height)) {
-            if(inputs[index].param_values[i]->owner != inputs[index].parameters)
+            if(signals[index].param_values[i]->owner != signals[index].parameters)
                 return 1;
-            active_param_slider.value = inputs[index].param_values[i];
-            active_param_slider.initial_value = inputs[index].param_values[i]->v;
+            active_param_slider.value = signals[index].param_values[i];
+            active_param_slider.initial_value = signals[index].param_values[i]->v;
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
@@ -747,14 +747,14 @@ static int mouse_click_input(int index, int x, int y)
                    layout.param_source_start_y + layout.param_pitch * i,
                    layout.param_source_width,
                    layout.param_source_height)) {
-            if(active_param_source == &inputs[index].param_values[i]){
-                pval_free(*active_param_source, inputs[index].parameters);
-                *active_param_source = pval_new((**active_param_source).v, inputs[index].parameters);
+            if(active_param_source == &signals[index].param_values[i]){
+                pval_free(*active_param_source, signals[index].parameters);
+                *active_param_source = pval_new((**active_param_source).v, signals[index].parameters);
                 active_param_source = 0;
             }else{
-                active_param_source = &inputs[index].param_values[i];
-                pval_free(*active_param_source, inputs[index].parameters);
-                *active_param_source = pval_new((**active_param_source).v, inputs[index].parameters);
+                active_param_source = &signals[index].param_values[i];
+                pval_free(*active_param_source, signals[index].parameters);
+                *active_param_source = pval_new((**active_param_source).v, signals[index].parameters);
             }
             return 1;
         }
@@ -763,7 +763,7 @@ static int mouse_click_input(int index, int x, int y)
     // Are we trying to set active_param_source and we clicked on the box?
     if(active_param_source){
         pval_free(*active_param_source, 0);
-        *active_param_source = inputs[index].value;
+        *active_param_source = signals[index].value;
         active_param_source = 0;
     }
     return 0;
@@ -803,16 +803,16 @@ static int mouse_click(int x, int y)
         }
     }
 
-    // See if click is in an input
-    for(int i = 0; i < n_inputs; i++){
+    // See if click is in an signal
+    for(int i = 0; i < n_signals; i++){
         if(in_rect(x, y,
-                   layout.input_start_x + layout.input_pitch * i,
-                   layout.input_start_y,
-                   layout.input_width,
-                   layout.input_height)){
-            return mouse_click_input(i,
-                                     x - (layout.input_start_x + layout.input_pitch * i),
-                                     y - layout.input_start_y);
+                   layout.signal_start_x + layout.signal_pitch * i,
+                   layout.signal_start_y,
+                   layout.signal_width,
+                   layout.signal_height)){
+            return mouse_click_signal(i,
+                                     x - (layout.signal_start_x + layout.signal_pitch * i),
+                                     y - layout.signal_start_y);
         }
     }
 
