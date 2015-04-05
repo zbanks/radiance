@@ -5,7 +5,7 @@
 #include <SDL/SDL_timer.h>
 #include "audio.h"
 #include "err.h"
-#include "input.h"
+#include "signal.h"
 #include "output.h"
 #include "pattern.h"
 #include "slice.h"
@@ -25,7 +25,7 @@ int main()
     output_start();
     audio_start();
     midi_start();
-    input_start();
+    signal_start();
 
     for(;;)
     {
@@ -33,12 +33,12 @@ int main()
 
         if(ui_poll()) break;
         update_patterns(t);
-        update_inputs(t);
+        update_signals(t);
         ui_render();
         // TODO rate-limit
     }
 
-    input_stop();
+    signal_stop();
     midi_stop();
     audio_stop();
     output_stop();
