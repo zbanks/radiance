@@ -16,20 +16,29 @@ typedef struct
     enum osc_type type;
 } inp_lfo_state_t;
 
-parameter_t inp_lfo_parameters[] = {
-    {
+enum inp_lfo_param_names {
+    LFO_TYPE,
+    LFO_FREQ,
+    LFO_AMP,
+    LFO_OFFSET,
+
+    N_LFO_PARAMS
+};
+
+parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
+    [LFO_TYPE] = {
         .name = "Type",
         .default_val = 0,
     },
-    {
+    [LFO_FREQ] = {
         .name = "Freq",
         .default_val = 0.5,
     },
-    {
+    [LFO_AMP] = {
         .name = "Amp",
         .default_val = 1.0,
     },
-    {
+    [LFO_OFFSET] = {
         .name = "Offset",
         .default_val = 0.5,
     },
@@ -42,11 +51,11 @@ void inp_lfo_init(signal_t * signal){
 
 void inp_lfo_update(signal_t * signal, float t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
-    state->phase += (t - state->last_t) * signal->param_states[1]->value;
+    state->phase += (t - state->last_t) * signal->param_states[LFO_FREQ]->value;
     state->last_t = t;
-    state->type = quantize_parameter(osc_quant_labels, signal->param_states[0]->value);
-    signal->output->value = osc_fn_gen(state->type, state->phase) * signal->param_states[2]->value
-                            + (1.0 - signal->param_states[2]->value) * signal->param_states[3]->value;
+    state->type = quantize_parameter(osc_quant_labels, signal->param_states[LFO_TYPE]->value);
+    signal->output->value = osc_fn_gen(state->type, state->phase) * signal->param_states[LFO_AMP]->value
+                            + (1.0 - signal->param_states[LFO_AMP]->value) * signal->param_states[LFO_OFFSET]->value;
 }
 
 void inp_lfo_del(signal_t * signal){
@@ -60,7 +69,7 @@ signal_t signals[N_SIGNALS] = {
         .name = "LFO 1",
         .type = SIGNAL_LFO,
         .default_val = 0.5,
-        .n_params = sizeof(inp_lfo_parameters) / sizeof(parameter_t),
+        .n_params = N_LFO_PARAMS,
         .parameters = inp_lfo_parameters,
         .color = {1.0, 0.0, 0.0, 0.0},
         .init = inp_lfo_init,
@@ -71,7 +80,7 @@ signal_t signals[N_SIGNALS] = {
         .name = "LFO 2",
         .type = SIGNAL_LFO,
         .default_val = 0.5,
-        .n_params = sizeof(inp_lfo_parameters) / sizeof(parameter_t),
+        .n_params = N_LFO_PARAMS,
         .parameters = inp_lfo_parameters,
         .color = {0.9, 0.3, 0.0, 0.0},
         .init = inp_lfo_init,
@@ -82,7 +91,7 @@ signal_t signals[N_SIGNALS] = {
         .name = "LFO 3",
         .type = SIGNAL_LFO,
         .default_val = 0.5,
-        .n_params = sizeof(inp_lfo_parameters) / sizeof(parameter_t),
+        .n_params = N_LFO_PARAMS,
         .parameters = inp_lfo_parameters,
         .color = {0.9, 0.9, 0.0, 0.0},
         .init = inp_lfo_init,

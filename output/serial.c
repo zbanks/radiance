@@ -1,4 +1,3 @@
-#include "serial.h"
 #include <SDL/SDL_timer.h>
 #include <errno.h>
 #include <fcntl.h> 
@@ -10,10 +9,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "core/err.h"
 #include "crc.h"
-#include "err.h"
 #include "lux.h"
-#include "lux.h"
+#include "output/serial.h"
 
 int ser;
 static char lux_is_transmitting;

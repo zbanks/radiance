@@ -1,7 +1,7 @@
 #ifndef __SLICE_H
 #define __SLICE_H
 
-#include <slot.h>
+#include "core/slot.h"
 
 typedef struct output_vertex
 {

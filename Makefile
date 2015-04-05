@@ -29,7 +29,7 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -I. -Icore -Iui -Imidi -Isignals -Ifilters -Ioutput -Ilib/lux/inc -Ilib -L/usr/local/lib
+INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib
 LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio -lvamp-hostsdk -lportmidi -lporttime
 
 # Assembler, compiler, and linker flags

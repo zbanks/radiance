@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "core/parameter.h"
 
 int quantize_parameter(quant_labels_t l, float p){ 

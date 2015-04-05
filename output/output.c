@@ -1,16 +1,17 @@
-#include "output.h"
-#include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "slice.h"
-#include "slot.h"
-#include "err.h"
-#include "serial.h"
-#include "crc.h"
-#include "lux.h"
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
+
+#include "core/err.h"
+#include "core/slot.h"
+#include "crc.h"
+#include "lux.h"
+#include "output/output.h"
+#include "output/serial.h"
+#include "output/slice.h"
 
 static int output_running;
 

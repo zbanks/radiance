@@ -1,7 +1,8 @@
-#include "slice.h"
-#include "slot.h"
-#include "err.h"
 #include <SDL/SDL_thread.h>
+
+#include "core/err.h"
+#include "core/slot.h"
+#include "output/slice.h"
 
 output_vertex_t s1v2 = {
     .x = 0.3,

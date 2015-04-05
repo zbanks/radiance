@@ -1,10 +1,11 @@
-#include "midi.h"
+#include <portmidi.h>
 
-#include "err.h"
-#include "portmidi.h"
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
-#include "controllers.h"
+
+#include "core/err.h"
+#include "midi/controllers.h"
+#include "midi/midi.h"
 
 #define MIDI_BUFFER_SIZE 64
 
