@@ -46,6 +46,7 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
 
 void inp_lfo_init(signal_t * signal){
     signal->state = malloc(sizeof(inp_lfo_state_t));
+    signal->param_states = malloc(sizeof(param_state_t *) * signal->n_params);
     signal->output = malloc(sizeof(param_state_t));
 }
 
@@ -60,6 +61,7 @@ void inp_lfo_update(signal_t * signal, float t){
 
 void inp_lfo_del(signal_t * signal){
     free(signal->output);
+    free(signal->param_states);
     free(signal->state);
 }
 
