@@ -1,7 +1,7 @@
 #ifndef __PATTERN_H
 #define __PATTERN_H
 
-#include "core/slot.h"
+#include "slot.h"
 
 extern const int n_patterns;
 extern const pattern_t* patterns[];

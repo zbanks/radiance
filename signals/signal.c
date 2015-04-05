@@ -1,6 +1,6 @@
 #include <math.h>
-#include "signal.h"
-#include "pattern.h"
+#include "signals/signal.h"
+#include "patterns/pattern.h"
 
 #define N_SIGNALS 3
 #ifndef M_PI

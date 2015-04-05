@@ -7,47 +7,6 @@
 const int n_slots = N_SLOTS;
 slot_t slots[N_SLOTS];
 
-// Parameter value pointer allocation
-pval_t pvals[PVAL_STACK_SIZE];
-
-static pval_t * next_pval = 0;
-static int free_pvals = PVAL_STACK_SIZE;
-
-void pval_init_stack(){
-    for(int i = 0; i < PVAL_STACK_SIZE; i++){
-        pvals[i].next = next_pval;
-        next_pval = &pvals[i];
-    }
-}
-
-pval_t * pval_new(float v, void * owner){
-    struct pval * pv;
-    if(!free_pvals)
-        return 0;
-    if(next_pval == 0)
-        pval_init_stack();
-    pv = next_pval;
-    next_pval = next_pval->next;
-    pv->v = v;
-    pv->owner = owner;
-    free_pvals--;
-#ifdef PVAL_STACK_DEBUG
-    printf("free pvals-- %d\n", free_pvals);
-#endif
-    return pv;
-}
-
-void pval_free(pval_t * pv, void * owner){
-    if(owner && (pv->owner != owner))
-        return;
-    pv->next = next_pval;
-    next_pval = pv;
-    free_pvals++;
-#ifdef PVAL_STACK_DEBUG
-    printf("free pvals++: %d\n", free_pvals);
-#endif
-}
-
 SDL_mutex* patterns_updating;
 
 color_t render_composite(float x, float y)

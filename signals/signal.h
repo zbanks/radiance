@@ -1,7 +1,7 @@
 #ifndef __SIGNAL_H
 #define __SIGNAL_H
 
-#include "slot.h"
+#include "core/slot.h"
 
 struct signal;
 

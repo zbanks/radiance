@@ -2,34 +2,8 @@
 #define __SLOT_H
 
 #include <SDL/SDL_mutex.h>
-
-typedef struct color
-{
-    float r;
-    float g;
-    float b;
-    float a;
-} color_t;
-
-#define PVAL_STACK_SIZE 2048
-#define PVAL_STACK_DEBUG 
-
-// Forward definitions
-struct pval;
-struct signal;
-
-typedef struct pval {
-    float v;
-    union {
-        void * owner;
-        struct signal * signal;
-    };
-    struct pval * next;
-} pval_t;
-
-void pval_init_stack();
-pval_t * pval_new(float v, void * owner);
-void pval_free(pval_t * pval, void * owner);
+#include "util/color.h"
+#include "core/parameter.h"
 
 struct slot;
 
@@ -39,14 +13,6 @@ typedef void (*pat_update_fn_pt)(struct slot* slot, float t);
 typedef void (*pat_prevclick_fn_pt)(struct slot*, float x, float y);
 typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
 typedef void (*pat_del_fn_pt)(pat_state_pt state);
-typedef void (*param_val_to_str_fn_pt)(float val, char* buf, int n);
-
-typedef struct parameter
-{
-    char* name;
-    param_val_to_str_fn_pt val_to_str;
-    float default_val;
-} parameter_t;
 
 typedef struct pattern
 {
