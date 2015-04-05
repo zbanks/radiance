@@ -35,7 +35,7 @@ all: beat-off
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) beat-off
+	-rm -f $(OBJECTS) $(DEPS) beat-off
 
 beat-off: $(OBJECTS)
 	$(CXX) $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
