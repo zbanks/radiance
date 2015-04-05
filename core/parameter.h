@@ -26,6 +26,12 @@ typedef struct parameter
     float default_val;
 } parameter_t;
 
+// ---- quantized parameters ----
+
+typedef char *quant_labels_t[];
+#define LABELS_END 0
+
+int quantize_parameter(quant_labels_t l, float p);
 
 #endif
 

@@ -1,10 +1,11 @@
-#include "slot.h"
-#include "err.h"
 #include <SDL/SDL.h>
+
+#include "core/err.h"
+#include "core/slot.h"
 
 #define N_SLOTS 8
 
-const int n_slots = N_SLOTS;
+int n_slots = N_SLOTS;
 slot_t slots[N_SLOTS];
 
 SDL_mutex* patterns_updating;
@@ -50,12 +51,6 @@ void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
     slot->alpha = 0;
-    slot->param_values = malloc(sizeof(float *) * pattern->n_params);
-    if(!slot->param_values) FAIL("Could not malloc param values\n");
-    for(int i=0; i < pattern->n_params; i++)
-    {
-        slot->param_values[i] = pval_new(pattern->parameters[i].default_val, slot);
-    }
     slot->state = (*pattern->init)();
     if(!slot->state) FAIL("Could not malloc pattern state\n");
 }
@@ -63,11 +58,7 @@ void pat_load(slot_t* slot, pattern_t* pattern)
 void pat_unload(slot_t* slot)
 {
     if(!slot->pattern) return;
-    for(int i=0; i < slot->pattern->n_params; i++){
-        pval_free(slot->param_values[i], slot);
-    }
     (*slot->pattern->del)(slot->state);
-    free(slot->param_values);
     slot->pattern = 0;
 }
 

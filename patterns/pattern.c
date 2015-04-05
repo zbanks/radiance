@@ -1,82 +1,17 @@
-#include "pattern.h"
-#include "slot.h"
 #include <stdlib.h>
 #include <math.h>
+
+#include "core/slot.h"
+#include "patterns/pattern.h"
+#include "util/color.h"
+#include "util/siggen.h"
+
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
 
-#define N_PATTERNS 3
-
-const int n_patterns = N_PATTERNS;
-const pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble};
-
-static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v );
-
-// Do we actually want this? -@zbanks, 4/4/15
-static int get_param_by_name(slot_t * slot, const char * name, float * param){
-    for(int i = 0; i < slot->pattern->n_params; i++){
-        if(strcmp(slot->pattern->parameters[i].name,  name) == 0){
-            *param = slot->param_values[i]->v;
-            return 0;
-        }
-    }
-    return 1;
-}
-
-static color_t param_to_color(float param)
-{
-#define ENDSZ 0.07
-    color_t result;
-    if(param < ENDSZ){
-        result.r = param / ENDSZ;
-        result.g = 0;
-        result.b = 0;
-    }else if(param > (1.0 - ENDSZ)){
-        result.r = 1.0;
-        result.g = (param - 1.0 + ENDSZ) / ENDSZ;
-        result.b = 1.0;
-    }else{
-        param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
-        HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
-    }
-    result.a = 1;
-    return result;
-}
-
-// Function Generator
-
-const quant_labels_t osc_quant_labels = {
-    "Sine",
-    "Triangle",
-    "Sawtooth",
-    "Square",
-    LABELS_END
-};
-
-float osc_fn_gen(enum osc_type type, float phase){
-    switch(type){
-        case OSC_SINE:
-        default:
-            return (sin(phase * 2 * M_PI) + 1.0) / 2.0;
-        case OSC_TRIANGLE:
-            return fabs(fmod(phase, 1.0) - 0.5) * 2;
-        case OSC_SAWTOOTH:
-            return fmod(phase, 1.0);
-        case OSC_SQUARE:
-            return (fmod(phase, 1.0) > 0.5 ? 1.0 : 0.0);
-    }
-}
-
-int quantize_parameter(quant_labels_t l, float p){ 
-    int i = 0;
-    int r;
-    while(l[++i]);
-    r = floor(p * i);
-    if(r >= i) r = i - 1;
-    return r;
-}
-
+pattern_t* patterns[] = {&pat_full, &pat_wave, &pat_bubble};
+int n_patterns = sizeof(patterns) / sizeof(pattern_t);
 
 // --------- Pattern: Full -----------
 
@@ -93,7 +28,7 @@ void pat_full_del(pat_state_pt state)
 void pat_full_update(slot_t* slot, float t)
 {
     color_t* color = (color_t*)slot->state;
-    *color = param_to_color(slot->param_values[0]->v);
+    *color = param_to_color(slot->param_states[0]->value);
 }
 
 void pat_full_prevclick(slot_t * slot, float x, float y){
@@ -105,14 +40,14 @@ color_t pat_full_pixel(slot_t* slot, float x, float y)
     return *(color_t*)slot->state;
 }
 
-const parameter_t pat_full_params[] = {
+parameter_t pat_full_params[] = {
     {
         .name = "Color",
         .default_val = 0.5,
     },
 };
 
-const pattern_t pat_full = {
+pattern_t pat_full = {
     .render = &pat_full_pixel,
     .init = &pat_full_init,
     .del = &pat_full_del,
@@ -151,58 +86,66 @@ void pat_wave_update(slot_t* slot, float t)
     float k_ang;
 
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
-    state->color = param_to_color(slot->param_values[0]->v);
-    state->type = quantize_parameter(osc_quant_labels, slot->param_values[1]->v);
+    state->color = param_to_color(slot->param_states[0]->value);
+    state->type = quantize_parameter(osc_quant_labels, slot->param_states[1]->value);
 
-    state->phase += (t - state->last_t) * slot->param_values[2]->v;
+    state->phase += (t - state->last_t) * slot->param_states[2]->value;
     state->last_t = t;
 
-    k_mag = slot->param_values[3]->v * 2 + 0.2;
-    k_ang = slot->param_values[4]->v * 2 * M_PI;
+    k_mag = slot->param_states[3]->value * 2 + 0.2;
+    k_ang = slot->param_states[4]->value * 2 * M_PI;
     state->kx = cos(k_ang) * k_mag;
     state->ky = sin(k_ang) * k_mag;
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){
-    if(slot->param_values[3]->owner == slot)
-        slot->param_values[3]->v = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
-    if(slot->param_values[4]->owner == slot)
-        slot->param_values[4]->v = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
+    // TODO: check that we have control of the param before writing to it
+    slot->param_states[3]->value = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
+    slot->param_states[4]->value = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
 }
 
 color_t pat_wave_pixel(slot_t* slot, float x, float y)
 {
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
-    //result.a = (sin((state->phase + y * state->ky + x * state->kx) * 1 * M_PI) + 1) / 2;
     result.a = osc_fn_gen(state->type, state->phase + y * state->ky + x * state->kx);
     return result;
 }
 
-const parameter_t pat_wave_params[] = {
-    {
+static enum pat_wave_param_names {
+    WAVE_COLOR,
+    WAVE_TYPE,
+    WAVE_OMEGA,
+    WAVE_K_MAG,
+    WAVE_K_ANGLE,
+
+    N_WAVE_PARAMS
+};
+
+parameter_t pat_wave_params[N_WAVE_PARAMS] = {
+    [WAVE_COLOR] = {
         .name = "Color",
         .default_val = 0.5,
     },
-    {
+    [WAVE_TYPE] = {
         .name = "Wave Type",
         .default_val = 0.0,
     },
-    {
+    [WAVE_OMEGA] = {
         .name = "\\omega",
         .default_val = 0.5,
     },
-    {
+    [WAVE_K_MAG] = {
         .name = "|k|",
         .default_val = 0.5,
     },
-    {
+    [WAVE_K_ANGLE] = {
         .name = "<)k",
         .default_val = 0.5,
     },
 };
 
-const pattern_t pat_wave = {
+pattern_t pat_wave = {
     .render = &pat_wave_pixel,
     .init = &pat_wave_init,
     .del = &pat_wave_del,
@@ -237,18 +180,17 @@ void pat_bubble_del(pat_state_pt state)
 void pat_bubble_update(slot_t* slot, float t)
 {
     pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
-    state->color = param_to_color(slot->param_values[0]->v);
-    state->r = slot->param_values[1]->v;
-    state->rho = slot->param_values[2]->v * 1.3 + 0.3;
-    state->cx = slot->param_values[3]->v * 2 - 1.0;
-    state->cy = slot->param_values[4]->v * 2 - 1.0;
+    state->color = param_to_color(slot->param_states[0]->value);
+    state->r = slot->param_states[1]->value;
+    state->rho = slot->param_states[2]->value * 1.3 + 0.3;
+    state->cx = slot->param_states[3]->value * 2 - 1.0;
+    state->cy = slot->param_states[4]->value * 2 - 1.0;
 }
 
 void pat_bubble_prevclick(slot_t * slot, float x, float y){
-    if(slot->param_values[3]->owner == slot)
-        slot->param_values[3]->v = (x + 1.0) / 2;
-    if(slot->param_values[4]->owner == slot)
-        slot->param_values[4]->v = (y + 1.0) / 2;
+    // TODO: check that we have control of the param before writing to it
+    slot->param_states[3]->value = (x + 1.0) / 2;
+    slot->param_states[4]->value = (y + 1.0) / 2;
 }
 
 color_t pat_bubble_pixel(slot_t* slot, float x, float y)
@@ -266,7 +208,7 @@ color_t pat_bubble_pixel(slot_t* slot, float x, float y)
     return result;
 }
 
-const parameter_t pat_bubble_params[] = {
+parameter_t pat_bubble_params[] = {
     {
         .name = "Color",
         .default_val = 0.5,
@@ -289,7 +231,7 @@ const parameter_t pat_bubble_params[] = {
     },
 };
 
-const pattern_t pat_bubble = {
+pattern_t pat_bubble = {
     .render = &pat_bubble_pixel,
     .init = &pat_bubble_init,
     .del = &pat_bubble_del,
@@ -299,130 +241,3 @@ const pattern_t pat_bubble = {
     .parameters = pat_bubble_params,
     .name = "Bubble",
 };
-
-
-/*
-pat_state_pt init()
-{
-    return malloc(sizeof(float));
-}
-
-void del(pat_state_pt state)
-{
-    free((float*)state);
-}
-
-void update(slot_t* slot, float t)
-{
-    float* st = (float*)slot->state;
-    *st = t;
-}
-
-color_t pixel_at(slot_t* slot, float x, float y)
-{
-    float* st = (float*)slot->state;
-    color_t result;
-    float n = 1-sqrt(x*x+y*y);
-    if(n < 0) n = 0;
-
-    result.r = 1;
-    result.g = slot->param_values[0];
-    result.b = 0;
-    result.a = n;
-
-    return result;
-}
-
-color_t pixel_at2(slot_t* slot, float x, float y)
-{
-    float* st = (float*)slot->state;
-
-    color_t result;
-    float n = 1 - x*x;
-    if(n < 0) n = 0;
-
-    result.r = 0;
-    result.g = 0;
-    result.b = 1;
-    result.a = n * fmod(*st, 1);
-
-    return result;
-}
-
-const parameter_t ball_parameters[1] = {
-    {
-        .name = "yellow",
-        .default_val = 0.5,
-    },
-};
-
-const pattern_t ball = {
-    .render = &pixel_at,
-    .init = &init,
-    .del = &del,
-    .update = &update,
-    .n_params = 1,
-    .parameters = ball_parameters,
-};
-
-const pattern_t stripe = {
-    .render = &pixel_at2,
-    .init = &init,
-    .del = &del,
-    .update = &update,
-    .n_params = 0,
-};
-*/
-
-// r,g,b values are from 0 to 1
-// h = [0,360], s = [0,1], v = [0,1]
-//		if s == 0, then h = -1 (undefined)
-static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v )
-{
-	int i;
-	float f, p, q, t;
-	if( s == 0 ) {
-		// achromatic (grey)
-		*r = *g = *b = v;
-		return;
-	}
-	h /= 60;			// sector 0 to 5
-	i = floor( h );
-	f = h - i;			// factorial part of h
-	p = v * ( 1 - s );
-	q = v * ( 1 - s * f );
-	t = v * ( 1 - s * ( 1 - f ) );
-	switch( i ) {
-		case 0:
-			*r = v;
-			*g = t;
-			*b = p;
-			break;
-		case 1:
-			*r = q;
-			*g = v;
-			*b = p;
-			break;
-		case 2:
-			*r = p;
-			*g = v;
-			*b = t;
-			break;
-		case 3:
-			*r = p;
-			*g = q;
-			*b = v;
-			break;
-		case 4:
-			*r = t;
-			*g = p;
-			*b = v;
-			break;
-		default:		// case 5:
-			*r = v;
-			*g = p;
-			*b = q;
-			break;
-	}
-}
-

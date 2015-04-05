@@ -1,6 +1,8 @@
 #include <math.h>
-#include "signals/signal.h"
+
 #include "patterns/pattern.h"
+#include "signals/signal.h"
+#include "util/siggen.h"
 
 #define N_SIGNALS 3
 #ifndef M_PI
@@ -14,7 +16,7 @@ typedef struct
     enum osc_type type;
 } inp_lfo_state_t;
 
-const parameter_t inp_lfo_parameters[] = {
+parameter_t inp_lfo_parameters[] = {
     {
         .name = "Type",
         .default_val = 0,
@@ -35,34 +37,24 @@ const parameter_t inp_lfo_parameters[] = {
 
 void inp_lfo_init(signal_t * signal){
     signal->state = malloc(sizeof(inp_lfo_state_t));
-
-    signal->param_values = malloc(sizeof(float *) * signal->n_params);
-    for(int i = 0; i < signal->n_params; i++){
-        signal->param_values[i] = pval_new(signal->parameters[i].default_val, signal->parameters);
-    }
-
-    signal->value = pval_new(signal->default_val, signal);
+    signal->output = malloc(sizeof(param_state_t));
 }
 
 void inp_lfo_update(signal_t * signal, float t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
-    state->phase += (t - state->last_t) * signal->param_values[1]->v;
+    state->phase += (t - state->last_t) * signal->param_states[1]->value;
     state->last_t = t;
-    state->type = quantize_parameter(osc_quant_labels, signal->param_values[0]->v);
-    signal->value->v = osc_fn_gen(state->type, state->phase) * signal->param_values[2]->v
-                      + (1.0 - signal->param_values[2]->v) * signal->param_values[3]->v;
+    state->type = quantize_parameter(osc_quant_labels, signal->param_states[0]->value);
+    signal->output->value = osc_fn_gen(state->type, state->phase) * signal->param_states[2]->value
+                            + (1.0 - signal->param_states[2]->value) * signal->param_states[3]->value;
 }
 
 void inp_lfo_del(signal_t * signal){
-    for(int i = 0; i < signal->n_params; i++){
-        pval_free(signal->param_values[i], signal->parameters);
-    }
-    pval_free(signal->value, signal);
-    free(signal->param_values);
+    free(signal->output);
     free(signal->state);
 }
 
-const int n_signals = N_SIGNALS;
+int n_signals = N_SIGNALS;
 signal_t signals[N_SIGNALS] = {
     {
         .name = "LFO 1",

@@ -9,4 +9,6 @@ typedef struct color
     float a;
 } color_t;
 
+color_t param_to_color(float param);
+
 #endif

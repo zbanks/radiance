@@ -1,13 +1,15 @@
+#include <math.h>
+#include <stdint.h>
+
 #include <SDL/SDL.h>
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_ttf.h>
-#include <math.h>
-#include <stdint.h>
-#include "err.h"
-#include "signal.h"
-#include "pattern.h"
-#include "slot.h"
-#include "slice.h"
+
+#include "core/err.h"
+#include "core/slot.h"
+#include "output/slice.h"
+#include "patterns/pattern.h"
+#include "signals/signal.h"
 
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;

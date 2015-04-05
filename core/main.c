@@ -1,16 +1,19 @@
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
+
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
-#include "audio.h"
-#include "err.h"
-#include "signal.h"
-#include "output.h"
-#include "pattern.h"
-#include "slice.h"
-#include "slot.h"
-#include "ui.h"
+
+#include "core/err.h"
+#include "core/slot.h"
+#include "filters/audio.h"
+#include "output/output.h"
+#include "output/slice.h"
+#include "midi/midi.h"
+#include "patterns/pattern.h"
+#include "signals/signal.h"
+#include "ui/ui.h"
 
 int main()
 {

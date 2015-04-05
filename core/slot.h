@@ -2,8 +2,9 @@
 #define __SLOT_H
 
 #include <SDL/SDL_mutex.h>
-#include "util/color.h"
+
 #include "core/parameter.h"
+#include "util/color.h"
 
 struct slot;
 
@@ -23,18 +24,18 @@ typedef struct pattern
     pat_del_fn_pt del;
     int n_params;
     parameter_t* parameters;
-    const char* name;
+    char* name;
 } pattern_t;
 
 typedef struct slot
 {
-    const pattern_t* pattern;
+    pattern_t* pattern;
     void* state;
     float alpha;
-    pval_t ** param_values;
+    param_state_t ** param_states;
 } slot_t;
 
-extern const int n_slots;
+extern int n_slots;
 
 extern slot_t slots[];
 
