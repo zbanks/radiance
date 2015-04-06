@@ -4,6 +4,8 @@
 
 void param_output_set(param_output_t * output, float value){
     param_state_t * pstate = output->connected_state;
+    // Set local copy
+    output->value = value;
     while(pstate){
         // Iterate through linked list setting `value`
         pstate->value = value;

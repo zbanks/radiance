@@ -77,6 +77,19 @@ layout_t layout = {
         .handle_height = 10, 
     },
 
+    .output_slider = {
+        .width = 100,
+        .height = 10,
+        .track_x = 3,
+        .track_y = 0,
+        .track_width = 100,
+        .track_height = 10,
+        .handle_start_x = 0,
+        .handle_y = 0,
+        .handle_width = 3,
+        .handle_height = 10, 
+    },
+
     .pattern_start_x = 10,
     .pattern_start_y = 520,
     .pattern_width = 100,
@@ -93,8 +106,10 @@ layout_t layout = {
         .pitch = 125,
         .text_x = 5,
         .text_y = 3,
+        .output_start_x = 0,
+        .output_start_y = 30,
         .slider_start_x = 0,
-        .slider_start_y = 50,
+        .slider_start_y = 55,
         .slider_pitch = 30,
     },
 };
@@ -128,7 +143,7 @@ static struct
     int dy;
 } active_slot;
 
-//static pval_t ** active_param_source;
+static param_state_t * active_param_source;
 
 void ui_init()
 {
@@ -279,6 +294,7 @@ static void update_pattern_preview(slot_t* slot)
 static void ui_update_slot(slot_t* slot)
 {
     SDL_Rect r;
+    SDL_Color param_name_c = {255, 255, 255};
     r.x = 0;
     r.y = 0;
     r.w = layout.slot_width;
@@ -310,8 +326,18 @@ static void ui_update_slot(slot_t* slot)
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
-            SDL_Color c = {255, 255, 255};
-            slider_render(&slot->pattern->parameters[i], &slot->param_states[i], c);
+            if(&slot->param_states[i] == active_param_source){
+                //param_name_c = {255, 200, 0};
+                param_name_c.r = 255;
+                param_name_c.g = 200;
+                param_name_c.b =   0;
+            }else{
+                //param_name_c = {255, 255, 255};
+                param_name_c.r = 255;
+                param_name_c.g = 255;
+                param_name_c.b = 255;
+            }
+            slider_render(&slot->pattern->parameters[i], &slot->param_states[i], param_name_c);
 
             r.x = layout.pattern.slider_start_x;
             r.y = layout.pattern.slider_start_y + layout.pattern.slider_pitch * i;
@@ -347,6 +373,7 @@ static void ui_update_pattern(pattern_t* pattern)
 static void ui_update_signal(signal_t* signal)
 {
     SDL_Rect r;
+    SDL_Color param_name_c;
     r.x = 0;
     r.y = 0;
     r.w = layout.signal.width;
@@ -361,10 +388,27 @@ static void ui_update_signal(signal_t* signal)
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, signal_pane, &r);
 
+    slider_output_render(&signal->output);
+    r.x = layout.signal.output_start_x;
+    r.y = layout.signal.output_start_y;
+    r.w = layout.output_slider.width;
+    r.h = layout.output_slider.height;
+    SDL_BlitSurface(output_slider_surface, 0, signal_pane, &r);
+
     for(int i = 0; i < signal->n_params; i++)
     {
-        SDL_Color c = {255, 255, 255};
-        slider_render(&signal->parameters[i], &signal->param_states[i], c);
+        if(&signal->param_states[i] == active_param_source){
+            //param_name_c = {255, 200, 0};
+            param_name_c.r = 255;
+            param_name_c.g = 200;
+            param_name_c.b =   0;
+        }else{
+            //param_name_c = {255, 255, 255};
+            param_name_c.r = 255;
+            param_name_c.g = 255;
+            param_name_c.b = 255;
+        }
+        slider_render(&signal->parameters[i], &signal->param_states[i], param_name_c);
 
         r.x = layout.signal.slider_start_x;
         r.y = layout.signal.slider_start_y + layout.signal.slider_pitch * i;
@@ -573,25 +617,24 @@ static int mouse_click_slot(int index, int x, int y)
             return 1;
         }
         // See if the click is on the parameter source button
-
-/*
         if(in_rect(x, y,
-                   layout.param_source_start_x,
-                   layout.param_source_start_y + layout.param_pitch * i,
-                   layout.param_source_width,
-                   layout.param_source_height)) {
-            if(active_param_source == &slots[index].param_values[i]){
-                pval_free(*active_param_source, &slots[index]);
-                *active_param_source = pval_new((**active_param_source).v, &slots[index]);
+                   layout.pattern.slider_start_x +
+                   layout.slider.name_x,
+                   layout.pattern.slider_start_y +
+                   layout.slider.name_y + layout.pattern.slider_pitch * i,
+                   layout.slider.track_width / 2, //FIXME
+                   layout.slider.handle_y - layout.slider.name_y)){
+                   //layout.slider.handle_width,
+                   //layout.slider.handle_height)) {
+            if(active_param_source)
+                param_state_disconnect(active_param_source);
+            if(active_param_source == &slots[index].param_states[i]){
                 active_param_source = 0;
             }else{
-                active_param_source = &slots[index].param_values[i];
-                pval_free(*active_param_source, &slots[index]);
-                *active_param_source = pval_new((**active_param_source).v, &slots[index]);
+                active_param_source = &slots[index].param_states[i];
             }
             return 1;
         }
-*/
 
     }
 
@@ -608,7 +651,47 @@ static int mouse_click_slot(int index, int x, int y)
 
 static int mouse_click_signal(int index, int x, int y)
 {
+    for(int i = 0; i < signals[index].n_params; i++)
+    {
+        // See if the click is on a parameter slider
+        if(in_rect(x, y,
+                   layout.signal.slider_start_x +
+                   layout.slider.handle_start_x +
+                     signals[index].param_states[i].value *
+                     (layout.slider.track_width - layout.slider.handle_width),
+                   layout.signal.slider_start_y +
+                   layout.slider.handle_y + layout.signal.slider_pitch * i,
+                   layout.slider.handle_width,
+                   layout.slider.handle_height)) {
+            if(signals[index].param_states[i].connected_output)
+                return 1;
+            active_param_slider.state = &signals[index].param_states[i];
+            active_param_slider.initial_value = signals[index].param_states[i].value;
+            mouse_drag_fn_p = &mouse_drag_param_slider;
+            return 1;
+        }
+        // See if the click is on the parameter source button
+        if(in_rect(x, y,
+                   layout.signal.slider_start_x +
+                   layout.slider.name_x,
+                   layout.signal.slider_start_y +
+                   layout.slider.name_y + layout.signal.slider_pitch * i,
+                   layout.slider.track_width / 2, //FIXME
+                   layout.slider.handle_y - layout.slider.name_y)){
+            if(active_param_source)
+                param_state_disconnect(active_param_source);
+            if(active_param_source == &signals[index].param_states[i]){
+                active_param_source = 0;
+            }else{
+                active_param_source = &signals[index].param_states[i];
+            }
+            return 1;
+        }
+
+    }
+
 /*
+    //TODO
     // See if the click is on a parameter slider
     for(int i = 0; i < signals[index].n_params; i++)
     {

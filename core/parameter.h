@@ -19,6 +19,7 @@ typedef struct param_state {
 } param_state_t;
 
 typedef struct param_output {
+    float value;
     struct param_state * connected_state;
     SDL_Color handle_color;
     SDL_Color label_color;

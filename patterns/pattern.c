@@ -129,6 +129,7 @@ void pat_wave_update(slot_t* slot, float t)
     state->type = quantize_parameter(osc_quant_labels, slot->param_states[WAVE_TYPE].value);
 
     state->phase += (t - state->last_t) * slot->param_states[WAVE_OMEGA].value;
+    state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
 
     k_mag = slot->param_states[WAVE_K_MAG].value * 2 + 0.2;
