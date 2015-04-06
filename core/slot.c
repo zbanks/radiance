@@ -51,7 +51,8 @@ void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
     slot->alpha = 0;
-    slot->param_states = malloc(sizeof(param_state_t *) * pattern->n_params);
+    slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
+    //memset(slot->param_states, 0, sizeof(param_state_t *) * pattern->n_params);
     slot->state = (*pattern->init)();
     if(!slot->state) FAIL("Could not malloc pattern state\n");
 }

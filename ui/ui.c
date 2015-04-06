@@ -69,7 +69,7 @@ layout_t layout = {
         .source_x = 20,
         .source_y = 3,
         .track_x = 3,
-        .track_y = 10,
+        .track_y = 20,
         .track_width = 94,
         .handle_start_x = 3,
         .handle_y = 15,
@@ -307,17 +307,15 @@ static void ui_update_slot(slot_t* slot)
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
-            parameter_t test_slider_p = {.name = "name"};
-            param_state_t test_slider_ps = {.value = 0.3, .next_connected_state = 0, .connected_output = 0};
             SDL_Color c = {255, 255, 255};
-            slider_render(&test_slider_p, &test_slider_ps, c);
+            slider_render(&slot->pattern->parameters[i], &slot->param_states[i], c);
 
             r.x = layout.pattern.slider_start_x;
             r.y = layout.pattern.slider_start_y + layout.pattern.slider_pitch * i;
             r.w = layout.slider.width;
             r.h = layout.slider.height;
 
-            SDL_BlitSurface(slot_pane, 0, slider_surface, &r);
+            SDL_BlitSurface(slider_surface, 0, slot_pane, &r);
         }
         
     }

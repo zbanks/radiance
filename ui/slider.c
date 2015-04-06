@@ -30,6 +30,12 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_Surface* txt = TTF_RenderText_Solid(param_font, param->name, c);
 
     SDL_Rect r;
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.slider.width;
+    r.h = layout.slider.height;
+    SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format, 20, 20, 20));
+
     r.x = layout.slider.name_x;
     r.y = layout.slider.name_y;
     r.w = txt->w;
@@ -37,7 +43,7 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_BlitSurface(txt, 0, slider_surface, &r);
     SDL_FreeSurface(txt);
 
-    if(param_output){
+    if(param_output && 0){
         handle_color = param_output->handle_color;
 
         txt = TTF_RenderText_Solid(param_font, param_output->label, param_output->label_color);
