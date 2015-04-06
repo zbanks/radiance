@@ -43,7 +43,7 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_BlitSurface(txt, 0, slider_surface, &r);
     SDL_FreeSurface(txt);
 
-    if(param_output && 0){
+    if(param_output){
         handle_color = param_output->handle_color;
 
         txt = TTF_RenderText_Solid(param_font, param_output->label, param_output->label_color);

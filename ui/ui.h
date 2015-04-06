@@ -62,13 +62,18 @@ typedef struct {
     int pattern_text_x;
     int pattern_text_y;
 
-    int signal_start_x;
-    int signal_start_y;
-    int signal_pitch;
-    int signal_width;
-    int signal_height;
-    int signal_text_x;
-    int signal_text_y;
+    struct {
+        int start_x;
+        int start_y;
+        int pitch;
+        int width;
+        int height;
+        int text_x;
+        int text_y;
+        int slider_start_x;
+        int slider_start_y;
+        int slider_pitch;
+    } signal;
 } layout_t;
 
 extern layout_t layout;

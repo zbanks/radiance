@@ -85,13 +85,18 @@ layout_t layout = {
     .pattern_text_x = 5,
     .pattern_text_y = 3,
 
-    .signal_start_x = 260,
-    .signal_start_y = 30,
-    .signal_width = 110,
-    .signal_height = 200,
-    .signal_pitch = 125,
-    .signal_text_x = 5,
-    .signal_text_y = 3,
+    .signal = {
+        .start_x = 260,
+        .start_y = 30,
+        .width = 110,
+        .height = 200,
+        .pitch = 125,
+        .text_x = 5,
+        .text_y = 3,
+        .slider_start_x = 0,
+        .slider_start_y = 50,
+        .slider_pitch = 30,
+    },
 };
 
 static void (*mouse_drag_fn_p)(int x, int y);
@@ -156,7 +161,7 @@ void ui_init()
     pattern_pane = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
     if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    signal_pane = SDL_CreateRGBSurface(0, layout.signal_width, layout.signal_height, 32, 0, 0, 0, 0);
+    signal_pane = SDL_CreateRGBSurface(0, layout.signal.width, layout.signal.height, 32, 0, 0, 0, 0);
     if(!signal_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
@@ -346,13 +351,13 @@ static void ui_update_signal(signal_t* signal)
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
-    r.w = layout.signal_width;
-    r.h = layout.signal_height;
+    r.w = layout.signal.width;
+    r.h = layout.signal.height;
     SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 20, 20, 20));
 
     SDL_Surface* msg = TTF_RenderText_Solid(signal_font, signal->name, color_to_SDL(signal->color));
-    r.x = layout.signal_text_x;
-    r.y = layout.signal_text_y;
+    r.x = layout.signal.text_x;
+    r.y = layout.signal.text_y;
 
     r.w = msg->w;
     r.h = msg->h;
@@ -360,43 +365,15 @@ static void ui_update_signal(signal_t* signal)
 
     for(int i = 0; i < signal->n_params; i++)
     {
-/*
-        SDL_Surface* msg = TTF_RenderText_Solid(param_font, signal->parameters[i].name, white);
-        r.x = layout.param_text_start_x;
-        r.y = layout.param_text_start_y+layout.param_pitch*i;
-        r.w = msg->w;
-        r.h = msg->h;
-        SDL_BlitSurface(msg, 0, signal_pane, &r);
-        SDL_FreeSurface(msg);
+        SDL_Color c = {255, 255, 255};
+        slider_render(&signal->parameters[i], &signal->param_states[i], c);
 
-        r.x = layout.param_slider_start_x;
-        r.y = layout.param_slider_start_y + layout.param_pitch*i;
-        r.w = layout.param_slider_width;
-        r.h = 3;
-        SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 80, 80, 80));
+        r.x = layout.signal.slider_start_x;
+        r.y = layout.signal.slider_start_y + layout.signal.slider_pitch * i;
+        r.w = layout.slider.width;
+        r.h = layout.slider.height;
 
-        r.x = layout.param_handle_start_x +
-                signal->param_values[i]->v * (layout.param_slider_width - layout.param_handle_width);
-        r.y = layout.param_handle_start_y + layout.param_pitch * i;
-        r.w = layout.param_handle_width;
-        r.h = layout.param_handle_height;
-
-        if(signal->param_values[i]->owner == signal->parameters)
-            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 0, 0, 80));
-        else
-            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 180, 180, 180));
-
-        r.x = layout.param_source_start_x;
-        r.y = layout.param_source_start_y + layout.param_pitch * i;
-        r.w = layout.param_source_width;
-        r.h = layout.param_source_height;
-        if(active_param_source == &signal->param_values[i])
-            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 220, 220, 220));
-        else if(signal->param_values[i]->owner != signal->parameters)
-            SDL_FillRect(signal_pane, &r, color_to_MapRGB(signal_pane->format, signal->param_values[i]->signal->color));
-        else
-            SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 40, 40, 40));
-*/
+        SDL_BlitSurface(slider_surface, 0, signal_pane, &r);
     }
 }
 
@@ -422,8 +399,8 @@ void ui_render()
         ui_update_signal(&signals[i]);
         r.w = signal_pane->w;
         r.h = signal_pane->h;
-        r.x = layout.signal_start_x + layout.signal_pitch * i;
-        r.y = layout.signal_start_y;
+        r.x = layout.signal.start_x + layout.signal.pitch * i;
+        r.y = layout.signal.start_y;
 
         SDL_BlitSurface(signal_pane, 0, screen, &r);
     }
@@ -720,13 +697,13 @@ static int mouse_click(int x, int y)
     // See if click is in an signal
     for(int i = 0; i < n_signals; i++){
         if(in_rect(x, y,
-                   layout.signal_start_x + layout.signal_pitch * i,
-                   layout.signal_start_y,
-                   layout.signal_width,
-                   layout.signal_height)){
+                   layout.signal.start_x + layout.signal.pitch * i,
+                   layout.signal.start_y,
+                   layout.signal.width,
+                   layout.signal.height)){
             return mouse_click_signal(i,
-                                     x - (layout.signal_start_x + layout.signal_pitch * i),
-                                     y - layout.signal_start_y);
+                                     x - (layout.signal.start_x + layout.signal.pitch * i),
+                                     y - layout.signal.start_y);
         }
     }
 
