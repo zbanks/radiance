@@ -108,13 +108,11 @@ static struct
     float initial_value;
 } active_alpha_slider;
 
-/*
 static struct
 {
-    pval_t * value;
+    param_state_t * state;
     float initial_value;
 } active_param_slider;
-*/
 
 static struct
 {
@@ -462,15 +460,13 @@ static void mouse_drag_alpha_slider(int x, int y)
 
 static void mouse_drag_param_slider(int x, int y)
 {
-/*
     float val = active_param_slider.initial_value +
-                (float)x / (layout.param_slider_width - layout.param_handle_width);
+                (float)x / (layout.slider.track_width - layout.slider.handle_width);
 
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    active_param_slider.value->v = val;
-*/
+    active_param_slider.state->value = val;
 }
 
 static void mouse_drag_pattern(int x, int y)
@@ -560,23 +556,22 @@ static int mouse_click_slot(int index, int x, int y)
     // See if the click is on a parameter slider
     for(int i = 0; i < slots[index].pattern->n_params; i++)
     {
-/*
         if(in_rect(x, y,
-                   layout.param_handle_start_x +
-                     slots[index].param_values[i]->v *
-                     (layout.param_slider_width - layout.param_handle_width),
-                   layout.param_handle_start_y + layout.param_pitch * i,
-                   layout.param_handle_width,
-                   layout.param_handle_height))
-        {
-            if(slots[index].param_values[i]->owner != &slots[index])
+                   layout.pattern.slider_start_x +
+                   layout.slider.handle_start_x +
+                     slots[index].param_states[i].value *
+                     (layout.slider.track_width - layout.slider.handle_width),
+                   layout.pattern.slider_start_y +
+                   layout.slider.handle_y + layout.pattern.slider_pitch * i,
+                   layout.slider.handle_width,
+                   layout.slider.handle_height)) {
+            if(slots[index].param_states[i].connected_output)
                 return 1;
-            active_param_slider.value = slots[index].param_values[i];
-            active_param_slider.initial_value = slots[index].param_values[i]->v;
+            active_param_slider.state = &slots[index].param_states[i];
+            active_param_slider.initial_value = slots[index].param_states[i].value;
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
-*/
         // See if the click is on the parameter source button
 
 /*
