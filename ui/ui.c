@@ -66,7 +66,7 @@ layout_t layout = {
         .height = 30,
         .name_x = 3,
         .name_y = 3,
-        .source_x = 20,
+        .source_end_x = 94,
         .source_y = 3,
         .track_x = 3,
         .track_y = 20,
@@ -690,51 +690,19 @@ static int mouse_click_signal(int index, int x, int y)
 
     }
 
-/*
-    //TODO
-    // See if the click is on a parameter slider
-    for(int i = 0; i < signals[index].n_params; i++)
-    {
-        if(in_rect(x, y,
-                   layout.param_handle_start_x +
-                     signals[index].param_values[i]->v *
-                     (layout.param_slider_width - layout.param_handle_width),
-                   layout.param_handle_start_y + layout.param_pitch * i,
-                   layout.param_handle_width,
-                   layout.param_handle_height)) {
-            if(signals[index].param_values[i]->owner != signals[index].parameters)
-                return 1;
-            active_param_slider.value = signals[index].param_values[i];
-            active_param_slider.initial_value = signals[index].param_values[i]->v;
-            mouse_drag_fn_p = &mouse_drag_param_slider;
-            return 1;
-        }
-
-        if(in_rect(x, y,
-                   layout.param_source_start_x,
-                   layout.param_source_start_y + layout.param_pitch * i,
-                   layout.param_source_width,
-                   layout.param_source_height)) {
-            if(active_param_source == &signals[index].param_values[i]){
-                pval_free(*active_param_source, signals[index].parameters);
-                *active_param_source = pval_new((**active_param_source).v, signals[index].parameters);
-                active_param_source = 0;
-            }else{
-                active_param_source = &signals[index].param_values[i];
-                pval_free(*active_param_source, signals[index].parameters);
-                *active_param_source = pval_new((**active_param_source).v, signals[index].parameters);
-            }
-            return 1;
+    // Was the output clicked
+    if(in_rect(x, y,
+               layout.signal.output_start_x,
+               layout.signal.output_start_y,
+               layout.output_slider.width,
+               layout.output_slider.height)){
+        // Is there something looking for a source?
+        if(active_param_source){
+                param_state_connect(active_param_source, &signals[index].output);
+            active_param_source = 0;
         }
     }
 
-    // Are we trying to set active_param_source and we clicked on the box?
-    if(active_param_source){
-        pval_free(*active_param_source, 0);
-        *active_param_source = signals[index].value;
-        active_param_source = 0;
-    }
-*/
     return 0;
 }
 

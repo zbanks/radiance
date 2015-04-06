@@ -43,7 +43,7 @@ typedef struct {
         int height;
         int name_x;
         int name_y;
-        int source_x;
+        int source_end_x;
         int source_y;
         int track_x;
         int track_y;
