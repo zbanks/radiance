@@ -37,8 +37,8 @@ void param_state_connect(param_state_t * state, param_output_t * output){
 }
 
 void param_state_disconnect(param_state_t * state){
-    param_state_t ps;
-    param_output_t output = param_state_output(state);
+    param_state_t * ps;
+    param_output_t * output = param_state_output(state);
     if(!output) return;
 
     // Clear references to `connected_output` & `next_connected_state`
@@ -60,7 +60,7 @@ void param_state_disconnect(param_state_t * state){
 
 }
 
-param_state_t param_state_output(param_state_t * state){
+param_output_t * param_state_output(param_state_t * state){
     return state->connected_output;
 }
 

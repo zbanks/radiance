@@ -25,12 +25,12 @@ typedef struct param_output {
     char * label;
 } param_output_t;
 
-void param_output_set(param_output_t output, float value);
-void param_output_free(param_output_t output);
-float param_state_get(param_state_t state);
-void param_state_connect(param_state_t state, param_output_t output);
-void param_state_disconnect(param_state_t state);
-param_state_t param_state_output(param_state_t state);  // Returns NULL if not connected
+void param_output_set(param_output_t * output, float value);
+void param_output_free(param_output_t * output);
+float param_state_get(param_state_t * state);
+void param_state_connect(param_state_t * state, param_output_t * output);
+void param_state_disconnect(param_state_t * state);
+param_output_t * param_state_output(param_state_t * state);  // Returns NULL if not connected
 
 // ---- parameter ----
 
