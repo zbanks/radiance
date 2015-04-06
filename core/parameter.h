@@ -8,12 +8,29 @@
 
 // ---- param_state ----
 
+// Forward declarations
+struct param_state;
+struct param_output;
+
 typedef struct param_state {
     float value;
+    struct param_output * connected_output;
+    struct param_state * next_connected_state;
+} param_state_t;
+
+typedef struct param_output {
+    struct param_state * connected_state;
     SDL_Color handle_color;
     SDL_Color label_color;
     char * label;
-} param_state_t;
+} param_output_t;
+
+void param_output_set(param_output_t output, float value);
+void param_output_free(param_output_t output);
+float param_state_get(param_state_t state);
+void param_state_connect(param_state_t state, param_output_t output);
+void param_state_disconnect(param_state_t state);
+param_state_t param_state_output(param_state_t state);  // Returns NULL if not connected
 
 // ---- parameter ----
 
