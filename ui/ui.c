@@ -127,19 +127,6 @@ static struct
 
 //static pval_t ** active_param_source;
 
-static uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
-    return SDL_MapRGB(format, 
-                      (uint8_t) roundf(255 * color.r),
-                      (uint8_t) roundf(255 * color.g),
-                      (uint8_t) roundf(255 * color.b));
-}
-
-static SDL_Color color_to_SDL(color_t color){
-    return (SDL_Color) {(uint8_t) roundf(255 * color.r),
-                        (uint8_t) roundf(255 * color.g),
-                        (uint8_t) roundf(255 * color.b)};
-}
-
 void ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
@@ -177,6 +164,8 @@ void ui_init()
 
     signal_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!signal_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+
+    slider_init();
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -319,7 +308,7 @@ static void ui_update_slot(slot_t* slot)
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
             parameter_t test_slider_p = {.name = "name"};
-            param_state_t test_slider_ps = {.value = 0.3, .handle_color = {0,0,80}, .label_color = {255,255,0}, .label = "src"};
+            param_state_t test_slider_ps = {.value = 0.3, .next_connected_state = 0, .connected_output = 0};
             SDL_Color c = {255, 255, 255};
             slider_render(&test_slider_p, &test_slider_ps, c);
 

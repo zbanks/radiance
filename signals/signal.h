@@ -20,11 +20,11 @@ typedef void (*inp_del_fn_pt)(struct signal * signal);
 typedef struct signal {
     char * name;
     enum signal_type type;
-    param_state_t * output;
+    param_output_t output;
     float default_val;
     int n_params;
     parameter_t * parameters;
-    param_state_t ** param_states;
+    param_state_t * param_states;
     color_t color;
     inp_state_pt state;
     inp_init_fn_pt init;

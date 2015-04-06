@@ -25,6 +25,8 @@ void slider_del()
 
 void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
 {
+    param_output_t * param_output = param_state_output(state);
+    SDL_Color handle_color = {0, 0, 80};
     SDL_Surface* txt = TTF_RenderText_Solid(param_font, param->name, c);
 
     SDL_Rect r;
@@ -35,13 +37,17 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_BlitSurface(txt, 0, slider_surface, &r);
     SDL_FreeSurface(txt);
 
-    txt = TTF_RenderText_Solid(param_font, state->label, state->label_color);
-    r.x = layout.slider.source_x;
-    r.y = layout.slider.source_y;
-    r.w = txt->w;
-    r.h = txt->h;
-    SDL_BlitSurface(txt, 0, slider_surface, &r);
-    SDL_FreeSurface(txt);
+    if(param_output){
+        handle_color = param_output->handle_color;
+
+        txt = TTF_RenderText_Solid(param_font, param_output->label, param_output->label_color);
+        r.x = layout.slider.source_x;
+        r.y = layout.slider.source_y;
+        r.w = txt->w;
+        r.h = txt->h;
+        SDL_BlitSurface(txt, 0, slider_surface, &r);
+        SDL_FreeSurface(txt);
+    }
 
     r.x = layout.slider.track_x;
     r.y = layout.slider.track_y;
@@ -50,14 +56,15 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format, 80, 80, 80));
 
     r.x = layout.slider.handle_start_x +
-          state->value * (layout.slider.track_width - layout.slider.handle_width);
+          param_state_get(state) * (layout.slider.track_width - layout.slider.handle_width);
     r.y = layout.slider.handle_y;
     r.w = layout.slider.handle_width;
     r.h = layout.slider.handle_height;
 
+
     SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format,
-                                                state->handle_color.r,
-                                                state->handle_color.g,
-                                                state->handle_color.b));
+                                                handle_color.r,
+                                                handle_color.g,
+                                                handle_color.b));
 }
 

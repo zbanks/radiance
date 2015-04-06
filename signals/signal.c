@@ -46,21 +46,21 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
 
 void inp_lfo_init(signal_t * signal){
     signal->state = malloc(sizeof(inp_lfo_state_t));
-    signal->param_states = malloc(sizeof(param_state_t *) * signal->n_params);
-    signal->output = malloc(sizeof(param_state_t));
+    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
+    //signal->output = malloc(sizeof(param_output_t));
 }
 
 void inp_lfo_update(signal_t * signal, float t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
-    state->phase += (t - state->last_t) * signal->param_states[LFO_FREQ]->value;
+    state->phase += (t - state->last_t) * signal->param_states[LFO_FREQ].value;
     state->last_t = t;
-    state->type = quantize_parameter(osc_quant_labels, signal->param_states[LFO_TYPE]->value);
-    signal->output->value = osc_fn_gen(state->type, state->phase) * signal->param_states[LFO_AMP]->value
-                            + (1.0 - signal->param_states[LFO_AMP]->value) * signal->param_states[LFO_OFFSET]->value;
+    state->type = quantize_parameter(osc_quant_labels, signal->param_states[LFO_TYPE].value);
+    param_output_set(&signal->output, osc_fn_gen(state->type, state->phase) * signal->param_states[LFO_AMP].value
+                                      + (1.0 - signal->param_states[LFO_AMP].value) * signal->param_states[LFO_OFFSET].value);
 }
 
 void inp_lfo_del(signal_t * signal){
-    free(signal->output);
+    param_output_free(&signal->output);
     free(signal->param_states);
     free(signal->state);
 }

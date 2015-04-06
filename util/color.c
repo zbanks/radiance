@@ -1,6 +1,22 @@
 #include <math.h>
 
+#include <SDL/SDL.h>
+
 #include "util/color.h"
+
+uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
+    return SDL_MapRGB(format, 
+                      (uint8_t) roundf(255 * color.r),
+                      (uint8_t) roundf(255 * color.g),
+                      (uint8_t) roundf(255 * color.b));
+}
+
+SDL_Color color_to_SDL(color_t color){
+    return (SDL_Color) {(uint8_t) roundf(255 * color.r),
+                        (uint8_t) roundf(255 * color.g),
+                        (uint8_t) roundf(255 * color.b)};
+}
+
 
 // r,g,b values are from 0 to 1
 // h = [0,360], s = [0,1], v = [0,1]

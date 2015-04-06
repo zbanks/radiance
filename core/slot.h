@@ -29,10 +29,10 @@ typedef struct pattern
 
 typedef struct slot
 {
-    pattern_t* pattern;
+    pattern_t * pattern;
     void* state;
     float alpha;
-    param_state_t ** param_states;
+    param_state_t * param_states;
 } slot_t;
 
 extern int n_slots;
