@@ -66,6 +66,14 @@ param_output_t * param_state_output(param_state_t * state){
     return state->connected_output;
 }
 
+void float_to_string(float val, char * buf, int n){
+    snprintf(buf, n, "%f", val);
+}
+
+void quant_osc_to_string(float val, char * buf, int n){
+    snprintf(buf, n, "Sine");
+}
+
 int quantize_parameter(quant_labels_t l, float p){ 
     int i = 0;
     int r;

@@ -57,24 +57,26 @@ layout_t layout = {
 
     .pattern = {
         .slider_start_x = 0,
-        .slider_start_y = 100,
-        .slider_pitch = 30,
+        .slider_start_y = 90,
+        .slider_pitch = 34,
     },
 
     .slider = {
         .width = 100,
-        .height = 30,
+        .height = 40,
         .name_x = 3,
-        .name_y = 3,
+        .name_y = 0,
         .source_end_x = 94,
         .source_y = 3,
         .track_x = 3,
-        .track_y = 20,
+        .track_y = 16,
         .track_width = 94,
         .handle_start_x = 3,
-        .handle_y = 15,
+        .handle_y = 12,
         .handle_width = 10,
         .handle_height = 10, 
+        .value_start_x = 0,
+        .value_start_y = 22,
     },
 
     .output_slider = {
@@ -110,7 +112,7 @@ layout_t layout = {
         .output_start_y = 30,
         .slider_start_x = 0,
         .slider_start_y = 55,
-        .slider_pitch = 30,
+        .slider_pitch = 35,
     },
 };
 
@@ -622,7 +624,7 @@ static int mouse_click_slot(int index, int x, int y)
                    layout.slider.name_x,
                    layout.pattern.slider_start_y +
                    layout.slider.name_y + layout.pattern.slider_pitch * i,
-                   layout.slider.track_width / 2, //FIXME
+                   layout.slider.track_width, //FIXME
                    layout.slider.handle_y - layout.slider.name_y)){
                    //layout.slider.handle_width,
                    //layout.slider.handle_height)) {
@@ -676,7 +678,7 @@ static int mouse_click_signal(int index, int x, int y)
                    layout.slider.name_x,
                    layout.signal.slider_start_y +
                    layout.slider.name_y + layout.signal.slider_pitch * i,
-                   layout.slider.track_width / 2, //FIXME
+                   layout.slider.track_width, //FIXME
                    layout.slider.handle_y - layout.slider.name_y)){
             if(active_param_source)
                 param_state_disconnect(active_param_source);

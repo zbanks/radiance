@@ -29,18 +29,22 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
     [LFO_TYPE] = {
         .name = "Type",
         .default_val = 0,
+        .val_to_str = float_to_string,
     },
     [LFO_FREQ] = {
         .name = "Freq",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
     [LFO_AMP] = {
         .name = "Amp",
         .default_val = 1.0,
+        .val_to_str = float_to_string,
     },
     [LFO_OFFSET] = {
         .name = "Offset",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
 };
 

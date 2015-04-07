@@ -98,14 +98,17 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
     [WAVE_OMEGA] = {
         .name = "\\omega",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
     [WAVE_K_MAG] = {
         .name = "|k|",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
     [WAVE_K_ANGLE] = {
         .name = "<)k",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
 };
 
@@ -192,18 +195,22 @@ parameter_t pat_bubble_params[N_BUBBLE_PARAMS] = {
     [BUBBLE_R] = {
         .name = "r",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
     [BUBBLE_RHO] = {
         .name = "\\rho",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
     [BUBBLE_CX] = {
         .name = "cx",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
     [BUBBLE_CY] = {
         .name = "cy",
         .default_val = 0.5,
+        .val_to_str = float_to_string,
     },
 };
 

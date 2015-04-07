@@ -32,6 +32,7 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
 {
     param_output_t * param_output = param_state_output(state);
     SDL_Color handle_color = {0, 0, 80};
+    SDL_Color white = {255, 255, 255};
     SDL_Surface* txt = TTF_RenderText_Solid(param_font, param->name, c);
 
     SDL_Rect r;
@@ -46,6 +47,18 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     r.w = txt->w;
     r.h = txt->h;
     SDL_BlitSurface(txt, 0, slider_surface, &r);
+
+    if(param->val_to_str){
+        char sbuf[129];
+        param->val_to_str(param_state_get(state), sbuf, 128);
+        txt = TTF_RenderText_Solid(param_font, sbuf, white);
+        r.x = layout.slider.value_start_x;
+        r.y = layout.slider.value_start_y;
+        r.w = txt->w;
+        r.h = txt->h;
+        SDL_BlitSurface(txt, 0, slider_surface, &r);
+    }
+
     SDL_FreeSurface(txt);
 
     if(param_output){

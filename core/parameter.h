@@ -44,6 +44,9 @@ typedef struct parameter
     float default_val;
 } parameter_t;
 
+void float_to_string(float val, char * buf, int n);
+void quant_osc_to_string(float val, char * buf, int n);
+
 // ---- quantized parameters ----
 
 typedef char *quant_labels_t[];

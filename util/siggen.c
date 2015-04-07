@@ -21,11 +21,11 @@ float osc_fn_gen(enum osc_type type, float phase){
         default:
             return (sin(phase * 2 * M_PI) + 1.0) / 2.0;
         case OSC_TRIANGLE:
-            return fabs(fmod(phase, 1.0) - 0.5) * 2;
+            return fabs(fmod(phase + 16.0, 1.0) - 0.5) * 2;
         case OSC_SAWTOOTH:
-            return fmod(phase, 1.0);
+            return fmod(phase + 16.0, 1.0);
         case OSC_SQUARE:
-            return (fmod(phase, 1.0) > 0.5 ? 1.0 : 0.0);
+            return (fmod(phase + 16.0, 1.0) > 0.5 ? 1.0 : 0.0);
     }
 }
 

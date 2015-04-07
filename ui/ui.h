@@ -52,6 +52,8 @@ typedef struct {
         int handle_y;
         int handle_width;
         int handle_height;
+        int value_start_x;
+        int value_start_y;
     } slider;
 
     struct {
