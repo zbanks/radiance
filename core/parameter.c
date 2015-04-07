@@ -22,6 +22,7 @@ void param_output_free(param_output_t * output){
         last_pstate = pstate;
         pstate = pstate->next_connected_state;
         last_pstate->next_connected_state = 0;
+        last_pstate->prev_connected_state = 0;
     }
 }
 
@@ -34,31 +35,34 @@ void param_state_connect(param_state_t * state, param_output_t * output){
     state->connected_output = output;
 
     // Insert `state` into linked list
+    if(output->connected_state)
+        output->connected_state->prev_connected_state = state;
     state->next_connected_state = output->connected_state;
+    state->prev_connected_state = 0;
+
     output->connected_state = state;
 }
 
 void param_state_disconnect(param_state_t * state){
-    param_state_t * ps;
+    param_state_t * s;
     param_output_t * output = param_state_output(state);
     if(!output) return;
 
+    // Delete `state` from linked list
+    s = state->prev_connected_state;
+    if(s)
+        s->next_connected_state = state->next_connected_state;
+    else
+        output->connected_state = state->next_connected_state;
+
+    s = state->next_connected_state;
+    if(s)
+        s->prev_connected_state = state->prev_connected_state;
+
     // Clear references to `connected_output` & `next_connected_state`
     state->next_connected_state = 0;
+    state->prev_connected_state = 0;
     state->connected_output = 0;
-
-    // Delete `state` from linked list
-    ps = output->connected_state;
-    if(ps == state){
-        output->connected_state = 0;
-        return;
-    }
-    while(ps && ps->next_connected_state != state){
-        ps = ps->next_connected_state;
-    }
-    if(ps->next_connected_state == state){
-        ps->next_connected_state = state->next_connected_state;
-    }
 
 }
 

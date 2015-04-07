@@ -16,6 +16,7 @@ typedef struct param_state {
     float value;
     struct param_output * connected_output;
     struct param_state * next_connected_state;
+    struct param_state * prev_connected_state;
 } param_state_t;
 
 typedef struct param_output {
