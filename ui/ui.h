@@ -91,6 +91,21 @@ typedef struct {
         int slider_start_y;
         int slider_pitch;
     } signal;
+
+    struct {
+        int start_x;
+        int start_y;
+        int width;
+        int height;
+        int pitch_x;
+        int pitch_y;
+        int text_x;
+        int text_y;
+        int waveform_x;
+        int waveform_y;
+        int waveform_width;
+        int waveform_height;
+    } filter;
 } layout_t;
 
 extern layout_t layout;

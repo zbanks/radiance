@@ -11,6 +11,10 @@
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
 
+#include <algorithm>
+#include <deque>
+#include <math.h>
+
 static int audio_running;
 
 static SDL_Thread* audio_thread;
@@ -32,8 +36,18 @@ using Vamp::HostExt::PluginLoader;
 using Vamp::HostExt::PluginWrapper;
 using Vamp::HostExt::PluginInputDomainAdapter;
 
+double last_odf;
+std::deque<double> odf_history;
+#define ODF_HISTORY_SIZE 512
+
 #define VAMP_PLUGIN_SO ("btrack.so")
 #define VAMP_PLUGIN_ID ("btrack-vamp")
+
+void audio_history(float * history, int n_history){
+    for(int i = 0; (i < odf_history.size()) && (i < n_history); i++){
+        history[i] = odf_history[i];
+    }
+}
 
 static int audio_run(void* args)
 {
@@ -101,6 +115,10 @@ static int audio_run(void* args)
 
     float *fifoptr[1] = {fifo};
 
+    // Clear out the ODF history
+    odf_history.clear();
+    odf_history.insert(odf_history.begin(), ODF_HISTORY_SIZE, 0.0);
+
     while(audio_running)
     {
         err = Pa_ReadStream( stream, chunk, FRAMES_PER_BUFFER );
@@ -114,8 +132,16 @@ static int audio_run(void* args)
         // Do chunk things here
         rt = RealTime::frame2RealTime(elapsed*FRAMES_PER_BUFFER, SAMPLE_RATE);
         Plugin::FeatureSet features = plugin->process(fifoptr, rt);
+
+        double v = fabs(features[1][0].values[0]);
+        odf_history.pop_back();
+        odf_history.push_front(max(v, v * 0.2 + odf_history[0] * 0.8));
+
+        double max_odf = *max_element(odf_history.begin(), odf_history.end());
+        last_odf = odf_history[0] / (max_odf + 1e-6);
+
         if(!features[0].empty()){
-            printf("feat %s %d.%d\n", features[0][0].label.c_str(), features[0][0].timestamp.sec, features[0][0].timestamp.usec());
+            printf("feat %s %d.%d %f\n", features[0][0].label.c_str(), features[0][0].timestamp.sec, features[0][0].timestamp.usec(), last_odf);
         }
 
         elapsed++;

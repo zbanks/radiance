@@ -13,6 +13,7 @@
 #include "patterns/pattern.h"
 #include "signals/signal.h"
 #include "core/parameter.h"
+#include "filters/filter.h"
 
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;
@@ -20,16 +21,20 @@ static SDL_Surface* pattern_preview;
 static SDL_Surface* slot_pane;
 static SDL_Surface* pattern_pane;
 static SDL_Surface* signal_pane;
+static SDL_Surface* filter_pane;
 static TTF_Font* pattern_font;
 static TTF_Font* signal_font;
+static TTF_Font* filter_font;
 
 static int mouse_down;
 static int mouse_drag_start_x;
 static int mouse_drag_start_y;
 
 layout_t layout = {
-    .win_width = 1024,
-    .win_height = 600,
+    //.win_width = 1366,
+    //.win_height = 768,
+    .win_width = 1200,
+    .win_height = 700,
 
     .master_x = 30,
     .master_y = 30,
@@ -101,7 +106,7 @@ layout_t layout = {
     .pattern_text_y = 3,
 
     .signal = {
-        .start_x = 260,
+        .start_x = 600,
         .start_y = 30,
         .width = 110,
         .height = 200,
@@ -114,6 +119,22 @@ layout_t layout = {
         .slider_start_y = 55,
         .slider_pitch = 35,
     },
+
+    .filter = {
+        .start_x = 380,
+        .start_y = 30,
+        .width = 200,
+        .height = 200,
+        .pitch_x = 0,
+        .pitch_y = 60,
+        .text_x = 5,
+        .text_y = 5,
+        .waveform_x = 5,
+        .waveform_y = 30,
+        .waveform_width = 190,
+        .waveform_height = 40,
+    },
+
 };
 
 static void (*mouse_drag_fn_p)(int x, int y);
@@ -179,11 +200,17 @@ void ui_init()
     signal_pane = SDL_CreateRGBSurface(0, layout.signal.width, layout.signal.height, 32, 0, 0, 0, 0);
     if(!signal_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
+    filter_pane = SDL_CreateRGBSurface(0, layout.filter.width, layout.filter.height, 32, 0, 0, 0, 0);
+    if(!filter_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     signal_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!signal_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+
+    filter_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 14);
+    if(!filter_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     slider_init();
 
@@ -352,6 +379,48 @@ static void ui_update_slot(slot_t* slot)
     }
 }
 
+static void ui_update_filter(filter_t * filter)
+{
+    static float * history = 0;
+    if(!history)
+        history = malloc(sizeof(float) * layout.filter.waveform_width);
+    if(!history)
+        printf("Malloc failed"); //XXX
+
+    SDL_Rect r;
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.filter.width;
+    r.h = layout.filter.height;
+    SDL_FillRect(filter_pane, &r, SDL_MapRGB(filter_pane->format, 20, 20, 20));
+
+    SDL_Color white = {255, 255, 255};
+    SDL_Surface* msg = TTF_RenderText_Solid(filter_font, filter->name, white);
+    r.x = layout.filter.text_x;
+    r.y = layout.filter.text_y;
+
+    r.w = msg->w;
+    r.h = msg->h;
+    SDL_BlitSurface(msg, 0, filter_pane, &r);
+
+    filter->history(filter, history, layout.filter.waveform_width);
+    float y_scale = 1e-6;
+    for(int i = 0; i < layout.filter.waveform_width; i++){
+        history[i] = fabs(history[i]);
+        if(history[i] > y_scale) y_scale = history[i];
+    }
+    y_scale = ((float) layout.filter.waveform_height) / y_scale;
+    SDL_LockSurface(filter_pane);
+    Uint32 * pixels = (Uint32 *) filter_pane->pixels;
+    for(int i = 0; i < layout.filter.waveform_width; i++){
+        int v = history[i] * y_scale;
+        int offset = (filter_pane->pitch / sizeof(Uint32)) * (layout.filter.waveform_y + layout.filter.waveform_height - v) + layout.filter.waveform_x + i;
+        *(pixels + offset) = SDL_MapRGB(filter_pane->format, 200, 200, 200);
+    }
+    SDL_UnlockSurface(filter_pane);
+    SDL_FreeSurface(msg);
+}
+
 static void ui_update_pattern(pattern_t* pattern)
 {
     SDL_Rect r;
@@ -482,6 +551,16 @@ void ui_render()
         }
 
         SDL_BlitSurface(pattern_pane, 0, screen, &r);
+    }
+
+    for(int i = 0; i < n_filters; i++){
+        ui_update_filter(&filters[i]);
+        r.x = layout.filter.start_x + layout.filter.pitch_x * i;
+        r.y = layout.filter.start_y + layout.filter.pitch_y * i;
+        r.w = layout.filter.width;
+        r.h = layout.filter.height;
+
+        SDL_BlitSurface(filter_pane, 0, screen, &r);
     }
 
     SDL_Flip(screen);
@@ -700,12 +779,25 @@ static int mouse_click_signal(int index, int x, int y)
                layout.output_slider.height)){
         // Is there something looking for a source?
         if(active_param_source){
-                param_state_connect(active_param_source, &signals[index].output);
+            param_state_connect(active_param_source, &signals[index].output);
             active_param_source = 0;
         }
     }
 
     return 0;
+}
+
+static int mouse_click_filter(int index, int x, int y){
+    if(in_rect(x, y,
+                layout.filter.waveform_x,
+                layout.filter.waveform_y,
+                layout.filter.waveform_width,
+                layout.filter.waveform_height)){
+        if(active_param_source){
+            param_state_connect(active_param_source, &filters[index].output);
+            active_param_source = 0;
+        }
+    }
 }
 
 static int mouse_click(int x, int y)
@@ -752,6 +844,20 @@ static int mouse_click(int x, int y)
             return mouse_click_signal(i,
                                      x - (layout.signal.start_x + layout.signal.pitch * i),
                                      y - layout.signal.start_y);
+        }
+    }
+
+    // See if click is in filter
+    for(int i = 0; i < n_filters; i++){
+        if(in_rect(x, y,
+                   layout.filter.start_x + layout.filter.pitch_x * i,
+                   layout.filter.start_y + layout.filter.pitch_y * i,
+                   layout.filter.width,
+                   layout.filter.height)){
+
+            return mouse_click_filter(i,
+                    x - (layout.filter.start_x + layout.filter.pitch_x * i),
+                    y - (layout.filter.start_y + layout.filter.pitch_y * i));
         }
     }
 

@@ -40,7 +40,7 @@ int main()
         if(ui_poll()) break;
         update_patterns(t);
         update_signals(t);
-        //update_filters(t, 0);
+        update_filters(t, 0);
         ui_render();
 
         float d = SDL_GetTicks() - (t * 1000.);
