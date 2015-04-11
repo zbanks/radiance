@@ -8,12 +8,15 @@
 #include "core/err.h"
 #include "core/slot.h"
 #include "filters/audio.h"
+#include "filters/filter.h"
 #include "output/output.h"
 #include "output/slice.h"
 #include "midi/midi.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
 #include "ui/ui.h"
+
+#define MAX_FRAMERATE 30
 
 int main()
 {
@@ -37,8 +40,12 @@ int main()
         if(ui_poll()) break;
         update_patterns(t);
         update_signals(t);
+        //update_filters(t, 0);
         ui_render();
-        // TODO rate-limit
+
+        float d = SDL_GetTicks() - (t * 1000.);
+        if(d < (1000. / MAX_FRAMERATE))
+            SDL_Delay((1000. / MAX_FRAMERATE) - d);
     }
 
     signal_stop();
