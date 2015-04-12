@@ -10,8 +10,9 @@
     #define M_PI 3.14159265358979323846
 #endif
 
-pattern_t* patterns[] = {&pat_full, &pat_wave, &pat_bubble};
-int n_patterns = sizeof(patterns) / sizeof(pattern_t);
+#define N_PATTERNS 3
+pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble};
+int n_patterns = N_PATTERNS;
 
 // --------- Pattern: Full -----------
 

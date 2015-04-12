@@ -3,6 +3,7 @@
 
 #include "core/slot.h"
 #include "core/parameter.h"
+#include <SDL/SDL_mutex.h>
 
 #define N_MAX_ACTIVE_HITS 128
 
@@ -20,7 +21,7 @@ enum hit_event {
 typedef void * hit_state_pt;
 typedef void * active_hit_state_pt;
 //typedef hit_state_pt (*hit_init_fn_pt)();
-typedef int (*hit_start_fn_pt)(struct slot * slot, struct active_hit * active_hit);
+typedef struct active_hit * (*hit_start_fn_pt)(struct slot * slot);
 typedef int (*hit_update_fn_pt)(struct active_hit * active_hit, float t);
 typedef int (*hit_event_fn_pt)(struct active_hit * active_hit, enum hit_event event, float event_data);
 typedef void (*hit_prevclick_fn_pt)(struct slot * slot, float x, float y);
@@ -61,4 +62,5 @@ extern struct active_hit preview_active_hits[];
 
 extern hit_t hit_full;
 
+extern SDL_mutex* hits_updating;
 #endif

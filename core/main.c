@@ -28,6 +28,7 @@ int main()
     hit_load(&hit_slots[0], &hit_full);
 
     patterns_updating = SDL_CreateMutex();
+    hits_updating = SDL_CreateMutex();
 
     filters_load();
 
@@ -46,6 +47,7 @@ int main()
         float tb = (float)timebase_get() / 1000; // TODO make all times long
 
         update_patterns(tb);
+        update_hits(tb);
         update_signals(tb);
         ui_render();
 
@@ -60,6 +62,7 @@ int main()
     filters_unload();
 
     SDL_DestroyMutex(patterns_updating);
+    SDL_DestroyMutex(hits_updating);
 
     ui_quit();
 

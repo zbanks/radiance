@@ -53,13 +53,28 @@ void update_patterns(float t)
     SDL_UnlockMutex(patterns_updating); 
 }
 
+void update_hits(float t)
+{
+    if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
+    for(int i=0; i < n_active_hits; i++)
+    {
+        if(active_hits[i].hit)
+        {
+            if(active_hits[i].hit->update(&active_hits[i], t))
+                active_hits[i].hit->stop(&active_hits[i]);
+        }
+    }
+
+    SDL_UnlockMutex(hits_updating);
+}
+
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
     slot->alpha = 0;
     slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
     for(int i = 0; i < pattern->n_params; i++){
-        slot->param_states[i].value = pattern->parameters[i].default_val;
+        param_state_init(&slot->param_states[i], pattern->parameters[i].default_val);
     }
     slot->state = (*pattern->init)();
     if(!slot->state) FAIL("Could not malloc pattern state\n");
@@ -78,7 +93,7 @@ void hit_load(slot_t * slot, hit_t * hit){
     slot->alpha = 0;
     slot->param_states = malloc(sizeof(param_state_t) * hit->n_params);
     for(int i = 0; i < hit->n_params; i++){
-        slot->param_states[i].value = hit->parameters[i].default_val;
+        param_state_init(&slot->param_states[i], hit->parameters[i].default_val);
     }
     //slot->state
 }

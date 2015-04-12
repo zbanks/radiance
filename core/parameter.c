@@ -26,6 +26,13 @@ void param_output_free(param_output_t * output){
     }
 }
 
+void param_state_init(param_state_t * state, float value){
+    state->value = value;
+    state->connected_output = 0;
+    state->next_connected_state = 0;
+    state->prev_connected_state = 0;
+}
+
 float param_state_get(param_state_t * state){
     return state->value;
 }

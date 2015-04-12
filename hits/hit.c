@@ -1,14 +1,19 @@
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
+#include <SDL/SDL_mutex.h>
 
 #include "core/parameter.h"
 #include "core/slot.h"
 #include "hits/hit.h"
 #include "util/color.h"
 #include "util/siggen.h"
+#include "core/err.h"
 
-hit_t * hits[] = {&hit_full, };
-int n_hits = sizeof(hits) / sizeof(hit_t);
+#define N_HITS  1
+
+hit_t * hits[N_HITS] = {&hit_full, };
+int n_hits = N_HITS;
 
 int n_active_hits = 0;
 struct active_hit active_hits[N_MAX_ACTIVE_HITS];
@@ -16,6 +21,8 @@ struct active_hit active_hits[N_MAX_ACTIVE_HITS];
 #define N_HIT_SLOTS 8 //FIXME
 
 struct active_hit preview_active_hits[N_HIT_SLOTS];
+
+SDL_mutex* hits_updating;
 
 enum adsr_state {
     ADSR_OFF = 0,
@@ -27,13 +34,10 @@ enum adsr_state {
 };
 
 color_t render_composite_hits(color_t base, float x, float y) {
-    color_t result;
-
-    result.r = 0;
-    result.g = 0;
-    result.b = 0;
+    color_t result = base;
 
     for(int i=0; i < n_active_hits; i++) {
+        if(!active_hits[i].hit) continue;
         color_t c = (active_hits[i].hit->render)(&active_hits[i], x, y);
         c.a *= active_hits[i].alpha;
         result.r = result.r * (1 - c.a) + c.r * c.a;
@@ -42,6 +46,49 @@ color_t render_composite_hits(color_t base, float x, float y) {
     }
 
     return result;
+}
+
+static struct active_hit * alloc_hit(hit_t * hit){
+    struct active_hit * ah;
+
+    if(n_active_hits == N_MAX_ACTIVE_HITS){
+        ah = &active_hits[N_MAX_ACTIVE_HITS-1];
+        ah->hit->stop(ah);
+
+        if(n_active_hits >= N_MAX_ACTIVE_HITS){
+            printf("Failed to dealloc hit");
+            return 0;
+        }
+    }
+
+    memcpy(active_hits+1, active_hits, n_active_hits * sizeof(struct active_hit));
+    n_active_hits++;
+
+    ah = &active_hits[0];
+
+    ah->hit = hit;
+    ah->param_values = malloc(hit->n_params * sizeof(float));
+    if(!ah->param_values) return 0;
+
+    return ah;
+}
+
+static void free_hit(struct active_hit * active_hit){
+    int i;
+    if(!active_hit->hit) return;
+
+    active_hit->hit = 0;
+    free(active_hit->param_values);
+    active_hit->param_values = 0;
+
+    for(i = 0; i < n_active_hits; i++){
+        if(active_hit == &active_hits[i]) break;
+    }
+    n_active_hits--;
+    if(i < n_active_hits)
+        memcpy(&active_hits[i], &active_hits[i+1], sizeof(struct active_hit) * (n_active_hits -  i));
+    memset(&active_hits[n_active_hits], 0, sizeof(struct active_hit));
+
 }
 
 // ----- Hit: Full -----
@@ -87,15 +134,16 @@ struct hit_full_state {
     float base_alpha;
 };
 
-int hit_full_start(slot_t * slot, struct active_hit * active_hit) {
-    if(!slot->hit) return 1;
+struct active_hit * hit_full_start(slot_t * slot) {
+    if(!slot->hit) return 0;
 
-    active_hit->param_values = malloc(slot->hit->n_params * sizeof(float));
+    struct active_hit * active_hit = alloc_hit(slot->hit);
+    if(!active_hit) return 0;
+
     active_hit->state = malloc(sizeof(struct hit_full_state));
+    if(!active_hit->state) return 0;
+
     active_hit->alpha = slot->alpha;
-    
-    if(!active_hit->param_values) return 1;
-    if(!active_hit->state) return 1;
 
     for(int i = 0; i < slot->hit->n_params; i++){
         active_hit->param_values[i] = slot->param_states[i].value;
@@ -108,13 +156,13 @@ int hit_full_start(slot_t * slot, struct active_hit * active_hit) {
     state->x = 0;
     state->base_alpha = state->color.a;
 
-    return 0;
+    return active_hit;
 }
 
 void hit_full_stop(struct active_hit * active_hit){
-    struct hit_full_state * state = active_hit->state;
-    free(active_hit->param_values);
-    free(active_hit->state);
+    if(active_hit->state) free(active_hit->state);
+    active_hit->state = 0;
+    free_hit(active_hit);
 }
 
 int hit_full_update(struct active_hit * active_hit, float t){

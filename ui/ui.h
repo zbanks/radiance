@@ -12,11 +12,13 @@ typedef struct {
     int master_width;
     int master_height;
 
-    int slot_start_x;
-    int slot_start_y;
-    int slot_width;
-    int slot_height;
-    int slot_pitch;
+    struct {
+        int start_x;
+        int start_y;
+        int width;
+        int height;
+        int pitch;
+    } slot;
 
     int preview_x;
     int preview_y;
@@ -56,13 +58,35 @@ typedef struct {
         int value_start_y;
     } slider;
 
-    int pattern_start_x;
-    int pattern_start_y;
-    int pattern_pitch;
-    int pattern_width;
-    int pattern_height;
-    int pattern_text_x;
-    int pattern_text_y;
+    struct {
+        int start_x;
+        int start_y;
+        int pitch_x;
+        int pitch_y;
+        int width;
+        int height;
+        int text_x;
+        int text_y;
+    } add_pattern;
+
+    struct {
+        int start_x;
+        int start_y;
+        int pitch_x;
+        int pitch_y;
+        int width;
+        int height;
+        int text_x;
+        int text_y;
+    } add_hit;
+
+    struct {
+        int start_x;
+        int start_y;
+        int pitch;
+        int width;
+        int height;
+    } hit_slot;
 
     struct {
         int start_x;

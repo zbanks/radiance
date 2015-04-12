@@ -9,6 +9,7 @@
 #include "ui/slider.h"
 #include "core/err.h"
 #include "core/slot.h"
+#include "hits/hit.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
@@ -20,7 +21,9 @@ static SDL_Surface* screen;
 static SDL_Surface* master_preview;
 static SDL_Surface* pattern_preview;
 static SDL_Surface* slot_pane;
+static SDL_Surface* hit_slot_pane;
 static SDL_Surface* pattern_pane;
+static SDL_Surface* hit_pane;
 static SDL_Surface* signal_pane;
 static SDL_Surface* filter_pane;
 static TTF_Font* pattern_font;
@@ -33,20 +36,21 @@ static int mouse_drag_start_y;
 
 layout_t layout = {
     //.win_width = 1366,
-    //.win_height = 768,
     .win_width = 1200,
-    .win_height = 700,
+    .win_height = 766,
 
     .master_x = 30,
     .master_y = 30,
     .master_width = 200,
     .master_height = 200,
 
-    .slot_start_x = 10,
-    .slot_start_y = 250,
-    .slot_width = 110,
-    .slot_height = 250,
-    .slot_pitch = 125,
+    .slot = {
+        .start_x = 10,
+        .start_y = 245,
+        .width = 110,
+        .height = 250,
+        .pitch = 125,
+    },
 
     .preview_x = 25,
     .preview_y = 5,
@@ -84,14 +88,34 @@ layout_t layout = {
         .value_start_x = 0,
         .value_start_y = 22,
     },
+    
+    .add_pattern = {
+        .start_x = 1010,
+        .start_y = 250,
+        .width = 100,
+        .height = 30,
+        .pitch_x = 0,
+        .pitch_y = 35,
+        .text_x = 5,
+        .text_y = 3,
+    },
 
-    .pattern_start_x = 10,
-    .pattern_start_y = 520,
-    .pattern_width = 100,
-    .pattern_height = 30,
-    .pattern_pitch = 120,
-    .pattern_text_x = 5,
-    .pattern_text_y = 3,
+    .add_hit = {
+        .start_x = 1010,
+        .start_y = 515,
+        .width = 100,
+        .height = 30,
+        .pitch_x = 0,
+        .pitch_y = 35,
+    },
+
+    .hit_slot = {
+        .start_x = 10,
+        .start_y = 510,
+        .pitch = 125,
+        .width = 110,
+        .height = 250,
+    },
 
     .signal = {
         .start_x = 600,
@@ -162,7 +186,17 @@ static struct
     int index;
     int dx;
     int dy;
+} active_hit;
+
+static struct
+{
+    slot_t * slot;
+    int dx;
+    int dy;
+    int is_pattern;
 } active_slot;
+
+static struct active_hit * active_active_hit;
 
 param_state_t * active_param_source;
 
@@ -189,10 +223,16 @@ void ui_init()
     pattern_preview = SDL_CreateRGBSurface(0, layout.preview_width, layout.preview_height, 32, 0, 0, 0, 0);
     if(!pattern_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    slot_pane = SDL_CreateRGBSurface(0, layout.slot_width, layout.slot_height, 32, 0, 0, 0, 0);
+    slot_pane = SDL_CreateRGBSurface(0, layout.slot.width, layout.slot.height, 32, 0, 0, 0, 0);
     if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
-    pattern_pane = SDL_CreateRGBSurface(0, layout.pattern_width, layout.pattern_height, 32, 0, 0, 0, 0);
+    hit_slot_pane = SDL_CreateRGBSurface(0, layout.hit_slot.width, layout.hit_slot.height, 32, 0, 0, 0, 0);
+    if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+
+    pattern_pane = SDL_CreateRGBSurface(0, layout.add_pattern.width, layout.add_pattern.height, 32, 0, 0, 0, 0);
+    if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+
+    hit_pane = SDL_CreateRGBSurface(0, layout.add_hit.width, layout.add_hit.height, 32, 0, 0, 0, 0);
     if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 
     signal_pane = SDL_CreateRGBSurface(0, layout.signal.width, layout.signal.height, 32, 0, 0, 0, 0);
@@ -217,7 +257,7 @@ void ui_init()
     mouse_drag_fn_p = 0;
     mouse_drop_fn_p = 0;
     active_pattern.index = -1;
-    active_slot.index = -1;
+    active_slot.slot = 0;
 }
 
 void ui_quit()
@@ -329,8 +369,8 @@ static void ui_update_slot(slot_t* slot)
     SDL_Color param_name_c = {255, 255, 255};
     r.x = 0;
     r.y = 0;
-    r.w = layout.slot_width;
-    r.h = layout.slot_height;
+    r.w = layout.slot.width;
+    r.h = layout.slot.height;
     SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
     if(slot->pattern)
@@ -377,6 +417,67 @@ static void ui_update_slot(slot_t* slot)
             r.h = layout.slider.height;
 
             SDL_BlitSurface(slider_surface, 0, slot_pane, &r);
+        }
+        
+    }
+}
+
+static void ui_update_hit_slot(slot_t* hit_slot)
+{
+    SDL_Rect r;
+    SDL_Color param_name_c = {255, 255, 255};
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.hit_slot.width;
+    r.h = layout.hit_slot.height;
+    SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
+
+    if(hit_slot->hit)
+    {
+        /*
+        update_pattern_preview(hit_slot);
+        r.w = layout.preview_width;
+        r.h = layout.preview_height;
+        r.x = layout.preview_x;
+        r.y = layout.preview_y;
+        SDL_BlitSurface(pattern_preview, 0, slot_pane, &r);
+        */
+
+        r.x = layout.alpha_slider_x;
+        r.y = layout.alpha_slider_y;
+        r.w = 3;
+        r.h = layout.alpha_slider_height;
+        SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(hit_slot_pane->format, 80, 80, 80));
+
+        r.x = layout.alpha_handle_x;
+        r.y = layout.alpha_handle_y +
+              (1 - hit_slot->alpha) * (layout.alpha_slider_height - layout.alpha_handle_height);
+        r.w = layout.alpha_handle_width;
+        r.h = layout.alpha_handle_height;
+
+        SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(hit_slot_pane->format, 0, 0, 80));
+
+        for(int i = 0; i < hit_slot->hit->n_params; i++)
+        {
+            if(&hit_slot->param_states[i] == active_param_source){
+                //param_name_c = {255, 200, 0};
+                param_name_c.r = 255;
+                param_name_c.g = 200;
+                param_name_c.b =   0;
+            }else{
+                //param_name_c = {255, 255, 255};
+                param_name_c.r = 255;
+                param_name_c.g = 255;
+                param_name_c.b = 255;
+            }
+            slider_render(&hit_slot->hit->parameters[i], &hit_slot->param_states[i], param_name_c);
+
+            r.x = layout.pattern.slider_start_x;
+            r.y = layout.pattern.slider_start_y + layout.pattern.slider_pitch * i;
+            r.w = layout.slider.width;
+            r.h = layout.slider.height;
+
+            SDL_BlitSurface(slider_surface, 0, hit_slot_pane, &r);
         }
         
     }
@@ -433,18 +534,38 @@ static void ui_update_pattern(pattern_t* pattern)
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
-    r.w = layout.pattern_width;
-    r.h = layout.pattern_height;
+    r.w = layout.add_pattern.width;
+    r.h = layout.add_pattern.height;
     SDL_FillRect(pattern_pane, &r, SDL_MapRGB(pattern_pane->format, 20, 20, 20));
 
     SDL_Color white = {255, 255, 255};
     SDL_Surface* msg = TTF_RenderText_Solid(pattern_font, pattern->name, white);
-    r.x = layout.pattern_text_x;
-    r.y = layout.pattern_text_y;
+    r.x = layout.add_pattern.text_x;
+    r.y = layout.add_pattern.text_y;
 
     r.w = msg->w;
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, pattern_pane, &r);
+    SDL_FreeSurface(msg);
+}
+
+static void ui_update_hit(hit_t * hit)
+{
+    SDL_Rect r;
+    r.x = 0;
+    r.y = 0;
+    r.w = layout.add_hit.width;
+    r.h = layout.add_hit.height;
+    SDL_FillRect(hit_pane, &r, SDL_MapRGB(hit_pane->format, 20, 20, 20));
+
+    SDL_Color white = {255, 255, 255};
+    SDL_Surface* msg = TTF_RenderText_Solid(pattern_font, hit->name, white);
+    r.x = layout.add_hit.text_x;
+    r.y = layout.add_hit.text_y;
+
+    r.w = msg->w;
+    r.h = msg->h;
+    SDL_BlitSurface(msg, 0, hit_pane, &r);
     SDL_FreeSurface(msg);
 }
 
@@ -534,9 +655,9 @@ void ui_render()
             ui_update_slot(&slots[i]);
             r.w = slot_pane->w;
             r.h = slot_pane->h;
-            r.x = layout.slot_start_x + layout.slot_pitch * i;
-            r.y = layout.slot_start_y;
-            if(active_slot.index == i)
+            r.x = layout.slot.start_x + layout.slot.pitch * i;
+            r.y = layout.slot.start_y;
+            if(active_slot.slot == &slots[i])
             {
                 r.x += active_slot.dx;
                 r.y += active_slot.dy;
@@ -546,13 +667,32 @@ void ui_render()
         }
     }
 
+    for(int i=0; i<n_hit_slots; i++)
+    {
+        if(hit_slots[i].hit)
+        {
+            ui_update_hit_slot(&hit_slots[i]);
+            r.w = hit_slot_pane->w;
+            r.h = hit_slot_pane->h;
+            r.x = layout.hit_slot.start_x + layout.hit_slot.pitch * i;
+            r.y = layout.hit_slot.start_y;
+            if(active_slot.slot == &hit_slots[i])
+            {
+                r.x += active_slot.dx;
+                r.y += active_slot.dy;
+            }
+
+            SDL_BlitSurface(hit_slot_pane, 0, screen, &r);
+        }
+    }
+
     for(int i=0; i<n_patterns; i++)
     {
         ui_update_pattern(patterns[i]);
-        r.w = layout.pattern_width;
-        r.h = layout.pattern_height;
-        r.x = layout.pattern_start_x + layout.pattern_pitch * i;
-        r.y = layout.pattern_start_y;
+        r.w = layout.add_pattern.width;
+        r.h = layout.add_pattern.height;
+        r.x = layout.add_pattern.start_x + layout.add_pattern.pitch_x * i;
+        r.y = layout.add_pattern.start_y + layout.add_pattern.pitch_y * i;
         if(active_pattern.index == i)
         {
             r.x += active_pattern.dx;
@@ -560,6 +700,22 @@ void ui_render()
         }
 
         SDL_BlitSurface(pattern_pane, 0, screen, &r);
+    }
+
+    for(int i=0; i<n_hits; i++)
+    {
+        ui_update_hit(hits[i]);
+        r.w = layout.add_hit.width;
+        r.h = layout.add_hit.height;
+        r.x = layout.add_hit.start_x + layout.add_hit.pitch_x * i;
+        r.y = layout.add_hit.start_y + layout.add_hit.pitch_y * i;
+        if(active_hit.index == i)
+        {
+            r.x += active_hit.dx;
+            r.y += active_hit.dy;
+        }
+
+        SDL_BlitSurface(hit_pane, 0, screen, &r);
     }
 
     for(int i = 0; i < n_filters; i++){
@@ -624,9 +780,9 @@ static void mouse_drop_pattern()
     for(int i = 0; i < n_slots; i++)
     {
         if(in_rect(x,y,
-                   layout.slot_start_x + layout.slot_pitch * i,
-                   layout.slot_start_y,
-                   layout.slot_width, layout.slot_height))
+                   layout.slot.start_x + layout.slot.pitch * i,
+                   layout.slot.start_y,
+                   layout.slot.width, layout.slot.height))
         {
             pat_unload(&slots[i]);
             pat_load(&slots[i],patterns[active_pattern.index]);
@@ -640,19 +796,21 @@ static void mouse_drop_slot()
     int x = mouse_drag_start_x + active_slot.dx;
     int y = mouse_drag_start_y + active_slot.dy;
 
-    for(int i = 0; i < n_slots; i++)
-    {
-        if(in_rect(x,y,
-                   layout.slot_start_x + layout.slot_pitch * i,
-                   layout.slot_start_y,
-                   layout.slot_width, layout.slot_height))
+    if(active_slot.is_pattern){
+        for(int i = 0; i < n_slots; i++)
         {
-            slot_t temp_slot = slots[i];
-            slots[i] = slots[active_slot.index];
-            slots[active_slot.index] = temp_slot;
+            if(in_rect(x,y,
+                    layout.slot.start_x + layout.slot.pitch * i,
+                    layout.slot.start_y,
+                    layout.slot.width, layout.slot.height))
+            {
+                slot_t temp_slot = *active_slot.slot;
+                *active_slot.slot = slots[i];
+                slots[i] = temp_slot;
+            }
         }
     }
-    active_slot.index = -1;
+    active_slot.slot = 0;
 }
 
 static int mouse_click_slot(int index, int x, int y)
@@ -729,7 +887,103 @@ static int mouse_click_slot(int index, int x, int y)
     }
 
     // Else, drag the slot
-    active_slot.index = index;
+    active_slot.slot = &slots[index];
+    active_slot.is_pattern = 1;
+    active_slot.dx = 0;
+    active_slot.dy = 0;
+
+    mouse_drag_fn_p = &mouse_drag_slot;
+    mouse_drop_fn_p = &mouse_drop_slot;
+    return 1;
+
+}
+
+static void hit_release(){
+    if(active_active_hit && active_active_hit->hit){
+        active_active_hit->hit->event(active_active_hit, HITEV_NOTE_OFF, 1.);
+    }
+    active_active_hit = 0;
+}
+
+static int mouse_click_hit_slot(int index, int x, int y)
+{
+    if(!hit_slots[index].hit) return 0;
+
+    // See if the click is on the alpha slider
+    if(in_rect(x, y,
+               layout.alpha_handle_x,
+               layout.alpha_handle_y +
+                 (1 - slots[index].alpha) *
+                 (layout.alpha_slider_height - layout.alpha_handle_height),
+               layout.alpha_handle_width,
+               layout.alpha_handle_height))
+    {
+        active_alpha_slider.slot = &hit_slots[index];
+        active_alpha_slider.initial_value = hit_slots[index].alpha;
+        mouse_drag_fn_p = &mouse_drag_alpha_slider;
+        return 1;
+    }
+
+    // See if the click is on the preview 
+    if(in_rect(x, y,
+               layout.preview_x,
+               layout.preview_y,
+               layout.preview_width,
+               layout.preview_height)){
+        active_active_hit = hit_slots[index].hit->start(&hit_slots[index]);
+        if(active_active_hit) active_active_hit->hit->event(active_active_hit, HITEV_NOTE_ON, 1.);
+        mouse_drop_fn_p = &hit_release;
+        hit_slots[index].hit->prevclick(
+                &hit_slots[index],
+                -1.0 + 2.0 * (x - layout.preview_x) / (float) layout.preview_width,
+                -1.0 + 2.0 * (y - layout.preview_y) / (float) layout.preview_width);
+        return 1; 
+    }
+
+    // See if the click is on a parameter slider
+    for(int i = 0; i < hit_slots[index].hit->n_params; i++)
+    {
+        if(in_rect(x, y,
+                   layout.pattern.slider_start_x +
+                   layout.slider.handle_start_x +
+                     hit_slots[index].param_states[i].value *
+                     (layout.slider.track_width - layout.slider.handle_width),
+                   layout.pattern.slider_start_y +
+                   layout.slider.handle_y + layout.pattern.slider_pitch * i,
+                   layout.slider.handle_width,
+                   layout.slider.handle_height)) {
+            if(hit_slots[index].param_states[i].connected_output)
+                return 1;
+            active_param_slider.state = &hit_slots[index].param_states[i];
+            active_param_slider.initial_value = hit_slots[index].param_states[i].value;
+            mouse_drag_fn_p = &mouse_drag_param_slider;
+            return 1;
+        }
+        // See if the click is on the parameter source button
+        if(in_rect(x, y,
+                   layout.pattern.slider_start_x +
+                   layout.slider.name_x,
+                   layout.pattern.slider_start_y +
+                   layout.slider.name_y + layout.pattern.slider_pitch * i,
+                   layout.slider.track_width, //FIXME
+                   layout.slider.handle_y - layout.slider.name_y)){
+                   //layout.slider.handle_width,
+                   //layout.slider.handle_height)) {
+            if(active_param_source)
+                param_state_disconnect(active_param_source);
+            if(active_param_source == &hit_slots[index].param_states[i]){
+                active_param_source = 0;
+            }else{
+                active_param_source = &hit_slots[index].param_states[i];
+            }
+            return 1;
+        }
+
+    }
+
+    // Else, drag the slot
+    active_slot.slot = &hit_slots[index];
+    active_slot.is_pattern = 0;
     active_slot.dx = 0;
     active_slot.dy = 0;
 
@@ -817,14 +1071,29 @@ static int mouse_click(int x, int y)
     for(int i=0; i<n_slots; i++)
     {
         if(in_rect(x, y,
-                   layout.slot_start_x + layout.slot_pitch * i,
-                   layout.slot_start_y,
-                   layout.slot_width, layout.slot_height))
+                   layout.slot.start_x + layout.slot.pitch * i,
+                   layout.slot.start_y,
+                   layout.slot.width, layout.slot.height))
         {
             // If it is, see if that slot wants to handle it
             return mouse_click_slot(i,
-                                    x - (layout.slot_start_x + layout.slot_pitch * i),
-                                    y - layout.slot_start_y);
+                                    x - (layout.slot.start_x + layout.slot.pitch * i),
+                                    y - layout.slot.start_y);
+        }
+    }
+
+    // See if click is in a hit slot
+    for(int i=0; i<n_hit_slots; i++)
+    {
+        if(in_rect(x, y,
+                   layout.hit_slot.start_x + layout.hit_slot.pitch * i,
+                   layout.hit_slot.start_y,
+                   layout.hit_slot.width, layout.hit_slot.height))
+        {
+            // If it is, see if that slot wants to handle it
+            return mouse_click_hit_slot(i,
+                                        x - (layout.hit_slot.start_x + layout.hit_slot.pitch * i),
+                                        y - layout.hit_slot.start_y);
         }
     }
 
@@ -832,9 +1101,9 @@ static int mouse_click(int x, int y)
     for(int i=0; i<n_slots; i++)
     {
         if(in_rect(x, y, 
-                   layout.pattern_start_x + layout.pattern_pitch * i,
-                   layout.pattern_start_y,
-                   layout.pattern_width, layout.pattern_height))
+                   layout.add_pattern.start_x + layout.add_pattern.pitch_x * i,
+                   layout.add_pattern.start_y + layout.add_pattern.pitch_y * i,
+                   layout.add_pattern.width, layout.add_pattern.height))
         {
             active_pattern.index = i;
             active_pattern.dx = 0;

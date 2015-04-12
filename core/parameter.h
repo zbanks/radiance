@@ -29,6 +29,7 @@ typedef struct param_output {
 
 void param_output_set(param_output_t * output, float value);
 void param_output_free(param_output_t * output);
+void param_state_init(param_state_t * state, float value);
 float param_state_get(param_state_t * state);
 void param_state_connect(param_state_t * state, param_output_t * output);
 void param_state_disconnect(param_state_t * state);
