@@ -9,7 +9,6 @@ extern "C" {
     extern double last_odf;
     void audio_start();
     void audio_stop();
-    void audio_history(float * history, int n_history);
 
 #ifdef __cplusplus
 }

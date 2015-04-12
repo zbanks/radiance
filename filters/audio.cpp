@@ -1,4 +1,7 @@
 #include "filters/audio.h"
+extern "C" {
+    #include "filters/timebase.h"
+}
 #include <stdlib.h>
 #include <stdio.h>
 #include <portaudio.h>
@@ -37,17 +40,9 @@ using Vamp::HostExt::PluginWrapper;
 using Vamp::HostExt::PluginInputDomainAdapter;
 
 double last_odf;
-std::deque<double> odf_history;
-#define ODF_HISTORY_SIZE 512
 
 #define VAMP_PLUGIN_SO ("btrack.so")
 #define VAMP_PLUGIN_ID ("btrack-vamp")
-
-void audio_history(float * history, int n_history){
-    for(int i = 0; (i < odf_history.size()) && (i < n_history); i++){
-        history[i] = odf_history[i];
-    }
-}
 
 static int audio_run(void* args)
 {
@@ -57,7 +52,6 @@ static int audio_run(void* args)
 
     PluginLoader::PluginKey key;
     int elapsed = 0;
-    int returnValue = 1;
     RealTime rt;
     PluginWrapper *wrapper = 0;
     RealTime adjustment = RealTime::zeroTime;
@@ -112,16 +106,15 @@ static int audio_run(void* args)
 
     err = Pa_StartStream( stream );
     if(err != paNoError) FAIL("Could not open audio input stream\n");
+    int start_time_sdl = SDL_GetTicks();
 
     float *fifoptr[1] = {fifo};
-
-    // Clear out the ODF history
-    odf_history.clear();
-    odf_history.insert(odf_history.begin(), ODF_HISTORY_SIZE, 0.0);
 
     while(audio_running)
     {
         err = Pa_ReadStream( stream, chunk, FRAMES_PER_BUFFER );
+        int ticks = SDL_GetTicks();
+        //printf("%f ", SDL_GetTicks() / 1000.);
 
         // shift buffer along a step size
     	for (int i=stepSize; i<blockSize; i++) fifo[i-stepSize] = fifo[i];
@@ -134,14 +127,9 @@ static int audio_run(void* args)
         Plugin::FeatureSet features = plugin->process(fifoptr, rt);
 
         double v = fabs(features[1][0].values[0]);
-        odf_history.pop_back();
-        odf_history.push_front(max(v, v * 0.2 + odf_history[0] * 0.8));
-
-        double max_odf = *max_element(odf_history.begin(), odf_history.end());
-        last_odf = odf_history[0] / (max_odf + 1e-6);
 
         if(!features[0].empty()){
-            printf("feat %s %d.%d %f\n", features[0][0].label.c_str(), features[0][0].timestamp.sec, features[0][0].timestamp.usec(), last_odf);
+            printf("feat %s %d.%d\n", features[0][0].label.c_str(), features[0][0].timestamp.sec, features[0][0].timestamp.usec());
         }
 
         elapsed++;
