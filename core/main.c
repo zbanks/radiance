@@ -3,11 +3,11 @@
 #include <stdlib.h>
 
 #include <SDL/SDL_thread.h>
-#include <SDL/SDL_timer.h>
+#include <SDL/SDL_framerate.h>
 
 #include "core/err.h"
 #include "core/slot.h"
-#include "filters/audio.h"
+#include "core/audio.h"
 #include "filters/filter.h"
 #include "output/output.h"
 #include "output/slice.h"
@@ -15,8 +15,6 @@
 #include "patterns/pattern.h"
 #include "signals/signal.h"
 #include "ui/ui.h"
-
-#define MAX_FRAMERATE 30
 
 int main()
 {
@@ -35,19 +33,20 @@ int main()
     midi_start();
     signal_start();
 
-    for(;;)
-    {
-        int t = SDL_GetTicks();
-        float tb = t / 1000.;
+    FPSmanager fps_manager;
 
-        if(ui_poll()) break;
+    SDL_initFramerate(&fps_manager);
+    SDL_setFramerate(&fps_manager, 60);
+
+    while(ui_poll())
+    {
+        float tb = (float)timebase_get() / 1000; // TODO make all times long
+
         update_patterns(tb);
         update_signals(tb);
         ui_render();
 
-        float d = SDL_GetTicks() - t;
-        if(d < (1000. / MAX_FRAMERATE))
-            SDL_Delay((1000. / MAX_FRAMERATE) - d);
+        SDL_framerateDelay(&fps_manager);
     }
 
     signal_stop();

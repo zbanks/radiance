@@ -14,6 +14,7 @@
 #include "signals/signal.h"
 #include "core/parameter.h"
 #include "filters/filter.h"
+#include "timebase/timebase.h"
 
 static SDL_Surface* screen;
 static SDL_Surface* master_preview;
@@ -874,7 +875,10 @@ static int mouse_click(int x, int y)
     }
 
     // Otherwise, do not handle click
-    return 0;
+    // TEMP: treat click as beat tap
+    timebase_tap(0.8);
+    return 1;
+    //return 0;
 }
 
 int ui_poll()
@@ -885,7 +889,7 @@ int ui_poll()
         switch(e.type)
         {
             case SDL_QUIT:
-                return 1;
+                return 0;
             case SDL_MOUSEBUTTONDOWN:
                 mouse_click(e.button.x, e.button.y);
                 mouse_down = 1;
@@ -906,6 +910,6 @@ int ui_poll()
                 mouse_down = 0;
         }
     }
-    return 0;
+    return 1;
 }
 

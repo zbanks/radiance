@@ -1,5 +1,4 @@
 #include "filters/filter.h"
-#include "filters/audio.h"
 #include "filters/vamp.h"
 #include "core/parameter.h"
 
@@ -115,7 +114,7 @@ void filters_unload(){
     }
 }
 
-void filters_update(chunk_p chunk){
+void filters_update(chunk_pt chunk){
     vamp_plugin_update(&beat_filter, chunk);
     for(int i = 0; i < n_filters; i++){
         vamp_plugin_update(&filters[i], chunk);
