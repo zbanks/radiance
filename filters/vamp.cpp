@@ -5,7 +5,7 @@
 #include <vamp-hostsdk/PluginLoader.h>
 
 extern "C" {
-#include "filters/audio.h"
+#include "core/audio.h"
 #include "filters/filter.h"
 }
 
@@ -64,7 +64,7 @@ static int rt_msec(RealTime rt){
     return rt.sec * 1000 + rt.msec();
 }
 
-int vamp_plugin_update(filter_t * filter, chunk_p chunk){
+int vamp_plugin_update(filter_t * filter, chunk_pt chunk){
     // Returns number of events processed 
     
     Plugin * plugin = (Plugin *) filter->vamp_plugin;

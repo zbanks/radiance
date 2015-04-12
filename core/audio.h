@@ -5,7 +5,7 @@
 #define SAMPLE_RATE 48000
 #define FRAMES_PER_BUFFER 512
 
-typedef float * chunk_p;
+typedef float* chunk_pt;
 void audio_start();
 void audio_stop();
 

@@ -7,7 +7,7 @@
 
 #include "core/err.h"
 #include "core/slot.h"
-#include "filters/audio.h"
+#include "core/audio.h"
 #include "filters/filter.h"
 #include "output/output.h"
 #include "output/slice.h"

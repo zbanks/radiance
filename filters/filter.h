@@ -2,7 +2,7 @@
 #define __FILTER_H
 
 #include "core/parameter.h"
-#include "filters/audio.h"
+#include "core/audio.h"
 
 struct filter;
 
@@ -44,7 +44,7 @@ extern int n_filters;
 extern filter_t filters[];
 extern filter_t beat_filter;
 
-void filters_update(chunk_p chunk);
+void filters_update(chunk_pt chunk);
 void filters_load();
 void filters_unload();
 #endif

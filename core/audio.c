@@ -1,5 +1,6 @@
-#include "filters/audio.h"
+#include "core/audio.h"
 #include "filters/filter.h"
+#include "timebase/timebase.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,6 +55,7 @@ static int audio_run(void* args)
 
         // Do chunk things here
         filters_update(chunk);
+        timebase_update(chunk);
     }
 
     err = Pa_StopStream(stream);
