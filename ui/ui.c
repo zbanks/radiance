@@ -363,6 +363,28 @@ static void update_pattern_preview(slot_t* slot)
     SDL_UnlockSurface(pattern_preview);
 }
 
+static void update_hit_preview(slot_t* slot)
+{
+    SDL_LockSurface(pattern_preview);
+
+    for(int x = 0; x < layout.preview_width; x++)
+    {
+        for(int y = 0; y < layout.preview_height; y++)
+        {
+            float xf = ((float)x / (layout.preview_width - 1)) * 2 - 1;
+            float yf = ((float)y / (layout.preview_height - 1)) * 2 - 1;
+            color_t pixel = render_composite_slot_hits(slot, xf, yf);
+            ((uint32_t*)(pattern_preview->pixels))[x + layout.preview_width * y] = SDL_MapRGB(
+                pattern_preview->format,
+                (uint8_t)roundf(255 * pixel.r * pixel.a),
+                (uint8_t)roundf(255 * pixel.g * pixel.a),
+                (uint8_t)roundf(255 * pixel.b * pixel.a));
+        }
+    }
+
+    SDL_UnlockSurface(pattern_preview);
+}
+
 static void ui_update_slot(slot_t* slot)
 {
     SDL_Rect r;
@@ -434,14 +456,12 @@ static void ui_update_hit_slot(slot_t* hit_slot)
 
     if(hit_slot->hit)
     {
-        /*
-        update_pattern_preview(hit_slot);
+        update_hit_preview(hit_slot);
         r.w = layout.preview_width;
         r.h = layout.preview_height;
         r.x = layout.preview_x;
         r.y = layout.preview_y;
-        SDL_BlitSurface(pattern_preview, 0, slot_pane, &r);
-        */
+        SDL_BlitSurface(pattern_preview, 0, hit_slot_pane, &r);
 
         r.x = layout.alpha_slider_x;
         r.y = layout.alpha_slider_y;

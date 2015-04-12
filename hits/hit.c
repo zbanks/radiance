@@ -48,6 +48,22 @@ color_t render_composite_hits(color_t base, float x, float y) {
     return result;
 }
 
+color_t render_composite_slot_hits(slot_t * slot, float x, float y) {
+    color_t result = {0, 0, 0, 1.0};
+
+    for(int i=0; i < n_active_hits; i++) {
+        if(!active_hits[i].hit) continue;
+        if(active_hits[i].slot != slot) continue;
+        color_t c = (active_hits[i].hit->render)(&active_hits[i], x, y);
+        //c.a *= active_hits[i].alpha;
+        result.r = result.r * (1 - c.a) + c.r * c.a;
+        result.g = result.g * (1 - c.a) + c.g * c.a;
+        result.b = result.b * (1 - c.a) + c.b * c.a;
+    }
+
+    return result;
+}
+
 static struct active_hit * alloc_hit(hit_t * hit){
     struct active_hit * ah;
 
@@ -109,19 +125,19 @@ parameter_t hit_full_params[] = {
         .default_val = 0.5,
     },
     [FULL_ATTACK] = {
-        .name = "Attack",
+        .name = "Attack Time",
         .default_val = 0.3,
     },
     [FULL_DECAY] = {
-        .name = "Decay",
+        .name = "Decay Time",
         .default_val = 0.1,
     },
     [FULL_SUSTAIN] = {
-        .name = "Sustain",
+        .name = "Sustain Level",
         .default_val = 0.7,
     },
     [FULL_RELEASE] = {
-        .name = "Release",
+        .name = "Release Time",
         .default_val = 0.5,
     },
 };
@@ -140,6 +156,7 @@ struct active_hit * hit_full_start(slot_t * slot) {
     struct active_hit * active_hit = alloc_hit(slot->hit);
     if(!active_hit) return 0;
 
+    active_hit->slot = slot;
     active_hit->state = malloc(sizeof(struct hit_full_state));
     if(!active_hit->state) return 0;
 
@@ -153,7 +170,7 @@ struct active_hit * hit_full_start(slot_t * slot) {
 
     state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
     state->adsr = ADSR_INIT;
-    state->x = 0;
+    state->x = 0.0;
     state->base_alpha = state->color.a;
 
     return active_hit;
