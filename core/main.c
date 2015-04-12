@@ -9,6 +9,7 @@
 #include "core/slot.h"
 #include "core/audio.h"
 #include "filters/filter.h"
+#include "hits/hit.h"
 #include "output/output.h"
 #include "output/slice.h"
 #include "midi/midi.h"
@@ -23,6 +24,8 @@ int main()
     pat_load(&slots[0], &pat_full);
     pat_load(&slots[1], &pat_wave);
     pat_load(&slots[2], &pat_bubble);
+
+    hit_load(&hit_slots[0], &hit_full);
 
     patterns_updating = SDL_CreateMutex();
 

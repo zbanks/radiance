@@ -4,6 +4,7 @@ CXX = g++
 # Files to include
 C_SRC  = $(wildcard core/*.c)
 C_SRC += $(wildcard filters/*.c)
+C_SRC += $(wildcard hits/*.c)
 C_SRC += $(wildcard lib/*.c)
 C_SRC += $(wildcard midi/*.c)
 C_SRC += $(wildcard output/*.c)
@@ -25,6 +26,7 @@ C_INC += $(wildcard signals/*.h)
 C_INC += $(wildcard timebase/*.h)
 C_INC += $(wildcard ui/*.h)
 C_INC += $(wildcard util/*.h)
+C_INC += $(wildcard hits/*.h)
 C_INC += $(wildcard lib/lux/inc/*.h)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))

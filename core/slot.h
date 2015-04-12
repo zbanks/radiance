@@ -5,6 +5,7 @@
 
 #include "core/parameter.h"
 #include "util/color.h"
+#include "hits/hit.h"
 
 struct slot;
 
@@ -29,21 +30,31 @@ typedef struct pattern
 
 typedef struct slot
 {
-    pattern_t * pattern;
+    union {
+        pattern_t * pattern;
+        hit_t * hit;
+    };
     void* state;
     float alpha;
     param_state_t * param_states;
 } slot_t;
 
 extern int n_slots;
+extern int n_hit_slots;
 
 extern slot_t slots[];
+extern slot_t hit_slots[];
 
 void update_patterns(float t);
+void update_hits(float t);
+
 color_t render_composite(float x, float y);
 
-void pat_load(slot_t* slot, pattern_t* pattern);
+void pat_load(slot_t* slot, struct pattern * pattern);
 void pat_unload(slot_t* slot);
+
+void hit_load(slot_t* slot, struct hit * hit);
+void hit_unload(slot_t* slot);
 
 extern SDL_mutex* patterns_updating;
 

@@ -2,11 +2,16 @@
 
 #include "core/err.h"
 #include "core/slot.h"
+#include "hits/hit.h"
 
 #define N_SLOTS 8
+#define N_HIT_SLOTS 8
 
 int n_slots = N_SLOTS;
 slot_t slots[N_SLOTS];
+
+int n_hit_slots = N_HIT_SLOTS;
+slot_t hit_slots[N_HIT_SLOTS];
 
 SDL_mutex* patterns_updating;
 
@@ -29,7 +34,8 @@ color_t render_composite(float x, float y)
             result.b = result.b * (1 - c.a) + c.b * c.a;
         }
     }
-    return result;
+
+    return render_composite_hits(result, x, y);
 }
 
 void update_patterns(float t)
@@ -67,3 +73,19 @@ void pat_unload(slot_t* slot)
     slot->pattern = 0;
 }
 
+void hit_load(slot_t * slot, hit_t * hit){
+    slot->hit = hit;
+    slot->alpha = 0;
+    slot->param_states = malloc(sizeof(param_state_t) * hit->n_params);
+    for(int i = 0; i < hit->n_params; i++){
+        slot->param_states[i].value = hit->parameters[i].default_val;
+    }
+    //slot->state
+}
+
+void hit_unload(slot_t * slot){
+    if(!slot->hit) return;
+    free(slot->param_states);
+    //slot->state
+    slot->hit = 0;
+}
