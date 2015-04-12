@@ -3,7 +3,6 @@
 
 #include "core/audio.h"
 #include "core/parameter.h"
-#include "filters/audio.h"
 #include "ui/graph.h"
 
 struct filter;
