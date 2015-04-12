@@ -414,6 +414,7 @@ static void ui_update_filter(filter_t * filter)
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, filter_pane, &r);
 
+    /*
     filter->history(filter, history, layout.filter.waveform_width);
     float y_scale = 1e-6;
     for(int i = 0; i < layout.filter.waveform_width; i++){
@@ -429,6 +430,7 @@ static void ui_update_filter(filter_t * filter)
         *(pixels + offset) = SDL_MapRGB(filter_pane->format, 200, 200, 200);
     }
     SDL_UnlockSurface(filter_pane);
+    */
     SDL_FreeSurface(msg);
 }
 
@@ -818,8 +820,10 @@ static int mouse_click_filter(int index, int x, int y){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[index].output);
             active_param_source = 0;
+            return 1;
         }
     }
+    return 0;
 }
 
 static int mouse_click(int x, int y)

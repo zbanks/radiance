@@ -28,6 +28,8 @@ int main()
 
     patterns_updating = SDL_CreateMutex();
 
+    filters_load();
+
     output_start();
     audio_start();
     midi_start();
@@ -35,15 +37,15 @@ int main()
 
     for(;;)
     {
-        float t = (float)SDL_GetTicks() / 1000.;
+        int t = SDL_GetTicks();
+        float tb = t / 1000.;
 
         if(ui_poll()) break;
-        update_patterns(t);
-        update_signals(t);
-        update_filters(t, 0);
+        update_patterns(tb);
+        update_signals(tb);
         ui_render();
 
-        float d = SDL_GetTicks() - (t * 1000.);
+        float d = SDL_GetTicks() - t;
         if(d < (1000. / MAX_FRAMERATE))
             SDL_Delay((1000. / MAX_FRAMERATE) - d);
     }
@@ -52,6 +54,8 @@ int main()
     midi_stop();
     audio_stop();
     output_stop();
+
+    filters_unload();
 
     SDL_DestroyMutex(patterns_updating);
 

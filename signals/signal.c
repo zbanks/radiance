@@ -53,6 +53,9 @@ void inp_lfo_init(signal_t * signal){
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     for(int i = 0; i < signal->n_params; i++){
         signal->param_states[i].value = signal->parameters[i].default_val;
+        signal->param_states[i].connected_output = 0;
+        signal->param_states[i].next_connected_state = 0;
+        signal->param_states[i].prev_connected_state = 0;
     }
     //signal->output = malloc(sizeof(param_output_t));
 }
