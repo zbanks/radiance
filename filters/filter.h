@@ -7,8 +7,9 @@
 struct filter;
 
 typedef void * filter_state_pt;
+typedef void * vamp_plugin_p;
 typedef void (*filter_init_fn_pt)(struct filter * filter);
-typedef void (*filter_update_fn_pt)(struct filter * filter, float t, chunk_t chunk);
+typedef void (*filter_update_fn_pt)(struct filter * filter, int t_msec, double value);
 typedef void (*filter_del_fn_pt)(struct filter * filter);
 
 typedef struct filter {
@@ -19,6 +20,12 @@ typedef struct filter {
 
     // Output value
     param_output_t output;
+
+    // VAMP Configuration
+    char * vamp_so;
+    char * vamp_id;
+    unsigned int vamp_output;
+    vamp_plugin_p vamp_plugin;
 
     // UI Elements
     char * name;
@@ -37,5 +44,7 @@ extern int n_filters;
 extern filter_t filters[];
 extern filter_t beat_filter;
 
-void update_filters(float t, chunk_t chunk);
+void filters_update(chunk_p chunk);
+void filters_load();
+void filters_unload();
 #endif

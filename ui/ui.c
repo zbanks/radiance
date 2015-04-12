@@ -798,8 +798,10 @@ static int mouse_click_filter(int index, int x, int y){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[index].output);
             active_param_source = 0;
+            return 1;
         }
     }
+    return 0;
 }
 
 static int mouse_click(int x, int y)

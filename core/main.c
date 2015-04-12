@@ -9,7 +9,6 @@
 #include "core/slot.h"
 #include "filters/audio.h"
 #include "filters/filter.h"
-#include "filters/timebase.h"
 #include "output/output.h"
 #include "output/slice.h"
 #include "midi/midi.h"
@@ -28,6 +27,8 @@ int main()
     pat_load(&slots[2], &pat_bubble);
 
     patterns_updating = SDL_CreateMutex();
+
+    filters_load();
 
     output_start();
     audio_start();
@@ -53,6 +54,8 @@ int main()
     midi_stop();
     audio_stop();
     output_stop();
+
+    filters_unload();
 
     SDL_DestroyMutex(patterns_updating);
 
