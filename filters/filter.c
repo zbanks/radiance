@@ -40,8 +40,10 @@ void filter_beat_del(filter_t * filter){
 
 }
 
-void filter_beat_update(filter_t * filter, int t_msec, double value){
-    printf("Beat: %d\n", t_msec);
+void filter_beat_update(filter_t * filter, int t_msec, double value)
+{
+    timebase_tap();
+    //printf("Beat: %d\n", t_msec);
 }
 
 
