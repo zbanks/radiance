@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include <SDL/SDL_thread.h>
-#include <SDL/SDL_timer.h>
+#include <SDL/SDL_framerate.h>
 
 #include "core/err.h"
 #include "core/slot.h"
@@ -35,6 +35,11 @@ int main()
     midi_start();
     signal_start();
 
+    FPSmanager fps_manager;
+
+    SDL_initFramerate(&fps_manager);
+    SDL_setFramerate(&fps_manager, 60);
+
     for(;;)
     {
         int t = SDL_GetTicks();
@@ -45,9 +50,7 @@ int main()
         update_signals(tb);
         ui_render();
 
-        float d = SDL_GetTicks() - t;
-        if(d < (1000. / MAX_FRAMERATE))
-            SDL_Delay((1000. / MAX_FRAMERATE) - d);
+        SDL_framerateDelay(&fps_manager);
     }
 
     signal_stop();
