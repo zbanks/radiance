@@ -6,9 +6,7 @@
 #include "core/err.h"
 #include "core/audio.h"
 
-static long cur_ms;
-
-static double period_ms_per_mb;
+static double freq_mb_per_ms;
 static long pt_ms;
 static long pt_mb;
 
@@ -26,7 +24,7 @@ void timebase_init()
 
     pt_ms = 0;
     pt_mb = 0;
-    period_ms_per_mb = 60. / 140.;
+    freq_mb_per_ms = 140. / 60;
 }
 
 void timebase_del()
@@ -36,33 +34,38 @@ void timebase_del()
 
 void timebase_update(chunk_pt chunk)
 {
-    if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
-    cur_ms = SDL_GetTicks();
-    if(SDL_UnlockMutex(updating)) FAIL("Unable to unlock mutex: %s\n", SDL_GetError());
 }
 
-static long get_cur_mb()
+static long get_cur_mb(long cur_ms)
 {
-    return pt_mb + (long)((double)(cur_ms - pt_ms) / period_ms_per_mb);
+    return pt_mb + (long)((double)(cur_ms - pt_ms) * freq_mb_per_ms);
 }
 
-void timebase_tap(float alpha)
+void timebase_tap()
 {
+    long cur_ms = SDL_GetTicks();
+
+    long cur_mb = get_cur_mb(cur_ms);
+
+    long error_mb = ((cur_mb + 1500) % 1000) - 500;
+    printf("ERROR: %ld\n", error_mb);
+
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
 
-    pt_mb = get_cur_mb();
+    freq_mb_per_ms = (1000. - (double)error_mb) / (double)(cur_ms - pt_ms);
+
     pt_ms = cur_ms;
-
-    long error_mb = ((pt_mb + 1500) % 1000) - 500;
-    period_ms_per_mb *= 1000. / (1000 - error_mb * alpha);
+    pt_mb = cur_mb;
 
     if(SDL_UnlockMutex(updating)) FAIL("Unable to unlock mutex: %s\n", SDL_GetError());
 }
 
 long timebase_get()
 {
+    long cur_ms = SDL_GetTicks();
+
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
-    long result = get_cur_mb();
+    long result = get_cur_mb(cur_ms);
     if(SDL_UnlockMutex(updating)) FAIL("Unable to unlock mutex: %s\n", SDL_GetError());
 
     return result;

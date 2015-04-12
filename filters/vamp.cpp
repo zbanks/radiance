@@ -30,6 +30,7 @@ int vamp_plugin_load(filter_t * filter){
 
     key = loader->composePluginKey(string(filter->vamp_so), string(filter->vamp_id));
     plugin = loader->loadPlugin(key, SAMPLE_RATE, PluginLoader::ADAPT_ALL);
+    //plugin = loader->loadPlugin(key, SAMPLE_RATE, 0);
 
     if(!plugin){
         printf("Unable to load vamp plugin %s\n", filter->vamp_so);
