@@ -88,17 +88,21 @@ typedef struct {
         int pitch_y;
         int text_x;
         int text_y;
-        int waveform_x;
-        int waveform_y;
-        int waveform_width;
-        int waveform_height;
+        int graph_x;
+        int graph_y;
     } filter;
 
     struct {
         int width;
         int height;
         int scroll_rate;
-    } graph;
+    } graph_signal;
+
+    struct {
+        int width;
+        int height;
+        int scroll_rate;
+    } graph_filter;
 } layout_t;
 
 extern layout_t layout;

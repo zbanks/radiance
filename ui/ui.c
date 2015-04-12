@@ -108,9 +108,15 @@ layout_t layout = {
         .slider_pitch = 35,
     },
 
-    .graph = {
+    .graph_signal = {
         .width = 100,
         .height = 30,
+        .scroll_rate = 50,
+    },
+
+    .graph_filter = {
+        .width = 190,
+        .height = 40,
         .scroll_rate = 50,
     },
 
@@ -123,10 +129,8 @@ layout_t layout = {
         .pitch_y = 60,
         .text_x = 5,
         .text_y = 5,
-        .waveform_x = 5,
-        .waveform_y = 30,
-        .waveform_width = 190,
-        .waveform_height = 40,
+        .graph_x = 5,
+        .graph_y = 30,
     },
 
 };
@@ -380,12 +384,6 @@ static void ui_update_slot(slot_t* slot)
 
 static void ui_update_filter(filter_t * filter)
 {
-    static float * history = 0;
-    if(!history)
-        history = malloc(sizeof(float) * layout.filter.waveform_width);
-    if(!history)
-        printf("Malloc failed"); //XXX
-
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
@@ -404,10 +402,10 @@ static void ui_update_filter(filter_t * filter)
 
     graph_update(&(filter->graph_state), filter->output.value);
     graph_render(&(filter->graph_state), white);
-    r.x = layout.filter.waveform_x;
-    r.y = layout.filter.waveform_y;
-    r.w = layout.graph.width;
-    r.h = layout.graph.height;
+    r.x = layout.filter.graph_x;
+    r.y = layout.filter.graph_y;
+    r.w = layout.graph_filter.width;
+    r.h = layout.graph_filter.height;
     SDL_BlitSurface(graph_surface, 0, filter_pane, &r);
 
     /*
@@ -473,8 +471,8 @@ static void ui_update_signal(signal_t* signal)
     graph_render(&(signal->graph_state), white);
     r.x = layout.signal.output_x;
     r.y = layout.signal.output_y;
-    r.w = layout.graph.width;
-    r.h = layout.graph.height;
+    r.w = layout.graph_signal.width;
+    r.h = layout.graph_signal.height;
     SDL_BlitSurface(graph_surface, 0, signal_pane, &r);
 
     for(int i = 0; i < signal->n_params; i++)
@@ -786,8 +784,8 @@ static int mouse_click_signal(int index, int x, int y)
     if(in_rect(x, y,
                layout.signal.output_x,
                layout.signal.output_y,
-               layout.graph.width,
-               layout.graph.height)){
+               layout.graph_signal.width,
+               layout.graph_signal.height)){
         // Is there something looking for a source?
         if(active_param_source){
             param_state_connect(active_param_source, &signals[index].output);
@@ -800,10 +798,10 @@ static int mouse_click_signal(int index, int x, int y)
 
 static int mouse_click_filter(int index, int x, int y){
     if(in_rect(x, y,
-                layout.filter.waveform_x,
-                layout.filter.waveform_y,
-                layout.filter.waveform_width,
-                layout.filter.waveform_height)){
+                layout.filter.graph_x,
+                layout.filter.graph_y,
+                layout.graph_filter.width,
+                layout.graph_filter.height)){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[index].output);
             active_param_source = 0;

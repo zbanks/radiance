@@ -25,7 +25,10 @@ void filter_onset_update(filter_t * filter, int t_msec, double value){
     struct filter_onset_state * state = filter->state;
 
     state->agc_scale *= state->agc_alpha;
-    value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
+    if(value > state->lpf_last) 
+        state->lpf_last = value;
+    else 
+        value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
 
     if(value > state->agc_scale) state->agc_scale = value;
 
@@ -62,7 +65,7 @@ filter_t filters[N_FILTERS] = {
     .del = filter_onset_del,
     .state = &((struct filter_onset_state) {
         .agc_scale = 512.,
-        .agc_alpha = 0.997,
+        .agc_alpha = 0.999,
         .lpf_last = 0.,
         .lpf_alpha = 0.05,
     }),
@@ -100,7 +103,7 @@ void filters_load(){
         }else{
             printf("Initializing filter '%s'\n", filters[i].name);
             filters[i].init(&filters[i]);
-            graph_create(&filters[i].graph_state);
+            graph_create_filter(&filters[i].graph_state);
         }
     }
 }

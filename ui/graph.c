@@ -7,9 +7,14 @@
 
 SDL_Surface* graph_surface;
 
+#define MAX(x,y) ((x > y) ? x : y)
+
 void graph_init()
 {
-    graph_surface = SDL_CreateRGBSurface(0, layout.graph.width, layout.graph.height, 32, 0, 0, 0, 0);
+    graph_surface = SDL_CreateRGBSurface(0, 
+                                         MAX(layout.graph_filter.width, layout.graph_signal.width),
+                                         MAX(layout.graph_filter.height, layout.graph_signal.height),
+                                         32, 0, 0, 0, 0);
     if(!graph_surface) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 }
 
@@ -18,11 +23,28 @@ void graph_del(graph_state_t* state)
     SDL_FreeSurface(graph_surface);
 }
 
-void graph_create(graph_state_t* state)
+void graph_create_filter(graph_state_t* state)
 {
-    state->history = malloc(sizeof(*(state->history)) * layout.graph.width);
+    state->width = layout.graph_filter.width;
+    state->height = layout.graph_filter.height;
+    state->scroll_rate = layout.graph_filter.scroll_rate;
+    state->history = malloc(sizeof(*(state->history)) * state->width);
     if(!state->history) FAIL("Could not malloc graph history\n");
-    for(int i = 0; i < layout.graph.width; i++)
+    for(int i = 0; i < state->width; i++)
+    {
+        state->history[i] = 0;
+    }
+    state->last_t = SDL_GetTicks();
+}
+
+void graph_create_signal(graph_state_t* state)
+{
+    state->width = layout.graph_signal.width;
+    state->height = layout.graph_signal.height;
+    state->scroll_rate = layout.graph_signal.scroll_rate;
+    state->history = malloc(sizeof(*(state->history)) * state->width);
+    if(!state->history) FAIL("Could not malloc graph history\n");
+    for(int i = 0; i < state->width; i++)
     {
         state->history[i] = 0;
     }
@@ -37,25 +59,25 @@ void graph_remove(graph_state_t* state)
 void graph_update(graph_state_t* state, float value)
 {
     long t = SDL_GetTicks();
-    int pixels = (t - state->last_t) / (1000 / layout.graph.scroll_rate);
+    int pixels = (t - state->last_t) / (1000 / state->scroll_rate);
     float prev_value = state->history[0];
     for(int i = 1; i <= pixels; i++)
     {
-        for(int i = layout.graph.width - 1; i > 0; i--)
+        for(int i = state->width - 1; i > 0; i--)
         {
             state->history[i] = state->history[i-1];
         }
         float alpha = (float)i / pixels;
         state->history[0] = (1 - alpha) * prev_value + alpha * value;
-        state->last_t += (1000 / layout.graph.scroll_rate);
+        state->last_t += (1000 / state->scroll_rate);
     }
 }
 
 static int x_to_pixel(graph_state_t* state, float x)
 {
-    int pix = (int)round((1 - x) * (layout.graph.height - 1));
+    int pix = (int)round((1 - x) * (state->height - 1));
     if(pix < 0) pix = 0;
-    if(pix >= layout.graph.height) pix = layout.graph.height - 1;
+    if(pix >= state->height) pix = state->height - 1;
     return pix;
 }
 
@@ -65,13 +87,13 @@ void graph_render(graph_state_t* state, SDL_Color c)
 
     r.x = 0;
     r.y = 0;
-    r.w = layout.graph.width;
-    r.h = layout.graph.height;
+    r.w = graph_surface->w;
+    r.h = graph_surface->h;
 
     SDL_FillRect(graph_surface, &r, SDL_MapRGB(graph_surface->format, 20, 20, 20));
 
     int prevX = x_to_pixel(state, state->history[0]);
-    for(int i = 1; i < layout.graph.width; i++)
+    for(int i = 1; i < state->width; i++)
     {
         int x = x_to_pixel(state, state->history[i]);
         int delta = 0;
