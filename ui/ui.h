@@ -106,6 +106,12 @@ typedef struct {
         int waveform_width;
         int waveform_height;
     } filter;
+
+    struct {
+        int width;
+        int height;
+        int scroll_rate;
+    } graph;
 } layout_t;
 
 extern layout_t layout;

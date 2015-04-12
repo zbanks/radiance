@@ -133,7 +133,8 @@ static int audio_run(void* args)
         rt = RealTime::frame2RealTime(elapsed*FRAMES_PER_BUFFER, SAMPLE_RATE);
         Plugin::FeatureSet features = plugin->process(fifoptr, rt);
 
-        double v = fabs(features[1][0].values[0]);
+        //double v = fabs(features[1][0].values[0]);
+        double v = 0;
         odf_history.pop_back();
         odf_history.push_front(max(v, v * 0.2 + odf_history[0] * 0.8));
 

@@ -120,6 +120,12 @@ layout_t layout = {
         .slider_pitch = 35,
     },
 
+    .graph = {
+        .width = 100,
+        .height = 30,
+        .scroll_rate = 50,
+    },
+
     .filter = {
         .start_x = 380,
         .start_y = 30,
@@ -213,6 +219,7 @@ void ui_init()
     if(!filter_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     slider_init();
+    graph_init();
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -233,6 +240,10 @@ void ui_quit()
     SDL_FreeSurface(slot_pane);
     SDL_FreeSurface(signal_pane);
     TTF_CloseFont(pattern_font);
+
+    slider_del();
+    graph_del();
+
     SDL_Quit();
 }
 
@@ -459,12 +470,23 @@ static void ui_update_signal(signal_t* signal)
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, signal_pane, &r);
 
+    graph_update(&(signal->graph_state), signal->output.value);
+    SDL_Color white = {255, 255, 255};
+    graph_render(&(signal->graph_state), white);
+    r.x = layout.signal.output_start_x;
+    r.y = layout.signal.output_start_y;
+    r.w = layout.graph.width;
+    r.h = layout.graph.height;
+    SDL_BlitSurface(graph_surface, 0, signal_pane, &r);
+
+    /*
     slider_output_render(&signal->output);
     r.x = layout.signal.output_start_x;
     r.y = layout.signal.output_start_y;
     r.w = layout.output_slider.width;
     r.h = layout.output_slider.height;
     SDL_BlitSurface(output_slider_surface, 0, signal_pane, &r);
+    */
 
     for(int i = 0; i < signal->n_params; i++)
     {
