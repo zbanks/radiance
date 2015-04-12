@@ -19,13 +19,11 @@ using Vamp::HostExt::PluginWrapper;
 using Vamp::HostExt::PluginInputDomainAdapter;
 
 int vamp_plugin_load(filter_t * filter){
-    PluginLoader::PluginKey key;
-    RealTime rt;
-    //PluginWrapper *wrapper = 0;
-    //RealTime adjustment = RealTime::zeroTime;
-    PluginLoader *loader = PluginLoader::getInstance();
     Plugin *plugin;
     Plugin::OutputDescriptor od;
+    PluginLoader *loader = PluginLoader::getInstance();
+    PluginLoader::PluginKey key;
+    RealTime rt;
 
     // Set existing vamp plugin to NULL
     filter->vamp_plugin = 0;
@@ -70,18 +68,17 @@ int vamp_plugin_update(filter_t * filter, chunk_p chunk){
     // Returns number of events processed 
     
     Plugin * plugin = (Plugin *) filter->vamp_plugin;
+    RealTime rt = RealTime::frame2RealTime(n_filtered_chunks*FRAMES_PER_BUFFER, SAMPLE_RATE);
+    int n_features = 0;
+    int event_time;
+    double event_value;
 
     if(!plugin)
         return 0;
 
-    RealTime rt = RealTime::frame2RealTime(n_filtered_chunks*FRAMES_PER_BUFFER, SAMPLE_RATE);
-    int n_features;
-
     Plugin::FeatureSet features = plugin->process(&chunk, rt);
 
     for(vector<Plugin::Feature>::iterator it =features[filter->vamp_output].begin(); it != features[filter->vamp_output].end(); it++){
-        int event_time;
-        double event_value = 0.0;
         if(it->hasTimestamp)
             event_time = rt_msec(it->timestamp);
         else
@@ -89,6 +86,8 @@ int vamp_plugin_update(filter_t * filter, chunk_p chunk){
 
         if(!it->values.empty())
             event_value = it->values.front();
+        else
+            event_value = 0.0;
         
         filter->update(filter, event_time, event_value);
         n_features++;
