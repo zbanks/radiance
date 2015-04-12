@@ -2,6 +2,7 @@
 #define __SIGNAL_H
 
 #include "core/slot.h"
+#include "ui/graph.h"
 
 struct signal;
 
@@ -30,6 +31,7 @@ typedef struct signal {
     inp_init_fn_pt init;
     inp_update_fn_pt update;
     inp_del_fn_pt del;
+    graph_state_t graph_state;
 } signal_t;
 
 extern int n_signals;

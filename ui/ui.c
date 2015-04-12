@@ -84,19 +84,6 @@ layout_t layout = {
         .value_start_y = 22,
     },
 
-    .output_slider = {
-        .width = 100,
-        .height = 10,
-        .track_x = 3,
-        .track_y = 0,
-        .track_width = 100,
-        .track_height = 10,
-        .handle_start_x = 0,
-        .handle_y = 0,
-        .handle_width = 3,
-        .handle_height = 10, 
-    },
-
     .pattern_start_x = 10,
     .pattern_start_y = 520,
     .pattern_width = 100,
@@ -113,11 +100,17 @@ layout_t layout = {
         .pitch = 125,
         .text_x = 5,
         .text_y = 3,
-        .output_start_x = 0,
-        .output_start_y = 30,
-        .slider_start_x = 0,
-        .slider_start_y = 55,
+        .output_x = 3,
+        .output_y = 30,
+        .slider_start_x = 3,
+        .slider_start_y = 65,
         .slider_pitch = 35,
+    },
+
+    .graph = {
+        .width = 100,
+        .height = 30,
+        .scroll_rate = 50,
     },
 
     .filter = {
@@ -213,6 +206,7 @@ void ui_init()
     if(!filter_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
     slider_init();
+    graph_init();
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -233,6 +227,10 @@ void ui_quit()
     SDL_FreeSurface(slot_pane);
     SDL_FreeSurface(signal_pane);
     TTF_CloseFont(pattern_font);
+
+    slider_del();
+    graph_del();
+
     SDL_Quit();
 }
 
@@ -461,12 +459,14 @@ static void ui_update_signal(signal_t* signal)
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, signal_pane, &r);
 
-    slider_output_render(&signal->output);
-    r.x = layout.signal.output_start_x;
-    r.y = layout.signal.output_start_y;
-    r.w = layout.output_slider.width;
-    r.h = layout.output_slider.height;
-    SDL_BlitSurface(output_slider_surface, 0, signal_pane, &r);
+    graph_update(&(signal->graph_state), signal->output.value);
+    SDL_Color white = {255, 255, 255};
+    graph_render(&(signal->graph_state), white);
+    r.x = layout.signal.output_x;
+    r.y = layout.signal.output_y;
+    r.w = layout.graph.width;
+    r.h = layout.graph.height;
+    SDL_BlitSurface(graph_surface, 0, signal_pane, &r);
 
     for(int i = 0; i < signal->n_params; i++)
     {
@@ -775,10 +775,10 @@ static int mouse_click_signal(int index, int x, int y)
 
     // Was the output clicked
     if(in_rect(x, y,
-               layout.signal.output_start_x,
-               layout.signal.output_start_y,
-               layout.output_slider.width,
-               layout.output_slider.height)){
+               layout.signal.output_x,
+               layout.signal.output_y,
+               layout.graph.width,
+               layout.graph.height)){
         // Is there something looking for a source?
         if(active_param_source){
             param_state_connect(active_param_source, &signals[index].output);

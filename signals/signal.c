@@ -142,11 +142,15 @@ void update_signals(float t) {
 void signal_start(){
     for(int i = 0; i < n_signals; i++){
         signals[i].init(&signals[i]);
+
+        graph_create(&signals[i].graph_state);
     }
 }
 
 void signal_stop(){
     for(int i = 0; i < n_signals; i++){
         signals[i].del(&signals[i]);
+
+        graph_remove(&signals[i].graph_state);
     }
 }

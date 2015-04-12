@@ -56,19 +56,6 @@ typedef struct {
         int value_start_y;
     } slider;
 
-    struct {
-        int width;
-        int height;
-        int track_x;
-        int track_y;
-        int track_width;
-        int track_height;
-        int handle_start_x;
-        int handle_y;
-        int handle_width;
-        int handle_height;
-    } output_slider;
-
     int pattern_start_x;
     int pattern_start_y;
     int pattern_pitch;
@@ -85,8 +72,8 @@ typedef struct {
         int height;
         int text_x;
         int text_y;
-        int output_start_x;
-        int output_start_y;
+        int output_x;
+        int output_y;
         int slider_start_x;
         int slider_start_y;
         int slider_pitch;
@@ -106,6 +93,12 @@ typedef struct {
         int waveform_width;
         int waveform_height;
     } filter;
+
+    struct {
+        int width;
+        int height;
+        int scroll_rate;
+    } graph;
 } layout_t;
 
 extern layout_t layout;
