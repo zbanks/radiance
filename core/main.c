@@ -16,8 +16,6 @@
 #include "signals/signal.h"
 #include "ui/ui.h"
 
-#define MAX_FRAMERATE 30
-
 int main()
 {
     ui_init();
@@ -40,12 +38,10 @@ int main()
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 60);
 
-    for(;;)
+    while(ui_poll())
     {
-        int t = SDL_GetTicks();
-        float tb = t / 1000.;
+        float tb = (float)timebase_time() / 1000; // TODO make all times long
 
-        if(ui_poll()) break;
         update_patterns(tb);
         update_signals(tb);
         ui_render();

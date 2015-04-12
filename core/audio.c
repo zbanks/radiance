@@ -67,6 +67,8 @@ static int audio_run(void* args)
 
 void audio_start()
 {
+    timebase_init();
+
     audio_running = 1;
 
     audio_thread = SDL_CreateThread(&audio_run, 0);
@@ -78,5 +80,7 @@ void audio_stop()
     audio_running = 0;
 
     SDL_WaitThread(audio_thread, 0);
+
+    timebase_del();
 }
 

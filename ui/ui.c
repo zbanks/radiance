@@ -877,7 +877,7 @@ int ui_poll()
         switch(e.type)
         {
             case SDL_QUIT:
-                return 1;
+                return 0;
             case SDL_MOUSEBUTTONDOWN:
                 mouse_click(e.button.x, e.button.y);
                 mouse_down = 1;
@@ -898,6 +898,6 @@ int ui_poll()
                 mouse_down = 0;
         }
     }
-    return 0;
+    return 1;
 }
 
