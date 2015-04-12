@@ -102,6 +102,7 @@ typedef struct {
 } layout_t;
 
 extern layout_t layout;
+extern param_state_t * active_param_source;
 
 void ui_init();
 void ui_quit();

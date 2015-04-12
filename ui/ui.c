@@ -159,7 +159,7 @@ static struct
     int dy;
 } active_slot;
 
-static param_state_t * active_param_source;
+param_state_t * active_param_source;
 
 void ui_init()
 {
@@ -400,6 +400,14 @@ static void ui_update_filter(filter_t * filter)
     r.w = msg->w;
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, filter_pane, &r);
+
+    graph_update(&(filter->graph_state), filter->output.value);
+    graph_render(&(filter->graph_state), white);
+    r.x = layout.filter.waveform_x;
+    r.y = layout.filter.waveform_y;
+    r.w = layout.graph.width;
+    r.h = layout.graph.height;
+    SDL_BlitSurface(graph_surface, 0, filter_pane, &r);
 
     /*
     filter->history(filter, history, layout.filter.waveform_width);

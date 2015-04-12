@@ -7,6 +7,13 @@
 
 int n_filtered_chunks = 0;
 
+struct filter_onset_state {
+    double agc_scale;
+    double agc_alpha;
+    double lpf_last;
+    double lpf_alpha;
+};
+
 void filter_onset_init(filter_t * filter){
 
 }
@@ -16,7 +23,14 @@ void filter_onset_del(filter_t * filter){
 }
 
 void filter_onset_update(filter_t * filter, int t_msec, double value){
-    param_output_set(&filter->output, value);
+    struct filter_onset_state * state = filter->state;
+
+    state->agc_scale *= state->agc_alpha;
+    value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
+
+    if(value > state->agc_scale) state->agc_scale = value;
+
+    param_output_set(&filter->output, value / state->agc_scale);
 }
 
 void filter_beat_init(filter_t * filter){
@@ -30,6 +44,7 @@ void filter_beat_del(filter_t * filter){
 void filter_beat_update(filter_t * filter, int t_msec, double value){
     printf("Beat: %d\n", t_msec);
 }
+
 
 int n_filters = N_FILTERS;
 filter_t filters[N_FILTERS] = {
@@ -46,6 +61,12 @@ filter_t filters[N_FILTERS] = {
     .init = filter_onset_init,
     .update = filter_onset_update,
     .del = filter_onset_del,
+    .state = &((struct filter_onset_state) {
+        .agc_scale = 512.,
+        .agc_alpha = 0.997,
+        .lpf_last = 0.,
+        .lpf_alpha = 0.05,
+    }),
     .vamp_so = "qm-vamp-plugins.so",
     .vamp_id = "qm-onsetdetector",
     .vamp_output = 1,
@@ -80,6 +101,7 @@ void filters_load(){
         }else{
             printf("Initializing filter '%s'\n", filters[i].name);
             filters[i].init(&filters[i]);
+            graph_create(&filters[i].graph_state);
         }
     }
 }

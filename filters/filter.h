@@ -3,6 +3,7 @@
 
 #include "core/parameter.h"
 #include "filters/audio.h"
+#include "ui/graph.h"
 
 struct filter;
 
@@ -32,6 +33,7 @@ typedef struct filter {
 
     // State
     filter_state_pt state;
+    graph_state_t graph_state;
 
     // Function Calls
     filter_init_fn_pt init;

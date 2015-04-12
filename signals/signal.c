@@ -3,6 +3,7 @@
 #include "patterns/pattern.h"
 #include "signals/signal.h"
 #include "util/siggen.h"
+#include "ui/graph.h"
 
 #define N_SIGNALS 3
 #ifndef M_PI
