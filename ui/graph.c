@@ -74,7 +74,10 @@ void graph_render(graph_state_t* state, SDL_Color c)
     for(int i = 1; i < layout.graph.width; i++)
     {
         int x = x_to_pixel(state, state->history[i]);
-        vlineRGBA(graph_surface, i, prevX, x, c.r, c.g, c.b, 255);
+        int delta = 0;
+        if(x > prevX) delta = 1;
+        if(x < prevX) delta = -1;
+        vlineRGBA(graph_surface, i, prevX + delta, x, c.r, c.g, c.b, 255);
         prevX = x;
     }
 }
