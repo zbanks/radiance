@@ -6,6 +6,7 @@
 void timebase_init();
 void timebase_del();
 void timebase_update(chunk_pt chunk);
-long timebase_time();
- 
+long timebase_get(); 
+void timebase_tap(float alpha);
+
 #endif

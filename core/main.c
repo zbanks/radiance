@@ -40,7 +40,7 @@ int main()
 
     while(ui_poll())
     {
-        float tb = (float)timebase_time() / 1000; // TODO make all times long
+        float tb = (float)timebase_get() / 1000; // TODO make all times long
 
         update_patterns(tb);
         update_signals(tb);
