@@ -46,8 +46,8 @@ filter_t filters[N_FILTERS] = {
     .init = filter_onset_init,
     .update = filter_onset_update,
     .del = filter_onset_del,
-    .vamp_so = "btrack.so",
-    .vamp_id = "btrack-vamp",
+    .vamp_so = "qm-vamp-plugins.so",
+    .vamp_id = "qm-onsetdetector",
     .vamp_output = 1,
     },
 };
@@ -75,8 +75,12 @@ void filters_load(){
     vamp_plugin_load(&beat_filter);
     beat_filter.init(&beat_filter);
     for(int i = 0; i < n_filters; i++){
-        vamp_plugin_load(&filters[i]);
-        filters[i].init(&filters[i]);
+        if(vamp_plugin_load(&filters[i])){
+            printf("Error initializing filter '%s'\n", filters[i].name);
+        }else{
+            printf("Initializing filter '%s'\n", filters[i].name);
+            filters[i].init(&filters[i]);
+        }
     }
 }
 
