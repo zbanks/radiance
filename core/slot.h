@@ -35,7 +35,7 @@ typedef struct slot
         hit_t * hit;
     };
     void* state;
-    float alpha;
+    param_state_t alpha;
     param_state_t * param_states;
 } slot_t;
 

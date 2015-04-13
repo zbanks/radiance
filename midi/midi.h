@@ -12,6 +12,7 @@ struct midi_connection_table {
     struct midi_connection_table * next;
 };
 
+void midi_connect_param(param_state_t * param, unsigned char device, unsigned char event, unsigned char data1);
 void midi_attach_param(param_state_t * param);
 void midi_clear_attach();
 void midi_start();

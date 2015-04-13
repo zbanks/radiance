@@ -105,8 +105,8 @@ signal_t signals[N_SIGNALS] = {
         .color = {0.9, 0.3, 0.0, 0.0},
         .output = {
             .value = 0.0,
-            .handle_color = {240, 40, 0},
-            .label_color = {240, 40, 0},
+            .handle_color = {220, 100, 0},
+            .label_color = {220, 100, 0},
             .label = "LFO"
         },
         .init = inp_lfo_init,

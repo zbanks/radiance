@@ -162,7 +162,7 @@ struct active_hit * hit_full_start(slot_t * slot) {
     active_hit->state = malloc(sizeof(struct hit_full_state));
     if(!active_hit->state) return 0;
 
-    active_hit->alpha = slot->alpha;
+    active_hit->alpha = param_state_get(&slot->alpha);
 
     for(int i = 0; i < slot->hit->n_params; i++){
         active_hit->param_values[i] = slot->param_states[i].value;

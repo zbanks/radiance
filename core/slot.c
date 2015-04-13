@@ -28,7 +28,7 @@ color_t render_composite(float x, float y)
         if(slots[i].pattern)
         {
             color_t c = (*slots[i].pattern->render)(&slots[i], x, y);
-            c.a *= slots[i].alpha;
+            c.a *= param_state_get(&slots[i].alpha);
             result.r = result.r * (1 - c.a) + c.r * c.a;
             result.g = result.g * (1 - c.a) + c.g * c.a;
             result.b = result.b * (1 - c.a) + c.b * c.a;
@@ -71,7 +71,7 @@ void update_hits(float t)
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
-    slot->alpha = 0;
+    param_state_init(&slot->alpha, 0);
     slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
     for(int i = 0; i < pattern->n_params; i++){
         param_state_init(&slot->param_states[i], pattern->parameters[i].default_val);
@@ -90,7 +90,7 @@ void pat_unload(slot_t* slot)
 
 void hit_load(slot_t * slot, hit_t * hit){
     slot->hit = hit;
-    slot->alpha = 0;
+    param_state_init(&slot->alpha, 0);
     slot->param_states = malloc(sizeof(param_state_t) * hit->n_params);
     for(int i = 0; i < hit->n_params; i++){
         param_state_init(&slot->param_states[i], hit->parameters[i].default_val);

@@ -404,6 +404,10 @@ static void ui_update_slot(slot_t* slot)
         r.y = layout.preview_y;
         SDL_BlitSurface(pattern_preview, 0, slot_pane, &r);
 
+        SDL_Color alpha_color = {0, 0, 80};
+        if(param_state_output(&slot->alpha)){
+            alpha_color = param_state_output(&slot->alpha)->handle_color;
+        }
         r.x = layout.alpha_slider_x;
         r.y = layout.alpha_slider_y;
         r.w = 3;
@@ -412,11 +416,14 @@ static void ui_update_slot(slot_t* slot)
 
         r.x = layout.alpha_handle_x;
         r.y = layout.alpha_handle_y +
-              (1 - slot->alpha) * (layout.alpha_slider_height - layout.alpha_handle_height);
+              (1 - param_state_get(&slot->alpha)) * (layout.alpha_slider_height - layout.alpha_handle_height);
         r.w = layout.alpha_handle_width;
         r.h = layout.alpha_handle_height;
 
-        SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 0, 0, 80));
+        SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format,
+                                               alpha_color.r,
+                                               alpha_color.g,
+                                               alpha_color.b));
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
@@ -463,6 +470,10 @@ static void ui_update_hit_slot(slot_t* hit_slot)
         r.y = layout.preview_y;
         SDL_BlitSurface(pattern_preview, 0, hit_slot_pane, &r);
 
+        SDL_Color alpha_color = {0, 0, 80};
+        if(param_state_output(&hit_slot->alpha)){
+            alpha_color = param_state_output(&hit_slot->alpha)->handle_color;
+        }
         r.x = layout.alpha_slider_x;
         r.y = layout.alpha_slider_y;
         r.w = 3;
@@ -471,11 +482,14 @@ static void ui_update_hit_slot(slot_t* hit_slot)
 
         r.x = layout.alpha_handle_x;
         r.y = layout.alpha_handle_y +
-              (1 - hit_slot->alpha) * (layout.alpha_slider_height - layout.alpha_handle_height);
+              (1 - param_state_get(&hit_slot->alpha)) * (layout.alpha_slider_height - layout.alpha_handle_height);
         r.w = layout.alpha_handle_width;
         r.h = layout.alpha_handle_height;
 
-        SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(hit_slot_pane->format, 0, 0, 80));
+        SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(hit_slot_pane->format,
+                                                   alpha_color.r,
+                                                   alpha_color.g,
+                                                   alpha_color.b));
 
         for(int i = 0; i < hit_slot->hit->n_params; i++)
         {
@@ -765,7 +779,7 @@ static void mouse_drag_alpha_slider(int x, int y)
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    active_alpha_slider.slot->alpha = val;
+    param_state_setq(&active_alpha_slider.slot->alpha, val);
 }
 
 static void mouse_drag_param_slider(int x, int y)
@@ -776,7 +790,7 @@ static void mouse_drag_param_slider(int x, int y)
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    active_param_slider.state->value = val;
+    param_state_setq(active_param_slider.state, val);
 }
 
 static void mouse_drag_pattern(int x, int y)
@@ -841,13 +855,13 @@ static int mouse_click_slot(int index, int x, int y)
     if(in_rect(x, y,
                layout.alpha_handle_x,
                layout.alpha_handle_y +
-                 (1 - slots[index].alpha) *
+                 (1 - param_state_get(&slots[index].alpha)) *
                  (layout.alpha_slider_height - layout.alpha_handle_height),
                layout.alpha_handle_width,
                layout.alpha_handle_height))
     {
         active_alpha_slider.slot = &slots[index];
-        active_alpha_slider.initial_value = slots[index].alpha;
+        active_alpha_slider.initial_value = param_state_get(&slots[index].alpha);
         mouse_drag_fn_p = &mouse_drag_alpha_slider;
         return 1;
     }
@@ -880,7 +894,7 @@ static int mouse_click_slot(int index, int x, int y)
             if(slots[index].param_states[i].connected_output)
                 return 1;
             active_param_slider.state = &slots[index].param_states[i];
-            active_param_slider.initial_value = slots[index].param_states[i].value;
+            active_param_slider.initial_value = param_state_get(&slots[index].param_states[i]);
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
@@ -933,13 +947,13 @@ static int mouse_click_hit_slot(int index, int x, int y)
     if(in_rect(x, y,
                layout.alpha_handle_x,
                layout.alpha_handle_y +
-                 (1 - slots[index].alpha) *
+                 (1 - param_state_get(&slots[index].alpha)) *
                  (layout.alpha_slider_height - layout.alpha_handle_height),
                layout.alpha_handle_width,
                layout.alpha_handle_height))
     {
         active_alpha_slider.slot = &hit_slots[index];
-        active_alpha_slider.initial_value = hit_slots[index].alpha;
+        active_alpha_slider.initial_value = param_state_get(&hit_slots[index].alpha);
         mouse_drag_fn_p = &mouse_drag_alpha_slider;
         return 1;
     }
@@ -975,7 +989,7 @@ static int mouse_click_hit_slot(int index, int x, int y)
             if(hit_slots[index].param_states[i].connected_output)
                 return 1;
             active_param_slider.state = &hit_slots[index].param_states[i];
-            active_param_slider.initial_value = hit_slots[index].param_states[i].value;
+            active_param_slider.initial_value = param_state_get(&hit_slots[index].param_states[i]);
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }
@@ -1030,7 +1044,7 @@ static int mouse_click_signal(int index, int x, int y)
             if(signals[index].param_states[i].connected_output)
                 return 1;
             active_param_slider.state = &signals[index].param_states[i];
-            active_param_slider.initial_value = signals[index].param_states[i].value;
+            active_param_slider.initial_value = param_state_get(&signals[index].param_states[i]);
             mouse_drag_fn_p = &mouse_drag_param_slider;
             return 1;
         }

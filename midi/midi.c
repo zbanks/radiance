@@ -7,6 +7,7 @@
 #include "core/err.h"
 #include "midi/controllers.h"
 #include "midi/midi.h"
+#include "midi/layout.h"
 #include "core/parameter.h"
 #include "ui/ui.h"
 
@@ -25,6 +26,8 @@ static PmEvent events[MIDI_BUFFER_SIZE];
 
 static struct midi_connection_table * connection_table = 0;
 
+SDL_Color midi_handle_color = {150, 150, 150};
+
 int n_recent_events = 0;
 
 static struct recent_event {
@@ -42,15 +45,14 @@ static struct {
     long time_min;
 } collapsed_events[MIDI_BUFFER_SIZE];
 
-static void midi_connect_param(unsigned char device, unsigned char event, unsigned char data1){
+void midi_connect_param(param_state_t * param_state, unsigned char device, unsigned char event, unsigned char data1){
     printf("Connecting to midi %d %d %d\n", device, event, data1); 
     n_recent_events  = 0;
 
     struct midi_connection_table * ct = connection_table;
     while(ct){
         if((ct->device == device) && (ct->event == event)){
-            param_state_connect(active_param_source, &ct->outputs[(int) data1]);
-            active_param_source = 0;
+            param_state_connect(param_state, &ct->outputs[(int) data1]);
             return;
         }
         ct = ct->next;
@@ -67,9 +69,7 @@ static void midi_connect_param(unsigned char device, unsigned char event, unsign
     // Init outputs
     for(int i = 0; (i < N_DATA1) && (i < controllers_enabled[device].n_inputs); i++){
         //snprintf(strings, 5, "%d", i);
-        ct->outputs[i].handle_color.r = 150;
-        ct->outputs[i].handle_color.g = 0;
-        ct->outputs[i].handle_color.b = 200;
+        ct->outputs[i].handle_color = midi_handle_color;
         ct->outputs[i].label_color = controllers_enabled[device].color;
         if(controllers_enabled[device].input_labels[i]){
             ct->outputs[i].label = controllers_enabled[device].input_labels[i];
@@ -81,8 +81,7 @@ static void midi_connect_param(unsigned char device, unsigned char event, unsign
         //strings += 5;
     }
 
-    param_state_connect(active_param_source, &ct->outputs[(int) data1]);
-    active_param_source = 0;
+    param_state_connect(param_state, &ct->outputs[(int) data1]);
 }
 
 static int midi_run(void* args)
@@ -98,6 +97,7 @@ static int midi_run(void* args)
     for(int i = 0; i < n_controllers_enabled; i++)
     {
         streams[i] = 0;
+        controllers_enabled[i].available = 0;
     }
 
     int n = Pm_CountDevices();
@@ -108,10 +108,12 @@ static int midi_run(void* args)
         {
             for(int j = 0; j < n_controllers_enabled; j++)
             {
+                if(!controllers_enabled[j].enabled) continue;
                 if(strcmp(device->name, controllers_enabled[j].name) == 0)
                 {
                     err = Pm_OpenInput(&streams[j], i, 0, MIDI_BUFFER_SIZE, 0, 0);
                     if(err != pmNoError) FAIL("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
+                    controllers_enabled[j].available = 1;
                 }
             }
         }
@@ -124,6 +126,8 @@ static int midi_run(void* args)
             printf("WARNING: Could not find MIDI device \"%s\"\n", controllers_enabled[i].name);
         }
     }
+
+    midi_setup_layout();
 
     int n_collapsed_events;
 
@@ -186,7 +190,8 @@ has_collapsed_event:
                     for(int l = 0; l < n_collapsed_events; l++){
                         if(((collapsed_events[l].data2_max - collapsed_events[l].data2_min) > MIDI_SELECT_DATA_THRESHOLD)
                         && ((double) (collapsed_events[l].data2_max - collapsed_events[l].data2_min) / (double) (collapsed_events[l].time_max - collapsed_events[l].time_min) > MIDI_SELECT_RATIO_THRESHOLD)){
-                            midi_connect_param(collapsed_events[l].device, collapsed_events[l].event, collapsed_events[l].data1);
+                            midi_connect_param(active_param_source, collapsed_events[l].device, collapsed_events[l].event, collapsed_events[l].data1);
+                            active_param_source = 0;
                             n_recent_events = 0;
                         }
                     }
@@ -203,7 +208,6 @@ has_collapsed_event:
                 ct = connection_table;
                 while(ct){
                     if((ct->device == i) && (ct->event == event)){
-                        printf("Setting %d to %d\n", data1, data2);
                         param_output_set(&ct->outputs[data1], data2 / 127.);
                         break;
                     }

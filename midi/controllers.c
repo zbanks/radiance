@@ -6,6 +6,7 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
     [MIDI_NK2_1] = {
         .name = "nanoKONTROL2 MIDI 1",
         .short_name = "NK",
+        .enabled = 1,
         .color = {0, 150, 255},
         .n_inputs = N_NK2_INPUTS,
         .input_labels = nanokontrol2_labels,
@@ -13,6 +14,7 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
     [MIDI_NP2_1] = {
         .name = "nanoPAD2 MIDI 1",
         .short_name = "NP",
+        .enabled = 1,
         .color = {150, 0, 255},
         .n_inputs = N_NP2_INPUTS,
         .input_labels = nanopad2_labels,
@@ -69,16 +71,16 @@ char * nanokontrol2_labels[N_NK2_INPUTS] = {
 
     [NK2_PLAY] = "Play",
     [NK2_STOP] = "Stop",
-    [NK2_REWIND] = "Rwd",
-    [NK2_FASTFWD] = "Fwd",
+    [NK2_REWIND] = "<<",
+    [NK2_FASTFWD] = ">>",
     [NK2_RECORD] = "Rec",
     [NK2_CYCLE] = "Cycle",
 
-    [NK2_LEFT] = "<-",
-    [NK2_RIGHT] = "->",
-    [NK2_SET] = "Set",
-    [NK2_SLEFT] = "<-S",
-    [NK2_SRIGHT] = "S->",
+    [NK2_LEFT] = "<-T",
+    [NK2_RIGHT] = "T->",
+    [NK2_SET] = "MSet",
+    [NK2_SLEFT] = "<-M",
+    [NK2_SRIGHT] = "M->",
 };
 
 char * nanopad2_labels[N_NP2_INPUTS] = {

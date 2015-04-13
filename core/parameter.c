@@ -37,6 +37,11 @@ float param_state_get(param_state_t * state){
     return state->value;
 }
 
+void param_state_setq(param_state_t * state, float value){
+    if(!state->connected_output)
+        state->value = value;
+}
+
 void param_state_connect(param_state_t * state, param_output_t * output){
     // Disconnect if already connected
     param_state_disconnect(state);

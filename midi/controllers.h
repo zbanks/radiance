@@ -7,6 +7,8 @@ struct midi_controller {
     char * name;
     char * short_name;
     SDL_Color color;
+    int enabled;
+    int available;
     int n_inputs;
     char ** input_labels;
 };
