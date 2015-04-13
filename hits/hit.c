@@ -26,11 +26,13 @@ SDL_mutex* hits_updating;
 
 enum adsr_state {
     ADSR_OFF = 0,
-    ADSR_INIT = 0,
+    ADSR_WAITING = 0,
+    ADSR_START,
     ADSR_ATTACK,
     ADSR_DECAY,
     ADSR_SUSTAIN,
     ADSR_RELEASE,
+    ADSR_DONE,
 };
 
 color_t render_composite_hits(color_t base, float x, float y) {
@@ -169,7 +171,7 @@ struct active_hit * hit_full_start(slot_t * slot) {
     struct hit_full_state * state = active_hit->state;
 
     state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
-    state->adsr = ADSR_INIT;
+    state->adsr = ADSR_WAITING;
     state->x = 0.0;
     state->base_alpha = state->color.a;
 
@@ -185,7 +187,8 @@ void hit_full_stop(struct active_hit * active_hit){
 int hit_full_update(struct active_hit * active_hit, float t){
     struct hit_full_state * state = active_hit->state;
     switch(state->adsr){
-        case ADSR_INIT:
+        case ADSR_WAITING: break;
+        case ADSR_START:
             state->adsr = ADSR_ATTACK;
         break;
         case ADSR_ATTACK:
@@ -208,9 +211,11 @@ int hit_full_update(struct active_hit * active_hit, float t){
             state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
             if(state->x <= 0){
                 state->x = 0.;
+                state->adsr = ADSR_DONE;
                 return 1;
             }
         break;
+        case ADSR_DONE: break;
     }
     state->last_t = t;
     return 0;
@@ -220,7 +225,7 @@ int hit_full_event(struct active_hit * active_hit, enum hit_event event, float e
     struct hit_full_state * state = active_hit->state;
     switch(event){
         case HITEV_NOTE_ON:
-            state->adsr = ADSR_ATTACK;
+            state->adsr = ADSR_START;
         break;
         case HITEV_NOTE_OFF:
             state->adsr = ADSR_RELEASE;

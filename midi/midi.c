@@ -58,23 +58,27 @@ static void midi_connect_param(unsigned char device, unsigned char event, unsign
     
     // No table element, create one.
     ct = malloc(sizeof(struct midi_connection_table));
-    char * strings = malloc(N_DATA1 * 5); // This is never free'd
+    //char * strings = malloc(N_DATA1 * 5); // This is never free'd
     ct->device = device;
     ct->event = event;
     ct->next = connection_table;
     connection_table = ct;
 
     // Init outputs
-    for(int i = 0; i < N_DATA1; i++){
-        snprintf(strings, 5, "%d", i);
-        ct->outputs[i].handle_color.r = 0;
-        ct->outputs[i].handle_color.g = 255;
-        ct->outputs[i].handle_color.b = MAX(40 + device * 40, 255);
-        ct->outputs[i].label_color.r = 0;
-        ct->outputs[i].label_color.g = 255;
-        ct->outputs[i].label_color.b = MAX(40 + device * 40, 255);
-        ct->outputs[i].label = strings;
-        strings += 5;
+    for(int i = 0; (i < N_DATA1) && (i < controllers_enabled[device].n_inputs); i++){
+        //snprintf(strings, 5, "%d", i);
+        ct->outputs[i].handle_color.r = 150;
+        ct->outputs[i].handle_color.g = 0;
+        ct->outputs[i].handle_color.b = 200;
+        ct->outputs[i].label_color = controllers_enabled[device].color;
+        if(controllers_enabled[device].input_labels[i]){
+            ct->outputs[i].label = controllers_enabled[device].input_labels[i];
+        }else{
+            printf("Unlabeled input on device %d (%s): %d\n", device, controllers_enabled[device].name, i);
+            ct->outputs[i].label = malloc(5); // Never free'd
+            snprintf(ct->outputs[i].label, 4, "%d", i);
+        }
+        //strings += 5;
     }
 
     param_state_connect(active_param_source, &ct->outputs[(int) data1]);
@@ -104,7 +108,7 @@ static int midi_run(void* args)
         {
             for(int j = 0; j < n_controllers_enabled; j++)
             {
-                if(strcmp(device->name, controllers_enabled[j]) == 0)
+                if(strcmp(device->name, controllers_enabled[j].name) == 0)
                 {
                     err = Pm_OpenInput(&streams[j], i, 0, MIDI_BUFFER_SIZE, 0, 0);
                     if(err != pmNoError) FAIL("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
@@ -117,7 +121,7 @@ static int midi_run(void* args)
     {
         if(!streams[i])
         {
-            printf("WARNING: Could not find MIDI device \"%s\"\n", controllers_enabled[i]);
+            printf("WARNING: Could not find MIDI device \"%s\"\n", controllers_enabled[i].name);
         }
     }
 
@@ -136,20 +140,6 @@ static int midi_run(void* args)
             for(int j = 0; j < n; j++)
             {
                 PmMessage m = events[j].message;
-                unsigned char event = Pm_MessageStatus(m);
-                unsigned char data1 = Pm_MessageData1(m);
-                unsigned char data2 = Pm_MessageData2(m);
-
-                //printf("Device %d event %d %d %d %li\n", i, event, data1, data2, events[j].timestamp);
-
-                struct midi_connection_table * ct = connection_table;
-                while(ct){
-                    if((ct->device == i) && (ct->event == event)){
-                        param_output_set(&ct->outputs[(int) data1], data2 / 127.);
-                        break;
-                    }
-                    ct = ct->next;
-                }
 
                 if(active_param_source){
                     memcpy(&recent_events[1], &recent_events[0], sizeof(struct recent_event) * (MIDI_BUFFER_SIZE - 1));
@@ -162,9 +152,9 @@ static int midi_run(void* args)
                     memset(collapsed_events, 0, sizeof(collapsed_events));
 
                     for(int k = 0; k < n_recent_events; k++){
-                        event = Pm_MessageStatus(recent_events[k].event.message);
-                        data1 = Pm_MessageData1(recent_events[k].event.message);
-                        data2 = Pm_MessageData2(recent_events[k].event.message);
+                        unsigned char event = Pm_MessageStatus(recent_events[k].event.message);
+                        unsigned char data1 = Pm_MessageData1(recent_events[k].event.message);
+                        unsigned char data2 = Pm_MessageData2(recent_events[k].event.message);
 
                         for(int l = 0; l <  n_collapsed_events; l++){
                             if((event == collapsed_events[l].event) &&
@@ -202,6 +192,22 @@ has_collapsed_event:
                     }
                 }else{ // if(!active_param_source)
                     n_recent_events = 0;
+                }
+
+                unsigned char event = Pm_MessageStatus(m);
+                unsigned char data1 = Pm_MessageData1(m);
+                unsigned char data2 = Pm_MessageData2(m);
+
+                printf("Device %d event %d %d %d %li\n", i, event, data1, data2, events[j].timestamp);
+                struct midi_connection_table * ct;
+                ct = connection_table;
+                while(ct){
+                    if((ct->device == i) && (ct->event == event)){
+                        printf("Setting %d to %d\n", data1, data2);
+                        param_output_set(&ct->outputs[data1], data2 / 127.);
+                        break;
+                    }
+                    ct = ct->next;
                 }
             }
         }

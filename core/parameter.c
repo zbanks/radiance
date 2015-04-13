@@ -38,6 +38,9 @@ float param_state_get(param_state_t * state){
 }
 
 void param_state_connect(param_state_t * state, param_output_t * output){
+    // Disconnect if already connected
+    param_state_disconnect(state);
+
     // Set `connected_output` pointer
     state->connected_output = output;
 
