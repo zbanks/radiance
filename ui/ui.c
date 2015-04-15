@@ -620,6 +620,7 @@ static void ui_update_signal(signal_t* signal)
     r.w = msg->w;
     r.h = msg->h;
     SDL_BlitSurface(msg, 0, signal_pane, &r);
+    SDL_FreeSurface(msg);
 
     graph_update(&(signal->graph_state), signal->output.value);
     SDL_Color white = {255, 255, 255};
@@ -1185,7 +1186,7 @@ static int mouse_click(int x, int y)
 int ui_poll()
 {
     SDL_Event e;
-    while(SDL_PollEvent(&e))
+    while(SDL_PollEvent(&e)) 
     {
         switch(e.type)
         {

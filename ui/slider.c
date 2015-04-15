@@ -42,6 +42,7 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     r.w = txt->w;
     r.h = txt->h;
     SDL_BlitSurface(txt, 0, slider_surface, &r);
+    SDL_FreeSurface(txt);
 
     if(param->val_to_str){
         char sbuf[129];
@@ -52,9 +53,8 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
         r.w = txt->w;
         r.h = txt->h;
         SDL_BlitSurface(txt, 0, slider_surface, &r);
+        SDL_FreeSurface(txt);
     }
-
-    SDL_FreeSurface(txt);
 
     if(param_output){
         handle_color = param_output->handle_color;
