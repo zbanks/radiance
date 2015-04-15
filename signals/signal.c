@@ -35,7 +35,7 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
     [LFO_FREQ] = {
         .name = "Freq",
         .default_val = 0.5,
-        .val_to_str = float_to_string,
+        .val_to_str = power_quantize_parameter_label,
     },
     [LFO_AMP] = {
         .name = "Amp",
@@ -63,7 +63,7 @@ void inp_lfo_init(signal_t * signal){
 
 void inp_lfo_update(signal_t * signal, float t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
-    state->phase += (t - state->last_t) * signal->param_states[LFO_FREQ].value;
+    state->phase += (t - state->last_t) * power_quantize_parameter(signal->param_states[LFO_FREQ].value);
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
     state->type = quantize_parameter(osc_quant_labels, signal->param_states[LFO_TYPE].value);

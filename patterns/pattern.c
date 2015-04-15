@@ -18,6 +18,7 @@ int n_patterns = N_PATTERNS;
 
 enum pat_full_param_names {
     FULL_COLOR,
+    FULL_VALUE,
 
     N_FULL_PARAMS
 };
@@ -26,6 +27,11 @@ parameter_t pat_full_params[] = {
     [FULL_COLOR] = {
         .name = "Color",
         .default_val = 0.5,
+    },
+    [FULL_VALUE] = {
+        .name = "Value",
+        .default_val = 1.0,
+        .val_to_str = float_to_string,
     },
 };
 
@@ -42,7 +48,11 @@ void pat_full_del(pat_state_pt state)
 void pat_full_update(slot_t* slot, float t)
 {
     color_t* color = (color_t*)slot->state;
-    *color = param_to_color(slot->param_states[FULL_COLOR].value);
+    *color = param_to_color(param_state_get(&slot->param_states[FULL_COLOR]));
+    float v = param_state_get(&slot->param_states[FULL_VALUE]);
+    color->r *= v;
+    color->g *= v;
+    color->b *= v;
 }
 
 void pat_full_prevclick(slot_t * slot, float x, float y){
@@ -99,7 +109,7 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
     [WAVE_OMEGA] = {
         .name = "\\omega",
         .default_val = 0.5,
-        .val_to_str = float_to_string,
+        .val_to_str = power_quantize_parameter_label,
     },
     [WAVE_K_MAG] = {
         .name = "|k|",
@@ -132,7 +142,7 @@ void pat_wave_update(slot_t* slot, float t)
     state->color = param_to_color(slot->param_states[WAVE_COLOR].value);
     state->type = quantize_parameter(osc_quant_labels, slot->param_states[WAVE_TYPE].value);
 
-    state->phase += (t - state->last_t) * slot->param_states[WAVE_OMEGA].value;
+    state->phase += (t - state->last_t) * power_quantize_parameter(slot->param_states[WAVE_OMEGA].value);
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
 
@@ -143,9 +153,13 @@ void pat_wave_update(slot_t* slot, float t)
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){
-    // TODO: check that we have control of the param before writing to it
-    slot->param_states[WAVE_K_MAG].value = sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0);
-    slot->param_states[WAVE_K_ANGLE].value = (atan2(y, x) / (2.0 * M_PI)) + 0.5;
+    pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
+    /* I don't know how I feel about resetting the state yet...
+    state->phase = 0.;
+    state->last_t = fmod(state->last_t, 16.0);
+    */
+    param_state_setq(&slot->param_states[WAVE_K_MAG], sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0));
+    param_state_setq(&slot->param_states[WAVE_K_ANGLE], (atan2(y, x) / (2.0 * M_PI)) + 0.5);
 }
 
 color_t pat_wave_pixel(slot_t* slot, float x, float y)

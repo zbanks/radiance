@@ -26,6 +26,7 @@ int main()
     pat_load(&slots[2], &pat_bubble);
 
     hit_load(&hit_slots[0], &hit_full);
+    hit_load(&hit_slots[1], &hit_full);
 
     patterns_updating = SDL_CreateMutex();
     hits_updating = SDL_CreateMutex();

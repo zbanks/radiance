@@ -186,20 +186,23 @@ void hit_full_stop(struct active_hit * active_hit){
 
 int hit_full_update(struct active_hit * active_hit, float t){
     struct hit_full_state * state = active_hit->state;
+    static const float attack_const = 2.5;
+    static const float decay_const = 5.0;
+    static const float release_const = 1.0;
     switch(state->adsr){
         case ADSR_WAITING: break;
         case ADSR_START:
             state->adsr = ADSR_ATTACK;
         break;
         case ADSR_ATTACK:
-            state->x += (t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
+            state->x += attack_const * (t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
             if(state->x >= state->base_alpha){
                 state->x = state->base_alpha;
                 state->adsr = ADSR_DECAY;
             }
         break;
         case ADSR_DECAY:
-            state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
+            state->x -= decay_const * (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
             if(state->x <= (state->base_alpha * active_hit->param_values[FULL_SUSTAIN])){
                 state->x = state->base_alpha * active_hit->param_values[FULL_SUSTAIN];
                 state->adsr = ADSR_SUSTAIN;
@@ -208,7 +211,7 @@ int hit_full_update(struct active_hit * active_hit, float t){
         case ADSR_SUSTAIN:
         break;
         case ADSR_RELEASE:
-            state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
+            state->x -= release_const * (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
             if(state->x <= 0){
                 state->x = 0.;
                 state->adsr = ADSR_DONE;
