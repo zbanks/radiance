@@ -50,19 +50,31 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
 };
 
 void inp_lfo_init(signal_t * signal){
-    signal->state = malloc(sizeof(inp_lfo_state_t));
+    inp_lfo_state_t * state = signal->state = malloc(sizeof(inp_lfo_state_t));
+    if(!signal->state) return;
+
+    state->phase = 0.;
+    state->last_t = 0.;
+    state->type = OSC_SINE;
+
+
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
+    if(!signal->param_states){
+        free(signal->state);
+        signal->state = 0;
+        return;
+    }
+
     for(int i = 0; i < signal->n_params; i++){
-        signal->param_states[i].value = signal->parameters[i].default_val;
-        signal->param_states[i].connected_output = 0;
-        signal->param_states[i].next_connected_state = 0;
-        signal->param_states[i].prev_connected_state = 0;
+        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
     }
     //signal->output = malloc(sizeof(param_output_t));
 }
 
 void inp_lfo_update(signal_t * signal, float t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
+    if(!state) return;
+
     state->phase += (t - state->last_t) * power_quantize_parameter(signal->param_states[LFO_FREQ].value);
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
@@ -72,9 +84,13 @@ void inp_lfo_update(signal_t * signal, float t){
 }
 
 void inp_lfo_del(signal_t * signal){
+    if(!signal->state) return;
+
     param_output_free(&signal->output);
     free(signal->param_states);
+    signal->param_states = 0;
     free(signal->state);
+    signal->state = 0;
 }
 
 int n_signals = N_SIGNALS;

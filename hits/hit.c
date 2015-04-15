@@ -87,6 +87,7 @@ static struct active_hit * alloc_hit(hit_t * hit){
     ah->hit = hit;
     ah->param_values = malloc(hit->n_params * sizeof(float));
     if(!ah->param_values) return 0;
+    memset(ah->param_values, hit->n_params * sizeof(float), 0);
 
     return ah;
 }
@@ -158,22 +159,21 @@ struct active_hit * hit_full_start(slot_t * slot) {
     struct active_hit * active_hit = alloc_hit(slot->hit);
     if(!active_hit) return 0;
 
-    active_hit->slot = slot;
     active_hit->state = malloc(sizeof(struct hit_full_state));
     if(!active_hit->state) return 0;
+    struct hit_full_state * state = active_hit->state;
+    state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
+    state->adsr = ADSR_WAITING;
+    state->x = 0.0;
+    state->last_t = 0.0;
+    state->base_alpha = state->color.a;
 
+    active_hit->slot = slot;
     active_hit->alpha = param_state_get(&slot->alpha);
 
     for(int i = 0; i < slot->hit->n_params; i++){
         active_hit->param_values[i] = slot->param_states[i].value;
     }
-
-    struct hit_full_state * state = active_hit->state;
-
-    state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
-    state->adsr = ADSR_WAITING;
-    state->x = 0.0;
-    state->base_alpha = state->color.a;
 
     return active_hit;
 }

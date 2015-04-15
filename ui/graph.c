@@ -58,6 +58,7 @@ void graph_remove(graph_state_t* state)
 
 void graph_update(graph_state_t* state, float value)
 {
+    if(!state->history) return;
     long t = SDL_GetTicks();
     int pixels = (t - state->last_t) / (1000 / state->scroll_rate);
     float prev_value = state->history[0];
@@ -84,6 +85,7 @@ static int x_to_pixel(graph_state_t* state, float x)
 void graph_render(graph_state_t* state, SDL_Color c)
 {
     SDL_Rect r;
+    if(!state->history) return;
 
     r.x = 0;
     r.y = 0;

@@ -37,7 +37,9 @@ parameter_t pat_full_params[] = {
 
 pat_state_pt pat_full_init()
 {
-    return malloc(sizeof(color_t));
+    color_t * color = malloc(sizeof(color_t));
+    *color = (color_t) {.r = 0., .g = 0., .b = 0., .a = 0.};
+    return color;
 }
 
 void pat_full_del(pat_state_pt state)
@@ -125,7 +127,14 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
 
 pat_state_pt pat_wave_init()
 {
-    return malloc(sizeof(pat_wave_state_t));
+    pat_wave_state_t * state = malloc(sizeof(pat_wave_state_t));
+    state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
+    state->phase = 0.0;
+    state->type = OSC_SINE;
+    state->last_t = 0.0;
+    state->kx = 1.0;
+    state->ky = 1.0;
+    return state;
 }
 
 void pat_wave_del(pat_state_pt state)
@@ -231,7 +240,12 @@ parameter_t pat_bubble_params[N_BUBBLE_PARAMS] = {
 
 pat_state_pt pat_bubble_init()
 {
-    return malloc(sizeof(pat_bubble_state_t));
+    pat_bubble_state_t * state = malloc(sizeof(pat_bubble_state_t));
+    state->color = (color_t) {0., 0., 0., 0.};
+    state->r = 0.;
+    state->cx = 0.;
+    state->cy = 0.;
+    return state;
 }
 
 void pat_bubble_del(pat_state_pt state)
