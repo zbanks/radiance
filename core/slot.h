@@ -8,6 +8,8 @@
 #include "hits/hit.h"
 
 struct slot;
+struct hit;
+struct pattern;
 
 typedef void* pat_state_pt;
 typedef pat_state_pt (*pat_init_fn_pt)();
@@ -31,8 +33,8 @@ typedef struct pattern
 typedef struct slot
 {
     union {
-        pattern_t * pattern;
-        hit_t * hit;
+        struct pattern * pattern;
+        struct hit * hit;
     };
     void* state;
     param_state_t alpha;

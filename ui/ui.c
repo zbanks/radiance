@@ -8,13 +8,14 @@
 #include "ui/ui.h"
 #include "ui/slider.h"
 #include "core/err.h"
+#include "core/parameter.h"
 #include "core/slot.h"
+#include "filters/filter.h"
 #include "hits/hit.h"
+#include "midi/midi.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
-#include "core/parameter.h"
-#include "filters/filter.h"
 #include "timebase/timebase.h"
 
 static SDL_Surface* screen;
@@ -1186,6 +1187,7 @@ static int mouse_click(int x, int y)
 int ui_poll()
 {
     SDL_Event e;
+    struct midi_event * me;
     while(SDL_PollEvent(&e)) 
     {
         switch(e.type)
@@ -1210,6 +1212,19 @@ int ui_poll()
                 mouse_drag_fn_p = 0;
                 mouse_drop_fn_p = 0;
                 mouse_down = 0;
+                break;
+            case SDL_MIDI_NOTE_ON:
+                me = e.user.data1;
+                printf("Note on: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
+                midi_handle_note_event(me);
+                free(me);
+                break;
+            case SDL_MIDI_NOTE_OFF:
+                me = e.user.data1;
+                printf("Note off: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
+                midi_handle_note_event(me);
+                free(me);
+                break;
         }
     }
     return 1;

@@ -88,7 +88,36 @@ enum nanokontrol2_inputs {
     N_NK2_INPUTS,
 };
 
+// 176: 1 -x , 2 - y, 16 on/off
+// 128: down
+// 144: up
+// 36-51
 enum nanopad2_inputs {
+    NP2_XY_X = 1,
+    NP2_XY_Y,
+    NP2_XY_DOWN = 16,
+
+    NP2_PAD_0A = 36,
+    NP2_PAD_0B,
+    NP2_PAD_1A,
+    NP2_PAD_1B,
+    NP2_PAD_2A,
+    NP2_PAD_2B,
+    NP2_PAD_3A,
+    NP2_PAD_3B,
+    NP2_PAD_4A,
+    NP2_PAD_4B,
+    NP2_PAD_5A,
+    NP2_PAD_5B,
+    NP2_PAD_6A,
+    NP2_PAD_6B,
+    NP2_PAD_7A,
+    NP2_PAD_7B,
+
     N_NP2_INPUTS,
 };
+
+#define NP2_PAD_NA(x) (NP2_PAD_0A + (x) * 2)
+#define NP2_PAD_NB(x) (NP2_PAD_0B + (x) * 2)
+
 #endif

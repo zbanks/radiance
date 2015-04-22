@@ -84,5 +84,24 @@ char * nanokontrol2_labels[N_NK2_INPUTS] = {
 };
 
 char * nanopad2_labels[N_NP2_INPUTS] = {
+    [NP2_XY_X] = "",
+    [NP2_XY_Y] = "",
+    [NP2_XY_DOWN] = "",
 
+    [NP2_PAD_0A] = "A1",
+    [NP2_PAD_0B] = "B1",
+    [NP2_PAD_1A] = "A2",
+    [NP2_PAD_1B] = "B2",
+    [NP2_PAD_2A] = "A3",
+    [NP2_PAD_2B] = "B3",
+    [NP2_PAD_3A] = "A4",
+    [NP2_PAD_3B] = "B4",
+    [NP2_PAD_4A] = "A5",
+    [NP2_PAD_4B] = "B5",
+    [NP2_PAD_5A] = "A6",
+    [NP2_PAD_5B] = "B6",
+    [NP2_PAD_6A] = "A7",
+    [NP2_PAD_6B] = "B7",
+    [NP2_PAD_7A] = "A8",
+    [NP2_PAD_7B] = "B8",
 };

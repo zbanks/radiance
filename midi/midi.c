@@ -1,6 +1,7 @@
 #include <portmidi.h>
 #include <string.h>
 
+#include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
 
@@ -188,8 +189,10 @@ has_collapsed_event:
                     }
 
                     for(int l = 0; l < n_collapsed_events; l++){
-                        if(((collapsed_events[l].data2_max - collapsed_events[l].data2_min) > MIDI_SELECT_DATA_THRESHOLD)
-                        && ((double) (collapsed_events[l].data2_max - collapsed_events[l].data2_min) / (double) (collapsed_events[l].time_max - collapsed_events[l].time_min) > MIDI_SELECT_RATIO_THRESHOLD)){
+                        // (range > range_threshold AND rate > ratio_threshold) OR (event == NOTE_ON)
+                        if((((collapsed_events[l].data2_max - collapsed_events[l].data2_min) > MIDI_SELECT_DATA_THRESHOLD)
+                            && ((double) (collapsed_events[l].data2_max - collapsed_events[l].data2_min) / (double) (collapsed_events[l].time_max - collapsed_events[l].time_min) > MIDI_SELECT_RATIO_THRESHOLD))
+                           || ((collapsed_events[l].event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_ON)){
                             midi_connect_param(active_param_source, collapsed_events[l].device, collapsed_events[l].event, collapsed_events[l].data1);
                             active_param_source = 0;
                             n_recent_events = 0;
@@ -209,9 +212,30 @@ has_collapsed_event:
                 while(ct){
                     if((ct->device == i) && (ct->event == event)){
                         param_output_set(&ct->outputs[data1], data2 / 127.);
+                        /*
+                        if(ct->events[data1] < MIDI_MAX_EVENTS)
+                            ct->events[data1]++;
                         break;
+                        */
                     }
                     ct = ct->next;
+                }
+
+                SDL_Event sdl_event;
+                if((event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_ON){
+                    sdl_event.type = SDL_MIDI_NOTE_ON;
+                    sdl_event.user.code = 0;
+                    sdl_event.user.data1 = malloc(sizeof(struct midi_event));
+                    *(struct midi_event *) sdl_event.user.data1 = (struct midi_event) {.device = i, .event = event, .data1 = data1, .data2 = data2};
+                    sdl_event.user.data2 = 0;
+                    SDL_PushEvent(&sdl_event);
+                } else if((event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_OFF){
+                    sdl_event.type = SDL_MIDI_NOTE_OFF;
+                    sdl_event.user.code = 0;
+                    sdl_event.user.data1 = malloc(sizeof(struct midi_event));
+                    *(struct midi_event *) sdl_event.user.data1 = (struct midi_event) {.device = i, .event = event, .data1 = data1, .data2 = data2};
+                    sdl_event.user.data2 = 0;
+                    SDL_PushEvent(&sdl_event);
                 }
             }
         }
@@ -234,6 +258,7 @@ has_collapsed_event:
 void midi_start()
 {
     midi_running = 1;
+
     midi_thread = SDL_CreateThread(&midi_run, 0);
     if(!midi_thread) FAIL("Could not create MIDI thread: %s\n",SDL_GetError());
 }

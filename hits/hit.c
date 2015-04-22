@@ -18,6 +18,8 @@ int n_hits = N_HITS;
 int n_active_hits = 0;
 struct active_hit active_hits[N_MAX_ACTIVE_HITS];
 
+
+
 #define N_HIT_SLOTS 8 //FIXME
 
 struct active_hit preview_active_hits[N_HIT_SLOTS];
@@ -38,7 +40,7 @@ enum adsr_state {
 color_t render_composite_hits(color_t base, float x, float y) {
     color_t result = base;
 
-    for(int i=0; i < n_active_hits; i++) {
+    for(int i=0; i < N_MAX_ACTIVE_HITS; i++) {
         if(!active_hits[i].hit) continue;
         color_t c = (active_hits[i].hit->render)(&active_hits[i], x, y);
         c.a *= active_hits[i].alpha;
@@ -53,7 +55,7 @@ color_t render_composite_hits(color_t base, float x, float y) {
 color_t render_composite_slot_hits(slot_t * slot, float x, float y) {
     color_t result = {0, 0, 0, 1.0};
 
-    for(int i=0; i < n_active_hits; i++) {
+    for(int i=0; i < N_MAX_ACTIVE_HITS; i++) {
         if(!active_hits[i].hit) continue;
         if(active_hits[i].slot != slot) continue;
         color_t c = (active_hits[i].hit->render)(&active_hits[i], x, y);
@@ -77,37 +79,35 @@ static struct active_hit * alloc_hit(hit_t * hit){
             printf("Failed to dealloc hit");
             return 0;
         }
+    }else{
+        for(int i = 0; i < N_MAX_ACTIVE_HITS; i++){
+            if(!active_hits[i].hit){
+                ah = &active_hits[i];
+                break;
+            }
+        }
     }
 
-    memcpy(active_hits+1, active_hits, n_active_hits * sizeof(struct active_hit));
-    n_active_hits++;
-
-    ah = &active_hits[0];
-
-    ah->hit = hit;
     ah->param_values = malloc(hit->n_params * sizeof(float));
     if(!ah->param_values) return 0;
     memset(ah->param_values, hit->n_params * sizeof(float), 0);
+
+    ah->hit = hit;
+    n_active_hits++;
 
     return ah;
 }
 
 static void free_hit(struct active_hit * active_hit){
     int i;
-    if(!active_hit->hit) return;
+    if(!active_hit || !active_hit->hit) return;
 
-    active_hit->hit = 0;
     free(active_hit->param_values);
     active_hit->param_values = 0;
+    memset(active_hit, 0, sizeof(struct active_hit));
 
-    for(i = 0; i < n_active_hits; i++){
-        if(active_hit == &active_hits[i]) break;
-    }
+    active_hit->hit = 0;
     n_active_hits--;
-    if(i < n_active_hits)
-        memcpy(&active_hits[i], &active_hits[i+1], sizeof(struct active_hit) * (n_active_hits -  i));
-    memset(&active_hits[n_active_hits], 0, sizeof(struct active_hit));
-
 }
 
 // ----- Hit: Full -----
@@ -162,6 +162,16 @@ struct active_hit * hit_full_start(slot_t * slot) {
     active_hit->state = malloc(sizeof(struct hit_full_state));
     if(!active_hit->state) return 0;
     struct hit_full_state * state = active_hit->state;
+
+    for(int i = 0; i < slot->hit->n_params; i++){
+        active_hit->param_values[i] = slot->param_states[i].value;
+    }
+
+    active_hit->param_values[FULL_SUSTAIN] = (active_hit->param_values[FULL_SUSTAIN] * 0.95) + 0.05;
+    active_hit->param_values[FULL_ATTACK] = (active_hit->param_values[FULL_ATTACK] / 2.5) + 0.05;
+    active_hit->param_values[FULL_DECAY] = (active_hit->param_values[FULL_DECAY] / 5.0) + 0.05;
+    active_hit->param_values[FULL_RELEASE] = (active_hit->param_values[FULL_RELEASE] / 1.0) + 0.05;
+
     state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
     state->adsr = ADSR_WAITING;
     state->x = 0.0;
@@ -171,9 +181,6 @@ struct active_hit * hit_full_start(slot_t * slot) {
     active_hit->slot = slot;
     active_hit->alpha = param_state_get(&slot->alpha);
 
-    for(int i = 0; i < slot->hit->n_params; i++){
-        active_hit->param_values[i] = slot->param_states[i].value;
-    }
 
     return active_hit;
 }
@@ -186,23 +193,20 @@ void hit_full_stop(struct active_hit * active_hit){
 
 int hit_full_update(struct active_hit * active_hit, float t){
     struct hit_full_state * state = active_hit->state;
-    static const float attack_const = 2.5;
-    static const float decay_const = 5.0;
-    static const float release_const = 1.0;
     switch(state->adsr){
         case ADSR_WAITING: break;
         case ADSR_START:
             state->adsr = ADSR_ATTACK;
         break;
         case ADSR_ATTACK:
-            state->x += attack_const * (t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
+            state->x += (t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
             if(state->x >= state->base_alpha){
                 state->x = state->base_alpha;
                 state->adsr = ADSR_DECAY;
             }
         break;
         case ADSR_DECAY:
-            state->x -= decay_const * (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
+            state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
             if(state->x <= (state->base_alpha * active_hit->param_values[FULL_SUSTAIN])){
                 state->x = state->base_alpha * active_hit->param_values[FULL_SUSTAIN];
                 state->adsr = ADSR_SUSTAIN;
@@ -211,7 +215,7 @@ int hit_full_update(struct active_hit * active_hit, float t){
         case ADSR_SUSTAIN:
         break;
         case ADSR_RELEASE:
-            state->x -= release_const * (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
+            state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
             if(state->x <= 0){
                 state->x = 0.;
                 state->adsr = ADSR_DONE;
@@ -229,6 +233,7 @@ int hit_full_event(struct active_hit * active_hit, enum hit_event event, float e
     switch(event){
         case HITEV_NOTE_ON:
             state->adsr = ADSR_START;
+            state->base_alpha *= event_data;
         break;
         case HITEV_NOTE_OFF:
             state->adsr = ADSR_RELEASE;

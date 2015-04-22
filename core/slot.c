@@ -56,7 +56,7 @@ void update_patterns(float t)
 void update_hits(float t)
 {
     if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
-    for(int i=0; i < n_active_hits; i++)
+    for(int i=0; i < N_MAX_ACTIVE_HITS; i++)
     {
         if(active_hits[i].hit)
         {
