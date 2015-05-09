@@ -6,6 +6,7 @@
 #include <SDL/SDL_ttf.h>
 
 #include "ui/ui.h"
+#include "ui/layout.h"
 #include "ui/slider.h"
 #include "core/err.h"
 #include "core/parameter.h"
@@ -13,20 +14,28 @@
 #include "filters/filter.h"
 #include "hits/hit.h"
 #include "midi/midi.h"
+#include "midi/layout.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
 #include "timebase/timebase.h"
 
-static SDL_Surface* screen;
-static SDL_Surface* master_preview;
-static SDL_Surface* pattern_preview;
-static SDL_Surface* slot_pane;
-static SDL_Surface* hit_slot_pane;
-static SDL_Surface* pattern_pane;
-static SDL_Surface* hit_pane;
-static SDL_Surface* signal_pane;
-static SDL_Surface* filter_pane;
+#define SURFACES \
+    X(screen, window) \
+    X(master_preview, master) \
+    X(pattern_preview, pattern) \
+    X(slot_pane, slot) \
+    X(hit_slot_pane, hit_slot) \
+    X(pattern_pane, pattern) \
+    X(hit_pane, hit) \
+    X(signal_pane, signal) \
+    X(filter_pane, filter)
+
+#define X(s, l) \
+    static SDL_Surface* s;
+SURFACES
+#undef X
+
 static TTF_Font* pattern_font;
 static TTF_Font* signal_font;
 static TTF_Font* filter_font;
@@ -35,167 +44,42 @@ static int mouse_down;
 static int mouse_drag_start_x;
 static int mouse_drag_start_y;
 
-layout_t layout = {
-    //.win_width = 1366,
-    .win_width = 1200,
-    .win_height = 766,
-
-    .master_x = 30,
-    .master_y = 30,
-    .master_width = 200,
-    .master_height = 200,
-
-    .slot = {
-        .start_x = 10,
-        .start_y = 245,
-        .width = 110,
-        .height = 250,
-        .pitch = 125,
-    },
-
-    .preview_x = 25,
-    .preview_y = 5,
-    .preview_width = 80,
-    .preview_height = 80,
-
-    .alpha_slider_x = 9,
-    .alpha_slider_y = 5,
-    .alpha_slider_height = 80,
-    .alpha_handle_x = 5,
-    .alpha_handle_y = 5,
-    .alpha_handle_width = 10,
-    .alpha_handle_height = 10,
-
-    .pattern = {
-        .slider_start_x = 0,
-        .slider_start_y = 90,
-        .slider_pitch = 34,
-    },
-
-    .slider = {
-        .width = 100,
-        .height = 40,
-        .name_x = 3,
-        .name_y = 0,
-        .source_end_x = 94,
-        .source_y = 3,
-        .track_x = 3,
-        .track_y = 16,
-        .track_width = 94,
-        .handle_start_x = 3,
-        .handle_y = 12,
-        .handle_width = 10,
-        .handle_height = 10, 
-        .value_start_x = 0,
-        .value_start_y = 22,
-    },
-    
-    .add_pattern = {
-        .start_x = 1010,
-        .start_y = 250,
-        .width = 100,
-        .height = 30,
-        .pitch_x = 0,
-        .pitch_y = 35,
-        .text_x = 5,
-        .text_y = 3,
-    },
-
-    .add_hit = {
-        .start_x = 1010,
-        .start_y = 515,
-        .width = 100,
-        .height = 30,
-        .pitch_x = 0,
-        .pitch_y = 35,
-    },
-
-    .hit_slot = {
-        .start_x = 10,
-        .start_y = 510,
-        .pitch = 125,
-        .width = 110,
-        .height = 250,
-    },
-
-    .signal = {
-        .start_x = 600,
-        .start_y = 30,
-        .width = 110,
-        .height = 200,
-        .pitch = 125,
-        .text_x = 5,
-        .text_y = 3,
-        .output_x = 3,
-        .output_y = 30,
-        .slider_start_x = 3,
-        .slider_start_y = 65,
-        .slider_pitch = 35,
-    },
-
-    .graph_signal = {
-        .width = 100,
-        .height = 30,
-        .scroll_rate = 50,
-    },
-
-    .graph_filter = {
-        .width = 190,
-        .height = 40,
-        .scroll_rate = 50,
-    },
-
-    .filter = {
-        .start_x = 380,
-        .start_y = 30,
-        .width = 200,
-        .height = 200,
-        .pitch_x = 0,
-        .pitch_y = 60,
-        .text_x = 5,
-        .text_y = 5,
-        .graph_x = 5,
-        .graph_y = 30,
-    },
-
-};
-
 static void (*mouse_drag_fn_p)(int x, int y);
 static void (*mouse_drop_fn_p)();
 
 static struct
 {
-    slot_t* slot;
-    float initial_value;
-} active_alpha_slider;
-
-static struct
-{
     param_state_t * state;
     float initial_value;
-} active_param_slider;
+} active_slider;
 
 static struct
 {
     int index;
-    int dx;
-    int dy;
+    struct xy dxy;
 } active_pattern;
 
 static struct
 {
     int index;
-    int dx;
-    int dy;
+    struct xy dxy;
 } active_hit;
 
 static struct
 {
     slot_t * slot;
-    int dx;
-    int dy;
+    struct xy dxy;
     int is_pattern;
 } active_slot;
+
+enum slider_event {
+    SLIDER_LOCKED = 1,
+    SLIDER_DRAG_START,
+    SLIDER_DRAG_END,
+    SLIDER_CONNECT_START,
+    SLIDER_CONNECT_CANCEL,
+    SLIDER_CONNECT,
+};
 
 static struct active_hit * active_active_hit;
 
@@ -213,34 +97,15 @@ void ui_init()
         FAIL("TTF_Init Error: %s\n", SDL_GetError());
     }
 
-    screen = SDL_SetVideoMode(layout.win_width, layout.win_height, 0, SDL_DOUBLEBUF);
+    screen = SDL_SetVideoMode(layout.window.w, layout.window.h, 0, SDL_DOUBLEBUF);
 
     if (!screen) FAIL("SDL_SetVideoMode Error: %s\n", SDL_GetError());
 
-    master_preview = SDL_CreateRGBSurface(0, layout.master_width, layout.master_height, 32, 0, 0, 0, 0);
-
-    if(!master_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    pattern_preview = SDL_CreateRGBSurface(0, layout.preview_width, layout.preview_height, 32, 0, 0, 0, 0);
-    if(!pattern_preview) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    slot_pane = SDL_CreateRGBSurface(0, layout.slot.width, layout.slot.height, 32, 0, 0, 0, 0);
-    if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    hit_slot_pane = SDL_CreateRGBSurface(0, layout.hit_slot.width, layout.hit_slot.height, 32, 0, 0, 0, 0);
-    if(!slot_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    pattern_pane = SDL_CreateRGBSurface(0, layout.add_pattern.width, layout.add_pattern.height, 32, 0, 0, 0, 0);
-    if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    hit_pane = SDL_CreateRGBSurface(0, layout.add_hit.width, layout.add_hit.height, 32, 0, 0, 0, 0);
-    if(!pattern_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    signal_pane = SDL_CreateRGBSurface(0, layout.signal.width, layout.signal.height, 32, 0, 0, 0, 0);
-    if(!signal_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    filter_pane = SDL_CreateRGBSurface(0, layout.filter.width, layout.filter.height, 32, 0, 0, 0, 0);
-    if(!filter_pane) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+#define X(s, l) \
+    s = SDL_CreateRGBSurface(0, layout.## l ##.w, layout.## l ##.h, 32, 0, 0, 0, 0); \
+    if(!s) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+SURFACES
+#undef X
 
     pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
     if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
@@ -268,11 +133,14 @@ void ui_quit()
         pat_unload(&slots[i]);
     }
 
-    SDL_FreeSurface(master_preview);
-    SDL_FreeSurface(pattern_preview);
-    SDL_FreeSurface(slot_pane);
-    SDL_FreeSurface(signal_pane);
+#define X(s, l) \
+    SDL_FreeSurface(s);
+SURFACES
+#undef X
+
     TTF_CloseFont(pattern_font);
+    TTF_CloseFont(signal_font);
+    TTF_CloseFont(filter_font);
 
     slider_del();
     graph_del();
@@ -282,12 +150,12 @@ void ui_quit()
 
 static int x_to_px(float x)
 {
-    return (int)(((x + 1) / 2) * layout.master_width);
+    return (int)(((x + 1) / 2) * layout.master.w);
 }
 
 static int y_to_px(float y)
 {
-    return (int)(((y + 1) / 2) * layout.master_height);
+    return (int)(((y + 1) / 2) * layout.master.h);
 }
 
 static int SDL_line(SDL_Surface* dst, int16_t x1, int16_t y1, int16_t x2, int16_t y2,
@@ -302,14 +170,14 @@ static void update_master_preview()
 {
     SDL_LockSurface(master_preview);
 
-    for(int x=0;x<layout.master_width;x++)
+    for(int x=0;x<layout.master.w;x++)
     {
-        for(int y=0;y<layout.master_height;y++)
+        for(int y=0;y<layout.master.h;y++)
         {
-            float xf = ((float)x / (layout.master_width - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.master_height - 1)) * 2 - 1;
+            float xf = ((float)x / (layout.master.w - 1)) * 2 - 1;
+            float yf = ((float)y / (layout.master.h - 1)) * 2 - 1;
             color_t pixel = render_composite(xf, yf);
-            ((uint32_t*)(master_preview->pixels))[x + layout.master_width * y] = SDL_MapRGB(
+            ((uint32_t*)(master_preview->pixels))[x + layout.master.w * y] = SDL_MapRGB(
                 master_preview->format,
                 (uint8_t)roundf(255 * pixel.r),
                 (uint8_t)roundf(255 * pixel.g),
@@ -346,14 +214,14 @@ static void update_pattern_preview(slot_t* slot)
 {
     SDL_LockSurface(pattern_preview);
 
-    for(int x = 0; x < layout.preview_width; x++)
+    for(int x = 0; x < layout.slot.preview.w; x++)
     {
-        for(int y = 0; y < layout.preview_height; y++)
+        for(int y = 0; y < layout.preview.h; y++)
         {
-            float xf = ((float)x / (layout.preview_width - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.preview_height - 1)) * 2 - 1;
+            float xf = ((float)x / (layout.slot.preview.w - 1)) * 2 - 1;
+            float yf = ((float)y / (layout.slot.preview.h - 1)) * 2 - 1;
             color_t pixel = (*slot->pattern->render)(slot, xf, yf);
-            ((uint32_t*)(pattern_preview->pixels))[x + layout.preview_width * y] = SDL_MapRGB(
+            ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview.w * y] = SDL_MapRGB(
                 pattern_preview->format,
                 (uint8_t)roundf(255 * pixel.r * pixel.a),
                 (uint8_t)roundf(255 * pixel.g * pixel.a),
@@ -368,14 +236,14 @@ static void update_hit_preview(slot_t* slot)
 {
     SDL_LockSurface(pattern_preview);
 
-    for(int x = 0; x < layout.preview_width; x++)
+    for(int x = 0; x < layout.hit_slot.preview.w; x++)
     {
-        for(int y = 0; y < layout.preview_height; y++)
+        for(int y = 0; y < layout.hit_slot.preview.h; y++)
         {
-            float xf = ((float)x / (layout.preview_width - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.preview_height - 1)) * 2 - 1;
+            float xf = ((float)x / (layout.hit_slot.preview.w - 1)) * 2 - 1;
+            float yf = ((float)y / (layout.hit_slot.preview.h - 1)) * 2 - 1;
             color_t pixel = render_composite_slot_hits(slot, xf, yf);
-            ((uint32_t*)(pattern_preview->pixels))[x + layout.preview_width * y] = SDL_MapRGB(
+            ((uint32_t*)(pattern_preview->pixels))[x + layout.hit_slot.preview.w * y] = SDL_MapRGB(
                 pattern_preview->format,
                 (uint8_t)roundf(255 * pixel.r * pixel.a),
                 (uint8_t)roundf(255 * pixel.g * pixel.a),
@@ -388,38 +256,24 @@ static void update_hit_preview(slot_t* slot)
 
 static void ui_update_slot(slot_t* slot)
 {
-    SDL_Rect r;
+    union rect r;
     SDL_Color param_name_c = {255, 255, 255};
-    r.x = 0;
-    r.y = 0;
-    r.w = layout.slot.width;
-    r.h = layout.slot.height;
+    rect_copy(&r, &layout.slot);
     SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
     if(slot->pattern)
     {
         update_pattern_preview(slot);
-        r.w = layout.preview_width;
-        r.h = layout.preview_height;
-        r.x = layout.preview_x;
-        r.y = layout.preview_y;
-        SDL_BlitSurface(pattern_preview, 0, slot_pane, &r);
+        SDL_BlitSurface(pattern_preview, 0, slot_pane, &layout.preview.rect.sdl);
 
         SDL_Color alpha_color = {0, 0, 80};
         if(param_state_output(&slot->alpha)){
             alpha_color = param_state_output(&slot->alpha)->handle_color;
         }
-        r.x = layout.alpha_slider_x;
-        r.y = layout.alpha_slider_y;
-        r.w = 3;
-        r.h = layout.alpha_slider_height;
-        SDL_FillRect(slot_pane, &r, SDL_MapRGB(pattern_preview->format, 80, 80, 80));
+        SDL_FillRect(slot_pane, &layout.alpha_slider.rect.sdl, SDL_MapRGB(pattern_preview->format, 80, 80, 80));
 
-        r.x = layout.alpha_handle_x;
-        r.y = layout.alpha_handle_y +
-              (1 - param_state_get(&slot->alpha)) * (layout.alpha_slider_height - layout.alpha_handle_height);
-        r.w = layout.alpha_handle_width;
-        r.h = layout.alpha_handle_height;
+        rect_copy(&r, &layout.alpha_handle.rect);
+        r.y += (1 - param_state_get(&hit_slot->alpha)) * (layout.alpha_slider.h - layout.alpha_handle.h);
 
         SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format,
                                                alpha_color.r,
@@ -440,11 +294,7 @@ static void ui_update_slot(slot_t* slot)
                 param_name_c.b = 255;
             }
             slider_render(&slot->pattern->parameters[i], &slot->param_states[i], param_name_c);
-
-            r.x = layout.pattern.slider_start_x;
-            r.y = layout.pattern.slider_start_y + layout.pattern.slider_pitch * i;
-            r.w = layout.slider.width;
-            r.h = layout.slider.height;
+            rect_array_layout(&layout.pattern_slider.rect_array, i, &r);
 
             SDL_BlitSurface(slider_surface, 0, slot_pane, &r);
         }
@@ -454,38 +304,23 @@ static void ui_update_slot(slot_t* slot)
 
 static void ui_update_hit_slot(slot_t* hit_slot)
 {
-    SDL_Rect r;
+    union rect r;
     SDL_Color param_name_c = {255, 255, 255};
-    r.x = 0;
-    r.y = 0;
-    r.w = layout.hit_slot.width;
-    r.h = layout.hit_slot.height;
-    SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
+    rect_copy(&r, &layout.hit_slot.rect_array);
+    SDL_FillRect(hit_slot_pane, &r.sdl, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
     if(hit_slot->hit)
     {
         update_hit_preview(hit_slot);
-        r.w = layout.preview_width;
-        r.h = layout.preview_height;
-        r.x = layout.preview_x;
-        r.y = layout.preview_y;
-        SDL_BlitSurface(pattern_preview, 0, hit_slot_pane, &r);
+        SDL_BlitSurface(pattern_preview, 0, hit_slot_pane, &layout.preview.rect.sdl);
 
         SDL_Color alpha_color = {0, 0, 80};
         if(param_state_output(&hit_slot->alpha)){
             alpha_color = param_state_output(&hit_slot->alpha)->handle_color;
         }
-        r.x = layout.alpha_slider_x;
-        r.y = layout.alpha_slider_y;
-        r.w = 3;
-        r.h = layout.alpha_slider_height;
-        SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(hit_slot_pane->format, 80, 80, 80));
-
-        r.x = layout.alpha_handle_x;
-        r.y = layout.alpha_handle_y +
-              (1 - param_state_get(&hit_slot->alpha)) * (layout.alpha_slider_height - layout.alpha_handle_height);
-        r.w = layout.alpha_handle_width;
-        r.h = layout.alpha_handle_height;
+        SDL_FillRect(hit_slot_pane, &layout.alpha_slider.rect.sdl, SDL_MapRGB(hit_slot_pane->format, 80, 80, 80));
+        rect_copy(&r, &layout.alpha_handle.rect);
+        r.y += (1 - param_state_get(&hit_slot->alpha)) * (layout.alpha_slider.h - layout.alpha_handle.h);
 
         SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(hit_slot_pane->format,
                                                    alpha_color.r,
@@ -506,11 +341,7 @@ static void ui_update_hit_slot(slot_t* hit_slot)
                 param_name_c.b = 255;
             }
             slider_render(&hit_slot->hit->parameters[i], &hit_slot->param_states[i], param_name_c);
-
-            r.x = layout.pattern.slider_start_x;
-            r.y = layout.pattern.slider_start_y + layout.pattern.slider_pitch * i;
-            r.w = layout.slider.width;
-            r.h = layout.slider.height;
+            rect_array_layout(&layout.pattern_slider.rect_array, i, &r);
 
             SDL_BlitSurface(slider_surface, 0, hit_slot_pane, &r);
         }
@@ -520,11 +351,8 @@ static void ui_update_hit_slot(slot_t* hit_slot)
 
 static void ui_update_filter(filter_t * filter)
 {
-    SDL_Rect r;
-    r.x = 0;
-    r.y = 0;
-    r.w = layout.filter.width;
-    r.h = layout.filter.height;
+    union rect r;
+    rect_copy(&r, &layout.filter.rect_array);
     SDL_FillRect(filter_pane, &r, SDL_MapRGB(filter_pane->format, 20, 20, 20));
 
     SDL_Color white = {255, 255, 255};
@@ -538,29 +366,8 @@ static void ui_update_filter(filter_t * filter)
 
     graph_update(&(filter->graph_state), filter->output.value);
     graph_render(&(filter->graph_state), white);
-    r.x = layout.filter.graph_x;
-    r.y = layout.filter.graph_y;
-    r.w = layout.graph_filter.width;
-    r.h = layout.graph_filter.height;
-    SDL_BlitSurface(graph_surface, 0, filter_pane, &r);
+    SDL_BlitSurface(graph_surface, 0, filter_pane, &layout.graph_filter.rect.sdl);
 
-    /*
-    filter->history(filter, history, layout.filter.waveform_width);
-    float y_scale = 1e-6;
-    for(int i = 0; i < layout.filter.waveform_width; i++){
-        history[i] = fabs(history[i]);
-        if(history[i] > y_scale) y_scale = history[i];
-    }
-    y_scale = ((float) layout.filter.waveform_height) / y_scale;
-    SDL_LockSurface(filter_pane);
-    Uint32 * pixels = (Uint32 *) filter_pane->pixels;
-    for(int i = 0; i < layout.filter.waveform_width; i++){
-        int v = history[i] * y_scale;
-        int offset = (filter_pane->pitch / sizeof(Uint32)) * (layout.filter.waveform_y + layout.filter.waveform_height - v) + layout.filter.waveform_x + i;
-        *(pixels + offset) = SDL_MapRGB(filter_pane->format, 200, 200, 200);
-    }
-    SDL_UnlockSurface(filter_pane);
-    */
     SDL_FreeSurface(msg);
 }
 
@@ -569,8 +376,8 @@ static void ui_update_pattern(pattern_t* pattern)
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
-    r.w = layout.add_pattern.width;
-    r.h = layout.add_pattern.height;
+    r.w = layout.add_pattern.w;
+    r.h = layout.add_pattern.h;
     SDL_FillRect(pattern_pane, &r, SDL_MapRGB(pattern_pane->format, 20, 20, 20));
 
     SDL_Color white = {255, 255, 255};
@@ -589,8 +396,8 @@ static void ui_update_hit(hit_t * hit)
     SDL_Rect r;
     r.x = 0;
     r.y = 0;
-    r.w = layout.add_hit.width;
-    r.h = layout.add_hit.height;
+    r.w = layout.add_hit.w;
+    r.h = layout.add_hit.h;
     SDL_FillRect(hit_pane, &r, SDL_MapRGB(hit_pane->format, 20, 20, 20));
 
     SDL_Color white = {255, 255, 255};
@@ -606,13 +413,9 @@ static void ui_update_hit(hit_t * hit)
 
 static void ui_update_signal(signal_t* signal)
 {
-    SDL_Rect r;
+    union rect r;
     SDL_Color param_name_c;
-    r.x = 0;
-    r.y = 0;
-    r.w = layout.signal.width;
-    r.h = layout.signal.height;
-    SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 20, 20, 20));
+    SDL_FillRect(signal_pane, &layout.signal.rect.sdl, SDL_MapRGB(signal_pane->format, 20, 20, 20));
 
     SDL_Surface* msg = TTF_RenderText_Solid(signal_font, signal->name, color_to_SDL(signal->color));
     r.x = layout.signal.text_x;
@@ -620,17 +423,13 @@ static void ui_update_signal(signal_t* signal)
 
     r.w = msg->w;
     r.h = msg->h;
-    SDL_BlitSurface(msg, 0, signal_pane, &r);
+    SDL_BlitSurface(msg, 0, signal_pane, &r.sdl);
     SDL_FreeSurface(msg);
 
     graph_update(&(signal->graph_state), signal->output.value);
     SDL_Color white = {255, 255, 255};
     graph_render(&(signal->graph_state), white);
-    r.x = layout.signal.output_x;
-    r.y = layout.signal.output_y;
-    r.w = layout.graph_signal.width;
-    r.h = layout.graph_signal.height;
-    SDL_BlitSurface(graph_surface, 0, signal_pane, &r);
+    SDL_BlitSurface(graph_surface, 0, signal_pane, &layout.graph_signal.rect.sdl);
 
     for(int i = 0; i < signal->n_params; i++)
     {
@@ -646,11 +445,7 @@ static void ui_update_signal(signal_t* signal)
             param_name_c.b = 255;
         }
         slider_render(&signal->parameters[i], &signal->param_states[i], param_name_c);
-
-        r.x = layout.signal.slider_start_x;
-        r.y = layout.signal.slider_start_y + layout.signal.slider_pitch * i;
-        r.w = layout.slider.width;
-        r.h = layout.slider.height;
+        rect_array_layout(&layout.signal_slider, i, &r);
 
         SDL_BlitSurface(slider_surface, 0, signal_pane, &r);
     }
@@ -658,30 +453,17 @@ static void ui_update_signal(signal_t* signal)
 
 void ui_render()
 {
-    SDL_Rect r;
-
-    r.x = 0;
-    r.y = 0;
-    r.w = layout.win_width;
-    r.h = layout.win_height;
-    SDL_FillRect(screen, &r, SDL_MapRGB(screen->format, 0, 0, 0));
+    union rect r;
+    SDL_FillRect(screen, &layout.window.rect.sdl, SDL_MapRGB(screen->format, 0, 0, 0));
 
     update_master_preview();
-    r.x = layout.master_x;
-    r.y = layout.master_y;
-    r.w = layout.master_width;
-    r.h = layout.master_height;
-    SDL_BlitSurface(master_preview, 0, screen, &r);
+    SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect.sdl);
 
     for(int i = 0; i < n_signals; i++)
     {
         ui_update_signal(&signals[i]);
-        r.w = signal_pane->w;
-        r.h = signal_pane->h;
-        r.x = layout.signal.start_x + layout.signal.pitch * i;
-        r.y = layout.signal.start_y;
-
-        SDL_BlitSurface(signal_pane, 0, screen, &r);
+        rect_array_layout(&layout.signal_pane.rect_array, i, &r);
+        SDL_BlitSurface(signal_pane, 0, screen, &r.sdl);
     }
 
     for(int i=0; i<n_slots; i++)
@@ -689,17 +471,13 @@ void ui_render()
         if(slots[i].pattern)
         {
             ui_update_slot(&slots[i]);
-            r.w = slot_pane->w;
-            r.h = slot_pane->h;
-            r.x = layout.slot.start_x + layout.slot.pitch * i;
-            r.y = layout.slot.start_y;
-            if(active_slot.slot == &slots[i])
-            {
-                r.x += active_slot.dx;
-                r.y += active_slot.dy;
+            rect_array_layout(&layout.slot_pane.rect_array, i, &r);
+
+            if(active_slot.slot == &slots[i]) {
+                rect_translate(&r, &active_slot.dxy);
             }
 
-            SDL_BlitSurface(slot_pane, 0, screen, &r);
+            SDL_BlitSurface(slot_pane, 0, screen, &r.sdl);
         }
     }
 
@@ -708,91 +486,70 @@ void ui_render()
         if(hit_slots[i].hit)
         {
             ui_update_hit_slot(&hit_slots[i]);
-            r.w = hit_slot_pane->w;
-            r.h = hit_slot_pane->h;
-            r.x = layout.hit_slot.start_x + layout.hit_slot.pitch * i;
-            r.y = layout.hit_slot.start_y;
-            if(active_slot.slot == &hit_slots[i])
-            {
-                r.x += active_slot.dx;
-                r.y += active_slot.dy;
+            rect_array_layout(&layout.hit_slot_pane.rect_array, i, &r);
+
+            if(active_slot.slot == &hit_slots[i]) { //TODO ? shoudl this be active_hit_slot
+                rect_translate(&r, &active_slot.dxy);
             }
 
-            SDL_BlitSurface(hit_slot_pane, 0, screen, &r);
+            SDL_BlitSurface(hit_slot_pane, 0, screen, &r.sdl);
         }
     }
 
     for(int i=0; i<n_patterns; i++)
     {
         ui_update_pattern(patterns[i]);
-        r.w = layout.add_pattern.width;
-        r.h = layout.add_pattern.height;
-        r.x = layout.add_pattern.start_x + layout.add_pattern.pitch_x * i;
-        r.y = layout.add_pattern.start_y + layout.add_pattern.pitch_y * i;
-        if(active_pattern.index == i)
-        {
-            r.x += active_pattern.dx;
-            r.y += active_pattern.dy;
+        rect_array_layout(&layout.add_pattern.rect_array, i, &r);
+
+        if(active_pattern.index == i) {
+            rect_translate(&r, &active_pattern.dxy);
         }
 
-        SDL_BlitSurface(pattern_pane, 0, screen, &r);
+        SDL_BlitSurface(pattern_pane, 0, screen, &r.sdl);
     }
 
     for(int i=0; i<n_hits; i++)
     {
         ui_update_hit(hits[i]);
-        r.w = layout.add_hit.width;
-        r.h = layout.add_hit.height;
-        r.x = layout.add_hit.start_x + layout.add_hit.pitch_x * i;
-        r.y = layout.add_hit.start_y + layout.add_hit.pitch_y * i;
-        if(active_hit.index == i)
-        {
-            r.x += active_hit.dx;
-            r.y += active_hit.dy;
+        rect_array_layout(&layout.add_hit.rect_array, i, &r);
+
+        if(active_hit.index == i) {
+            rect_translate(&r, &active_hit.dxy);
         }
 
-        SDL_BlitSurface(hit_pane, 0, screen, &r);
+        SDL_BlitSurface(hit_pane, 0, screen, &r.sdl);
     }
 
     for(int i = 0; i < n_filters; i++){
         ui_update_filter(&filters[i]);
-        r.x = layout.filter.start_x + layout.filter.pitch_x * i;
-        r.y = layout.filter.start_y + layout.filter.pitch_y * i;
-        r.w = layout.filter.width;
-        r.h = layout.filter.height;
+        rect_array_layout(&layout.filter.rect_array, i, &r);
 
-        SDL_BlitSurface(filter_pane, 0, screen, &r);
+        SDL_BlitSurface(filter_pane, 0, screen, &r.sdl);
     }
 
     SDL_Flip(screen);
 }
 
-static int in_rect(int x, int y, int rx, int ry, int rw, int rh)
-{
-    return x >= rx && y >= ry &&
-           x < rx + rw && y < ry + rh;
-}
-
 static void mouse_drag_alpha_slider(int x, int y)
 {
-    float val = active_alpha_slider.initial_value -
-                (float)y / (layout.alpha_slider_height - layout.alpha_handle_height);
+    float val = active_slider.initial_value -
+                (float)y / (layout.alpha_slider.track.h - layout.alpha_slider.handle.h);
 
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    param_state_setq(&active_alpha_slider.slot->alpha, val);
+    param_state_setq(&active_slider.state, val);
 }
 
 static void mouse_drag_param_slider(int x, int y)
 {
-    float val = active_param_slider.initial_value +
-                (float)x / (layout.slider.track_width - layout.slider.handle_width);
+    float val = active_slider.initial_value +
+                (float)x / (layout.slider.track.w - layout.slider.handle.w);
 
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    param_state_setq(active_param_slider.state, val);
+    param_state_setq(&active_slider.state, val);
 }
 
 static void mouse_drag_pattern(int x, int y)
@@ -810,16 +567,15 @@ static void mouse_drag_slot(int x, int y)
 
 static void mouse_drop_pattern()
 {
-    int x = mouse_drag_start_x + active_pattern.dx;
-    int y = mouse_drag_start_y + active_pattern.dy;
+    union rect r;
+    struct xy xy;
+    xy.x = mouse_drag_start_x + active_pattern.dx;
+    xy.y = mouse_drag_start_y + active_pattern.dy;
 
     for(int i = 0; i < n_slots; i++)
     {
-        if(in_rect(x,y,
-                   layout.slot.start_x + layout.slot.pitch * i,
-                   layout.slot.start_y,
-                   layout.slot.width, layout.slot.height))
-        {
+        rect_array_layout(&layout.slot.rect_array, i, &r);
+        if(in_rect(&xy, &r, 0)){
             pat_unload(&slots[i]);
             pat_load(&slots[i],patterns[active_pattern.index]);
         }
@@ -829,17 +585,14 @@ static void mouse_drop_pattern()
 
 static void mouse_drop_slot()
 {
-    int x = mouse_drag_start_x + active_slot.dx;
-    int y = mouse_drag_start_y + active_slot.dy;
+    union rect r;
+    struct xy xy;
 
     if(active_slot.is_pattern){
         for(int i = 0; i < n_slots; i++)
         {
-            if(in_rect(x,y,
-                    layout.slot.start_x + layout.slot.pitch * i,
-                    layout.slot.start_y,
-                    layout.slot.width, layout.slot.height))
-            {
+            rect_array_layout(&layout.slot.rect_array, i, &r);
+            if(in_rect(&xy, &r, 0)){
                 slot_t temp_slot = *active_slot.slot;
                 *active_slot.slot = slots[i];
                 slots[i] = temp_slot;
@@ -849,77 +602,78 @@ static void mouse_drop_slot()
     active_slot.slot = 0;
 }
 
-static int mouse_click_slot(int index, int x, int y)
+static enum slider_event mouse_click_alpha_slider(param_state_t * param_state, struct xy){
+    union rect r;
+    struct xy offset;
+
+    rect_copy(&r, &layout.alpha_slider.handle_rect);
+    r.y += param_state_get(param_state) * (layout.alpha_slider.track.h - layout.alpha_slider.handle.h);
+    if(in_rect(&xy, &r, &offset)){
+        active_alpha_slider.state = param_state;
+        active_alpha_slider.initial_value = param_state_get(param_state);
+        mouse_drag_fn_p = &mouse_drag_alpha_slider;
+        return SLIDER_DRAG_START;
+    }
+}
+
+static enum slider_event mouse_click_slider(param_state_t * param_state, struct xy){
+    union rect r;
+    struct xy offset;
+
+    rect_copy(&r, &layout.slider.handle_rect);
+    r.x += param_state_get(param_state) * (layout.slider.track.w - layout.slider.handle.w);
+    if(in_rect(&xy, &r, &offset)){
+        if(param_state->connected_output)
+            return SLIDER_LOCKED;
+        active_param_slider.state = param_state;
+        active_param_slider.initial_value = param_state_get(param_state);
+        mouse_drag_fn_p = &mouse_drag_param_slider;
+        return SLIDER_DRAG_START;
+    }
+
+    rect_copy(&r, &r_slider);
+    r.w = layout.slider.track.w; // FIXME
+    r.h = layout.signal_slider.handle.y - layout.signal_slider.source.y;
+    if(in_rect(&xy, &r, &offset)){
+        if(active_param_source)
+            param_state_disconnect(active_param_source);
+        if(active_param_source == param_state){
+            active_param_source = 0;
+            return SLIDER_CONNECT_CANCEL;
+        }else{
+            active_param_source = param_state;
+            return SLIDER_CONNECT_START;
+        }
+    }
+}
+
+static int mouse_click_slot(int index, struct xy xy)
 {
+    union rect r;
+    struct xy offset;
     if(!slots[index].pattern) return 0;
 
     // See if the click is on the alpha slider
-    if(in_rect(x, y,
-               layout.alpha_handle_x,
-               layout.alpha_handle_y +
-                 (1 - param_state_get(&slots[index].alpha)) *
-                 (layout.alpha_slider_height - layout.alpha_handle_height),
-               layout.alpha_handle_width,
-               layout.alpha_handle_height))
-    {
-        active_alpha_slider.slot = &slots[index];
-        active_alpha_slider.initial_value = param_state_get(&slots[index].alpha);
-        mouse_drag_fn_p = &mouse_drag_alpha_slider;
-        return 1;
+    if(in_rect(&xy, &layout.slot.alpha.rect, &offset)){
+        return !!mouse_click_alpha_slider(&slots[index].alpha, offset);
     }
 
     // See if the click is on the preview 
-    if(in_rect(x, y,
-               layout.preview_x,
-               layout.preview_y,
-               layout.preview_width,
-               layout.preview_height)){
+    if(in_rect(&xy, &layout.slot.preview.rect, &offset)){
         slots[index].pattern->prevclick(
                 &slots[index],
-                -1.0 + 2.0 * (x - layout.preview_x) / (float) layout.preview_width,
-                -1.0 + 2.0 * (y - layout.preview_y) / (float) layout.preview_width);
+                -1.0 + 2.0 * (xy.x - layout.slot.preview_x) / (float) layout.preview_w,
+                -1.0 + 2.0 * (xy.y - layout.slot.preview_y) / (float) layout.preview_h);
         return 1; 
     }
 
     // See if the click is on a parameter slider
     for(int i = 0; i < slots[index].pattern->n_params; i++)
     {
-        if(in_rect(x, y,
-                   layout.pattern.slider_start_x +
-                   layout.slider.handle_start_x +
-                     slots[index].param_states[i].value *
-                     (layout.slider.track_width - layout.slider.handle_width),
-                   layout.pattern.slider_start_y +
-                   layout.slider.handle_y + layout.pattern.slider_pitch * i,
-                   layout.slider.handle_width,
-                   layout.slider.handle_height)) {
-            if(slots[index].param_states[i].connected_output)
-                return 1;
-            active_param_slider.state = &slots[index].param_states[i];
-            active_param_slider.initial_value = param_state_get(&slots[index].param_states[i]);
-            mouse_drag_fn_p = &mouse_drag_param_slider;
-            return 1;
+        rect_array_layout(&layout.slot.sliders.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return !!mouse_click_param_slider(&slots[index].param_states[i], offset);
         }
-        // See if the click is on the parameter source button
-        if(in_rect(x, y,
-                   layout.pattern.slider_start_x +
-                   layout.slider.name_x,
-                   layout.pattern.slider_start_y +
-                   layout.slider.name_y + layout.pattern.slider_pitch * i,
-                   layout.slider.track_width, //FIXME
-                   layout.slider.handle_y - layout.slider.name_y)){
-                   //layout.slider.handle_width,
-                   //layout.slider.handle_height)) {
-            if(active_param_source)
-                param_state_disconnect(active_param_source);
-            if(active_param_source == &slots[index].param_states[i]){
-                active_param_source = 0;
-            }else{
-                active_param_source = &slots[index].param_states[i];
-            }
-            return 1;
-        }
-
     }
 
     // Else, drag the slot
@@ -941,80 +695,36 @@ static void hit_release(){
     active_active_hit = 0;
 }
 
-static int mouse_click_hit_slot(int index, int x, int y)
+static int mouse_click_hit_slot(int index, struct xy xy)
 {
+    union rect r;
+    struct xy offset;
+
     if(!hit_slots[index].hit) return 0;
 
     // See if the click is on the alpha slider
-    if(in_rect(x, y,
-               layout.alpha_handle_x,
-               layout.alpha_handle_y +
-                 (1 - param_state_get(&slots[index].alpha)) *
-                 (layout.alpha_slider_height - layout.alpha_handle_height),
-               layout.alpha_handle_width,
-               layout.alpha_handle_height))
-    {
-        active_alpha_slider.slot = &hit_slots[index];
-        active_alpha_slider.initial_value = param_state_get(&hit_slots[index].alpha);
-        mouse_drag_fn_p = &mouse_drag_alpha_slider;
-        return 1;
+    if(in_rect(&xy, &layout.hit_slot.alpha.rect, &offset)){
+        return !!mouse_click_alpha_slider(&hit_slots[index].alpha, offset);
     }
 
     // See if the click is on the preview 
-    if(in_rect(x, y,
-               layout.preview_x,
-               layout.preview_y,
-               layout.preview_width,
-               layout.preview_height)){
+    if(in_rect(&xy, &layout.hit_slot.preview.rect, &offset)){
         active_active_hit = hit_slots[index].hit->start(&hit_slots[index]);
         if(active_active_hit) active_active_hit->hit->event(active_active_hit, HITEV_NOTE_ON, 1.);
-        mouse_drop_fn_p = &hit_release;
         hit_slots[index].hit->prevclick(
                 &hit_slots[index],
-                -1.0 + 2.0 * (x - layout.preview_x) / (float) layout.preview_width,
-                -1.0 + 2.0 * (y - layout.preview_y) / (float) layout.preview_width);
+                -1.0 + 2.0 * (xy.x - layout.hit_slot.preview_x) / (float) layout.hit_slot.preview_w,
+                -1.0 + 2.0 * (xy.y - layout.hit_slot.preview_y) / (float) layout.hit_slot.preview_h);
         return 1; 
     }
 
     // See if the click is on a parameter slider
     for(int i = 0; i < hit_slots[index].hit->n_params; i++)
     {
-        if(in_rect(x, y,
-                   layout.pattern.slider_start_x +
-                   layout.slider.handle_start_x +
-                     hit_slots[index].param_states[i].value *
-                     (layout.slider.track_width - layout.slider.handle_width),
-                   layout.pattern.slider_start_y +
-                   layout.slider.handle_y + layout.pattern.slider_pitch * i,
-                   layout.slider.handle_width,
-                   layout.slider.handle_height)) {
-            if(hit_slots[index].param_states[i].connected_output)
-                return 1;
-            active_param_slider.state = &hit_slots[index].param_states[i];
-            active_param_slider.initial_value = param_state_get(&hit_slots[index].param_states[i]);
-            mouse_drag_fn_p = &mouse_drag_param_slider;
-            return 1;
+        rect_array_layout(&layout.hit_slot.sliders.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return !!mouse_click_param_slider(&hit_slots[index].param_states[i], offset);
         }
-        // See if the click is on the parameter source button
-        if(in_rect(x, y,
-                   layout.pattern.slider_start_x +
-                   layout.slider.name_x,
-                   layout.pattern.slider_start_y +
-                   layout.slider.name_y + layout.pattern.slider_pitch * i,
-                   layout.slider.track_width, //FIXME
-                   layout.slider.handle_y - layout.slider.name_y)){
-                   //layout.slider.handle_width,
-                   //layout.slider.handle_height)) {
-            if(active_param_source)
-                param_state_disconnect(active_param_source);
-            if(active_param_source == &hit_slots[index].param_states[i]){
-                active_param_source = 0;
-            }else{
-                active_param_source = &hit_slots[index].param_states[i];
-            }
-            return 1;
-        }
-
     }
 
     // Else, drag the slot
@@ -1029,53 +739,21 @@ static int mouse_click_hit_slot(int index, int x, int y)
 
 }
 
-static int mouse_click_signal(int index, int x, int y)
+static int mouse_click_signal(int index, struct xy xy)
 {
+    union rect r;
+    struct xy offset;
     for(int i = 0; i < signals[index].n_params; i++)
     {
         // See if the click is on a parameter slider
-        if(in_rect(x, y,
-                   layout.signal.slider_start_x +
-                   layout.slider.handle_start_x +
-                     signals[index].param_states[i].value *
-                     (layout.slider.track_width - layout.slider.handle_width),
-                   layout.signal.slider_start_y +
-                   layout.slider.handle_y + layout.signal.slider_pitch * i,
-                   layout.slider.handle_width,
-                   layout.slider.handle_height)) {
-            if(signals[index].param_states[i].connected_output)
-                return 1;
-            active_param_slider.state = &signals[index].param_states[i];
-            active_param_slider.initial_value = param_state_get(&signals[index].param_states[i]);
-            mouse_drag_fn_p = &mouse_drag_param_slider;
-            return 1;
+        rect_array_layout(&layout.signal_slider.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return !!mouse_click_param_slider(&signals[index].param_states[i], offset);
         }
-        // See if the click is on the parameter source button
-        if(in_rect(x, y,
-                   layout.signal.slider_start_x +
-                   layout.slider.name_x,
-                   layout.signal.slider_start_y +
-                   layout.slider.name_y + layout.signal.slider_pitch * i,
-                   layout.slider.track_width, //FIXME
-                   layout.slider.handle_y - layout.slider.name_y)){
-            if(active_param_source)
-                param_state_disconnect(active_param_source);
-            if(active_param_source == &signals[index].param_states[i]){
-                active_param_source = 0;
-            }else{
-                active_param_source = &signals[index].param_states[i];
-            }
-            return 1;
-        }
-
     }
 
     // Was the output clicked
-    if(in_rect(x, y,
-               layout.signal.output_x,
-               layout.signal.output_y,
-               layout.graph_signal.width,
-               layout.graph_signal.height)){
+    if(in_rect(&xy, &layout.graph_signal, 0)){
         // Is there something looking for a source?
         if(active_param_source){
             param_state_connect(active_param_source, &signals[index].output);
@@ -1086,12 +764,8 @@ static int mouse_click_signal(int index, int x, int y)
     return 0;
 }
 
-static int mouse_click_filter(int index, int x, int y){
-    if(in_rect(x, y,
-                layout.filter.graph_x,
-                layout.filter.graph_y,
-                layout.graph_filter.width,
-                layout.graph_filter.height)){
+static int mouse_click_filter(int index, struct xy xy){
+    if(in_rect(&xy, &layout.graph_filter, 0)){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[index].output);
             active_param_source = 0;
@@ -1101,49 +775,37 @@ static int mouse_click_filter(int index, int x, int y){
     return 0;
 }
 
-static int mouse_click(int x, int y)
+static int mouse_click(struct xy xy)
 {
+    struct xy offset;
+    union rect r;
     // See if click is in a slot
     for(int i=0; i<n_slots; i++)
     {
-        if(in_rect(x, y,
-                   layout.slot.start_x + layout.slot.pitch * i,
-                   layout.slot.start_y,
-                   layout.slot.width, layout.slot.height))
-        {
+        rect_array_layout(&layout.slot.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
             // If it is, see if that slot wants to handle it
-            return mouse_click_slot(i,
-                                    x - (layout.slot.start_x + layout.slot.pitch * i),
-                                    y - layout.slot.start_y);
+            return mouse_click_slot(i, offset);
         }
     }
 
     // See if click is in a hit slot
     for(int i=0; i<n_hit_slots; i++)
     {
-        if(in_rect(x, y,
-                   layout.hit_slot.start_x + layout.hit_slot.pitch * i,
-                   layout.hit_slot.start_y,
-                   layout.hit_slot.width, layout.hit_slot.height))
-        {
+        rect_array_layout(&layout.hit_slot.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
             // If it is, see if that slot wants to handle it
-            return mouse_click_hit_slot(i,
-                                        x - (layout.hit_slot.start_x + layout.hit_slot.pitch * i),
-                                        y - layout.hit_slot.start_y);
+            return mouse_click_hit_slot(i, offset);
         }
     }
 
     // See if click is in a pattern
     for(int i=0; i<n_slots; i++)
     {
-        if(in_rect(x, y, 
-                   layout.add_pattern.start_x + layout.add_pattern.pitch_x * i,
-                   layout.add_pattern.start_y + layout.add_pattern.pitch_y * i,
-                   layout.add_pattern.width, layout.add_pattern.height))
-        {
+        rect_array_layout(&layout.add_pattern.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
             active_pattern.index = i;
-            active_pattern.dx = 0;
-            active_pattern.dy = 0;
+            active_pattern.dxy = (struct xy) {0,0};
             mouse_drag_fn_p = &mouse_drag_pattern;
             mouse_drop_fn_p = &mouse_drop_pattern;
             return 1;
@@ -1152,28 +814,17 @@ static int mouse_click(int x, int y)
 
     // See if click is in an signal
     for(int i = 0; i < n_signals; i++){
-        if(in_rect(x, y,
-                   layout.signal.start_x + layout.signal.pitch * i,
-                   layout.signal.start_y,
-                   layout.signal.width,
-                   layout.signal.height)){
-            return mouse_click_signal(i,
-                                     x - (layout.signal.start_x + layout.signal.pitch * i),
-                                     y - layout.signal.start_y);
+        rect_array_layout(&layout.signal.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return mouse_click_signal(i, offset);
         }
     }
 
     // See if click is in filter
     for(int i = 0; i < n_filters; i++){
-        if(in_rect(x, y,
-                   layout.filter.start_x + layout.filter.pitch_x * i,
-                   layout.filter.start_y + layout.filter.pitch_y * i,
-                   layout.filter.width,
-                   layout.filter.height)){
-
-            return mouse_click_filter(i,
-                    x - (layout.filter.start_x + layout.filter.pitch_x * i),
-                    y - (layout.filter.start_y + layout.filter.pitch_y * i));
+        rect_array_layout(&layout.filter.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return mouse_click_filter(i, offset);
         }
     }
 

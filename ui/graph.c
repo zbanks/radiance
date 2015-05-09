@@ -12,8 +12,8 @@ SDL_Surface* graph_surface;
 void graph_init()
 {
     graph_surface = SDL_CreateRGBSurface(0, 
-                                         MAX(layout.graph_filter.width, layout.graph_signal.width),
-                                         MAX(layout.graph_filter.height, layout.graph_signal.height),
+                                         MAX(layout.graph_filter.w, layout.graph_signal.w),
+                                         MAX(layout.graph_filter.h, layout.graph_signal.h),
                                          32, 0, 0, 0, 0);
     if(!graph_surface) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 }
@@ -25,8 +25,8 @@ void graph_del(graph_state_t* state)
 
 void graph_create_filter(graph_state_t* state)
 {
-    state->width = layout.graph_filter.width;
-    state->height = layout.graph_filter.height;
+    state->width = layout.graph_filter.w;
+    state->height = layout.graph_filter.h;
     state->scroll_rate = layout.graph_filter.scroll_rate;
     state->history = malloc(sizeof(*(state->history)) * state->width);
     if(!state->history) FAIL("Could not malloc graph history\n");
@@ -39,8 +39,8 @@ void graph_create_filter(graph_state_t* state)
 
 void graph_create_signal(graph_state_t* state)
 {
-    state->width = layout.graph_signal.width;
-    state->height = layout.graph_signal.height;
+    state->width = layout.graph_signal.w;
+    state->height = layout.graph_signal.w;
     state->scroll_rate = layout.graph_signal.scroll_rate;
     state->history = malloc(sizeof(*(state->history)) * state->width);
     if(!state->history) FAIL("Could not malloc graph history\n");

@@ -15,10 +15,14 @@
 #include "midi/midi.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
+#include "timebase/timebase.h"
 #include "ui/ui.h"
+#include "ui/layout.h"
 
 int main()
 {
+    dump_layout(&layout, stdout);
+    return 0;
     ui_init();
 
     pat_load(&slots[0], &pat_full);

@@ -37,7 +37,7 @@ INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib
 LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio -lvamp-hostsdk -lportmidi -lporttime
 
 # Assembler, compiler, and linker flags
-CXXFLAGS  = -g -O0 $(INC) -Wall
+CXXFLAGS  = -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers
 CFLAGS = $(CXXFLAGS) -std=c99
 LFLAGS  = $(CXXFLAGS)
 
