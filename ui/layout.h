@@ -2,19 +2,26 @@
 #define __UI_LAYOUT_H__
 
 #include <string.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <SDL/SDL.h>
 
 #define INT int
+#define SINT16 Sint16
+#define UINT16 Uint16
 #define STRING char *
 #define FLOAT float
 
 #define INT_FN(x) atoi(x)
+#define SINT16_FN(x) atoi(x)
+#define UINT16_FN(x) atoi(x)
 #define STRING_FN(x) strdup(x)
 #define FLOAT_FN(x) atof(x)
 
 #define INT_FMT "%d"
+#define SINT16_FMT "%d"
+#define UINT16_FMT "%d"
 #define STRING_FMT "%s"
 #define FLOAT_FM "%f"
 
@@ -61,7 +68,7 @@ _ISEMPTY(                                                               \
 #define CFG(n, type, def) type n;
 
 #define CFG_XY_ATTR(n, dx, dy) \
-    CFG(PREFIX(n, x), INT, dx) CFG(PREFIX(n, y), INT, dy)
+    CFG(PREFIX(n, x), SINT16, dx) CFG(PREFIX(n, y), SINT16, dy)
 struct PACKED xy {
     CFG_XY_ATTR(,,)
 };
@@ -81,10 +88,10 @@ union txt {
 };
 
 #define CFG_RECT_ATTR(n, dx, dy, dw, dh) \
-    CFG(PREFIX(n, x), INT, dx) \
-    CFG(PREFIX(n, y), INT, dy) \
-    CFG(PREFIX(n, w), INT, dw) \
-    CFG(PREFIX(n, h), INT, dh) 
+    CFG(PREFIX(n, x), SINT16, dx) \
+    CFG(PREFIX(n, y), SINT16, dy) \
+    CFG(PREFIX(n, w), UINT16, dw) \
+    CFG(PREFIX(n, h), UINT16, dh) 
 
 union rect {
     SDL_Rect sdl;
@@ -98,12 +105,12 @@ union rect {
 };
 
 #define CFG_RECT_ARRAY_ATTR(n, dx, dy, dw, dh, dpx, dpy, dtile) \
-    CFG(PREFIX(n, x), INT, dx) \
-    CFG(PREFIX(n, y), INT, dy) \
-    CFG(PREFIX(n, w), INT, dw) \
-    CFG(PREFIX(n, h), INT, dh) \
-    CFG(PREFIX(n, px), INT, dpx) \
-    CFG(PREFIX(n, py), INT, dpy) \
+    CFG(PREFIX(n, x), SINT16, dx) \
+    CFG(PREFIX(n, y), SINT16, dy) \
+    CFG(PREFIX(n, w), UINT16, dw) \
+    CFG(PREFIX(n, h), UINT16, dh) \
+    CFG(PREFIX(n, px), UINT16, dpx) \
+    CFG(PREFIX(n, py), UINT16, dpy) \
     CFG(PREFIX(n, tile), INT, dtile)
 
 struct PACKED rect_array {
@@ -139,22 +146,23 @@ extern struct layout layout;
 
 int dump_layout(struct layout* cfg, char * filename);
 void rect_array_layout(struct rect_array * array_spec, int index, union rect * rect);
+void rect_array_origin(struct rect_array * array_spec, union rect * rect);
 
-inline void rect_shift(union rect * rect, struct xy * d){
+static inline void rect_shift(union rect * rect, struct xy * d){
     rect->x += d->x;
     rect->y += d->y;
 }
 
-inline void rect_shift_origin(union rect * rect){
+static inline void rect_shift_origin(union rect * rect){
     rect->x = 0;
     rect->y = 0;
 }
 
-inline void rect_copy(union rect * dst, union rect * src){
+static inline void rect_copy(union rect * dst, union rect * src){
     memcpy(dst, src, sizeof(union rect));
 }
 
-inline int in_rect(struct xy * xy, union rect * rect, struct xy * offset){
+static inline int in_rect(struct xy * xy, union rect * rect, struct xy * offset){
     if((xy->x >= rect->x) && (xy->x < rect->x + rect->w) && \
        (xy->y >= rect->y) && (xy->y < rect->y + rect->h)){
         if(offset){

@@ -21,11 +21,11 @@ static int parse_layout(void * user, const char * section, const char * name, co
 
 int dump_layout(struct layout* cfg, char * filename){
     char * sptr;
-    FILE * stream = fopen(filename, "r");
+    FILE * stream = fopen(filename, "w");
     if(!stream)
         return 1;
 
-    #define CFGSECTION(s, d...) fprintf(stream, "[" #s "]\n"); sptr = (char *) &cfg->s; d; printf("\n");
+    #define CFGSECTION(s, d...) fprintf(stream, "[" #s "]\n"); sptr = (char *) &cfg->s; d; fprintf(stream, "\n");
     #define CFG(n, type, default) fprintf(stream, "%s=" type##_FMT "\n", STRINGIFY(n), *((type *) sptr)); sptr += sizeof(type);
     #include "layout.def"
 
@@ -52,6 +52,13 @@ void rect_array_layout(struct rect_array * array_spec, int index, union rect * r
 
     rect->x = array_spec->x + array_spec->px * index_x;
     rect->y = array_spec->y + array_spec->py * index_y;
+    rect->w = array_spec->w;
+    rect->h = array_spec->h;
+}
+
+void rect_array_origin(struct rect_array * array_spec, union rect * rect){
+    rect->x = 0;
+    rect->y = 0;
     rect->w = array_spec->w;
     rect->h = array_spec->h;
 }

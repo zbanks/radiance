@@ -48,6 +48,11 @@ CFGSECTION(add_pattern,
     CFG_XY(text, 5, 3)
 )
 
+CFGSECTION(add_hit,
+    CFG_RECT_ARRAY(, 101, 250, 100, 430, 0, 35, 0)
+    CFG_XY(text, 5, 3)
+)
+
 CFGSECTION(signal,
     CFG_RECT_ARRAY(, 600, 30, 110, 200, 125, 0, 0)
     CFG_TXT(name, 5, 3, 14, 0, "", "")

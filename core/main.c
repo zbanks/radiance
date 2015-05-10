@@ -21,8 +21,9 @@
 
 int main()
 {
-    dump_layout(&layout, stdout);
-    return 0;
+    dump_layout(&layout, "layout.ini");
+    //return 0;
+    //load_layout(&layout, "layout.ini");
     ui_init();
 
     pat_load(&slots[0], &pat_full);
