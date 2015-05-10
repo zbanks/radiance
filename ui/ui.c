@@ -21,7 +21,6 @@
 #include "timebase/timebase.h"
 
 #define SURFACES \
-    X(screen, layout.window) \
     X(master_preview, layout.master) \
     X(pattern_preview, layout.slot.preview_rect) \
     X(slot_pane, layout.slot) \
