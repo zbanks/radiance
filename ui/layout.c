@@ -9,6 +9,12 @@ struct layout layout = {
     #include "layout.def"
 };
 
+char* mystrdup(const char* s) {
+    char* p = malloc(strlen(s)+1);
+    if (p) strcpy(p, s);
+    return p;
+}
+
 static int parse_layout(void * user, const char * section, const char * name, const char * value){
     char * sptr;
     struct layout * cfg = (struct layout *) user;

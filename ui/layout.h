@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <SDL/SDL.h>
 
+char* mystrdup(const char* s);
+
 #define INT int
 #define SINT16 Sint16
 #define UINT16 Uint16
@@ -16,7 +18,7 @@
 #define INT_FN(x) atoi(x)
 #define SINT16_FN(x) atoi(x)
 #define UINT16_FN(x) atoi(x)
-#define STRING_FN(x) strdup(x)
+#define STRING_FN(x) mystrdup(x)
 #define FLOAT_FN(x) atof(x)
 
 #define INT_FMT "%d"

@@ -4,6 +4,7 @@
 #include <SDL/SDL_mutex.h>
 
 #include "core/parameter.h"
+#include "core/time.h"
 #include "util/color.h"
 #include "hits/hit.h"
 
@@ -13,7 +14,7 @@ struct pattern;
 
 typedef void* pat_state_pt;
 typedef pat_state_pt (*pat_init_fn_pt)();
-typedef void (*pat_update_fn_pt)(struct slot* slot, float t);
+typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
 typedef void (*pat_prevclick_fn_pt)(struct slot*, float x, float y);
 typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
 typedef void (*pat_del_fn_pt)(pat_state_pt state);
@@ -47,8 +48,8 @@ extern int n_hit_slots;
 extern slot_t slots[];
 extern slot_t hit_slots[];
 
-void update_patterns(float t);
-void update_hits(float t);
+void update_patterns(mbeat_t t);
+void update_hits(mbeat_t t);
 
 color_t render_composite(float x, float y);
 

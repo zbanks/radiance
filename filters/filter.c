@@ -3,27 +3,19 @@
 #include "filters/vamp.h"
 #include "timebase/timebase.h"
 
-#define N_FILTERS 1
+#define N_FILTERS 2
 
 int n_filtered_chunks = 0;
 
-struct filter_onset_state {
+struct filter_lpf_agc_state {
     double agc_scale;
     double agc_alpha;
     double lpf_last;
     double lpf_alpha;
 };
 
-void filter_onset_init(filter_t * filter){
-
-}
-
-void filter_onset_del(filter_t * filter){
-
-}
-
-void filter_onset_update(filter_t * filter, int t_msec, double value){
-    struct filter_onset_state * state = filter->state;
+void filter_diodelpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
+    struct filter_lpf_agc_state * state = filter->state;
 
     state->agc_scale *= state->agc_alpha;
     if(value > state->lpf_last) 
@@ -36,15 +28,23 @@ void filter_onset_update(filter_t * filter, int t_msec, double value){
     param_output_set(&filter->output, value / state->agc_scale);
 }
 
-void filter_beat_init(filter_t * filter){
+void filter_lpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
+    struct filter_lpf_agc_state * state = filter->state;
 
+    state->agc_scale *= state->agc_alpha;
+    /*
+    if(value > state->lpf_last) 
+        state->lpf_last = value;
+    else 
+    */
+    value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
+
+    if(value > state->agc_scale) state->agc_scale = value;
+
+    param_output_set(&filter->output, value / state->agc_scale);
 }
 
-void filter_beat_del(filter_t * filter){
-
-}
-
-void filter_beat_update(filter_t * filter, int t_msec, double value)
+void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
 {
     timebase_tap();
     //printf("Beat: %d\n", t_msec);
@@ -57,16 +57,17 @@ filter_t filters[N_FILTERS] = {
     .n_params = 0,
     .parameters = 0,
     .name = "Onset Detection",
+    .color = {255, 0, 255},
     .output = {
             .value = 0.0,
             .handle_color = {255, 0, 255},
             .label_color = {255, 0, 255},
             .label = "ODF",
         },
-    .init = filter_onset_init,
-    .update = filter_onset_update,
-    .del = filter_onset_del,
-    .state = &((struct filter_onset_state) {
+    .init = 0,
+    .update = filter_diodelpf_agc_update,
+    .del = 0,
+    .state = &((struct filter_lpf_agc_state) {
         .agc_scale = 512.,
         .agc_alpha = 0.999,
         .lpf_last = 0.,
@@ -75,6 +76,30 @@ filter_t filters[N_FILTERS] = {
     .vamp_so = "qm-vamp-plugins.so",
     .vamp_id = "qm-onsetdetector",
     .vamp_output = 1,
+    },
+    {
+    .n_params = 0,
+    .parameters = 0,
+    .name = "Fundamental Freq",
+    .color = {128, 0, 255},
+    .output = {
+            .value = 0.0,
+            .handle_color = {128, 0, 255},
+            .label_color = {128, 0, 255},
+            .label = "F0",
+        },
+    .init = 0,
+    .update = filter_lpf_agc_update,
+    .del = 0,
+    .state = &((struct filter_lpf_agc_state) {
+        .agc_scale = 128.,
+        .agc_alpha = 0.999999,
+        .lpf_last = 0.,
+        .lpf_alpha = 0.05,
+    }),
+    .vamp_so = "pyin.so",
+    .vamp_id = "pyin",
+    .vamp_output = 0,
     },
 };
 
@@ -88,9 +113,9 @@ filter_t beat_filter = {
         .label_color = {0, 0, 0},
         .label = "Beat?",
     },
-    .init = filter_beat_init,
+    .init = 0,
     .update = filter_beat_update,
-    .del = filter_beat_del,
+    .del = 0,
     .vamp_so = "btrack.so",
     .vamp_id = "btrack-vamp",
     .vamp_output = 0,
@@ -99,13 +124,15 @@ filter_t beat_filter = {
 void filters_load(){
     n_filtered_chunks = 0;
     vamp_plugin_load(&beat_filter);
-    beat_filter.init(&beat_filter);
+    if(beat_filter.init)
+        beat_filter.init(&beat_filter);
     for(int i = 0; i < n_filters; i++){
         if(vamp_plugin_load(&filters[i])){
             printf("Error initializing filter '%s'\n", filters[i].name);
         }else{
             printf("Initializing filter '%s'\n", filters[i].name);
-            filters[i].init(&filters[i]);
+            if(filters[i].init)
+                filters[i].init(&filters[i]);
             graph_create_filter(&filters[i].graph_state);
         }
     }
@@ -113,10 +140,12 @@ void filters_load(){
 
 void filters_unload(){
     vamp_plugin_unload(&beat_filter);
-    beat_filter.del(&beat_filter);
+    if(beat_filter.del)
+        beat_filter.del(&beat_filter);
     for(int i = 0; i < n_filters; i++){
         vamp_plugin_unload(&filters[i]);
-        filters[i].del(&filters[i]);
+        if(filters[i].del)
+            filters[i].del(&filters[i]);
     }
 }
 

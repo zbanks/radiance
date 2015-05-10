@@ -2,6 +2,7 @@
 #define __SIGNAL_H
 
 #include "core/slot.h"
+#include "core/time.h"
 #include "ui/graph.h"
 
 struct signal;
@@ -15,7 +16,7 @@ typedef pat_state_pt (*pat_init_fn_pt)();
 
 typedef void * inp_state_pt;
 typedef void (*inp_init_fn_pt)(struct signal * signal);
-typedef void (*inp_update_fn_pt)(struct signal * signal, float t);
+typedef void (*inp_update_fn_pt)(struct signal * signal, mbeat_t t);
 typedef void (*inp_del_fn_pt)(struct signal * signal);
 
 typedef struct signal {
@@ -39,6 +40,6 @@ extern signal_t signals[];
 
 void signal_start();
 void signal_stop();
-void update_signals(float t);
+void update_signals(mbeat_t t);
 
 #endif

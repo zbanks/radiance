@@ -1,6 +1,7 @@
 #include "core/err.h"
 #include "ui/layout.h"
 #include "ui/slider.h"
+#include "ui/text.h"
 #include "ui/ui.h"
 
 #include <SDL/SDL_ttf.h>
@@ -35,8 +36,13 @@ void slider_del()
 
 void slider_render_alpha(param_state_t* state)
 {
+    param_output_t * param_output = param_state_output(state);
     SDL_Color handle_color = {0, 0, 80};
     SDL_Rect r;
+
+    if(param_output){
+        handle_color = param_output->handle_color;
+    }
 
     SDL_FillRect(alpha_slider_surface, &layout.alpha_slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));
 
@@ -55,40 +61,22 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     param_output_t * param_output = param_state_output(state);
     SDL_Color handle_color = {0, 0, 80};
     SDL_Color white = {255, 255, 255};
-    SDL_Surface* txt = TTF_RenderText_Solid(param_font, param->name, c);
 
     SDL_Rect r;
     SDL_FillRect(slider_surface, &layout.slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));
 
-    r.x = layout.slider.name_x;
-    r.y = layout.slider.name_y;
-    r.w = txt->w;
-    r.h = txt->h;
-    SDL_BlitSurface(txt, 0, slider_surface, &r);
-    SDL_FreeSurface(txt);
+    text_render(slider_surface, param_font, &layout.slider.name_txt, &c, param->name);
 
     if(param->val_to_str){
         char sbuf[129];
         param->val_to_str(param_state_get(state), sbuf, 128);
-        txt = TTF_RenderText_Solid(param_font, sbuf, white);
-        r.x = layout.slider.value_x;
-        r.y = layout.slider.value_y;
-        r.w = txt->w;
-        r.h = txt->h;
-        SDL_BlitSurface(txt, 0, slider_surface, &r);
-        SDL_FreeSurface(txt);
+        text_render(slider_surface, param_font, &layout.slider.value_txt, &white, sbuf);
     }
 
     if(param_output){
         handle_color = param_output->handle_color;
 
-        txt = TTF_RenderText_Solid(param_font, param_output->label, param_output->label_color);
-        r.x = layout.slider.source_x - txt->w;
-        r.y = layout.slider.source_y;
-        r.w = txt->w;
-        r.h = txt->h;
-        SDL_BlitSurface(txt, 0, slider_surface, &r);
-        SDL_FreeSurface(txt);
+        text_render(slider_surface, param_font, &layout.slider.source_txt, &param_output->label_color, param_output->label);
     }
 
     SDL_FillRect(slider_surface, &layout.slider.track_rect, SDL_MapRGB(slider_surface->format, 80, 80, 80));

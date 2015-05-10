@@ -32,6 +32,8 @@ int main()
 
     hit_load(&hit_slots[0], &hit_full);
     hit_load(&hit_slots[1], &hit_full);
+    hit_load(&hit_slots[2], &hit_pulse);
+    hit_load(&hit_slots[3], &hit_pulse);
 
     patterns_updating = SDL_CreateMutex();
     hits_updating = SDL_CreateMutex();
@@ -50,7 +52,9 @@ int main()
 
     while(ui_poll())
     {
-        float tb = (float)timebase_get() / 1000; // TODO make all times long
+        //float tb = (float)timebase_get() / 1000; // TODO make all times long
+        mbeat_t tb = timebase_get();
+        printf("%d\n", tb);
 
         update_patterns(tb);
         update_hits(tb);

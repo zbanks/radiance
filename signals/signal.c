@@ -4,6 +4,7 @@
 #include "signals/signal.h"
 #include "util/siggen.h"
 #include "ui/graph.h"
+#include "core/time.h"
 
 #define N_SIGNALS 3
 #ifndef M_PI
@@ -13,7 +14,8 @@
 typedef struct
 {
     float phase;
-    float last_t;
+    mbeat_t last_t;
+    float freq;
     enum osc_type type;
 } inp_lfo_state_t;
 
@@ -54,7 +56,8 @@ void inp_lfo_init(signal_t * signal){
     if(!signal->state) return;
 
     state->phase = 0.;
-    state->last_t = 0.;
+    state->last_t = 0;
+    state->freq = 1.0;
     state->type = OSC_SINE;
 
 
@@ -71,11 +74,23 @@ void inp_lfo_init(signal_t * signal){
     //signal->output = malloc(sizeof(param_output_t));
 }
 
-void inp_lfo_update(signal_t * signal, float t){
+void inp_lfo_update(signal_t * signal, mbeat_t t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
     if(!state) return;
 
-    state->phase += (t - state->last_t) * power_quantize_parameter(signal->param_states[LFO_FREQ].value);
+    float new_freq = 1.0 / power_quantize_parameter(signal->param_states[LFO_FREQ].value);
+#define BMOD(t, f) (t % B2MB(f))
+    if(new_freq != state->freq){
+        if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
+            // Update with old phase up until zero crossing
+            state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
+            // Update with new phase past zero crossing
+            state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
+            state->freq = new_freq;
+        }
+    }
+
+    state->phase += MB2B(t - state->last_t) / state->freq; 
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
     state->type = quantize_parameter(osc_quant_labels, signal->param_states[LFO_TYPE].value);
@@ -148,7 +163,7 @@ signal_t signals[N_SIGNALS] = {
     }
 };
 
-void update_signals(float t) {
+void update_signals(mbeat_t t) {
     for(int i=0; i < n_signals; i++)
     {
         signals[i].update(&signals[i], t);

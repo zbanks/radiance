@@ -61,7 +61,7 @@ int vamp_plugin_load(filter_t * filter){
     return 0;
 }
 
-static int rt_msec(RealTime rt){
+static long rt_msec(RealTime rt){
     return rt.sec * 1000 + rt.msec();
 }
 

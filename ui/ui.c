@@ -316,11 +316,12 @@ static void ui_update_hit_slot(slot_t* hit_slot)
 static void ui_update_filter(filter_t * filter)
 {
     rect_t r;
+    SDL_Color white = {255, 255, 255};
+
     rect_array_origin(&layout.filter.rect_array, &r);
     SDL_FillRect(filter_pane, &r, SDL_MapRGB(filter_pane->format, 20, 20, 20));
 
-    SDL_Color white = {255, 255, 255};
-    text_render(filter_pane, filter_font, &layout.filter.name_txt, &white, filter->name);
+    text_render(filter_pane, filter_font, &layout.filter.name_txt, &filter->color, filter->name);
 
     graph_update(&(filter->graph_state), filter->output.value);
     graph_render(&(filter->graph_state), white);
@@ -747,7 +748,7 @@ static int mouse_click(struct xy xy)
 
     // Otherwise, do not handle click
     // TEMP: treat click as beat tap
-    timebase_tap(0.8);
+    //timebase_tap(0.8);
     return 1;
     //return 0;
 }

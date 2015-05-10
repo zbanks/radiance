@@ -84,9 +84,9 @@ char * nanokontrol2_labels[N_NK2_INPUTS] = {
 };
 
 char * nanopad2_labels[N_NP2_INPUTS] = {
-    [NP2_XY_X] = "",
-    [NP2_XY_Y] = "",
-    [NP2_XY_DOWN] = "",
+    [NP2_XY_X] = "X",
+    [NP2_XY_Y] = "Y",
+    [NP2_XY_DOWN] = "XY",
 
     [NP2_PAD_0A] = "A1",
     [NP2_PAD_0B] = "B1",

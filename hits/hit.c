@@ -10,9 +10,14 @@
 #include "util/siggen.h"
 #include "core/err.h"
 
-#define N_HITS  1
+#ifndef M_PI 
+#define M_PI 3.1415
+#endif
 
-hit_t * hits[N_HITS] = {&hit_full, };
+
+#define N_HITS  2
+
+hit_t * hits[N_HITS] = {&hit_full, &hit_pulse };
 int n_hits = N_HITS;
 
 int n_active_hits = 0;
@@ -149,7 +154,7 @@ struct hit_full_state {
     color_t color;
     enum adsr_state adsr;
     float x;
-    float last_t;
+    mbeat_t last_t;
     float base_alpha;
 };
 
@@ -175,7 +180,7 @@ struct active_hit * hit_full_start(slot_t * slot) {
     state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
     state->adsr = ADSR_WAITING;
     state->x = 0.0;
-    state->last_t = 0.0;
+    state->last_t = 0;
     state->base_alpha = state->color.a;
 
     active_hit->slot = slot;
@@ -191,7 +196,7 @@ void hit_full_stop(struct active_hit * active_hit){
     free_hit(active_hit);
 }
 
-int hit_full_update(struct active_hit * active_hit, float t){
+int hit_full_update(struct active_hit * active_hit, mbeat_t t){
     struct hit_full_state * state = active_hit->state;
     switch(state->adsr){
         case ADSR_WAITING: break;
@@ -199,14 +204,14 @@ int hit_full_update(struct active_hit * active_hit, float t){
             state->adsr = ADSR_ATTACK;
         break;
         case ADSR_ATTACK:
-            state->x += (t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
+            state->x += MB2B(t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
             if(state->x >= state->base_alpha){
                 state->x = state->base_alpha;
                 state->adsr = ADSR_DECAY;
             }
         break;
         case ADSR_DECAY:
-            state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
+            state->x -= MB2B(t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
             if(state->x <= (state->base_alpha * active_hit->param_values[FULL_SUSTAIN])){
                 state->x = state->base_alpha * active_hit->param_values[FULL_SUSTAIN];
                 state->adsr = ADSR_SUSTAIN;
@@ -215,7 +220,7 @@ int hit_full_update(struct active_hit * active_hit, float t){
         case ADSR_SUSTAIN:
         break;
         case ADSR_RELEASE:
-            state->x -= (t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
+            state->x -= MB2B(t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
             if(state->x <= 0){
                 state->x = 0.;
                 state->adsr = ADSR_DONE;
@@ -263,6 +268,136 @@ hit_t hit_full = {
     .prevclick = &hit_full_prevclick,
     .n_params = N_FULL_PARAMS,
     .parameters = hit_full_params,
-    .name = "Full Hit",
+    .name = "Full",
 };
 
+// ----- Hit: Pulse -----
+//
+enum hit_pulse_param_names {
+    PULSE_COLOR,
+    PULSE_TIME,
+    PULSE_WIDTH,
+    PULSE_ANGLE,
+
+    N_PULSE_PARAMS
+};
+
+parameter_t hit_pulse_params[] = {
+    [PULSE_COLOR] = {
+        .name = "Color",
+        .default_val = 0.5,
+    },
+    [PULSE_TIME] = {
+        .name = "time",
+        .default_val = 0.5,
+        .val_to_str = power_quantize_parameter_label,
+    },
+    [PULSE_WIDTH] = {
+        .name = "Width",
+        .default_val = 0.3,
+    },
+    [PULSE_ANGLE] = {
+        .name = "Angle",
+        .default_val = 0.5,
+    },
+};
+
+struct hit_pulse_state {
+    color_t color;
+    float base_alpha;
+    float start_t;
+    float x;
+};
+
+struct active_hit * hit_pulse_start(slot_t * slot) {
+    if(!slot->hit) return 0;
+
+    struct active_hit * active_hit = alloc_hit(slot->hit);
+    if(!active_hit) return 0;
+
+    active_hit->state = malloc(sizeof(struct hit_pulse_state));
+    if(!active_hit->state) return 0;
+    struct hit_pulse_state * state = active_hit->state;
+
+    for(int i = 0; i < slot->hit->n_params; i++){
+        active_hit->param_values[i] = slot->param_states[i].value;
+    }
+
+    active_hit->param_values[PULSE_TIME] = 1.0 / power_quantize_parameter(active_hit->param_values[PULSE_TIME]);
+    active_hit->param_values[PULSE_WIDTH] = (active_hit->param_values[PULSE_WIDTH] / 2.5) + 0.05;
+    active_hit->param_values[PULSE_ANGLE] = (active_hit->param_values[PULSE_ANGLE] * 2 * M_PI) - M_PI;
+
+    state->color = param_to_color(active_hit->param_values[PULSE_COLOR]);
+    state->start_t = -1.;
+    state->x = -1.;
+    state->base_alpha = state->color.a;
+
+    active_hit->slot = slot;
+    active_hit->alpha = param_state_get(&slot->alpha);
+
+    return active_hit;
+}
+
+void hit_pulse_stop(struct active_hit * active_hit){
+    if(active_hit->state) free(active_hit->state);
+    active_hit->state = 0;
+    free_hit(active_hit);
+}
+
+int hit_pulse_update(struct active_hit * active_hit, float abs_t){
+    struct hit_pulse_state * state = active_hit->state;
+    if(state->start_t < 0)
+        state->start_t = abs_t;
+    state->x = (abs_t - state->start_t) / (active_hit->param_values[PULSE_TIME] / 2.) - 1.;
+    if(state->x > 1.5){ // Wait until at least sqrt(2) so it fades out nice on the corner
+        printf("done %f\n", active_hit->param_values[PULSE_TIME]);
+        return 1;
+    }
+    return 0;
+}
+
+int hit_pulse_event(struct active_hit * active_hit, enum hit_event event, float event_data){
+    struct hit_pulse_state * state = active_hit->state;
+    switch(event){
+        case HITEV_NOTE_ON:
+            state->base_alpha *= event_data;
+        break;
+        case HITEV_NOTE_OFF:
+        break;
+        default: break;
+    }
+    return 0;
+}
+
+void hit_pulse_prevclick(slot_t * slot, float x, float y){
+
+}
+
+color_t hit_pulse_pixel(struct active_hit * active_hit, float x, float y) {
+    struct hit_pulse_state * state = active_hit->state;
+    color_t color = state->color;
+    float a;
+    float z;
+    if((x == 0.) && (y == 0.)){
+        a = 0;
+    }else{
+        //a = (sinf(active_hit->param_values[PULSE_ANGLE]) * y + cosf(active_hit->param_values[PULSE_ANGLE]) * x) / (x * x + y * y);
+        a = (sinf(active_hit->param_values[PULSE_ANGLE]) * y + cosf(active_hit->param_values[PULSE_ANGLE]) * x); // / (x * x + y * y);
+    }
+    z = a - state->x;
+    color.a = state->base_alpha * (fabs(z) < active_hit->param_values[PULSE_WIDTH] ? cosf(z * M_PI / (2 * active_hit->param_values[PULSE_WIDTH])) : 0.);
+    return color;
+}
+
+
+hit_t hit_pulse = {
+    .render = &hit_pulse_pixel,
+    .start = &hit_pulse_start,
+    .stop = &hit_pulse_stop,
+    .update = &hit_pulse_update,
+    .event = &hit_pulse_event,
+    .prevclick = &hit_pulse_prevclick,
+    .n_params = N_PULSE_PARAMS,
+    .parameters = hit_pulse_params,
+    .name = "Pulse",
+};

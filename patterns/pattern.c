@@ -47,7 +47,7 @@ void pat_full_del(pat_state_pt state)
     free(state);
 }
 
-void pat_full_update(slot_t* slot, float t)
+void pat_full_update(slot_t* slot, long t)
 {
     color_t* color = (color_t*)slot->state;
     *color = param_to_color(param_state_get(&slot->param_states[FULL_COLOR]));
@@ -84,7 +84,7 @@ typedef struct
     color_t color;
     float phase;
     enum osc_type type;
-    float last_t;
+    mbeat_t last_t;
     float kx;
     float ky;
 } pat_wave_state_t;
@@ -131,7 +131,7 @@ pat_state_pt pat_wave_init()
     state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
     state->phase = 0.0;
     state->type = OSC_SINE;
-    state->last_t = 0.0;
+    state->last_t = 0;
     state->kx = 1.0;
     state->ky = 1.0;
     return state;
@@ -142,7 +142,7 @@ void pat_wave_del(pat_state_pt state)
     free(state);
 }
 
-void pat_wave_update(slot_t* slot, float t)
+void pat_wave_update(slot_t* slot, mbeat_t t)
 {
     float k_mag;
     float k_ang;
@@ -151,7 +151,8 @@ void pat_wave_update(slot_t* slot, float t)
     state->color = param_to_color(slot->param_states[WAVE_COLOR].value);
     state->type = quantize_parameter(osc_quant_labels, slot->param_states[WAVE_TYPE].value);
 
-    state->phase += (t - state->last_t) * power_quantize_parameter(slot->param_states[WAVE_OMEGA].value);
+    printf(">%ld %f\n", t - state->last_t, MB2B(t - state->last_t));
+    state->phase += MB2B(t - state->last_t) * power_quantize_parameter(slot->param_states[WAVE_OMEGA].value);
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
 
@@ -253,7 +254,7 @@ void pat_bubble_del(pat_state_pt state)
     free(state);
 }
 
-void pat_bubble_update(slot_t* slot, float t)
+void pat_bubble_update(slot_t* slot, long t)
 {
     pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
     state->color = param_to_color(slot->param_states[BUBBLE_COLOR].value);

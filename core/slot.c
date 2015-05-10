@@ -2,6 +2,7 @@
 
 #include "core/err.h"
 #include "core/slot.h"
+#include "core/time.h"
 #include "hits/hit.h"
 
 #define N_SLOTS 8
@@ -38,7 +39,7 @@ color_t render_composite(float x, float y)
     return render_composite_hits(result, x, y);
 }
 
-void update_patterns(float t)
+void update_patterns(mbeat_t t)
 {
     if(SDL_LockMutex(patterns_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
 
@@ -53,7 +54,7 @@ void update_patterns(float t)
     SDL_UnlockMutex(patterns_updating); 
 }
 
-void update_hits(float t)
+void update_hits(mbeat_t t)
 {
     if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
     for(int i=0; i < N_MAX_ACTIVE_HITS; i++)
