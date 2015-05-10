@@ -6,6 +6,9 @@
 
 extern param_state_t * active_param_source;
 
+extern void (*mouse_drag_fn_p)(struct xy);
+extern void (*mouse_drop_fn_p)();
+
 void ui_init();
 void ui_quit();
 void ui_update_master();

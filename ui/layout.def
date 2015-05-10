@@ -7,7 +7,7 @@
                   pitch_x_default, pitch_y_default) */
 
 CFGSECTION(window,
-    CFG_RECT(, 0, 0, 1200, 700)
+    CFG_RECT(, 0, 0, 1200, 760)
 )
 
 CFGSECTION(master,
@@ -15,48 +15,50 @@ CFGSECTION(master,
 )
 
 CFGSECTION(slot,
+    CFG(n, INT, 8)
     CFG_RECT_ARRAY(, 10, 245, 110, 250, 125, 0, 0)
     CFG_RECT(preview, 25, 5, 80, 80)
-    CFG_RECT(alpha, 9, 5, 0, 100)
-    CFG_RECT_ARRAY(sliders, 0, 90, 100, 40, 35, 0, 0)
+    CFG_RECT(alpha, 0, 0, 20, 80)
+    CFG_RECT_ARRAY(sliders, 5, 90, 100, 40, 0, 40, 0)
 )
 
 CFGSECTION(hit_slot,
+    CFG(n, INT, 8)
     CFG_RECT_ARRAY(, 10, 510, 110, 250, 125, 0, 0)
     CFG_RECT(preview, 25, 5, 80, 80)
-    CFG_RECT(alpha, 9, 5, 0, 100)
-    CFG_RECT_ARRAY(sliders, 0, 90, 100, 40, 35, 0, 0)
-)
-
-CFGSECTION(alpha_slider,
-    CFG_RECT(, 0, 0, 0, 100)
-    CFG_RECT(track, 4, 0, 3, 80)
-    CFG_RECT(handle, 5, 5, 10, 10)
-)
-
-CFGSECTION(slider,
-    CFG_RECT(, 0, 0, 100, 0)
-    CFG_RECT(track, 3, 16, 94, 5)
-    CFG_RECT(handle, 3, 12, 10, 10)
-    CFG_TXT(name, 94, 3, 10, 1, "", "white")
-    CFG_TXT(source, 94, 3, 10, 1, "", "white")
-    CFG_TXT(value, 0, 22, 10, 0, "", "white")
-)
-    
-CFGSECTION(add_pattern,
-    CFG_RECT_ARRAY(, 101, 250, 100, 30, 0, 35, 0)
-    CFG_XY(text, 5, 3)
-)
-
-CFGSECTION(add_hit,
-    CFG_RECT_ARRAY(, 101, 250, 100, 430, 0, 35, 0)
-    CFG_XY(text, 5, 3)
+    CFG_RECT(alpha, 0, 0, 20, 80)
+    CFG_RECT_ARRAY(sliders, 5, 90, 100, 40, 0, 40, 0)
 )
 
 CFGSECTION(signal,
     CFG_RECT_ARRAY(, 600, 30, 110, 200, 125, 0, 0)
-    CFG_TXT(name, 5, 3, 14, 0, "", "")
-    CFG_RECT_ARRAY(sliders, 3, 65, 100, 40, 35, 0, 0)
+    CFG_TXT(name, 55, 3, 14, 2, "", "")
+    CFG_RECT_ARRAY(sliders, 5, 60, 100, 40, 0, 40, 0)
+)
+
+CFGSECTION(alpha_slider,
+    CFG_RECT(, 0, 0, 20, 80)
+    CFG_RECT(track, 9, 5, 3, 80)
+    CFG_RECT(handle, 5, 5, 10, 10)
+)
+
+CFGSECTION(slider,
+    CFG_RECT(, 0, 0, 100, 40)
+    CFG_RECT(track, 3, 16, 94, 4)
+    CFG_RECT(handle, 3, 12, 10, 10)
+    CFG_TXT(name, 3, 0, 10, 0, "", "white")
+    CFG_TXT(source, 60, 0, 10, 1, "", "white")
+    CFG_TXT(value, 0, 22, 10, 0, "", "white")
+)
+    
+CFGSECTION(add_pattern,
+    CFG_RECT_ARRAY(, 1010, 250, 100, 30, 0, 35, 0)
+    CFG_TXT(name, 50, 15, 10, 3, "", "white")
+)
+
+CFGSECTION(add_hit,
+    CFG_RECT_ARRAY(, 1010, 510, 100, 30, 0, 35, 0)
+    CFG_TXT(name, 50, 15, 10, 3, "", "white")
 )
 
 CFGSECTION(graph_signal,
@@ -70,7 +72,7 @@ CFGSECTION(graph_filter,
 )
 
 CFGSECTION(filter,
-    CFG_RECT_ARRAY(, 380, 30, 0, 60, 200, 200, 0)
+    CFG_RECT_ARRAY(, 380, 30,  200, 80,  0,  200, 0)
     CFG_TXT(name, 5, 5, 12, 0, "", "white")
 )
 

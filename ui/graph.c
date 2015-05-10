@@ -40,7 +40,7 @@ void graph_create_filter(graph_state_t* state)
 void graph_create_signal(graph_state_t* state)
 {
     state->width = layout.graph_signal.w;
-    state->height = layout.graph_signal.w;
+    state->height = layout.graph_signal.h;
     state->scroll_rate = layout.graph_signal.scroll_rate;
     state->history = malloc(sizeof(*(state->history)) * state->width);
     if(!state->history) FAIL("Could not malloc graph history\n");

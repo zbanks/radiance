@@ -80,11 +80,8 @@ struct PACKED xy {
     CFG(PREFIX(n, font), STRING, dfont) \
     CFG(PREFIX(n, color), STRING, dcolor)
 
-union txt { 
-    struct xy xy;
-    struct PACKED {
-        CFG_TXT_ATTR(,,,,,,)
-    };
+struct PACKED txt {
+    CFG_TXT_ATTR(,,,,,,)
 };
 
 #define CFG_RECT_ATTR(n, dx, dy, dw, dh) \
@@ -93,7 +90,10 @@ union txt {
     CFG(PREFIX(n, w), UINT16, dw) \
     CFG(PREFIX(n, h), UINT16, dh) 
 
-union rect {
+
+typedef SDL_Rect rect_t;
+/*
+typedef union {
     SDL_Rect sdl;
     struct PACKED {
         struct xy xy;
@@ -102,7 +102,8 @@ union rect {
     struct PACKED {
         CFG_RECT_ATTR(,,,,)
     };
-};
+} rect_t;
+*/
 
 #define CFG_RECT_ARRAY_ATTR(n, dx, dy, dw, dh, dpx, dpy, dtile) \
     CFG(PREFIX(n, x), SINT16, dx) \
@@ -120,8 +121,8 @@ struct PACKED rect_array {
 #undef CFG
 
 #define CFG_XY(n, args...) union { struct xy PREFIX(n, xy); struct PACKED { CFG_XY_ATTR(n, args) }; };
-#define CFG_TXT(n, args...) union { union txt PREFIX(n, txt); struct PACKED { CFG_TXT_ATTR(n, args) }; };
-#define CFG_RECT(n, args...) union { union rect PREFIX(n, rect); struct PACKED { CFG_RECT_ATTR(n, args) }; };
+#define CFG_TXT(n, args...) union { struct txt PREFIX(n, txt); struct PACKED { CFG_TXT_ATTR(n, args) }; };
+#define CFG_RECT(n, args...) union { rect_t PREFIX(n, rect); struct PACKED { CFG_RECT_ATTR(n, args) }; };
 #define CFG_RECT_ARRAY(n, args...) union { struct rect_array PREFIX(n, rect_array); struct PACKED { CFG_RECT_ARRAY_ATTR(n, args) }; };
 
 struct layout {
@@ -145,24 +146,24 @@ extern struct layout layout;
 #define CFG_RECT_ARRAY CFG_RECT_ARRAY_ATTR
 
 int dump_layout(struct layout* cfg, char * filename);
-void rect_array_layout(struct rect_array * array_spec, int index, union rect * rect);
-void rect_array_origin(struct rect_array * array_spec, union rect * rect);
+void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect);
+void rect_array_origin(struct rect_array * array_spec, rect_t * rect);
 
-static inline void rect_shift(union rect * rect, struct xy * d){
+static inline void rect_shift(rect_t * rect, const struct xy * d){
     rect->x += d->x;
     rect->y += d->y;
 }
 
-static inline void rect_shift_origin(union rect * rect){
+static inline void rect_shift_origin(rect_t * rect){
     rect->x = 0;
     rect->y = 0;
 }
 
-static inline void rect_copy(union rect * dst, union rect * src){
-    memcpy(dst, src, sizeof(union rect));
+static inline void rect_copy(rect_t * dst, const rect_t * src){
+    memcpy(dst, src, sizeof(rect_t));
 }
 
-static inline int in_rect(struct xy * xy, union rect * rect, struct xy * offset){
+static inline int in_rect(const struct xy * xy, const rect_t * rect, struct xy * offset){
     if((xy->x >= rect->x) && (xy->x < rect->x + rect->w) && \
        (xy->y >= rect->y) && (xy->y < rect->y + rect->h)){
         if(offset){
@@ -174,5 +175,18 @@ static inline int in_rect(struct xy * xy, union rect * rect, struct xy * offset)
     return 0;
 }
 
+static inline struct xy xy_add(struct xy a, struct xy b){
+    return (struct xy) {
+        .x = a.x + b.x,
+        .y = a.y + b.y
+    };
+}
+
+static inline struct xy xy_sub(struct xy a, struct xy b){
+    return (struct xy) {
+        .x = a.x - b.x,
+        .y = a.y - b.y
+    };
+}
 
 #endif

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "ui/layout.h"
 #include "util/ini.h"
+#include "ui/text.h"
 
 struct layout layout = {
     #define CFGSECTION(w, d...) .w = { d },
@@ -43,7 +44,7 @@ int load_layout(struct layout* cfg, const char * filename){
     return 0;
 }
 
-void rect_array_layout(struct rect_array * array_spec, int index, union rect * rect){
+void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect){
     if(array_spec->tile != 0){
         printf("Unsupported tile format: %d\n", array_spec->tile);
     }
@@ -56,7 +57,7 @@ void rect_array_layout(struct rect_array * array_spec, int index, union rect * r
     rect->h = array_spec->h;
 }
 
-void rect_array_origin(struct rect_array * array_spec, union rect * rect){
+void rect_array_origin(struct rect_array * array_spec, rect_t * rect){
     rect->x = 0;
     rect->y = 0;
     rect->w = array_spec->w;
