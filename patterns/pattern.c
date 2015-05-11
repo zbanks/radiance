@@ -151,7 +151,6 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     state->color = param_to_color(slot->param_states[WAVE_COLOR].value);
     state->type = quantize_parameter(osc_quant_labels, slot->param_states[WAVE_TYPE].value);
 
-    printf(">%ld %f\n", t - state->last_t, MB2B(t - state->last_t));
     state->phase += MB2B(t - state->last_t) * power_quantize_parameter(slot->param_states[WAVE_OMEGA].value);
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;

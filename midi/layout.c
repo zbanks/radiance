@@ -13,6 +13,12 @@ void midi_setup_layout(){
         }
     }
 
+    if(controllers_enabled[MIDI_NK2_2].available){
+        for(int i = 0; (i < n_hit_slots) && (i < 8); i++){
+            midi_connect_param(&hit_slots[i].alpha, MIDI_NK2_2, 176, NK2_S0 + i);
+        }
+    }
+
     memset(np2_map, 0, sizeof(np2_map));
     if(controllers_enabled[MIDI_NP2_1].available){
         for(int i = 0; i < 16; i++){

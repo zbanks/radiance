@@ -1,6 +1,6 @@
 #include "controllers.h"
 
-#define N_CONTROLLERS 2
+#define N_CONTROLLERS 3
 
 struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
     [MIDI_NK2_1] = {
@@ -18,6 +18,14 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
         .color = {150, 0, 255},
         .n_inputs = N_NP2_INPUTS,
         .input_labels = nanopad2_labels,
+    },
+    [MIDI_NK2_2] = {
+        .name = "nanoKONTROL2 MIDI 1",
+        .short_name = "nk'",
+        .enabled = 1,
+        .color = {150, 150, 255},
+        .n_inputs = N_NK2_INPUTS,
+        .input_labels = nanokontrol2_labels,
     },
 };
 

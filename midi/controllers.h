@@ -16,6 +16,7 @@ struct midi_controller {
 enum midi_devices {
     MIDI_NK2_1,
     MIDI_NP2_1,
+    MIDI_NK2_2,
 
     N_MIDI_DEVICES, 
 };

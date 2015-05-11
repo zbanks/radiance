@@ -328,7 +328,7 @@ struct active_hit * hit_pulse_start(slot_t * slot) {
     active_hit->param_values[PULSE_ANGLE] = (active_hit->param_values[PULSE_ANGLE] * 2 * M_PI) - M_PI;
 
     state->color = param_to_color(active_hit->param_values[PULSE_COLOR]);
-    state->start_t = -1.;
+    state->start_t = -1;
     state->x = -1.;
     state->base_alpha = state->color.a;
 
@@ -348,7 +348,7 @@ int hit_pulse_update(struct active_hit * active_hit, float abs_t){
     struct hit_pulse_state * state = active_hit->state;
     if(state->start_t < 0)
         state->start_t = abs_t;
-    state->x = (abs_t - state->start_t) / (active_hit->param_values[PULSE_TIME] / 2.) - 1.;
+    state->x = MB2B(abs_t - state->start_t) / (active_hit->param_values[PULSE_TIME] / 2.) - 1.;
     if(state->x > 1.5){ // Wait until at least sqrt(2) so it fades out nice on the corner
         printf("done %f\n", active_hit->param_values[PULSE_TIME]);
         return 1;

@@ -42,6 +42,8 @@ void slider_render_alpha(param_state_t* state)
 
     if(param_output){
         handle_color = param_output->handle_color;
+    }else{
+
     }
 
     SDL_FillRect(alpha_slider_surface, &layout.alpha_slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));
@@ -50,7 +52,7 @@ void slider_render_alpha(param_state_t* state)
 
     rect_copy(&r, &layout.alpha_slider.handle_rect);
     r.y += (1.0 - param_state_get(state)) * (layout.alpha_slider.track_h - layout.alpha_slider.handle_h);
-    SDL_FillRect(alpha_slider_surface, &r, SDL_MapRGB(slider_surface->format,
+    SDL_FillRect(alpha_slider_surface, &r, SDL_MapRGB(alpha_slider_surface->format,
                                                 handle_color.r,
                                                 handle_color.g,
                                                 handle_color.b));

@@ -70,7 +70,7 @@ void midi_connect_param(param_state_t * param_state, unsigned char device, unsig
     // Init outputs
     for(int i = 0; (i < N_DATA1) && (i < controllers_enabled[device].n_inputs); i++){
         //snprintf(strings, 5, "%d", i);
-        ct->outputs[i].handle_color = midi_handle_color;
+        ct->outputs[i].handle_color = controllers_enabled[device].color;
         ct->outputs[i].label_color = controllers_enabled[device].color;
         if(controllers_enabled[device].input_labels[i]){
             ct->outputs[i].label = controllers_enabled[device].input_labels[i];
@@ -110,14 +110,21 @@ static int midi_run(void* args)
             for(int j = 0; j < n_controllers_enabled; j++)
             {
                 if(!controllers_enabled[j].enabled) continue;
+                if(controllers_enabled[j].available) continue;
+                printf("'%s' vs '%s' %d\n", device->name, controllers_enabled[j].name, strcmp(device->name, controllers_enabled[j].name));
                 if(strcmp(device->name, controllers_enabled[j].name) == 0)
                 {
                     err = Pm_OpenInput(&streams[j], i, 0, MIDI_BUFFER_SIZE, 0, 0);
                     if(err != pmNoError) FAIL("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
                     controllers_enabled[j].available = 1;
+                    printf("Connected MIDI device: '%s'", device->name);
+                    goto _connected_device;
                 }
             }
+            printf("Unconnected MIDI device: '%s'", device->name);
         }
+_connected_device:
+        printf("\n");
     }
 
     for(int i = 0; i < n_controllers_enabled; i++)

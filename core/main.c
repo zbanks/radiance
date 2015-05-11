@@ -54,7 +54,6 @@ int main()
     {
         //float tb = (float)timebase_get() / 1000; // TODO make all times long
         mbeat_t tb = timebase_get();
-        printf("%d\n", tb);
 
         update_patterns(tb);
         update_hits(tb);
