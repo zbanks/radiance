@@ -1,5 +1,6 @@
 #include "core/audio.h"
 #include "filters/filter.h"
+#include "waveform/waveform.h"
 #include "timebase/timebase.h"
 
 #include <stdlib.h>
@@ -20,7 +21,7 @@ static SDL_Thread* audio_thread;
 
 static float chunk[NUM_CHANNELS * FRAMES_PER_BUFFER];
 
-static int audio_run(void* args)
+static int audio_run(void* UNUSED args)
 {
     PaStreamParameters inputParameters;
     PaStream *stream = NULL;
@@ -56,6 +57,7 @@ static int audio_run(void* args)
         // Do chunk things here
         filters_update(chunk);
         timebase_update(chunk);
+        waveform_update(chunk);
     }
 
     err = Pa_StopStream(stream);
@@ -68,6 +70,7 @@ static int audio_run(void* args)
 void audio_start()
 {
     timebase_init();
+    waveform_init();
 
     audio_running = 1;
 
@@ -82,5 +85,6 @@ void audio_stop()
     SDL_WaitThread(audio_thread, 0);
 
     timebase_del();
+    waveform_del();
 }
 

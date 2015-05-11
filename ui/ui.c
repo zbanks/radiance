@@ -7,12 +7,15 @@
 
 #include "ui/ui.h"
 #include "ui/layout.h"
+#include "ui/graph.h"
+#include "ui/waveform.h"
 #include "ui/slider.h"
 #include "ui/text.h"
 #include "core/err.h"
 #include "core/parameter.h"
 #include "core/slot.h"
 #include "filters/filter.h"
+#include "waveform/waveform.h"
 #include "hits/hit.h"
 #include "midi/midi.h"
 #include "midi/layout.h"
@@ -24,6 +27,7 @@
 #define SURFACES \
     X(master_preview, layout.master) \
     X(pattern_preview, layout.slot.preview_rect) \
+    X(audio_pane, layout.audio) \
     X(slot_pane, layout.slot) \
     X(hit_slot_pane, layout.hit_slot) \
     X(pattern_pane, layout.add_pattern) \
@@ -103,6 +107,7 @@ SURFACES
 
     slider_init();
     graph_init();
+    ui_waveform_init();
 
     mouse_down = 0;
     mouse_drag_fn_p = 0;
@@ -129,6 +134,7 @@ SURFACES
 
     slider_del();
     graph_del();
+    ui_waveform_del();
 
     SDL_Quit();
 }
@@ -237,6 +243,30 @@ static void update_hit_preview(slot_t* slot)
     }
 
     SDL_UnlockSurface(pattern_preview);
+}
+
+static void ui_update_audio(){
+    rect_t r;
+    rect_origin(&layout.audio.rect, &r);
+    SDL_FillRect(audio_pane, &r, SDL_MapRGB(audio_pane->format, 20, 20, 20));
+
+    ui_waveform_render();
+    SDL_BlitSurface(waveform_surface, 0, audio_pane, &layout.waveform.rect);
+
+    mbeat_t time = timebase_get(); 
+    float phase = MB2B(time % 2000);
+    float dx = 1.0 - fabs(phase - 1.0);
+    float dy = 4 * (dx - 0.5) * (dx - 0.5);
+    int x = layout.audio.ball_x + layout.audio.ball_r + (layout.audio.ball_w - 2 * layout.audio.ball_r) * dx;
+    int y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * dy;
+    filledCircleRGBA(audio_pane, x, y, layout.audio.ball_r, 255, 10, 10, 255);
+    hlineRGBA(audio_pane, layout.audio.ball_x, layout.audio.ball_x + layout.audio.ball_w, layout.audio.ball_y + layout.audio.ball_h, 255, 255, 255, 255);
+
+
+    char buf[16];
+    snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
+    SDL_Color white = {255, 255, 255};
+    text_render(audio_pane, signal_font, &layout.audio.bpm_txt, &white, buf);
 }
 
 static void ui_update_slot(slot_t* slot)
@@ -392,6 +422,9 @@ void ui_render()
     update_master_preview();
     SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect);
 
+    ui_update_audio();
+    SDL_BlitSurface(audio_pane, 0, screen, &layout.audio.rect);
+
     for(int i = 0; i < n_signals; i++)
     {
         ui_update_signal(&signals[i]);
@@ -454,6 +487,7 @@ void ui_render()
     }
 
     for(int i = 0; i < n_filters; i++){
+        if(!filters[i].display) continue;
         ui_update_filter(&filters[i]);
         rect_array_layout(&layout.filter.rect_array, i, &r);
 

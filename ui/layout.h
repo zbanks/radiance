@@ -156,9 +156,11 @@ static inline void rect_shift(rect_t * rect, const struct xy * d){
     rect->y += d->y;
 }
 
-static inline void rect_shift_origin(rect_t * rect){
-    rect->x = 0;
-    rect->y = 0;
+static inline void rect_origin(rect_t * src, rect_t * dst){
+    dst->x = 0;
+    dst->y = 0;
+    dst->w = src->w;
+    dst->h = src->h;
 }
 
 static inline void rect_copy(rect_t * dst, const rect_t * src){

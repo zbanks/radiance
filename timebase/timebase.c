@@ -71,3 +71,9 @@ long timebase_get()
     return result;
 }
 
+float timebase_get_bpm()
+{
+    return freq_mb_per_ms * 60;
+}
+
+// (mb/ms) * (1000 b / mb) * (s / 1000 ms) * (60 m /s) = 60 (mb / ms) / bpm

@@ -4,6 +4,7 @@
 
 #include "ui/ui.h"
 #include "core/err.h"
+#include "waveform/waveform.h"
 
 SDL_Surface* graph_surface;
 
@@ -84,7 +85,7 @@ static int x_to_pixel(graph_state_t* state, float x)
 
 void graph_render(graph_state_t* state, SDL_Color c)
 {
-    SDL_Rect r;
+    rect_t r;
     if(!state->history) return;
 
     r.x = 0;

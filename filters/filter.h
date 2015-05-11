@@ -33,6 +33,7 @@ typedef struct filter {
     // UI Elements
     char * name;
     SDL_Color color;
+    char display;
 
     // State
     filter_state_pt state;
