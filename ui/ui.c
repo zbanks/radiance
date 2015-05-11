@@ -19,6 +19,7 @@
 #include "hits/hit.h"
 #include "midi/midi.h"
 #include "midi/layout.h"
+#include "midi/controllers.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
@@ -33,7 +34,9 @@
     X(pattern_pane, layout.add_pattern) \
     X(hit_pane, layout.add_hit) \
     X(signal_pane, layout.signal) \
-    X(filter_pane, layout.filter)
+    X(filter_pane, layout.filter) \
+    X(output_pane, layout.output) \
+    X(midi_pane, layout.midi) 
 
 #define X(s, l) \
     static SDL_Surface* s;
@@ -183,6 +186,7 @@ static void update_master_preview()
         int x1;
         int y1;
         output_vertex_t* v = output_strips[i].first;
+        SDL_Color c = output_strips[i].color;
 
         int x2 = x_to_px(v->x);
         int y2 = y_to_px(v->y);
@@ -196,7 +200,7 @@ static void update_master_preview()
             SDL_line(master_preview,
                      x1, y1,
                      x2, y2,
-                     255,255,0,255);
+                     c.r, c.g, c.b, 255);
         }
     }
 }
@@ -267,6 +271,34 @@ static void ui_update_audio(){
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
     SDL_Color white = {255, 255, 255};
     text_render(audio_pane, signal_font, &layout.audio.bpm_txt, &white, buf);
+}
+
+static void ui_update_output(output_strip_t * output_strip){
+    rect_t r;
+    rect_array_origin(&layout.output.rect_array, &r);
+    SDL_FillRect(output_pane, &r, SDL_MapRGB(output_pane->format, 20, 20, 20));
+    char buf[16];
+
+    SDL_Color color = {150, 150, 150};
+
+    if(output_strip->bus >= 0)
+        color = output_strip->color;
+
+    snprintf(buf, 16, "%d @0x%08X", output_strip->length, output_strip->id);
+    text_render(output_pane, filter_font, &layout.output.name_txt, &color, buf);
+}
+
+static void ui_update_midi(struct midi_controller * controller){
+    rect_t r;
+    rect_array_origin(&layout.midi.rect_array, &r);
+    SDL_FillRect(midi_pane, &r, SDL_MapRGB(midi_pane->format, 20, 20, 20));
+
+    SDL_Color color = {150, 150, 150};
+
+    if(controller->available)
+        color = controller->color;
+
+    text_render(midi_pane, signal_font, &layout.midi.name_txt, &color, controller->short_name);
 }
 
 static void ui_update_slot(slot_t* slot)
@@ -494,6 +526,20 @@ void ui_render()
         SDL_BlitSurface(filter_pane, 0, screen, &r);
     }
 
+    for(int i = 0; i < n_output_strips;i++){
+        ui_update_output(&output_strips[i]);
+        rect_array_layout(&layout.output.rect_array, i, &r);
+
+        SDL_BlitSurface(output_pane, 0, screen, &r);
+    }
+
+    for(int i = 0; i < n_controllers_enabled; i++){
+        ui_update_midi(&controllers_enabled[i]);
+        rect_array_layout(&layout.midi.rect_array, i, &r);
+        
+        SDL_BlitSurface(midi_pane, 0, screen, &r);
+    }
+
     SDL_Flip(screen);
 }
 
@@ -678,6 +724,14 @@ static int mouse_click_hit_slot(int index, struct xy xy)
 
 }
 
+static int mouse_click_output(int index, struct xy xy){
+    return 0;
+}
+
+static int mouse_click_midi(int index, struct xy xy){
+    return 0;
+}
+
 static int mouse_click_signal(int index, struct xy xy)
 {
     rect_t r;
@@ -718,6 +772,18 @@ static int mouse_click(struct xy xy)
 {
     struct xy offset;
     rect_t r;
+    
+    // See if click is in master pane
+    if(in_rect(&xy, &layout.master.rect, &offset)){
+        return;
+    }
+
+    // See if click is in audio pane
+    if(in_rect(&xy, &layout.audio.rect, &offset)){
+        timebase_tap(0.8);
+    }
+
+
     // See if click is in a slot
     for(int i=0; i<n_slots; i++)
     {
@@ -777,6 +843,22 @@ static int mouse_click(struct xy xy)
         rect_array_layout(&layout.filter.rect_array, i, &r);
         if(in_rect(&xy, &r, &offset)){
             return mouse_click_filter(i, offset);
+        }
+    }
+
+    // See if click is in output
+    for(int i =  0; i < n_output_strips; i++){
+        rect_array_layout(&layout.output.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return mouse_click_output(i, offset);
+        }
+    }
+
+    // See if click is in midi
+    for(int i =  0; i < n_controllers_enabled; i++){
+        rect_array_layout(&layout.midi.rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            return mouse_click_midi(i, offset);
         }
     }
 

@@ -6,7 +6,7 @@
 #include "ui/graph.h"
 #include "core/time.h"
 
-#define N_SIGNALS 3
+#define N_SIGNALS 4
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
@@ -108,6 +108,82 @@ void inp_lfo_del(signal_t * signal){
     signal->state = 0;
 }
 
+typedef struct
+{
+    float value;
+    mbeat_t last_t;
+} inp_lpf_state_t;
+
+enum inp_lpf_param_names {
+    LPF_INPUT,
+    LPF_ALPHA,
+    LPF_BETA,
+
+    N_LPF_PARAMS
+};
+
+parameter_t inp_lpf_parameters[N_LPF_PARAMS] = {
+    [LPF_INPUT] = {
+        .name = "Input",
+        .default_val = 0,
+        .val_to_str = float_to_string,
+    },
+    [LPF_ALPHA] = {
+        .name = "Rise",
+        .default_val = 0.05,
+        .val_to_str = float_to_string,
+    },
+    [LPF_BETA] = {
+        .name = "Fall",
+        .default_val = 0.05,
+        .val_to_str = float_to_string,
+    },
+};
+
+void inp_lpf_init(signal_t * signal){
+    inp_lpf_state_t * state = signal->state = malloc(sizeof(inp_lpf_state_t));
+    if(!signal->state) return;
+
+    state->value = 0.;
+    state->last_t = 0;
+
+    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
+    if(!signal->param_states){
+        free(signal->state);
+        signal->state = 0;
+        return;
+    }
+
+    for(int i = 0; i < signal->n_params; i++){
+        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
+    }
+}
+
+void inp_lpf_update(signal_t * signal, mbeat_t t){
+    inp_lpf_state_t * state = (inp_lpf_state_t *) signal->state;
+    if(!state) return;
+    float x = signal->param_states[LPF_INPUT].value;
+    float a = signal->param_states[LPF_ALPHA].value;
+    float b = signal->param_states[LPF_BETA].value;
+
+    if(x > state->value)
+        state->value = a * x + (1. - a) * state->value;
+    else
+        state->value = b * x + (1. - b) * state->value;
+
+    param_output_set(&signal->output, state->value);
+}
+
+void inp_lpf_del(signal_t * signal){
+    if(!signal->state) return;
+
+    param_output_free(&signal->output);
+    free(signal->param_states);
+    signal->param_states = 0;
+    free(signal->state);
+    signal->state = 0;
+}
+
 int n_signals = N_SIGNALS;
 signal_t signals[N_SIGNALS] = {
     {
@@ -160,7 +236,24 @@ signal_t signals[N_SIGNALS] = {
         .init = inp_lfo_init,
         .update = inp_lfo_update,
         .del = inp_lfo_del,
-    }
+    },
+    {
+        .name = "LPF 1",
+        .type = SIGNAL_LPF,
+        .default_val = 0.5,
+        .n_params = N_LPF_PARAMS,
+        .parameters = inp_lpf_parameters,
+        .color = {0.1, 0.9, 0.0, 0.0},
+        .output = {
+            .value = 0.0,
+            .handle_color = {25, 240, 0},
+            .label_color = {25, 240, 0},
+            .label = "LPF"
+        },
+        .init = inp_lpf_init,
+        .update = inp_lpf_update,
+        .del = inp_lpf_del,
+    },
 };
 
 void update_signals(mbeat_t t) {

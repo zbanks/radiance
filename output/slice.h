@@ -2,6 +2,7 @@
 #define __SLICE_H
 
 #include "core/slot.h"
+#include <SDL/SDL.h>
 
 typedef struct output_vertex
 {
@@ -16,6 +17,7 @@ typedef struct output_strip
     int id;
     int length;
     output_vertex_t* first;
+    SDL_Color color;
     int bus;
 } output_strip_t;
 

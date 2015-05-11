@@ -1,6 +1,7 @@
 #ifndef __MIDI_H
 #define __MIDI_H
 
+#include <portmidi.h>
 #include "core/parameter.h"
 #include <SDL/SDL.h>
 
@@ -43,5 +44,7 @@ void midi_attach_param(param_state_t * param);
 void midi_clear_attach();
 void midi_start();
 void midi_stop();
+
+PmError pm_errmsg(PmError err);
 
 #endif

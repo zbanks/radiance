@@ -88,5 +88,15 @@ CFGSECTION(filter,
     CFG_TXT(name, 5, 5, 12, 0, "", "white")
 )
 
+CFGSECTION(output,
+    CFG_RECT_ARRAY(, 1120, 250, 160, 45,  0,  50, 0)
+    CFG_TXT(name, 5, 5, 12, 0, "", "white")
+)
+
+CFGSECTION(midi,
+    CFG_RECT_ARRAY(, 1120, 510, 160, 45,  0,  50, 0)
+    CFG_TXT(name, 5, 5, 12, 0, "", "white")
+)
+
 #undef CFGSECTION
 #undef CFG

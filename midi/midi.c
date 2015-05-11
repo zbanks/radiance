@@ -46,6 +46,11 @@ static struct {
     long time_min;
 } collapsed_events[MIDI_BUFFER_SIZE];
 
+PmError pm_errmsg(PmError err){
+    printf("CAUGHT PM ERROR\n");
+    return err;
+}
+
 void midi_connect_param(param_state_t * param_state, unsigned char device, unsigned char event, unsigned char data1){
     printf("Connecting to midi %d %d %d\n", device, event, data1); 
     n_recent_events  = 0;
@@ -85,22 +90,8 @@ void midi_connect_param(param_state_t * param_state, unsigned char device, unsig
     param_state_connect(param_state, &ct->outputs[(int) data1]);
 }
 
-static int midi_run(void* args)
-{
+static void midi_refresh_devices(){
     PmError err;
-
-    err = Pm_Initialize();
-    if(err != pmNoError) FAIL("Could not initialize PortMIDI: %s\n", Pm_GetErrorText(err));
-
-    streams = malloc(sizeof(PortMidiStream*) * n_controllers_enabled);
-    if(!streams) FAIL("Could not allocate MIDI controller streams");
-
-    for(int i = 0; i < n_controllers_enabled; i++)
-    {
-        streams[i] = 0;
-        controllers_enabled[i].available = 0;
-    }
-
     int n = Pm_CountDevices();
     for(int i = 0; i < n; i++)
     {
@@ -134,7 +125,42 @@ _connected_device:
             printf("WARNING: Could not find MIDI device \"%s\"\n", controllers_enabled[i].name);
         }
     }
+}
 
+static int midi_check_errors(int i){
+    if(!streams[i]) return 0;
+    PmError err = Pm_HasHostError(streams[i]);
+    if(err < 0){
+        printf("MIDI Host error: %s\n", Pm_GetErrorText(err));
+
+        // Close stream  & disconnect 
+        Pm_Close(streams[i]);
+        controllers_enabled[i].available = 0;
+
+        // Refresh devices (attempt to reconnect the device that we just lost) 
+        midi_refresh_devices();
+        return 1;
+    }
+    return 0;
+}
+
+static int midi_run(void* args)
+{
+    PmError err;
+
+    err = Pm_Initialize();
+    if(err != pmNoError) FAIL("Could not initialize PortMIDI: %s\n", Pm_GetErrorText(err));
+
+    streams = malloc(sizeof(PortMidiStream*) * n_controllers_enabled);
+    if(!streams) FAIL("Could not allocate MIDI controller streams");
+
+    for(int i = 0; i < n_controllers_enabled; i++)
+    {
+        streams[i] = 0;
+        controllers_enabled[i].available = 0;
+    }
+
+    midi_refresh_devices();
     midi_setup_layout();
 
     int n_collapsed_events;
@@ -143,10 +169,11 @@ _connected_device:
     {
         for(int i = 0; i < n_controllers_enabled; i++)
         {
+            if(midi_check_errors(i)) continue;
             if(!streams[i]) continue;
             int n = Pm_Read(streams[i], events, MIDI_BUFFER_SIZE);
             if(n < 0){
-                printf("Read error!\n");
+                printf("MIDI Read error: %s\n", Pm_GetErrorText(n));
                 continue;
             }
             for(int j = 0; j < n; j++)

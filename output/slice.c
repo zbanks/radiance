@@ -48,11 +48,13 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .id = 0xFFFFFFFF,
         .length = 46,
         .first = &s1v1,
+        .color = {255,255,0},
     },
     {
         .id = 2,
         .length = 20,
         .first = &s2v1,
+        .color = {255,150,0},
     },
 };
 
