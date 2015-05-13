@@ -3,6 +3,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_thread.h>
 
+#include "waveform/waveform.h"
 #include "core/err.h"
 #include "core/audio.h"
 
@@ -52,7 +53,9 @@ void timebase_tap()
 
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
 
-    freq_mb_per_ms = (1000. - (double)error_mb) / (double)(cur_ms - pt_ms);
+    double new_freq = (1000. - (double)error_mb) / (double)(cur_ms - pt_ms);
+    double alpha = 0.25;
+    freq_mb_per_ms = alpha * new_freq + (1. - alpha) * freq_mb_per_ms;
 
     pt_ms = cur_ms;
     pt_mb = cur_mb;
@@ -63,10 +66,17 @@ void timebase_tap()
 long timebase_get()
 {
     long cur_ms = SDL_GetTicks();
+    static last_result = 0;
 
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
     long result = get_cur_mb(cur_ms);
     if(SDL_UnlockMutex(updating)) FAIL("Unable to unlock mutex: %s\n", SDL_GetError());
+
+    if((result % 1000) < (last_result % 1000)){
+        beat_lines[0] |= 4;
+    }
+
+    last_result = result;
 
     return result;
 }

@@ -5,36 +5,29 @@
 #include "output/slice.h"
 
 output_vertex_t s1v2 = {
-    .x = 0.3,
-    .y = 0.7,
-    .index = 199,
+    .x = 1.0,
+    .y = 0.4,
+    .index = 60,
     .next = 0,
 };
 
 output_vertex_t s1v1 = {
-    .x = 0.3,
-    .y = 0.3,
+    .x = -1.0,
+    .y = 0.4,
     .index = 0,
     .next = &s1v2,
 };
 
-output_vertex_t s2v3 = {
-    .x = 0.5,
-    .y = 0.7,
-    .index = 199,
+output_vertex_t s2v2 = {
+    .x = 1.0,
+    .y = -0.4,
+    .index = 60,
     .next = 0,
 };
 
-output_vertex_t s2v2 = {
-    .x = 0.7,
-    .y = 0.7,
-    .index = 99,
-    .next = &s2v3,
-};
-
 output_vertex_t s2v1 = {
-    .x = 0.7,
-    .y = 0.3,
+    .x = -1.0,
+    .y = -0.4,
     .index = 0,
     .next = &s2v2,
 };
@@ -45,14 +38,14 @@ int n_output_strips = N_OUTPUT_STRIPS;
 
 output_strip_t output_strips[N_OUTPUT_STRIPS] = {
     {
-        .id = 0xFFFFFFFF,
-        .length = 46,
+        .id = 1,
+        .length = 60,
         .first = &s1v1,
         .color = {255,255,0},
     },
     {
         .id = 2,
-        .length = 20,
+        .length = 60,
         .first = &s2v1,
         .color = {255,150,0},
     },

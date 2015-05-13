@@ -15,7 +15,7 @@ struct pattern;
 typedef void* pat_state_pt;
 typedef pat_state_pt (*pat_init_fn_pt)();
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
-typedef void (*pat_prevclick_fn_pt)(struct slot*, float x, float y);
+typedef void (*pat_prevclick_fn_pt)(struct slot* slot, float x, float y);
 typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
 typedef void (*pat_del_fn_pt)(pat_state_pt state);
 

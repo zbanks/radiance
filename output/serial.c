@@ -134,7 +134,6 @@ char lux_rx_packet(struct lux_frame *response, int timeout_ms){
     for(int j = 0; j <= timeout_ms; j++){
         for(int i = 0; i < 1100; i++)
             lux_codec();   
-        SDL_Delay(1);
         if(lux_packet_in_memory){
             //printf("rx packet @t=%d\n", j);
             break;
@@ -160,15 +159,15 @@ char lux_rx_packet(struct lux_frame *response, int timeout_ms){
 void lux_hal_enable_rx(){
     const int r = TIOCM_RTS;
     lux_is_transmitting = 0;
-    SDL_Delay(1);
-    ioctl(ser, TIOCMBIS, &r);
+    //SDL_Delay(1);
+    //ioctl(ser, TIOCMBIS, &r);
 };
 
 void lux_hal_disable_rx(){
     const int r = TIOCM_RTS;
     lux_is_transmitting = 1;
     ioctl(ser, TIOCMBIC, &r);
-    SDL_Delay(1);
+    //SDL_Delay(1);
 };
 
 void lux_hal_enable_tx(){};

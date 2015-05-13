@@ -7,11 +7,16 @@
 
 #include "core/err.h"
 #include "core/slot.h"
+#include "signals/signal.h"
+#include "timebase/timebase.h"
+#include "core/time.h"
 #include "crc.h"
 #include "lux.h"
 #include "output/output.h"
 #include "output/serial.h"
 #include "output/slice.h"
+
+#define LUX_WRITE_ONLY
 
 static int output_running;
 
@@ -23,22 +28,43 @@ static int output_run(void* args)
 {
     struct lux_frame lf;
     char r;
+    char need_delay;
+    int c = 0;
     
     while(output_running)
     {
+        mbeat_t tb = timebase_get();
+
+        update_patterns(tb);
+        update_hits(tb);
+        update_signals(tb);
+
+        need_delay = 1;
         for(int i=0; i<n_output_strips; i++)
         {
             if(output_strips[i].bus < 0)
                 continue;
 
+            need_delay = 0;
+
             output_to_buffer(&output_strips[i], output_buffers[i]);
 
             int j = 0;
+            float energy = 0.;
+            float scalar = 1.0;
+            for(int k = 0; k < output_strips[i].length; k++){
+                energy += output_buffers[i][k].r;
+                energy += output_buffers[i][k].g;
+                energy += output_buffers[i][k].b;
+            }
+            scalar = output_strips[i].length * 2.2 / energy * 255.;
+            if(scalar > 255.)
+                scalar = 255.;
 
             for(int k = 0; k < output_strips[i].length; k++){
-                lf.data.carray.data[j++] = output_buffers[i][k].r * 20;
-                lf.data.carray.data[j++] = output_buffers[i][k].g * 20;
-                lf.data.carray.data[j++] = output_buffers[i][k].b * 20;
+                lf.data.carray.data[j++] = output_buffers[i][k].r * scalar;
+                lf.data.carray.data[j++] = output_buffers[i][k].g * scalar;
+                lf.data.carray.data[j++] = output_buffers[i][k].b * scalar;
             }
             lf.data.carray.cmd = CMD_FRAME; j++;
             lf.destination = output_strips[i].id;
@@ -47,7 +73,15 @@ static int output_run(void* args)
             if((r = lux_tx_packet(&lf)))
                 printf("failed cmd: %d\n", r);
 
-            SDL_Delay(1);
+            c++;
+        }
+        if(need_delay){
+            printf("delaying output\n");
+            SDL_Delay(100);
+        }else{
+            if(c % 1000 == 0){
+                printf("output %d - %d\n", c, SDL_GetTicks());
+            }
         }
     }
     return 0;
@@ -73,6 +107,7 @@ void output_start()
         output_running = 1;
 
         for(int i=0; i<n_output_strips; i++) {
+#ifndef LUX_WRITE_ONLY
             cmd.data.carray.cmd = CMD_GET_ID;
             cmd.destination = output_strips[i].id;
             cmd.length = 1;
@@ -95,6 +130,10 @@ void output_start()
                         printf("...length mis-match! %d in file, %d from strip\n", output_strips[i].length, resp.data.ssingle_r.data);
                 }
             }
+#else
+            output_strips[i].bus = 0;
+            printf("Attached light strip 0x%08x\n", output_strips[i].id);
+#endif
         }
         output_thread = SDL_CreateThread(&output_run, 0);
         if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());

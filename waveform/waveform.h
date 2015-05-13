@@ -12,6 +12,8 @@ struct waveform_bin {
     float history[WAVEFORM_HISTORY_SIZE];
 };
 
+char beat_lines[WAVEFORM_HISTORY_SIZE];
+
 enum freq_bin_i {
     WF_HIGH,
     WF_MID,
@@ -21,6 +23,7 @@ enum freq_bin_i {
 };
 
 extern struct waveform_bin waveform_bins[];
+extern struct waveform_bin beat_bin;
 
 void waveform_init();
 void waveform_update(chunk_pt chunk);

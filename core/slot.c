@@ -59,7 +59,7 @@ void update_hits(mbeat_t t)
     if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
     for(int i=0; i < N_MAX_ACTIVE_HITS; i++)
     {
-        if(active_hits[i].hit)
+        if(active_hits[i].hit && active_hits[i].state)
         {
             if(active_hits[i].hit->update(&active_hits[i], t))
                 active_hits[i].hit->stop(&active_hits[i]);
@@ -90,6 +90,8 @@ void pat_unload(slot_t* slot)
 }
 
 void hit_load(slot_t * slot, hit_t * hit){
+    if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
+
     slot->hit = hit;
     param_state_setq(&slot->alpha, 0.);
     slot->param_states = malloc(sizeof(param_state_t) * hit->n_params);
@@ -97,11 +99,16 @@ void hit_load(slot_t * slot, hit_t * hit){
         param_state_init(&slot->param_states[i], hit->parameters[i].default_val);
     }
     //slot->state
+    
+    SDL_UnlockMutex(hits_updating);
 }
 
 void hit_unload(slot_t * slot){
+    if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
+
     if(!slot->hit) return;
     free(slot->param_states);
     //slot->state
     slot->hit = 0;
+    SDL_UnlockMutex(hits_updating);
 }

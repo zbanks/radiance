@@ -258,11 +258,17 @@ static void ui_update_audio(){
     SDL_BlitSurface(waveform_surface, 0, audio_pane, &layout.waveform.rect);
 
     mbeat_t time = timebase_get(); 
-    float phase = MB2B(time % 2000);
-    float dx = 1.0 - fabs(phase - 1.0);
-    float dy = 4 * (dx - 0.5) * (dx - 0.5);
-    int x = layout.audio.ball_x + layout.audio.ball_r + (layout.audio.ball_w - 2 * layout.audio.ball_r) * dx;
-    int y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * dy;
+    float phase = MB2B(time % 4000);
+    //float dx = 1.0 - fabs(phase - 1.0);
+    float dx = 1.0 - fabs(fmod(phase, 2.0) - 1.0);
+    float dy = 4. * (dx - 0.5) * (dx - 0.5);
+    int y;
+    if(phase < 1.)
+        y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * dy;
+    else
+        y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * (0.4 + 0.6 * dy);
+
+    int x = layout.audio.ball_x + layout.audio.ball_r + (layout.audio.ball_w - 2 * layout.audio.ball_r) * 0.5;
     filledCircleRGBA(audio_pane, x, y, layout.audio.ball_r, 255, 10, 10, 255);
     hlineRGBA(audio_pane, layout.audio.ball_x, layout.audio.ball_x + layout.audio.ball_w, layout.audio.ball_y + layout.audio.ball_h, 255, 255, 255, 255);
 
@@ -780,7 +786,7 @@ static int mouse_click(struct xy xy)
 
     // See if click is in audio pane
     if(in_rect(&xy, &layout.audio.rect, &offset)){
-        timebase_tap(0.8);
+        timebase_tap();
     }
 
 

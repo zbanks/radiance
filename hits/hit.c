@@ -46,7 +46,7 @@ color_t render_composite_hits(color_t base, float x, float y) {
     color_t result = base;
 
     for(int i=0; i < N_MAX_ACTIVE_HITS; i++) {
-        if(!active_hits[i].hit) continue;
+        if(!active_hits[i].hit || !active_hits[i].state) continue;
         color_t c = (active_hits[i].hit->render)(&active_hits[i], x, y);
         c.a *= active_hits[i].alpha;
         result.r = result.r * (1 - c.a) + c.r * c.a;
@@ -61,7 +61,7 @@ color_t render_composite_slot_hits(slot_t * slot, float x, float y) {
     color_t result = {0, 0, 0, 1.0};
 
     for(int i=0; i < N_MAX_ACTIVE_HITS; i++) {
-        if(!active_hits[i].hit) continue;
+        if(!active_hits[i].hit || !active_hits[i].state) continue;
         if(active_hits[i].slot != slot) continue;
         color_t c = (active_hits[i].hit->render)(&active_hits[i], x, y);
         //c.a *= active_hits[i].alpha;
@@ -198,30 +198,31 @@ void hit_full_stop(struct active_hit * active_hit){
 
 int hit_full_update(struct active_hit * active_hit, mbeat_t t){
     struct hit_full_state * state = active_hit->state;
+    printf("%d %f %d", state->adsr,  state->x, state->last_t);
     switch(state->adsr){
         case ADSR_WAITING: break;
         case ADSR_START:
             state->adsr = ADSR_ATTACK;
         break;
         case ADSR_ATTACK:
-            state->x += MB2B(t - state->last_t) * (state->base_alpha) / active_hit->param_values[FULL_ATTACK];
-            if(state->x >= state->base_alpha){
-                state->x = state->base_alpha;
+            state->x += MB2B(t - state->last_t) / active_hit->param_values[FULL_ATTACK];
+            if(state->x >= 1.0){
+                state->x = 1.0;
                 state->adsr = ADSR_DECAY;
             }
         break;
         case ADSR_DECAY:
-            state->x -= MB2B(t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
-            if(state->x <= (state->base_alpha * active_hit->param_values[FULL_SUSTAIN])){
-                state->x = state->base_alpha * active_hit->param_values[FULL_SUSTAIN];
+            state->x -= MB2B(t - state->last_t) * (active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
+            if(state->x <= (active_hit->param_values[FULL_SUSTAIN])){
+                state->x = active_hit->param_values[FULL_SUSTAIN];
                 state->adsr = ADSR_SUSTAIN;
             }
         break;
         case ADSR_SUSTAIN:
         break;
         case ADSR_RELEASE:
-            state->x -= MB2B(t - state->last_t) * (state->base_alpha * active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
-            if(state->x <= 0){
+            state->x -= MB2B(t - state->last_t) * (active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
+            if(state->x <= 0.){
                 state->x = 0.;
                 state->adsr = ADSR_DONE;
                 return 1;
@@ -230,6 +231,7 @@ int hit_full_update(struct active_hit * active_hit, mbeat_t t){
         case ADSR_DONE: break;
     }
     state->last_t = t;
+    printf(" - %d %f %d\n", state->adsr,  state->x, state->last_t);
     return 0;
 }
 
@@ -238,7 +240,7 @@ int hit_full_event(struct active_hit * active_hit, enum hit_event event, float e
     switch(event){
         case HITEV_NOTE_ON:
             state->adsr = ADSR_START;
-            state->base_alpha *= event_data;
+            state->base_alpha = event_data;
         break;
         case HITEV_NOTE_OFF:
             state->adsr = ADSR_RELEASE;
@@ -344,7 +346,7 @@ void hit_pulse_stop(struct active_hit * active_hit){
     free_hit(active_hit);
 }
 
-int hit_pulse_update(struct active_hit * active_hit, float abs_t){
+int hit_pulse_update(struct active_hit * active_hit, mbeat_t abs_t){
     struct hit_pulse_state * state = active_hit->state;
     if(state->start_t < 0)
         state->start_t = abs_t;
@@ -360,7 +362,7 @@ int hit_pulse_event(struct active_hit * active_hit, enum hit_event event, float 
     struct hit_pulse_state * state = active_hit->state;
     switch(event){
         case HITEV_NOTE_ON:
-            state->base_alpha *= event_data;
+            state->base_alpha = event_data;
         break;
         case HITEV_NOTE_OFF:
         break;

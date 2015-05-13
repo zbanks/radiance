@@ -21,6 +21,9 @@
 
 int main()
 {
+    patterns_updating = SDL_CreateMutex();
+    hits_updating = SDL_CreateMutex();
+
     dump_layout(&layout, "layout.ini");
     //return 0;
     //load_layout(&layout, "layout.ini");
@@ -29,21 +32,29 @@ int main()
     pat_load(&slots[0], &pat_full);
     pat_load(&slots[1], &pat_wave);
     pat_load(&slots[2], &pat_bubble);
+    pat_load(&slots[3], &pat_full);
+    pat_load(&slots[4], &pat_wave);
+    pat_load(&slots[5], &pat_bubble);
+    pat_load(&slots[6], &pat_wave);
+    pat_load(&slots[7], &pat_bubble);
 
     hit_load(&hit_slots[0], &hit_full);
     hit_load(&hit_slots[1], &hit_full);
-    hit_load(&hit_slots[2], &hit_pulse);
-    hit_load(&hit_slots[3], &hit_pulse);
+    hit_load(&hit_slots[2], &hit_full);
+    hit_load(&hit_slots[3], &hit_full);
+    hit_load(&hit_slots[4], &hit_pulse);
+    hit_load(&hit_slots[5], &hit_pulse);
+    hit_load(&hit_slots[6], &hit_pulse);
+    hit_load(&hit_slots[7], &hit_pulse);
+    for(int i = 0; i < 8; i++) param_state_setq(&hit_slots[i].alpha, 1.);
 
-    patterns_updating = SDL_CreateMutex();
-    hits_updating = SDL_CreateMutex();
 
     filters_load();
 
-    output_start();
     audio_start();
     midi_start();
     signal_start();
+    output_start();
 
     FPSmanager fps_manager;
 

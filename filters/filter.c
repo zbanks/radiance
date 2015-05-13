@@ -3,6 +3,7 @@
 #include "filters/filter.h"
 #include "filters/vamp.h"
 #include "timebase/timebase.h"
+#include "waveform/waveform.h"
 
 #define N_FILTERS 3
 
@@ -48,6 +49,7 @@ void filter_lpf_agc_update(filter_t * filter, mbeat_t UNUSED t_msec, double valu
 void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
 {
     timebase_tap();
+    waveform_add_beatline();
     //printf("Beat: %d\n", t_msec);
 }
 
@@ -96,7 +98,7 @@ filter_t filters[N_FILTERS] = {
     .del = 0,
     .state = &((struct filter_lpf_agc_state) {
         .agc_scale = 128.,
-        .agc_alpha = 0.999999,
+        .agc_alpha = 0.9999,
         .lpf_last = 0.,
         .lpf_alpha = 0.05,
     }),
