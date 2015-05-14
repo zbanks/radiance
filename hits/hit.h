@@ -66,6 +66,7 @@ extern struct active_hit preview_active_hits[];
 
 extern hit_t hit_full;
 extern hit_t hit_pulse;
+extern hit_t hit_circle;
 
 extern SDL_mutex* hits_updating;
 #endif

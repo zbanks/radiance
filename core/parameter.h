@@ -3,9 +3,6 @@
 
 #include <SDL/SDL.h>
 
-#define PVAL_STACK_SIZE 2048
-#define PVAL_STACK_DEBUG 
-
 // ---- param_state ----
 
 // Forward declarations

@@ -7,6 +7,7 @@
 #include "core/slot.h"
 #include "hits/hit.h"
 #include "util/color.h"
+#include "util/math.h"
 #include "util/siggen.h"
 #include "core/err.h"
 
@@ -15,9 +16,9 @@
 #endif
 
 
-#define N_HITS  2
+#define N_HITS  3
 
-hit_t * hits[N_HITS] = {&hit_full, &hit_pulse };
+hit_t * hits[N_HITS] = {&hit_full, &hit_pulse, &hit_circle};
 int n_hits = N_HITS;
 
 int n_active_hits = 0;
@@ -95,7 +96,7 @@ static struct active_hit * alloc_hit(hit_t * hit){
 
     ah->param_values = malloc(hit->n_params * sizeof(float));
     if(!ah->param_values) return 0;
-    memset(ah->param_values, hit->n_params * sizeof(float), 0);
+    memset(ah->param_values, 0, hit->n_params * sizeof(float));
 
     ah->hit = hit;
     n_active_hits++;
@@ -198,7 +199,6 @@ void hit_full_stop(struct active_hit * active_hit){
 
 int hit_full_update(struct active_hit * active_hit, mbeat_t t){
     struct hit_full_state * state = active_hit->state;
-    printf("%d %f %d", state->adsr,  state->x, state->last_t);
     switch(state->adsr){
         case ADSR_WAITING: break;
         case ADSR_START:
@@ -231,7 +231,6 @@ int hit_full_update(struct active_hit * active_hit, mbeat_t t){
         case ADSR_DONE: break;
     }
     state->last_t = t;
-    printf(" - %d %f %d\n", state->adsr,  state->x, state->last_t);
     return 0;
 }
 
@@ -352,7 +351,6 @@ int hit_pulse_update(struct active_hit * active_hit, mbeat_t abs_t){
         state->start_t = abs_t;
     state->x = MB2B(abs_t - state->start_t) / (active_hit->param_values[PULSE_TIME] / 2.) - 1.;
     if(state->x > 1.5){ // Wait until at least sqrt(2) so it fades out nice on the corner
-        printf("done %f\n", active_hit->param_values[PULSE_TIME]);
         return 1;
     }
     return 0;
@@ -383,11 +381,11 @@ color_t hit_pulse_pixel(struct active_hit * active_hit, float x, float y) {
     if((x == 0.) && (y == 0.)){
         a = 0;
     }else{
-        //a = (sinf(active_hit->param_values[PULSE_ANGLE]) * y + cosf(active_hit->param_values[PULSE_ANGLE]) * x) / (x * x + y * y);
-        a = (sinf(active_hit->param_values[PULSE_ANGLE]) * y + cosf(active_hit->param_values[PULSE_ANGLE]) * x); // / (x * x + y * y);
+        //a = (SIN(active_hit->param_values[PULSE_ANGLE]) * y + COS(active_hit->param_values[PULSE_ANGLE]) * x) / (x * x + y * y);
+        a = (SIN(active_hit->param_values[PULSE_ANGLE]) * y + COS(active_hit->param_values[PULSE_ANGLE]) * x); // / (x * x + y * y);
     }
     z = a - state->x;
-    color.a = state->base_alpha * (fabs(z) < active_hit->param_values[PULSE_WIDTH] ? cosf(z * M_PI / (2 * active_hit->param_values[PULSE_WIDTH])) : 0.);
+    color.a = state->base_alpha * (fabs(z) < active_hit->param_values[PULSE_WIDTH] ? COS(z * M_PI / (2 * active_hit->param_values[PULSE_WIDTH])) : 0.);
     return color;
 }
 
@@ -402,4 +400,129 @@ hit_t hit_pulse = {
     .n_params = N_PULSE_PARAMS,
     .parameters = hit_pulse_params,
     .name = "Pulse",
+};
+
+// ----- Hit: Circle -----
+//
+enum hit_circle_param_names {
+    CIRCLE_COLOR,
+    CIRCLE_TIME,
+    CIRCLE_WIDTH,
+    CIRCLE_ANGLE,
+
+    N_CIRCLE_PARAMS
+};
+
+parameter_t hit_circle_params[] = {
+    [CIRCLE_COLOR] = {
+        .name = "Color",
+        .default_val = 0.5,
+    },
+    [CIRCLE_TIME] = {
+        .name = "time",
+        .default_val = 0.5,
+        .val_to_str = power_quantize_parameter_label,
+    },
+    [CIRCLE_WIDTH] = {
+        .name = "Width",
+        .default_val = 0.3,
+    },
+    [CIRCLE_ANGLE] = {
+        .name = "Angle",
+        .default_val = 0.5,
+    },
+};
+
+struct hit_circle_state {
+    color_t color;
+    float base_alpha;
+    float start_t;
+    float x;
+};
+
+struct active_hit * hit_circle_start(slot_t * slot) {
+    if(!slot->hit) return 0;
+
+    struct active_hit * active_hit = alloc_hit(slot->hit);
+    if(!active_hit) return 0;
+
+    active_hit->state = malloc(sizeof(struct hit_circle_state));
+    if(!active_hit->state) return 0;
+    struct hit_circle_state * state = active_hit->state;
+
+    for(int i = 0; i < slot->hit->n_params; i++){
+        active_hit->param_values[i] = slot->param_states[i].value;
+    }
+
+    active_hit->param_values[CIRCLE_TIME] = 1.0 / power_quantize_parameter(active_hit->param_values[CIRCLE_TIME]);
+    active_hit->param_values[CIRCLE_WIDTH] = (active_hit->param_values[CIRCLE_WIDTH] / 2.5) + 0.05;
+    active_hit->param_values[CIRCLE_ANGLE] = (active_hit->param_values[CIRCLE_ANGLE] * 2 * M_PI) - M_PI;
+
+    state->color = param_to_color(active_hit->param_values[CIRCLE_COLOR]);
+    state->start_t = -1;
+    state->x = -1.4;
+    state->base_alpha = state->color.a;
+
+    active_hit->slot = slot;
+    active_hit->alpha = param_state_get(&slot->alpha);
+
+    return active_hit;
+}
+
+void hit_circle_stop(struct active_hit * active_hit){
+    if(active_hit->state) free(active_hit->state);
+    active_hit->state = 0;
+    free_hit(active_hit);
+}
+
+int hit_circle_update(struct active_hit * active_hit, mbeat_t abs_t){
+    struct hit_circle_state * state = active_hit->state;
+    if(state->start_t < 0)
+        state->start_t = abs_t;
+    state->x = MB2B(abs_t - state->start_t) / (active_hit->param_values[CIRCLE_TIME] / 2.) - 1.;
+    if(state->x > 0.1){ // Wait until at least sqrt(2) so it fades out nice on the corner
+        return 1;
+    }
+    return 0;
+}
+
+int hit_circle_event(struct active_hit * active_hit, enum hit_event event, float event_data){
+    struct hit_circle_state * state = active_hit->state;
+    switch(event){
+        case HITEV_NOTE_ON:
+            state->base_alpha = event_data;
+        break;
+        case HITEV_NOTE_OFF:
+        break;
+        default: break;
+    }
+    return 0;
+}
+
+void hit_circle_prevclick(slot_t * slot, float x, float y){
+
+}
+
+color_t hit_circle_pixel(struct active_hit * active_hit, float x, float y) {
+    struct hit_circle_state * state = active_hit->state;
+    color_t color = state->color;
+    float a;
+    float z;
+    a = sqrt(x * x + y * y);
+    z = a + state->x;
+    color.a = state->base_alpha * (fabs(z) < active_hit->param_values[CIRCLE_WIDTH] ? COS(z * M_PI / (2 * active_hit->param_values[CIRCLE_WIDTH])) : 0.);
+    return color;
+}
+
+
+hit_t hit_circle = {
+    .render = &hit_circle_pixel,
+    .start = &hit_circle_start,
+    .stop = &hit_circle_stop,
+    .update = &hit_circle_update,
+    .event = &hit_circle_event,
+    .prevclick = &hit_circle_prevclick,
+    .n_params = N_CIRCLE_PARAMS,
+    .parameters = hit_circle_params,
+    .name = "Circle",
 };

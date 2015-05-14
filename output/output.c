@@ -30,6 +30,7 @@ static int output_run(void* args)
     char r;
     char need_delay;
     int c = 0;
+    int last_tick;
     
     while(output_running)
     {
@@ -73,15 +74,18 @@ static int output_run(void* args)
             if((r = lux_tx_packet(&lf)))
                 printf("failed cmd: %d\n", r);
 
-            c++;
         }
+        stat_ops = c++;
+        SDL_Delay(1);
         if(need_delay){
-            printf("delaying output\n");
-            SDL_Delay(100);
-        }else{
-            if(c % 1000 == 0){
-                printf("output %d - %d\n", c, SDL_GetTicks());
-            }
+            //printf("delaying output\n");
+            SDL_Delay(10);
+        }
+        if(c % 100 == 0){
+            int t = SDL_GetTicks();
+            stat_ops = c;
+            last_tick = t;
+            printf("output %d - %d\n", c, SDL_GetTicks());
         }
     }
     return 0;

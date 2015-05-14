@@ -44,6 +44,7 @@ void midi_attach_param(param_state_t * param);
 void midi_clear_attach();
 void midi_start();
 void midi_stop();
+void midi_refresh_devices();
 
 PmError pm_errmsg(PmError err);
 

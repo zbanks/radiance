@@ -40,12 +40,12 @@ int main()
 
     hit_load(&hit_slots[0], &hit_full);
     hit_load(&hit_slots[1], &hit_full);
-    hit_load(&hit_slots[2], &hit_full);
-    hit_load(&hit_slots[3], &hit_full);
+    hit_load(&hit_slots[2], &hit_pulse);
+    hit_load(&hit_slots[3], &hit_pulse);
     hit_load(&hit_slots[4], &hit_pulse);
     hit_load(&hit_slots[5], &hit_pulse);
-    hit_load(&hit_slots[6], &hit_pulse);
-    hit_load(&hit_slots[7], &hit_pulse);
+    hit_load(&hit_slots[6], &hit_circle);
+    hit_load(&hit_slots[7], &hit_circle);
     for(int i = 0; i < 8; i++) param_state_setq(&hit_slots[i].alpha, 1.);
 
 
@@ -59,7 +59,7 @@ int main()
     FPSmanager fps_manager;
 
     SDL_initFramerate(&fps_manager);
-    SDL_setFramerate(&fps_manager, 60);
+    SDL_setFramerate(&fps_manager, 40);
 
     while(ui_poll())
     {
@@ -71,7 +71,7 @@ int main()
         update_signals(tb);
         ui_render();
 
-        SDL_framerateDelay(&fps_manager);
+        stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
     }
 
     signal_stop();

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "util/math.h"
 #include "core/slot.h"
 #include "patterns/pattern.h"
 #include "util/color.h"
@@ -157,8 +158,8 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
 
     k_mag = slot->param_states[WAVE_K_MAG].value * 2 + 0.2;
     k_ang = slot->param_states[WAVE_K_ANGLE].value * 2 * M_PI;
-    state->kx = cos(k_ang) * k_mag;
-    state->ky = sin(k_ang) * k_mag;
+    state->kx = COS(k_ang) * k_mag;
+    state->ky = SIN(k_ang) * k_mag;
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){

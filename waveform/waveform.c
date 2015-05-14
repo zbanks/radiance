@@ -1,4 +1,5 @@
 #include "waveform/waveform.h"
+#include "timebase/timebase.h"
 #include "core/audio.h"
 #include "core/time.h"
 #include "ui/graph.h"
@@ -7,15 +8,41 @@
 #include <string.h>
 #include <SDL/SDL.h>
 
+#define WF_LOW_COLOR {10, 10, 60} // dark blue
+#define WF_MID_COLOR {30, 40, 110} // blue
+#define WF_HIGH_COLOR {40, 90, 130} // light blue
+#define WF_LABEL_COLOR {30, 40, 110}
+
 struct waveform_bin waveform_bins[N_WF_BINS] = {
-    [WF_HIGH] = {
-        .color = {10, 10, 60}, // dark blue
+    [WF_LOW] = {
+        .color = WF_LOW_COLOR,
+        .output = {
+            .value = 0.,
+            .handle_color = WF_LABEL_COLOR,
+            .label_color = WF_LABEL_COLOR,
+            .label = "Lows",
+            .connected_state = 0,
+        },
     },
     [WF_MID] = {
-        .color = {30, 40, 110}, // blue
+        .color = WF_MID_COLOR,
+        .output = {
+            .value = 0.,
+            .handle_color = WF_LABEL_COLOR,
+            .label_color = WF_LABEL_COLOR,
+            .label = "Mids",
+            .connected_state = 0,
+        },
     },
-    [WF_LOW] = {
-        .color = {40, 90, 130}, // light blue
+    [WF_HIGH] = {
+        .color = WF_HIGH_COLOR,
+        .output = {
+            .value = 0.,
+            .handle_color = WF_LABEL_COLOR,
+            .label_color = WF_LABEL_COLOR,
+            .label = "Highs",
+            .connected_state = 0,
+        },
     },
 };
 
@@ -25,13 +52,15 @@ struct waveform_bin beat_bin = {
 
 void waveform_init(){
     for(int i = 0; i < N_WF_BINS; i++){
-        memset(waveform_bins[i].history, 0, sizeof(waveform_bins[i].history));
+        memset(waveform_bins[i].history, 0, sizeof(WAVEFORM_HISTORY_SIZE * sizeof(float)));
     }
-    memset(beat_bin.history, 0, sizeof(beat_bin.history));
+    memset(beat_bin.history, 0, sizeof(WAVEFORM_HISTORY_SIZE * sizeof(float)));
 }
 
-static inline void waveform_history_update(float * history, float value){
-    memmove(history + 1, history, (WAVEFORM_HISTORY_SIZE - 1) * sizeof(float));
+static inline void waveform_bin_update(struct waveform_bin * bin, float value){
+    float * history = bin->history;
+    //XXX WTF?
+    memmove(history + 1, history, (WAVEFORM_HISTORY_SIZE - 16) * sizeof(float));
     *history = value;
 }
 
@@ -40,7 +69,7 @@ void waveform_add_beatline(){
 }
 
 void waveform_update(chunk_pt chunk){
-    const float alpha = 0.990;
+    const float alpha = 0.98;
 
     float vall = 0.;
     float vhigh = 0.;
@@ -64,10 +93,15 @@ void waveform_update(chunk_pt chunk){
 
     vmid = MAX(0., vall - vlow - vhigh);
 
-    waveform_history_update(waveform_bins[WF_HIGH].history, (vlow + vmid + vhigh));
-    waveform_history_update(waveform_bins[WF_MID].history, (vlow + vmid));
-    waveform_history_update(waveform_bins[WF_LOW].history, (vlow));
-    waveform_history_update(beat_bin.history, MB2B(timebase_get() % 1000));
+    waveform_bin_update(waveform_bins[WF_LOW].history, (vlow + vmid + vhigh));
+    waveform_bin_update(waveform_bins[WF_MID].history, (vhigh + vmid));
+    waveform_bin_update(waveform_bins[WF_HIGH].history, (vhigh));
+    waveform_bin_update(beat_bin.history, MB2B(timebase_get() % 1000));
+
+    param_output_set(&waveform_bins[WF_LOW].output, vlow);
+    param_output_set(&waveform_bins[WF_MID].output, vmid);
+    param_output_set(&waveform_bins[WF_HIGH].output, vhigh);
+
     memmove(beat_lines + 1, beat_lines, (WAVEFORM_HISTORY_SIZE - 1) * sizeof(char));
     beat_lines[0] = 0;
 }

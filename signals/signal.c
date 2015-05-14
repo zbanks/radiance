@@ -3,10 +3,11 @@
 #include "patterns/pattern.h"
 #include "signals/signal.h"
 #include "util/siggen.h"
+#include "util/math.h"
 #include "ui/graph.h"
 #include "core/time.h"
 
-#define N_SIGNALS 4
+#define N_SIGNALS 5
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
@@ -32,7 +33,7 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
     [LFO_TYPE] = {
         .name = "Type",
         .default_val = 0,
-        .val_to_str = float_to_string,
+        .val_to_str = osc_quantize_parameter_label,
     },
     [LFO_FREQ] = {
         .name = "Freq",
@@ -184,6 +185,99 @@ void inp_lpf_del(signal_t * signal){
     signal->state = 0;
 }
 
+typedef struct
+{
+    float min;
+    float max;
+} inp_agc_state_t;
+
+enum inp_agc_param_names {
+    AGC_INPUT,
+    AGC_MAX,
+    AGC_MIN,
+    AGC_DECAY,
+
+    N_AGC_PARAMS
+};
+
+parameter_t inp_agc_parameters[N_AGC_PARAMS] = {
+    [AGC_INPUT] = {
+        .name = "Input",
+        .default_val = 0,
+        .val_to_str = float_to_string,
+    },
+    [AGC_MAX] = {
+        .name = "Max (1 -> x)",
+        .default_val = 1.,
+        .val_to_str = float_to_string,
+    },
+    [AGC_MIN] = {
+        .name = "Min (0 -> x)",
+        .default_val = 0.,
+        .val_to_str = float_to_string,
+    },
+    [AGC_DECAY] = {
+        .name = "AGC Decay",
+        .default_val = 0.5,
+        .val_to_str = float_to_string,
+    },
+};
+
+void inp_agc_init(signal_t * signal){
+    inp_agc_state_t * state = signal->state = malloc(sizeof(inp_lpf_state_t));
+    if(!signal->state) return;
+
+    state->min = 0.;
+    state->max = 1.;
+
+    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
+    if(!signal->param_states){
+        free(signal->state);
+        return;
+    }
+
+    for(int i = 0; i < signal->n_params; i++){
+        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
+    }
+}
+
+void inp_agc_update(signal_t * signal, mbeat_t t){
+    if(!signal->state) return;
+    inp_agc_state_t * state = (inp_lpf_state_t *) signal->state;
+
+    float x = signal->param_states[AGC_INPUT].value;
+    float min = signal->param_states[AGC_MIN].value;
+    float max = signal->param_states[AGC_MAX].value;
+    float a = signal->param_states[AGC_DECAY].value;
+    float y;
+
+    if(a < 1e-4){
+        state->max = 1.;
+        state->min = 0.;
+    }else{
+        a = a * 0.01 + 0.99;
+        state->max = MAX(state->max * a, x);
+        state->min = MIN(state->max - (state->max - state->min) * a, x);
+        x = (x - state->min) / (state->max - state->min);
+    }
+
+    if(min < max){
+        y = x * (max - min) + min;
+    }else{
+        y = (1. - x) * (min - max) + max;
+    }
+    param_output_set(&signal->output, y);
+}
+
+void inp_agc_del(signal_t * signal){
+    if(!signal->state) return;
+    param_output_free(&signal->output);
+    free(signal->param_states);
+    signal->param_states = 0;
+    free(signal->state);
+    signal->state = 0; 
+}
+
 int n_signals = N_SIGNALS;
 signal_t signals[N_SIGNALS] = {
     {
@@ -221,28 +315,28 @@ signal_t signals[N_SIGNALS] = {
         .del = inp_lfo_del,
     },
     {
-        .name = "LFO 3",
-        .type = SIGNAL_LFO,
-        .default_val = 0.5,
-        .n_params = N_LFO_PARAMS,
-        .parameters = inp_lfo_parameters,
-        .color = {0.9, 0.9, 0.0, 0.0},
-        .output = {
-            .value = 0.0,
-            .handle_color = {240, 240, 0},
-            .label_color = {240, 240, 0},
-            .label = "LFO"
-        },
-        .init = inp_lfo_init,
-        .update = inp_lfo_update,
-        .del = inp_lfo_del,
-    },
-    {
         .name = "LPF 1",
         .type = SIGNAL_LPF,
         .default_val = 0.5,
         .n_params = N_LPF_PARAMS,
         .parameters = inp_lpf_parameters,
+        .color = {0.9, 0.9, 0.0, 0.0},
+        .output = {
+            .value = 0.0,
+            .handle_color = {240, 240, 0},
+            .label_color = {240, 240, 0},
+            .label = "LPF"
+        },
+        .init = inp_lpf_init,
+        .update = inp_lpf_update,
+        .del = inp_lpf_del,
+    },
+    {
+        .name = "AGC 1",
+        .type = SIGNAL_AGC,
+        .default_val = 0.5,
+        .n_params = N_AGC_PARAMS,
+        .parameters = inp_agc_parameters,
         .color = {0.1, 0.9, 0.0, 0.0},
         .output = {
             .value = 0.0,
@@ -250,9 +344,26 @@ signal_t signals[N_SIGNALS] = {
             .label_color = {25, 240, 0},
             .label = "LPF"
         },
-        .init = inp_lpf_init,
-        .update = inp_lpf_update,
-        .del = inp_lpf_del,
+        .init = inp_agc_init,
+        .update = inp_agc_update,
+        .del = inp_agc_del,
+    },
+    {
+        .name = "AGC 2",
+        .type = SIGNAL_AGC,
+        .default_val = 0.5,
+        .n_params = N_AGC_PARAMS,
+        .parameters = inp_agc_parameters,
+        .color = {0.0, 0.8, 0.8, 0.0},
+        .output = {
+            .value = 0.0,
+            .handle_color = {0, 220, 220},
+            .label_color = {0, 220, 220},
+            .label = "LPF"
+        },
+        .init = inp_agc_init,
+        .update = inp_agc_update,
+        .del = inp_agc_del,
     },
 };
 

@@ -7,7 +7,7 @@
                   pitch_x_default, pitch_y_default) */
 
 CFGSECTION(window,
-    CFG_RECT(, 0, 0, 1300, 760)
+    CFG_RECT(, 0, 0, 1362, 764)
 )
 
 CFGSECTION(master,
@@ -32,13 +32,16 @@ CFGSECTION(hit_slot,
 
 CFGSECTION(audio,
     CFG_RECT(, 240, 30, 280, 200)
-    CFG_RECT(ball, 10, 80, 20, 40)
+    CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
-    CFG_TXT(bpm, 40, 90, 20, 0, "", "white")
+    CFG_TXT(bpm, 40, 120, 20, 0, "", "white")
+    CFG_TXT(fps, 10, 160, 20, 0, "", "white")
+    CFG_TXT(ops, 100, 160, 20, 0, "", "white")
+    CFG_RECT_ARRAY(bins, 260, 110, 15, 15, 0, 20, 0)
 )
 
 CFGSECTION(signal,
-    CFG_RECT_ARRAY(, 750, 30, 110, 200, 125, 0, 0)
+    CFG_RECT_ARRAY(, 750, 30, 110, 200, 115, 0, 0)
     CFG_TXT(name, 55, 3, 14, 2, "", "")
     CFG_RECT_ARRAY(sliders, 5, 60, 100, 32, 0, 32, 0)
 )
@@ -69,7 +72,7 @@ CFGSECTION(add_hit,
 )
 
 CFGSECTION(waveform,
-    CFG_RECT(, 5, 5, 270, 70)
+    CFG_RECT(, 5, 5, 270, 100)
     CFG(skip, INT, 5)
 )
 
@@ -79,12 +82,12 @@ CFGSECTION(graph_signal,
 )
 
 CFGSECTION(graph_filter,
-    CFG_RECT(, 5, 30, 190, 40)
+    CFG_RECT(, 5, 30, 190, 60)
     CFG(scroll_rate, INT, 50)
 )
 
 CFGSECTION(filter,
-    CFG_RECT_ARRAY(, 530, 30,  200, 80,  0,  85, 0)
+    CFG_RECT_ARRAY(, 530, 30,  200, 98,  0,  102, 0)
     CFG_TXT(name, 5, 5, 12, 0, "", "white")
 )
 

@@ -10,6 +10,7 @@ struct signal;
 enum signal_type {
     SIGNAL_LFO,
     SIGNAL_LPF,
+    SIGNAL_AGC,
 };
 
 typedef void* pat_state_pt;

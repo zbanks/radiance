@@ -277,6 +277,20 @@ static void ui_update_audio(){
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
     SDL_Color white = {255, 255, 255};
     text_render(audio_pane, signal_font, &layout.audio.bpm_txt, &white, buf);
+
+    snprintf(buf, 16, "fps: %d", stat_fps);
+    text_render(audio_pane, signal_font, &layout.audio.fps_txt, &white, buf);
+
+    snprintf(buf, 16, "ops: %d", stat_ops);
+    text_render(audio_pane, signal_font, &layout.audio.ops_txt, &white, buf);
+
+    for(int i = 0; i < N_WF_BINS; i++){
+        rect_array_layout(&layout.audio.bins_rect_array, i, &r);
+        SDL_FillRect(audio_pane, &r, SDL_MapRGB(audio_pane->format,
+                    waveform_bins[i].color.r,
+                    waveform_bins[i].color.g,
+                    waveform_bins[i].color.b));
+    }
 }
 
 static void ui_update_output(output_strip_t * output_strip){
@@ -735,6 +749,7 @@ static int mouse_click_output(int index, struct xy xy){
 }
 
 static int mouse_click_midi(int index, struct xy xy){
+    //midi_refresh_devices();
     return 0;
 }
 
@@ -768,10 +783,32 @@ static int mouse_click_filter(int index, struct xy xy){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[index].output);
             active_param_source = 0;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+static int mouse_click_audio(struct xy xy){
+    rect_t r;
+    struct xy offset;
+
+    for(int i = 0; i < N_WF_BINS; i++){
+        rect_array_layout(&layout.audio.bins_rect_array, i, &r);
+        if(in_rect(&xy, &r, &offset)){
+            if(active_param_source){
+                param_state_connect(active_param_source, &waveform_bins[i].output);
+                active_param_source = 0;
+            }
             return 1;
         }
     }
-    return 0;
+
+    if(in_rect(&xy, &layout.waveform.rect, &offset)){
+        timebase_tap();
+    }
+
+    return 1;
 }
 
 static int mouse_click(struct xy xy)
@@ -786,7 +823,7 @@ static int mouse_click(struct xy xy)
 
     // See if click is in audio pane
     if(in_rect(&xy, &layout.audio.rect, &offset)){
-        timebase_tap();
+        return mouse_click_audio(offset);
     }
 
 

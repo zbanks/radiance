@@ -84,7 +84,11 @@ void pat_load(slot_t* slot, pattern_t* pattern)
 void pat_unload(slot_t* slot)
 {
     if(!slot->pattern) return;
+    for(int i = 0; i < slot->pattern->n_params; i++){
+        param_state_disconnect(&slot->param_states[i]);
+    }
     (*slot->pattern->del)(slot->state);
+    param_state_disconnect(&slot->alpha);
     free(slot->param_states);
     slot->pattern = 0;
 }
@@ -107,8 +111,10 @@ void hit_unload(slot_t * slot){
     if(SDL_LockMutex(hits_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
 
     if(!slot->hit) return;
+    for(int i = 0; i < slot->hit->n_params; i++){
+        param_state_disconnect(&slot->param_states[i]);
+    }
     free(slot->param_states);
-    //slot->state
     slot->hit = 0;
     SDL_UnlockMutex(hits_updating);
 }

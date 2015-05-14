@@ -35,11 +35,11 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib
-LIB  = -lSDL -lSDL_ttf -lSDL_gfx -lm -lpthread -lportaudio -lvamp-hostsdk -lportmidi -lporttime
+INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib -L/usr/lib 
+LIB  = -lm -lSDL -lSDL_ttf -lSDL_gfx -lpthread -lportaudio -lvamp-hostsdk -lportmidi #-lporttime
 
 # Assembler, compiler, and linker flags
-CXXFLAGS  = -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers
+CXXFLAGS  = -g -O3 $(INC) -Wall -Wextra -Wno-missing-field-initializers
 CFLAGS = $(CXXFLAGS) -std=c99
 LFLAGS  = $(CXXFLAGS)
 

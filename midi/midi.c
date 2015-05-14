@@ -90,7 +90,7 @@ void midi_connect_param(param_state_t * param_state, unsigned char device, unsig
     param_state_connect(param_state, &ct->outputs[(int) data1]);
 }
 
-static void midi_refresh_devices(){
+void midi_refresh_devices(){
     PmError err;
     int n = Pm_CountDevices();
     for(int i = 0; i < n; i++)
@@ -101,8 +101,8 @@ static void midi_refresh_devices(){
             for(int j = 0; j < n_controllers_enabled; j++)
             {
                 if(!controllers_enabled[j].enabled) continue;
-                if(controllers_enabled[j].available) continue;
-                printf("'%s' vs '%s' %d\n", device->name, controllers_enabled[j].name, strcmp(device->name, controllers_enabled[j].name));
+                //if(controllers_enabled[j].available) continue;
+                //printf("'%s' vs '%s' %d\n", device->name, controllers_enabled[j].name, strcmp(device->name, controllers_enabled[j].name));
                 if(strcmp(device->name, controllers_enabled[j].name) == 0)
                 {
                     err = Pm_OpenInput(&streams[j], i, 0, MIDI_BUFFER_SIZE, 0, 0);
@@ -240,7 +240,7 @@ has_collapsed_event:
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                printf("Device %d event %d %d %d %li\n", i, event, data1, data2, events[j].timestamp);
+                //printf("Device %d event %d %d %d %li\n", i, event, data1, data2, events[j].timestamp);
                 struct midi_connection_table * ct;
                 ct = connection_table;
                 while(ct){
