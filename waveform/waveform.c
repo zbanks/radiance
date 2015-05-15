@@ -59,8 +59,7 @@ void waveform_init(){
 
 static inline void waveform_bin_update(struct waveform_bin * bin, float value){
     float * history = bin->history;
-    //XXX WTF?
-    memmove(history + 1, history, (WAVEFORM_HISTORY_SIZE - 16) * sizeof(float));
+    memmove(history + 1, history, (WAVEFORM_HISTORY_SIZE - 1) * sizeof(float));
     *history = value;
 }
 
@@ -93,10 +92,10 @@ void waveform_update(chunk_pt chunk){
 
     vmid = MAX(0., vall - vlow - vhigh);
 
-    waveform_bin_update(waveform_bins[WF_LOW].history, (vlow + vmid + vhigh));
-    waveform_bin_update(waveform_bins[WF_MID].history, (vhigh + vmid));
-    waveform_bin_update(waveform_bins[WF_HIGH].history, (vhigh));
-    waveform_bin_update(beat_bin.history, MB2B(timebase_get() % 1000));
+    waveform_bin_update(&waveform_bins[WF_LOW], (vlow + vmid + vhigh));
+    waveform_bin_update(&waveform_bins[WF_MID], (vhigh + vmid));
+    waveform_bin_update(&waveform_bins[WF_HIGH], (vhigh));
+    waveform_bin_update(&beat_bin, MB2B(timebase_get() % 1000));
 
     param_output_set(&waveform_bins[WF_LOW].output, vlow);
     param_output_set(&waveform_bins[WF_MID].output, vmid);
