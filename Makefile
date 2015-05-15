@@ -49,6 +49,15 @@ LFLAGS  = $(CXXFLAGS)
 %.d : %.cpp
 	@$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
+midi/midi.o: midi/midi.c
+	$(CC) -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers -std=c99 $(INC) $(LIB) -c -o $@ $<
+
+ui/ui.o: ui/ui.c
+	$(CC) -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers -std=c99 $(INC) $(LIB) -c -o $@ $<
+
+timebase/timebase.o: timebase/timebase.c
+	$(CC) -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers -std=c99 $(INC) $(LIB) -c -o $@ $<
+
 # Targets
 .PHONY: all
 all: beat-off

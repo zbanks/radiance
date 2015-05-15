@@ -95,6 +95,11 @@ void graph_render(graph_state_t* state, SDL_Color c)
 
     SDL_FillRect(graph_surface, &r, SDL_MapRGB(graph_surface->format, 20, 20, 20));
 
+    r.w = state->width;
+    r.h = state->height;
+
+    SDL_FillRect(graph_surface, &r, SDL_MapRGB(graph_surface->format, 30, 30, 30));
+
     int prevX = x_to_pixel(state, state->history[0]);
     for(int i = 1; i < state->width; i++)
     {
@@ -102,7 +107,7 @@ void graph_render(graph_state_t* state, SDL_Color c)
         int delta = 0;
         if(x > prevX) delta = 1;
         if(x < prevX) delta = -1;
-        vlineRGBA(graph_surface, i, prevX + delta, x, c.r, c.g, c.b, 255);
+        vlineRGBA(graph_surface, state->width - i, prevX + delta, x, c.r, c.g, c.b, 255);
         prevX = x;
     }
 }

@@ -9,5 +9,6 @@ extern pattern_t* patterns[];
 extern pattern_t pat_full;
 extern pattern_t pat_wave;
 extern pattern_t pat_bubble;
+extern pattern_t pat_strobe;
 
 #endif

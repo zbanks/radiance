@@ -20,7 +20,7 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
         .input_labels = nanopad2_labels,
     },
     [MIDI_NK2_2] = {
-        .name = "nanoKONTROL2 MIDI 2",
+        .name = "nanoKONTROL2 MIDI 1",
         .short_name = "nk'",
         .enabled = 1,
         .color = {150, 150, 255},

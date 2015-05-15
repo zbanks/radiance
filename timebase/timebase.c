@@ -7,7 +7,7 @@
 #include "core/err.h"
 #include "core/audio.h"
 
-#define NUDGE 25
+#define NUDGE 5
 
 int stat_fps = 0;
 int stat_ops = 0;
@@ -17,11 +17,7 @@ static long pt_ms;
 static long pt_mb;
 
 static SDL_mutex* updating;
-
-static enum {
-    MANUAL,
-    AUTOMATIC,
-} timebase_state;
+volatile int timebase_source = TB_AUTOMATIC;
 
 void timebase_init()
 {
@@ -47,7 +43,7 @@ static long get_cur_mb(long cur_ms)
     return pt_mb + (long)((double)(cur_ms - pt_ms) * freq_mb_per_ms);
 }
 
-void timebase_tap()
+void timebase_tap(double alpha)
 {
     long cur_ms = SDL_GetTicks();
 
@@ -59,7 +55,6 @@ void timebase_tap()
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
 
     double new_freq = (1000. - (double)error_mb) / (double)(cur_ms - pt_ms);
-    double alpha = 1.0;
     freq_mb_per_ms = alpha * new_freq + (1. - alpha) * freq_mb_per_ms;
 
     pt_ms = cur_ms;
@@ -89,6 +84,10 @@ long timebase_get()
 float timebase_get_bpm()
 {
     return freq_mb_per_ms * 60;
+}
+
+void timebase_align(){
+    pt_mb += 1000;
 }
 
 // (mb/ms) * (1000 b / mb) * (s / 1000 ms) * (60 m /s) = 60 (mb / ms) / bpm

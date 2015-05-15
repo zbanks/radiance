@@ -4,6 +4,7 @@
 
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_timer.h>
+#include <SDL/SDL_framerate.h>
 
 #include "core/err.h"
 #include "core/slot.h"
@@ -31,6 +32,10 @@ static int output_run(void* args)
     char need_delay;
     int c = 0;
     int last_tick;
+    FPSmanager fps_manager;
+
+    SDL_initFramerate(&fps_manager);
+    SDL_setFramerate(&fps_manager, 100);
     
     while(output_running)
     {
@@ -58,7 +63,7 @@ static int output_run(void* args)
                 energy += output_buffers[i][k].g;
                 energy += output_buffers[i][k].b;
             }
-            scalar = output_strips[i].length * 2.2 / energy * 255.;
+            scalar = output_strips[i].length * 2.0 / energy * 255.;
             if(scalar > 255.)
                 scalar = 255.;
 
@@ -75,6 +80,7 @@ static int output_run(void* args)
                 printf("failed cmd: %d\n", r);
 
         }
+        /*
         stat_ops = c++;
         SDL_Delay(1);
         if(need_delay){
@@ -87,6 +93,8 @@ static int output_run(void* args)
             last_tick = t;
             printf("output %d - %d\n", c, SDL_GetTicks());
         }
+        */
+        stat_ops = 1000. / SDL_framerateDelay(&fps_manager);
     }
     return 0;
 }

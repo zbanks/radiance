@@ -163,9 +163,16 @@ void inp_lpf_init(signal_t * signal){
 void inp_lpf_update(signal_t * signal, mbeat_t t){
     inp_lpf_state_t * state = (inp_lpf_state_t *) signal->state;
     if(!state) return;
+    if(!state->last_t) state->last_t = t;
     float x = signal->param_states[LPF_INPUT].value;
     float a = signal->param_states[LPF_ALPHA].value;
     float b = signal->param_states[LPF_BETA].value;
+    if(state->last_t + 10 < t){
+        a = 1.;
+        b = 1.;
+    }else{
+        state->last_t += 10;
+    }
 
     if(x > state->value)
         state->value = a * x + (1. - a) * state->value;
@@ -189,6 +196,7 @@ typedef struct
 {
     float min;
     float max;
+    mbeat_t last_t;
 } inp_agc_state_t;
 
 enum inp_agc_param_names {
@@ -250,6 +258,11 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
     float max = signal->param_states[AGC_MAX].value;
     float a = signal->param_states[AGC_DECAY].value;
     float y;
+    if(state->last_t + 10 < t){
+        a = 1.;
+    }else{
+        state->last_t += 10;
+    }
 
     if(a < 1e-4){
         state->max = 1.;

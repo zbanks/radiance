@@ -21,7 +21,7 @@ void ui_waveform_render(){
     rect_t r;
     rect_origin(&layout.waveform.rect, &r);
 
-    SDL_FillRect(waveform_surface, &r, SDL_MapRGB(waveform_surface->format, 20, 20, 20));
+    SDL_FillRect(waveform_surface, &r, SDL_MapRGB(waveform_surface->format, 30, 30, 30));
 #define MAX(a, b) ((a > b) ? a : b)
     int h;
     SDL_Color c;
@@ -37,7 +37,7 @@ void ui_waveform_render(){
                 x = MAX(x, history[i * skip + k]);
             }
             h = x * layout.waveform.h;
-            vlineRGBA(waveform_surface, i, (layout.waveform.h + h) / 2, (layout.waveform.h - h) / 2, c.r, c.g, c.b, 255);
+            vlineRGBA(waveform_surface, layout.waveform.w - i, (layout.waveform.h + h) / 2, (layout.waveform.h - h) / 2, c.r, c.g, c.b, 255);
         }
     }
     /*
@@ -56,11 +56,11 @@ void ui_waveform_render(){
             l = l | beat_lines[i * skip + k];
         }
         if(l & 1)
-            vlineRGBA(waveform_surface, i, layout.waveform.y, layout.waveform.h, 128, 255, 0, 200);
+            vlineRGBA(waveform_surface, layout.waveform.w - i, layout.waveform.y, layout.waveform.h, 128, 255, 0, 200);
         if(l & 2)
-            vlineRGBA(waveform_surface, i, layout.waveform.y, layout.waveform.h, 255, 128, 0, 200);
+            vlineRGBA(waveform_surface, layout.waveform.w - i, layout.waveform.y, layout.waveform.h, 255, 128, 0, 200);
         if(l & 4)
-            vlineRGBA(waveform_surface, i, layout.waveform.y, layout.waveform.h, 255, 0, 0, 200);
+            vlineRGBA(waveform_surface, layout.waveform.w - i, layout.waveform.y, layout.waveform.h, 255, 0, 0, 200);
          
     }
 }

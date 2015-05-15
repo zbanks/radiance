@@ -32,6 +32,7 @@ CFGSECTION(hit_slot,
 
 CFGSECTION(audio,
     CFG_RECT(, 240, 30, 280, 200)
+    CFG_RECT(auto, 190, 125, 10, 10)
     CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
     CFG_TXT(bpm, 40, 120, 20, 0, "", "white")

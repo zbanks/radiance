@@ -291,6 +291,11 @@ static void ui_update_audio(){
                     waveform_bins[i].color.g,
                     waveform_bins[i].color.b));
     }
+
+    if(timebase_source == TB_AUTOMATIC)
+        boxRGBA(audio_pane, layout.audio.auto_x, layout.audio.auto_y, layout.audio.auto_x + layout.audio.auto_w, layout.audio.auto_y + layout.audio.auto_h, 10, 255, 10, 255);
+    else
+        boxRGBA(audio_pane, layout.audio.auto_x, layout.audio.auto_y, layout.audio.auto_x + layout.audio.auto_w, layout.audio.auto_y + layout.audio.auto_h, 255, 10, 10, 255);
 }
 
 static void ui_update_output(output_strip_t * output_strip){
@@ -805,7 +810,19 @@ static int mouse_click_audio(struct xy xy){
     }
 
     if(in_rect(&xy, &layout.waveform.rect, &offset)){
-        timebase_tap();
+        timebase_tap(0.3);
+    }
+
+    if(in_rect(&xy, &layout.audio.ball_rect, &offset)){
+        printf("ball clicked\n");
+        timebase_align();
+    }
+
+    if(in_rect(&xy, &layout.audio.auto_rect, &offset)){
+        if(timebase_source == TB_AUTOMATIC)
+            timebase_source = TB_MANUAL;
+        else 
+            timebase_source = TB_AUTOMATIC;
     }
 
     return 1;

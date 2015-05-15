@@ -11,10 +11,11 @@
 #include "midi/layout.h"
 #include "core/parameter.h"
 #include "ui/ui.h"
+#include "util/math.h"
 
-#define MIDI_BUFFER_SIZE 64
-#define MIN(x, y) ((x > y) ? y : x)
-#define MAX(x, y) ((x > y) ? x : y)
+#define MIDI_BUFFER_SIZE 256
+//#define MIN(x, y) ((x > y) ? y : x)
+//#define MAX(x, y) ((x > y) ? x : y)
 
 #define MIDI_SELECT_DATA_THRESHOLD 32  // 1/4  of the range
 #define MIDI_SELECT_RATIO_THRESHOLD 0.15
@@ -101,7 +102,7 @@ void midi_refresh_devices(){
             for(int j = 0; j < n_controllers_enabled; j++)
             {
                 if(!controllers_enabled[j].enabled) continue;
-                //if(controllers_enabled[j].available) continue;
+                if(controllers_enabled[j].available) continue;
                 //printf("'%s' vs '%s' %d\n", device->name, controllers_enabled[j].name, strcmp(device->name, controllers_enabled[j].name));
                 if(strcmp(device->name, controllers_enabled[j].name) == 0)
                 {
@@ -138,7 +139,7 @@ static int midi_check_errors(int i){
         controllers_enabled[i].available = 0;
 
         // Refresh devices (attempt to reconnect the device that we just lost) 
-        midi_refresh_devices();
+        //midi_refresh_devices();
         return 1;
     }
     return 0;
@@ -240,7 +241,7 @@ has_collapsed_event:
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                //printf("Device %d event %d %d %d %li\n", i, event, data1, data2, events[j].timestamp);
+                printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, events[j].timestamp, n_recent_events);
                 struct midi_connection_table * ct;
                 ct = connection_table;
                 while(ct){

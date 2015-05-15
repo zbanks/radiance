@@ -103,6 +103,8 @@ int quantize_parameter(quant_labels_t l, float p){
 }
 
 static quant_labels_t power_quant_labels = {
+    "1 / 32",
+    "1 / 16",
     "1 / 8",
     "1 / 4",
     "1 / 2",
@@ -120,5 +122,5 @@ void power_quantize_parameter_label(float val, char * buf, int n){
 
 float power_quantize_parameter(float p){
     int v = quantize_parameter(power_quant_labels, p);
-    return powf(2, v) / 8.0;
+    return powf(2, v) / 32.0;
 }

@@ -173,7 +173,7 @@ struct active_hit * hit_full_start(slot_t * slot) {
         active_hit->param_values[i] = slot->param_states[i].value;
     }
 
-    active_hit->param_values[FULL_SUSTAIN] = (active_hit->param_values[FULL_SUSTAIN] * 0.95) + 0.05;
+    active_hit->param_values[FULL_SUSTAIN] = (active_hit->param_values[FULL_SUSTAIN] * 1.0) + 0.00;
     active_hit->param_values[FULL_ATTACK] = (active_hit->param_values[FULL_ATTACK] / 2.5) + 0.05;
     active_hit->param_values[FULL_DECAY] = (active_hit->param_values[FULL_DECAY] / 5.0) + 0.05;
     active_hit->param_values[FULL_RELEASE] = (active_hit->param_values[FULL_RELEASE] / 1.0) + 0.05;
@@ -212,7 +212,7 @@ int hit_full_update(struct active_hit * active_hit, mbeat_t t){
             }
         break;
         case ADSR_DECAY:
-            state->x -= MB2B(t - state->last_t) * (active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
+            state->x -= MB2B(t - state->last_t) * (1. - active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
             if(state->x <= (active_hit->param_values[FULL_SUSTAIN])){
                 state->x = active_hit->param_values[FULL_SUSTAIN];
                 state->adsr = ADSR_SUSTAIN;
@@ -221,7 +221,7 @@ int hit_full_update(struct active_hit * active_hit, mbeat_t t){
         case ADSR_SUSTAIN:
         break;
         case ADSR_RELEASE:
-            state->x -= MB2B(t - state->last_t) * (active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
+            state->x -= MB2B(t - state->last_t) * (1. - active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
             if(state->x <= 0.){
                 state->x = 0.;
                 state->adsr = ADSR_DONE;
@@ -408,7 +408,6 @@ enum hit_circle_param_names {
     CIRCLE_COLOR,
     CIRCLE_TIME,
     CIRCLE_WIDTH,
-    CIRCLE_ANGLE,
 
     N_CIRCLE_PARAMS
 };
@@ -426,10 +425,6 @@ parameter_t hit_circle_params[] = {
     [CIRCLE_WIDTH] = {
         .name = "Width",
         .default_val = 0.3,
-    },
-    [CIRCLE_ANGLE] = {
-        .name = "Angle",
-        .default_val = 0.5,
     },
 };
 
@@ -456,7 +451,6 @@ struct active_hit * hit_circle_start(slot_t * slot) {
 
     active_hit->param_values[CIRCLE_TIME] = 1.0 / power_quantize_parameter(active_hit->param_values[CIRCLE_TIME]);
     active_hit->param_values[CIRCLE_WIDTH] = (active_hit->param_values[CIRCLE_WIDTH] / 2.5) + 0.05;
-    active_hit->param_values[CIRCLE_ANGLE] = (active_hit->param_values[CIRCLE_ANGLE] * 2 * M_PI) - M_PI;
 
     state->color = param_to_color(active_hit->param_values[CIRCLE_COLOR]);
     state->start_t = -1;

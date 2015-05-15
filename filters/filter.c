@@ -48,9 +48,10 @@ void filter_lpf_agc_update(filter_t * filter, mbeat_t UNUSED t_msec, double valu
 
 void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
 {
-    timebase_tap();
+    if(timebase_source == TB_AUTOMATIC){
+        timebase_tap(0.95);
+    }
     waveform_add_beatline();
-    //printf("Beat: %d\n", t_msec);
 }
 
 

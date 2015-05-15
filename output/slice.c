@@ -4,35 +4,51 @@
 #include "core/slot.h"
 #include "output/slice.h"
 
+#define SP 0.1
+
 output_vertex_t s1v2 = {
-    .x = 1.0,
-    .y = 0.4,
+    .x = -1.0,
+    .y = SP,
     .index = 60,
     .next = 0,
 };
 
 output_vertex_t s1v1 = {
-    .x = -1.0,
-    .y = 0.4,
+    .x = 0.9,
+    .y = SP,
     .index = 0,
     .next = &s1v2,
 };
 
 output_vertex_t s2v2 = {
-    .x = 1.0,
-    .y = -0.4,
+    .x = -1.0,
+    .y = -SP,
     .index = 60,
     .next = 0,
 };
 
 output_vertex_t s2v1 = {
-    .x = -1.0,
-    .y = -0.4,
+    .x = 0.9,
+    .y = -SP,
     .index = 0,
     .next = &s2v2,
 };
 
-#define N_OUTPUT_STRIPS 2
+output_vertex_t s3v2 = {
+    .x = 0.9,
+    .y = 1.0,
+    .index = 60,
+    .next = 0,
+};
+
+output_vertex_t s3v1 = {
+    .x = 0.9,
+    .y = -0.45,
+    .index = 0,
+    .next = &s3v2,
+};
+
+#define N_OUTPUT_STRIPS 4
 
 int n_output_strips = N_OUTPUT_STRIPS;
 
@@ -48,6 +64,18 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .length = 60,
         .first = &s2v1,
         .color = {255,150,0},
+    },
+    {
+        .id = 4,
+        .length = 60,
+        .first = &s3v1,
+        .color = {150,255,0},
+    },
+    {
+        .id = 8,
+        .length = 60,
+        .first = &s3v1,
+        .color = {150,255,0},
     },
 };
 

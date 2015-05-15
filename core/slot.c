@@ -88,7 +88,7 @@ void pat_unload(slot_t* slot)
         param_state_disconnect(&slot->param_states[i]);
     }
     (*slot->pattern->del)(slot->state);
-    param_state_disconnect(&slot->alpha);
+    //param_state_disconnect(&slot->alpha);
     free(slot->param_states);
     slot->pattern = 0;
 }
