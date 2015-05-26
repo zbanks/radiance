@@ -163,7 +163,7 @@ void lux_hal_enable_rx(){
     SDL_Delay(1);
     ioctl(ser, TIOCMBIS, &r);
 #endif
-};
+}
 
 void lux_hal_disable_rx(){
     const int r = TIOCM_RTS;
@@ -172,10 +172,10 @@ void lux_hal_disable_rx(){
 #ifndef LUX_WRITE_ONLY
     SDL_Delay(1);
 #endif
-};
+}
 
-void lux_hal_enable_tx(){};
-void lux_hal_disable_tx(){};
+void lux_hal_enable_tx(){}
+void lux_hal_disable_tx(){}
 
 int16_t lux_hal_bytes_to_read(){
     int bytes_avail;

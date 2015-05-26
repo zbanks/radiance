@@ -13,9 +13,6 @@ enum signal_type {
     SIGNAL_AGC,
 };
 
-typedef void* pat_state_pt;
-typedef pat_state_pt (*pat_init_fn_pt)();
-
 typedef void * inp_state_pt;
 typedef void (*inp_init_fn_pt)(struct signal * signal);
 typedef void (*inp_update_fn_pt)(struct signal * signal, mbeat_t t);
