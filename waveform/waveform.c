@@ -80,7 +80,7 @@ void waveform_update(chunk_pt chunk){
 
 #define MAX(a, b) ((a > b) ? a : b)
 #define LB1 1.0
-#define LB2 0.5
+#define LB2 0.1
 //#define LA2 0.9914878835315175  // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 60Hz
 //#define LA2 0.9719069870254697  // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 200Hz
 #define LA2 0.96
@@ -90,7 +90,9 @@ void waveform_update(chunk_pt chunk){
 #define HA2 0.6521846367685737 // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 3000Hz
 #define HN  ((1. + LA2) / 2.) * 2
 
+
     for(int i = 0; i < FRAMES_PER_BUFFER; i++){
+        chunk[i] *= 3.;
         vall = MAX(vall, fabs(chunk[i]));
 
         //slow = slow * alpha + chunk[i] * (1 - alpha);
