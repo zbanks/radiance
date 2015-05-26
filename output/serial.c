@@ -112,7 +112,7 @@ char lux_tx_packet(struct lux_frame *cmd){
     if(!cmd)
         return -30;
 
-    *(uint32_t*)lux_destination = cmd->destination;
+    memcpy(lux_destination, &cmd->destination, sizeof(cmd->destination));
     if(cmd->length > LUX_PACKET_MAX_SIZE)
         return -31;
     lux_packet_length = cmd->length;
@@ -149,7 +149,7 @@ char lux_rx_packet(struct lux_frame *response, int timeout_ms){
         return -41;
 
     response->length = lux_packet_length;
-    response->destination = *(uint32_t *) lux_destination;
+    memcpy(&response->destination, lux_destination, sizeof(response->destination));
     memset(&response->data, 0, LUX_PACKET_MAX_SIZE);
     memcpy(&response->data, lux_packet, lux_packet_length);
 
@@ -157,17 +157,21 @@ char lux_rx_packet(struct lux_frame *response, int timeout_ms){
 }
 
 void lux_hal_enable_rx(){
-    const int r = TIOCM_RTS;
     lux_is_transmitting = 0;
-    //SDL_Delay(1);
-    //ioctl(ser, TIOCMBIS, &r);
+#ifndef LUX_WRITE_ONLY
+    const int r = TIOCM_RTS;
+    SDL_Delay(1);
+    ioctl(ser, TIOCMBIS, &r);
+#endif
 };
 
 void lux_hal_disable_rx(){
     const int r = TIOCM_RTS;
     lux_is_transmitting = 1;
     ioctl(ser, TIOCMBIC, &r);
-    //SDL_Delay(1);
+#ifndef LUX_WRITE_ONLY
+    SDL_Delay(1);
+#endif
 };
 
 void lux_hal_enable_tx(){};
@@ -181,7 +185,8 @@ int16_t lux_hal_bytes_to_read(){
 
 uint8_t lux_hal_read_byte(){
     uint8_t byte = 0;
-    read(ser, &byte, 1);
+    if(!read(ser, &byte, 1))
+        printf("Error writing byte to serial port\n");
     return byte;
 }
 
@@ -190,7 +195,8 @@ int16_t lux_hal_bytes_to_write(){
 }
 
 void lux_hal_write_byte(uint8_t byte){
-    write(ser, &byte, 1);
+    if(!write(ser, &byte, 1))
+        printf("Error writing byte to serial port\n");
 }
 
 uint8_t lux_hal_tx_flush(){

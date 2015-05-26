@@ -39,7 +39,7 @@ INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib -L/usr/lib
 LIB  = -lm -lSDL -lSDL_ttf -lSDL_gfx -lpthread -lportaudio -lvamp-hostsdk -lportmidi #-lporttime
 
 # Assembler, compiler, and linker flags
-CXXFLAGS  = -g -O3 $(INC) -Wall -Wextra -Wno-missing-field-initializers
+CXXFLAGS  = -g -O3 $(INC) -Wall -Wextra -DLUX_WRITE_ONLY
 CFLAGS = $(CXXFLAGS) -std=c99
 LFLAGS  = $(CXXFLAGS)
 
@@ -49,14 +49,16 @@ LFLAGS  = $(CXXFLAGS)
 %.d : %.cpp
 	@$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
+ui/layout.o: ui/layout.c
+	$(CC) $(CFLAGS) -Wno-missing-field-initializers $(INC) $(LIB) -c -o $@ $<
 midi/midi.o: midi/midi.c
-	$(CC) -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers -std=c99 $(INC) $(LIB) -c -o $@ $<
+	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
 
 ui/ui.o: ui/ui.c
-	$(CC) -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers -std=c99 $(INC) $(LIB) -c -o $@ $<
+	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
 
 timebase/timebase.o: timebase/timebase.c
-	$(CC) -g -O0 $(INC) -Wall -Wextra -Wno-missing-field-initializers -std=c99 $(INC) $(LIB) -c -o $@ $<
+	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
 
 # Targets
 .PHONY: all

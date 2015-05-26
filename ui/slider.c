@@ -37,7 +37,7 @@ void slider_del()
 void slider_render_alpha(param_state_t* state)
 {
     param_output_t * param_output = param_state_output(state);
-    SDL_Color handle_color = {0, 0, 80};
+    SDL_Color handle_color = {0, 0, 80, 255};
     SDL_Rect r;
 
     if(param_output){
@@ -61,8 +61,8 @@ void slider_render_alpha(param_state_t* state)
 void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
 {
     param_output_t * param_output = param_state_output(state);
-    SDL_Color handle_color = {0, 0, 80};
-    SDL_Color white = {255, 255, 255};
+    SDL_Color handle_color = {0, 0, 80, 255};
+    SDL_Color white = {255, 255, 255, 255};
 
     SDL_Rect r;
     SDL_FillRect(slider_surface, &layout.slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));

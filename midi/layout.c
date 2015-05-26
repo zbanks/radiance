@@ -38,7 +38,7 @@ int midi_handle_note_event(struct midi_event * event){
     if(controllers_enabled[MIDI_NP2_1].available){
         for(int i = 0; i < 16; i++){
             if((np2_map[i].device == event->device) && (np2_map[i].data1 == event->data1)){
-                printf("Hit found %d %d %x\n", i, np2_map[i].slot_index, np2_map[i].active_hit);
+                printf("Hit found %d %d %p\n", i, np2_map[i].slot_index, np2_map[i].active_hit);
                 if((event->event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_ON){
                     if(np2_map[i].active_hit){
                         np2_map[i].active_hit->hit->event(np2_map[i].active_hit, HITEV_NOTE_OFF, 0.);

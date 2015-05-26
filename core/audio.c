@@ -21,8 +21,9 @@ static SDL_Thread* audio_thread;
 
 static float chunk[NUM_CHANNELS * FRAMES_PER_BUFFER];
 
-static int audio_run(void* UNUSED args)
+static int audio_run(void* args)
 {
+    UNUSED(args);
     PaStreamParameters inputParameters;
     PaStream *stream = NULL;
     PaError err;
@@ -56,7 +57,6 @@ static int audio_run(void* UNUSED args)
 
         // Do chunk things here
         filters_update(chunk);
-        timebase_update(chunk);
         waveform_update(chunk);
     }
 

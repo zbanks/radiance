@@ -11,7 +11,7 @@ char serial_init();
 void serial_close();
 
 struct lux_frame {
-    int destination;
+    uint32_t destination;
     int length;
     union lux_command_frame data;
 };

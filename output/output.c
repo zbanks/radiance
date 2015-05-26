@@ -17,8 +17,6 @@
 #include "output/serial.h"
 #include "output/slice.h"
 
-#define LUX_WRITE_ONLY
-
 static int output_running;
 
 color_t** output_buffers = 0;
@@ -27,11 +25,9 @@ static SDL_Thread* output_thread;
 
 static int output_run(void* args)
 {
+    UNUSED(args);
     struct lux_frame lf;
     char r;
-    char need_delay;
-    int c = 0;
-    int last_tick;
     FPSmanager fps_manager;
 
     SDL_initFramerate(&fps_manager);
@@ -45,13 +41,10 @@ static int output_run(void* args)
         update_hits(tb);
         update_signals(tb);
 
-        need_delay = 1;
         for(int i=0; i<n_output_strips; i++)
         {
             if(output_strips[i].bus < 0)
                 continue;
-
-            need_delay = 0;
 
             output_to_buffer(&output_strips[i], output_buffers[i]);
 
@@ -143,18 +136,23 @@ void output_start()
                 }
             }
 #else
+            UNUSED(cmd);
+            UNUSED(resp);
+            UNUSED(r);
             output_strips[i].bus = 0;
             printf("Attached light strip 0x%08x\n", output_strips[i].id);
 #endif
         }
-        output_thread = SDL_CreateThread(&output_run, 0);
-        if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
     }else{
         printf("No serial initialized\n");
         for(int i = 0; i < n_output_strips; i++){
             output_strips[i].bus = -1;
         }
     }
+
+    // Create output thread to run updates even if no serial was init'd
+    output_thread = SDL_CreateThread(&output_run, 0);
+    if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
 }
 
 void output_stop()

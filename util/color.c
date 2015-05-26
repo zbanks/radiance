@@ -14,7 +14,8 @@ uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
 SDL_Color color_to_SDL(color_t color){
     return (SDL_Color) {(uint8_t) roundf(255 * color.r),
                         (uint8_t) roundf(255 * color.g),
-                        (uint8_t) roundf(255 * color.b)};
+                        (uint8_t) roundf(255 * color.b),
+                        (uint8_t) roundf(255 * color.a)};
 }
 
 

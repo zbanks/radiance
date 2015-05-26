@@ -7,7 +7,7 @@
 
 void text_render(SDL_Surface * surface, TTF_Font * font, struct txt * params, const SDL_Color * color, const char * text){
     SDL_Surface* msg;
-    SDL_Color white = {0,0,0};
+    SDL_Color white = {0,0,0,255};
     rect_t r;
 
     if(color){

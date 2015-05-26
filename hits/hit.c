@@ -89,11 +89,15 @@ static struct active_hit * alloc_hit(hit_t * hit){
         for(int i = 0; i < N_MAX_ACTIVE_HITS; i++){
             if(!active_hits[i].hit){
                 ah = &active_hits[i];
-                break;
+                goto _found_hit;
             }
         }
+        // No empty space in `active_hits`
+        // This segment shouldn't be reached because of the check above
+        return 0;
     }
 
+_found_hit:
     ah->param_values = malloc(hit->n_params * sizeof(float));
     if(!ah->param_values) return 0;
     memset(ah->param_values, 0, hit->n_params * sizeof(float));
@@ -105,7 +109,6 @@ static struct active_hit * alloc_hit(hit_t * hit){
 }
 
 static void free_hit(struct active_hit * active_hit){
-    int i;
     if(!active_hit || !active_hit->hit) return;
 
     free(active_hit->param_values);
@@ -250,10 +253,15 @@ int hit_full_event(struct active_hit * active_hit, enum hit_event event, float e
 }
 
 void hit_full_prevclick(slot_t * slot, float x, float y){
-
+    UNUSED(slot);
+    UNUSED(x);
+    UNUSED(y);
 }
 
 color_t hit_full_pixel(struct active_hit * active_hit, float x, float y) {
+    UNUSED(x);
+    UNUSED(y);
+
     struct hit_full_state * state = active_hit->state;
     color_t color = state->color;
     color.a = state->base_alpha * state->x;
@@ -370,7 +378,9 @@ int hit_pulse_event(struct active_hit * active_hit, enum hit_event event, float 
 }
 
 void hit_pulse_prevclick(slot_t * slot, float x, float y){
-
+    UNUSED(slot);
+    UNUSED(x);
+    UNUSED(y);
 }
 
 color_t hit_pulse_pixel(struct active_hit * active_hit, float x, float y) {
@@ -494,7 +504,9 @@ int hit_circle_event(struct active_hit * active_hit, enum hit_event event, float
 }
 
 void hit_circle_prevclick(slot_t * slot, float x, float y){
-
+    UNUSED(slot);
+    UNUSED(x);
+    UNUSED(y);
 }
 
 color_t hit_circle_pixel(struct active_hit * active_hit, float x, float y) {

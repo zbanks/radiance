@@ -34,9 +34,12 @@ void timebase_del()
     SDL_DestroyMutex(updating);
 }
 
+/* DELETEME
 void timebase_update(chunk_pt chunk)
 {
+    UNUSED(chunk);
 }
+*/
 
 static long get_cur_mb(long cur_ms)
 {
@@ -66,7 +69,7 @@ void timebase_tap(double alpha)
 long timebase_get()
 {
     long cur_ms = SDL_GetTicks();
-    static last_result = 0;
+    static int last_result = 0;
 
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
     long result = get_cur_mb(cur_ms);

@@ -145,12 +145,13 @@ static uint8_t cobs_encode_and_send(uint8_t byte)
     }
     else
     {
-        cobs_buffer[cobs_encoder_fill_ptr++]=byte;
-    }
-    if(cobs_encoder_fill_ptr == 256)
-    {
-        cobs_encoder_fill_ptr = 255;
-        goto write;
+        //TODO: Needs testing
+        //XXX cobs_encoder_fill_ptr probably needs to get reset?
+        cobs_buffer[cobs_encoder_fill_ptr]=byte;
+        if(cobs_encoder_fill_ptr == 255){
+            goto write;
+        }
+        cobs_encoder_fill_ptr++;
     }
     return 1;
 

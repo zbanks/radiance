@@ -44,7 +44,7 @@ typedef struct hit {
     char * name;
 } hit_t;
 
-struct active_hit {
+struct active_hit { // Needs a lock
     struct hit * hit;
     struct slot * slot;
 

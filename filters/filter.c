@@ -16,7 +16,8 @@ struct filter_lpf_agc_state {
     double lpf_alpha;
 };
 
-void filter_diodelpf_agc_update(filter_t * filter, mbeat_t UNUSED t_msec, double value){
+void filter_diodelpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
+    UNUSED(t_msec);
     struct filter_lpf_agc_state * state = filter->state;
 
     state->agc_scale *= state->agc_alpha;
@@ -30,7 +31,8 @@ void filter_diodelpf_agc_update(filter_t * filter, mbeat_t UNUSED t_msec, double
     param_output_set(&filter->output, value / state->agc_scale);
 }
 
-void filter_lpf_agc_update(filter_t * filter, mbeat_t UNUSED t_msec, double value){
+void filter_lpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
+    UNUSED(t_msec);
     struct filter_lpf_agc_state * state = filter->state;
 
     state->agc_scale *= state->agc_alpha;
@@ -48,6 +50,10 @@ void filter_lpf_agc_update(filter_t * filter, mbeat_t UNUSED t_msec, double valu
 
 void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
 {
+    UNUSED(filter);
+    UNUSED(t_msec);
+    UNUSED(value);
+
     if(timebase_source == TB_AUTOMATIC){
         timebase_tap(0.95);
     }
@@ -62,11 +68,11 @@ filter_t filters[N_FILTERS] = {
     .parameters = 0,
     .name = "Onset Detection",
     .display = 1,
-    .color = {255, 0, 255},
+    .color = {255, 0, 255, 255},
     .output = {
             .value = 0.0,
-            .handle_color = {255, 0, 255},
-            .label_color = {255, 0, 255},
+            .handle_color = {255, 0, 255, 255},
+            .label_color = {255, 0, 255, 255},
             .label = "ODF",
         },
     .init = 0,
@@ -87,11 +93,11 @@ filter_t filters[N_FILTERS] = {
     .parameters = 0,
     .name = "Fundamental Freq",
     .display = 1,
-    .color = {128, 0, 255},
+    .color = {128, 0, 255, 0},
     .output = {
             .value = 0.0,
-            .handle_color = {128, 0, 255},
-            .label_color = {128, 0, 255},
+            .handle_color = {128, 0, 255, 255},
+            .label_color = {128, 0, 255, 255},
             .label = "F0",
         },
     .init = 0,
@@ -114,8 +120,8 @@ filter_t filters[N_FILTERS] = {
     .display = 0,
     .output = { //
         .value = 0.0,
-        .handle_color = {0, 0, 0},
-        .label_color = {0, 0, 0},
+        .handle_color = {0, 0, 0, 255},
+        .label_color = {0, 0, 0, 255},
         .label = "Beat?",
     },
     .init = 0,

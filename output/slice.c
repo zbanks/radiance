@@ -57,25 +57,25 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .id = 1,
         .length = 60,
         .first = &s1v1,
-        .color = {255,255,0},
+        .color = {255,255,0, 255},
     },
     {
         .id = 2,
         .length = 60,
         .first = &s2v1,
-        .color = {255,150,0},
+        .color = {255,150,0, 255},
     },
     {
         .id = 4,
         .length = 60,
         .first = &s3v1,
-        .color = {150,255,0},
+        .color = {150,255,0, 255},
     },
     {
         .id = 8,
         .length = 60,
         .first = &s3v1,
-        .color = {150,255,0},
+        .color = {150,255,0, 255},
     },
 };
 

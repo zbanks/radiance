@@ -14,7 +14,6 @@ extern volatile int timebase_source;
 
 void timebase_init();
 void timebase_del();
-void timebase_update(chunk_pt chunk);
 long timebase_get(); 
 float timebase_get_bpm(); 
 void timebase_tap(double alpha);

@@ -251,7 +251,7 @@ void inp_agc_init(signal_t * signal){
 
 void inp_agc_update(signal_t * signal, mbeat_t t){
     if(!signal->state) return;
-    inp_agc_state_t * state = (inp_lpf_state_t *) signal->state;
+    inp_agc_state_t * state = (inp_agc_state_t *) signal->state;
 
     float x = signal->param_states[AGC_INPUT].value;
     float min = signal->param_states[AGC_MIN].value;
@@ -302,8 +302,8 @@ signal_t signals[N_SIGNALS] = {
         .color = {1.0, 0.0, 0.0, 0.0},
         .output = {
             .value = 0.0,
-            .handle_color = {255, 0, 0},
-            .label_color = {255, 0, 0},
+            .handle_color = {255, 0, 0, 255},
+            .label_color = {255, 0, 0, 255},
             .label = "LFO"
         },
         .init = inp_lfo_init,
@@ -319,8 +319,8 @@ signal_t signals[N_SIGNALS] = {
         .color = {0.9, 0.3, 0.0, 0.0},
         .output = {
             .value = 0.0,
-            .handle_color = {220, 100, 0},
-            .label_color = {220, 100, 0},
+            .handle_color = {220, 100, 0, 255},
+            .label_color = {220, 100, 0, 255},
             .label = "LFO"
         },
         .init = inp_lfo_init,
@@ -336,8 +336,8 @@ signal_t signals[N_SIGNALS] = {
         .color = {0.9, 0.9, 0.0, 0.0},
         .output = {
             .value = 0.0,
-            .handle_color = {240, 240, 0},
-            .label_color = {240, 240, 0},
+            .handle_color = {240, 240, 0, 255},
+            .label_color = {240, 240, 0, 255},
             .label = "LPF"
         },
         .init = inp_lpf_init,
@@ -353,8 +353,8 @@ signal_t signals[N_SIGNALS] = {
         .color = {0.1, 0.9, 0.0, 0.0},
         .output = {
             .value = 0.0,
-            .handle_color = {25, 240, 0},
-            .label_color = {25, 240, 0},
+            .handle_color = {25, 240, 0, 255},
+            .label_color = {25, 240, 0, 255},
             .label = "LPF"
         },
         .init = inp_agc_init,
@@ -370,8 +370,8 @@ signal_t signals[N_SIGNALS] = {
         .color = {0.0, 0.8, 0.8, 0.0},
         .output = {
             .value = 0.0,
-            .handle_color = {0, 220, 220},
-            .label_color = {0, 220, 220},
+            .handle_color = {0, 220, 220, 255},
+            .label_color = {0, 220, 220, 255},
             .label = "LPF"
         },
         .init = inp_agc_init,

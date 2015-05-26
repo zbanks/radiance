@@ -19,7 +19,7 @@ void graph_init()
     if(!graph_surface) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
 }
 
-void graph_del(graph_state_t* state)
+void graph_del()
 {
     SDL_FreeSurface(graph_surface);
 }

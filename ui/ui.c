@@ -275,7 +275,7 @@ static void ui_update_audio(){
 
     char buf[16];
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
-    SDL_Color white = {255, 255, 255};
+    SDL_Color white = {255, 255, 255, 255};
     text_render(audio_pane, signal_font, &layout.audio.bpm_txt, &white, buf);
 
     snprintf(buf, 16, "fps: %d", stat_fps);
@@ -304,7 +304,7 @@ static void ui_update_output(output_strip_t * output_strip){
     SDL_FillRect(output_pane, &r, SDL_MapRGB(output_pane->format, 20, 20, 20));
     char buf[16];
 
-    SDL_Color color = {150, 150, 150};
+    SDL_Color color = {150, 150, 150, 255};
 
     if(output_strip->bus >= 0)
         color = output_strip->color;
@@ -318,7 +318,7 @@ static void ui_update_midi(struct midi_controller * controller){
     rect_array_origin(&layout.midi.rect_array, &r);
     SDL_FillRect(midi_pane, &r, SDL_MapRGB(midi_pane->format, 20, 20, 20));
 
-    SDL_Color color = {150, 150, 150};
+    SDL_Color color = {150, 150, 150, 255};
 
     if(controller->available)
         color = controller->color;
@@ -329,7 +329,7 @@ static void ui_update_midi(struct midi_controller * controller){
 static void ui_update_slot(slot_t* slot)
 {
     rect_t r;
-    SDL_Color param_name_c = {255, 255, 255};
+    SDL_Color param_name_c = {255, 255, 255, 255};
     rect_array_origin(&layout.slot.rect_array, &r);
     SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
@@ -366,7 +366,7 @@ static void ui_update_slot(slot_t* slot)
 static void ui_update_hit_slot(slot_t* hit_slot)
 {
     rect_t r;
-    SDL_Color param_name_c = {255, 255, 255};
+    SDL_Color param_name_c = {255, 255, 255, 255};
     rect_array_origin(&layout.hit_slot.rect_array, &r);
     SDL_FillRect(hit_slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
@@ -403,7 +403,7 @@ static void ui_update_hit_slot(slot_t* hit_slot)
 static void ui_update_filter(filter_t * filter)
 {
     rect_t r;
-    SDL_Color white = {255, 255, 255};
+    SDL_Color white = {255, 255, 255, 255};
 
     rect_array_origin(&layout.filter.rect_array, &r);
     SDL_FillRect(filter_pane, &r, SDL_MapRGB(filter_pane->format, 20, 20, 20));
@@ -421,7 +421,7 @@ static void ui_update_pattern(pattern_t* pattern)
     rect_array_origin(&layout.add_pattern.rect_array, &r);
     SDL_FillRect(pattern_pane, &r, SDL_MapRGB(pattern_pane->format, 20, 20, 20));
 
-    SDL_Color white = {255, 255, 255};
+    SDL_Color white = {255, 255, 255, 255};
     text_render(pattern_pane, pattern_font, &layout.add_pattern.name_txt, &white, pattern->name);
 }
 
@@ -431,7 +431,7 @@ static void ui_update_hit(hit_t * hit)
     rect_array_origin(&layout.add_hit.rect_array, &r);
     SDL_FillRect(hit_pane, &r, SDL_MapRGB(hit_pane->format, 20, 20, 20));
 
-    SDL_Color white = {255, 255, 255};
+    SDL_Color white = {255, 255, 255, 255};
     text_render(hit_pane, pattern_font, &layout.add_hit.name_txt, &white, hit->name);
 }
 
@@ -447,7 +447,7 @@ static void ui_update_signal(signal_t* signal)
     text_render(signal_pane, signal_font, &layout.signal.name_txt, &signal_c, signal->name);
 
     graph_update(&(signal->graph_state), signal->output.value);
-    SDL_Color white = {255, 255, 255};
+    SDL_Color white = {255, 255, 255, 255};
     graph_render(&(signal->graph_state), white);
     SDL_BlitSurface(graph_surface, 0, signal_pane, &layout.graph_signal.rect);
 
@@ -750,10 +750,14 @@ static int mouse_click_hit_slot(int index, struct xy xy)
 }
 
 static int mouse_click_output(int index, struct xy xy){
+    UNUSED(index);
+    UNUSED(xy);
     return 0;
 }
 
 static int mouse_click_midi(int index, struct xy xy){
+    UNUSED(index);
+    UNUSED(xy);
     //midi_refresh_devices();
     return 0;
 }
@@ -835,7 +839,7 @@ static int mouse_click(struct xy xy)
     
     // See if click is in master pane
     if(in_rect(&xy, &layout.master.rect, &offset)){
-        return;
+        return 1;
     }
 
     // See if click is in audio pane

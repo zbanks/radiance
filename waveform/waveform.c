@@ -8,10 +8,10 @@
 #include <string.h>
 #include <SDL/SDL.h>
 
-#define WF_LOW_COLOR {10, 10, 60} // dark blue
-#define WF_MID_COLOR {30, 40, 110} // blue
-#define WF_HIGH_COLOR {40, 90, 130} // light blue
-#define WF_LABEL_COLOR {30, 40, 110}
+#define WF_LOW_COLOR {10, 10, 60, 255} // dark blue
+#define WF_MID_COLOR {30, 40, 110, 255} // blue
+#define WF_HIGH_COLOR {40, 90, 130, 255} // light blue
+#define WF_LABEL_COLOR {30, 40, 110, 255}
 
 struct waveform_bin waveform_bins[N_WF_BINS] = {
     [WF_LOW] = {
@@ -47,7 +47,7 @@ struct waveform_bin waveform_bins[N_WF_BINS] = {
 };
 
 struct waveform_bin beat_bin = {
-    .color = {255, 0, 0},
+    .color = {255, 0, 0, 255},
 };
 
 void waveform_init(){
@@ -85,7 +85,7 @@ void waveform_update(chunk_pt chunk){
         slow = slow * alpha + chunk[i] * (1 - alpha);
         vlow = MAX(vlow, fabs(slow));
 
-        shigh = shigh * alpha - chunk[i] * (1 - alpha);
+        shigh = - shigh * alpha + chunk[i] * (1 - alpha);
         vhigh = MAX(vhigh, fabs(shigh));
 
     }
