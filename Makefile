@@ -39,7 +39,7 @@ INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib -L/usr/lib
 LIB  = -lm -lSDL -lSDL_ttf -lSDL_gfx -lpthread -lportaudio -lvamp-hostsdk -lportmidi #-lporttime
 
 # Assembler, compiler, and linker flags
-CXXFLAGS  = -g -O3 $(INC) -Wall -Wextra -Wpedantic -DLUX_WRITE_ONLY
+CXXFLAGS  = -g -O3 $(INC) -Wall -Wextra -Werror -DLUX_WRITE_ONLY
 CFLAGS = $(CXXFLAGS) -std=c99
 LFLAGS  = $(CXXFLAGS)
 
