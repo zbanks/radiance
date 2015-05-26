@@ -61,6 +61,11 @@ void update_hits(mbeat_t t)
     {
         if(active_hits[i].hit && active_hits[i].state)
         {
+            if(t - active_hits[i].start > ACTIVE_HIT_TIMEOUT){
+                active_hits[i].hit->stop(&active_hits[i]);
+                continue;
+            }
+
             if(active_hits[i].hit->update(&active_hits[i], t))
                 active_hits[i].hit->stop(&active_hits[i]);
         }

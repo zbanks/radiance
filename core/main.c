@@ -73,11 +73,14 @@ int main()
     while(ui_poll())
     {
         //float tb = (float)timebase_get() / 1000; // TODO make all times long
+        /*
         mbeat_t tb = timebase_get();
 
         update_patterns(tb);
         update_hits(tb);
         update_signals(tb);
+        */
+
         ui_render();
 
         stat_fps = 1000. / SDL_framerateDelay(&fps_manager);

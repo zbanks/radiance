@@ -33,3 +33,4 @@ void osc_quantize_parameter_label(float val, char * buf, int n){
     int v = quantize_parameter(osc_quant_labels, val);
     strncpy(buf, osc_quant_labels[v], n);
 }
+

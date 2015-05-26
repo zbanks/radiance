@@ -7,6 +7,7 @@
 #include <SDL/SDL_mutex.h>
 
 #define N_MAX_ACTIVE_HITS 128
+#define ACTIVE_HIT_TIMEOUT 32000 // 32 beats
 
 struct slot;
 struct hit;
@@ -50,6 +51,7 @@ struct active_hit { // Needs a lock
 
     float * param_values;
     float alpha;
+    mbeat_t start;
     void * state;
 };
 

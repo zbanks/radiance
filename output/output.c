@@ -109,7 +109,6 @@ void output_start()
         struct lux_frame resp;
         char r;
         printf("Serial initialized\n");
-        output_running = 1;
 
         for(int i=0; i<n_output_strips; i++) {
 #ifndef LUX_WRITE_ONLY
@@ -151,6 +150,7 @@ void output_start()
     }
 
     // Create output thread to run updates even if no serial was init'd
+    output_running = 1;
     output_thread = SDL_CreateThread(&output_run, 0);
     if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
 }

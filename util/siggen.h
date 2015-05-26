@@ -2,6 +2,7 @@
 #define __SIGGEN_H__
 
 #include "core/parameter.h"
+#include "core/time.h"
 
 enum osc_type {
     OSC_SINE,

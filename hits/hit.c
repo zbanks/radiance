@@ -1,20 +1,16 @@
+#include <SDL/SDL_mutex.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <SDL/SDL_mutex.h>
 
+#include "core/err.h"
 #include "core/parameter.h"
 #include "core/slot.h"
 #include "hits/hit.h"
+#include "timebase/timebase.h"
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
-#include "core/err.h"
-
-#ifndef M_PI 
-#define M_PI 3.1415
-#endif
-
 
 #define N_HITS  3
 
@@ -24,8 +20,6 @@ int n_hits = N_HITS;
 int n_active_hits = 0;
 struct active_hit active_hits[N_MAX_ACTIVE_HITS];
 
-
-
 #define N_HIT_SLOTS 8 //FIXME
 
 struct active_hit preview_active_hits[N_HIT_SLOTS];
@@ -34,8 +28,6 @@ SDL_mutex* hits_updating;
 
 enum adsr_state {
     ADSR_OFF = 0,
-    ADSR_WAITING = 0,
-    ADSR_START,
     ADSR_ATTACK,
     ADSR_DECAY,
     ADSR_SUSTAIN,
@@ -158,7 +150,8 @@ struct hit_full_state {
     color_t color;
     enum adsr_state adsr;
     float x;
-    mbeat_t last_t;
+    mbeat_t release_t;
+    float release_x;
     float base_alpha;
 };
 
@@ -177,19 +170,20 @@ struct active_hit * hit_full_start(slot_t * slot) {
     }
 
     active_hit->param_values[FULL_SUSTAIN] = (active_hit->param_values[FULL_SUSTAIN] * 1.0) + 0.00;
-    active_hit->param_values[FULL_ATTACK] = (active_hit->param_values[FULL_ATTACK] / 2.5) + 0.05;
+    active_hit->param_values[FULL_ATTACK] = (active_hit->param_values[FULL_ATTACK] / 2.5) + 0.00;
     active_hit->param_values[FULL_DECAY] = (active_hit->param_values[FULL_DECAY] / 5.0) + 0.05;
-    active_hit->param_values[FULL_RELEASE] = (active_hit->param_values[FULL_RELEASE] / 1.0) + 0.05;
+    active_hit->param_values[FULL_RELEASE] = (active_hit->param_values[FULL_RELEASE] / 1.0) + 0.00;
 
     state->color = param_to_color(active_hit->param_values[FULL_COLOR]);
-    state->adsr = ADSR_WAITING;
+    state->adsr = ADSR_OFF;
     state->x = 0.0;
-    state->last_t = 0;
+    state->release_t = 0;
+    state->release_x = 0.;
     state->base_alpha = state->color.a;
 
     active_hit->slot = slot;
     active_hit->alpha = param_state_get(&slot->alpha);
-
+    active_hit->start = timebase_get(); // This will get overridden on the NOTEON event
 
     return active_hit;
 }
@@ -202,38 +196,39 @@ void hit_full_stop(struct active_hit * active_hit){
 
 int hit_full_update(struct active_hit * active_hit, mbeat_t t){
     struct hit_full_state * state = active_hit->state;
+    float dt = MB2B(t - active_hit->start); 
     switch(state->adsr){
-        case ADSR_WAITING: break;
-        case ADSR_START:
-            state->adsr = ADSR_ATTACK;
-        break;
+        case ADSR_OFF: break;
         case ADSR_ATTACK:
-            state->x += MB2B(t - state->last_t) / active_hit->param_values[FULL_ATTACK];
-            if(state->x >= 1.0){
-                state->x = 1.0;
-                state->adsr = ADSR_DECAY;
-            }
-        break;
         case ADSR_DECAY:
-            state->x -= MB2B(t - state->last_t) * (1. - active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_DECAY];
-            if(state->x <= (active_hit->param_values[FULL_SUSTAIN])){
-                state->x = active_hit->param_values[FULL_SUSTAIN];
-                state->adsr = ADSR_SUSTAIN;
+            if(dt < active_hit->param_values[FULL_ATTACK]){
+                state->x = dt / active_hit->param_values[FULL_ATTACK];
+            }else{
+                dt -= active_hit->param_values[FULL_ATTACK];
+                if(dt < active_hit->param_values[FULL_DECAY]){
+                    state->x = 1.0 - (dt / active_hit->param_values[FULL_DECAY]) * (1.0 - active_hit->param_values[FULL_SUSTAIN]);
+                    state->adsr = ADSR_DECAY;
+                }else{
+                    state->x = active_hit->param_values[FULL_SUSTAIN];
+                    state->adsr = ADSR_SUSTAIN;
+                }
             }
         break;
-        case ADSR_SUSTAIN:
-        break;
+        case ADSR_SUSTAIN: break;
         case ADSR_RELEASE:
-            state->x -= MB2B(t - state->last_t) * (1. - active_hit->param_values[FULL_SUSTAIN]) / active_hit->param_values[FULL_RELEASE];
-            if(state->x <= 0.){
+                           /*
+            dt = MB2B(t - state->release_t);
+            if(dt < active_hit->param_values[FULL_RELEASE]){
+                state->x = state->release_x * (1.0 - dt / active_hit->param_values[FULL_RELEASE]);
+            }else{
                 state->x = 0.;
                 state->adsr = ADSR_DONE;
                 return 1;
             }
+            */
         break;
         case ADSR_DONE: break;
     }
-    state->last_t = t;
     return 0;
 }
 
@@ -241,11 +236,14 @@ int hit_full_event(struct active_hit * active_hit, enum hit_event event, float e
     struct hit_full_state * state = active_hit->state;
     switch(event){
         case HITEV_NOTE_ON:
-            state->adsr = ADSR_START;
+            state->adsr = ADSR_ATTACK;
             state->base_alpha = event_data;
+            active_hit->start = timebase_get(); 
         break;
         case HITEV_NOTE_OFF:
             state->adsr = ADSR_RELEASE;
+            state->release_t = timebase_get();
+            state->release_x = state->x;
         break;
         default: break;
     }
@@ -314,7 +312,6 @@ parameter_t hit_pulse_params[] = {
 struct hit_pulse_state {
     color_t color;
     float base_alpha;
-    float start_t;
     float x;
 };
 
@@ -337,12 +334,12 @@ struct active_hit * hit_pulse_start(slot_t * slot) {
     active_hit->param_values[PULSE_ANGLE] = (active_hit->param_values[PULSE_ANGLE] * 2 * M_PI) - M_PI;
 
     state->color = param_to_color(active_hit->param_values[PULSE_COLOR]);
-    state->start_t = -1;
     state->x = -1.;
     state->base_alpha = state->color.a;
 
     active_hit->slot = slot;
     active_hit->alpha = param_state_get(&slot->alpha);
+    active_hit->start = timebase_get();
 
     return active_hit;
 }
@@ -355,9 +352,7 @@ void hit_pulse_stop(struct active_hit * active_hit){
 
 int hit_pulse_update(struct active_hit * active_hit, mbeat_t abs_t){
     struct hit_pulse_state * state = active_hit->state;
-    if(state->start_t < 0)
-        state->start_t = abs_t;
-    state->x = MB2B(abs_t - state->start_t) / (active_hit->param_values[PULSE_TIME] / 2.) - 1.;
+    state->x = MB2B(abs_t - active_hit->start) / (active_hit->param_values[PULSE_TIME] / 2.) - 1.;
     if(state->x > 1.5){ // Wait until at least sqrt(2) so it fades out nice on the corner
         return 1;
     }
@@ -441,7 +436,6 @@ parameter_t hit_circle_params[] = {
 struct hit_circle_state {
     color_t color;
     float base_alpha;
-    float start_t;
     float x;
 };
 
@@ -463,12 +457,12 @@ struct active_hit * hit_circle_start(slot_t * slot) {
     active_hit->param_values[CIRCLE_WIDTH] = (active_hit->param_values[CIRCLE_WIDTH] / 2.5) + 0.05;
 
     state->color = param_to_color(active_hit->param_values[CIRCLE_COLOR]);
-    state->start_t = -1;
     state->x = -1.4;
     state->base_alpha = state->color.a;
 
     active_hit->slot = slot;
     active_hit->alpha = param_state_get(&slot->alpha);
+    active_hit->start = timebase_get();
 
     return active_hit;
 }
@@ -481,9 +475,7 @@ void hit_circle_stop(struct active_hit * active_hit){
 
 int hit_circle_update(struct active_hit * active_hit, mbeat_t abs_t){
     struct hit_circle_state * state = active_hit->state;
-    if(state->start_t < 0)
-        state->start_t = abs_t;
-    state->x = MB2B(abs_t - state->start_t) / (active_hit->param_values[CIRCLE_TIME] / 2.) - 1.;
+    state->x = MB2B(abs_t - active_hit->start) / (active_hit->param_values[CIRCLE_TIME] / 2.) - 1.;
     if(state->x > 0.1){ // Wait until at least sqrt(2) so it fades out nice on the corner
         return 1;
     }
