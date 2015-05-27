@@ -40,14 +40,14 @@ CFGSECTION(audio,
     CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
     CFG_TXT(bpm, 40, 120, 20, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(fps, 10, 160, 20, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(ops, 100, 160, 20, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(fps, 10, 160, 12, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(ops, 100, 160, 12, 0, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT_ARRAY(bins, 260, 110, 15, 15, 0, 20, 0)
 )
 
 CFGSECTION(signal,
     CFG_RECT_ARRAY(, 750, 30, 110, 200, 115, 0, 0)
-    CFG_TXT(name, 55, 3, 14, 2, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 55, 3, 18, 2, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT_ARRAY(sliders, 5, 60, 100, 32, 0, 32, 0)
 )
 
@@ -68,12 +68,12 @@ CFGSECTION(slider,
     
 CFGSECTION(add_pattern,
     CFG_RECT_ARRAY(, 1010, 250, 100, 30, 0, 35, 0)
-    CFG_TXT(name, 50, 15, 10, 3, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 50, 15, 16, 3, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(add_hit,
     CFG_RECT_ARRAY(, 1010, 510, 100, 30, 0, 35, 0)
-    CFG_TXT(name, 50, 15, 10, 3, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 50, 15, 16, 3, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(waveform,
@@ -93,17 +93,17 @@ CFGSECTION(graph_filter,
 
 CFGSECTION(filter,
     CFG_RECT_ARRAY(, 530, 30,  200, 98,  0,  102, 0)
-    CFG_TXT(name, 5, 5, 12, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(output,
     CFG_RECT_ARRAY(, 1120, 250, 160, 45,  0,  50, 0)
-    CFG_TXT(name, 5, 5, 12, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(midi,
     CFG_RECT_ARRAY(, 1120, 510, 160, 45,  0,  50, 0)
-    CFG_TXT(name, 5, 5, 12, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
 )
 
 #undef CFGSECTION

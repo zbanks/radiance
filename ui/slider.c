@@ -9,7 +9,6 @@
 SDL_Surface* slider_surface;
 SDL_Surface* alpha_slider_surface;
 
-static TTF_Font* param_font;
 static struct
 {
     param_state_t * state;
@@ -23,15 +22,11 @@ void slider_init()
 
     alpha_slider_surface = SDL_CreateRGBSurface(0, layout.alpha_slider.w, layout.alpha_slider.h, 32, 0, 0, 0, 0);
     if(!slider_surface) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-
-    param_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 10);
-    if(!param_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 }
 
 void slider_del()
 {
     SDL_FreeSurface(slider_surface);
-    TTF_CloseFont(param_font);
 }
 
 void slider_render_alpha(param_state_t* state)
@@ -67,18 +62,18 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_Rect r;
     SDL_FillRect(slider_surface, &layout.slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));
 
-    text_render(slider_surface, param_font, &layout.slider.name_txt, &c, param->name);
+    text_render(slider_surface, &layout.slider.name_txt, &c, param->name);
 
     if(param->val_to_str){
         char sbuf[129];
         param->val_to_str(param_state_get(state), sbuf, 128);
-        text_render(slider_surface, param_font, &layout.slider.value_txt, &white, sbuf);
+        text_render(slider_surface, &layout.slider.value_txt, &white, sbuf);
     }
 
     if(param_output){
         handle_color = param_output->handle_color;
 
-        text_render(slider_surface, param_font, &layout.slider.source_txt, &param_output->label_color, param_output->label);
+        text_render(slider_surface, &layout.slider.source_txt, &param_output->label_color, param_output->label);
     }
 
     SDL_FillRect(slider_surface, &layout.slider.track_rect, SDL_MapRGB(slider_surface->format, 80, 80, 80));

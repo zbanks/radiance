@@ -44,9 +44,6 @@ SURFACES
 #undef X
 
 static SDL_Surface * screen;
-static TTF_Font* pattern_font;
-static TTF_Font* signal_font;
-static TTF_Font* filter_font;
 
 static int mouse_down;
 static struct xy mouse_drag_start;
@@ -99,15 +96,6 @@ void ui_init()
 SURFACES
 #undef X
 
-    pattern_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
-    if(!pattern_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
-
-    signal_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 20);
-    if(!signal_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
-
-    filter_font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeSans.ttf", 14);
-    if(!filter_font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
-
     slider_init();
     graph_init();
     ui_waveform_init();
@@ -130,10 +118,6 @@ void ui_quit()
     SDL_FreeSurface(s);
 SURFACES
 #undef X
-
-    TTF_CloseFont(pattern_font);
-    TTF_CloseFont(signal_font);
-    TTF_CloseFont(filter_font);
 
     slider_del();
     graph_del();
@@ -275,14 +259,13 @@ static void ui_update_audio(){
 
     char buf[16];
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
-    SDL_Color white = {255, 255, 255, 255};
-    text_render(audio_pane, signal_font, &layout.audio.bpm_txt, &white, buf);
+    text_render(audio_pane, &layout.audio.bpm_txt, 0, buf);
 
     snprintf(buf, 16, "fps: %d", stat_fps);
-    text_render(audio_pane, signal_font, &layout.audio.fps_txt, &white, buf);
+    text_render(audio_pane, &layout.audio.fps_txt, 0, buf);
 
     snprintf(buf, 16, "ops: %d", stat_ops);
-    text_render(audio_pane, signal_font, &layout.audio.ops_txt, &white, buf);
+    text_render(audio_pane, &layout.audio.ops_txt, 0, buf);
 
     for(int i = 0; i < N_WF_BINS; i++){
         rect_array_layout(&layout.audio.bins_rect_array, i, &r);
@@ -310,7 +293,7 @@ static void ui_update_output(output_strip_t * output_strip){
         color = output_strip->color;
 
     snprintf(buf, 16, "%d @0x%08X", output_strip->length, output_strip->id);
-    text_render(output_pane, filter_font, &layout.output.name_txt, &color, buf);
+    text_render(output_pane, &layout.output.name_txt, &color, buf);
 }
 
 static void ui_update_midi(struct midi_controller * controller){
@@ -323,7 +306,7 @@ static void ui_update_midi(struct midi_controller * controller){
     if(controller->available)
         color = controller->color;
 
-    text_render(midi_pane, signal_font, &layout.midi.name_txt, &color, controller->short_name);
+    text_render(midi_pane, &layout.midi.name_txt, &color, controller->short_name);
 }
 
 static void ui_update_slot(slot_t* slot)
@@ -408,7 +391,7 @@ static void ui_update_filter(filter_t * filter)
     rect_array_origin(&layout.filter.rect_array, &r);
     SDL_FillRect(filter_pane, &r, SDL_MapRGB(filter_pane->format, 20, 20, 20));
 
-    text_render(filter_pane, filter_font, &layout.filter.name_txt, &filter->color, filter->name);
+    text_render(filter_pane, &layout.filter.name_txt, &filter->color, filter->name);
 
     graph_update(&(filter->graph_state), filter->output.value);
     graph_render(&(filter->graph_state), white);
@@ -421,8 +404,7 @@ static void ui_update_pattern(pattern_t* pattern)
     rect_array_origin(&layout.add_pattern.rect_array, &r);
     SDL_FillRect(pattern_pane, &r, SDL_MapRGB(pattern_pane->format, 20, 20, 20));
 
-    SDL_Color white = {255, 255, 255, 255};
-    text_render(pattern_pane, pattern_font, &layout.add_pattern.name_txt, &white, pattern->name);
+    text_render(pattern_pane, &layout.add_pattern.name_txt, 0, pattern->name);
 }
 
 static void ui_update_hit(hit_t * hit)
@@ -431,8 +413,7 @@ static void ui_update_hit(hit_t * hit)
     rect_array_origin(&layout.add_hit.rect_array, &r);
     SDL_FillRect(hit_pane, &r, SDL_MapRGB(hit_pane->format, 20, 20, 20));
 
-    SDL_Color white = {255, 255, 255, 255};
-    text_render(hit_pane, pattern_font, &layout.add_hit.name_txt, &white, hit->name);
+    text_render(hit_pane, &layout.add_hit.name_txt, 0, hit->name);
 }
 
 static void ui_update_signal(signal_t* signal)
@@ -444,7 +425,7 @@ static void ui_update_signal(signal_t* signal)
     SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 20, 20, 20));
 
     signal_c = color_to_SDL(signal->color);
-    text_render(signal_pane, signal_font, &layout.signal.name_txt, &signal_c, signal->name);
+    text_render(signal_pane, &layout.signal.name_txt, &signal_c, signal->name);
 
     graph_update(&(signal->graph_state), signal->output.value);
     SDL_Color white = {255, 255, 255, 255};

@@ -29,10 +29,9 @@ void text_load_font(struct txt * params){
     params->ui_font.color = color;
 }
 
-void text_render(SDL_Surface * surface, TTF_Font * font, struct txt * params, const SDL_Color * color, const char * text){
+void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * color, const char * text){
     SDL_Surface* msg;
     rect_t r;
-    UNUSED(font);
 
     if(!params->ui_font.font)
         text_load_font(params);
@@ -49,9 +48,7 @@ void text_render(SDL_Surface * surface, TTF_Font * font, struct txt * params, co
     r.y = params->y;
     r.w = msg->w;
     r.h = msg->h;
-    //TODO: font, color
     
-    // Extract font/color from params
     switch(params->align){
         case TXTALIGN_BR:
             r.y -= r.h;

@@ -53,7 +53,6 @@ void timebase_tap(double alpha)
     long cur_mb = get_cur_mb(cur_ms);
 
     long error_mb = ((cur_mb + 1500) % 1000) - 500;
-    printf("ERROR: %ld\n", error_mb);
 
     if(SDL_LockMutex(updating)) FAIL("Unable to lock mutex: %s\n", SDL_GetError());
 
