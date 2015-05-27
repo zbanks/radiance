@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <SDL/SDL.h>
+#include <SDL/SDL_ttf.h>
 
 char* mystrdup(const char* s);
 
@@ -25,12 +26,14 @@ char* mystrdup(const char* s);
 #define SINT16_FMT "%d"
 #define UINT16_FMT "%d"
 #define STRING_FMT "%s"
-#define FLOAT_FM "%f"
+#define FLOAT_FMT "%f"
 
 #define PACKED __attribute__ ((__packed__))
 
 #define CONCAT(x, y) CONCAT2(x, y)
 #define CONCAT2(x, y) x ## y
+
+#define SECTIONSTRUCT(x) _##x##_layout
 
 #define STRINGIFY(x) STRINGIFY2(x)
 #define STRINGIFY2(x) #x
@@ -84,6 +87,10 @@ struct PACKED xy {
 
 struct PACKED txt {
     CFG_TXT_ATTR(,,,,,,)
+    struct {
+        TTF_Font * font;
+        SDL_Color color;
+    } ui_font;
 };
 
 #define CFG_RECT_ATTR(n, dx, dy, dw, dh) \
@@ -128,7 +135,7 @@ struct PACKED rect_array {
 #define CFG_RECT_ARRAY(n, args...) union { struct rect_array PREFIX(n, rect_array); struct PACKED { CFG_RECT_ARRAY_ATTR(n, args) }; };
 
 struct layout {
-    #define CFGSECTION(w, d...) struct PACKED { d } w;
+    #define CFGSECTION(w, d...) struct PACKED SECTIONSTRUCT(w) { d } w;
     #define CFG(n, type, default) type n;
     #include "layout.def"
 };

@@ -16,24 +16,21 @@ char* mystrdup(const char* s) {
 }
 
 static int parse_layout(void * user, const char * section, const char * name, const char * value){
-    char * sptr;
     struct layout * cfg = (struct layout *) user;
     if (0) ;
-    #define CFGSECTION(s, d...) else if(strcasecmp(section, #s) == 0){ sptr = (char *) &cfg->s; d }
-    #define CFG(n, type, default) if(strcasecmp(name, STRINGIFY(n))==0){ *((type *) sptr) = type##_FN(value); return 1;} \
-                                sptr += sizeof(type);
+    #define CFGSECTION(s, d...) else if(strcasecmp(section, #s) == 0){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d }
+    #define CFG(n, type, default) if(strcasecmp(name, STRINGIFY(n))==0){ sp->n = type##_FN(value); return 1;} 
     #include "layout.def"
     return 0;
 }
 
 int dump_layout(struct layout* cfg, char * filename){
-    char * sptr;
     FILE * stream = fopen(filename, "w");
     if(!stream)
         return 1;
 
-    #define CFGSECTION(s, d...) fprintf(stream, "[" #s "]\n"); sptr = (char *) &cfg->s; d; fprintf(stream, "\n");
-    #define CFG(n, type, default) fprintf(stream, "%s=" type##_FMT "\n", STRINGIFY(n), *((type *) sptr)); sptr += sizeof(type);
+    #define CFGSECTION(s, d...) fprintf(stream, "[" #s "]\n"); if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d; } fprintf(stream, "\n");
+    #define CFG(n, type, default) fprintf(stream, "%s=" type##_FMT "\n", STRINGIFY(n), sp->n); 
     #include "layout.def"
 
     fclose(stream);

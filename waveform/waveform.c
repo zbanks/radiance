@@ -100,7 +100,6 @@ void waveform_update(chunk_pt chunk){
 
 
     for(int i = 0; i < FRAMES_PER_BUFFER; i++){
-        chunk[i] *= 4.;
         vall = MAX(vall, fabs(chunk[i]));
 
         //slow = slow * alpha + chunk[i] * (1 - alpha);
