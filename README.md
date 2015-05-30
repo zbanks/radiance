@@ -1,7 +1,9 @@
 beat-off
 ========
 
-LJ software for controlling light displays. Supports beat detection, MIDI controllers, and output over [flux](http://github,com/zbanks/flux).
+LJ software for controlling light displays. Supports beat detection, MIDI controllers, and output over [flux](http://github.com/zbanks/flux).
+
+Please [submit](http://github.com/zbanks/beat-off/issues) any feature requests or issues you have. Especially let us know if you have trouble getting it to compile.
 
 Screenshots
 -----------
