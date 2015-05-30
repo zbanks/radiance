@@ -32,9 +32,88 @@ Finally, although not required to build/run, you'll want the following VAMP plug
 - [pYIN](https://code.soundsoftware.ac.uk/projects/pyin) - Pitch estimation
 - [Queen Mary Set](http://isophonics.net/QMVampPlugins)
 
+How it works
+============
+*(Todo: This should be fleshed out a lot more)*
+
+### Timebase 
+The *timebase* is a global relative time that is synced to the beat of the incoming audio. 
+
+Internally, each beat is subdivided into 1000 *"millibeats"*. The timebase is guaranteed to be monotonic, but it can pause or change speed to stay synced to the beat.
+
+All of the *patterns*, *hits*, and *signals* use times from the timebase to sync to the ambient audio.
+
+### Patterns & Hits
+*Patterns* are visual effects on a plane that continuously change over time.
+
+*Hits* are visual effects on a pane that have a finite duration. While they are running, they can also take in events (e.g. `note_on` & `note_off` from MIDI).
+
+Each pattern and hit also has the following things:
+
+#### Alpha
+*Alpha* is used to refer to transparency, with 1 corresponding to opaque and 0 corresponding to invisible/transparent. Patterns, and hits can be running but have their alpha set to 0 so they produce no output.
+
+#### Parameters
+*Parameters* are inputs which modify how patterns, hits, and signals behave. They are represented as sliders in the UI. 
+
+For instance, most patterns have a parameter to change the color. Alpha is also a parameter.
+
+A key mechanism of beat-off is that parameters can be *attached* MIDI devices or other sources. This allows you to control parameters using MIDI devices. 
+
+##### Connecting Parameters
+
+Clicking on the label of a slider will cause it to turn yellow, at which point it is ready to be connected. Click it again to reset.
+
+While the label is yellow, you can click on a filter or signal to attach the parameter to its output. To connect to a MIDI device, you can twiddle the desired knob (or press the desired button) until it connects.
+
+While a parameter is connected to something, its slider knob will change color to indicate what it is connected to. You will not be able to control it with the mouse while it is connected.
+
+#### Preview
+The preview displays what the pattern or hit looks like on its own and *fully opaque*.
+
+### Signals
+*Signals* can be used to control parameters in an automatic/programmatic way. 
+
+#### LFO (Low Frequency Oscillator)
+The *LFO* acts as a function generator which is synced to the global timebase. 
+
+#### LPF (Low-Pass Filter)
+The *LPF* takes in an input and filters it with a "single pole"/"exponential" filter. (`H(z) = (1 - a) / (1 - a z^-1)`)
+
+The filter is actually nonlinear and uses different constants if the signal is *rising* and *falling*. This is useful for mitigating the inherent phase delay of a linear causal LPF.
+
+#### AGC (Automatic Gain Control)
+The *AGC* also takes in an input and filters it. It attempts to remove the DC component and scale it such that it fills the range of [*Min*, *Max*].
+
+This can be useful to filter the output of the *Onset Detection Function* to fill the entire [0, 1] range. It can be also used as a simple gain & offset by setting *Decay = 0*.
+
+### Filters
+*Filters* also can be used to control parameters. They are the output of VAMP plugins
+
+#### Onset Detection Function
+The *ODF* is a key part of the beat detection algorithm and describes how likely there is a beat onset at any given time.
+
+The output from the VAMP plugin is run through a single pole diode LPF (like one in the LPF signal). As a result, beats show up as a sharp increase, with an exponential tail.
+
+This function works incredibly well to modulate patterns & hits with, at least with EDM...
+
+#### Fundamental Frequency (F0)
+The pYIL VAMP plugin attempts to estimate the fundamental freqnecy (F0) from an audio stream. It's a little weird to do causally to EDM, but it is usually useful when the ODF isn't.
+
+The output from the VAMP plugin is run though an AGC stage, like in the AGC signal.
+
+### Master Preview Pane
+
+The square in the upper left is the master preview pane. It is the result of the composition of all the patterns and hits. 
+
+The master preview pane shows what is sampled to be output to the lights.
+
+The colored lines over the pane describe the positions of the strips. Color is used to indicate which strip is which.
+
 Configuration
 =============
-Most of the configuation is done by editing `.h` files.
+
+Most of the configuration is done by editing the source.
 
 ### UI
 The UI is largely parametrically laid out, and is currently the largest component that can be modified without recompiling. The configuration file `layout.ini` can theoretically be used to "skin" the interface. 
@@ -61,3 +140,8 @@ The filters visible in the UI are defined in the `filters` array in `filters/fil
 
 ### Default Patterns / Hits
 The default patterns and hits in the slots are loaded in `core/main.c`.
+
+Screenshots
+===========
+
+![screenshot](https://raw.githubusercontent.com/ervanalb/beat-off/master/beat-off-screenshot.png)
