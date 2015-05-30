@@ -68,7 +68,7 @@ int main()
     FPSmanager fps_manager;
 
     SDL_initFramerate(&fps_manager);
-    SDL_setFramerate(&fps_manager, 40);
+    SDL_setFramerate(&fps_manager, 100);
 
     while(ui_poll())
     {

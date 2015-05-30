@@ -85,11 +85,13 @@ struct PACKED xy {
     CFG(PREFIX(n, font), STRING, dfont) \
     CFG(PREFIX(n, color), STRING, dcolor)
 
+struct txt;
 struct PACKED txt {
     CFG_TXT_ATTR(,,,,,,)
     struct {
         TTF_Font * font;
         SDL_Color color;
+        struct txt * next;
     } ui_font;
 };
 

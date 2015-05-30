@@ -7,6 +7,8 @@
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_ttf.h>
 
+static struct txt * last_txt = 0;
+
 void text_load_font(struct txt * params){
     SDL_Color color = {255,255,255,255};
     char filename[256];
@@ -27,6 +29,18 @@ void text_load_font(struct txt * params){
         printf("Unable to parse color '%s'; using white instead.", params->color);
     }
     params->ui_font.color = color;
+
+    //last_txt->ui_font.next = params;
+    //params->ui_font.next = 0;
+    params->ui_font.next = last_txt;
+    last_txt = params;
+}
+
+void text_unload_fonts(){
+    while (last_txt){
+        TTF_CloseFont(last_txt->ui_font.font);
+        last_txt = last_txt->ui_font.next;
+    }
 }
 
 void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * color, const char * text){

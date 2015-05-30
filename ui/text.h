@@ -16,6 +16,7 @@ enum txt_alignment {
 };
 
 void text_load_font(struct txt * params);
+void text_unload_fonts();
 void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * color, const char * text);
 
 #endif

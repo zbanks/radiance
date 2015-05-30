@@ -54,25 +54,25 @@ int n_output_strips = N_OUTPUT_STRIPS;
 
 output_strip_t output_strips[N_OUTPUT_STRIPS] = {
     {
-        .id = 1,
+        .id = "lux:00000001",
         .length = 60,
         .first = &s1v1,
         .color = {255,255,0, 255},
     },
     {
-        .id = 2,
+        .id = "lux:00000002",
         .length = 60,
         .first = &s2v1,
         .color = {255,150,0, 255},
     },
     {
-        .id = 4,
+        .id = "lux:00000004",
         .length = 60,
         .first = &s3v1,
         .color = {150,255,0, 255},
     },
     {
-        .id = 8,
+        .id = "lux:00000008",
         .length = 60,
         .first = &s3v1,
         .color = {150,255,0, 255},

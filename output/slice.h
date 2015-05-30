@@ -14,7 +14,7 @@ typedef struct output_vertex
 
 typedef struct output_strip
 {
-    int id;
+    char * id;
     int length;
     output_vertex_t* first;
     SDL_Color color;

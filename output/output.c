@@ -11,24 +11,27 @@
 #include "signals/signal.h"
 #include "timebase/timebase.h"
 #include "core/time.h"
-#include "crc.h"
-#include "lux.h"
 #include "output/output.h"
 #include "output/serial.h"
 #include "output/slice.h"
 
-static int output_running;
+#include <flux.h>
+#include <czmq.h>
+
+#define BROKER_URL "tcp://localhost:5555"
 
 color_t** output_buffers = 0;
 
+static int output_running;
 static SDL_Thread* output_thread;
+
+static flux_cli_t * flux_client;
 
 static int output_run(void* args)
 {
     UNUSED(args);
-    struct lux_frame lf;
-    char r;
     FPSmanager fps_manager;
+    unsigned char frame[4096];
 
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
@@ -48,7 +51,6 @@ static int output_run(void* args)
 
             output_to_buffer(&output_strips[i], output_buffers[i]);
 
-            int j = 0;
             float energy = 0.;
             float scalar = 1.0;
             for(int k = 0; k < output_strips[i].length; k++){
@@ -60,33 +62,19 @@ static int output_run(void* args)
             if(scalar > 255.)
                 scalar = 255.;
 
+            int j = 0;
             for(int k = 0; k < output_strips[i].length; k++){
-                lf.data.carray.data[j++] = output_buffers[i][k].r * scalar;
-                lf.data.carray.data[j++] = output_buffers[i][k].g * scalar;
-                lf.data.carray.data[j++] = output_buffers[i][k].b * scalar;
+                frame[j++] = output_buffers[i][k].r * scalar;
+                frame[j++] = output_buffers[i][k].g * scalar;
+                frame[j++] = output_buffers[i][k].b * scalar;
             }
-            lf.data.carray.cmd = CMD_FRAME; j++;
-            lf.destination = output_strips[i].id;
-            lf.length = j;
 
-            if((r = lux_tx_packet(&lf)))
-                printf("failed cmd: %d\n", r);
-
+            zmsg_t * fmsg = zmsg_new();
+            zmsg_t * reply = zmsg_new();
+            zmsg_pushmem(fmsg, frame, j);
+            flux_cli_send(flux_client, output_strips[i].id, "FRAME", &fmsg, &reply);
+            zmsg_destroy(&reply);
         }
-        /*
-        stat_ops = c++;
-        SDL_Delay(1);
-        if(need_delay){
-            //printf("delaying output\n");
-            SDL_Delay(10);
-        }
-        if(c % 100 == 0){
-            int t = SDL_GetTicks();
-            stat_ops = c;
-            last_tick = t;
-            printf("output %d - %d\n", c, SDL_GetTicks());
-        }
-        */
         stat_ops = 1000. / SDL_framerateDelay(&fps_manager);
     }
     return 0;
@@ -98,55 +86,38 @@ void output_start()
 
     if(!output_buffers) FAIL("Could not allocate output buffer array");
 
+    flux_client = flux_cli_init(BROKER_URL, 0);
+    if(flux_client){
+        printf("Flux connected\n");
+        for(int i = 0; i < n_output_strips; i++){
+            output_strips[i].bus = flux_cli_id_check(flux_client, output_strips[i].id);
+            if(output_strips[i].bus) continue;
+
+            zmsg_t * imsg = zmsg_new();
+            zmsg_t * reply = NULL;
+            if(!flux_cli_send(flux_client, output_strips[i].id, "INFO", &imsg, &reply)){
+                zhash_t * info = zhash_unpack(zmsg_first(reply));
+                char * length_str  = zhash_lookup(info, "length");
+                if(length_str)
+                    output_strips[i].length = atoi(length_str);
+                printf("Lux device '%s' with length '%s'\n", (char *) zhash_lookup(info, "id"), (char *) zhash_lookup(info, "length"));
+                zhash_destroy(&info);
+            }else{
+                output_strips[i].bus = -1;
+            }
+            zmsg_destroy(&reply);
+        }
+    }else{
+        printf("No flux initialized\n");
+        for(int i = 0; i < n_output_strips; i++){
+            output_strips[i].bus = -1;
+        }
+    }
+
     for(int i=0; i<n_output_strips; i++)
     {
         output_buffers[i] = malloc(sizeof(color_t) * output_strips[i].length);
         if(!output_buffers[i]) FAIL("Could not allocate output buffer");
-    }
-
-    if(serial_init()){
-        struct lux_frame cmd;
-        struct lux_frame resp;
-        char r;
-        printf("Serial initialized\n");
-
-        for(int i=0; i<n_output_strips; i++) {
-#ifndef LUX_WRITE_ONLY
-            cmd.data.carray.cmd = CMD_GET_ID;
-            cmd.destination = output_strips[i].id;
-            cmd.length = 1;
-
-            if((r = lux_command_response(&cmd, &resp, 20))){
-                printf("failed cmd get_id: %d\n", r);
-                output_strips[i].bus = -1;
-            }else{
-                printf("Found light strip %d @0x%08x: '%s'\n", i, cmd.destination, resp.data.raw);
-                output_strips[i].bus = 0;
-
-                cmd.data.carray.cmd = CMD_GET_LENGTH;
-                cmd.length = 1;
-                if((r = lux_command_response(&cmd, &resp, 20))){
-                    printf("failed cmd get_length: %d\n", r);
-                }else{
-                    if(output_strips[i].length == resp.data.ssingle_r.data)
-                        printf("...length matches: %d\n", resp.data.ssingle_r.data);
-                    else
-                        printf("...length mis-match! %d in file, %d from strip\n", output_strips[i].length, resp.data.ssingle_r.data);
-                }
-            }
-#else
-            UNUSED(cmd);
-            UNUSED(resp);
-            UNUSED(r);
-            output_strips[i].bus = 0;
-            printf("Attached light strip 0x%08x\n", output_strips[i].id);
-#endif
-        }
-    }else{
-        printf("No serial initialized\n");
-        for(int i = 0; i < n_output_strips; i++){
-            output_strips[i].bus = -1;
-        }
     }
 
     // Create output thread to run updates even if no serial was init'd

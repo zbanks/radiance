@@ -119,6 +119,8 @@ void ui_quit()
 SURFACES
 #undef X
 
+    text_unload_fonts();
+
     slider_del();
     graph_del();
     ui_waveform_del();
@@ -292,7 +294,7 @@ static void ui_update_output(output_strip_t * output_strip){
     if(output_strip->bus >= 0)
         color = output_strip->color;
 
-    snprintf(buf, 16, "%d @0x%08X", output_strip->length, output_strip->id);
+    snprintf(buf, 16, "%d %s", output_strip->length, output_strip->id);
     text_render(output_pane, &layout.output.name_txt, &color, buf);
 }
 
