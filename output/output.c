@@ -12,21 +12,17 @@
 #include "timebase/timebase.h"
 #include "core/time.h"
 #include "output/output.h"
-#include "output/serial.h"
 #include "output/slice.h"
-
-#include <flux.h>
-#include <czmq.h>
-
-#define BROKER_URL "tcp://musicazoo.mit.edu:1365"
-//#define BROKER_URL "tcp://localhost:1365"
+#include "output/flux.h"
+#include "output/lux.h"
 
 color_t** output_buffers = 0;
 
 static int output_running;
 static SDL_Thread* output_thread;
 
-static flux_cli_t * flux_client;
+static int output_on_flux = 0;
+static int output_on_lux = 0;
 
 static int output_run(void* args)
 {
@@ -47,7 +43,7 @@ static int output_run(void* args)
 
         for(int i=0; i<n_output_strips; i++)
         {
-            if(output_strips[i].bus < 0)
+            if(!output_strips[i].bus)
                 continue;
 
             output_to_buffer(&output_strips[i], output_buffers[i]);
@@ -70,11 +66,10 @@ static int output_run(void* args)
                 frame[j++] = output_buffers[i][k].b * scalar;
             }
 
-            zmsg_t * fmsg = zmsg_new();
-            zmsg_t * reply = NULL;
-            zmsg_pushmem(fmsg, frame, j);
-            flux_cli_send(flux_client, output_strips[i].id, "FRAME", &fmsg, &reply);
-            zmsg_destroy(&reply);
+            if(output_on_flux && (output_strips[i].bus & OUTPUT_FLUX))
+                output_flux_push(&output_strips[i], frame, j);
+            if(output_on_lux && (output_strips[i].bus & OUTPUT_LUX))
+                output_lux_push(&output_strips[i], frame, j);
         }
         stat_ops = 1000. / SDL_framerateDelay(&fps_manager);
     }
@@ -87,39 +82,32 @@ void output_start()
 
     if(!output_buffers) FAIL("Could not allocate output buffer array");
 
-    flux_client = flux_cli_init(BROKER_URL, 1);
-    if(flux_client){
-        printf("Flux connected\n");
-        for(int i = 0; i < n_output_strips; i++){
-            output_strips[i].bus = flux_cli_id_check(flux_client, output_strips[i].id);
-            if(output_strips[i].bus) continue;
+    for(int i=0; i<n_output_strips; i++)
+    {
+        output_buffers[i] = malloc(sizeof(color_t) * output_strips[i].length);
+        if(!output_buffers[i]) FAIL("Could not allocate output buffer");
 
-            zmsg_t * imsg = zmsg_new();
-            zmsg_t * reply = NULL;
-            if(!flux_cli_send(flux_client, output_strips[i].id, "INFO", &imsg, &reply)){
-                zhash_t * info = zhash_unpack(zmsg_first(reply));
-                char * length_str  = zhash_lookup(info, "length");
-                if(length_str)
-                    output_strips[i].length = atoi(length_str);
-                printf("Lux device '%s' with length '%s'\n", (char *) zhash_lookup(info, "id"), (char *) zhash_lookup(info, "length"));
-                zhash_destroy(&info);
-            }else{
-                output_strips[i].bus = -1;
-            }
-            zmsg_destroy(&reply);
-        }
-    }else{
-        printf("No flux initialized\n");
+        // TODO: better unify lux/flux 
+        sprintf(output_strips[i].id_str, "lux:%08x", output_strips[i].id_int);
+    }
+
+    output_on_flux = !output_flux_init();
+    output_on_lux = !output_lux_init();
+
+    if(!(output_on_flux || output_on_lux)){
+        printf("No flux or lux initialized\n");
         for(int i = 0; i < n_output_strips; i++){
             output_strips[i].bus = -1;
         }
     }
 
-    for(int i=0; i<n_output_strips; i++)
-    {
-        output_buffers[i] = malloc(sizeof(color_t) * output_strips[i].length);
-        if(!output_buffers[i]) FAIL("Could not allocate output buffer");
-    }
+    int n_flux = 0;
+    int n_lux = 0;
+
+    if(output_on_flux) n_flux = output_flux_enumerate(output_strips, n_output_strips);
+    if(output_on_lux) n_lux = output_lux_enumerate(output_strips, n_output_strips);
+
+    printf("Found %d flux devices & %d lux devices\n", n_flux, n_lux);
 
     // Create output thread to run updates even if no serial was init'd
     output_running = 1;
@@ -140,6 +128,9 @@ void output_stop()
 
     free(output_buffers);
 
-    serial_close();
+    if(output_on_flux)
+        output_flux_del();
+    if(output_on_lux)
+        output_lux_del();
 }
 

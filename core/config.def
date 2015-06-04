@@ -1,5 +1,18 @@
+/* CFGSECTION(name, ...) */
+/* CFG(name, function, default) */
+
 CFGSECTION(path,
     CFG(layout, STRING, "layout.ini")
+    //CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
+)
+
+CFGSECTION(flux,
+    CFG(enabled, INT, 0)
+    CFG(broker, STRING, "tcp://localhost:1365")
+)
+
+CFGSECTION(lux,
+    CFG(enabled, INT, 0)
 )
 
 #undef CFGSECTION

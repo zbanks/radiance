@@ -291,10 +291,10 @@ static void ui_update_output(output_strip_t * output_strip){
 
     SDL_Color color = {150, 150, 150, 255};
 
-    if(output_strip->bus >= 0)
+    if(output_strip->bus > 0)
         color = output_strip->color;
 
-    snprintf(buf, 16, "%d %s", output_strip->length, output_strip->id);
+    snprintf(buf, 16, "%d %s", output_strip->length, output_strip->id_str);
     text_render(output_pane, &layout.output.name_txt, &color, buf);
 }
 

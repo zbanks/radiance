@@ -30,8 +30,8 @@ int main()
     patterns_updating = SDL_CreateMutex();
     hits_updating = SDL_CreateMutex();
 
-    layout_dump(&layout, "layout.ini");
     config_dump(&config, "config.ini");
+    layout_dump(&layout, config.path.layout);
     //return 0;
     //layout_load(&layout, "layout.ini");
     ui_init();

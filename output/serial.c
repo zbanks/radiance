@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 #include "core/err.h"
-#include "crc.h"
-#include "lux.h"
+#include "lib/crc.h"
+#include "lib/lux/inc/lux.h"
 #include "output/serial.h"
 
 int ser;
@@ -52,9 +52,9 @@ char serial_init(){
     if(ser > 0){
         serial_set_attribs(ser, 3000000);
         serial_set_blocking(ser, 1);
-        return 1;
+        return 0;
     }
-    return 0;
+    return -1;
 }
 
 void serial_close(){

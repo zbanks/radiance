@@ -4,6 +4,11 @@
 #include "core/slot.h"
 #include <SDL/SDL.h>
 
+enum output_bus {
+    OUTPUT_FLUX = 1,
+    OUTPUT_LUX = 2, // bitmask
+};
+
 typedef struct output_vertex
 {
     float x;
@@ -14,7 +19,8 @@ typedef struct output_vertex
 
 typedef struct output_strip
 {
-    char * id;
+    char id_str[16];
+    int id_int;
     int length;
     output_vertex_t* first;
     SDL_Color color;
