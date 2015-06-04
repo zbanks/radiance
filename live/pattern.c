@@ -1,14 +1,15 @@
 #include "core/slot.h"
 #include "core/err.h"
+#include "patterns/pattern.h"
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
 #include "util/string.h"
 
-extern pattern_t pat_full;
+extern pattern_t pat_dyn;
 
 #define N_PATTERNS 1
-pattern_t * patterns[N_PATTERNS] = {&pat_full};
+pattern_t * patterns[N_PATTERNS] = {&pat_dyn};
 int n_patterns = N_PATTERNS;
 
 
@@ -21,7 +22,7 @@ enum pat_full_param_names {
     N_FULL_PARAMS
 };
 
-parameter_t pat_full_params[] = {
+static parameter_t pat_full_params[] = {
     [FULL_COLOR] = {
         .name = "Color",
         .default_val = 0.5,
@@ -33,19 +34,19 @@ parameter_t pat_full_params[] = {
     },
 };
 
-pat_state_pt pat_full_init()
+static pat_state_pt pat_full_init()
 {
     color_t * color = malloc(sizeof(color_t));
     *color = (color_t) {.r = 0., .g = 0., .b = 0., .a = 0.};
     return color;
 }
 
-void pat_full_del(pat_state_pt state)
+static void pat_full_del(pat_state_pt state)
 {
     free(state);
 }
 
-void pat_full_update(slot_t* slot, long t)
+static void pat_full_update(slot_t* slot, long t)
 {
     UNUSED(t);
     color_t* color = (color_t*)slot->state;
@@ -56,20 +57,20 @@ void pat_full_update(slot_t* slot, long t)
     color->b *= v;
 }
 
-void pat_full_prevclick(slot_t * slot, float x, float y){
+static void pat_full_prevclick(slot_t * slot, float x, float y){
     UNUSED(slot);
     UNUSED(x);
     UNUSED(y);
 }
 
-color_t pat_full_pixel(slot_t* slot, float x, float y)
+static color_t pat_full_pixel(slot_t* slot, float x, float y)
 {
     UNUSED(x);
     UNUSED(y);
     return *(color_t*)slot->state;
 }
 
-pattern_t pat_full = {
+pattern_t pat_dyn = {
     .render = &pat_full_pixel,
     .init = &pat_full_init,
     .del = &pat_full_del,

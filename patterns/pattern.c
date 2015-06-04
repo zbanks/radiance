@@ -9,6 +9,8 @@
 #include "util/siggen.h"
 #include "util/string.h"
 
+#ifndef SHAREDLIB
+
 #define N_PATTERNS 4
 pattern_t * default_patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble, &pat_strobe};
 pattern_t ** patterns;
@@ -23,6 +25,8 @@ void pattern_init(){
 void pattern_del(){
     free(patterns);
 }
+
+#endif
 
 // --------- Pattern: Full -----------
 

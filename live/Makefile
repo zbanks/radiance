@@ -2,7 +2,8 @@ CC = gcc
 
 # Files to include
 C_SRC = $(wildcard *.c)
-#C_SRC += ../core/slot.c ../core/parameter.c
+C_SRC += ../core/parameter.c
+C_SRC += ../patterns/pattern.c
 #C_SRC  += $(wildcard ../core/*.c)
 #C_SRC += $(wildcard dynamic/*.c)
 #C_SRC += $(wildcard filters/*.c)
@@ -22,10 +23,10 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
 INC  = -I.. -L/usr/local/lib -L/usr/lib 
-LIB  = -lm
+LIB  = -lm -lSDL
 
 # Assembler, compiler, and linker flags
-CFLAGS  = -g -O3 $(INC) -Wall -Wextra -Werror -std=c99 -fPIC
+CFLAGS  = -g -O3 $(INC) -Wall -Wextra -Werror -std=c99 -fPIC -DSHAREDLIB
 
 -include $(DEPS)
 %.d : %.c

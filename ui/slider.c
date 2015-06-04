@@ -114,7 +114,7 @@ enum slider_event mouse_click_alpha_slider(param_state_t * param_state, struct x
 
     rect_copy(&r, &layout.alpha_slider.handle_rect);
     r.y += (1.0 - param_state_get(param_state)) * (layout.alpha_slider.track_h - layout.alpha_slider.handle_h);
-    if(in_rect(&xy, &r, &offset)){
+    if(xy_in_rect(&xy, &r, &offset)){
         active_slider.state = param_state;
         active_slider.initial_value = param_state_get(param_state);
         mouse_drag_fn_p = &mouse_drag_alpha_slider;
@@ -129,7 +129,7 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
 
     rect_copy(&r, &layout.slider.handle_rect);
     r.x += param_state_get(param_state) * (layout.slider.track_w - layout.slider.handle_w);
-    if(in_rect(&xy, &r, &offset)){
+    if(xy_in_rect(&xy, &r, &offset)){
         if(param_state->connected_output)
             return SLIDER_LOCKED;
         active_slider.state = param_state;
@@ -142,7 +142,7 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
     r.y = 0;
     r.w = layout.slider.track_w; // FIXME
     r.h = layout.slider.handle_y - layout.slider.source_y;
-    if(in_rect(&xy, &r, &offset)){
+    if(xy_in_rect(&xy, &r, &offset)){
         if(active_param_source)
             param_state_disconnect(active_param_source);
         if(active_param_source == param_state){

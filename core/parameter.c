@@ -1,8 +1,6 @@
 #include <math.h>
 
 #include "core/parameter.h"
-#include "util/string.h"
-
 
 void param_output_set(param_output_t * output, float value){
     param_state_t * pstate = output->connected_state;
