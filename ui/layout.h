@@ -100,26 +100,33 @@ struct PACKED rect_array {
 #undef CFG_RECT_ARRAY
 #define CFG_RECT_ARRAY CFG_RECT_ARRAY_ATTR
 
+// Calculates the `rect` corresponding to the `index`th item in the `array_spec` layout
 void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect);
+// Calculates the `rect` at (0,0) with the width, height of a rect in the `array_spec`
 void rect_array_origin(struct rect_array * array_spec, rect_t * rect);
 
+// Offsets a `rect` by an xy coordinate `d`
 static inline void rect_shift(rect_t * rect, const struct xy * d){
     rect->x += d->x;
     rect->y += d->y;
 }
 
-static inline void rect_origin(rect_t * src, rect_t * dst){
+// Creates a copy of a `rect` at the origin 
+static inline void rect_origin(const rect_t * src, rect_t * dst){
     dst->x = 0;
     dst->y = 0;
     dst->w = src->w;
     dst->h = src->h;
 }
 
+// Creates a copy of a `rect`
 static inline void rect_copy(rect_t * dst, const rect_t * src){
     memcpy(dst, src, sizeof(rect_t));
 }
 
-static inline int in_rect(const struct xy * xy, const rect_t * rect, struct xy * offset){
+// Determines if an `xy` coordinate is in a given `rect` and where (`offset`) in the rect it is.
+// Returns 1 if the coordinate is in the rect & populates `offset` if non-null
+static inline int xy_in_rect(const struct xy * xy, const rect_t * rect, struct xy * offset){
     if((xy->x >= rect->x) && (xy->x < rect->x + rect->w) && \
        (xy->y >= rect->y) && (xy->y < rect->y + rect->h)){
         if(offset){
@@ -131,6 +138,7 @@ static inline int in_rect(const struct xy * xy, const rect_t * rect, struct xy *
     return 0;
 }
 
+// Adds two `xy` values & returns the result
 static inline struct xy xy_add(struct xy a, struct xy b){
     return (struct xy) {
         .x = a.x + b.x,
@@ -138,6 +146,7 @@ static inline struct xy xy_add(struct xy a, struct xy b){
     };
 }
 
+// Subtracts two `xy` values (a - b) & returns the result
 static inline struct xy xy_sub(struct xy a, struct xy b){
     return (struct xy) {
         .x = a.x - b.x,

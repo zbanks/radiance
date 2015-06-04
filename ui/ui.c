@@ -578,7 +578,7 @@ static void mouse_drop_pattern()
     for(int i = 0; i < n_slots; i++)
     {
         rect_array_layout(&layout.slot.rect_array, i, &r);
-        if(in_rect(&xy, &r, 0)){
+        if(xy_in_rect(&xy, &r, 0)){
             pat_unload(&slots[i]);
             pat_load(&slots[i],patterns[active_pattern.index]);
         }
@@ -595,7 +595,7 @@ static void mouse_drop_hit()
     for(int i = 0; i < n_hit_slots; i++)
     {
         rect_array_layout(&layout.hit_slot.rect_array, i, &r);
-        if(in_rect(&xy, &r, 0)){
+        if(xy_in_rect(&xy, &r, 0)){
             hit_unload(&hit_slots[i]);
             hit_load(&hit_slots[i], hits[active_hit.index]);
         }
@@ -615,7 +615,7 @@ static void mouse_drop_slot()
         for(int i = 0; i < n_slots; i++)
         {
             rect_array_layout(&layout.slot.rect_array, i, &r);
-            if(in_rect(&xy, &r, 0)){
+            if(xy_in_rect(&xy, &r, 0)){
                 slot_t temp_slot = *active_slot.slot;
                 *active_slot.slot = slots[i];
                 slots[i] = temp_slot;
@@ -629,7 +629,7 @@ static void mouse_drop_slot()
         for(int i = 0; i < n_hit_slots; i++)
         {
             rect_array_layout(&layout.hit_slot.rect_array, i, &r);
-            if(in_rect(&xy, &r, 0)){
+            if(xy_in_rect(&xy, &r, 0)){
                 slot_t temp_slot = *active_slot.slot;
                 *active_slot.slot = hit_slots[i];
                 hit_slots[i] = temp_slot;
@@ -650,12 +650,12 @@ static int mouse_click_slot(int index, struct xy xy)
     if(!slots[index].pattern) return 0;
 
     // See if the click is on the alpha slider
-    if(in_rect(&xy, &layout.slot.alpha_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.slot.alpha_rect, &offset)){
         return !!mouse_click_alpha_slider(&slots[index].alpha, offset);
     }
 
     // See if the click is on the preview 
-    if(in_rect(&xy, &layout.slot.preview_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
         slots[index].pattern->prevclick(
                 &slots[index],
                 -1.0 + 2.0 * (xy.x - layout.slot.preview_x) / (float) layout.slot.preview_w,
@@ -667,7 +667,7 @@ static int mouse_click_slot(int index, struct xy xy)
     for(int i = 0; i < slots[index].pattern->n_params; i++)
     {
         rect_array_layout(&layout.slot.sliders_rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return !!mouse_click_param_slider(&slots[index].param_states[i], offset);
         }
     }
@@ -698,12 +698,12 @@ static int mouse_click_hit_slot(int index, struct xy xy)
     if(!hit_slots[index].hit) return 0;
 
     // See if the click is on the alpha slider
-    if(in_rect(&xy, &layout.hit_slot.alpha_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.hit_slot.alpha_rect, &offset)){
         return !!mouse_click_alpha_slider(&hit_slots[index].alpha, offset);
     }
 
     // See if the click is on the preview 
-    if(in_rect(&xy, &layout.hit_slot.preview_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.hit_slot.preview_rect, &offset)){
         active_active_hit = hit_slots[index].hit->start(&hit_slots[index]);
         if(active_active_hit) active_active_hit->hit->event(active_active_hit, HITEV_NOTE_ON, 1.);
         mouse_drop_fn_p = &hit_release;
@@ -718,7 +718,7 @@ static int mouse_click_hit_slot(int index, struct xy xy)
     for(int i = 0; i < hit_slots[index].hit->n_params; i++)
     {
         rect_array_layout(&layout.hit_slot.sliders_rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return !!mouse_click_param_slider(&hit_slots[index].param_states[i], offset);
         }
     }
@@ -744,7 +744,6 @@ static int mouse_click_midi(int index, struct xy xy){
     UNUSED(index);
     UNUSED(xy);
     //midi_refresh_devices();
-    dynamic_load_so("./live/live.so"); 
     return 0;
 }
 
@@ -756,13 +755,13 @@ static int mouse_click_signal(int index, struct xy xy)
     {
         // See if the click is on a parameter slider
         rect_array_layout(&layout.signal.sliders_rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return !!mouse_click_param_slider(&signals[index].param_states[i], offset);
         }
     }
 
     // Was the output clicked
-    if(in_rect(&xy, &layout.graph_signal.rect, 0)){
+    if(xy_in_rect(&xy, &layout.graph_signal.rect, 0)){
         // Is there something looking for a source?
         if(active_param_source){
             param_state_connect(active_param_source, &signals[index].output);
@@ -774,7 +773,7 @@ static int mouse_click_signal(int index, struct xy xy)
 }
 
 static int mouse_click_filter(int index, struct xy xy){
-    if(in_rect(&xy, &layout.graph_filter.rect, 0)){
+    if(xy_in_rect(&xy, &layout.graph_filter.rect, 0)){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[index].output);
             active_param_source = 0;
@@ -790,7 +789,7 @@ static int mouse_click_audio(struct xy xy){
 
     for(int i = 0; i < N_WF_BINS; i++){
         rect_array_layout(&layout.audio.bins_rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             if(active_param_source){
                 param_state_connect(active_param_source, &waveform_bins[i].output);
                 active_param_source = 0;
@@ -799,16 +798,16 @@ static int mouse_click_audio(struct xy xy){
         }
     }
 
-    if(in_rect(&xy, &layout.waveform.rect, &offset)){
+    if(xy_in_rect(&xy, &layout.waveform.rect, &offset)){
         timebase_tap(config.timebase.beat_click_alpha);
     }
 
-    if(in_rect(&xy, &layout.audio.ball_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.audio.ball_rect, &offset)){
         printf("ball clicked\n");
         timebase_align();
     }
 
-    if(in_rect(&xy, &layout.audio.auto_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.audio.auto_rect, &offset)){
         if(timebase_source == TB_AUTOMATIC)
             timebase_source = TB_MANUAL;
         else 
@@ -824,12 +823,12 @@ static int mouse_click(struct xy xy)
     rect_t r;
     
     // See if click is in master pane
-    if(in_rect(&xy, &layout.master.rect, &offset)){
+    if(xy_in_rect(&xy, &layout.master.rect, &offset)){
         return 1;
     }
 
     // See if click is in audio pane
-    if(in_rect(&xy, &layout.audio.rect, &offset)){
+    if(xy_in_rect(&xy, &layout.audio.rect, &offset)){
         return mouse_click_audio(offset);
     }
 
@@ -838,7 +837,7 @@ static int mouse_click(struct xy xy)
     for(int i=0; i<n_slots; i++)
     {
         rect_array_layout(&layout.slot.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             // If it is, see if that slot wants to handle it
             return mouse_click_slot(i, offset);
         }
@@ -848,7 +847,7 @@ static int mouse_click(struct xy xy)
     for(int i=0; i<n_hit_slots; i++)
     {
         rect_array_layout(&layout.hit_slot.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             // If it is, see if that slot wants to handle it
             return mouse_click_hit_slot(i, offset);
         }
@@ -858,7 +857,7 @@ static int mouse_click(struct xy xy)
     for(int i=0; i<n_slots; i++)
     {
         rect_array_layout(&layout.add_pattern.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             active_pattern.index = i;
             active_pattern.dxy = (struct xy) {0,0};
             mouse_drag_fn_p = &mouse_drag_pattern;
@@ -871,7 +870,7 @@ static int mouse_click(struct xy xy)
     for(int i=0; i<n_hit_slots; i++)
     {
         rect_array_layout(&layout.add_hit.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             active_hit.index = i;
             active_hit.dxy = (struct xy) {0,0};
             mouse_drag_fn_p = &mouse_drag_hit;
@@ -883,7 +882,7 @@ static int mouse_click(struct xy xy)
     // See if click is in an signal
     for(int i = 0; i < n_signals; i++){
         rect_array_layout(&layout.signal.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_signal(i, offset);
         }
     }
@@ -891,7 +890,7 @@ static int mouse_click(struct xy xy)
     // See if click is in filter
     for(int i = 0; i < n_filters; i++){
         rect_array_layout(&layout.filter.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_filter(i, offset);
         }
     }
@@ -899,7 +898,7 @@ static int mouse_click(struct xy xy)
     // See if click is in output
     for(int i =  0; i < n_output_strips; i++){
         rect_array_layout(&layout.output.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_output(i, offset);
         }
     }
@@ -907,7 +906,7 @@ static int mouse_click(struct xy xy)
     // See if click is in midi
     for(int i =  0; i < n_controllers_enabled; i++){
         rect_array_layout(&layout.midi.rect_array, i, &r);
-        if(in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_midi(i, offset);
         }
     }
