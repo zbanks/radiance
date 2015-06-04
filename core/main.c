@@ -6,6 +6,7 @@
 #include <SDL/SDL_framerate.h>
 
 #include "core/err.h"
+#include "core/config.h"
 #include "core/slot.h"
 #include "core/audio.h"
 #include "filters/filter.h"
@@ -29,9 +30,10 @@ int main()
     patterns_updating = SDL_CreateMutex();
     hits_updating = SDL_CreateMutex();
 
-    dump_layout(&layout, "layout.ini");
+    layout_dump(&layout, "layout.ini");
+    config_dump(&config, "config.ini");
     //return 0;
-    //load_layout(&layout, "layout.ini");
+    //layout_load(&layout, "layout.ini");
     ui_init();
 
     pat_load(&slots[0], &pat_full);

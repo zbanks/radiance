@@ -29,7 +29,7 @@ All of the *patterns*, *hits*, and *signals* use times from the timebase to sync
 Each pattern and hit also has the following things:
 
 #### Alpha
-*Alpha* is used to refer to transparency, with 1 corresponding to opaque and 0 corresponding to invisible/transparent. Patterns, and hits can be running but have their alpha set to 0 so they produce no output.
+*Alpha* represents opacity, with 1 corresponding to opaque and 0 corresponding to invisible/transparent. Patterns, and hits can be running but have their alpha set to 0 so they produce no output.
 
 #### Parameters
 *Parameters* are inputs which modify how patterns, hits, and signals behave. They are represented as sliders in the UI. 

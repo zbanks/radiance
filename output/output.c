@@ -18,7 +18,8 @@
 #include <flux.h>
 #include <czmq.h>
 
-#define BROKER_URL "tcp://localhost:5555"
+#define BROKER_URL "tcp://musicazoo.mit.edu:1365"
+//#define BROKER_URL "tcp://localhost:1365"
 
 color_t** output_buffers = 0;
 
@@ -70,7 +71,7 @@ static int output_run(void* args)
             }
 
             zmsg_t * fmsg = zmsg_new();
-            zmsg_t * reply = zmsg_new();
+            zmsg_t * reply = NULL;
             zmsg_pushmem(fmsg, frame, j);
             flux_cli_send(flux_client, output_strips[i].id, "FRAME", &fmsg, &reply);
             zmsg_destroy(&reply);
@@ -86,7 +87,7 @@ void output_start()
 
     if(!output_buffers) FAIL("Could not allocate output buffer array");
 
-    flux_client = flux_cli_init(BROKER_URL, 0);
+    flux_client = flux_cli_init(BROKER_URL, 1);
     if(flux_client){
         printf("Flux connected\n");
         for(int i = 0; i < n_output_strips; i++){

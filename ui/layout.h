@@ -7,68 +7,18 @@
 #include <stdio.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
+#include "core/config_macros.h"
 
-char* mystrdup(const char* s);
+#ifdef CFGOBJ
+#undef CFGOBJ
+#undef CFGOBJ_PATH
+#endif
 
-#define INT int
-#define SINT16 Sint16
-#define UINT16 Uint16
-#define STRING char *
-#define FLOAT float
+#define CFGOBJ layout
+#define CFGOBJ_PATH "ui/layout.def"
 
-#define INT_FN(x) atoi(x)
-#define SINT16_FN(x) atoi(x)
-#define UINT16_FN(x) atoi(x)
-#define STRING_FN(x) mystrdup(x)
-#define FLOAT_FN(x) atof(x)
-
-#define INT_FMT "%d"
-#define SINT16_FMT "%d"
-#define UINT16_FMT "%d"
-#define STRING_FMT "%s"
-#define FLOAT_FMT "%f"
-
-#define PACKED __attribute__ ((__packed__))
-
-#define CONCAT(x, y) CONCAT2(x, y)
-#define CONCAT2(x, y) x ## y
-
-#define SECTIONSTRUCT(x) _##x##_layout
-
-#define STRINGIFY(x) STRINGIFY2(x)
-#define STRINGIFY2(x) #x
-
-/* ISEMPTY macro from https://gustedt.wordpress.com/2010/06/08/detect-empty-macro-arguments/ */
-
-#define _ARG16(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, ...) _15
-#define HAS_COMMA(...) _ARG16(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
-#define _TRIGGER_PARENTHESIS_(...) ,
- 
-#define ISEMPTY(...)                                                    \
-_ISEMPTY(                                                               \
-          /* test if there is just one argument, eventually an empty    \
-             one */                                                     \
-          HAS_COMMA(__VA_ARGS__),                                       \
-          /* test if _TRIGGER_PARENTHESIS_ together with the argument   \
-             adds a comma */                                            \
-          HAS_COMMA(_TRIGGER_PARENTHESIS_ __VA_ARGS__),                 \
-          /* test if the argument together with a parenthesis           \
-             adds a comma */                                            \
-          HAS_COMMA(__VA_ARGS__ (/*empty*/)),                           \
-          /* test if placing it between _TRIGGER_PARENTHESIS_ and the   \
-             parenthesis adds a comma */                                \
-          HAS_COMMA(_TRIGGER_PARENTHESIS_ __VA_ARGS__ (/*empty*/))      \
-          )
- 
-#define PASTE5(_0, _1, _2, _3, _4) _0 ## _1 ## _2 ## _3 ## _4
-#define _ISEMPTY(_0, _1, _2, _3) HAS_COMMA(PASTE5(_IS_EMPTY_CASE_, _0, _1, _2, _3))
-#define _IS_EMPTY_CASE_0001 ,
-
-/* End of ISEMPTY macro code */
-
-#define PREFIX(prefix, suffix) CONCAT(CONCAT(PREFIX_, ISEMPTY(prefix))(prefix), suffix)
-#define PREFIX_1(prefix) prefix
-#define PREFIX_0(prefix) CONCAT(prefix, _)
+//#undef PACKED
+//#define PACKED 
 
 #define CFG(n, type, def) type n;
 
@@ -136,13 +86,7 @@ struct PACKED rect_array {
 #define CFG_RECT(n, args...) union { rect_t PREFIX(n, rect); struct PACKED { CFG_RECT_ATTR(n, args) }; };
 #define CFG_RECT_ARRAY(n, args...) union { struct rect_array PREFIX(n, rect_array); struct PACKED { CFG_RECT_ARRAY_ATTR(n, args) }; };
 
-struct layout {
-    #define CFGSECTION(w, d...) struct PACKED SECTIONSTRUCT(w) { d } w;
-    #define CFG(n, type, default) type n;
-    #include "layout.def"
-};
-
-extern struct layout layout;
+#include "core/config_gen_h.def"
 
 #undef CFG_XY
 #define CFG_XY CFG_XY_ATTR
@@ -156,7 +100,6 @@ extern struct layout layout;
 #undef CFG_RECT_ARRAY
 #define CFG_RECT_ARRAY CFG_RECT_ARRAY_ATTR
 
-int dump_layout(struct layout* cfg, char * filename);
 void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect);
 void rect_array_origin(struct rect_array * array_spec, rect_t * rect);
 

@@ -1,0 +1,6 @@
+CFGSECTION(path,
+    CFG(layout, STRING, "layout.ini")
+)
+
+#undef CFGSECTION
+#undef CFG

@@ -269,14 +269,16 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
         state->min = 0.;
     }else{
         a = a * 0.01 + 0.99;
-        state->max = MAX(state->max * a, x);
-        state->min = MIN(state->max - (state->max - state->min) * a, x);
+        state->max = MAX(state->max * a + (1. - a) * x, x);
+        state->min = MIN(state->min * a + (1. - a) * x, x);
+        //state->min = MIN(state->max - (state->max - state->min) * a, x);
         x = (x - state->min) / (state->max - state->min);
     }
 
     if(min < max){
         y = x * (max - min) + min;
     }else{
+        printf("how did this happen? %f %f\n", min, max);
         y = (1. - x) * (min - max) + max;
     }
     param_output_set(&signal->output, y);
