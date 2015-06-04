@@ -4,17 +4,17 @@
 #include <SDL/SDL_thread.h>
 
 #include "waveform/waveform.h"
-#include "core/err.h"
 #include "core/audio.h"
-
-#define NUDGE 5
+#include "core/config.h"
+#include "core/err.h"
 
 int stat_fps = 0;
 int stat_ops = 0;
 
-static double freq_mb_per_ms;
-static long pt_ms;
-static long pt_mb;
+static double ui_bpm = 140.;
+static double freq_mb_per_ms = 140. / 60;
+static long pt_ms = 0;
+static long pt_mb = 0;
 
 static SDL_mutex* updating;
 volatile int timebase_source = TB_AUTOMATIC;
@@ -27,6 +27,7 @@ void timebase_init()
     pt_ms = 0;
     pt_mb = 0;
     freq_mb_per_ms = 140. / 60;
+    ui_bpm = 140.;
 }
 
 void timebase_del()
@@ -62,6 +63,8 @@ void timebase_tap(double alpha)
     pt_ms = cur_ms;
     pt_mb = cur_mb;
 
+    ui_bpm = ui_bpm * config.timebase.ui_bpm_alpha + (1.0 - config.timebase.ui_bpm_alpha) * (freq_mb_per_ms * 60.);
+
     if(SDL_UnlockMutex(updating)) FAIL("Unable to unlock mutex: %s\n", SDL_GetError());
 }
 
@@ -80,12 +83,13 @@ long timebase_get()
 
     last_result = result;
 
-    return result - NUDGE;
+    return result - config.timebase.antidelay_ms;
 }
 
 float timebase_get_bpm()
 {
-    return freq_mb_per_ms * 60;
+    //return freq_mb_per_ms * 60;
+    return ui_bpm;
 }
 
 void timebase_align(){

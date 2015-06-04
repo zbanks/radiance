@@ -14,6 +14,7 @@
 #include "core/err.h"
 #include "core/parameter.h"
 #include "core/slot.h"
+#include "core/config.h"
 #include "filters/filter.h"
 #include "waveform/waveform.h"
 #include "hits/hit.h"
@@ -797,7 +798,7 @@ static int mouse_click_audio(struct xy xy){
     }
 
     if(in_rect(&xy, &layout.waveform.rect, &offset)){
-        timebase_tap(0.3);
+        timebase_tap(config.timebase.beat_click_alpha);
     }
 
     if(in_rect(&xy, &layout.audio.ball_rect, &offset)){

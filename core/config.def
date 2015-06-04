@@ -15,5 +15,12 @@ CFGSECTION(lux,
     CFG(enabled, INT, 0)
 )
 
+CFGSECTION(timebase,
+    CFG(antidelay_ms, INT, 5)
+    CFG(ui_bpm_alpha, FLOAT, 0.9)
+    CFG(beat_click_alpha, FLOAT, 0.4)
+    CFG(beat_btrack_alpha, FLOAT, 0.95)
+)
+
 #undef CFGSECTION
 #undef CFG

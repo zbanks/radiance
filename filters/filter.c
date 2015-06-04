@@ -1,4 +1,5 @@
 #include "core/parameter.h"
+#include "core/config.h"
 #include "core/err.h"
 #include "filters/filter.h"
 #include "filters/vamp.h"
@@ -55,7 +56,7 @@ void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
     UNUSED(value);
 
     if(timebase_source == TB_AUTOMATIC){
-        timebase_tap(0.95);
+        timebase_tap(config.timebase.beat_btrack_alpha);
     }
     waveform_add_beatline();
 }
