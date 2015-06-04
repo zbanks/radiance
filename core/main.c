@@ -27,6 +27,7 @@ static float random_color()
 
 int main()
 {
+    pattern_init();
     patterns_updating = SDL_CreateMutex();
     hits_updating = SDL_CreateMutex();
 
@@ -99,6 +100,7 @@ int main()
     SDL_DestroyMutex(hits_updating);
 
     ui_quit();
+    pattern_del();
 
     return 0;
 }

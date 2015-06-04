@@ -15,6 +15,7 @@
 #include "core/parameter.h"
 #include "core/slot.h"
 #include "core/config.h"
+#include "dynamic/object.h"
 #include "filters/filter.h"
 #include "waveform/waveform.h"
 #include "hits/hit.h"
@@ -743,6 +744,7 @@ static int mouse_click_midi(int index, struct xy xy){
     UNUSED(index);
     UNUSED(xy);
     //midi_refresh_devices();
+    dynamic_load_so("./live/live.so"); 
     return 0;
 }
 

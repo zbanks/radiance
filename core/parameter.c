@@ -1,6 +1,8 @@
 #include <math.h>
 
 #include "core/parameter.h"
+#include "util/string.h"
+
 
 void param_output_set(param_output_t * output, float value){
     param_state_t * pstate = output->connected_state;
@@ -85,10 +87,6 @@ param_output_t * param_state_output(param_state_t * state){
     return state->connected_output;
 }
 
-void float_to_string(float val, char * buf, int n){
-    snprintf(buf, n, "%f", val);
-}
-
 int quantize_parameter(quant_labels_t l, float p){ 
     int i = 0;
     int r;
@@ -96,6 +94,10 @@ int quantize_parameter(quant_labels_t l, float p){
     r = floor(p * i);
     if(r >= i) r = i - 1;
     return r;
+}
+
+void float_to_string(float val, char * buf, int n){
+    snprintf(buf, n, "%f", val);
 }
 
 static quant_labels_t power_quant_labels = {

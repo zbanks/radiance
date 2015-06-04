@@ -7,10 +7,22 @@
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
+#include "util/string.h"
 
 #define N_PATTERNS 4
-pattern_t* patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble, &pat_strobe};
+pattern_t * default_patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble, &pat_strobe};
+pattern_t ** patterns;
 int n_patterns = N_PATTERNS;
+
+void pattern_init(){
+    patterns = malloc(n_patterns * sizeof(pattern_t *));
+    if(!patterns) FAIL("Unable to malloc patterns array\n");
+    memcpy(patterns, default_patterns, n_patterns * sizeof(pattern_t *));
+}
+
+void pattern_del(){
+    free(patterns);
+}
 
 // --------- Pattern: Full -----------
 
