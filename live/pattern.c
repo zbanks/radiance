@@ -4,7 +4,6 @@
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
-#include "util/string.h"
 
 extern pattern_t pat_dyn;
 

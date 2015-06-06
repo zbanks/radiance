@@ -4,7 +4,6 @@
 #include "signals/signal.h"
 #include "util/siggen.h"
 #include "util/math.h"
-#include "util/string.h"
 #include "ui/graph.h"
 #include "core/time.h"
 

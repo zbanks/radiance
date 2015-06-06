@@ -7,7 +7,6 @@
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
-#include "util/string.h"
 
 #ifndef SHAREDLIB
 

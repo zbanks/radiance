@@ -19,27 +19,33 @@ int output_lux_enumerate(output_strip_t * strips, int n_strips){
     int r;
 
     for(int i = 0; i < n_strips; i++){
-        cmd.data.carray.cmd = CMD_GET_ID;
-        cmd.destination = strips[i].id_int;
-        cmd.length = 1;
 
-        if((r = lux_command_response(&cmd, &resp, 20))){
-            printf("failed cmd get_id: %d\n", r);
-            strips[i].bus &= ~OUTPUT_LUX;
-        }else{
-            printf("Found light strip %d @0x%08x: '%s'\n", i, cmd.destination, resp.data.raw);
-            n_found++;
+        if(config.lux.write_only){
             strips[i].bus |= OUTPUT_LUX;
-
-            cmd.data.carray.cmd = CMD_GET_LENGTH;
+            n_found++;
+        }else{
+            cmd.data.carray.cmd = CMD_GET_ID;
+            cmd.destination = strips[i].id_int;
             cmd.length = 1;
+
             if((r = lux_command_response(&cmd, &resp, 20))){
-                printf("failed cmd get_length: %d\n", r);
+                printf("failed cmd get_id: %d\n", r);
+                strips[i].bus &= ~OUTPUT_LUX;
             }else{
-                if(strips[i].length == resp.data.ssingle_r.data)
-                    printf("...length matches: %d\n", resp.data.ssingle_r.data);
-                else
-                    printf("...length mis-match! %d in file, %d from strip\n", strips[i].length, resp.data.ssingle_r.data);
+                printf("Found light strip %d @0x%08x: '%s'\n", i, cmd.destination, resp.data.raw);
+                n_found++;
+                strips[i].bus |= OUTPUT_LUX;
+
+                cmd.data.carray.cmd = CMD_GET_LENGTH;
+                cmd.length = 1;
+                if((r = lux_command_response(&cmd, &resp, 20))){
+                    printf("failed cmd get_length: %d\n", r);
+                }else{
+                    if(strips[i].length == resp.data.ssingle_r.data)
+                        printf("...length matches: %d\n", resp.data.ssingle_r.data);
+                    else
+                        printf("...length mis-match! %d in file, %d from strip\n", strips[i].length, resp.data.ssingle_r.data);
+                }
             }
         }
     }
