@@ -168,8 +168,9 @@ void inp_lpf_update(signal_t * signal, mbeat_t t){
     float a = signal->param_states[LPF_ALPHA].value;
     float b = signal->param_states[LPF_BETA].value;
     if(state->last_t + 10 < t){
-        a = 1.;
-        b = 1.;
+        //TODO: XXX
+        //a = 1.;
+        //b = 1.;
     }else{
         state->last_t += 10;
     }
@@ -357,7 +358,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {25, 240, 0, 255},
             .label_color = {25, 240, 0, 255},
-            .label = "LPF"
+            .label = "AGC"
         },
         .init = inp_agc_init,
         .update = inp_agc_update,
@@ -374,7 +375,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {0, 220, 220, 255},
             .label_color = {0, 220, 220, 255},
-            .label = "LPF"
+            .label = "AGC"
         },
         .init = inp_agc_init,
         .update = inp_agc_update,

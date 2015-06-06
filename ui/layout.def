@@ -11,7 +11,7 @@ CFGSECTION(globals,
 )
 
 CFGSECTION(window,
-    CFG_RECT(, 0, 0, 1362, 764)
+    CFG_RECT(, 0, 0, 1366, 764)
 )
 
 CFGSECTION(master,

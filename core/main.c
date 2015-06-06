@@ -43,7 +43,8 @@ int main()
     pat_load(&slots[3], &pat_strobe);
     pat_load(&slots[4], &pat_full);
     pat_load(&slots[5], &pat_wave);
-    pat_load(&slots[6], &pat_bubble);
+    //pat_load(&slots[6], &pat_bubble);
+    pat_load(&slots[6], &pat_fade);
     pat_load(&slots[7], &pat_strobe);
 
     hit_load(&hit_slots[0], &hit_full);
