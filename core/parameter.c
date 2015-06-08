@@ -8,7 +8,8 @@ void param_output_set(param_output_t * output, float value){
     output->value = value;
     while(pstate){
         // Iterate through linked list setting `value`
-        pstate->value = value;
+        //pstate->value = value;
+        pstate->value = value * (pstate->max - pstate->min) + pstate->min;
         pstate = pstate->next_connected_state;
     }
 }
@@ -28,12 +29,15 @@ void param_output_free(param_output_t * output){
 
 void param_state_init(param_state_t * state, float value){
     state->value = value;
+    state->min = 0.;
+    state->max = 1.;
     state->connected_output = 0;
     state->next_connected_state = 0;
     state->prev_connected_state = 0;
 }
 
 float param_state_get(param_state_t * state){
+    //return (state->value) * (state->max - state->min) + state->min;
     return state->value;
 }
 

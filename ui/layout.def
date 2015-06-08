@@ -53,6 +53,7 @@ CFGSECTION(slider,
     CFG_RECT(, 0, 0, 100, 40)
     CFG_RECT(track, 3, 16, 94, 4)
     CFG_RECT(handle, 3, 12, 10, 10)
+    CFG_RECT(output_indicator, 3, 12, 2, 10)
     CFG_TXT(name, 3, 0, 10, 0, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(source, 90, 0, 10, 4, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(value, 0, 22, 10, 0, "FreeSans.ttf", "#FFFFFF")

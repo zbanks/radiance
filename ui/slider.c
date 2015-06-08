@@ -13,6 +13,7 @@ static struct
 {
     param_state_t * state;
     float initial_value;
+    float * value_p;
 } active_slider;
 
 void slider_init()
@@ -70,20 +71,38 @@ void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
         text_render(slider_surface, &layout.slider.value_txt, &white, sbuf);
     }
 
+    SDL_FillRect(slider_surface, &layout.slider.track_rect, SDL_MapRGB(slider_surface->format, 80, 80, 80));
+
     if(param_output){
         handle_color = param_output->handle_color;
 
         text_render(slider_surface, &layout.slider.source_txt, &param_output->label_color, param_output->label);
+        rect_copy(&r, &layout.slider.handle_rect);
+        r.x += state->min * (layout.slider.track_w - layout.slider.handle_w);
+        SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format,
+                                                    handle_color.r,
+                                                    handle_color.g,
+                                                    handle_color.b));
+        rect_copy(&r, &layout.slider.handle_rect);
+        r.x += state->max * (layout.slider.track_w - layout.slider.handle_w);
+        SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format,
+                                                    handle_color.r,
+                                                    handle_color.g,
+                                                    handle_color.b));
+        rect_copy(&r, &layout.slider.output_indicator_rect);
+        r.x += param_state_get(state) * (layout.slider.track_w - layout.slider.output_indicator_w);
+        SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format,
+                                                    white.r,
+                                                    white.g,
+                                                    white.b));
+    }else{
+        rect_copy(&r, &layout.slider.handle_rect);
+        r.x += param_state_get(state) * (layout.slider.track_w - layout.slider.handle_w);
+        SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format,
+                                                    handle_color.r,
+                                                    handle_color.g,
+                                                    handle_color.b));
     }
-
-    SDL_FillRect(slider_surface, &layout.slider.track_rect, SDL_MapRGB(slider_surface->format, 80, 80, 80));
-
-    rect_copy(&r, &layout.slider.handle_rect);
-    r.x += param_state_get(state) * (layout.slider.track_w - layout.slider.handle_w);
-    SDL_FillRect(slider_surface, &r, SDL_MapRGB(slider_surface->format,
-                                                handle_color.r,
-                                                handle_color.g,
-                                                handle_color.b));
 }
 
 void mouse_drag_alpha_slider(struct xy xy)
@@ -105,7 +124,7 @@ void mouse_drag_param_slider(struct xy xy)
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
 
-    param_state_setq(active_slider.state, val);
+    *active_slider.value_p = val;
 }
 
 enum slider_event mouse_click_alpha_slider(param_state_t * param_state, struct xy xy){
@@ -127,15 +146,36 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
     rect_t r;
     struct xy offset;
 
-    rect_copy(&r, &layout.slider.handle_rect);
-    r.x += param_state_get(param_state) * (layout.slider.track_w - layout.slider.handle_w);
-    if(xy_in_rect(&xy, &r, &offset)){
-        if(param_state->connected_output)
-            return SLIDER_LOCKED;
-        active_slider.state = param_state;
-        active_slider.initial_value = param_state_get(param_state);
-        mouse_drag_fn_p = &mouse_drag_param_slider;
-        return SLIDER_DRAG_START;
+    if(!param_state->connected_output){
+        rect_copy(&r, &layout.slider.handle_rect);
+        r.x += param_state_get(param_state) * (layout.slider.track_w - layout.slider.handle_w);
+        if(xy_in_rect(&xy, &r, &offset)){
+            active_slider.state = param_state;
+            active_slider.initial_value = param_state_get(param_state);
+            active_slider.value_p = &param_state->value;
+            mouse_drag_fn_p = &mouse_drag_param_slider;
+            return SLIDER_DRAG_START;
+        }
+    }else{
+        rect_copy(&r, &layout.slider.handle_rect);
+        r.x += param_state->min * (layout.slider.track_w - layout.slider.handle_w);
+        if(xy_in_rect(&xy, &r, &offset)){
+            active_slider.state = param_state;
+            active_slider.initial_value = param_state->min;
+            active_slider.value_p = &param_state->min;
+            mouse_drag_fn_p = &mouse_drag_param_slider;
+            return SLIDER_DRAG_START;
+        }
+
+        rect_copy(&r, &layout.slider.handle_rect);
+        r.x += param_state->max * (layout.slider.track_w - layout.slider.handle_w);
+        if(xy_in_rect(&xy, &r, &offset)){
+            active_slider.state = param_state;
+            active_slider.initial_value = param_state->max;
+            active_slider.value_p = &param_state->max;
+            mouse_drag_fn_p = &mouse_drag_param_slider;
+            return SLIDER_DRAG_START;
+        }
     }
 
     r.x = 0;
