@@ -6,11 +6,9 @@
 #include "util/math.h"
 #include "ui/graph.h"
 #include "core/time.h"
+#include "core/err.h"
 
 #define N_SIGNALS 5
-#ifndef M_PI
-    #define M_PI 3.14159265358979323846
-#endif
 
 typedef struct
 {
@@ -294,6 +292,100 @@ void inp_agc_del(signal_t * signal){
     signal->state = 0; 
 }
 
+#define QTL_MAXSIZE 150
+
+typedef struct
+{
+    mbeat_t last_t;
+    float state[QTL_MAXSIZE];
+} inp_qtl_state_t;
+
+enum inp_qtl_param_names {
+    QTL_INPUT,
+    QTL_QUANT,
+    QTL_SIZE,
+
+    N_QTL_PARAMS
+};
+
+parameter_t inp_qtl_parameters[N_QTL_PARAMS] = {
+    [QTL_INPUT] = {
+        .name = "Input",
+        .default_val = 0,
+        .val_to_str = float_to_string,
+    },
+    [QTL_QUANT] = {
+        .name = "Quantile",
+        .default_val = 0.5,
+        .val_to_str = float_to_string,
+    },
+    [QTL_SIZE] = {
+        .name = "Size",
+        .default_val = 0.5,
+        .val_to_str = float_to_string,
+    },
+};
+
+void inp_qtl_init(signal_t * signal){
+    inp_qtl_state_t * state = signal->state = malloc(sizeof(inp_qtl_state_t));
+    if(!signal->state) return;
+
+    memset(state->state, 0, QTL_MAXSIZE * sizeof(float));
+    state->last_t= 0;
+
+    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
+    if(!signal->param_states){
+        free(signal->state);
+        return;
+    }
+
+    for(int i = 0; i < signal->n_params; i++){
+        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
+    }
+}
+
+static int _fcmp(const void * a, const void * b){
+    return *(float *)a < *(float *)b;
+}
+
+void inp_qtl_update(signal_t * signal, mbeat_t t){
+    static float istate[QTL_MAXSIZE];
+    if(!signal->state) return;
+    inp_qtl_state_t * state = (inp_qtl_state_t *) signal->state;
+
+    float x = signal->param_states[QTL_INPUT].value;
+    size_t s = signal->param_states[QTL_SIZE].value * QTL_MAXSIZE;
+    s = MAX(MIN(s, QTL_MAXSIZE - 1), 0);
+    size_t q = signal->param_states[QTL_QUANT].value * s;
+    q = MAX(MIN(q, s), 0);
+
+    if(state->last_t + 10 < t){
+        if(state->last_t + 11 < t){
+            state->last_t = t;
+        }else{
+            return;
+        }
+    }else{
+        state->last_t += 10;
+    }
+    UNUSED(t);
+    
+    memmove(state->state+1, state->state, (QTL_MAXSIZE-1) * sizeof(float));
+    state->state[0] = x;
+    memcpy(istate, state->state, s * sizeof(float));
+    qsort(istate, s, sizeof(float), &_fcmp);
+    param_output_set(&signal->output, istate[q]);
+}
+
+void inp_qtl_del(signal_t * signal){
+    if(!signal->state) return;
+    param_output_free(&signal->output);
+    free(signal->param_states);
+    signal->param_states = 0;
+    free(signal->state);
+    signal->state = 0; 
+}
+
 int n_signals = N_SIGNALS;
 signal_t signals[N_SIGNALS] = {
     {
@@ -364,6 +456,7 @@ signal_t signals[N_SIGNALS] = {
         .update = inp_agc_update,
         .del = inp_agc_del,
     },
+    /*
     {
         .name = "AGC 2",
         .type = SIGNAL_AGC,
@@ -380,6 +473,24 @@ signal_t signals[N_SIGNALS] = {
         .init = inp_agc_init,
         .update = inp_agc_update,
         .del = inp_agc_del,
+    },
+    */
+    {
+        .name = "Quantile",
+        .type = SIGNAL_QTL,
+        .default_val = 0.5,
+        .n_params = N_QTL_PARAMS,
+        .parameters = inp_qtl_parameters,
+        .color = {0.0, 0.8, 0.8, 0.0},
+        .output = {
+            .value = 0.0,
+            .handle_color = {0, 220, 220, 255},
+            .label_color = {0, 220, 220, 255},
+            .label = "QTL"
+        },
+        .init = inp_qtl_init,
+        .update = inp_qtl_update,
+        .del = inp_qtl_del,
     },
 };
 

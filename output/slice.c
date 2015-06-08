@@ -60,8 +60,8 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .color = {255,255,0, 255},
     },
     {
-        .id_int = 0x00000002,
-        .length = 60,
+        .id_int = 0xFFFFFFFF,
+        .length = 340,
         .first = &s2v1,
         .color = {255,150,0, 255},
     },
@@ -72,7 +72,7 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .color = {150,255,0, 255},
     },
     {
-        .id_int = 0x00000008,
+        .id_int = 0x00000000,
         .length = 60,
         .first = &s3v1,
         .color = {150,255,0, 255},

@@ -13,6 +13,7 @@ int n_filtered_chunks = 0;
 struct filter_lpf_agc_state {
     double agc_scale;
     double agc_alpha;
+    double agc_min;
     double lpf_last;
     double lpf_alpha;
 };
@@ -45,6 +46,7 @@ void filter_lpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
     value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
 
     if(value > state->agc_scale) state->agc_scale = value;
+    if(state->agc_scale < state->agc_min) state->agc_scale = state->agc_min;
 
     param_output_set(&filter->output, value / state->agc_scale);
 }
@@ -82,6 +84,7 @@ filter_t filters[N_FILTERS] = {
     .state = &((struct filter_lpf_agc_state) {
         .agc_scale = 512.,
         .agc_alpha = 0.999,
+        .agc_min = 512.,
         .lpf_last = 0.,
         .lpf_alpha = 0.05,
     }),
@@ -107,6 +110,7 @@ filter_t filters[N_FILTERS] = {
     .state = &((struct filter_lpf_agc_state) {
         .agc_scale = 128.,
         .agc_alpha = 0.9999,
+        .agc_min = 128.,
         .lpf_last = 0.,
         .lpf_alpha = 0.05,
     }),

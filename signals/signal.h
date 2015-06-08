@@ -11,6 +11,7 @@ enum signal_type {
     SIGNAL_LFO,
     SIGNAL_LPF,
     SIGNAL_AGC,
+    SIGNAL_QTL,
 };
 
 typedef void * inp_state_pt;
