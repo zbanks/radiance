@@ -8,10 +8,28 @@
 struct pattern;
 struct slot;
 
+enum pat_event {
+    PATEV_NONE = 0,
+
+    PATEV_M1_NOTE_ON,
+    PATEV_M1_NOTE_OFF,
+    PATEV_M1_AFTERTOUCH,
+
+    PATEV_M2_NOTE_ON_2,
+    PATEV_M2_NOTE_OFF_2,
+    PATEV_M2_AFTERTOUCH_2,
+
+    PATEV_MOUSE_CLICK_X,
+    PATEV_MOUSE_CLICK_Y,
+
+    PATEV_AUDIO_BEAT,
+    PATEV_AUDIO_BAR,
+};
+
 typedef void* pat_state_pt;
 typedef pat_state_pt (*pat_init_fn_pt)();
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
-typedef void (*pat_prevclick_fn_pt)(struct slot* slot, float x, float y);
+typedef int (*pat_event_fn_pt)(struct slot* slot, enum pat_event event, float event_data);
 typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
 typedef void (*pat_del_fn_pt)(pat_state_pt state);
 
@@ -19,26 +37,12 @@ typedef struct pattern
 {
     pat_init_fn_pt init;
     pat_update_fn_pt update;
-    pat_prevclick_fn_pt prevclick;
+    pat_event_fn_pt event;
     pat_render_fn_pt render;
     pat_del_fn_pt del;
     int n_params;
     parameter_t* parameters;
     char* name;
 } pattern_t;
-
-#ifndef SHAREDLIB
-void pattern_init();
-void pattern_del();
-
-extern int n_patterns;
-extern pattern_t** patterns;
-
-extern pattern_t pat_full;
-extern pattern_t pat_wave;
-extern pattern_t pat_bubble;
-extern pattern_t pat_strobe;
-extern pattern_t pat_fade;
-#endif
 
 #endif

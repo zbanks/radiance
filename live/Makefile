@@ -3,7 +3,7 @@ CC = gcc
 # Files to include
 C_SRC = $(wildcard *.c)
 C_SRC += ../core/parameter.c
-C_SRC += ../patterns/pattern.c
+#C_SRC += ../patterns/pattern.c
 #C_SRC  += $(wildcard ../core/*.c)
 #C_SRC += $(wildcard dynamic/*.c)
 #C_SRC += $(wildcard filters/*.c)

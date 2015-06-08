@@ -2,6 +2,7 @@
 #include "core/config.h"
 #include "core/slot.h"
 #include "patterns/pattern.h"
+#include "patterns/static.h"
 
 #include <dlfcn.h>
 

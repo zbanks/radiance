@@ -24,6 +24,7 @@
 #include "midi/controllers.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
+#include "patterns/static.h"
 #include "signals/signal.h"
 #include "timebase/timebase.h"
 
@@ -656,9 +657,9 @@ static int mouse_click_slot(int index, struct xy xy)
 
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        slots[index].pattern->prevclick(
-                &slots[index],
-                -1.0 + 2.0 * (xy.x - layout.slot.preview_x) / (float) layout.slot.preview_w,
+        slots[index].pattern->event(&slots[index], PATEV_MOUSE_CLICK_X,
+                -1.0 + 2.0 * (xy.x - layout.slot.preview_x) / (float) layout.slot.preview_w);
+        slots[index].pattern->event(&slots[index], PATEV_MOUSE_CLICK_Y,
                 -1.0 + 2.0 * (xy.y - layout.slot.preview_y) / (float) layout.slot.preview_h);
         return 1; 
     }

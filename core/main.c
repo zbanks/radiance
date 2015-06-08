@@ -15,6 +15,7 @@
 #include "output/slice.h"
 #include "midi/midi.h"
 #include "patterns/pattern.h"
+#include "patterns/static.h"
 #include "signals/signal.h"
 #include "timebase/timebase.h"
 #include "ui/ui.h"
