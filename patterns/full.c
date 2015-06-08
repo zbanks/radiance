@@ -66,9 +66,11 @@ int pat_full_event(slot_t* slot, enum pat_event event, float event_data){
     UNUSED(event_data);
     switch(event){
         case PATEV_MOUSE_CLICK_X:
+        case PATEV_M2_NOTE_ON:
             param_state_setq(&slot->param_states[FULL_COLOR], event_data / 2 + 0.5);
         break;
         case PATEV_MOUSE_CLICK_Y:
+        case PATEV_M1_NOTE_ON:
             param_state_setq(&slot->param_states[FULL_VALUE], event_data / 2 + 0.5);
         break;
         default: return 0;

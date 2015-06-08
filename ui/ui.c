@@ -734,13 +734,13 @@ int ui_poll()
                 break;
             case SDL_MIDI_NOTE_ON:
                 me = e.user.data1;
-                printf("Note on: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
+                //printf("Note on: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
                 midi_handle_note_event(me);
                 free(me);
                 break;
             case SDL_MIDI_NOTE_OFF:
                 me = e.user.data1;
-                printf("Note off: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
+                //printf("Note off: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
                 midi_handle_note_event(me);
                 free(me);
                 break;
