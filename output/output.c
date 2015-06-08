@@ -38,7 +38,6 @@ static int output_run(void* args)
         mbeat_t tb = timebase_get();
 
         update_patterns(tb);
-        update_hits(tb);
         update_signals(tb);
 
         for(int i=0; i<n_output_strips; i++)

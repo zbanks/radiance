@@ -1,21 +1,14 @@
 #include "midi/layout.h"
 #include "midi/midi.h"
 #include "midi/controllers.h"
-#include "hits/hit.h"
 #include "core/slot.h"
 
-static struct midi_note_hit_map np2_map[16];
+static struct midi_note_slot_map np2_map[16];
 
 void midi_setup_layout(){
     if(controllers_enabled[MIDI_NK2_1].available){
         for(int i = 0; (i < n_slots) && (i < 8); i++){
             midi_connect_param(&slots[i].alpha, MIDI_NK2_1, 176, NK2_S0 + i);
-        }
-    }
-
-    if(controllers_enabled[MIDI_NK2_2].available){
-        for(int i = 0; (i < n_hit_slots) && (i < 8); i++){
-            midi_connect_param(&hit_slots[i].alpha, MIDI_NK2_2, 176, NK2_S0 + i);
         }
     }
 
@@ -38,7 +31,9 @@ int midi_handle_note_event(struct midi_event * event){
     if(controllers_enabled[MIDI_NP2_1].available){
         for(int i = 0; i < 16; i++){
             if((np2_map[i].device == event->device) && (np2_map[i].data1 == event->data1)){
-                printf("Hit found %d %d %p\n", i, np2_map[i].slot_index, (void *) np2_map[i].active_hit);
+                //TODO: reimplement the NP2 for patterns
+                //printf("Hit found %d %d %p\n", i, np2_map[i].slot_index, (void *) np2_map[i].active_hit);
+                /*
                 if((event->event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_ON){
                     if(np2_map[i].active_hit){
                         np2_map[i].active_hit->hit->event(np2_map[i].active_hit, HITEV_NOTE_OFF, 0.);
@@ -54,6 +49,7 @@ int midi_handle_note_event(struct midi_event * event){
                         np2_map[i].active_hit->hit->event(np2_map[i].active_hit, HITEV_NOTE_OFF, event->data2 / 127.0);
                     np2_map[i].active_hit = 0;
                 }
+                */
                 r++;
             }
         }

@@ -20,18 +20,10 @@ CFGSECTION(master,
 
 CFGSECTION(slot,
     CFG(n, INT, 8)
-    CFG_RECT_ARRAY(, 10, 245, 110, 250, 125, 0, 0)
+    CFG_RECT_ARRAY(, 10, 245, 110, 350, 125, 0, 0)
     CFG_RECT(preview, 25, 5, 80, 80)
     CFG_RECT(alpha, 0, 0, 20, 80)
-    CFG_RECT_ARRAY(sliders, 5, 90, 100, 32, 0, 32, 0)
-)
-
-CFGSECTION(hit_slot,
-    CFG(n, INT, 8)
-    CFG_RECT_ARRAY(, 10, 510, 110, 250, 125, 0, 0)
-    CFG_RECT(preview, 25, 5, 80, 80)
-    CFG_RECT(alpha, 0, 0, 20, 80)
-    CFG_RECT_ARRAY(sliders, 5, 90, 100, 32, 0, 32, 0)
+    CFG_RECT_ARRAY(sliders, 5, 90, 100, 32, 0, 40, 0)
 )
 
 CFGSECTION(audio,
@@ -68,11 +60,6 @@ CFGSECTION(slider,
     
 CFGSECTION(add_pattern,
     CFG_RECT_ARRAY(, 1010, 250, 100, 30, 0, 35, 0)
-    CFG_TXT(name, 50, 15, 16, 3, "FreeSans.ttf", "#FFFFFF")
-)
-
-CFGSECTION(add_hit,
-    CFG_RECT_ARRAY(, 1010, 510, 100, 30, 0, 35, 0)
     CFG_TXT(name, 50, 15, 16, 3, "FreeSans.ttf", "#FFFFFF")
 )
 

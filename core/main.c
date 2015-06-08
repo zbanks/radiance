@@ -10,7 +10,6 @@
 #include "core/slot.h"
 #include "core/audio.h"
 #include "filters/filter.h"
-#include "hits/hit.h"
 #include "output/output.h"
 #include "output/slice.h"
 #include "midi/midi.h"
@@ -21,16 +20,10 @@
 #include "ui/ui.h"
 #include "ui/layout.h"
 
-static float random_color()
-{
-    return (rand() % 1000) / 1000. ;
-}
-
 int main()
 {
     pattern_init();
     patterns_updating = SDL_CreateMutex();
-    hits_updating = SDL_CreateMutex();
 
     config_dump(&config, "config.ini");
     layout_dump(&layout, config.path.layout);
@@ -39,27 +32,16 @@ int main()
     ui_init();
 
     pat_load(&slots[0], &pat_full);
-    pat_load(&slots[1], &pat_wave);
+    pat_load(&slots[1], &pat_fade);
     pat_load(&slots[2], &pat_bubble);
-    pat_load(&slots[3], &pat_strobe);
-    pat_load(&slots[4], &pat_full);
+    pat_load(&slots[3], &pat_wave);
+    pat_load(&slots[4], &pat_strobe);
     pat_load(&slots[5], &pat_wave);
-    //pat_load(&slots[6], &pat_bubble);
-    pat_load(&slots[6], &pat_fade);
+    pat_load(&slots[6], &pat_bubble);
     pat_load(&slots[7], &pat_strobe);
 
-    hit_load(&hit_slots[0], &hit_full);
-    hit_load(&hit_slots[1], &hit_full);
-    hit_load(&hit_slots[2], &hit_full);
-    hit_load(&hit_slots[3], &hit_pulse);
-    hit_load(&hit_slots[4], &hit_pulse);
-    hit_load(&hit_slots[5], &hit_pulse);
-    hit_load(&hit_slots[6], &hit_circle);
-    hit_load(&hit_slots[7], &hit_circle);
     for(int i = 0; i < 8; i++){
-        param_state_setq(&hit_slots[i].alpha, 1.);
-        param_state_setq(&slots[i].param_states[0], random_color());
-        param_state_setq(&hit_slots[i].param_states[0], random_color());
+        param_state_setq(&slots[i].param_states[0], (rand() % 1000) / 1000.);
     }
 
 
@@ -82,7 +64,6 @@ int main()
         mbeat_t tb = timebase_get();
 
         update_patterns(tb);
-        update_hits(tb);
         update_signals(tb);
         */
 
@@ -99,7 +80,6 @@ int main()
     filters_unload();
 
     SDL_DestroyMutex(patterns_updating);
-    SDL_DestroyMutex(hits_updating);
 
     ui_quit();
     pattern_del();

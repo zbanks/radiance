@@ -5,7 +5,6 @@ CXX = g++
 C_SRC  = $(wildcard core/*.c)
 C_SRC += $(wildcard dynamic/*.c)
 C_SRC += $(wildcard filters/*.c)
-C_SRC += $(wildcard hits/*.c)
 C_SRC += $(wildcard lib/*.c)
 C_SRC += $(wildcard midi/*.c)
 C_SRC += $(wildcard output/*.c)
