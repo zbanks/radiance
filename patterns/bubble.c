@@ -77,29 +77,24 @@ void pat_bubble_update(slot_t* slot, long t)
 {
     UNUSED(t);
     pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
-    state->color = param_to_color(slot->param_states[BUBBLE_COLOR].value);
-    state->r = slot->param_states[BUBBLE_R].value;
-    state->rho = slot->param_states[BUBBLE_RHO].value * 1.3 + 0.3;
-    state->cx = slot->param_states[BUBBLE_CX].value * 2 - 1.0;
-    state->cy = slot->param_states[BUBBLE_CY].value * 2 - 1.0;
-}
-
-void pat_bubble_prevclick(slot_t * slot, float x, float y){
-    // TODO: check that we have control of the param before writing to it
-    slot->param_states[BUBBLE_CX].value = (x + 1.0) / 2;
-    slot->param_states[BUBBLE_CY].value = (y + 1.0) / 2;
+    state->color = param_to_color(param_state_get(&slot->param_states[BUBBLE_COLOR]));
+    state->r = param_state_get(&slot->param_states[BUBBLE_R]);
+    state->rho = param_state_get(&slot->param_states[BUBBLE_RHO]) * 1.3 + 0.3;
+    state->cx = param_state_get(&slot->param_states[BUBBLE_CX]) * 2 - 1.0;
+    state->cy = param_state_get(&slot->param_states[BUBBLE_CY]) * 2 - 1.0;
 }
 
 int pat_bubble_event(slot_t* slot, enum pat_event event, float event_data){
-    UNUSED(slot);
-    UNUSED(event);
-    UNUSED(event_data);
-    /*
     switch(event){
-        default:
+        case PATEV_MOUSE_CLICK_X:
+            param_state_setq(&slot->param_states[BUBBLE_CX], (event_data + 1.0) / 2);
+        break;
+        case PATEV_MOUSE_CLICK_Y:
+            param_state_setq(&slot->param_states[BUBBLE_CY], (event_data + 1.0) / 2);
+        break;
+        default: return 0;
     }
-    */
-    return 0;
+    return 1;
 }
 
 color_t pat_bubble_pixel(slot_t* slot, float x, float y)

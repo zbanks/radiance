@@ -77,7 +77,7 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
     if(!state) return;
 
-    float new_freq = 1.0 / power_quantize_parameter(signal->param_states[LFO_FREQ].value);
+    float new_freq = 1.0 / power_quantize_parameter(param_state_get(&signal->param_states[LFO_FREQ]));
 #define BMOD(t, f) (t % B2MB(f))
     if(new_freq != state->freq){
         if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
@@ -92,9 +92,9 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
     state->phase += MB2B(t - state->last_t) / state->freq; 
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
-    state->type = quantize_parameter(osc_quant_labels, signal->param_states[LFO_TYPE].value);
-    param_output_set(&signal->output, osc_fn_gen(state->type, state->phase) * signal->param_states[LFO_AMP].value
-                                      + (1.0 - signal->param_states[LFO_AMP].value) * signal->param_states[LFO_OFFSET].value);
+    state->type = quantize_parameter(osc_quant_labels, param_state_get(&signal->param_states[LFO_TYPE]));
+    param_output_set(&signal->output, osc_fn_gen(state->type, state->phase) * param_state_get(&signal->param_states[LFO_AMP])
+                                      + (1.0 - param_state_get(&signal->param_states[LFO_AMP])) * param_state_get(&signal->param_states[LFO_OFFSET]));
 }
 
 void inp_lfo_del(signal_t * signal){
@@ -162,9 +162,9 @@ void inp_lpf_update(signal_t * signal, mbeat_t t){
     inp_lpf_state_t * state = (inp_lpf_state_t *) signal->state;
     if(!state) return;
     if(!state->last_t) state->last_t = t;
-    float x = signal->param_states[LPF_INPUT].value;
-    float a = signal->param_states[LPF_ALPHA].value;
-    float b = signal->param_states[LPF_BETA].value;
+    float x = param_state_get(&signal->param_states[LPF_INPUT]);
+    float a = param_state_get(&signal->param_states[LPF_ALPHA]);
+    float b = param_state_get(&signal->param_states[LPF_BETA]);
     if(state->last_t + 10 < t){
         //TODO: XXX
         //a = 1.;
@@ -252,10 +252,10 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
     if(!signal->state) return;
     inp_agc_state_t * state = (inp_agc_state_t *) signal->state;
 
-    float x = signal->param_states[AGC_INPUT].value;
-    float min = signal->param_states[AGC_MIN].value;
-    float max = signal->param_states[AGC_MAX].value;
-    float a = signal->param_states[AGC_DECAY].value;
+    float x = param_state_get(&signal->param_states[AGC_INPUT]);
+    float min = param_state_get(&signal->param_states[AGC_MIN]);
+    float max = param_state_get(&signal->param_states[AGC_MAX]);
+    float a = param_state_get(&signal->param_states[AGC_DECAY]);
     float y;
     if(state->last_t + 10 < t){
         a = 1.;
@@ -353,10 +353,10 @@ void inp_qtl_update(signal_t * signal, mbeat_t t){
     if(!signal->state) return;
     inp_qtl_state_t * state = (inp_qtl_state_t *) signal->state;
 
-    float x = signal->param_states[QTL_INPUT].value;
-    size_t s = signal->param_states[QTL_SIZE].value * QTL_MAXSIZE;
+    float x = param_state_get(&signal->param_states[QTL_INPUT]);
+    size_t s = param_state_get(&signal->param_states[QTL_SIZE]) * QTL_MAXSIZE;
     s = MAX(MIN(s, QTL_MAXSIZE - 1), 0);
-    size_t q = signal->param_states[QTL_QUANT].value * s;
+    size_t q = param_state_get(&signal->param_states[QTL_QUANT]) * s;
     q = MAX(MIN(q, s), 0);
 
     if(state->last_t + 10 < t){

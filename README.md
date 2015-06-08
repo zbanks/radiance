@@ -24,7 +24,7 @@ All of the *patterns*, *hits*, and *signals* use times from the timebase to sync
 ### Patterns & Hits
 *Patterns* are visual effects on a plane that continuously change over time.
 
-*Hits* are visual effects on a pane that have a finite duration. While they are running, they can also take in events (e.g. `note_on` & `note_off` from MIDI).
+*Hits* are visual effects on a pane that have a finite duration. While they are running, they can also take in events (e.g. `note_on` & `note_off` from MIDI). **These have been removed from the latest version & merged into patterns**
 
 Each pattern and hit also has the following things:
 

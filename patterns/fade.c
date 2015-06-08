@@ -66,7 +66,7 @@ void pat_fade_del(pat_state_pt state)
 void pat_fade_update(slot_t* slot, mbeat_t t)
 {
     pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
-    float new_freq = 1.0 / power_quantize_parameter(slot->param_states[FADE_FREQ].value);
+    float new_freq = 1.0 / power_quantize_parameter(param_state_get(&slot->param_states[FADE_FREQ]));
 #define BMOD(t, f) (t % B2MB(f))
     if(new_freq != state->freq){
         if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
@@ -80,11 +80,11 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
 
     state->phase += MB2B(t - state->last_t) / state->freq; 
     if(state->phase > 1.0){
-        state->color_phase += slot->param_states[FADE_DELTA].value;
+        state->color_phase += param_state_get(&slot->param_states[FADE_DELTA]);
     }
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
-    float x = slot->param_states[FADE_COLOR].value;
+    float x = param_state_get(&slot->param_states[FADE_COLOR]);
     x += state->color_phase;
     state->color = param_to_color(fmod(x, 0.8) + 0.1);
 }
@@ -122,11 +122,11 @@ color_t pat_fade_pixel(slot_t* slot, float x, float y)
     color_t result = state->color;
     /*
     float a;
-    if(state->phase > (1.0 - slot->param_states[FADE_ATTACK].value / 2.)){
-        a = (1.0 - state->phase) / (slot->param_states[FADE_ATTACK].value / 2.);
+    if(state->phase > (1.0 - param_state_get(&slot->param_states[FADE_ATTACK]) / 2.)){
+        a = (1.0 - state->phase) / (param_state_get(&slot->param_states[FADE_ATTACK]) / 2.);
         a = 1.0 - a;
-    }else if(state->phase < slot->param_states[FADE_DECAY].value / 2.){
-        a = (state->phase) / (slot->param_states[FADE_DECAY].value / 2.);
+    }else if(state->phase < param_state_get(&slot->param_states[FADE_DECAY]) / 2.){
+        a = (state->phase) / (param_state_get(&slot->param_states[FADE_DECAY]) / 2.);
         a = 1.0 - a;
     }else{
         a = 0.;

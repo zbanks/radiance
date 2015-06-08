@@ -81,15 +81,15 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     float k_ang;
 
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
-    state->color = param_to_color(slot->param_states[WAVE_COLOR].value);
-    state->type = quantize_parameter(osc_quant_labels, slot->param_states[WAVE_TYPE].value);
+    state->color = param_to_color(param_state_get(&slot->param_states[WAVE_COLOR]));
+    state->type = quantize_parameter(osc_quant_labels, param_state_get(&slot->param_states[WAVE_TYPE]));
 
-    state->phase += MB2B(t - state->last_t) * power_quantize_parameter(slot->param_states[WAVE_OMEGA].value);
+    state->phase += MB2B(t - state->last_t) * power_quantize_parameter(param_state_get(&slot->param_states[WAVE_OMEGA]));
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->last_t = t;
 
-    k_mag = slot->param_states[WAVE_K_MAG].value * 2 + 0.2;
-    k_ang = slot->param_states[WAVE_K_ANGLE].value * 2 * M_PI;
+    k_mag = param_state_get(&slot->param_states[WAVE_K_MAG]) * 2 + 0.2;
+    k_ang = param_state_get(&slot->param_states[WAVE_K_ANGLE]) * 2 * M_PI;
     state->kx = COS(k_ang) * k_mag;
     state->ky = SIN(k_ang) * k_mag;
 }
