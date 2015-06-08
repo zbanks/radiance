@@ -4,6 +4,7 @@
 #include "filters/filter.h"
 #include "filters/vamp.h"
 #include "timebase/timebase.h"
+#include "util/signal.h"
 #include "waveform/waveform.h"
 
 #define N_FILTERS 3
@@ -11,44 +12,32 @@
 int n_filtered_chunks = 0;
 
 struct filter_lpf_agc_state {
-    double agc_scale;
-    double agc_alpha;
-    double agc_min;
-    double lpf_last;
-    double lpf_alpha;
+    struct agc_state agc_state;
+    struct ema_state dema_state;
+
+    // The following get populated into the previous fields on init
+    // If memory were actually a concern, we could union over the previous fields
+    // ...but it's not.
+    double agc_tau;
+    double agc_knee_high;
+    double agc_knee_low;
+    double dema_tau_rise;
+    double dema_tau_fall;
 };
 
-void filter_diodelpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
-    UNUSED(t_msec);
+void filter_lpf_agc_update(filter_t * filter, mbeat_t t, double value){
     struct filter_lpf_agc_state * state = filter->state;
 
-    state->agc_scale *= state->agc_alpha;
-    if(value > state->lpf_last) 
-        state->lpf_last = value;
-    else 
-        value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
+    double value_scaled = agc_update(&state->agc_state, t, value);
+    double value_lpf = dema_update(&state->dema_state, t, value_scaled);
 
-    if(value > state->agc_scale) state->agc_scale = value;
-
-    param_output_set(&filter->output, value / state->agc_scale);
+    param_output_set(&filter->output, (float) value_lpf);
 }
 
-void filter_lpf_agc_update(filter_t * filter, mbeat_t t_msec, double value){
-    UNUSED(t_msec);
+void filter_lpf_agc_init(filter_t * filter){
     struct filter_lpf_agc_state * state = filter->state;
-
-    state->agc_scale *= state->agc_alpha;
-    /*
-    if(value > state->lpf_last) 
-        state->lpf_last = value;
-    else 
-    */
-    value = state->lpf_last = (state->lpf_alpha * value) + ((1 - state->lpf_alpha) * state->lpf_last);
-
-    if(value > state->agc_scale) state->agc_scale = value;
-    if(state->agc_scale < state->agc_min) state->agc_scale = state->agc_min;
-
-    param_output_set(&filter->output, value / state->agc_scale);
+    agc_init(&state->agc_state, 1.0, 0.0, state->agc_knee_high, state->agc_knee_low, state->agc_tau);
+    dema_init(&state->dema_state, state->dema_tau_rise, state->dema_tau_fall);
 }
 
 void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
@@ -78,15 +67,15 @@ filter_t filters[N_FILTERS] = {
             .label_color = {255, 0, 255, 255},
             .label = "ODF",
         },
-    .init = 0,
-    .update = filter_diodelpf_agc_update,
+    .init = filter_lpf_agc_init,
+    .update = filter_lpf_agc_update,
     .del = 0,
     .state = &((struct filter_lpf_agc_state) {
-        .agc_scale = 512.,
-        .agc_alpha = 0.999,
-        .agc_min = 512.,
-        .lpf_last = 0.,
-        .lpf_alpha = 0.05,
+        .agc_tau = 1.,
+        .agc_knee_high = 400.,
+        .agc_knee_low = 100.,
+        .dema_tau_rise = 0.001,
+        .dema_tau_fall = 0.25,
     }),
     .vamp_so = "qm-vamp-plugins.so",
     .vamp_id = "qm-onsetdetector",
@@ -104,15 +93,15 @@ filter_t filters[N_FILTERS] = {
             .label_color = {128, 0, 255, 255},
             .label = "F0",
         },
-    .init = 0,
+    .init = filter_lpf_agc_init,
     .update = filter_lpf_agc_update,
     .del = 0,
     .state = &((struct filter_lpf_agc_state) {
-        .agc_scale = 128.,
-        .agc_alpha = 0.9999,
-        .agc_min = 128.,
-        .lpf_last = 0.,
-        .lpf_alpha = 0.05,
+        .agc_tau = 3.,
+        .agc_knee_high = 128.,
+        .agc_knee_low = 0.,
+        .dema_tau_rise = 0.05,
+        .dema_tau_fall = 0.3,
     }),
     .vamp_so = "pyin.so",
     .vamp_id = "pyin",

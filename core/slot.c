@@ -52,7 +52,7 @@ void update_patterns(mbeat_t t)
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
-    param_state_setq(&slot->alpha, 0.);
+    param_state_init(&slot->alpha, 0.);
     slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
     for(int i = 0; i < pattern->n_params; i++){
         param_state_init(&slot->param_states[i], pattern->parameters[i].default_val);

@@ -4,6 +4,7 @@
 #include "signals/signal.h"
 #include "util/siggen.h"
 #include "util/math.h"
+#include "util/signal.h"
 #include "ui/graph.h"
 #include "core/time.h"
 #include "core/err.h"
@@ -109,14 +110,13 @@ void inp_lfo_del(signal_t * signal){
 
 typedef struct
 {
-    float value;
-    mbeat_t last_t;
+    struct ema_state ema;
 } inp_lpf_state_t;
 
 enum inp_lpf_param_names {
     LPF_INPUT,
-    LPF_ALPHA,
-    LPF_BETA,
+    LPF_RISE,
+    LPF_FALL,
 
     N_LPF_PARAMS
 };
@@ -127,14 +127,14 @@ parameter_t inp_lpf_parameters[N_LPF_PARAMS] = {
         .default_val = 0,
         .val_to_str = float_to_string,
     },
-    [LPF_ALPHA] = {
+    [LPF_RISE] = {
         .name = "Rise",
-        .default_val = 0.05,
+        .default_val = 0.5,
         .val_to_str = float_to_string,
     },
-    [LPF_BETA] = {
+    [LPF_FALL] = {
         .name = "Fall",
-        .default_val = 0.05,
+        .default_val = 0.5,
         .val_to_str = float_to_string,
     },
 };
@@ -143,8 +143,7 @@ void inp_lpf_init(signal_t * signal){
     inp_lpf_state_t * state = signal->state = malloc(sizeof(inp_lpf_state_t));
     if(!signal->state) return;
 
-    state->value = 0.;
-    state->last_t = 0;
+    dema_init(&state->ema, signal->parameters[LPF_RISE].default_val, signal->parameters[LPF_FALL].default_val);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     if(!signal->param_states){
@@ -161,24 +160,14 @@ void inp_lpf_init(signal_t * signal){
 void inp_lpf_update(signal_t * signal, mbeat_t t){
     inp_lpf_state_t * state = (inp_lpf_state_t *) signal->state;
     if(!state) return;
-    if(!state->last_t) state->last_t = t;
     float x = param_state_get(&signal->param_states[LPF_INPUT]);
-    float a = param_state_get(&signal->param_states[LPF_ALPHA]);
-    float b = param_state_get(&signal->param_states[LPF_BETA]);
-    if(state->last_t + 10 < t){
-        //TODO: XXX
-        //a = 1.;
-        //b = 1.;
-    }else{
-        state->last_t += 10;
-    }
+    float rise = param_state_get(&signal->param_states[LPF_RISE]);
+    float fall = param_state_get(&signal->param_states[LPF_FALL]);
 
-    if(x > state->value)
-        state->value = a * x + (1. - a) * state->value;
-    else
-        state->value = b * x + (1. - b) * state->value;
+    dema_set_tau(&state->ema, rise, fall);
+    float out = dema_update(&state->ema, t, x);
 
-    param_output_set(&signal->output, state->value);
+    param_output_set(&signal->output, out);
 }
 
 void inp_lpf_del(signal_t * signal){
