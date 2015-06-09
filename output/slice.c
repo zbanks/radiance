@@ -92,6 +92,7 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
             vert = vert->next;
             if(!vert->next) return; // Error condition
         }
+        if(i >= strip->length) break;
 
         float alpha = (float)(i - vert->index) / (vert->next->index - vert->index);
         float x = alpha * vert->next->x + (1 - alpha) * vert->x;

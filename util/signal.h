@@ -61,4 +61,14 @@ struct agc_state {
 void agc_init(struct agc_state * state, double range_high, double range_low, double knee_high, double knee_low, double tau);
 double agc_update(struct agc_state * state, mbeat_t t, double in);
 
+static inline void agc_set_tau(struct agc_state * state, double tau){
+    dema_set_tau(&state->env_high, 0., tau);
+    dema_set_tau(&state->env_low, tau, 0.);
+}
+
+static inline void agc_set_range(struct agc_state * state, double range_high, double  range_low){
+    state->range_high = range_high;
+    state->range_low = range_low;
+}
+
 #endif

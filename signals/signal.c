@@ -182,9 +182,7 @@ void inp_lpf_del(signal_t * signal){
 
 typedef struct
 {
-    float min;
-    float max;
-    mbeat_t last_t;
+    struct agc_state agc_state;
 } inp_agc_state_t;
 
 enum inp_agc_param_names {
@@ -220,11 +218,10 @@ parameter_t inp_agc_parameters[N_AGC_PARAMS] = {
 };
 
 void inp_agc_init(signal_t * signal){
-    inp_agc_state_t * state = signal->state = malloc(sizeof(inp_lpf_state_t));
+    inp_agc_state_t * state = signal->state = malloc(sizeof(inp_agc_state_t));
     if(!signal->state) return;
 
-    state->min = 0.;
-    state->max = 1.;
+    agc_init(&state->agc_state, 1.0, 0.0, 0, 0, 0.5);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     if(!signal->param_states){
@@ -245,30 +242,11 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
     float min = param_state_get(&signal->param_states[AGC_MIN]);
     float max = param_state_get(&signal->param_states[AGC_MAX]);
     float a = param_state_get(&signal->param_states[AGC_DECAY]);
-    float y;
-    if(state->last_t + 10 < t){
-        a = 1.;
-    }else{
-        state->last_t += 10;
-    }
 
-    if(a < 1e-4){
-        state->max = 1.;
-        state->min = 0.;
-    }else{
-        a = a * 0.01 + 0.99;
-        state->max = MAX(state->max * a + (1. - a) * x, x);
-        state->min = MIN(state->min * a + (1. - a) * x, x);
-        //state->min = MIN(state->max - (state->max - state->min) * a, x);
-        x = (x - state->min) / (state->max - state->min);
-    }
+    agc_set_tau(&state->agc_state, a);
+    agc_set_range(&state->agc_state, max, min);
+    float y = agc_update(&state->agc_state, t, x);
 
-    if(min < max){
-        y = x * (max - min) + min;
-    }else{
-        printf("how did this happen? %f %f\n", min, max);
-        y = (1. - x) * (min - max) + max;
-    }
     param_output_set(&signal->output, y);
 }
 
@@ -334,7 +312,7 @@ void inp_qtl_init(signal_t * signal){
 }
 
 static int _fcmp(const void * a, const void * b){
-    return *(float *)a < *(float *)b;
+    return *(const float *)a < *(const float *)b;
 }
 
 void inp_qtl_update(signal_t * signal, mbeat_t t){

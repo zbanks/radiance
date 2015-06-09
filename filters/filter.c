@@ -100,8 +100,8 @@ filter_t filters[N_FILTERS] = {
         .agc_tau = 3.,
         .agc_knee_high = 128.,
         .agc_knee_low = 0.,
-        .dema_tau_rise = 0.05,
-        .dema_tau_fall = 0.3,
+        .dema_tau_rise = 0.1,
+        .dema_tau_fall = 0.1,
     }),
     .vamp_so = "pyin.so",
     .vamp_id = "pyin",
@@ -135,10 +135,10 @@ void filters_load(){
             printf("Error initializing filter '%s'\n", filters[i].name);
         }else{
             printf("Initializing filter '%s'\n", filters[i].name);
-            if(filters[i].init)
-                filters[i].init(&filters[i]);
             if(filters[i].display)
                 graph_create_filter(&filters[i].graph_state);
+            if(filters[i].init)
+                filters[i].init(&filters[i]);
         }
     }
 }

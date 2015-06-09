@@ -7,7 +7,7 @@
 #define N_SLOTS 8
 
 int n_slots = N_SLOTS;
-slot_t slots[N_SLOTS];
+slot_t slots[N_SLOTS] = {{0}};
 
 SDL_mutex* patterns_updating;
 
@@ -52,24 +52,30 @@ void update_patterns(mbeat_t t)
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
     slot->pattern = pattern;
+
+    slot->state = (*pattern->init)();
+    if(!slot->state) FAIL("Could not malloc pattern state\n");
+
     param_state_init(&slot->alpha, 0.);
+
     slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
     for(int i = 0; i < pattern->n_params; i++){
         param_state_init(&slot->param_states[i], pattern->parameters[i].default_val);
     }
-    slot->state = (*pattern->init)();
-    if(!slot->state) FAIL("Could not malloc pattern state\n");
 }
 
 void pat_unload(slot_t* slot)
 {
     if(!slot->pattern) return;
+
     for(int i = 0; i < slot->pattern->n_params; i++){
         param_state_disconnect(&slot->param_states[i]);
     }
-    (*slot->pattern->del)(slot->state);
-    //param_state_disconnect(&slot->alpha);
     free(slot->param_states);
+
+    param_state_disconnect(&slot->alpha);
+
+    (*slot->pattern->del)(slot->state);
     slot->pattern = 0;
 }
 
