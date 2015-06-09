@@ -7,9 +7,9 @@
 enum osc_type {
     OSC_SINE,
     OSC_TRIANGLE,
+    OSC_SQUARE,
     OSC_SAWTOOTH_R,
     OSC_SAWTOOTH_F,
-    OSC_SQUARE,
 };
 
 extern quant_labels_t osc_quant_labels;

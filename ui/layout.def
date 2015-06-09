@@ -21,9 +21,9 @@ CFGSECTION(master,
 CFGSECTION(slot,
     CFG(n, INT, 8)
     CFG_RECT_ARRAY(, 10, 245, 115, 350, 125, 0, 0)
-    CFG_RECT(preview, 25, 5+5, 80, 80)
-    CFG_RECT(alpha, 0, 0+5, 20, 80)
-    CFG_RECT_ARRAY(sliders, 5, 90+5, 110, 32, 0, 40, 0)
+    CFG_RECT(preview, 25, 10, 80, 80)
+    CFG_RECT(alpha, 0, 10, 20, 80)
+    CFG_RECT_ARRAY(sliders, 8, 90+5, 110, 32, 0, 40, 0)
 )
 
 CFGSECTION(audio,
@@ -45,17 +45,17 @@ CFGSECTION(signal,
 
 CFGSECTION(alpha_slider,
     CFG_RECT(, 0, 0, 20, 80)
-    CFG_RECT(track, 9, 5, 3, 80)
-    CFG_RECT(handle, 5, 5, 10, 10)
+    CFG_RECT(track, 9, 0, 3, 80)
+    CFG_RECT(handle, 5, 0, 10, 10)
 )
 
 CFGSECTION(slider,
     CFG_RECT(, 0, 0, 100, 40)
-    CFG_RECT(track, 3, 16, 94, 4)
+    CFG_RECT(track, 3, 16, 94, 3)
     CFG_RECT(handle, 3, 12, 10, 10)
     CFG_TXT(name, 3, 0, 10, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(source, 90, 0, 10, 4, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(value, 0, 22, 10, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(source, 94, 0, 10, 4, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(value, 3, 23, 10, 0, "FreeSans.ttf", "#FFFFFF")
 )
     
 CFGSECTION(add_pattern,
