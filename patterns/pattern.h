@@ -13,17 +13,21 @@ enum pat_event {
 
     PATEV_M1_NOTE_ON,
     PATEV_M1_NOTE_OFF,
-    PATEV_M1_AFTERTOUCH,
+    PATEV_M1_AFTERTOUCH, // Not currently used by any of  our midi controllers
 
     PATEV_M2_NOTE_ON,
     PATEV_M2_NOTE_OFF,
-    PATEV_M2_AFTERTOUCH,
+    PATEV_M2_AFTERTOUCH, // Not currently used by any of  our midi controllers
 
-    PATEV_MOUSE_CLICK_X,
-    PATEV_MOUSE_CLICK_Y,
+    PATEV_MOUSE_DOWN_X,
+    PATEV_MOUSE_DOWN_Y,
+    PATEV_MOUSE_DRAG_X, 
+    PATEV_MOUSE_DRAG_Y,
+    PATEV_MOUSE_UP_X, 
+    PATEV_MOUSE_UP_Y,
 
-    PATEV_AUDIO_BEAT,
-    PATEV_AUDIO_BAR,
+    PATEV_AUDIO_BEAT, // Not currently used
+    PATEV_AUDIO_BAR, // Not currently used
 };
 
 typedef void* pat_state_pt;

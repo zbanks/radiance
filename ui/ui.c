@@ -49,7 +49,7 @@ static int mouse_down;
 static struct xy mouse_drag_start;
 
 void (*mouse_drag_fn_p)(struct xy);
-void (*mouse_drop_fn_p)();
+void (*mouse_drop_fn_p)(struct xy);
 
 static struct
 {
@@ -62,6 +62,12 @@ static struct
     slot_t * slot;
     struct xy dxy;
 } active_slot;
+
+static struct
+{
+    slot_t * slot;
+    struct xy dxy;
+} active_preview;
 
 param_state_t * active_param_source;
 
@@ -101,6 +107,7 @@ SURFACES
     mouse_drop_fn_p = 0;
     active_pattern.index = -1;
     active_slot.slot = 0;
+    active_preview.slot = 0;
 
     master_pixels = layout.master.w * layout.master.h;
     master_xs = malloc(sizeof(float) * master_pixels);
@@ -482,9 +489,21 @@ static void mouse_drag_slot(struct xy xy)
     active_slot.dxy = xy; 
 }
 
+static void mouse_drag_pattern_ev(struct xy xy){
+    if(!active_preview.slot->pattern) return;
+    struct xy offset;
+    xy = xy_add(xy, active_preview.dxy);
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
+        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_DRAG_X,
+                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
+        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_DRAG_Y,
+                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+    }
+}
 
-static void mouse_drop_pattern()
+static void mouse_drop_pattern(struct xy unused)
 {
+    UNUSED(unused);
     rect_t r;
     struct xy xy;
     xy = xy_add(active_pattern.dxy, mouse_drag_start);
@@ -500,8 +519,9 @@ static void mouse_drop_pattern()
     active_pattern.index = -1;
 }
 
-static void mouse_drop_slot()
+static void mouse_drop_slot(struct xy unused)
 {
+    UNUSED(unused);
     rect_t r;
     struct xy xy;
     xy = xy_add(active_slot.dxy, mouse_drag_start);
@@ -523,6 +543,18 @@ static void mouse_drop_slot()
     active_slot.slot = 0;
 }
 
+static void mouse_drop_pattern_ev(struct xy xy){
+    if(!active_preview.slot->pattern) return;
+    struct xy offset;
+    xy = xy_add(xy, active_preview.dxy);
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
+        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_X,
+                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
+        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_Y,
+                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+    }
+}
+
 static int mouse_click_slot(int index, struct xy xy)
 {
     rect_t r;
@@ -536,10 +568,14 @@ static int mouse_click_slot(int index, struct xy xy)
 
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        slots[index].pattern->event(&slots[index], PATEV_MOUSE_CLICK_X,
-                -1.0 + 2.0 * (xy.x - layout.slot.preview_x) / (float) layout.slot.preview_w);
-        slots[index].pattern->event(&slots[index], PATEV_MOUSE_CLICK_Y,
-                -1.0 + 2.0 * (xy.y - layout.slot.preview_y) / (float) layout.slot.preview_h);
+        slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_X,
+                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
+        slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_Y,
+                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+        active_preview.slot = &slots[index];
+        memcpy(&active_preview.dxy, &xy, sizeof(struct xy));
+        mouse_drag_fn_p = &mouse_drag_pattern_ev;
+        mouse_drop_fn_p = &mouse_drop_pattern_ev;
         return 1; 
     }
 
@@ -744,14 +780,16 @@ int ui_poll()
                 mouse_drag_start = xy;
                 break;
             case SDL_MOUSEMOTION:
-                if(mouse_down && mouse_drag_fn_p)
-                {
+                if(mouse_down && mouse_drag_fn_p){
                     xy  = xy_sub(xy, mouse_drag_start);
                     (*mouse_drag_fn_p)(xy);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
-                if(mouse_drop_fn_p) (*mouse_drop_fn_p)();
+                if(mouse_drop_fn_p){
+                    xy = xy_sub(xy, mouse_drag_start);
+                    (*mouse_drop_fn_p)(xy);
+                }
                 mouse_drag_fn_p = 0;
                 mouse_drop_fn_p = 0;
                 mouse_down = 0;

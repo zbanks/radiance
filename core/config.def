@@ -6,6 +6,10 @@ CFGSECTION(path,
     //CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
 )
 
+CFGSECTION(output,
+    CFG(max_energy, FLOAT, 1.40)
+)
+
 CFGSECTION(flux,
     CFG(enabled, INT, 1)
     CFG(verbose, INT, 0)

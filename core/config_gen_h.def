@@ -12,7 +12,7 @@
 #ifdef SECTIONSTRUCT 
 #undef SECTIONSTRUCT
 #endif 
-#define SECTIONSTRUCT(x) _##x##_##CFGOBJ
+#define SECTIONSTRUCT(x) CONCAT(_##x##_,CFGOBJ)
 
 struct CFGOBJ {
     #define CFGSECTION(w, d...) struct SECTIONSTRUCT(w) { d } w;

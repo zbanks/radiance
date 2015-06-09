@@ -90,29 +90,20 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
     state->color = param_to_cpow_color(fmod(x, 1.0));
 }
 
-void pat_fade_prevclick(slot_t * slot, float x, float y){
-    UNUSED(slot);
-    UNUSED(x);
-    UNUSED(y);
-    //pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
-    /* I don't know how I feel about resetting the state yet...
-    state->phase = 0.;
-    state->last_t = fmod(state->last_t, 16.0);
-    */
-    //param_state_setq(&slot->param_states[FADE_K_MAG], sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0));
-    //param_state_setq(&slot->param_states[FADE_K_ANGLE], (atan2(y, x) / (2.0 * M_PI)) + 0.5);
-}
-
 int pat_fade_event(slot_t* slot, enum pat_event event, float event_data){
-    UNUSED(slot);
-    UNUSED(event);
+    pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
     UNUSED(event_data);
-    /*
     switch(event){
-        default:
+        case PATEV_MOUSE_DOWN_X:
+        case PATEV_M1_NOTE_ON:
+        case PATEV_M2_NOTE_ON:
+            state->color_phase += param_state_get(&slot->param_states[FADE_DELTA]);
+            float x = param_state_get(&slot->param_states[FADE_COLOR]) + state->color_phase;
+            state->color = param_to_cpow_color(fmod(x, 1.0));
+        break;
+        default: return 0;
     }
-    */
-    return 0;
+    return 1;
 }
 
 color_t pat_fade_pixel(slot_t* slot, float x, float y)

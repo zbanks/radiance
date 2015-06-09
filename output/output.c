@@ -11,6 +11,7 @@
 #include "signals/signal.h"
 #include "timebase/timebase.h"
 #include "core/time.h"
+#include "core/config.h"
 #include "output/output.h"
 #include "output/slice.h"
 #include "output/flux.h"
@@ -54,7 +55,7 @@ static int output_run(void* args)
                 energy += output_buffers[i][k].g;
                 energy += output_buffers[i][k].b;
             }
-            scalar = output_strips[i].length * 2.0 / energy * 255.;
+            scalar = output_strips[i].length * config.output.max_energy / energy * 255.;
             if(scalar > 255.)
                 scalar = 255.;
 

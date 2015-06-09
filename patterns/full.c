@@ -62,11 +62,15 @@ color_t pat_full_pixel(slot_t* slot, float x, float y)
 
 int pat_full_event(slot_t* slot, enum pat_event event, float event_data){
     switch(event){
-        case PATEV_MOUSE_CLICK_X:
+        case PATEV_MOUSE_DOWN_X:
+        case PATEV_MOUSE_DRAG_X:
+        case PATEV_MOUSE_UP_X:
         case PATEV_M2_NOTE_ON:
             param_state_setq(&slot->param_states[FULL_COLOR], event_data / 2 + 0.5);
         break;
-        case PATEV_MOUSE_CLICK_Y:
+        case PATEV_MOUSE_DOWN_Y:
+        case PATEV_MOUSE_DRAG_Y:
+        case PATEV_MOUSE_UP_Y:
         case PATEV_M1_NOTE_ON:
             param_state_setq(&slot->param_states[FULL_VALUE], event_data / 2 + 0.5);
         break;
