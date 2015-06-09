@@ -13,7 +13,7 @@ static flux_cli_t * flux_client;
 int output_flux_init(){
     if(!config.flux.enabled) return -1;
 
-    flux_client = flux_cli_init(config.flux.broker, config.flux.verbose);
+    flux_client = flux_cli_init(config.flux.broker, config.flux.timeout, config.flux.verbose);
     if(flux_client){
         printf("Flux connected\n");
 /* for each output strip
@@ -68,7 +68,7 @@ int output_flux_push(output_strip_t * strip, unsigned char * frame, int length){
     if(reply_size == 2 && memcmp(reply, "OK", 2) == 0){
 
     }else{
-        printf("Recieved error response from flux: %.*s\n", reply_size, reply);
+        if(config.flux.verbose) printf("Recieved error response from flux: %.*s\n", reply_size, reply);
     }
     free(reply);
     return 0;

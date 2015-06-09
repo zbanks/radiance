@@ -11,6 +11,21 @@ slot_t slots[N_SLOTS] = {{0}};
 
 SDL_mutex* patterns_updating;
 
+void render_composite_frame(slot_t * fslots, float * x, float * y, size_t n, color_t * out){
+    memset(out, 0, n * sizeof(color_t)); // Initialize to black
+    for(int i = 0; i < n_slots; i++){
+        if(!fslots[i].pattern) continue;
+
+        for(size_t j = 0; j < n; j++){
+            color_t c = (*fslots[i].pattern->render)(&fslots[i], x[j], y[j]);
+            c.a *= param_state_get(&fslots[i].alpha);
+            out[j].r = out[j].r * (1. - c.a) + c.r * c.a;
+            out[j].g = out[j].g * (1. - c.a) + c.g * c.a;
+            out[j].b = out[j].b * (1. - c.a) + c.b * c.a;
+        }
+    }
+}
+
 color_t render_composite(float x, float y)
 {
     color_t result;

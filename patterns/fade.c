@@ -83,10 +83,11 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
         state->color_phase += param_state_get(&slot->param_states[FADE_DELTA]);
     }
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
+    state->color_phase = fmod(state->color_phase, 1.0);
     state->last_t = t;
     float x = param_state_get(&slot->param_states[FADE_COLOR]);
     x += state->color_phase;
-    state->color = param_to_color(fmod(x, 0.8) + 0.1);
+    state->color = param_to_cpow_color(fmod(x, 1.0));
 }
 
 void pat_fade_prevclick(slot_t * slot, float x, float y){

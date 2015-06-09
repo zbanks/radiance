@@ -85,10 +85,19 @@ color_t param_to_color(float param)
         result.b = 1.0;
     }else{
         param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
-        HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
+        HSVtoRGB(&result.r, &result.g, &result.b, param * 300, 1.0, 1.0);
     }
     result.a = 1;
     return result;
 }
 
-
+color_t param_to_cpow_color(float param){
+    color_t result;
+    HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
+    float p = result.r + result.g + result.b;
+    result.r /= p;
+    result.g /= p;
+    result.b /= p;
+    result.a = 1;
+    return result;
+}

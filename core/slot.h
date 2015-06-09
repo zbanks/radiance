@@ -25,6 +25,7 @@ extern slot_t slots[];
 
 void update_patterns(mbeat_t t);
 
+void render_composite_frame(slot_t * fslots, float * x, float * y, size_t n, color_t * out);
 color_t render_composite(float x, float y);
 
 void pat_load(slot_t* slot, struct pattern * pattern);

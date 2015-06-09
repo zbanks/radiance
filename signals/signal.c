@@ -243,7 +243,7 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
     float max = param_state_get(&signal->param_states[AGC_MAX]);
     float a = param_state_get(&signal->param_states[AGC_DECAY]);
 
-    agc_set_tau(&state->agc_state, a);
+    agc_set_tau(&state->agc_state, a * 8.);
     agc_set_range(&state->agc_state, max, min);
     float y = agc_update(&state->agc_state, t, x);
 

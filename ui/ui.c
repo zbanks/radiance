@@ -63,8 +63,12 @@ static struct
     struct xy dxy;
 } active_slot;
 
-
 param_state_t * active_param_source;
+
+static size_t master_pixels;
+static float * master_xs;
+static float * master_ys;
+static color_t * master_frame;
 
 void ui_init()
 {
@@ -97,6 +101,24 @@ SURFACES
     mouse_drop_fn_p = 0;
     active_pattern.index = -1;
     active_slot.slot = 0;
+
+    master_pixels = layout.master.w * layout.master.h;
+    master_xs = malloc(sizeof(float) * master_pixels);
+    master_ys = malloc(sizeof(float) * master_pixels);
+    master_frame = malloc(sizeof(color_t) * master_pixels);
+
+    if(!master_xs) FAIL("Unable to alloc xs for master.\n");
+    if(!master_ys) FAIL("Unable to alloc ys for master.\n");
+    if(!master_frame) FAIL("Unable to alloc frame for master.\n");
+
+    int i = 0;
+    for(int y=0;y<layout.master.h;y++) {
+        for(int x=0;x<layout.master.w;x++) {
+            master_xs[i] = ((float)x / (layout.master.w - 1)) * 2 - 1;
+            master_ys[i] = ((float)y / (layout.master.h - 1)) * 2 - 1;
+            i++;
+        }
+    }
 }
 
 void ui_quit()
@@ -110,6 +132,10 @@ void ui_quit()
     SDL_FreeSurface(s);
 SURFACES
 #undef X
+
+    free(master_xs);
+    free(master_ys);
+    free(master_frame);
 
     text_unload_fonts();
 
@@ -142,18 +168,16 @@ static void update_master_preview()
 {
     SDL_LockSurface(master_preview);
 
-    for(int x=0;x<layout.master.w;x++)
-    {
-        for(int y=0;y<layout.master.h;y++)
-        {
-            float xf = ((float)x / (layout.master.w - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.master.h - 1)) * 2 - 1;
-            color_t pixel = render_composite(xf, yf);
-            ((uint32_t*)(master_preview->pixels))[x + layout.master.w * y] = SDL_MapRGB(
+    render_composite_frame(slots, master_xs, master_ys, master_pixels, master_frame);
+    int i = 0;
+    for(int y=0;y<layout.master.h;y++) {
+        for(int x=0;x<layout.master.w;x++) {
+            ((uint32_t*)(master_preview->pixels))[i] = SDL_MapRGB(
                 master_preview->format,
-                (uint8_t)roundf(255 * pixel.r),
-                (uint8_t)roundf(255 * pixel.g),
-                (uint8_t)roundf(255 * pixel.b));
+                (uint8_t)roundf(255 * master_frame[i].r),
+                (uint8_t)roundf(255 * master_frame[i].g),
+                (uint8_t)roundf(255 * master_frame[i].b));
+            i++;
         }
     }
 

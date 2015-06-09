@@ -7,10 +7,11 @@ CFGSECTION(path,
 )
 
 CFGSECTION(flux,
-    CFG(enabled, INT, 0)
-    CFG(verbose, INT, 1)
-    CFG(broker, STRING, "tcp://localhost:1365")
-    //CFG(broker, STRING, "tcp://musicazoo.mit.edu:1365")
+    CFG(enabled, INT, 1)
+    CFG(verbose, INT, 0)
+    CFG(timeout, INT, 100)
+    //CFG(broker, STRING, "tcp://localhost:1365")
+    CFG(broker, STRING, "tcp://musicazoo.mit.edu:1365")
 )
 
 CFGSECTION(lux,
