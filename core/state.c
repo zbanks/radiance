@@ -108,10 +108,20 @@ int state_save(const char * filename){
             fprintf(stream, "pattern_name=%s\n", slots[i].pattern->name);
             fprintf(stream, "alpha=%f\n", slots[i].alpha.value);
             for(int j = 0; j < slots[i].pattern->n_params; j++){
+                int padding = 32;
                 if(slots[i].param_states[j].connected_output)
-                    fprintf(stream, "param_%d=@%s\n", j, slots[i].param_states[j].connected_output->label);
+                    padding -= fprintf(stream, "param_%d=@%s", j, slots[i].param_states[j].connected_output->label);
                 else
-                    fprintf(stream, "param_%d=%f\n", j, slots[i].param_states[j].value);
+                    padding -= fprintf(stream, "param_%d=%f", j, slots[i].param_states[j].value);
+                if(padding < 0) padding = 0;
+                fprintf(stream, "%*s; %s", padding, "", slots[i].pattern->parameters[j].name);
+                char buf[32];
+                if(slots[i].param_states[j].connected_output || !slots[i].pattern->parameters[j].val_to_str){
+                    fprintf(stream, "\n");
+                }else{
+                    slots[i].pattern->parameters[j].val_to_str(slots[i].param_states[j].value, buf, sizeof(buf));
+                    fprintf(stream, " = %s\n", buf);
+                }
             }
         }
     }
@@ -121,10 +131,20 @@ int state_save(const char * filename){
         if(slots[i].pattern){
             fprintf(stream, "signal_name=%s\n", signals[i].name);
             for(int j = 0; j < signals[i].n_params; j++){
+                int padding = 32;
                 if(signals[i].param_states[j].connected_output)
-                    fprintf(stream, "param_%d=@%s\n", j, signals[i].param_states[j].connected_output->label);
+                    padding -= fprintf(stream, "param_%d=@%s", j, signals[i].param_states[j].connected_output->label);
                 else
-                    fprintf(stream, "param_%d=%f\n", j, signals[i].param_states[j].value);
+                    padding -= fprintf(stream, "param_%d=%f", j, signals[i].param_states[j].value);
+                if(padding < 0) padding = 0;
+                fprintf(stream, "%*s; %s", padding, "", slots[i].pattern->parameters[j].name);
+                char buf[32];
+                if(signals[i].param_states[j].connected_output || !signals[i].parameters[j].val_to_str){
+                    fprintf(stream, "\n");
+                }else{
+                    signals[i].parameters[j].val_to_str(signals[i].param_states[j].value, buf, sizeof(buf));
+                    fprintf(stream, " = %s\n", buf);
+                }
             }
         }
     }
