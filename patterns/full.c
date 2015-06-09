@@ -61,6 +61,7 @@ color_t pat_full_pixel(slot_t* slot, float x, float y)
 }
 
 int pat_full_event(slot_t* slot, enum pat_event event, float event_data){
+    if(isnan(event_data)) return 0;
     switch(event){
         case PATEV_MOUSE_DOWN_X:
         case PATEV_MOUSE_DRAG_X:

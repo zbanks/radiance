@@ -6,6 +6,11 @@ CFGSECTION(path,
     //CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
 )
 
+CFGSECTION(state,
+    CFG(n_states, INT, 4)
+    CFG(path_format, STRING, "config_%d.ini")
+)
+
 CFGSECTION(output,
     CFG(max_energy, FLOAT, 1.40)
 )

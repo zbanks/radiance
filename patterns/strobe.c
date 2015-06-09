@@ -9,6 +9,7 @@
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
+#include "util/signal.h"
 
 
 // --------- Pattern: Strobe -----------
@@ -16,8 +17,7 @@
 typedef struct
 {
     color_t color;
-    float phase;
-    float freq;
+    struct freq_state freq_state;
     mbeat_t last_t;
     float hit_dir;
     float hit_state;
@@ -41,7 +41,7 @@ parameter_t pat_strobe_params[N_STROBE_PARAMS] = {
     [STROBE_FREQ] = {
         .name = "Frequency",
         .default_val = 0.5,
-        .val_to_str = power_quantize_parameter_label,
+        .val_to_str = power_zero_quantize_parameter_label,
     },
     [STROBE_ATTACK] = {
         .name = "Attack",
@@ -59,9 +59,8 @@ pat_state_pt pat_strobe_init()
 {
     pat_strobe_state_t * state = malloc(sizeof(pat_strobe_state_t));
     state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
-    state->phase = 0.0;
+    freq_init(&state->freq_state, 0.5, 1);
     state->last_t = 0;
-    state->freq = 1.0;
     state->a = 0.;
     state->hit_dir = 0;
     state->hit_state = 0.;
@@ -73,32 +72,19 @@ void pat_strobe_del(pat_state_pt state)
     free(state);
 }
 
-void pat_strobe_update(slot_t* slot, mbeat_t t)
-{
+void pat_strobe_update(slot_t* slot, mbeat_t t){
     pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
-    float new_freq = 1.0 / power_quantize_parameter(param_state_get(&slot->param_states[STROBE_FREQ]));
-#define BMOD(t, f) (t % B2MB(f))
-    if(new_freq != state->freq){
-        float next_freq = (new_freq > state->freq) ? state->freq * 2. : state->freq / 2.;
-        if((BMOD(t, next_freq) < BMOD(state->last_t, next_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
-            // Update with old phase up until zero crossing
-            state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
-            // Update with new phase past zero crossing
-            state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
-            state->freq = next_freq;
-        }
-    }
+    freq_update(&state->freq_state, t, param_state_get(&slot->param_states[STROBE_FREQ]));
 
-    state->phase += MB2B(t - state->last_t) / state->freq; 
-    state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
     state->color = param_to_color(param_state_get(&slot->param_states[STROBE_COLOR]));
 
     float a = 0;
-    if(state->phase > (1.0 - param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.)){
-        a = (1.0 - state->phase) / (param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.);
+    float phase = state->freq_state.phase;
+    if(phase > (1.0 - param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.)){
+        a = (1.0 - phase) / (param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.);
         a = 1.0 - a;
-    }else if(state->phase < param_state_get(&slot->param_states[STROBE_DECAY]) / 2.){
-        a = (state->phase) / (param_state_get(&slot->param_states[STROBE_DECAY]) / 2.);
+    }else if(phase < param_state_get(&slot->param_states[STROBE_DECAY]) / 2.){
+        a = (phase) / (param_state_get(&slot->param_states[STROBE_DECAY]) / 2.);
         a = 1.0 - a;
     }else{
         a = 0.;

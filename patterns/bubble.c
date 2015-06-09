@@ -85,6 +85,7 @@ void pat_bubble_update(slot_t* slot, long t)
 }
 
 int pat_bubble_event(slot_t* slot, enum pat_event event, float event_data){
+    if(isnan(event_data)) return 0;
     switch(event){
         case PATEV_MOUSE_DOWN_X:
         case PATEV_MOUSE_DRAG_X:

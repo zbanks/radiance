@@ -2,6 +2,7 @@
 #define __UTIL_SIGNAL_H__
 
 #include "core/time.h"
+#include "core/parameter.h"
 
 // ---- Exponential Low-Pass Filters ----
 
@@ -70,5 +71,19 @@ static inline void agc_set_range(struct agc_state * state, double range_high, do
     state->range_high = range_high;
     state->range_low = range_low;
 }
+
+// ---- Frequency Doubling ----
+
+struct freq_state {
+    double freq;
+    double phase;
+    mbeat_t last_t;
+    int zeroable;
+};
+
+void freq_init(struct freq_state * state, double initial_freq_val, int zeroable);
+void freq_update(struct freq_state * state, mbeat_t t, double target_freq_val);
+
+
 
 #endif

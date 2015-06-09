@@ -109,3 +109,77 @@ double agc_update(struct agc_state * state, mbeat_t t, double in){
     // Scale & output
     return x * (state->range_high - state->range_low) + state->range_low;
 }
+
+// ---- Frequency Doubling ----
+
+static inline double value_to_frequency(int zeroable, double value){
+    if(zeroable)
+        return power_zero_quantize_parameter(value);
+    else
+        return power_quantize_parameter(value);
+}
+
+void freq_init(struct freq_state * state, double initial_freq_val, int zeroable){
+    state->freq = value_to_frequency(zeroable, initial_freq_val);
+    state->phase = 0.;
+    state->last_t = 0;
+    state->zeroable  = zeroable;
+}
+
+void freq_update(struct freq_state * state, mbeat_t t, double target_freq_val){
+    double new_freq = value_to_frequency(state->zeroable, target_freq_val);
+#define BOSC(t, f) (MB2B(t % B2MB(1.0 / f)) * f) // TODO: this skews for freqs higher than 8
+    if(new_freq != state->freq){
+        if(new_freq == 0){
+            // Switch to zero around the 50% period mark
+            if((BOSC(t, state->freq) > 0.5) && (BOSC(state->last_t, state->freq) < 0.5)){
+                state->freq = new_freq;
+                state->phase = 0.5;
+            }
+        }else if(state->freq == 0){
+            // Switch to new zero around the 50% period mark
+            if((BOSC(t, new_freq) > 0.5) && (BOSC(state->last_t, new_freq) < 0.5)){
+                state->freq = new_freq;
+                state->phase = 0.5;
+                // Set last_t to the time of the 50% crossing
+                state->last_t += B2MB(0.5 - BOSC(state->last_t, new_freq));
+            }
+        }else{
+            while(new_freq != state->freq){
+                double next_freq;
+                double big_freq, sml_freq;
+                if(new_freq > state->freq){
+                    next_freq = state->freq * 2.;
+                    if(next_freq > new_freq) next_freq = new_freq;
+                    big_freq = next_freq;
+                    sml_freq = state->freq;
+                }else{
+                    next_freq = state->freq * 0.5;
+                    if(next_freq < new_freq) next_freq = new_freq;
+                    big_freq = state->freq;
+                    sml_freq = next_freq;
+                }
+                double dp1 = BOSC(state->last_t, big_freq) - BOSC(state->last_t, sml_freq);
+                double dp2 = BOSC(t, big_freq) - BOSC(t, sml_freq);
+                double slope = big_freq - sml_freq;
+                if(dp1 <= 0 && (dp2 > 0 || dp2 < dp1)){
+                    // Crossing detected
+                    // Determine when the crossing should have happened
+                    state->last_t += dp1 / slope;
+                    state->phase = BOSC(state->last_t, next_freq);
+                    state->freq = next_freq;
+                    continue;
+                }
+                break;
+            }
+        }
+    }
+
+    if(state->freq == 0){
+        state->phase = 0.5;
+    }else{
+        state->phase = BOSC(t, state->freq);
+    }
+
+    state->last_t = t;
+}

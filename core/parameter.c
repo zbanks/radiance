@@ -129,7 +129,7 @@ void float_to_string(float val, char * buf, int n){
 }
 
 static quant_labels_t power_quant_labels = {
-    "1 / 32",
+    "0",
     "1 / 16",
     "1 / 8",
     "1 / 4",
@@ -142,11 +142,22 @@ static quant_labels_t power_quant_labels = {
 };
 
 void power_quantize_parameter_label(float val, char * buf, int n){
+    int v = quantize_parameter(power_quant_labels+1, val);
+    strncpy(buf, power_quant_labels[v+1], n);
+}
+
+float power_quantize_parameter(float p){
+    int v = quantize_parameter(power_quant_labels+1, p);
+    return powf(2, v) / 16.0;
+}
+
+void power_zero_quantize_parameter_label(float val, char * buf, int n){
     int v = quantize_parameter(power_quant_labels, val);
     strncpy(buf, power_quant_labels[v], n);
 }
 
-float power_quantize_parameter(float p){
+float power_zero_quantize_parameter(float p){
     int v = quantize_parameter(power_quant_labels, p);
-    return powf(2, v) / 32.0;
+    if(v == 0) return 0;
+    return powf(2, v-1) / 16.0;
 }

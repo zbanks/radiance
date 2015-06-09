@@ -37,7 +37,8 @@
     X(filter_pane, layout.filter) \
     X(output_pane, layout.output) \
     X(midi_pane, layout.midi) \
-    X(state_pane, layout.state)
+    X(state_save_pane, layout.state_save) \
+    X(state_load_pane, layout.state_load)
 
 #define X(s, l) \
     static SDL_Surface* s;
@@ -487,13 +488,21 @@ void ui_render()
         SDL_BlitSurface(midi_pane, 0, screen, &r);
     }
 
-    rect_array_layout(&layout.state.rect_array, 0, &r);
-    ui_draw_button(state_pane, &layout.state.label_txt, "Save");
-    SDL_BlitSurface(state_pane, 0, screen, &r);
+    for(int i = 0; i < config.state.n_states; i++){
+        char buf[16];
+        rect_array_layout(&layout.state_save.rect_array, i, &r);
+        snprintf(buf, 15, "Save %d", i);
+        ui_draw_button(state_save_pane, &layout.state_save.label_txt, buf);
+        SDL_BlitSurface(state_save_pane, 0, screen, &r);
+    }
 
-    rect_array_layout(&layout.state.rect_array, 1, &r);
-    ui_draw_button(state_pane, &layout.state.label_txt, "Load");
-    SDL_BlitSurface(state_pane, 0, screen, &r);
+    for(int i = 0; i < config.state.n_states; i++){
+        char buf[16];
+        rect_array_layout(&layout.state_load.rect_array, i, &r);
+        snprintf(buf, 15, "Load %d", i);
+        ui_draw_button(state_load_pane, &layout.state_load.label_txt, buf);
+        SDL_BlitSurface(state_load_pane, 0, screen, &r);
+    }
 
     SDL_Flip(screen);
 }
@@ -566,12 +575,14 @@ static void mouse_drop_pattern_ev(struct xy xy){
     if(!active_preview.slot->pattern) return;
     struct xy offset;
     xy = xy_add(xy, active_preview.dxy);
+    float x = NAN;
+    float y = NAN;
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_X,
-                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
-        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_Y,
-                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+        x = -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w;
+        y = -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h;
     }
+    active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_X, x);
+    active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_Y, y);
 }
 
 static int mouse_click_slot(int index, struct xy xy)
@@ -627,7 +638,6 @@ static int mouse_click_midi(int index, struct xy xy){
     UNUSED(index);
     UNUSED(xy);
     //midi_refresh_devices();
-    dynamic_load_so("./live/live.so");
     return 0;
 }
 
@@ -698,6 +708,22 @@ static int mouse_click_audio(struct xy xy){
             timebase_source = TB_AUTOMATIC;
     }
 
+    return 1;
+}
+
+static int mouse_click_state_save(int index, struct xy xy){
+    char * filename = NULL;
+    if(asprintf(&filename, config.state.path_format, index)) return 0;
+    if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
+    free(filename);
+    return 1;
+}
+
+static int mouse_click_state_load(int index, struct xy xy){
+    char * filename = NULL;
+    if(asprintf(&filename, config.state.path_format, index)) return 0;
+    if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
+    free(filename);
     return 1;
 }
 
@@ -772,15 +798,20 @@ static int mouse_click(struct xy xy)
         }
     }
 
-    // See if click is on a state  button
-    rect_array_layout(&layout.state.rect_array, 0, &r);
-    if(xy_in_rect(&xy, &r, &offset)){
-        return state_save("state.ini");
+    // See if click is on a save state button
+    for(int i = 0; i < config.state.n_states; i++){
+        rect_array_layout(&layout.state_save.rect_array, i, &r);
+        if(xy_in_rect(&xy, &r, &offset)){
+            return mouse_click_state_save(i, offset);
+        }
     }
 
-    rect_array_layout(&layout.state.rect_array, 1, &r);
-    if(xy_in_rect(&xy, &r, &offset)){
-        return state_load("state.ini");
+    // See if click is on a load state button
+    for(int i = 0; i < config.state.n_states; i++){
+        rect_array_layout(&layout.state_load.rect_array, i, &r);
+        if(xy_in_rect(&xy, &r, &offset)){
+            return mouse_click_state_load(i, offset);
+        }
     }
 
     // Otherwise, do not handle click

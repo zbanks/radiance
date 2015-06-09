@@ -13,9 +13,7 @@
 
 typedef struct
 {
-    float phase;
-    mbeat_t last_t;
-    float freq;
+    struct freq_state freq_state;
     enum osc_type type;
 } inp_lfo_state_t;
 
@@ -55,11 +53,8 @@ void inp_lfo_init(signal_t * signal){
     inp_lfo_state_t * state = signal->state = malloc(sizeof(inp_lfo_state_t));
     if(!signal->state) return;
 
-    state->phase = 0.;
-    state->last_t = 0;
-    state->freq = 1.0;
     state->type = OSC_SINE;
-
+    freq_init(&state->freq_state, 0.5, 0);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     if(!signal->param_states){
@@ -78,24 +73,10 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
     if(!state) return;
 
-    float new_freq = 1.0 / power_quantize_parameter(param_state_get(&signal->param_states[LFO_FREQ]));
-#define BMOD(t, f) (t % B2MB(f))
-    if(new_freq != state->freq){
-        float next_freq = (new_freq > state->freq) ? state->freq * 2. : state->freq / 2.;
-        if((BMOD(t, next_freq) < BMOD(state->last_t, next_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
-            // Update with old phase up until zero crossing
-            state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
-            // Update with new phase past zero crossing
-            state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
-            state->freq = next_freq;
-        }
-    }
+    freq_update(&state->freq_state, t,  param_state_get(&signal->param_states[LFO_FREQ]));
 
-    state->phase += MB2B(t - state->last_t) / state->freq; 
-    state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
-    state->last_t = t;
     state->type = quantize_parameter(osc_quant_labels, param_state_get(&signal->param_states[LFO_TYPE]));
-    param_output_set(&signal->output, osc_fn_gen(state->type, state->phase) * param_state_get(&signal->param_states[LFO_AMP])
+    param_output_set(&signal->output, osc_fn_gen(state->type, state->freq_state.phase) * param_state_get(&signal->param_states[LFO_AMP])
                                       + (1.0 - param_state_get(&signal->param_states[LFO_AMP])) * param_state_get(&signal->param_states[LFO_OFFSET]));
 }
 

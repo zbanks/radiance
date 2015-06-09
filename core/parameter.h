@@ -60,6 +60,8 @@ int quantize_parameter(quant_labels_t l, float p);
 
 void power_quantize_parameter_label(float val, char * buf, int n);
 float power_quantize_parameter(float p);
+void power_zero_quantize_parameter_label(float val, char * buf, int n);
+float power_zero_quantize_parameter(float p);
 
 #endif
 
