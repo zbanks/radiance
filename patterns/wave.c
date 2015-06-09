@@ -21,6 +21,7 @@ typedef struct
     mbeat_t last_t;
     float kx;
     float ky;
+    float rho;
 } pat_wave_state_t;
 
 enum pat_wave_param_names {
@@ -29,6 +30,7 @@ enum pat_wave_param_names {
     WAVE_OMEGA,
     WAVE_K_MAG,
     WAVE_K_ANGLE,
+    WAVE_RHO,
 
     N_WAVE_PARAMS
 };
@@ -57,6 +59,11 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
         .default_val = 0.5,
         .val_to_str = float_to_string,
     },
+    [WAVE_RHO] = {
+        .name = "\\rho",
+        .default_val = 0.5,
+        .val_to_str = float_to_string,
+    },
 };
 
 pat_state_pt pat_wave_init()
@@ -68,6 +75,7 @@ pat_state_pt pat_wave_init()
     state->last_t = 0;
     state->kx = 1.0;
     state->ky = 1.0;
+    state->rho = 0.5;
     return state;
 }
 
@@ -92,6 +100,7 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     k_ang = param_state_get(&slot->param_states[WAVE_K_ANGLE]) * 2 * M_PI;
     state->kx = COS(k_ang) * k_mag;
     state->ky = SIN(k_ang) * k_mag;
+    state->rho = exp(param_state_get(&slot->param_states[WAVE_RHO]) * 2 * logf(0.5 - 0.1)) + 0.1;
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){
@@ -121,6 +130,7 @@ color_t pat_wave_pixel(slot_t* slot, float x, float y)
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
     result.a = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
+    result.a = pow(result.a, state->rho);
     return result;
 }
 
