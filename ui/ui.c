@@ -223,14 +223,18 @@ static void update_pattern_preview(slot_t* slot)
     {
         for(int y = 0; y < layout.slot.preview_h; y++)
         {
+            // Checkerboard background
+            int i = (x / 10) + (y / 10);
+            float bg_shade = (i & 1) ? 0.05 : 0.35;
+
             float xf = ((float)x / (layout.slot.preview_w - 1)) * 2 - 1;
             float yf = ((float)y / (layout.slot.preview_h - 1)) * 2 - 1;
             color_t pixel = (*slot->pattern->render)(slot, xf, yf);
             ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview_w * y] = SDL_MapRGB(
                 pattern_preview->format,
-                (uint8_t)roundf(255 * pixel.r * pixel.a),
-                (uint8_t)roundf(255 * pixel.g * pixel.a),
-                (uint8_t)roundf(255 * pixel.b * pixel.a));
+                (uint8_t)roundf(255 * (pixel.r * pixel.a + (1.0 - pixel.a) * bg_shade)),
+                (uint8_t)roundf(255 * (pixel.g * pixel.a + (1.0 - pixel.a) * bg_shade)),
+                (uint8_t)roundf(255 * (pixel.b * pixel.a + (1.0 - pixel.a) * bg_shade)));
         }
     }
 
