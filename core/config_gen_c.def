@@ -33,9 +33,9 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename){
 
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename){
     if(ini_parse(filename, CONCAT(CFGOBJ, _parse), cfg) < 0){
-        printf("Unable to load layout configuration file: '%s'\n", filename);
+        printf("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
         return 1;
     }
-    printf("Loaded layout configuration file: '%s'\n", filename);
+    printf("Loaded " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
     return 0;
 }

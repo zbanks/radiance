@@ -113,7 +113,6 @@ filter_t filters[N_FILTERS] = {
     .name = "Beat Detection",
     .display = 0,
     .output = { //
-        .value = 0.0,
         .handle_color = {0, 0, 0, 255},
         .label_color = {0, 0, 0, 255},
         .label = "Beat?",
@@ -137,6 +136,7 @@ void filters_load(){
             printf("Initializing filter '%s'\n", filters[i].name);
             if(filters[i].display)
                 graph_create_filter(&filters[i].graph_state);
+            param_output_init(&filters[i].output, 0.);
             if(filters[i].init)
                 filters[i].init(&filters[i]);
         }
@@ -148,6 +148,7 @@ void filters_unload(){
         vamp_plugin_unload(&filters[i]);
         if(filters[i].del)
             filters[i].del(&filters[i]);
+        param_output_free(&filters[i].output);
         graph_remove(&filters[i].graph_state);
     }
 }

@@ -76,6 +76,7 @@ void midi_connect_param(param_state_t * param_state, unsigned char device, unsig
     // Init outputs
     for(int i = 0; (i < N_DATA1) && (i < controllers_enabled[device].n_inputs); i++){
         //snprintf(strings, 5, "%d", i);
+        param_output_init(&ct->outputs[i], 0.);
         ct->outputs[i].handle_color = controllers_enabled[device].color;
         ct->outputs[i].label_color = controllers_enabled[device].color;
         if(controllers_enabled[device].input_labels[i]){

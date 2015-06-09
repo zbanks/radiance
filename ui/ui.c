@@ -36,7 +36,8 @@
     X(signal_pane, layout.signal) \
     X(filter_pane, layout.filter) \
     X(output_pane, layout.output) \
-    X(midi_pane, layout.midi) 
+    X(midi_pane, layout.midi) \
+    X(state_pane, layout.state)
 
 #define X(s, l) \
     static SDL_Surface* s;
@@ -409,6 +410,12 @@ static void ui_update_signal(signal_t* signal)
     }
 }
 
+static void ui_draw_button(SDL_Surface * surface, struct txt * label_fmt, const char * label){
+    rect_t r = {.x = 0, .y = 0, .w = surface->w, .h = surface->h};
+    SDL_FillRect(surface, &r, SDL_MapRGB(surface->format, 20, 20, 20));
+    text_render(surface, label_fmt, 0, label);
+}
+
 void ui_render()
 {
     rect_t r;
@@ -475,6 +482,14 @@ void ui_render()
         
         SDL_BlitSurface(midi_pane, 0, screen, &r);
     }
+
+    rect_array_layout(&layout.state.rect_array, 0, &r);
+    ui_draw_button(state_pane, &layout.state.label_txt, "Save");
+    SDL_BlitSurface(state_pane, 0, screen, &r);
+
+    rect_array_layout(&layout.state.rect_array, 1, &r);
+    ui_draw_button(state_pane, &layout.state.label_txt, "Load");
+    SDL_BlitSurface(state_pane, 0, screen, &r);
 
     SDL_Flip(screen);
 }
@@ -751,6 +766,17 @@ static int mouse_click(struct xy xy)
         if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_midi(i, offset);
         }
+    }
+
+    // See if click is on a state  button
+    rect_array_layout(&layout.state.rect_array, 0, &r);
+    if(xy_in_rect(&xy, &r, &offset)){
+        return state_save("state.ini");
+    }
+
+    rect_array_layout(&layout.state.rect_array, 1, &r);
+    if(xy_in_rect(&xy, &r, &offset)){
+        return state_load("state.ini");
     }
 
     // Otherwise, do not handle click

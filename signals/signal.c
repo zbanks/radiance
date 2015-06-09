@@ -366,7 +366,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {255, 0, 0, 255},
             .label_color = {255, 0, 0, 255},
-            .label = "LFO"
+            .label = "LFO1"
         },
         .init = inp_lfo_init,
         .update = inp_lfo_update,
@@ -383,7 +383,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {220, 100, 0, 255},
             .label_color = {220, 100, 0, 255},
-            .label = "LFO"
+            .label = "LFO2"
         },
         .init = inp_lfo_init,
         .update = inp_lfo_update,
@@ -400,7 +400,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {240, 240, 0, 255},
             .label_color = {240, 240, 0, 255},
-            .label = "LPF"
+            .label = "LPF1"
         },
         .init = inp_lpf_init,
         .update = inp_lpf_update,
@@ -417,7 +417,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {25, 240, 0, 255},
             .label_color = {25, 240, 0, 255},
-            .label = "AGC"
+            .label = "AGC1"
         },
         .init = inp_agc_init,
         .update = inp_agc_update,
@@ -443,17 +443,16 @@ signal_t signals[N_SIGNALS] = {
     },
     */
     {
-        .name = "Quantile",
+        .name = "Quantile 1",
         .type = SIGNAL_QTL,
         .default_val = 0.5,
         .n_params = N_QTL_PARAMS,
         .parameters = inp_qtl_parameters,
         .color = {0.0, 0.8, 0.8, 0.0},
         .output = {
-            .value = 0.0,
             .handle_color = {0, 220, 220, 255},
             .label_color = {0, 220, 220, 255},
-            .label = "QTL"
+            .label = "QTL1"
         },
         .init = inp_qtl_init,
         .update = inp_qtl_update,
@@ -471,16 +470,17 @@ void update_signals(mbeat_t t) {
 
 void signal_start(){
     for(int i = 0; i < n_signals; i++){
+        graph_create_signal(&signals[i].graph_state);
+        param_output_init(&signals[i].output, 0.);
         signals[i].init(&signals[i]);
 
-        graph_create_signal(&signals[i].graph_state);
     }
 }
 
 void signal_stop(){
     for(int i = 0; i < n_signals; i++){
         signals[i].del(&signals[i]);
-
+        param_output_free(&signals[i].output);
         graph_remove(&signals[i].graph_state);
     }
 }

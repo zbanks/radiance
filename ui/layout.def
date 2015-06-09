@@ -93,5 +93,10 @@ CFGSECTION(midi,
     CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
 )
 
+CFGSECTION(state,
+    CFG_RECT_ARRAY(, 1120, 700, 60, 45,  65,  0, 0)
+    CFG_TXT(label, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
+)
+
 #undef CFGSECTION
 #undef CFG

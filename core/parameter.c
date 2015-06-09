@@ -2,6 +2,19 @@
 
 #include "core/parameter.h"
 
+static param_output_t * param_output_list;
+
+void param_output_init(param_output_t * output, float value){
+    output->value = value;
+    output->connected_state = NULL;
+    //output->handle_color = (SDL_Color) {80, 80, 80, 255};
+    //output->label_color = (SDL_Color) {80, 80, 80, 255};
+    if(!output->label) output->label = "";
+
+    output->next = param_output_list;
+    param_output_list = output;
+}
+
 void param_output_set(param_output_t * output, float value){
     param_state_t * pstate = output->connected_state;
     // Set local copy
@@ -24,6 +37,13 @@ void param_output_free(param_output_t * output){
         last_pstate->next_connected_state = 0;
         last_pstate->prev_connected_state = 0;
     }
+
+    // Remove from param_output_list
+    param_output_t * poptr = param_output_list;
+    while(poptr && poptr->next != output)
+        poptr = poptr->next;
+    if(poptr)
+        poptr->next = output->next;
 }
 
 void param_state_init(param_state_t * state, float value){
@@ -56,6 +76,16 @@ void param_state_connect(param_state_t * state, param_output_t * output){
     state->prev_connected_state = 0;
 
     output->connected_state = state;
+}
+
+int param_state_connect_label(param_state_t * state, const char * label){
+    param_output_t * poptr = param_output_list;
+    while(poptr && strcmp(poptr->label, label) != 0)
+        poptr = poptr->next;
+    if(!poptr) return -1;
+
+    param_state_connect(state, poptr);
+    return 0;
 }
 
 void param_state_disconnect(param_state_t * state){
