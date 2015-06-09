@@ -805,7 +805,13 @@ int ui_poll()
             case SDL_QUIT:
                 return 0;
             case SDL_MOUSEBUTTONDOWN:
-                mouse_click(xy);
+                // If there's an active param source, cancel it after the click
+                if(active_param_source){
+                    mouse_click(xy);
+                    active_param_source = NULL;
+                }else{
+                    mouse_click(xy);
+                }
                 mouse_down = 1;
                 mouse_drag_start = xy;
                 break;

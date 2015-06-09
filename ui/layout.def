@@ -20,10 +20,10 @@ CFGSECTION(master,
 
 CFGSECTION(slot,
     CFG(n, INT, 8)
-    CFG_RECT_ARRAY(, 10, 245, 110, 350, 125, 0, 0)
-    CFG_RECT(preview, 25, 5, 80, 80)
-    CFG_RECT(alpha, 0, 0, 20, 80)
-    CFG_RECT_ARRAY(sliders, 5, 90, 100, 32, 0, 40, 0)
+    CFG_RECT_ARRAY(, 10, 245, 115, 350, 125, 0, 0)
+    CFG_RECT(preview, 25, 5+5, 80, 80)
+    CFG_RECT(alpha, 0, 0+5, 20, 80)
+    CFG_RECT_ARRAY(sliders, 5, 90+5, 110, 32, 0, 40, 0)
 )
 
 CFGSECTION(audio,
