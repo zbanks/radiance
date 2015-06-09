@@ -108,13 +108,11 @@ int state_save(const char * filename){
             fprintf(stream, "pattern_name=%s\n", slots[i].pattern->name);
             fprintf(stream, "alpha=%f\n", slots[i].alpha.value);
             for(int j = 0; j < slots[i].pattern->n_params; j++){
-                int padding = 32;
                 if(slots[i].param_states[j].connected_output)
-                    padding -= fprintf(stream, "param_%d=@%s", j, slots[i].param_states[j].connected_output->label);
+                    fprintf(stream, "param_%d=@%-31s", j, slots[i].param_states[j].connected_output->label);
                 else
-                    padding -= fprintf(stream, "param_%d=%f", j, slots[i].param_states[j].value);
-                if(padding < 0) padding = 0;
-                fprintf(stream, "%*s; %s", padding, "", slots[i].pattern->parameters[j].name);
+                    fprintf(stream, "param_%d=%-32f", j, slots[i].param_states[j].value);
+                fprintf(stream, " ; %s", slots[i].pattern->parameters[j].name);
                 char buf[32];
                 if(slots[i].param_states[j].connected_output || !slots[i].pattern->parameters[j].val_to_str){
                     fprintf(stream, "\n");
@@ -131,13 +129,12 @@ int state_save(const char * filename){
         if(slots[i].pattern){
             fprintf(stream, "signal_name=%s\n", signals[i].name);
             for(int j = 0; j < signals[i].n_params; j++){
-                int padding = 32;
+                //int padding = 32;
                 if(signals[i].param_states[j].connected_output)
-                    padding -= fprintf(stream, "param_%d=@%s", j, signals[i].param_states[j].connected_output->label);
+                    fprintf(stream, "param_%d=@%-31s", j, signals[i].param_states[j].connected_output->label);
                 else
-                    padding -= fprintf(stream, "param_%d=%f", j, signals[i].param_states[j].value);
-                if(padding < 0) padding = 0;
-                fprintf(stream, "%*s; %s", padding, "", slots[i].pattern->parameters[j].name);
+                    fprintf(stream, "param_%d=%-32f", j, signals[i].param_states[j].value);
+                fprintf(stream, " ; %s",  slots[i].pattern->parameters[j].name);
                 char buf[32];
                 if(signals[i].param_states[j].connected_output || !signals[i].parameters[j].val_to_str){
                     fprintf(stream, "\n");
