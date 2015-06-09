@@ -69,12 +69,13 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
     float new_freq = 1.0 / power_quantize_parameter(param_state_get(&slot->param_states[FADE_FREQ]));
 #define BMOD(t, f) (t % B2MB(f))
     if(new_freq != state->freq){
-        if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
+        float next_freq = (new_freq > state->freq) ? state->freq * 2. : state->freq / 2.;
+        if((BMOD(t, next_freq) < BMOD(state->last_t, next_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
             // Update with old phase up until zero crossing
             state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
             // Update with new phase past zero crossing
             state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
-            state->freq = new_freq;
+            state->freq = next_freq;
         }
     }
 

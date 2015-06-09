@@ -81,12 +81,13 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
     float new_freq = 1.0 / power_quantize_parameter(param_state_get(&signal->param_states[LFO_FREQ]));
 #define BMOD(t, f) (t % B2MB(f))
     if(new_freq != state->freq){
-        if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
+        float next_freq = (new_freq > state->freq) ? state->freq * 2. : state->freq / 2.;
+        if((BMOD(t, next_freq) < BMOD(state->last_t, next_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
             // Update with old phase up until zero crossing
             state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
             // Update with new phase past zero crossing
             state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
-            state->freq = new_freq;
+            state->freq = next_freq;
         }
     }
 
@@ -312,7 +313,7 @@ void inp_qtl_init(signal_t * signal){
 }
 
 static int _fcmp(const void * a, const void * b){
-    return *(const float *)a < *(const float *)b;
+    return *(const float *)a > *(const float *)b;
 }
 
 void inp_qtl_update(signal_t * signal, mbeat_t t){

@@ -243,7 +243,7 @@ has_collapsed_event:
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
+                //printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
                 struct midi_connection_table * ct;
                 ct = connection_table;
                 while(ct){

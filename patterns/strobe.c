@@ -19,6 +19,9 @@ typedef struct
     float phase;
     float freq;
     mbeat_t last_t;
+    float hit_dir;
+    float hit_state;
+    float a;
 } pat_strobe_state_t;
 
 enum pat_strobe_param_names {
@@ -59,6 +62,9 @@ pat_state_pt pat_strobe_init()
     state->phase = 0.0;
     state->last_t = 0;
     state->freq = 1.0;
+    state->a = 0.;
+    state->hit_dir = 0;
+    state->hit_state = 0.;
     return state;
 }
 
@@ -73,38 +79,72 @@ void pat_strobe_update(slot_t* slot, mbeat_t t)
     float new_freq = 1.0 / power_quantize_parameter(param_state_get(&slot->param_states[STROBE_FREQ]));
 #define BMOD(t, f) (t % B2MB(f))
     if(new_freq != state->freq){
-        if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
+        float next_freq = (new_freq > state->freq) ? state->freq * 2. : state->freq / 2.;
+        if((BMOD(t, next_freq) < BMOD(state->last_t, next_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
             // Update with old phase up until zero crossing
             state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
             // Update with new phase past zero crossing
             state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
-            state->freq = new_freq;
+            state->freq = next_freq;
         }
     }
 
     state->phase += MB2B(t - state->last_t) / state->freq; 
     state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
-    state->last_t = t;
     state->color = param_to_color(param_state_get(&slot->param_states[STROBE_COLOR]));
+
+    float a = 0;
+    if(state->phase > (1.0 - param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.)){
+        a = (1.0 - state->phase) / (param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.);
+        a = 1.0 - a;
+    }else if(state->phase < param_state_get(&slot->param_states[STROBE_DECAY]) / 2.){
+        a = (state->phase) / (param_state_get(&slot->param_states[STROBE_DECAY]) / 2.);
+        a = 1.0 - a;
+    }else{
+        a = 0.;
+    }
+
+    if(state->hit_dir != 0){
+        if(state->hit_dir > 0){
+            // Attack
+            state->hit_state += MB2B(t - state->last_t) / (param_state_get(&slot->param_states[STROBE_ATTACK]) / 4. + 0.05);
+            if(state->hit_state >= 1.){
+                state->hit_state = 1.;
+            }
+        }else{
+            state->hit_state -= MB2B(t - state->last_t) / (param_state_get(&slot->param_states[STROBE_DECAY]) /4. + 0.05);
+            if(state->hit_state <= 0.){
+                // Remove hit
+                state->hit_state = 0;
+                state->hit_dir = 0;
+            }
+        }
+    }
+
+    state->last_t = t;
+    state->a = MIN(1.0, fabs(state->hit_dir) * state->hit_state + a);
 }
 
-void pat_strobe_prevclick(slot_t * slot, float x, float y){
-    UNUSED(slot);
-    UNUSED(x);
-    UNUSED(y);
-    //pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
-    /* I don't know how I feel about resetting the state yet...
-    state->phase = 0.;
-    state->last_t = fmod(state->last_t, 16.0);
-    */
-    //param_state_setq(&slot->param_states[STROBE_K_MAG], sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0));
-    //param_state_setq(&slot->param_states[STROBE_K_ANGLE], (atan2(y, x) / (2.0 * M_PI)) + 0.5);
-}
 
 int pat_strobe_event(slot_t* slot, enum pat_event event, float event_data){
-    UNUSED(slot);
-    UNUSED(event);
-    UNUSED(event_data);
+    pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
+    switch(event){
+        case PATEV_MOUSE_DOWN_X:
+            state->hit_dir = 1.;
+            state->hit_state = 0;
+        break;
+        case PATEV_M1_NOTE_ON:
+        case PATEV_M2_NOTE_ON:
+            state->hit_dir = event_data;
+            state->hit_state = 0;
+        break;
+        case PATEV_MOUSE_UP_X:
+        case PATEV_M1_NOTE_OFF:
+        case PATEV_M2_NOTE_OFF:
+            state->hit_dir = -state->hit_dir;
+        break;
+        default: return 0;
+    }
     /*
     switch(event){
         default:
@@ -119,18 +159,7 @@ color_t pat_strobe_pixel(slot_t* slot, float x, float y)
     UNUSED(y);
     pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
     color_t result = state->color;
-    float a;
-    if(state->phase > (1.0 - param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.)){
-        a = (1.0 - state->phase) / (param_state_get(&slot->param_states[STROBE_ATTACK]) / 2.);
-        a = 1.0 - a;
-    }else if(state->phase < param_state_get(&slot->param_states[STROBE_DECAY]) / 2.){
-        a = (state->phase) / (param_state_get(&slot->param_states[STROBE_DECAY]) / 2.);
-        a = 1.0 - a;
-    }else{
-        a = 0.;
-    }
-
-    result.a = a;
+    result.a = state->a;
     return result;
 }
 

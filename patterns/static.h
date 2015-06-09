@@ -11,6 +11,7 @@ extern pattern_t pat_full;
 extern pattern_t pat_wave;
 extern pattern_t pat_bubble;
 extern pattern_t pat_strobe;
+extern pattern_t pat_mstrobe;
 extern pattern_t pat_fade;
 
 #endif
