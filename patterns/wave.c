@@ -43,6 +43,7 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
     [WAVE_TYPE] = {
         .name = "Wave Type",
         .default_val = 0.0,
+        .val_to_str = osc_quantize_parameter_label,
     },
     [WAVE_OMEGA] = {
         .name = "\\omega",
@@ -101,16 +102,6 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     state->kx = COS(k_ang) * k_mag;
     state->ky = SIN(k_ang) * k_mag;
     state->rho = exp(param_state_get(&slot->param_states[WAVE_RHO]) * 2 * logf(0.5 - 0.1)) + 0.1;
-}
-
-void pat_wave_prevclick(slot_t * slot, float x, float y){
-    //pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
-    /* I don't know how I feel about resetting the state yet...
-    state->phase = 0.;
-    state->last_t = fmod(state->last_t, 16.0);
-    */
-    param_state_setq(&slot->param_states[WAVE_K_MAG], sqrt(powf(x, 2) + powf(y, 2)) / sqrt(2.0));
-    param_state_setq(&slot->param_states[WAVE_K_ANGLE], (atan2(y, x) / (2.0 * M_PI)) + 0.5);
 }
 
 int pat_wave_event(slot_t* slot, enum pat_event event, float event_data){

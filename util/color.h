@@ -41,6 +41,7 @@ extern struct colormap cm_rainbow;
 extern struct colormap cm_rainbow_edged;
 extern struct colormap cm_rainbow_equal;
 extern struct colormap cm_jet;
+extern struct colormap cm_hot;
 
 extern struct colormap * cm_global;
 extern struct colormap * cm_global_mono;

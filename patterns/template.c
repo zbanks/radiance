@@ -40,7 +40,7 @@ static void del(pat_state_pt state) {
     // TEMPLATE: Free any additional regions malloc'd in init
 }
 
-static void update(slot_t* slot, long t) {
+static void update(slot_t* slot, mbeat_t t) {
     state_t * state = (state_t *) slot->state;
     UNUSED(t);
     UNUSED(state);

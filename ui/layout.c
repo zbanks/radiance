@@ -9,13 +9,13 @@ void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect)
     int index_x = index;
     int index_y = index;
     if(array_spec->tile > 0){
-        // Tile horizontally
+        // Tile down with `tile` per row
         index_x = index % array_spec->tile;
         index_y = index / array_spec->tile;
     }else if(array_spec->tile < 0){
-        // Tile vertically
-        index_x = index % (-array_spec->tile);
-        index_y = index / (-array_spec->tile);
+        // Tile across with `tile` per column
+        index_y = index % (-array_spec->tile);
+        index_x = index / (-array_spec->tile);
     }
 
     rect->x = array_spec->x + array_spec->px * index_x;

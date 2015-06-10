@@ -112,8 +112,8 @@ color_t param_to_cpow_color(float param){
 
 // --- Colormaps ---
 
-int n_colormaps = 4;
-struct colormap * colormaps[4] =  {&cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal, &cm_jet};
+int n_colormaps = 5;
+struct colormap * colormaps[5] =  {&cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal, &cm_jet, &cm_hot};
 
 color_t colormap_color(struct colormap * cm, float value){
     //if(colormap_test(cm)) return (color_t) {0,0,0,1};
