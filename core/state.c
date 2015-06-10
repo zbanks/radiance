@@ -37,8 +37,18 @@ static int load_handler(void * user, const char * section, const char * name, co
                 return 0;
             }
             if(*value == '@'){
-                if(param_state_connect_label(&signals[i].param_states[j], value+1)){
-                    printf("Error connecting: %s %s %s\n", section, name, value);
+                float min;
+                float max;
+                char sout[32];
+                if(sscanf(value, "@[%f,%f]%31s", &min, &max, sout) == 3){
+                    if(param_state_connect_label(&signals[i].param_states[j], sout)){
+                        printf("Error connecting: %s %s %s\n", section, name, value);
+                    }
+                    signals[i].param_states[j].min = min;
+                    signals[i].param_states[j].max = max;
+                }else{
+                    printf("Error parsing '%s'\n", value);
+                    return 0;
                 }
             }else{
                 param_state_disconnect(&signals[i].param_states[j]);
@@ -67,8 +77,18 @@ static int load_handler(void * user, const char * section, const char * name, co
                 return 0;
             }
             if(*value == '@'){
-                if(param_state_connect_label(&slots[i].param_states[j], value+1)){
-                    printf("Error connecting: %s %s %s\n", section, name, value);
+                float min;
+                float max;
+                char sout[32];
+                if(sscanf(value, "@[%f,%f]%31s", &min, &max, sout) == 3){
+                    if(param_state_connect_label(&slots[i].param_states[j], sout)){
+                        printf("Error connecting: %s %s %s\n", section, name, value);
+                    }
+                    slots[i].param_states[j].min = min;
+                    slots[i].param_states[j].max = max;
+                }else{
+                    printf("Error parsing '%s'\n", value);
+                    return 0;
                 }
             }else{
                 param_state_disconnect(&slots[i].param_states[j]);
@@ -109,7 +129,10 @@ int state_save(const char * filename){
             fprintf(stream, "alpha=%f\n", slots[i].alpha.value);
             for(int j = 0; j < slots[i].pattern->n_params; j++){
                 if(slots[i].param_states[j].connected_output)
-                    fprintf(stream, "param_%d=@%-31s", j, slots[i].param_states[j].connected_output->label);
+                    fprintf(stream, "param_%d=@[%6f,%6f]%-18s", j,
+                            slots[i].param_states[j].min,
+                            slots[i].param_states[j].max,
+                            slots[i].param_states[j].connected_output->label);
                 else
                     fprintf(stream, "param_%d=%-32f", j, slots[i].param_states[j].value);
                 fprintf(stream, " ; %s", slots[i].pattern->parameters[j].name);
@@ -131,7 +154,10 @@ int state_save(const char * filename){
             for(int j = 0; j < signals[i].n_params; j++){
                 //int padding = 32;
                 if(signals[i].param_states[j].connected_output)
-                    fprintf(stream, "param_%d=@%-31s", j, signals[i].param_states[j].connected_output->label);
+                    fprintf(stream, "param_%d=@[%6f,%6f]%-18s", j,
+                            signals[i].param_states[j].min,
+                            signals[i].param_states[j].max,
+                            signals[i].param_states[j].connected_output->label);
                 else
                     fprintf(stream, "param_%d=%-32f", j, signals[i].param_states[j].value);
                 fprintf(stream, " ; %s",  slots[i].pattern->parameters[j].name);
