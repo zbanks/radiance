@@ -46,7 +46,8 @@ void pat_full_update(slot_t* slot, long t)
 {
     UNUSED(t);
     color_t* color = (color_t*)slot->state;
-    *color = param_to_color(param_state_get(&slot->param_states[FULL_COLOR]));
+    //*color = param_to_color(param_state_get(&slot->param_states[FULL_COLOR]));
+    *color = colormap_color(&cm_rainbow, param_state_get(&slot->param_states[FULL_COLOR]));
     float v = param_state_get(&slot->param_states[FULL_VALUE]);
     color->r *= v;
     color->g *= v;

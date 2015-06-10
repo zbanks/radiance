@@ -16,7 +16,7 @@ CFGSECTION(output,
 )
 
 CFGSECTION(flux,
-    CFG(enabled, INT, 1)
+    CFG(enabled, INT, 0)
     CFG(verbose, INT, 0)
     CFG(timeout, INT, 100)
     //CFG(broker, STRING, "tcp://localhost:1365")

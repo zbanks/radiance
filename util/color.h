@@ -16,4 +16,27 @@ SDL_Color color_to_SDL(color_t color);
 color_t param_to_color(float param);
 color_t param_to_cpow_color(float param);
 
+// --- Colormaps ---
+
+struct colormap_el {
+    float x;
+    struct color y;
+    float gamma;
+};
+
+struct colormap {
+    const char name[32];
+    size_t n_points;
+    struct colormap_el points[];
+};
+
+color_t colormap_color(struct colormap * cm, float value);
+int colormap_test(struct colormap * cm);
+
+extern int n_colormaps;
+extern struct colormap * colormaps[];
+extern struct colormap cm_rainbow;
+extern struct colormap cm_rainbow_edged;
+extern struct colormap cm_rainbow_equal;
+
 #endif

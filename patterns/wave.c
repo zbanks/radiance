@@ -109,7 +109,7 @@ void pat_wave_prevclick(slot_t * slot, float x, float y){
     state->phase = 0.;
     state->last_t = fmod(state->last_t, 16.0);
     */
-    param_state_setq(&slot->param_states[WAVE_K_MAG], sqrt(pow(x, 2) + pow(y, 2)) / sqrt(2.0));
+    param_state_setq(&slot->param_states[WAVE_K_MAG], sqrt(powf(x, 2) + powf(y, 2)) / sqrt(2.0));
     param_state_setq(&slot->param_states[WAVE_K_ANGLE], (atan2(y, x) / (2.0 * M_PI)) + 0.5);
 }
 
@@ -130,7 +130,7 @@ color_t pat_wave_pixel(slot_t* slot, float x, float y)
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
     result.a = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
-    result.a = pow(result.a, state->rho);
+    result.a = powf(result.a, state->rho);
     return result;
 }
 
