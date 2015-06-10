@@ -62,17 +62,21 @@ void graph_update(graph_state_t* state, float value)
     if(!state->history) return;
     long t = SDL_GetTicks();
     int pixels = (t - state->last_t) / (1000 / state->scroll_rate);
+    if(pixels <= 0) return; 
+    if(pixels >= state->width) pixels = state->width - 1;
+
     float prev_value = state->history[0];
-    for(int i = 1; i <= pixels; i++)
+    // TODO XXX There's an issue where memory is being overwritten
+    if(isnan(prev_value)) prev_value = 0.;
+    memmove(state->history+pixels, state->history, (state->width - pixels) * sizeof(float));
+    for(int i = 0; i < pixels; i++)
     {
-        for(int i = state->width - 1; i > 0; i--)
-        {
-            state->history[i] = state->history[i-1];
-        }
-        float alpha = (float)i / pixels;
-        state->history[0] = (1 - alpha) * prev_value + alpha * value;
-        state->last_t += (1000 / state->scroll_rate);
+        float alpha = ((float) i) / ((float) pixels);
+        state->history[i] = (1 - alpha) * value + alpha * prev_value;
+        //XXX Band-aid: something is overwriting history[0] w/ -nan
+        //if(isnan(state->history[i])) state->history[i] = 0.;
     }
+    state->last_t += pixels * (1000 / state->scroll_rate);
 }
 
 static int x_to_pixel(graph_state_t* state, float x)

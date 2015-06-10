@@ -6,11 +6,21 @@ CFGSECTION(path,
     //CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
 )
 
+CFGSECTION(state,
+    CFG(n_states, INT, 4)
+    CFG(path_format, STRING, "config_%d.ini")
+)
+
+CFGSECTION(output,
+    CFG(max_energy, FLOAT, 1.40)
+)
+
 CFGSECTION(flux,
-    CFG(enabled, INT, 0)
-    CFG(verbose, INT, 1)
-    CFG(broker, STRING, "tcp://localhost:1365")
-    //CFG(broker, STRING, "tcp://musicazoo.mit.edu:1365")
+    CFG(enabled, INT, 1)
+    CFG(verbose, INT, 0)
+    CFG(timeout, INT, 100)
+    //CFG(broker, STRING, "tcp://localhost:1365")
+    CFG(broker, STRING, "tcp://musicazoo.mit.edu:1365")
 )
 
 CFGSECTION(lux,

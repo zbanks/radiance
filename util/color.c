@@ -3,6 +3,7 @@
 #include <SDL/SDL.h>
 
 #include "util/color.h"
+#include "util/math.h"
 
 uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color){
     return SDL_MapRGB(format, 
@@ -75,6 +76,7 @@ color_t param_to_color(float param)
 {
 #define ENDSZ 0.07
     color_t result;
+    param = MIN(MAX(param, 0.), 1.);
     if(param < ENDSZ){
         result.r = param / ENDSZ;
         result.g = 0;
@@ -85,10 +87,25 @@ color_t param_to_color(float param)
         result.b = 1.0;
     }else{
         param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
-        HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
+        HSVtoRGB(&result.r, &result.g, &result.b, param * 300, 1.0, 1.0);
     }
     result.a = 1;
     return result;
 }
 
-
+color_t param_to_cpow_color(float param){
+#define MINP 0.0
+    color_t result;
+    param = MIN(MAX(param, 0.), 1.);
+    HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
+    float p = result.r + result.g + result.b;
+    p /= (1. - MINP);
+    result.r /= p;
+    result.g /= p;
+    result.b /= p;
+    result.r += MINP;
+    result.g += MINP;
+    result.b += MINP;
+    result.a = 1;
+    return result;
+}

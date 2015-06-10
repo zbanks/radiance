@@ -25,6 +25,9 @@ typedef struct output_strip
     output_vertex_t* first;
     SDL_Color color;
     int bus;
+    float * xs;
+    float * ys;
+    color_t * frame;
 } output_strip_t;
 
 extern int n_output_strips;

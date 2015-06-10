@@ -34,7 +34,7 @@ static char* rstrip(char* s)
 }
 
 /* Return pointer to first non-whitespace char in given string. */
-static char* lskip(const char* s)
+static char* lskip(char* s)
 {
     while (*s && isspace((unsigned char)(*s)))
         s++;
@@ -44,7 +44,7 @@ static char* lskip(const char* s)
 /* Return pointer to first char c or ';' comment in given string, or pointer to
    null at end of string if neither found. ';' must be prefixed by a whitespace
    character to register as a comment. */
-static char* find_char_or_comment(const char* s, char c)
+static char* find_char_or_comment(char* s, char c)
 {
     int was_whitespace = 0;
     while (*s && *s != c && !(was_whitespace && *s == ';')) {

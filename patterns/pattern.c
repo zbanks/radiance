@@ -9,8 +9,8 @@
 #include "util/math.h"
 #include "util/siggen.h"
 
-#define N_PATTERNS 5
-pattern_t * default_patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble, &pat_strobe,&pat_fade};
+#define N_PATTERNS 7
+pattern_t * default_patterns[N_PATTERNS] = {&pat_full, &pat_wave, &pat_bubble, &pat_strobe, &pat_mstrobe, &pat_fade, &pat_swipe};
 pattern_t ** patterns;
 int n_patterns = N_PATTERNS;
 

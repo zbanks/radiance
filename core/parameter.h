@@ -24,14 +24,18 @@ typedef struct param_output {
     SDL_Color handle_color;
     SDL_Color label_color;
     char * label;
+    struct param_output * next;
 } param_output_t;
 
+void param_output_init(param_output_t * output, float value);
 void param_output_set(param_output_t * output, float value);
 void param_output_free(param_output_t * output);
+
 void param_state_init(param_state_t * state, float value);
 void param_state_setq(param_state_t * state, float value);
 float param_state_get(param_state_t * state);
 void param_state_connect(param_state_t * state, param_output_t * output);
+int param_state_connect_label(param_state_t * state, const char * label);
 void param_state_disconnect(param_state_t * state);
 param_output_t * param_state_output(param_state_t * state);  // Returns NULL if not connected
 
@@ -58,6 +62,8 @@ int quantize_parameter(quant_labels_t l, float p);
 
 void power_quantize_parameter_label(float val, char * buf, int n);
 float power_quantize_parameter(float p);
+void power_zero_quantize_parameter_label(float val, char * buf, int n);
+float power_zero_quantize_parameter(float p);
 
 #endif
 

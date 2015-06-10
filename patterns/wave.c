@@ -9,17 +9,19 @@
 #include "util/color.h"
 #include "util/math.h"
 #include "util/siggen.h"
+#include "util/signal.h"
 
 // --------- Pattern: Wave -----------
 
 typedef struct
 {
     color_t color;
-    float phase;
+    struct freq_state freq_state;
     enum osc_type type;
     mbeat_t last_t;
     float kx;
     float ky;
+    float rho;
 } pat_wave_state_t;
 
 enum pat_wave_param_names {
@@ -28,6 +30,7 @@ enum pat_wave_param_names {
     WAVE_OMEGA,
     WAVE_K_MAG,
     WAVE_K_ANGLE,
+    WAVE_RHO,
 
     N_WAVE_PARAMS
 };
@@ -56,17 +59,23 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
         .default_val = 0.5,
         .val_to_str = float_to_string,
     },
+    [WAVE_RHO] = {
+        .name = "\\rho",
+        .default_val = 0.5,
+        .val_to_str = float_to_string,
+    },
 };
 
 pat_state_pt pat_wave_init()
 {
     pat_wave_state_t * state = malloc(sizeof(pat_wave_state_t));
     state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
-    state->phase = 0.0;
+    freq_init(&state->freq_state, 0.5, 0);
     state->type = OSC_SINE;
     state->last_t = 0;
     state->kx = 1.0;
     state->ky = 1.0;
+    state->rho = 0.5;
     return state;
 }
 
@@ -84,14 +93,14 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     state->color = param_to_color(param_state_get(&slot->param_states[WAVE_COLOR]));
     state->type = quantize_parameter(osc_quant_labels, param_state_get(&slot->param_states[WAVE_TYPE]));
 
-    state->phase += MB2B(t - state->last_t) * power_quantize_parameter(param_state_get(&slot->param_states[WAVE_OMEGA]));
-    state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
+    freq_update(&state->freq_state, t, param_state_get(&slot->param_states[WAVE_OMEGA]));
     state->last_t = t;
 
     k_mag = param_state_get(&slot->param_states[WAVE_K_MAG]) * 2 + 0.2;
     k_ang = param_state_get(&slot->param_states[WAVE_K_ANGLE]) * 2 * M_PI;
     state->kx = COS(k_ang) * k_mag;
     state->ky = SIN(k_ang) * k_mag;
+    state->rho = exp(param_state_get(&slot->param_states[WAVE_RHO]) * 2 * logf(0.5 - 0.1)) + 0.1;
 }
 
 void pat_wave_prevclick(slot_t * slot, float x, float y){
@@ -120,7 +129,8 @@ color_t pat_wave_pixel(slot_t* slot, float x, float y)
 {
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
     color_t result = state->color;
-    result.a = osc_fn_gen(state->type, state->phase + y * state->ky + x * state->kx);
+    result.a = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
+    result.a = pow(result.a, state->rho);
     return result;
 }
 

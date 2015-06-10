@@ -7,9 +7,9 @@
 quant_labels_t osc_quant_labels = {
     [OSC_SINE] = "Sine",
     [OSC_TRIANGLE] = "Triangle",
+    [OSC_SQUARE] = "Square",
     [OSC_SAWTOOTH_R] = "Sawtooth Rising",
     [OSC_SAWTOOTH_F] = "Sawtooth Falling",
-    [OSC_SQUARE] = "Square",
     LABELS_END
 };
 
@@ -25,7 +25,7 @@ float osc_fn_gen(enum osc_type type, float phase){
         case OSC_SAWTOOTH_F:
             return fmod(-phase + 16.0, 1.0);
         case OSC_SQUARE:
-            return (fmod(phase + 16.0 + 0.5, 1.0) > 0.5 ? 1.0 : 0.0);
+            return (fmod(phase + 16.0 + 0.75, 1.0) > 0.5 ? 1.0 : 0.0);
     }
 }
 

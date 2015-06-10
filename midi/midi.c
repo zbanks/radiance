@@ -17,8 +17,8 @@
 //#define MIN(x, y) ((x > y) ? y : x)
 //#define MAX(x, y) ((x > y) ? x : y)
 
-#define MIDI_SELECT_DATA_THRESHOLD 32  // 1/4  of the range
-#define MIDI_SELECT_RATIO_THRESHOLD 0.15
+#define MIDI_SELECT_DATA_THRESHOLD (127/6)  // 1/6  of the range
+#define MIDI_SELECT_RATIO_THRESHOLD 0.10
 
 static int midi_running;
 static SDL_Thread* midi_thread;
@@ -76,6 +76,7 @@ void midi_connect_param(param_state_t * param_state, unsigned char device, unsig
     // Init outputs
     for(int i = 0; (i < N_DATA1) && (i < controllers_enabled[device].n_inputs); i++){
         //snprintf(strings, 5, "%d", i);
+        param_output_init(&ct->outputs[i], 0.);
         ct->outputs[i].handle_color = controllers_enabled[device].color;
         ct->outputs[i].label_color = controllers_enabled[device].color;
         if(controllers_enabled[device].input_labels[i]){
@@ -242,7 +243,7 @@ has_collapsed_event:
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
+                //printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
                 struct midi_connection_table * ct;
                 ct = connection_table;
                 while(ct){

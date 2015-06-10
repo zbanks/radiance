@@ -4,6 +4,7 @@
 #include "signals/signal.h"
 #include "util/siggen.h"
 #include "util/math.h"
+#include "util/signal.h"
 #include "ui/graph.h"
 #include "core/time.h"
 #include "core/err.h"
@@ -12,9 +13,7 @@
 
 typedef struct
 {
-    float phase;
-    mbeat_t last_t;
-    float freq;
+    struct freq_state freq_state;
     enum osc_type type;
 } inp_lfo_state_t;
 
@@ -54,11 +53,8 @@ void inp_lfo_init(signal_t * signal){
     inp_lfo_state_t * state = signal->state = malloc(sizeof(inp_lfo_state_t));
     if(!signal->state) return;
 
-    state->phase = 0.;
-    state->last_t = 0;
-    state->freq = 1.0;
     state->type = OSC_SINE;
-
+    freq_init(&state->freq_state, 0.5, 0);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     if(!signal->param_states){
@@ -77,23 +73,10 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
     inp_lfo_state_t * state = (inp_lfo_state_t *) signal->state;
     if(!state) return;
 
-    float new_freq = 1.0 / power_quantize_parameter(param_state_get(&signal->param_states[LFO_FREQ]));
-#define BMOD(t, f) (t % B2MB(f))
-    if(new_freq != state->freq){
-        if((BMOD(t, new_freq) < BMOD(state->last_t, new_freq)) && (BMOD(t, state->freq) < BMOD(state->last_t, state->freq))){
-            // Update with old phase up until zero crossing
-            state->phase += (state->freq - MB2B(BMOD(state->last_t, state->freq))) / state->freq;
-            // Update with new phase past zero crossing
-            state->last_t += (state->freq - MB2B(BMOD(state->last_t, state->freq)));
-            state->freq = new_freq;
-        }
-    }
+    freq_update(&state->freq_state, t,  param_state_get(&signal->param_states[LFO_FREQ]));
 
-    state->phase += MB2B(t - state->last_t) / state->freq; 
-    state->phase = fmod(state->phase, 1.0); // Prevent losing float resolution
-    state->last_t = t;
     state->type = quantize_parameter(osc_quant_labels, param_state_get(&signal->param_states[LFO_TYPE]));
-    param_output_set(&signal->output, osc_fn_gen(state->type, state->phase) * param_state_get(&signal->param_states[LFO_AMP])
+    param_output_set(&signal->output, osc_fn_gen(state->type, state->freq_state.phase) * param_state_get(&signal->param_states[LFO_AMP])
                                       + (1.0 - param_state_get(&signal->param_states[LFO_AMP])) * param_state_get(&signal->param_states[LFO_OFFSET]));
 }
 
@@ -109,14 +92,13 @@ void inp_lfo_del(signal_t * signal){
 
 typedef struct
 {
-    float value;
-    mbeat_t last_t;
+    struct ema_state ema;
 } inp_lpf_state_t;
 
 enum inp_lpf_param_names {
     LPF_INPUT,
-    LPF_ALPHA,
-    LPF_BETA,
+    LPF_RISE,
+    LPF_FALL,
 
     N_LPF_PARAMS
 };
@@ -127,14 +109,14 @@ parameter_t inp_lpf_parameters[N_LPF_PARAMS] = {
         .default_val = 0,
         .val_to_str = float_to_string,
     },
-    [LPF_ALPHA] = {
+    [LPF_RISE] = {
         .name = "Rise",
-        .default_val = 0.05,
+        .default_val = 0.5,
         .val_to_str = float_to_string,
     },
-    [LPF_BETA] = {
+    [LPF_FALL] = {
         .name = "Fall",
-        .default_val = 0.05,
+        .default_val = 0.5,
         .val_to_str = float_to_string,
     },
 };
@@ -143,8 +125,7 @@ void inp_lpf_init(signal_t * signal){
     inp_lpf_state_t * state = signal->state = malloc(sizeof(inp_lpf_state_t));
     if(!signal->state) return;
 
-    state->value = 0.;
-    state->last_t = 0;
+    dema_init(&state->ema, signal->parameters[LPF_RISE].default_val, signal->parameters[LPF_FALL].default_val);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     if(!signal->param_states){
@@ -161,24 +142,14 @@ void inp_lpf_init(signal_t * signal){
 void inp_lpf_update(signal_t * signal, mbeat_t t){
     inp_lpf_state_t * state = (inp_lpf_state_t *) signal->state;
     if(!state) return;
-    if(!state->last_t) state->last_t = t;
     float x = param_state_get(&signal->param_states[LPF_INPUT]);
-    float a = param_state_get(&signal->param_states[LPF_ALPHA]);
-    float b = param_state_get(&signal->param_states[LPF_BETA]);
-    if(state->last_t + 10 < t){
-        //TODO: XXX
-        //a = 1.;
-        //b = 1.;
-    }else{
-        state->last_t += 10;
-    }
+    float rise = param_state_get(&signal->param_states[LPF_RISE]);
+    float fall = param_state_get(&signal->param_states[LPF_FALL]);
 
-    if(x > state->value)
-        state->value = a * x + (1. - a) * state->value;
-    else
-        state->value = b * x + (1. - b) * state->value;
+    dema_set_tau(&state->ema, rise, fall);
+    float out = dema_update(&state->ema, t, x);
 
-    param_output_set(&signal->output, state->value);
+    param_output_set(&signal->output, out);
 }
 
 void inp_lpf_del(signal_t * signal){
@@ -193,9 +164,7 @@ void inp_lpf_del(signal_t * signal){
 
 typedef struct
 {
-    float min;
-    float max;
-    mbeat_t last_t;
+    struct agc_state agc_state;
 } inp_agc_state_t;
 
 enum inp_agc_param_names {
@@ -231,11 +200,10 @@ parameter_t inp_agc_parameters[N_AGC_PARAMS] = {
 };
 
 void inp_agc_init(signal_t * signal){
-    inp_agc_state_t * state = signal->state = malloc(sizeof(inp_lpf_state_t));
+    inp_agc_state_t * state = signal->state = malloc(sizeof(inp_agc_state_t));
     if(!signal->state) return;
 
-    state->min = 0.;
-    state->max = 1.;
+    agc_init(&state->agc_state, 1.0, 0.0, 0, 0, 0.5);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
     if(!signal->param_states){
@@ -256,30 +224,11 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
     float min = param_state_get(&signal->param_states[AGC_MIN]);
     float max = param_state_get(&signal->param_states[AGC_MAX]);
     float a = param_state_get(&signal->param_states[AGC_DECAY]);
-    float y;
-    if(state->last_t + 10 < t){
-        a = 1.;
-    }else{
-        state->last_t += 10;
-    }
 
-    if(a < 1e-4){
-        state->max = 1.;
-        state->min = 0.;
-    }else{
-        a = a * 0.01 + 0.99;
-        state->max = MAX(state->max * a + (1. - a) * x, x);
-        state->min = MIN(state->min * a + (1. - a) * x, x);
-        //state->min = MIN(state->max - (state->max - state->min) * a, x);
-        x = (x - state->min) / (state->max - state->min);
-    }
+    agc_set_tau(&state->agc_state, a * 8.);
+    agc_set_range(&state->agc_state, max, min);
+    float y = agc_update(&state->agc_state, t, x);
 
-    if(min < max){
-        y = x * (max - min) + min;
-    }else{
-        printf("how did this happen? %f %f\n", min, max);
-        y = (1. - x) * (min - max) + max;
-    }
     param_output_set(&signal->output, y);
 }
 
@@ -345,7 +294,7 @@ void inp_qtl_init(signal_t * signal){
 }
 
 static int _fcmp(const void * a, const void * b){
-    return *(float *)a < *(float *)b;
+    return *(const float *)a > *(const float *)b;
 }
 
 void inp_qtl_update(signal_t * signal, mbeat_t t){
@@ -399,7 +348,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {255, 0, 0, 255},
             .label_color = {255, 0, 0, 255},
-            .label = "LFO"
+            .label = "LFO1"
         },
         .init = inp_lfo_init,
         .update = inp_lfo_update,
@@ -416,7 +365,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {220, 100, 0, 255},
             .label_color = {220, 100, 0, 255},
-            .label = "LFO"
+            .label = "LFO2"
         },
         .init = inp_lfo_init,
         .update = inp_lfo_update,
@@ -433,7 +382,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {240, 240, 0, 255},
             .label_color = {240, 240, 0, 255},
-            .label = "LPF"
+            .label = "LPF1"
         },
         .init = inp_lpf_init,
         .update = inp_lpf_update,
@@ -450,7 +399,7 @@ signal_t signals[N_SIGNALS] = {
             .value = 0.0,
             .handle_color = {25, 240, 0, 255},
             .label_color = {25, 240, 0, 255},
-            .label = "AGC"
+            .label = "AGC1"
         },
         .init = inp_agc_init,
         .update = inp_agc_update,
@@ -476,17 +425,16 @@ signal_t signals[N_SIGNALS] = {
     },
     */
     {
-        .name = "Quantile",
+        .name = "Quantile 1",
         .type = SIGNAL_QTL,
         .default_val = 0.5,
         .n_params = N_QTL_PARAMS,
         .parameters = inp_qtl_parameters,
         .color = {0.0, 0.8, 0.8, 0.0},
         .output = {
-            .value = 0.0,
             .handle_color = {0, 220, 220, 255},
             .label_color = {0, 220, 220, 255},
-            .label = "QTL"
+            .label = "QTL1"
         },
         .init = inp_qtl_init,
         .update = inp_qtl_update,
@@ -504,16 +452,17 @@ void update_signals(mbeat_t t) {
 
 void signal_start(){
     for(int i = 0; i < n_signals; i++){
+        graph_create_signal(&signals[i].graph_state);
+        param_output_init(&signals[i].output, 0.);
         signals[i].init(&signals[i]);
 
-        graph_create_signal(&signals[i].graph_state);
     }
 }
 
 void signal_stop(){
     for(int i = 0; i < n_signals; i++){
         signals[i].del(&signals[i]);
-
+        param_output_free(&signals[i].output);
         graph_remove(&signals[i].graph_state);
     }
 }

@@ -36,7 +36,9 @@
     X(signal_pane, layout.signal) \
     X(filter_pane, layout.filter) \
     X(output_pane, layout.output) \
-    X(midi_pane, layout.midi) 
+    X(midi_pane, layout.midi) \
+    X(state_save_pane, layout.state_save) \
+    X(state_load_pane, layout.state_load)
 
 #define X(s, l) \
     static SDL_Surface* s;
@@ -49,7 +51,7 @@ static int mouse_down;
 static struct xy mouse_drag_start;
 
 void (*mouse_drag_fn_p)(struct xy);
-void (*mouse_drop_fn_p)();
+void (*mouse_drop_fn_p)(struct xy);
 
 static struct
 {
@@ -63,8 +65,18 @@ static struct
     struct xy dxy;
 } active_slot;
 
+static struct
+{
+    slot_t * slot;
+    struct xy dxy;
+} active_preview;
 
 param_state_t * active_param_source;
+
+static size_t master_pixels;
+static float * master_xs;
+static float * master_ys;
+static color_t * master_frame;
 
 void ui_init()
 {
@@ -97,6 +109,25 @@ SURFACES
     mouse_drop_fn_p = 0;
     active_pattern.index = -1;
     active_slot.slot = 0;
+    active_preview.slot = 0;
+
+    master_pixels = layout.master.w * layout.master.h;
+    master_xs = malloc(sizeof(float) * master_pixels);
+    master_ys = malloc(sizeof(float) * master_pixels);
+    master_frame = malloc(sizeof(color_t) * master_pixels);
+
+    if(!master_xs) FAIL("Unable to alloc xs for master.\n");
+    if(!master_ys) FAIL("Unable to alloc ys for master.\n");
+    if(!master_frame) FAIL("Unable to alloc frame for master.\n");
+
+    int i = 0;
+    for(int y=0;y<layout.master.h;y++) {
+        for(int x=0;x<layout.master.w;x++) {
+            master_xs[i] = ((float)x / (layout.master.w - 1)) * 2 - 1;
+            master_ys[i] = ((float)y / (layout.master.h - 1)) * 2 - 1;
+            i++;
+        }
+    }
 }
 
 void ui_quit()
@@ -110,6 +141,10 @@ void ui_quit()
     SDL_FreeSurface(s);
 SURFACES
 #undef X
+
+    free(master_xs);
+    free(master_ys);
+    free(master_frame);
 
     text_unload_fonts();
 
@@ -142,18 +177,16 @@ static void update_master_preview()
 {
     SDL_LockSurface(master_preview);
 
-    for(int x=0;x<layout.master.w;x++)
-    {
-        for(int y=0;y<layout.master.h;y++)
-        {
-            float xf = ((float)x / (layout.master.w - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.master.h - 1)) * 2 - 1;
-            color_t pixel = render_composite(xf, yf);
-            ((uint32_t*)(master_preview->pixels))[x + layout.master.w * y] = SDL_MapRGB(
+    render_composite_frame(slots, master_xs, master_ys, master_pixels, master_frame);
+    int i = 0;
+    for(int y=0;y<layout.master.h;y++) {
+        for(int x=0;x<layout.master.w;x++) {
+            ((uint32_t*)(master_preview->pixels))[i] = SDL_MapRGB(
                 master_preview->format,
-                (uint8_t)roundf(255 * pixel.r),
-                (uint8_t)roundf(255 * pixel.g),
-                (uint8_t)roundf(255 * pixel.b));
+                (uint8_t)roundf(255 * master_frame[i].r),
+                (uint8_t)roundf(255 * master_frame[i].g),
+                (uint8_t)roundf(255 * master_frame[i].b));
+            i++;
         }
     }
 
@@ -191,14 +224,18 @@ static void update_pattern_preview(slot_t* slot)
     {
         for(int y = 0; y < layout.slot.preview_h; y++)
         {
+            // Checkerboard background
+            int i = (x / 10) + (y / 10);
+            float bg_shade = (i & 1) ? 0.05 : 0.35;
+
             float xf = ((float)x / (layout.slot.preview_w - 1)) * 2 - 1;
             float yf = ((float)y / (layout.slot.preview_h - 1)) * 2 - 1;
             color_t pixel = (*slot->pattern->render)(slot, xf, yf);
             ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview_w * y] = SDL_MapRGB(
                 pattern_preview->format,
-                (uint8_t)roundf(255 * pixel.r * pixel.a),
-                (uint8_t)roundf(255 * pixel.g * pixel.a),
-                (uint8_t)roundf(255 * pixel.b * pixel.a));
+                (uint8_t)roundf(255 * (pixel.r * pixel.a + (1.0 - pixel.a) * bg_shade)),
+                (uint8_t)roundf(255 * (pixel.g * pixel.a + (1.0 - pixel.a) * bg_shade)),
+                (uint8_t)roundf(255 * (pixel.b * pixel.a + (1.0 - pixel.a) * bg_shade)));
         }
     }
 
@@ -219,7 +256,7 @@ static void ui_update_audio(){
     float dx = 1.0 - fabs(fmod(phase, 2.0) - 1.0);
     float dy = 4. * (dx - 0.5) * (dx - 0.5);
     int y;
-    if(phase < 1.)
+    if(phase > 3.)
         y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * dy;
     else
         y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * (0.4 + 0.6 * dy);
@@ -238,6 +275,9 @@ static void ui_update_audio(){
 
     snprintf(buf, 16, "ops: %d", stat_ops);
     text_render(audio_pane, &layout.audio.ops_txt, 0, buf);
+
+    snprintf(buf, 16, "%d", ((time % 4000) / 1000) + 1);
+    text_render(audio_pane, &layout.audio.beat_txt, 0, buf);
 
     for(int i = 0; i < N_WF_BINS; i++){
         rect_array_layout(&layout.audio.bins_rect_array, i, &r);
@@ -378,6 +418,12 @@ static void ui_update_signal(signal_t* signal)
     }
 }
 
+static void ui_draw_button(SDL_Surface * surface, struct txt * label_fmt, const char * label){
+    rect_t r = {.x = 0, .y = 0, .w = surface->w, .h = surface->h};
+    SDL_FillRect(surface, &r, SDL_MapRGB(surface->format, 20, 20, 20));
+    text_render(surface, label_fmt, 0, label);
+}
+
 void ui_render()
 {
     rect_t r;
@@ -445,6 +491,22 @@ void ui_render()
         SDL_BlitSurface(midi_pane, 0, screen, &r);
     }
 
+    for(int i = 0; i < config.state.n_states; i++){
+        char buf[16];
+        rect_array_layout(&layout.state_save.rect_array, i, &r);
+        snprintf(buf, 15, "Save %d", i);
+        ui_draw_button(state_save_pane, &layout.state_save.label_txt, buf);
+        SDL_BlitSurface(state_save_pane, 0, screen, &r);
+    }
+
+    for(int i = 0; i < config.state.n_states; i++){
+        char buf[16];
+        rect_array_layout(&layout.state_load.rect_array, i, &r);
+        snprintf(buf, 15, "Load %d", i);
+        ui_draw_button(state_load_pane, &layout.state_load.label_txt, buf);
+        SDL_BlitSurface(state_load_pane, 0, screen, &r);
+    }
+
     SDL_Flip(screen);
 }
 
@@ -458,9 +520,21 @@ static void mouse_drag_slot(struct xy xy)
     active_slot.dxy = xy; 
 }
 
+static void mouse_drag_pattern_ev(struct xy xy){
+    if(!active_preview.slot->pattern) return;
+    struct xy offset;
+    xy = xy_add(xy, active_preview.dxy);
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
+        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_DRAG_X,
+                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
+        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_DRAG_Y,
+                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+    }
+}
 
-static void mouse_drop_pattern()
+static void mouse_drop_pattern(struct xy unused)
 {
+    UNUSED(unused);
     rect_t r;
     struct xy xy;
     xy = xy_add(active_pattern.dxy, mouse_drag_start);
@@ -476,8 +550,9 @@ static void mouse_drop_pattern()
     active_pattern.index = -1;
 }
 
-static void mouse_drop_slot()
+static void mouse_drop_slot(struct xy unused)
 {
+    UNUSED(unused);
     rect_t r;
     struct xy xy;
     xy = xy_add(active_slot.dxy, mouse_drag_start);
@@ -499,6 +574,20 @@ static void mouse_drop_slot()
     active_slot.slot = 0;
 }
 
+static void mouse_drop_pattern_ev(struct xy xy){
+    if(!active_preview.slot->pattern) return;
+    struct xy offset;
+    xy = xy_add(xy, active_preview.dxy);
+    float x = NAN;
+    float y = NAN;
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
+        x = -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w;
+        y = -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h;
+    }
+    active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_X, x);
+    active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_Y, y);
+}
+
 static int mouse_click_slot(int index, struct xy xy)
 {
     rect_t r;
@@ -512,10 +601,14 @@ static int mouse_click_slot(int index, struct xy xy)
 
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        slots[index].pattern->event(&slots[index], PATEV_MOUSE_CLICK_X,
-                -1.0 + 2.0 * (xy.x - layout.slot.preview_x) / (float) layout.slot.preview_w);
-        slots[index].pattern->event(&slots[index], PATEV_MOUSE_CLICK_Y,
-                -1.0 + 2.0 * (xy.y - layout.slot.preview_y) / (float) layout.slot.preview_h);
+        slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_X,
+                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
+        slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_Y,
+                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+        active_preview.slot = &slots[index];
+        memcpy(&active_preview.dxy, &xy, sizeof(struct xy));
+        mouse_drag_fn_p = &mouse_drag_pattern_ev;
+        mouse_drop_fn_p = &mouse_drop_pattern_ev;
         return 1; 
     }
 
@@ -548,7 +641,6 @@ static int mouse_click_midi(int index, struct xy xy){
     UNUSED(index);
     UNUSED(xy);
     //midi_refresh_devices();
-    dynamic_load_so("./live/live.so");
     return 0;
 }
 
@@ -619,6 +711,22 @@ static int mouse_click_audio(struct xy xy){
             timebase_source = TB_AUTOMATIC;
     }
 
+    return 1;
+}
+
+static int mouse_click_state_save(int index, struct xy xy){
+    char * filename = NULL;
+    if(asprintf(&filename, config.state.path_format, index)) return 0;
+    if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
+    free(filename);
+    return 1;
+}
+
+static int mouse_click_state_load(int index, struct xy xy){
+    char * filename = NULL;
+    if(asprintf(&filename, config.state.path_format, index)) return 0;
+    if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
+    free(filename);
     return 1;
 }
 
@@ -693,6 +801,22 @@ static int mouse_click(struct xy xy)
         }
     }
 
+    // See if click is on a save state button
+    for(int i = 0; i < config.state.n_states; i++){
+        rect_array_layout(&layout.state_save.rect_array, i, &r);
+        if(xy_in_rect(&xy, &r, &offset)){
+            return mouse_click_state_save(i, offset);
+        }
+    }
+
+    // See if click is on a load state button
+    for(int i = 0; i < config.state.n_states; i++){
+        rect_array_layout(&layout.state_load.rect_array, i, &r);
+        if(xy_in_rect(&xy, &r, &offset)){
+            return mouse_click_state_load(i, offset);
+        }
+    }
+
     // Otherwise, do not handle click
     // TEMP: treat click as beat tap
     //timebase_tap(0.8);
@@ -715,19 +839,27 @@ int ui_poll()
             case SDL_QUIT:
                 return 0;
             case SDL_MOUSEBUTTONDOWN:
-                mouse_click(xy);
+                // If there's an active param source, cancel it after the click
+                if(active_param_source){
+                    mouse_click(xy);
+                    active_param_source = NULL;
+                }else{
+                    mouse_click(xy);
+                }
                 mouse_down = 1;
                 mouse_drag_start = xy;
                 break;
             case SDL_MOUSEMOTION:
-                if(mouse_down && mouse_drag_fn_p)
-                {
+                if(mouse_down && mouse_drag_fn_p){
                     xy  = xy_sub(xy, mouse_drag_start);
                     (*mouse_drag_fn_p)(xy);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
-                if(mouse_drop_fn_p) (*mouse_drop_fn_p)();
+                if(mouse_drop_fn_p){
+                    xy = xy_sub(xy, mouse_drag_start);
+                    (*mouse_drop_fn_p)(xy);
+                }
                 mouse_drag_fn_p = 0;
                 mouse_drop_fn_p = 0;
                 mouse_down = 0;
