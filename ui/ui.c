@@ -716,7 +716,7 @@ static int mouse_click_audio(struct xy xy){
 
 static int mouse_click_state_save(int index, struct xy xy){
     char * filename = NULL;
-    if(asprintf(&filename, config.state.path_format, index)) return 0;
+    if(!asprintf(&filename, config.state.path_format, index)) return 0;
     if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
     free(filename);
     return 1;
@@ -724,7 +724,7 @@ static int mouse_click_state_save(int index, struct xy xy){
 
 static int mouse_click_state_load(int index, struct xy xy){
     char * filename = NULL;
-    if(asprintf(&filename, config.state.path_format, index)) return 0;
+    if(!asprintf(&filename, config.state.path_format, index)) return 0;
     if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
     free(filename);
     return 1;

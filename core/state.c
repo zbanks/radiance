@@ -147,5 +147,5 @@ int state_save(const char * filename){
     }
 
     fclose(stream);
-    return -1;
+    return 0;
 }
