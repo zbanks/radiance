@@ -17,8 +17,8 @@
 //#define MIN(x, y) ((x > y) ? y : x)
 //#define MAX(x, y) ((x > y) ? x : y)
 
-#define MIDI_SELECT_DATA_THRESHOLD 32  // 1/4  of the range
-#define MIDI_SELECT_RATIO_THRESHOLD 0.15
+#define MIDI_SELECT_DATA_THRESHOLD (127/6)  // 1/6  of the range
+#define MIDI_SELECT_RATIO_THRESHOLD 0.10
 
 static int midi_running;
 static SDL_Thread* midi_thread;
