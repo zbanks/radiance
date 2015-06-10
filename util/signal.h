@@ -82,7 +82,7 @@ struct freq_state {
 };
 
 void freq_init(struct freq_state * state, double initial_freq_val, int zeroable);
-void freq_update(struct freq_state * state, mbeat_t t, double target_freq_val);
+int freq_update(struct freq_state * state, mbeat_t t, double target_freq_val);
 
 
 

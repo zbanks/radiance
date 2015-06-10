@@ -126,7 +126,9 @@ void freq_init(struct freq_state * state, double initial_freq_val, int zeroable)
     state->zeroable  = zeroable;
 }
 
-void freq_update(struct freq_state * state, mbeat_t t, double target_freq_val){
+int freq_update(struct freq_state * state, mbeat_t t, double target_freq_val){
+    // Returns number of beat boundaries crossed since last update call
+    int n_beats = 0;
     double new_freq = value_to_frequency(state->zeroable, target_freq_val);
 #define BOSC(t, f) (MB2B(t % B2MB(1.0 / f)) * f) // TODO: this skews for freqs higher than 8
     if(new_freq != state->freq){
@@ -165,7 +167,9 @@ void freq_update(struct freq_state * state, mbeat_t t, double target_freq_val){
                 if(dp1 <= 0 && (dp2 > 0 || dp2 < dp1)){
                     // Crossing detected
                     // Determine when the crossing should have happened
-                    state->last_t += dp1 / slope;
+                    double d = BOSC(state->last_t, next_freq) + dp1 / slope;
+                    n_beats += (int) d;
+                    state->last_t += B2MB(dp1 / slope);
                     state->phase = BOSC(state->last_t, next_freq);
                     state->freq = next_freq;
                     continue;
@@ -178,8 +182,13 @@ void freq_update(struct freq_state * state, mbeat_t t, double target_freq_val){
     if(state->freq == 0){
         state->phase = 0.5;
     }else{
+        n_beats += (t - state->last_t) / B2MB(1.0 / state->freq);
+        if(BOSC(state->last_t, state->freq) > BOSC(t, state->freq)) 
+            n_beats++;
+
         state->phase = BOSC(t, state->freq);
     }
 
     state->last_t = t;
+    return n_beats;
 }

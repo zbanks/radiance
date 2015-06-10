@@ -63,11 +63,10 @@ void pat_fade_del(pat_state_pt state)
 void pat_fade_update(slot_t* slot, mbeat_t t)
 {
     pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
-    float last_phase = state->freq_state.phase;
-    freq_update(&state->freq_state, t, param_state_get(&slot->param_states[FADE_FREQ]));
+    int n_beats = freq_update(&state->freq_state, t, param_state_get(&slot->param_states[FADE_FREQ]));
 
-    if(state->freq_state.phase < last_phase){
-        state->color_phase += param_state_get(&slot->param_states[FADE_DELTA]);
+    if(n_beats){
+        state->color_phase += n_beats * param_state_get(&slot->param_states[FADE_DELTA]);
         state->color_phase = fmod(state->color_phase, 1.0);
     }
 
