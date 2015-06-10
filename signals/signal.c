@@ -20,8 +20,6 @@ typedef struct
 enum inp_lfo_param_names {
     LFO_TYPE,
     LFO_FREQ,
-    LFO_AMP,
-    LFO_OFFSET,
 
     N_LFO_PARAMS
 };
@@ -36,16 +34,6 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
         .name = "Freq",
         .default_val = 0.5,
         .val_to_str = power_quantize_parameter_label,
-    },
-    [LFO_AMP] = {
-        .name = "Amp",
-        .default_val = 1.0,
-        .val_to_str = float_to_string,
-    },
-    [LFO_OFFSET] = {
-        .name = "Offset",
-        .default_val = 0.5,
-        .val_to_str = float_to_string,
     },
 };
 
@@ -76,8 +64,7 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
     freq_update(&state->freq_state, t,  param_state_get(&signal->param_states[LFO_FREQ]));
 
     state->type = quantize_parameter(osc_quant_labels, param_state_get(&signal->param_states[LFO_TYPE]));
-    param_output_set(&signal->output, osc_fn_gen(state->type, state->freq_state.phase) * param_state_get(&signal->param_states[LFO_AMP])
-                                      + (1.0 - param_state_get(&signal->param_states[LFO_AMP])) * param_state_get(&signal->param_states[LFO_OFFSET]));
+    param_output_set(&signal->output, osc_fn_gen(state->type, state->freq_state.phase));
 }
 
 void inp_lfo_del(signal_t * signal){
