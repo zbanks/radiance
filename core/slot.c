@@ -66,6 +66,8 @@ void update_patterns(mbeat_t t)
 
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
+    if(slot->pattern) pat_unload(slot);
+
     slot->pattern = pattern;
 
     slot->state = (*pattern->init)();

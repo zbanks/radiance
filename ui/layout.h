@@ -9,6 +9,19 @@
 #include <SDL/SDL_ttf.h>
 #include "core/config_macros.h"
 
+#define COLOR SDL_Color
+#define COLOR_FN(x) parse_color(x)
+#define COLOR_FMT(x) "#%02hhx%02hhx%02hhx", x.r, x.g, x.b
+// This is the most hacky... XXX :(
+#define _COLOR(r,g,b) ((r << 16) | (g << 8) | b)
+
+static inline SDL_Color parse_color(const char * cstr){
+    SDL_Color out;
+    if(sscanf(cstr, "#%02hhx%02hhx%02hhx", &out.r, &out.g, &out.b) >= 3)
+        return out;
+    return (SDL_Color) {0, 0, 0, 0};
+}
+
 #ifdef CFGOBJ
 #undef CFGOBJ
 #undef CFGOBJ_PATH

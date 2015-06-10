@@ -14,6 +14,7 @@
 #include "core/err.h"
 #include "core/parameter.h"
 #include "core/slot.h"
+#include "core/state.h"
 #include "core/config.h"
 #include "dynamic/object.h"
 #include "filters/filter.h"
@@ -276,7 +277,7 @@ static void ui_update_audio(){
     snprintf(buf, 16, "ops: %d", stat_ops);
     text_render(audio_pane, &layout.audio.ops_txt, 0, buf);
 
-    snprintf(buf, 16, "%d", ((time % 4000) / 1000) + 1);
+    snprintf(buf, 16, "%lu", ((time % 4000) / 1000) + 1);
     text_render(audio_pane, &layout.audio.beat_txt, 0, buf);
 
     for(int i = 0; i < N_WF_BINS; i++){
@@ -715,18 +716,18 @@ static int mouse_click_audio(struct xy xy){
 }
 
 static int mouse_click_state_save(int index, struct xy xy){
-    char * filename = NULL;
-    if(!asprintf(&filename, config.state.path_format, index)) return 0;
+    UNUSED(xy);
+    char filename[1024];
+    snprintf(filename, 1023, config.state.path_format, index);
     if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
-    free(filename);
     return 1;
 }
 
 static int mouse_click_state_load(int index, struct xy xy){
-    char * filename = NULL;
-    if(!asprintf(&filename, config.state.path_format, index)) return 0;
+    UNUSED(xy);
+    char filename[1024];
+    snprintf(filename, 1023, config.state.path_format, index);
     if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
-    free(filename);
     return 1;
 }
 

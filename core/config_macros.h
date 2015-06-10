@@ -13,11 +13,11 @@
 #define STRING_FN(x) mystrdup(x)
 #define FLOAT_FN(x) atof(x)
 
-#define INT_FMT "%d"
-#define SINT16_FMT "%d"
-#define UINT16_FMT "%d"
-#define STRING_FMT "%s"
-#define FLOAT_FMT "%f"
+#define INT_FMT(x) "%d", x
+#define SINT16_FMT(x) "%d", x
+#define UINT16_FMT(x) "%d", x
+#define STRING_FMT(x) "%s", x
+#define FLOAT_FMT(x) "%f", x
 
 #define PACKED __attribute__ ((__packed__))
 

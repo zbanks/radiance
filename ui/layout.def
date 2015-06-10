@@ -48,6 +48,7 @@ CFGSECTION(alpha_slider,
     CFG_RECT(, 0, 0, 20, 80)
     CFG_RECT(track, 9, 0, 3, 80)
     CFG_RECT(handle, 5, 0, 10, 10)
+    //CFG(handle_color, COLOR, _COLOR(0,0,60))
 )
 
 CFGSECTION(slider,

@@ -23,7 +23,7 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename){
         return 1;
 
     #define CFGSECTION(s, d...) fprintf(stream, "[" #s "]\n"); if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d; } fprintf(stream, "\n");
-    #define CFG(n, type, default) fprintf(stream, "%s=" type##_FMT "\n", STRINGIFY(n), sp->n); 
+    #define CFG(n, type, default) fprintf(stream, "%s=", STRINGIFY(n)); fprintf(stream, type##_FMT(sp->n)); fprintf(stream, "\n");
     #include CFGOBJ_PATH
 
     fclose(stream);
