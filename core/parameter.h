@@ -10,9 +10,11 @@ struct param_state;
 struct param_output;
 
 enum param_value_mode {
-    PARAM_VALUE_DIRECT,
+    PARAM_VALUE_DIRECT = 0,
     PARAM_VALUE_SCALED,
     PARAM_VALUE_EXPANDED,
+
+    N_PARAM_VALUE_MODES
 };
 
 typedef struct param_state {
