@@ -764,7 +764,7 @@ static int mouse_click_state_load(int index, struct xy xy){
 }
 
 static int mouse_click_palette(int index, struct xy xy){
-    colormap_set_global(colormaps[index], (float) xy.y / (float) layout.palette.w);
+    colormap_set_global(colormaps[index], (float) xy.x / (float) layout.palette.w);
     return 1;
 }
 

@@ -81,7 +81,7 @@ static void pat_strobe_update(slot_t* slot, mbeat_t t) {
             }
         }
     }else{
-        state->color = param_to_color(param_state_get(&slot->param_states[STROBE_COLOR]));
+        state->color = colormap_color(cm_global, param_state_get(&slot->param_states[STROBE_COLOR]));
     }
 
     state->last_t = t;

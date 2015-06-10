@@ -100,7 +100,7 @@ static void update(slot_t* slot, mbeat_t t) {
     state_t * state = (state_t *) slot->state;
     if(state->last_t == 0) state->last_t = t;
 
-    state->color = param_to_color(param_state_get(&slot->param_states[COLOR]));
+    state->color = colormap_color(cm_global, param_state_get(&slot->param_states[COLOR]));
     //freq_update(&state->freq_state, t, param_state_get(&slot->param_states[SPEED]));
     state->freq = power_quantize_parameter(param_state_get(&slot->param_states[SPEED]));
     state->sharp = param_state_get(&slot->param_states[SHARP]);
