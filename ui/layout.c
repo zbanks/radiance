@@ -6,11 +6,17 @@
 #include "core/config_gen_c.def"
 
 void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect){
-    if(array_spec->tile != 0){
-        printf("Unsupported tile format: %d\n", array_spec->tile);
-    }
     int index_x = index;
     int index_y = index;
+    if(array_spec->tile > 0){
+        // Tile horizontally
+        index_x = index % array_spec->tile;
+        index_y = index / array_spec->tile;
+    }else if(array_spec->tile < 0){
+        // Tile vertically
+        index_x = index % (-array_spec->tile);
+        index_y = index / (-array_spec->tile);
+    }
 
     rect->x = array_spec->x + array_spec->px * index_x;
     rect->y = array_spec->y + array_spec->py * index_y;

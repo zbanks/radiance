@@ -30,13 +30,18 @@ struct colormap {
     struct colormap_el points[];
 };
 
+int colormap_test_all();
 color_t colormap_color(struct colormap * cm, float value);
 int colormap_test(struct colormap * cm);
+void colormap_set_global(struct colormap * cm, float primary_value);
 
 extern int n_colormaps;
 extern struct colormap * colormaps[];
 extern struct colormap cm_rainbow;
 extern struct colormap cm_rainbow_edged;
 extern struct colormap cm_rainbow_equal;
+
+extern struct colormap * cm_global;
+extern struct colormap * cm_global_mono;
 
 #endif

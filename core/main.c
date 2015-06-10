@@ -17,11 +17,15 @@
 #include "patterns/static.h"
 #include "signals/signal.h"
 #include "timebase/timebase.h"
+#include "util/color.h"
 #include "ui/ui.h"
 #include "ui/layout.h"
 
 int main()
 {
+    colormap_test_all();
+    colormap_set_global(&cm_rainbow, 0.5);
+
     pattern_init();
     patterns_updating = SDL_CreateMutex();
 

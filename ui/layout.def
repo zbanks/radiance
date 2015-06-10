@@ -106,5 +106,13 @@ CFGSECTION(state_load,
     CFG_TXT(label, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
 )
 
+CFGSECTION(palette,
+    CFG_RECT_ARRAY(, 10, 650, 250, 35, 300, 44, -2)
+    CFG_TXT(name, 3, 2, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT(preview, 0, 26, 250, 8)
+    CFG_RECT(active, 235, 8, 8, 8)
+)
+
+
 #undef CFGSECTION
 #undef CFG

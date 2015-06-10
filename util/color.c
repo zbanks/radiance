@@ -116,8 +116,7 @@ int n_colormaps = 3;
 struct colormap * colormaps[3] =  {&cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal};
 
 color_t colormap_color(struct colormap * cm, float value){
-    // TODO: move test into init
-    if(colormap_test(cm)) return (color_t) {0,0,0,1};
+    //if(colormap_test(cm)) return (color_t) {0,0,0,1};
     value = MIN(MAX(value, 0.), 1.);
 
     struct colormap_el * left = cm->points;
@@ -164,103 +163,45 @@ int colormap_test(struct colormap * cm){
     return 0;
 }
 
-struct colormap cm_rainbow = {
-    .name = "Rainbow",
-    .n_points = 6,
-    .points = {
-        { .x = 0.,
-          .y = {1., 0., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .2,
-          .y = {1., 1., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .4,
-          .y = {0., 1., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .6,
-          .y = {0., 1., 1., 1.},
-          .gamma = 1.,
-        },
-        { .x = .8,
-          .y = {0., 0., 1., 1.},
-          .gamma = 1.,
-        },
-        { .x = 1.,
-          .y = {1., 0., 1., 1.},
-          .gamma = 1.,
-        },
-    },
-};
+int colormap_test_all(){
+    int rc = 0;
+    for(int i = 0; i < n_colormaps; i++){
+        if(colormap_test(colormaps[i])){
+            printf("Error in colormap '%s'\n", colormaps[i]->name);
+            rc = -1;
+        }
+    }
+    return rc;
+}
 
-struct colormap cm_rainbow_edged = {
-    .name = "Rainbow Edged",
-    .n_points = 8,
+
+
+// This colormap is special, it fades from black/*color*/white
+// where *color* is taken from the global colormap
+struct colormap s_cm_global_mono = {
+    .name = "Global Mono",
+    .n_points = 3,
     .points = {
         { .x = 0.0,
-          .y = {0., 0., 0., 1.},
+          .y = {0.0, 0.0, 0.0, 1.},
           .gamma = 1.,
         },
-        { .x = 0.05,
-          .y = {1., 0., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .2,
-          .y = {1., 1., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .4,
-          .y = {0., 1., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .6,
-          .y = {0., 1., 1., 1.},
-          .gamma = 1.,
-        },
-        { .x = .8,
-          .y = {0., 0., 1., 1.},
-          .gamma = 1.,
-        },
-        { .x = 0.95,
-          .y = {1., 0., 1., 1.},
+        { .x = 0.5,
+          .y = {0.5, 0.5, 0.5, 1.},
           .gamma = 1.,
         },
         { .x = 1.0,
-          .y = {1., 1., 1., 1.},
+          .y = {1.0, 1.0, 1.0, 1.},
           .gamma = 1.,
         },
     },
 };
 
-struct colormap cm_rainbow_equal = {
-    .name = "Rainbow Equal",
-    .n_points = 6,
-    .points = {
-        { .x = 0.,
-          .y = {1., 0., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .2,
-          .y = {0.5, 0.5, 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .4,
-          .y = {0., 1., 0., 1.},
-          .gamma = 1.,
-        },
-        { .x = .6,
-          .y = {0., 0.5, 0.5, 1.},
-          .gamma = 1.,
-        },
-        { .x = .8,
-          .y = {0., 0., 1., 1.},
-          .gamma = 1.,
-        },
-        { .x = 1.,
-          .y = {0.5, 0., 0.5, 1.},
-          .gamma = 1.,
-        },
-    },
-};
+struct colormap * cm_global = &cm_rainbow;
+struct colormap * cm_global_mono = &s_cm_global_mono;
+
+void colormap_set_global(struct colormap * cm, float primary_value){
+    cm_global = cm;
+    cm_global_mono = &s_cm_global_mono;
+    s_cm_global_mono.points[1].y = colormap_color(cm, primary_value);
+}

@@ -38,6 +38,8 @@
     X(filter_pane, layout.filter) \
     X(output_pane, layout.output) \
     X(midi_pane, layout.midi) \
+    X(palette_pane, layout.palette) \
+    X(palette_preview, layout.palette.preview_rect) \
     X(state_save_pane, layout.state_save) \
     X(state_load_pane, layout.state_load)
 
@@ -419,6 +421,29 @@ static void ui_update_signal(signal_t* signal)
     }
 }
 
+static void ui_update_palette(struct colormap * cm){
+    rect_t r;
+    rect_array_origin(&layout.palette.rect_array, &r);
+    SDL_FillRect(palette_pane, &r, SDL_MapRGB(palette_pane->format, 20, 20, 20));
+
+    text_render(palette_pane, &layout.palette.name_txt, 0, cm->name);
+
+    SDL_LockSurface(palette_preview);
+    for(int x = 0; x < layout.palette.preview_w; x++){
+        color_t color = colormap_color(cm, (float) x / (float) layout.palette.preview_w);
+        Uint32 sdlcolor = SDL_MapRGB(palette_preview->format, (uint8_t)roundf(255 * color.r), (uint8_t)roundf(255 * color.g), (uint8_t)roundf(255 * color.b));
+        for(int y = 0; y < layout.palette.preview_h; y++){
+            ((Uint32 *) palette_preview->pixels)[y * layout.palette.preview_w + x] = sdlcolor;
+        }
+    }
+    SDL_UnlockSurface(palette_preview);
+    SDL_BlitSurface(palette_preview, 0, palette_pane, &layout.palette.preview_rect);
+
+    if(cm == cm_global){
+        SDL_FillRect(palette_pane, &layout.palette.active_rect, SDL_MapRGB(palette_pane->format, 255, 255, 255));
+    }
+}
+
 static void ui_draw_button(SDL_Surface * surface, struct txt * label_fmt, const char * label){
     rect_t r = {.x = 0, .y = 0, .w = surface->w, .h = surface->h};
     SDL_FillRect(surface, &r, SDL_MapRGB(surface->format, 20, 20, 20));
@@ -506,6 +531,13 @@ void ui_render()
         snprintf(buf, 15, "Load %d", i);
         ui_draw_button(state_load_pane, &layout.state_load.label_txt, buf);
         SDL_BlitSurface(state_load_pane, 0, screen, &r);
+    }
+
+    for(int i = 0; i < n_colormaps; i++){
+        ui_update_palette(colormaps[i]);
+        rect_array_layout(&layout.palette.rect_array, i, &r);
+
+        SDL_BlitSurface(palette_pane, 0, screen, &r);
     }
 
     SDL_Flip(screen);
@@ -731,6 +763,11 @@ static int mouse_click_state_load(int index, struct xy xy){
     return 1;
 }
 
+static int mouse_click_palette(int index, struct xy xy){
+    colormap_set_global(colormaps[index], (float) xy.y / (float) layout.palette.w);
+    return 1;
+}
+
 static int mouse_click(struct xy xy)
 {
     struct xy offset;
@@ -815,6 +852,14 @@ static int mouse_click(struct xy xy)
         rect_array_layout(&layout.state_load.rect_array, i, &r);
         if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_state_load(i, offset);
+        }
+    }
+
+    // See if click is on a palette
+    for(int i = 0; i < n_colormaps; i++){
+        rect_array_layout(&layout.palette.rect_array, i, &r);
+        if(xy_in_rect(&xy, &r, &offset)){
+            return mouse_click_palette(i, offset);
         }
     }
 
