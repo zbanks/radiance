@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include "core/parameter.h"
+#include "util/math.h"
 
 static param_output_t * param_output_list;
 
@@ -22,7 +23,19 @@ void param_output_set(param_output_t * output, float value){
     while(pstate){
         // Iterate through linked list setting `value`
         //pstate->value = value;
-        pstate->value = value * (pstate->max - pstate->min) + pstate->min;
+        switch(pstate->mode){
+            case PARAM_VALUE_SCALED:
+                pstate->value = value * (pstate->max - pstate->min) + pstate->min;
+            break;
+            case PARAM_VALUE_EXPANDED:
+                pstate->value = (value - pstate->min) / (pstate->max - pstate->min);
+            break;
+            default:
+            case PARAM_VALUE_DIRECT:
+                pstate->value = value;
+            break;
+        }
+        pstate->value = MIN(MAX(pstate->value, 0.), 1.0);
         pstate = pstate->next_connected_state;
     }
 }
@@ -54,16 +67,6 @@ void param_state_init(param_state_t * state, float value){
     state->connected_output = 0;
     state->next_connected_state = 0;
     state->prev_connected_state = 0;
-}
-
-float param_state_get(param_state_t * state){
-    //return (state->value) * (state->max - state->min) + state->min;
-    return state->value;
-}
-
-void param_state_setq(param_state_t * state, float value){
-    if(!state->connected_output)
-        state->value = value;
 }
 
 void param_state_connect(param_state_t * state, param_output_t * output){

@@ -9,10 +9,17 @@
 struct param_state;
 struct param_output;
 
+enum param_value_mode {
+    PARAM_VALUE_DIRECT,
+    PARAM_VALUE_SCALED,
+    PARAM_VALUE_EXPANDED,
+};
+
 typedef struct param_state {
     float value;
     float min;
     float max;
+    enum param_value_mode mode;
     struct param_output * connected_output;
     struct param_state * next_connected_state;
     struct param_state * prev_connected_state;
@@ -32,12 +39,21 @@ void param_output_set(param_output_t * output, float value);
 void param_output_free(param_output_t * output);
 
 void param_state_init(param_state_t * state, float value);
-void param_state_setq(param_state_t * state, float value);
-float param_state_get(param_state_t * state);
+//void param_state_setq(param_state_t * state, float value);
+//float param_state_get(param_state_t * state);
 void param_state_connect(param_state_t * state, param_output_t * output);
 int param_state_connect_label(param_state_t * state, const char * label);
 void param_state_disconnect(param_state_t * state);
 param_output_t * param_state_output(param_state_t * state);  // Returns NULL if not connected
+
+static inline float param_state_get(param_state_t * state){
+    return state->value;
+}
+
+static inline void param_state_setq(param_state_t * state, float value){
+    if(!state->connected_output)
+        state->value = value;
+}
 
 // ---- parameter ----
 
