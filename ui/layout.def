@@ -31,9 +31,10 @@ CFGSECTION(audio,
     CFG_RECT(auto, 190, 125, 10, 10)
     CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
-    CFG_TXT(bpm, 40, 120, 20, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(bpm, 50, 120, 20, 0, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(fps, 10, 160, 12, 0, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(ops, 100, 160, 12, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(beat, 35, 130, 12, 0, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT_ARRAY(bins, 260, 110, 15, 15, 0, 20, 0)
 )
 

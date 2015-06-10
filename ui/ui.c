@@ -256,7 +256,7 @@ static void ui_update_audio(){
     float dx = 1.0 - fabs(fmod(phase, 2.0) - 1.0);
     float dy = 4. * (dx - 0.5) * (dx - 0.5);
     int y;
-    if(phase < 1.)
+    if(phase > 3.)
         y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * dy;
     else
         y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * (0.4 + 0.6 * dy);
@@ -275,6 +275,9 @@ static void ui_update_audio(){
 
     snprintf(buf, 16, "ops: %d", stat_ops);
     text_render(audio_pane, &layout.audio.ops_txt, 0, buf);
+
+    snprintf(buf, 16, "%d", ((time % 4000) / 1000) + 1);
+    text_render(audio_pane, &layout.audio.beat_txt, 0, buf);
 
     for(int i = 0; i < N_WF_BINS; i++){
         rect_array_layout(&layout.audio.bins_rect_array, i, &r);
