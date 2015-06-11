@@ -36,13 +36,13 @@ int main()
     //layout_load(&layout, "layout.ini");
     ui_init();
 
-    pat_load(&slots[0], &pat_full);
+    pat_load(&slots[0], &pat_rainbow);
     pat_load(&slots[1], &pat_fade);
-    pat_load(&slots[2], &pat_bubble);
-    pat_load(&slots[3], &pat_wave);
+    pat_load(&slots[2], &pat_strobe);
+    pat_load(&slots[3], &pat_bubble);
     pat_load(&slots[4], &pat_strobe);
-    pat_load(&slots[5], &pat_wave);
-    pat_load(&slots[6], &pat_bubble);
+    pat_load(&slots[5], &pat_bubble);
+    pat_load(&slots[6], &pat_swipe);
     pat_load(&slots[7], &pat_strobe);
 
     for(int i = 0; i < 8; i++){

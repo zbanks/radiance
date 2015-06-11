@@ -19,97 +19,6 @@ SDL_Color color_to_SDL(color_t color){
                         (uint8_t) roundf(255 * color.a)};
 }
 
-
-// r,g,b values are from 0 to 1
-// h = [0,360], s = [0,1], v = [0,1]
-//		if s == 0, then h = -1 (undefined)
-static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v )
-{
-	int i;
-	float f, p, q, t;
-	if( s == 0 ) {
-		// achromatic (grey)
-		*r = *g = *b = v;
-		return;
-	}
-	h /= 60;			// sector 0 to 5
-	i = floor( h );
-	f = h - i;			// factorial part of h
-	p = v * ( 1 - s );
-	q = v * ( 1 - s * f );
-	t = v * ( 1 - s * ( 1 - f ) );
-	switch( i ) {
-		case 0:
-			*r = v;
-			*g = t;
-			*b = p;
-			break;
-		case 1:
-			*r = q;
-			*g = v;
-			*b = p;
-			break;
-		case 2:
-			*r = p;
-			*g = v;
-			*b = t;
-			break;
-		case 3:
-			*r = p;
-			*g = q;
-			*b = v;
-			break;
-		case 4:
-			*r = t;
-			*g = p;
-			*b = v;
-			break;
-		default:		// case 5:
-			*r = v;
-			*g = p;
-			*b = q;
-			break;
-	}
-}
-
-color_t param_to_color(float param)
-{
-#define ENDSZ 0.07
-    color_t result;
-    param = MIN(MAX(param, 0.), 1.);
-    if(param < ENDSZ){
-        result.r = param / ENDSZ;
-        result.g = 0;
-        result.b = 0;
-    }else if(param > (1.0 - ENDSZ)){
-        result.r = 1.0;
-        result.g = (param - 1.0 + ENDSZ) / ENDSZ;
-        result.b = 1.0;
-    }else{
-        param = (param - ENDSZ) / (1.0 - 2 * ENDSZ);
-        HSVtoRGB(&result.r, &result.g, &result.b, param * 300, 1.0, 1.0);
-    }
-    result.a = 1;
-    return result;
-}
-
-color_t param_to_cpow_color(float param){
-#define MINP 0.0
-    color_t result;
-    param = MIN(MAX(param, 0.), 1.);
-    HSVtoRGB(&result.r, &result.g, &result.b, param * 360, 1.0, 1.0);
-    float p = result.r + result.g + result.b;
-    p /= (1. - MINP);
-    result.r /= p;
-    result.g /= p;
-    result.b /= p;
-    result.r += MINP;
-    result.g += MINP;
-    result.b += MINP;
-    result.a = 1;
-    return result;
-}
-
 // --- Colormaps ---
 
 // This colormap is special, it fades from black/*color*/white
@@ -117,6 +26,7 @@ color_t param_to_cpow_color(float param){
 struct colormap s_cm_global_mono = {
     .name = "Global Mono",
     .n_points = 3,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.0,
           .y = {0.0, 0.0, 0.0, 1.},
@@ -143,29 +53,32 @@ static float mono_value = 0;
 
 color_t colormap_color(struct colormap * cm, float value){
     //if(colormap_test(cm)) return (color_t) {0,0,0,1};
+    if(cm->state == COLORMAP_STATE_UNINITIALIZED)
+        colormap_init(cm);
+    if(cm->state != COLORMAP_STATE_SAMPLED)
+        return (color_t) {0,0,0, 1.0};
+
     value = MIN(MAX(value, 0.), 1.);
-
-    struct colormap_el * left = cm->points;
-    struct colormap_el * right = left+1;
-
-    while(right->x < value){
-        left++;
-        right++;
-    }
-
-    float t = powf((value - left->x) / (right->x - left->x), left->gamma);
-
+    value *= (COLORMAP_RESOLUTION - 1);
+    int idx = (int) value;
+#ifdef COLORMAP_EXACT
+    float alpha = fmod(value,  1.0);
+    color_t left = cm->samples[idx];
+    if(alpha < 1e-4)
+        return left;
+    color_t right = cm->samples[idx+1];
     color_t out;
-    out.r = right->y.r * t + left->y.r * (1.0 - t);
-    out.g = right->y.g * t + left->y.g * (1.0 - t);
-    out.b = right->y.b * t + left->y.b * (1.0 - t);
-    out.a = right->y.a * t + left->y.a * (1.0 - t);
+    out.r = right.r * alpha + left.r * (1.0 - alpha);
+    out.g = right.g * alpha + left.g * (1.0 - alpha);
+    out.b = right.b * alpha + left.b * (1.0 - alpha);
     out.a = 1;
-
     return out;
+#else 
+    return cm->samples[idx];
+#endif
 }
 
-int colormap_test(struct colormap * cm){
+static int colormap_test(struct colormap * cm){
     // Test to make sure the colormap is valid:
     // 1. There are at least 2 points
     // 2. The first point has x = 0
@@ -189,6 +102,7 @@ int colormap_test(struct colormap * cm){
     return 0;
 }
 
+
 int colormap_test_all(){
     int rc = 0;
     for(int i = 0; i < n_colormaps; i++){
@@ -200,13 +114,47 @@ int colormap_test_all(){
     return rc;
 }
 
+int colormap_init(struct colormap * cm){
+    if(cm->state != COLORMAP_STATE_UNINITIALIZED) return 0;
+    if(colormap_test(cm)){
+        cm->state = COLORMAP_STATE_INVALID;
+        printf("Error in colormap '%s'\n", cm->name);
+        return -1;
+    }
+
+    for(size_t i = 0; i < COLORMAP_RESOLUTION; i++){
+        float value = (float) i / (COLORMAP_RESOLUTION - 1.);
+        struct colormap_el * left = cm->points;
+        struct colormap_el * right = left+1;
+
+        while(right->x < value){
+            left++;
+            right++;
+        }
+
+        float t = powf((value - left->x) / (right->x - left->x), left->gamma);
+
+        color_t out;
+        out.r = right->y.r * t + left->y.r * (1.0 - t);
+        out.g = right->y.g * t + left->y.g * (1.0 - t);
+        out.b = right->y.b * t + left->y.b * (1.0 - t);
+        //out.a = right->y.a * t + left->y.a * (1.0 - t);
+        out.a = 1;
+        cm->samples[i] = out;
+    }
+    cm->state = COLORMAP_STATE_SAMPLED;
+    return 0;
+}
 
 void colormap_set_global(struct colormap * cm){
     cm_global = cm;
-    s_cm_global_mono.points[1].y = colormap_color(cm, mono_value);
+    colormap_set_mono(mono_value);
 }
 
 void colormap_set_mono(float value){
     mono_value = value;
     s_cm_global_mono.points[1].y = colormap_color(cm_global, mono_value);
+    s_cm_global_mono.state = COLORMAP_STATE_UNINITIALIZED;
+    colormap_init(&s_cm_global_mono);
+
 }

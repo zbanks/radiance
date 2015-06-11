@@ -6,6 +6,79 @@
 #include "patterns/static.h"
 #include "signals/signal.h"
 #include "util/ini.h"
+#include "util/color.h"
+
+static int parse_param(const char * name, const char * value, param_state_t * params, int n_params){
+    if(memcmp(name, "param_", 6) != 0){
+        printf("Invalid call to parse_param: name='%s'\n", name);
+        return -1;
+    }
+    int j = atoi(name + 6);
+    if(j < 0 || j >= n_params){
+        printf("Invalid name: %s=%s (idx=%d)\n", name, value, j);
+        return -1;
+    }
+    printf("param: %d %s\n", j, value);
+    if(*value == '@'){
+        float min;
+        float max;
+        char sout[32];
+        if(value[1] == '['){
+            if(sscanf(value, "@[%f,%f]%31s", &min, &max, sout) == 3){
+                if(param_state_connect_label(&params[j], sout)){
+                    printf("Error connecting: %s %s\n", name, value);
+                }
+                param_state_set_range(&params[j], PARAM_VALUE_SCALED, min, max);
+            }else{
+                printf("Error parsing '%s'\n", value);
+                return -1;
+            }
+        }else if(value[1] == '('){
+            if(sscanf(value, "@(%f,%f)%31s", &min, &max, sout) == 3){
+                if(param_state_connect_label(&params[j], sout)){
+                    printf("Error connecting: %s %s\n", name, value);
+                }
+                param_state_set_range(&params[j], PARAM_VALUE_EXPANDED, min, max);
+            }else{
+                printf("Error parsing '%s'\n", value);
+                return -1;
+            }
+        }else{
+            if(param_state_connect_label(&params[j], value+1)){
+                printf("Error connecting: %s %s\n", name, value);
+            }
+        }
+    }else{
+        param_state_disconnect(&params[j]);
+        param_state_setq(&params[j], atof(value));
+    }
+    return 0;
+}
+
+static int dump_param(FILE * stream, param_state_t * param_state, parameter_t * parameter, int index){
+    if(param_state->connected_output){
+        char * sfmt = "param_%1$d=@%2$-31s";
+        if(param_state->mode == PARAM_VALUE_SCALED){
+            sfmt = "param_%1$d=@[%3$6f,%4$6f]%2$-18s";
+        }else if(param_state->mode == PARAM_VALUE_EXPANDED){
+            sfmt = "param_%1$d=@(%3$6f,%4$6f)%2$-18s";
+        }
+        fprintf(stream, sfmt, index, param_state->connected_output->label, param_state->min, param_state->max);
+    }else{
+        fprintf(stream, "param_%d=%-32f", index, param_state->value);
+    }
+
+    fprintf(stream, " ; %s",  parameter->name);
+    char buf[32];
+    if(param_state->connected_output || !parameter->val_to_str){
+        fprintf(stream, "\n");
+    }else{
+        parameter->val_to_str(param_state->value, buf, sizeof(buf));
+        fprintf(stream, " = %s\n", buf);
+    }
+
+    return 0;
+}
 
 static int load_handler(void * user, const char * section, const char * name, const char * value){
     UNUSED(user);
@@ -17,6 +90,13 @@ static int load_handler(void * user, const char * section, const char * name, co
         }else if(strcmp(name, "signals") == 0){
             if(atoi(value) > n_signals){
                 printf("More signals in config file than in UI: %d vs %d.\n", atoi(value), n_signals);
+            }
+        }else if(strcmp(name, "palette") == 0){
+            for(int i = 0; i < n_colormaps; i++){
+                if(strcmp(value, colormaps[i]->name) == 0){
+                    colormap_set_global(colormaps[i]); 
+                    break;
+                }
             }
         }
     }else if(memcmp(section, "signal_", 7) == 0){
@@ -31,29 +111,8 @@ static int load_handler(void * user, const char * section, const char * name, co
                 return 0;
             }
         }else if(memcmp(name, "param_", 6) == 0){
-            int j = atoi(name + 6);
-            if(j < 0 || j > signals[i].n_params){
-                printf("Invalid name: %s [%s]%s=%s\n", name, section, name, value);
+            if(parse_param(name, value, signals[i].param_states, signals[i].n_params))
                 return 0;
-            }
-            if(*value == '@'){
-                float min;
-                float max;
-                char sout[32];
-                if(sscanf(value, "@[%f,%f]%31s", &min, &max, sout) == 3){
-                    if(param_state_connect_label(&signals[i].param_states[j], sout)){
-                        printf("Error connecting: %s %s %s\n", section, name, value);
-                    }
-                    signals[i].param_states[j].min = min;
-                    signals[i].param_states[j].max = max;
-                }else{
-                    printf("Error parsing '%s'\n", value);
-                    return 0;
-                }
-            }else{
-                param_state_disconnect(&signals[i].param_states[j]);
-                param_state_setq(&signals[i].param_states[j], atof(value));
-            }
         }
     }else if(memcmp(section, "slot_", 5) == 0){
         int i = atoi(section + 5);
@@ -64,36 +123,30 @@ static int load_handler(void * user, const char * section, const char * name, co
         if(strcmp(name, "pattern_name") == 0){
             for(int j = 0; j < n_patterns; j++){
                 if(strcmp(patterns[j]->name, value) == 0){
-                    pat_load(&slots[i], patterns[j]);
+                    if(slots[i].pattern != patterns[j])
+                        pat_load(&slots[i], patterns[j]);
                     break;
                 }
+            }
+        }else if(strcmp(name, "colormap") ==  0){
+            for(int j = 0; j < n_colormaps; j++){
+                if(strcmp(value, colormaps[j]->name) == 0){
+                    slots[i].colormap = colormaps[j];
+                    break;
+                }
+            }
+            if(strcmp(name, "GLOBAL") == 0){
+                slots[i].colormap = NULL;
             }
         }else if(strcmp(name, "alpha") == 0){
             param_state_setq(&slots[i].alpha, atof(value));
         }else if(memcmp(name, "param_", 6) == 0){
-            int j = atoi(name + 6);
-            if(!slots[i].pattern || j < 0 || j > slots[i].pattern->n_params){
-                printf("Invalid name: %s [%s]%s=%s\n", name, section, name, value);
+            if(!slots[i].pattern){
+                printf("No pattern for param: [%s] %s\n", section, name);
                 return 0;
             }
-            if(*value == '@'){
-                float min;
-                float max;
-                char sout[32];
-                if(sscanf(value, "@[%f,%f]%31s", &min, &max, sout) == 3){
-                    if(param_state_connect_label(&slots[i].param_states[j], sout)){
-                        printf("Error connecting: %s %s %s\n", section, name, value);
-                    }
-                    slots[i].param_states[j].min = min;
-                    slots[i].param_states[j].max = max;
-                }else{
-                    printf("Error parsing '%s'\n", value);
-                    return 0;
-                }
-            }else{
-                param_state_disconnect(&slots[i].param_states[j]);
-                param_state_setq(&slots[i].param_states[j], atof(value));
-            }
+            if(parse_param(name, value, slots[i].param_states, slots[i].pattern->n_params))
+                return 0;
         }else{
             printf("Invalid name: %s\n", name);
             return 0;
@@ -126,23 +179,13 @@ int state_save(const char * filename){
         fprintf(stream, "\n[slot_%d]\n", i);
         if(slots[i].pattern){
             fprintf(stream, "pattern_name=%s\n", slots[i].pattern->name);
+            if(slots[i].colormap)
+                fprintf(stream, "colormap=%s\n", slots[i].colormap->name);
+            else
+                fprintf(stream, "colormap=GLOBAL\n");
             fprintf(stream, "alpha=%f\n", slots[i].alpha.value);
             for(int j = 0; j < slots[i].pattern->n_params; j++){
-                if(slots[i].param_states[j].connected_output)
-                    fprintf(stream, "param_%d=@[%6f,%6f]%-18s", j,
-                            slots[i].param_states[j].min,
-                            slots[i].param_states[j].max,
-                            slots[i].param_states[j].connected_output->label);
-                else
-                    fprintf(stream, "param_%d=%-32f", j, slots[i].param_states[j].value);
-                fprintf(stream, " ; %s", slots[i].pattern->parameters[j].name);
-                char buf[32];
-                if(slots[i].param_states[j].connected_output || !slots[i].pattern->parameters[j].val_to_str){
-                    fprintf(stream, "\n");
-                }else{
-                    slots[i].pattern->parameters[j].val_to_str(slots[i].param_states[j].value, buf, sizeof(buf));
-                    fprintf(stream, " = %s\n", buf);
-                }
+                dump_param(stream, &slots[i].param_states[j], &slots[i].pattern->parameters[j], j);
             }
         }
     }
@@ -152,22 +195,7 @@ int state_save(const char * filename){
         if(slots[i].pattern){
             fprintf(stream, "signal_name=%s\n", signals[i].name);
             for(int j = 0; j < signals[i].n_params; j++){
-                //int padding = 32;
-                if(signals[i].param_states[j].connected_output)
-                    fprintf(stream, "param_%d=@[%6f,%6f]%-18s", j,
-                            signals[i].param_states[j].min,
-                            signals[i].param_states[j].max,
-                            signals[i].param_states[j].connected_output->label);
-                else
-                    fprintf(stream, "param_%d=%-32f", j, signals[i].param_states[j].value);
-                fprintf(stream, " ; %s",  slots[i].pattern->parameters[j].name);
-                char buf[32];
-                if(signals[i].param_states[j].connected_output || !signals[i].parameters[j].val_to_str){
-                    fprintf(stream, "\n");
-                }else{
-                    signals[i].parameters[j].val_to_str(signals[i].param_states[j].value, buf, sizeof(buf));
-                    fprintf(stream, " = %s\n", buf);
-                }
+                dump_param(stream, &signals[i].param_states[j], &signals[i].parameters[j], j);
             }
         }
     }

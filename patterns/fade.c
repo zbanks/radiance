@@ -72,7 +72,8 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
 
     float x = param_state_get(&slot->param_states[FADE_COLOR]);
     x += state->color_phase;
-    state->color = colormap_color(&cm_rainbow_equal, fmod(x, 1.0));
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    state->color = colormap_color(cm, fmod(x, 1.0));
 }
 
 int pat_fade_event(slot_t* slot, enum pat_event event, float event_data){
@@ -84,7 +85,8 @@ int pat_fade_event(slot_t* slot, enum pat_event event, float event_data){
         case PATEV_M2_NOTE_ON:
             state->color_phase += param_state_get(&slot->param_states[FADE_DELTA]);
             float x = param_state_get(&slot->param_states[FADE_COLOR]) + state->color_phase;
-            state->color = colormap_color(&cm_rainbow_equal, fmod(x, 1.0));
+            struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+            state->color = colormap_color(cm, fmod(x, 1.0));
         break;
         default: return 0;
     }

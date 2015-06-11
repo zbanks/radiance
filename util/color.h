@@ -24,15 +24,25 @@ struct colormap_el {
     float gamma;
 };
 
+#define COLORMAP_RESOLUTION 1025
+
+enum colormap_state {
+    COLORMAP_STATE_UNINITIALIZED = 0,
+    COLORMAP_STATE_INVALID,
+    COLORMAP_STATE_SAMPLED
+};
+
 struct colormap {
     const char name[32];
     size_t n_points;
+    enum colormap_state state;
+    color_t samples[COLORMAP_RESOLUTION];
     struct colormap_el points[];
 };
 
 int colormap_test_all();
 color_t colormap_color(struct colormap * cm, float value);
-int colormap_test(struct colormap * cm);
+int colormap_init(struct colormap * cm);
 void colormap_set_global(struct colormap * cm);
 void colormap_set_mono(float value);
 

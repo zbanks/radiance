@@ -47,6 +47,7 @@ void param_state_connect(param_state_t * state, param_output_t * output);
 int param_state_connect_label(param_state_t * state, const char * label);
 void param_state_disconnect(param_state_t * state);
 param_output_t * param_state_output(param_state_t * state);  // Returns NULL if not connected
+void param_state_set_range(param_state_t * state, enum param_value_mode mode, float min, float max);
 
 static inline float param_state_get(param_state_t * state){
     return state->value;

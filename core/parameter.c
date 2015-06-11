@@ -64,9 +64,10 @@ void param_state_init(param_state_t * state, float value){
     state->value = value;
     state->min = 0.;
     state->max = 1.;
-    state->connected_output = 0;
-    state->next_connected_state = 0;
-    state->prev_connected_state = 0;
+    state->mode = PARAM_VALUE_DIRECT;
+    state->connected_output = NULL;
+    state->next_connected_state = NULL;
+    state->prev_connected_state = NULL;
 }
 
 void param_state_connect(param_state_t * state, param_output_t * output){
@@ -97,7 +98,8 @@ int param_state_connect_label(param_state_t * state, const char * label){
 
 void param_state_disconnect(param_state_t * state){
     param_state_t * s;
-    param_output_t * output = param_state_output(state);
+    //param_output_t * output = param_state_output(state);
+    param_output_t * output = state->connected_output;
     if(!output) return;
 
     // Delete `state` from linked list
@@ -116,6 +118,27 @@ void param_state_disconnect(param_state_t * state){
     state->prev_connected_state = 0;
     state->connected_output = 0;
 
+}
+
+void param_state_set_range(param_state_t * state, enum param_value_mode mode, float min, float max){
+    state->mode = mode;
+    state->min = min;
+    state->max = max;
+
+    if(state->connected_output){
+        switch(state->mode){
+            case PARAM_VALUE_SCALED:
+                state->value = state->connected_output->value * (state->max - state->min) + state->min;
+            break;
+            case PARAM_VALUE_EXPANDED:
+                state->value = (state->connected_output->value - state->min) / (state->max - state->min);
+            break;
+            default:
+            case PARAM_VALUE_DIRECT:
+                state->value = state->connected_output->value;
+            break;
+        }
+    }
 }
 
 param_output_t * param_state_output(param_state_t * state){

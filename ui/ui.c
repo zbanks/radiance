@@ -448,6 +448,13 @@ static void ui_update_palette(struct colormap * cm){
 
     if(cm == cm_global){
         SDL_FillRect(palette_pane, &layout.palette.active_rect, SDL_MapRGB(palette_pane->format, 255, 255, 255));
+    }else{
+        rectangleRGBA(palette_pane, 
+                layout.palette.active_rect.x,
+                layout.palette.active_rect.y,
+                layout.palette.active_rect.x + layout.palette.active_rect.w,
+                layout.palette.active_rect.y + layout.palette.active_rect.h,
+                255, 255, 255, 255);
     }
 }
 

@@ -2,30 +2,35 @@
 
 struct colormap cm_rainbow = {
     .name = "Rainbow",
-    .n_points = 6,
+    .n_points = 7,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.,
           .y = {1., 0., 0., 1.},
           .gamma = 1.,
         },
-        { .x = .2,
+        { .x = 1./6.,
           .y = {1., 1., 0., 1.},
           .gamma = 1.,
         },
-        { .x = .4,
+        { .x = 2./6.,
           .y = {0., 1., 0., 1.},
           .gamma = 1.,
         },
-        { .x = .6,
+        { .x = 3./6.,
           .y = {0., 1., 1., 1.},
           .gamma = 1.,
         },
-        { .x = .8,
+        { .x = 4./6.,
           .y = {0., 0., 1., 1.},
           .gamma = 1.,
         },
-        { .x = 1.,
+        { .x = 5./6.,
           .y = {1., 0., 1., 1.},
+          .gamma = 1.,
+        },
+        { .x = 1.,
+          .y = {1., 0., 0., 1.},
           .gamma = 1.,
         },
     },
@@ -34,6 +39,7 @@ struct colormap cm_rainbow = {
 struct colormap cm_rainbow_edged = {
     .name = "Rainbow Edged",
     .n_points = 8,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.0,
           .y = {0., 0., 0., 1.},
@@ -72,30 +78,35 @@ struct colormap cm_rainbow_edged = {
 
 struct colormap cm_rainbow_equal = {
     .name = "Rainbow Equal",
-    .n_points = 6,
+    .n_points = 7,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.,
           .y = {1., 0., 0., 1.},
           .gamma = 1.,
         },
-        { .x = .2,
+        { .x = 1./6.,
           .y = {0.5, 0.5, 0., 1.},
           .gamma = 1.,
         },
-        { .x = .4,
+        { .x = 2./6.,
           .y = {0., 1., 0., 1.},
           .gamma = 1.,
         },
-        { .x = .6,
+        { .x = 3./6.,
           .y = {0., 0.5, 0.5, 1.},
           .gamma = 1.,
         },
-        { .x = .8,
+        { .x = 4./6.,
           .y = {0., 0., 1., 1.},
           .gamma = 1.,
         },
-        { .x = 1.,
+        { .x = 5./6.,
           .y = {0.5, 0., 0.5, 1.},
+          .gamma = 1.,
+        },
+        { .x = 1.,
+          .y = {1., 0., 0., 1.},
           .gamma = 1.,
         },
     },
@@ -104,6 +115,7 @@ struct colormap cm_rainbow_equal = {
 struct colormap cm_jet = {
     .name = "Jet",
     .n_points = 6,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.00,
           .y = {0.5, 0.0, 0.0, 1.},
@@ -135,6 +147,7 @@ struct colormap cm_jet = {
 struct colormap cm_hot = {
     .name = "Hot",
     .n_points = 5,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.00,
           .y = {0.0, 0.0, 0.0, 1.},
@@ -162,6 +175,7 @@ struct colormap cm_hot = {
 struct colormap cm_cyan = {
     .name = "Ocean",
     .n_points = 6,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.00,
           .y = {0.0, 0.2, 0.0, 1.},
@@ -193,6 +207,7 @@ struct colormap cm_cyan = {
 struct colormap cm_purple = {
     .name = "Purple",
     .n_points = 6,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.00,
           .y = {1.0, 0.0, 0.0, 1.},
@@ -224,6 +239,7 @@ struct colormap cm_purple = {
 struct colormap cm_stoplight = {
     .name = "Stoplight",
     .n_points = 5,
+    .state = COLORMAP_STATE_UNINITIALIZED,
     .points = {
         { .x = 0.00,
           .y = {0.2, 0.0, 0.0, 1.},
