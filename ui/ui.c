@@ -75,6 +75,7 @@ static struct
 } active_preview;
 
 param_state_t * active_param_source;
+struct colormap ** active_palette_source;
 
 static size_t master_pixels;
 static float * master_xs;
@@ -328,6 +329,7 @@ static void ui_update_slot(slot_t* slot)
 {
     rect_t r;
     SDL_Color param_name_c = {255, 255, 255, 255};
+    SDL_Color highlight_c = {255, 200, 0, 255};
     rect_array_origin(&layout.slot.rect_array, &r);
     SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
 
@@ -336,23 +338,27 @@ static void ui_update_slot(slot_t* slot)
         update_pattern_preview(slot);
         SDL_BlitSurface(pattern_preview, 0, slot_pane, &layout.slot.preview_rect);
 
+        const char * palette_str;
+        if(slot->colormap)
+            palette_str = slot->colormap->name;
+        else
+            palette_str = "Global";
+
+        if(&slot->colormap == active_palette_source)
+            text_render(slot_pane, &layout.slot.palette_txt, &highlight_c, palette_str);
+        else
+            text_render(slot_pane, &layout.slot.palette_txt, 0, palette_str);
+
         slider_render_alpha(&slot->alpha);
         SDL_BlitSurface(alpha_slider_surface, 0, slot_pane, &layout.slot.alpha_rect);
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
             if(&slot->param_states[i] == active_param_source){
-                //param_name_c = {255, 200, 0};
-                param_name_c.r = 255;
-                param_name_c.g = 200;
-                param_name_c.b =   0;
+                slider_render(&slot->pattern->parameters[i], &slot->param_states[i], highlight_c);
             }else{
-                //param_name_c = {255, 255, 255};
-                param_name_c.r = 255;
-                param_name_c.g = 255;
-                param_name_c.b = 255;
+                slider_render(&slot->pattern->parameters[i], &slot->param_states[i], param_name_c);
             }
-            slider_render(&slot->pattern->parameters[i], &slot->param_states[i], param_name_c);
             rect_array_layout(&layout.slot.sliders_rect_array, i, &r);
 
             SDL_BlitSurface(slider_surface, 0, slot_pane, &r);
@@ -426,7 +432,6 @@ static void ui_update_palette(struct colormap * cm){
     rect_array_origin(&layout.palette.rect_array, &r);
     SDL_FillRect(palette_pane, &r, SDL_MapRGB(palette_pane->format, 20, 20, 20));
 
-    text_render(palette_pane, &layout.palette.name_txt, 0, cm->name);
 
     SDL_LockSurface(palette_preview);
     for(int x = 0; x < layout.palette.preview_w; x++){
@@ -438,6 +443,8 @@ static void ui_update_palette(struct colormap * cm){
     }
     SDL_UnlockSurface(palette_preview);
     SDL_BlitSurface(palette_preview, 0, palette_pane, &layout.palette.preview_rect);
+
+    text_render(palette_pane, &layout.palette.name_txt, 0, cm->name);
 
     if(cm == cm_global){
         SDL_FillRect(palette_pane, &layout.palette.active_rect, SDL_MapRGB(palette_pane->format, 255, 255, 255));
@@ -632,6 +639,21 @@ static int mouse_click_slot(int index, struct xy xy)
         return !!mouse_click_alpha_slider(&slots[index].alpha, offset);
     }
 
+    // See if the click is on the palette indicator
+    r.x = 0;
+    r.w = layout.slot.w;
+    r.y = layout.slot.palette_y;
+    r.h = layout.slot.palette_size;
+    if(xy_in_rect(&xy, &r, &offset)){
+        if(active_palette_source == &slots[index].colormap){
+            active_palette_source = NULL;
+            slots[index].colormap = NULL;
+        }else{
+            active_palette_source = &slots[index].colormap;
+        }
+        return 1;
+    }
+
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
         slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_X,
@@ -764,7 +786,21 @@ static int mouse_click_state_load(int index, struct xy xy){
 }
 
 static int mouse_click_palette(int index, struct xy xy){
-    colormap_set_global(colormaps[index], (float) xy.x / (float) layout.palette.w);
+    struct xy offset;
+    if(active_palette_source){
+        *active_palette_source = colormaps[index];
+        active_palette_source = NULL;
+    }
+
+    if(index == 0) return 1;
+
+    if(xy_in_rect(&xy, &layout.palette.active_rect, &offset)){
+        colormap_set_global(colormaps[index]);
+    }
+
+    if(colormaps[index] == cm_global && xy_in_rect(&xy, &layout.palette.preview_rect, &offset)){
+        colormap_set_mono((float) offset.x / (float) layout.palette.w);
+    }
     return 1;
 }
 

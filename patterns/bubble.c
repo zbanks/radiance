@@ -77,7 +77,8 @@ void pat_bubble_update(slot_t* slot, long t)
 {
     UNUSED(t);
     pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
-    state->color = colormap_color(cm_global, param_state_get(&slot->param_states[BUBBLE_COLOR]));
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    state->color = colormap_color(cm, param_state_get(&slot->param_states[BUBBLE_COLOR]));
     state->r = param_state_get(&slot->param_states[BUBBLE_R]);
     state->rho = param_state_get(&slot->param_states[BUBBLE_RHO]) * 1.3 + 0.3;
     state->cx = param_state_get(&slot->param_states[BUBBLE_CX]) * 2 - 1.0;

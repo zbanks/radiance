@@ -18,16 +18,9 @@ enum swipe_state {
     SWIPE_SHRINKING,
 };
 
-enum swipe_source {
-    SOURCE_MOUSE,
-    SOURCE_M1,
-    SOURCE_M2,
-
-    N_SWIPE_SOURCES
-};
-
 struct swipe;
 struct swipe {
+    enum pat_event source;
     double kx; // Wave vector, normalized s.t. sqrt(kx * kx + ky * ky) == 1.0
     double ky;
     double ox; // Origin
@@ -46,8 +39,6 @@ typedef struct {
     mbeat_t last_t;
     color_t color;
     double sharp;
-    struct swipe * active_swipes[N_SWIPE_SOURCES];
-    struct swipe * inactive_swipes;
     struct swipe swipe_buffer[N_SWIPE_BUFFER];
 } state_t;
 
@@ -82,13 +73,6 @@ static pat_state_pt init() {
     if(!state) FAIL("Unable to malloc state for swipe.\n");
     memset(state, 0, sizeof(state_t));
 
-    struct swipe * sptr = state->inactive_swipes = state->swipe_buffer;
-    memset(sptr, 0, sizeof(struct swipe) * N_SWIPE_BUFFER);
-
-    for(int i = 0; i < N_SWIPE_BUFFER-1; i++){
-        sptr[i].next = &sptr[i+1];
-    }
-
     return state;
 }
 
@@ -100,42 +84,31 @@ static void update(slot_t* slot, mbeat_t t) {
     state_t * state = (state_t *) slot->state;
     if(state->last_t == 0) state->last_t = t;
 
-    state->color = colormap_color(cm_global, param_state_get(&slot->param_states[COLOR]));
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    state->color = colormap_color(cm, param_state_get(&slot->param_states[COLOR]));
     //freq_update(&state->freq_state, t, param_state_get(&slot->param_states[SPEED]));
     state->freq = power_quantize_parameter(param_state_get(&slot->param_states[SPEED]));
     state->sharp = param_state_get(&slot->param_states[SHARP]);
 
     double delta = state->freq * 2 * MB2B(t - state->last_t);
 
-    for(int i = 0; i < N_SWIPE_SOURCES; i++){
-        struct swipe ** prev = &state->active_swipes[i];
-        struct swipe * swipe = state->active_swipes[i];
-        while(swipe){
-            switch(swipe->state){
-                case SWIPE_GROWING:
-                    swipe->length += delta;
-                    prev = &swipe->next;
-                break;
-                case SWIPE_SHRINKING:
-                    swipe->ox += delta * swipe->kx;
-                    swipe->oy += delta * swipe->ky;
-                    if(! ((swipe->ox > -2 && swipe->ox < 2) && (swipe->oy > -2 && swipe->oy < 2))){
-                        // Remove swipe, clear it, and put it back in the inactive pile
-                        *prev = swipe->next;
-                        memset(swipe, 0, sizeof(struct swipe));
-                        swipe->next = state->inactive_swipes;
-                        state->inactive_swipes = swipe;
-                        swipe = *prev;
-                    }else{
-                        prev = &swipe->next;
-                    }
-                break;
-                case SWIPE_OFF:
-                default:
-                    prev = &swipe->next;
-                break;
-            }
-            swipe = *prev;
+    for(int i = 0; i < N_SWIPE_BUFFER; i++){
+        struct swipe * swipe = &state->swipe_buffer[i];
+        switch(swipe->state){
+            case SWIPE_GROWING:
+                swipe->length += delta;
+            break;
+            case SWIPE_SHRINKING:
+                swipe->ox += delta * swipe->kx;
+                swipe->oy += delta * swipe->ky;
+                if(! ((swipe->ox > -2 && swipe->ox < 2) && (swipe->oy > -2 && swipe->oy < 2))){
+                    // Remove swipe, clear it, and put it back in the inactive pile
+                    memset(swipe, 0, sizeof(struct swipe));
+                }
+            break;
+            case SWIPE_OFF:
+            default:
+            break;
         }
     }
     state->last_t = t;
@@ -147,25 +120,21 @@ static color_t pixel(slot_t* slot, float x, float y) {
     float a = 0.;
 
     // TEMPLATE: Compute color at (x, y) from state
-    for(int i = 0; i < N_SWIPE_SOURCES; i++){
-        struct swipe * swipe = state->active_swipes[i];
-        while(swipe){
-            if(swipe->state != SWIPE_OFF){
-                double fuzz = MIN(swipe->length / 2, state->sharp);
-                double v = (x - swipe->ox) * swipe->kx + (y - swipe->oy) * swipe->ky;
-                if(v > swipe->length)
-                    a += 0;
-                else if(v > (swipe->length - fuzz))
-                    a += swipe->alpha * (swipe->length - v) / fuzz;
-                else if(v > 0)
-                    a += swipe->alpha;
-                else if(v > -fuzz)
-                    a += swipe->alpha * (fuzz + v) / fuzz;
-                else
-                    a += 0;
-            }
-
-            swipe = swipe->next;
+    for(int i = 0; i < N_SWIPE_BUFFER; i++){
+        struct swipe * swipe = &state->swipe_buffer[i];
+        if(swipe->state != SWIPE_OFF){
+            double fuzz = MIN(swipe->length / 2, state->sharp);
+            double v = (x - swipe->ox) * swipe->kx + (y - swipe->oy) * swipe->ky;
+            if(v > swipe->length)
+                a += 0;
+            else if(v > (swipe->length - fuzz))
+                a += swipe->alpha * (swipe->length - v) / fuzz;
+            else if(v > 0)
+                a += swipe->alpha;
+            else if(v > -fuzz)
+                a += swipe->alpha * (fuzz + v) / fuzz;
+            else
+                a += 0;
         }
     }
     output.a = MIN(a, 1.0);
@@ -176,16 +145,30 @@ static int event(slot_t* slot, enum pat_event event, float event_data){
     state_t * state = (state_t *) slot->state;
     if(isnan(event_data)) event_data = 0;
     struct swipe * swipe;
+    int i;
     switch(event){
         case PATEV_M1_NOTE_ON:
-            // Pop off swipe from the front of inactive_swipes
-            swipe = state->inactive_swipes;
-            if(!swipe) return 0;
-            if(swipe->next) state->inactive_swipes = swipe->next;
-            // Prepend swipe onto active_swipes
-            swipe->next = state->active_swipes[0];
-            state->active_swipes[0] = swipe;
+            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+                if(state->swipe_buffer[i].state == SWIPE_OFF) break;
+            }
+            swipe = &state->swipe_buffer[i];
 
+            swipe->source = event;
+            swipe->ox = 0;
+            swipe->oy = -1;
+            swipe->length = 0;
+            swipe->kx = 0;
+            swipe->ky = 1.;
+            swipe->state = SWIPE_GROWING;
+            swipe->alpha = event_data;
+        break;
+        case PATEV_M2_NOTE_ON:
+            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+                if(state->swipe_buffer[i].state == SWIPE_OFF) break;
+            }
+            swipe = &state->swipe_buffer[i];
+
+            swipe->source = event;
             swipe->ox = -1;
             swipe->oy = 0;
             swipe->length = 0;
@@ -194,30 +177,13 @@ static int event(slot_t* slot, enum pat_event event, float event_data){
             swipe->state = SWIPE_GROWING;
             swipe->alpha = event_data;
         break;
-        case PATEV_M2_NOTE_ON:
-            swipe = state->inactive_swipes;
-            if(!swipe) return 0;
-            if(swipe->next) state->inactive_swipes = swipe->next;
-            state->inactive_swipes = swipe->next;
-            swipe->next = state->active_swipes[1];
-            state->active_swipes[1] = swipe;
-
-            swipe->ox = 0;
-            swipe->oy = -1;
-            swipe->length = 0;
-            swipe->kx = 0;
-            swipe->ky = 1;
-            swipe->state = SWIPE_GROWING;
-            swipe->alpha = event_data;
-        break;
         case PATEV_MOUSE_DOWN_X:
-            swipe = state->inactive_swipes;
-            if(!swipe) return 0;
-            if(swipe->next) state->inactive_swipes = swipe->next;
-            state->inactive_swipes = swipe->next;
-            swipe->next = state->active_swipes[2];
-            state->active_swipes[2] = swipe;
+            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+                if(state->swipe_buffer[i].state == SWIPE_OFF) break;
+            }
+            swipe = &state->swipe_buffer[i];
 
+            swipe->source = event;
             swipe->ox = -1;
             swipe->oy = -1;
             swipe->length = 0;
@@ -227,16 +193,28 @@ static int event(slot_t* slot, enum pat_event event, float event_data){
             swipe->alpha = 1.;
         break;
         case PATEV_M1_NOTE_OFF:
-            if(!state->active_swipes[0]) break;
-            state->active_swipes[0]->state = SWIPE_SHRINKING;
+            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+                if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == PATEV_M1_NOTE_ON){
+                    state->swipe_buffer[i].state = SWIPE_SHRINKING;
+                    return 1;
+                }
+            }
         break;
         case PATEV_M2_NOTE_OFF:
-            if(!state->active_swipes[1]) break;
-            state->active_swipes[1]->state = SWIPE_SHRINKING;
+            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+                if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == PATEV_M2_NOTE_ON){
+                    state->swipe_buffer[i].state = SWIPE_SHRINKING;
+                    return 1;
+                }
+            }
         break;
         case PATEV_MOUSE_UP_X:
-            if(!state->active_swipes[2]) break;
-            state->active_swipes[2]->state = SWIPE_SHRINKING;
+            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+                if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == PATEV_MOUSE_DOWN_X){
+                    state->swipe_buffer[i].state = SWIPE_SHRINKING;
+                    return 1;
+                }
+            }
         break;
         default:
         return 0;

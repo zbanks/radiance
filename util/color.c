@@ -112,8 +112,34 @@ color_t param_to_cpow_color(float param){
 
 // --- Colormaps ---
 
-int n_colormaps = 5;
-struct colormap * colormaps[5] =  {&cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal, &cm_jet, &cm_hot};
+// This colormap is special, it fades from black/*color*/white
+// where *color* is taken from the global colormap
+struct colormap s_cm_global_mono = {
+    .name = "Global Mono",
+    .n_points = 3,
+    .points = {
+        { .x = 0.0,
+          .y = {0.0, 0.0, 0.0, 1.},
+          .gamma = 1.5,
+        },
+        { .x = 0.5,
+          .y = {0.5, 0.5, 0.5, 1.},
+          .gamma = 1./1.5,
+        },
+        { .x = 1.0,
+          .y = {1.0, 1.0, 1.0, 1.},
+          .gamma = 1.,
+        },
+    },
+};
+
+struct colormap * cm_global = &cm_rainbow;
+struct colormap * cm_global_mono = &s_cm_global_mono;
+
+int n_colormaps = 9;
+struct colormap * colormaps[9] =  {&s_cm_global_mono, &cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal, &cm_jet, &cm_hot, &cm_cyan, &cm_purple, &cm_stoplight};
+
+static float mono_value = 0;
 
 color_t colormap_color(struct colormap * cm, float value){
     //if(colormap_test(cm)) return (color_t) {0,0,0,1};
@@ -175,33 +201,12 @@ int colormap_test_all(){
 }
 
 
-
-// This colormap is special, it fades from black/*color*/white
-// where *color* is taken from the global colormap
-struct colormap s_cm_global_mono = {
-    .name = "Global Mono",
-    .n_points = 3,
-    .points = {
-        { .x = 0.0,
-          .y = {0.0, 0.0, 0.0, 1.},
-          .gamma = 1.,
-        },
-        { .x = 0.5,
-          .y = {0.5, 0.5, 0.5, 1.},
-          .gamma = 1.,
-        },
-        { .x = 1.0,
-          .y = {1.0, 1.0, 1.0, 1.},
-          .gamma = 1.,
-        },
-    },
-};
-
-struct colormap * cm_global = &cm_rainbow;
-struct colormap * cm_global_mono = &s_cm_global_mono;
-
-void colormap_set_global(struct colormap * cm, float primary_value){
+void colormap_set_global(struct colormap * cm){
     cm_global = cm;
-    cm_global_mono = &s_cm_global_mono;
-    s_cm_global_mono.points[1].y = colormap_color(cm, primary_value);
+    s_cm_global_mono.points[1].y = colormap_color(cm, mono_value);
+}
+
+void colormap_set_mono(float value){
+    mono_value = value;
+    s_cm_global_mono.points[1].y = colormap_color(cm_global, mono_value);
 }

@@ -15,6 +15,7 @@ typedef struct slot
 {
     struct pattern * pattern;
     void* state;
+    struct colormap * colormap;
     param_state_t alpha;
     param_state_t * param_states;
 } slot_t;

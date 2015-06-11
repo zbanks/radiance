@@ -24,7 +24,8 @@
 int main()
 {
     colormap_test_all();
-    colormap_set_global(&cm_rainbow, 0.5);
+    colormap_set_global(&cm_rainbow);
+    colormap_set_mono(0.5);
 
     pattern_init();
     patterns_updating = SDL_CreateMutex();

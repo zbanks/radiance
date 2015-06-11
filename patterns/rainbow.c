@@ -80,7 +80,8 @@ static void update(slot_t* slot, mbeat_t t) {
 static color_t pixel(slot_t* slot, float x, float y) {
     state_t * state = (state_t *) slot->state;
     float t = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
-    return colormap_color(cm_global, t);
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    return colormap_color(cm, t);
 }
 
 static int event(slot_t* slot, enum pat_event event, float event_data){

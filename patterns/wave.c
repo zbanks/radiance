@@ -91,7 +91,8 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     float k_ang;
 
     pat_wave_state_t* state = (pat_wave_state_t*)slot->state;
-    state->color = colormap_color(cm_global, param_state_get(&slot->param_states[WAVE_COLOR]));
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    state->color = colormap_color(cm, param_state_get(&slot->param_states[WAVE_COLOR]));
     state->type = quantize_parameter(osc_quant_labels, param_state_get(&slot->param_states[WAVE_TYPE]));
 
     freq_update(&state->freq_state, t, param_state_get(&slot->param_states[WAVE_OMEGA]));

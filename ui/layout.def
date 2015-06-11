@@ -23,7 +23,8 @@ CFGSECTION(slot,
     CFG_RECT_ARRAY(, 10, 245, 115, 350, 125, 0, 0)
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_RECT(alpha, 0, 10, 20, 80)
-    CFG_RECT_ARRAY(sliders, 8, 90+5, 110, 32, 0, 40, 0)
+    CFG_TXT(palette, 62, 92, 13, 2, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, 0)
 )
 
 CFGSECTION(audio,
@@ -107,10 +108,10 @@ CFGSECTION(state_load,
 )
 
 CFGSECTION(palette,
-    CFG_RECT_ARRAY(, 10, 650, 250, 35, 300, 44, -2)
+    CFG_RECT_ARRAY(, 15, 610, 265, 35, 275, 44, 4)
     CFG_TXT(name, 3, 2, 14, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_RECT(preview, 0, 26, 250, 8)
-    CFG_RECT(active, 235, 8, 8, 8)
+    CFG_RECT(preview, 0, 26, 265, 8)
+    CFG_RECT(active, 250, 8, 8, 8)
 )
 
 

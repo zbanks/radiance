@@ -35,7 +35,7 @@ enum pat_strobe_param_names {
 
 parameter_t pat_strobe_params[N_STROBE_PARAMS] = {
     [STROBE_COLOR] = {
-        .name = "Shade",
+        .name = "Color",
         .default_val = 0.5,
     },
     [STROBE_FREQ] = {
@@ -76,7 +76,8 @@ void pat_strobe_update(slot_t* slot, mbeat_t t){
     pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
     freq_update(&state->freq_state, t, param_state_get(&slot->param_states[STROBE_FREQ]));
 
-    state->color = colormap_color(cm_global_mono, param_state_get(&slot->param_states[STROBE_COLOR]));
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    state->color = colormap_color(cm, param_state_get(&slot->param_states[STROBE_COLOR]));
 
     float a = 0;
     float phase = state->freq_state.phase;

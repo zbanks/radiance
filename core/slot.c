@@ -73,6 +73,7 @@ void pat_load(slot_t* slot, pattern_t* pattern)
     slot->state = (*pattern->init)();
     if(!slot->state) FAIL("Could not malloc pattern state\n");
 
+    slot->colormap = NULL;
     param_state_init(&slot->alpha, 0.);
 
     slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
@@ -84,6 +85,7 @@ void pat_load(slot_t* slot, pattern_t* pattern)
 void pat_unload(slot_t* slot)
 {
     if(!slot->pattern) return;
+    slot->colormap = NULL;
 
     for(int i = 0; i < slot->pattern->n_params; i++){
         param_state_disconnect(&slot->param_states[i]);
