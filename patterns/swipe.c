@@ -157,8 +157,8 @@ static int event(slot_t* slot, enum pat_event event, float event_data){
             swipe->ox = 1;
             swipe->oy = 0;
             swipe->length = 0;
-            swipe->kx = 0;
-            swipe->ky = -1.;
+            swipe->kx = -1;
+            swipe->ky = 0;
             swipe->state = SWIPE_GROWING;
             swipe->alpha = event_data;
         break;

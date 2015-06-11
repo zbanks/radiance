@@ -838,7 +838,7 @@ static int mouse_click(struct xy xy)
     }
 
     // See if click is in a pattern
-    for(int i=0; i<n_slots; i++)
+    for(int i=0; i<n_patterns; i++)
     {
         rect_array_layout(&layout.add_pattern.rect_array, i, &r);
         if(xy_in_rect(&xy, &r, &offset)){

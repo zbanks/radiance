@@ -15,5 +15,6 @@ extern pattern_t pat_mstrobe;
 extern pattern_t pat_fade;
 extern pattern_t pat_swipe;
 extern pattern_t pat_rainbow;
+extern pattern_t pat_sparkle;
 
 #endif
