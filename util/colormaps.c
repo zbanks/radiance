@@ -263,3 +263,31 @@ struct colormap cm_stoplight = {
         },
     },
 };
+
+struct colormap cm_bright = {
+    .name = "Bright",
+    .n_points = 5,
+    .state = COLORMAP_STATE_UNINITIALIZED,
+    .points = {
+        { .x = 0.00,
+          .y = {0.8, 0.0, 0.8, 1.},
+          .gamma = 1.,
+        },
+        { .x = 0.15,
+          .y = {0.6, 0.1, 0.9, 1.},
+          .gamma = 1.,
+        },
+        { .x = 0.40,
+          .y = {0.0, 0.4, 1.0, 1.},
+          .gamma = 1.,
+        },
+        { .x = 0.75,
+          .y = {0.0, 1.0, 0.3, 1.},
+          .gamma = 1.,
+        },
+        { .x = 1.00,
+          .y = {1.0, 0.8, 0.0, 1.},
+          .gamma = 1.,
+        },
+    },
+};

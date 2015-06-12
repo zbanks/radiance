@@ -24,12 +24,15 @@
 int main()
 {
     colormap_test_all();
-    colormap_set_global(&cm_rainbow);
+    colormap_set_global(&cm_rainbow_edged);
     colormap_set_mono(0.5);
 
     pattern_init();
     patterns_updating = SDL_CreateMutex();
 
+    config_load(&config, "config.ini");
+    layout_load(&layout, config.path.layout);
+    
     config_dump(&config, "config.ini");
     layout_dump(&layout, config.path.layout);
     //return 0;

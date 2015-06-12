@@ -36,7 +36,7 @@ static parameter_t params[] = {
     },
     [OMEGA] = {
         .name = "\\omega",
-        .default_val = 0.5,
+        .default_val = 0.4,
         .val_to_str = power_quantize_parameter_label,
     },
     [K_MAG] = {

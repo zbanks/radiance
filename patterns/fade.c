@@ -19,6 +19,7 @@ typedef struct
     color_t color;
     float color_phase;
     struct freq_state freq_state;
+    mbeat_t last_event_start;
 } pat_fade_state_t;
 
 enum pat_fade_param_names {
@@ -51,6 +52,7 @@ pat_state_pt pat_fade_init()
     pat_fade_state_t * state = malloc(sizeof(pat_fade_state_t));
     state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
     state->color_phase = 0.;
+    state->last_event_start = 0;
     freq_init(&state->freq_state, 0.5, 1);
     return state;
 }
@@ -65,7 +67,7 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
     pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
     int n_beats = freq_update(&state->freq_state, t, param_state_get(&slot->param_states[FADE_FREQ]));
 
-    if(n_beats){
+    if(n_beats && (t - state->last_event_start > 1000)){
         state->color_phase += n_beats * param_state_get(&slot->param_states[FADE_DELTA]);
         state->color_phase = fmod(state->color_phase, 1.0);
     }
@@ -87,6 +89,7 @@ int pat_fade_event(slot_t* slot, enum pat_event event, float event_data){
             float x = param_state_get(&slot->param_states[FADE_COLOR]) + state->color_phase;
             struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
             state->color = colormap_color(cm, fmod(x, 1.0));
+            state->last_event_start = state->freq_state.last_t;
         break;
         default: return 0;
     }

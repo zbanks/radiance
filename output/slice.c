@@ -14,7 +14,8 @@ output_vertex_t s1v2 = {
 };
 
 output_vertex_t s1v1 = {
-    .x = 0.9,
+    //.x = 0.9,
+    .x = 1.0,
     .y = SP,
     .index = 0,
     .next = &s1v2,
@@ -28,7 +29,8 @@ output_vertex_t s2v2 = {
 };
 
 output_vertex_t s2v1 = {
-    .x = 0.9,
+    //.x = 0.9,
+    .x = 1.0,
     .y = -SP,
     .index = 0,
     .next = &s2v2,
@@ -48,7 +50,7 @@ output_vertex_t s3v1 = {
     .next = &s3v2,
 };
 
-#define N_OUTPUT_STRIPS 4
+#define N_OUTPUT_STRIPS 2
 
 int n_output_strips = N_OUTPUT_STRIPS;
 
@@ -65,6 +67,7 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .first = &s2v1,
         .color = {255,150,0, 255},
     },
+    /*
     {
         .id_int = 0x00000004,
         .length = 60,
@@ -77,6 +80,7 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
         .first = &s3v1,
         .color = {150,255,0, 255},
     },
+    */
 };
 
 void output_to_buffer(output_strip_t* strip, color_t* buffer)

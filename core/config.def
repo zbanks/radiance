@@ -12,7 +12,7 @@ CFGSECTION(state,
 )
 
 CFGSECTION(output,
-    CFG(max_energy, FLOAT, 1.40)
+    CFG(max_energy, FLOAT, 3.00)
 )
 
 CFGSECTION(flux,

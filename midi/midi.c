@@ -80,12 +80,15 @@ void midi_connect_param(param_state_t * param_state, unsigned char device, unsig
         ct->outputs[i].handle_color = controllers_enabled[device].color;
         ct->outputs[i].label_color = controllers_enabled[device].color;
         if(controllers_enabled[device].input_labels[i]){
-            ct->outputs[i].label = controllers_enabled[device].input_labels[i];
+            //ct->outputs[i].label = controllers_enabled[device].input_labels[i];
+            snprintf(&ct->labels[i][0], 7, "%s%c", controllers_enabled[device].input_labels[i], controllers_enabled[device].suffix);
         }else{
             printf("Unlabeled input on device %d (%s): %d\n", device, controllers_enabled[device].name, i);
-            ct->outputs[i].label = malloc(5); // Never free'd
-            snprintf(ct->outputs[i].label, 4, "%d", i);
+            //ct->outputs[i].label = malloc(5); // Never free'd
+
+            snprintf(&ct->labels[i][0], 7, "%d%c", i, controllers_enabled[device].suffix);
         }
+        ct->outputs[i].label = &ct->labels[i][0];
         //strings += 5;
     }
 

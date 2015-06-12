@@ -11,6 +11,7 @@ struct midi_controller {
     int available;
     int n_inputs;
     char ** input_labels;
+    char suffix;
 };
 
 enum midi_devices {

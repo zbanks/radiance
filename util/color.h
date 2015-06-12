@@ -56,6 +56,7 @@ extern struct colormap cm_hot;
 extern struct colormap cm_cyan;
 extern struct colormap cm_purple;
 extern struct colormap cm_stoplight;
+extern struct colormap cm_bright;
 
 extern struct colormap * cm_global;
 extern struct colormap * cm_global_mono;

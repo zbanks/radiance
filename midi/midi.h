@@ -33,6 +33,7 @@ struct midi_connection_table {
     unsigned char device;
     unsigned char event;
     param_output_t outputs[N_DATA1];
+    char labels[N_DATA1][8];
     //unsigned char events[N_DATA1]; // Semaphores
     struct midi_connection_table * next;
 };

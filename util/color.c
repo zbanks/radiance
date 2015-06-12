@@ -46,8 +46,8 @@ struct colormap s_cm_global_mono = {
 struct colormap * cm_global = &cm_rainbow;
 struct colormap * cm_global_mono = &s_cm_global_mono;
 
-int n_colormaps = 9;
-struct colormap * colormaps[9] =  {&s_cm_global_mono, &cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal, &cm_jet, &cm_hot, &cm_cyan, &cm_purple, &cm_stoplight};
+int n_colormaps = 10;
+struct colormap * colormaps[10] =  {&s_cm_global_mono, &cm_rainbow, &cm_rainbow_edged, &cm_rainbow_equal, &cm_jet, &cm_hot, &cm_cyan, &cm_purple, &cm_stoplight, &cm_bright};
 
 static float mono_value = 0;
 

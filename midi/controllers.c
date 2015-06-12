@@ -10,6 +10,7 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
         .color = {0, 150, 255, 255},
         .n_inputs = N_NK2_INPUTS,
         .input_labels = nanokontrol2_labels,
+        .suffix = '\0',
     },
     [MIDI_NP2_1] = {
         .name = "nanoPAD2 MIDI 1",
@@ -18,6 +19,7 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
         .color = {150, 0, 255, 255},
         .n_inputs = N_NP2_INPUTS,
         .input_labels = nanopad2_labels,
+        .suffix = '\0',
     },
     [MIDI_NK2_2] = {
         .name = "nanoKONTROL2 MIDI 1",
@@ -26,6 +28,7 @@ struct midi_controller controllers_enabled[N_MIDI_DEVICES] = {
         .color = {150, 150, 255, 255},
         .n_inputs = N_NK2_INPUTS,
         .input_labels = nanokontrol2_labels,
+        .suffix = '\'',
     },
 };
 

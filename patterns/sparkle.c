@@ -68,7 +68,7 @@ static void update(slot_t* slot, mbeat_t t) {
         if(state->pixels[i] < 0)
             state->pixels[i] = 0;
     }
-    state->gen = RAND_MAX * param_state_get(&slot->param_states[GEN]) * MIN(dt, 0.5) / 100;
+    state->gen = RAND_MAX * param_state_get(&slot->param_states[GEN]) * MIN(dt, 0.5) / 20;
     struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
     state->color = colormap_color(cm, param_state_get(&slot->param_states[COLOR]));
     state->last_t = t;
