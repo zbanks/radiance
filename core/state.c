@@ -18,7 +18,6 @@ static int parse_param(const char * name, const char * value, param_state_t * pa
         printf("Invalid name: %s=%s (idx=%d)\n", name, value, j);
         return -1;
     }
-    printf("param: %d %s\n", j, value);
     if(*value == '@'){
         float min;
         float max;
