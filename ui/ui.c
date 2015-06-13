@@ -497,6 +497,19 @@ void ui_render()
         }
     }
 
+    rect_array_layout(&layout.slot.rect_array, 2, &r);
+    vlineRGBA(screen, r.x - 4, r.y, r.y + r.h, 255, 10, 30, 255);
+    vlineRGBA(screen, r.x - 5, r.y-1, r.y + r.h +1, 255, 10, 30, 255);
+    vlineRGBA(screen, r.x - 6, r.y, r.y + r.h, 255, 10, 30, 255);
+    rect_array_layout(&layout.slot.rect_array, 4, &r);
+    vlineRGBA(screen, r.x - 4, r.y, r.y + r.h, 255, 30, 255, 255);
+    vlineRGBA(screen, r.x - 5, r.y-1, r.y + r.h +1, 255, 30, 255, 255);
+    vlineRGBA(screen, r.x - 6, r.y, r.y + r.h, 255, 30, 255, 255);
+    rect_array_layout(&layout.slot.rect_array, 6, &r);
+    vlineRGBA(screen, r.x - 4, r.y, r.y + r.h, 10, 255, 20, 255);
+    vlineRGBA(screen, r.x - 5, r.y-1, r.y + r.h +1, 10, 255, 20, 255);
+    vlineRGBA(screen, r.x - 6, r.y, r.y + r.h, 10, 255, 20, 255);
+
     for(int i=0; i<n_patterns; i++)
     {
         ui_update_pattern(patterns[i]);
