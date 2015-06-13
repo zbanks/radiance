@@ -1,5 +1,8 @@
 /* CFGSECTION(name, ...) */
 /* CFG(name, function, default) */
+CFGSECTION(ui,
+    CFG(enabled, INT, 0)
+)
 
 CFGSECTION(path,
     CFG(layout, STRING, "layout.ini")

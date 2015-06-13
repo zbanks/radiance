@@ -8,6 +8,7 @@
 #include "core/err.h"
 #include "core/config.h"
 #include "core/slot.h"
+#include "core/state.h"
 #include "core/audio.h"
 #include "filters/filter.h"
 #include "output/output.h"
@@ -35,9 +36,12 @@ int main()
     
     config_dump(&config, "config.ini");
     layout_dump(&layout, config.path.layout);
-    //return 0;
-    //layout_load(&layout, "layout.ini");
-    ui_init();
+
+    int ui_loaded = 0;
+    if(config.ui.enabled){
+        ui_init();
+        ui_loaded = 1;
+    }
 
     pat_load(&slots[0], &pat_rainbow);
     pat_load(&slots[1], &pat_fade);
@@ -52,7 +56,6 @@ int main()
         param_state_setq(&slots[i].param_states[0], (rand() % 1000) / 1000.);
     }
 
-
     filters_load();
 
     audio_start();
@@ -61,23 +64,19 @@ int main()
     output_start();
 
     FPSmanager fps_manager;
-
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
-
-    while(ui_poll())
-    {
-        //float tb = (float)timebase_get() / 1000; // TODO make all times long
-        /*
-        mbeat_t tb = timebase_get();
-
-        update_patterns(tb);
-        update_signals(tb);
-        */
-
-        ui_render();
-
-        stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+    if(ui_loaded){
+        while(ui_poll())
+        {
+            ui_render();
+            stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+        }
+    }else{
+        state_load("state_0.ini");
+        while(1){
+            stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+        }
     }
 
     signal_stop();
@@ -89,7 +88,9 @@ int main()
 
     SDL_DestroyMutex(patterns_updating);
 
-    ui_quit();
+    if(ui_loaded){
+        ui_quit();
+    }
     pattern_del();
 
     return 0;
