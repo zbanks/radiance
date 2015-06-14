@@ -54,11 +54,11 @@ int main()
      * fade > 100fps
      * full > 100fps
      * strobe > 100fps
+     * swipe ~ 70fps
      * sparkle ~ 62fps
      * rainbow ~ 52fps
      * bubble ~42fps
      * wave ~ 42fps
-     * swipe ~ 25fps
      */
 
     /*

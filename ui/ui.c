@@ -1001,14 +1001,20 @@ static int ui_run(void* args)
 
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
+    stat_fps = 100;
 
+    unsigned int last_tick = SDL_GetTicks();
     while(ui_running)
     {
         ui_render();
         ui_poll();
+        // No @ervanalb, `SDL_getFramerate(...)` just returns whatever you *set* the framerate to (100).
         //SDL_framerateDelay(&fps_manager);
         //stat_fps = SDL_getFramerate(&fps_manager);
-        stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+        
+        // Calculate fps and simple LPF
+        stat_fps = 0.8 * stat_fps + 0.2 * (1000. / (SDL_GetTicks() - last_tick));
+        last_tick = SDL_GetTicks();
     }
     return 0;
 }

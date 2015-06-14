@@ -30,7 +30,7 @@ struct swipe {
     enum swipe_state state; // State: growing, shrinking, off
 };
 
-#define N_SWIPE_BUFFER 128
+#define N_SWIPE_BUFFER 20
 
 typedef struct {
     //struct freq_state freq_state;
@@ -112,7 +112,6 @@ static color_t pixel(pat_state_pt pat_state_p, float x, float y)
     color_t output = state->color;
     float a = 0.;
 
-    // TEMPLATE: Compute color at (x, y) from state
     for(int i = 0; i < N_SWIPE_BUFFER; i++){
         struct swipe * swipe = &state->swipe_buffer[i];
         if(swipe->state != SWIPE_OFF){
