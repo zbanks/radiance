@@ -4,6 +4,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_ttf.h>
+#include <SDL/SDL_framerate.h>
 
 #include "ui/ui.h"
 #include "ui/layout.h"
@@ -82,7 +83,11 @@ static float * master_xs;
 static float * master_ys;
 static color_t * master_frame;
 
-void ui_init()
+static void (*ui_done_fn)();
+static int ui_running;
+static SDL_Thread* ui_thread;
+
+static void ui_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO))
     {
@@ -464,7 +469,7 @@ static void ui_draw_button(SDL_Surface * surface, struct txt * label_fmt, const 
     text_render(surface, label_fmt, 0, label);
 }
 
-void ui_render()
+static void ui_render()
 {
     rect_t r;
     SDL_FillRect(screen, &layout.window.rect, SDL_MapRGB(screen->format, 0, 0, 0));
@@ -926,7 +931,7 @@ static int mouse_click(struct xy xy)
     //return 0;
 }
 
-int ui_poll()
+static void ui_poll()
 {
     SDL_Event e;
     struct midi_event * me;
@@ -939,7 +944,9 @@ int ui_poll()
         switch(e.type)
         {
             case SDL_QUIT:
-                return 0;
+                ui_running = 0;
+                if(ui_done_fn) (*ui_done_fn)();
+                break;
             case SDL_MOUSEBUTTONDOWN:
                 // If there's an active param source, cancel it after the click
                 if(active_param_source){
@@ -980,6 +987,43 @@ int ui_poll()
                 break;
         }
     }
-    return 1;
 }
+
+static int ui_run(void* args)
+{
+    UNUSED(args);
+    FPSmanager fps_manager;
+    SDL_initFramerate(&fps_manager);
+    SDL_setFramerate(&fps_manager, 100);
+
+    ui_init();
+
+    while(ui_running)
+    {
+        ui_render();
+        ui_poll();
+        SDL_framerateDelay(&fps_manager);
+        stat_fps = SDL_getFramerate(&fps_manager);
+    }
+    return 0;
+}
+
+void ui_start(void (*ui_done)())
+{
+    ui_running = 1;
+    ui_done_fn = ui_done;
+
+    ui_init();
+
+    ui_thread = SDL_CreateThread(&ui_run, 0);
+    if(!ui_thread) FAIL("Could not create UI thread: %s\n",SDL_GetError());
+}
+
+void ui_stop()
+{
+    ui_running = 0;
+
+    SDL_WaitThread(ui_thread, 0);
+}
+
 
