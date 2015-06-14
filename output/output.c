@@ -71,7 +71,8 @@ static int output_run(void* args)
             if(output_on_lux && (output_strips[i].bus & OUTPUT_LUX))
                 output_lux_push(&output_strips[i], frame, j);
         }
-        stat_ops = 1000. / SDL_framerateDelay(&fps_manager);
+        SDL_framerateDelay(&fps_manager);
+        stat_ops = SDL_getFramerate(&fps_manager);
     }
     return 0;
 }

@@ -70,12 +70,14 @@ int main()
         while(ui_poll())
         {
             ui_render();
-            stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+            SDL_framerateDelay(&fps_manager);
+            stat_fps = SDL_getFramerate(&fps_manager);
         }
     }else{
         state_load("state_0.ini");
         while(1){
-            stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+            SDL_framerateDelay(&fps_manager);
+            stat_fps = SDL_getFramerate(&fps_manager);
         }
     }
 

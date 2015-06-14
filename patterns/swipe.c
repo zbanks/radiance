@@ -141,19 +141,19 @@ static color_t pixel(slot_t* slot, float x, float y) {
     return output;
 }
 
-static int event(slot_t* slot, enum pat_event event, float event_data){
+static int event(slot_t* slot, enum pat_event e, float event_data){
     state_t * state = (state_t *) slot->state;
     if(isnan(event_data)) event_data = 0;
     struct swipe * swipe;
     int i;
-    switch(event){
+    switch(e){
         case PATEV_M1_NOTE_ON:
             for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
                 if(state->swipe_buffer[i].state == SWIPE_OFF) break;
             }
             swipe = &state->swipe_buffer[i];
 
-            swipe->source = event;
+            swipe->source = e;
             swipe->ox = 1;
             swipe->oy = 0;
             swipe->length = 0;
@@ -168,7 +168,7 @@ static int event(slot_t* slot, enum pat_event event, float event_data){
             }
             swipe = &state->swipe_buffer[i];
 
-            swipe->source = event;
+            swipe->source = e;
             swipe->ox = -1;
             swipe->oy = 0;
             swipe->length = 0;
@@ -183,7 +183,7 @@ static int event(slot_t* slot, enum pat_event event, float event_data){
             }
             swipe = &state->swipe_buffer[i];
 
-            swipe->source = event;
+            swipe->source = e;
             swipe->ox = -1;
             swipe->oy = -1;
             swipe->length = 0;

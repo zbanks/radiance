@@ -7,7 +7,7 @@
 #define N_SLOTS 8
 
 int n_slots = N_SLOTS;
-slot_t slots[N_SLOTS] = {{0}};
+slot_t slots[N_SLOTS]; // Initialize everything to zero
 
 SDL_mutex* patterns_updating;
 
