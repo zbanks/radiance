@@ -49,6 +49,24 @@ int main()
     
     config_dump(&config, "config.ini");
     layout_dump(&layout, config.path.layout);
+    
+    /*
+     * fade > 100fps
+     * full > 100fps
+     * strobe > 100fps
+     * sparkle ~ 50fps
+     * bubble ~42fps
+     * rainbow ~ 38fps
+     * wave ~ 35fps
+     * swipe ~ 25fps
+     */
+
+    /*
+    pattern_t * test_pat = &pat_sparkle;
+    for(int i = 0; i < n_slots; i++){
+        pat_load(&slots[i], test_pat);
+    }
+    */
 
     pat_load(&slots[0], &pat_rainbow);
     pat_load(&slots[1], &pat_fade);

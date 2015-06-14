@@ -1006,8 +1006,9 @@ static int ui_run(void* args)
     {
         ui_render();
         ui_poll();
-        SDL_framerateDelay(&fps_manager);
-        stat_fps = SDL_getFramerate(&fps_manager);
+        //SDL_framerateDelay(&fps_manager);
+        //stat_fps = SDL_getFramerate(&fps_manager);
+        stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
     }
     return 0;
 }
