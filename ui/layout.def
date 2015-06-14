@@ -1,10 +1,15 @@
 /* CFGSECTION(name, ...) */
 /* CFG(name, function, default) */
-/* CFG_XY(prefix, x_default, y_default) */
-/* CFG_RECT(x_default, y_default, width_default, height_default) */
-/* CFG_RECT_ARRAY(x_start_default, y_start_default, 
-                  width_default, height_default,
-                  pitch_x_default, pitch_y_default) */
+/* CFG_XY(prefix, x, y) */
+/* CFG_RECT(prefix, x, y, width, height) */
+/* CFG_RECT_ARRAY(prefix, x_start, y_start, 
+                          width, height,
+                          x_pitch, y_pitch, 
+                          tile_pattern) */
+/* tile_pattern is LAYOUT_TILE_NONE or a number times either LAYOUT_TILE_N_ACROSS or LAYOUT_TILE_N_DOWN */
+/* CFG_TXT(prefix, x, y, font_size, centering, font_name, color) */
+/* `centering` is one of: LAYOUT_ALIGN_TL, LAYOUT_ALIGN_BR, LAYOUT_ALIGN_TC, LAYOUT_ALIGN_CC, LAYOUT_ALIGN_TR */
+
 
 CFGSECTION(globals,
     CFG(font_directory, STRING, "/usr/share/fonts/truetype/freefont/")
@@ -23,8 +28,8 @@ CFGSECTION(slot,
     CFG_RECT_ARRAY(, 10, 245, 115, 350, 125, 0, 0)
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_RECT(alpha, 0, 10, 20, 80)
-    CFG_TXT(palette, 62, 92, 13, 2, "FreeSans.ttf", "#FFFFFF")
-    CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, 0)
+    CFG_TXT(palette, 62, 92, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, LAYOUT_TILE_NONE)
 )
 
 CFGSECTION(audio,
@@ -32,17 +37,17 @@ CFGSECTION(audio,
     CFG_RECT(auto, 190, 125, 10, 10)
     CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
-    CFG_TXT(bpm, 50, 120, 20, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(fps, 10, 160, 12, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(ops, 100, 160, 12, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(beat, 35, 130, 12, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_RECT_ARRAY(bins, 260, 110, 15, 15, 0, 20, 0)
+    CFG_TXT(bpm, 50, 120, 20, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(fps, 10, 160, 12, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(ops, 100, 160, 12, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(beat, 35, 130, 12, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(bins, 260, 110, 15, 15, 0, 20, LAYOUT_TILE_NONE)
 )
 
 CFGSECTION(signal,
     CFG_RECT_ARRAY(, 750, 30, 110, 200, 115, 0, 0)
-    CFG_TXT(name, 55, 3, 18, 2, "FreeSans.ttf", "#FFFFFF")
-    CFG_RECT_ARRAY(sliders, 5, 60, 100, 32, 0, 32, 0)
+    CFG_TXT(name, 55, 3, 18, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(sliders, 5, 60, 100, 32, 0, 32, LAYOUT_TILE_NONE)
 )
 
 CFGSECTION(alpha_slider,
@@ -57,14 +62,14 @@ CFGSECTION(slider,
     CFG_RECT(track, 3, 16, 94, 3)
     CFG_RECT(handle, 3, 12, 10, 10)
     CFG_RECT(output_indicator, 3, 12, 2, 10)
-    CFG_TXT(name, 3, 0, 10, 0, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(source, 94, 0, 10, 4, "FreeSans.ttf", "#FFFFFF")
-    CFG_TXT(value, 3, 23, 10, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 3, 0, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(source, 94, 0, 10, LAYOUT_ALIGN_TR, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(value, 3, 23, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
     
 CFGSECTION(add_pattern,
     CFG_RECT_ARRAY(, 1010, 250, 100, 30, 0, 35, 0)
-    CFG_TXT(name, 50, 15, 16, 3, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 50, 15, 16, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(waveform,
@@ -83,33 +88,33 @@ CFGSECTION(graph_filter,
 )
 
 CFGSECTION(filter,
-    CFG_RECT_ARRAY(, 530, 30,  200, 98,  0,  102, 0)
-    CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 530, 30,  200, 98,  0,  102, LAYOUT_TILE_NONE)
+    CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(output,
-    CFG_RECT_ARRAY(, 1120, 250, 160, 45,  0,  50, 0)
-    CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 1120, 250, 160, 45,  0,  50, LAYOUT_TILE_NONE)
+    CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(midi,
-    CFG_RECT_ARRAY(, 1120, 510, 160, 45,  0,  50, 0)
-    CFG_TXT(name, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 1120, 510, 160, 45,  0,  50, LAYOUT_TILE_NONE)
+    CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_save,
-    CFG_RECT_ARRAY(, 1120, 700, 55, 25,  60,  0, 0)
-    CFG_TXT(label, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 1120, 700, 55, 25,  60,  0, LAYOUT_TILE_NONE)
+    CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_load,
-    CFG_RECT_ARRAY(, 1120, 730, 55, 25,  60,  0, 0)
-    CFG_TXT(label, 5, 5, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 1120, 730, 55, 25,  60,  0, LAYOUT_TILE_NONE)
+    CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(palette,
-    CFG_RECT_ARRAY(, 15, 610, 265, 35, 275, 44, 4)
-    CFG_TXT(name, 3, 2, 14, 0, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 15, 610, 265, 35, 275, 44, 4 * LAYOUT_TILE_N_ACROSS)
+    CFG_TXT(name, 3, 2, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT(preview, 0, 26, 265, 8)
     CFG_RECT(active, 250, 8, 8, 8)
 )

@@ -8,6 +8,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include "core/config_macros.h"
+#include "ui/layout_constants.h"
 
 #define COLOR SDL_Color
 #define COLOR_FN(x) parse_color(x)

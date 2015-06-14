@@ -3,6 +3,7 @@
 #include "ui/ui.h"
 #include "ui/text.h"
 #include "ui/layout.h"
+#include "ui/layout_constants.h"
 #include <SDL/SDL.h>
 #include <SDL/SDL_gfxPrimitives.h>
 #include <SDL/SDL_ttf.h>
@@ -64,17 +65,17 @@ void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * c
     r.h = msg->h;
     
     switch(params->align){
-        case TXTALIGN_BR:
-            r.y -= r.h;
-        case TXTALIGN_TR:
+        case LAYOUT_ALIGN_BR:
+            r.y -= r.h; // fall through
+        case LAYOUT_ALIGN_TR:
             r.x -= r.w;
             break;
-        case TXTALIGN_CC:
+        case LAYOUT_ALIGN_CC:
             r.y -= r.h / 2; // fall through
-        case TXTALIGN_TC:
+        case LAYOUT_ALIGN_TC:
             r.x -= r.w / 2;
             break;
-        case TXTALIGN_TL:
+        case LAYOUT_ALIGN_TL:
         default:
             break;
     }

@@ -1,7 +1,10 @@
 *.o
+*.so
 *.d
 beat-off
 *.swp
 *.swm
 *.swn
 *.swo
+*.orig
+*.vim
