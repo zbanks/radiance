@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_framerate.h>
@@ -24,6 +25,12 @@
 
 static void ui_done_callback()
 {
+    output_stop();
+}
+
+void catch_sigterm(int sig)
+{
+    UNUSED(sig);
     output_stop();
 }
 
@@ -57,6 +64,10 @@ int main()
 
     filters_load();
 
+    // Set up signal handling before threads are made
+    signal(SIGTERM, catch_sigterm);
+    signal(SIGINT, catch_sigterm);
+
     audio_start();
     midi_start();
     signal_start();
@@ -67,12 +78,13 @@ int main()
 
     output_init();
     output_run();
-    // TODO SIG HANDLER that calls output_stop();
 
+    printf("\nShutting down...\n");
+
+    if(config.ui.enabled) ui_stop();
     signal_stop();
     midi_stop();
     audio_stop();
-    if(config.ui.enabled) ui_stop();
 
     filters_unload();
 
