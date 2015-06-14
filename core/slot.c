@@ -18,10 +18,10 @@ void render_composite_frame(state_source_t src, float * x, float * y, size_t n, 
         if(!slots[i].pattern) continue;
         const pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
         const pat_render_fn_pt pat_render = *slots[i].pattern->render;
+        float slot_alpha = param_state_get(&slots[i].alpha);
 
-        for(size_t j = 0; j < n; j++){
-            float slot_alpha = param_state_get(&slots[i].alpha);
-            if(slot_alpha > 1e-4){
+        if(slot_alpha > 1e-4){
+            for(size_t j = 0; j < n; j++){
                 color_t c = pat_render(pat_state_p, x[j], y[j]);
                 c.a *= slot_alpha;
                 out[j].r = out[j].r * (1. - c.a) + c.r * c.a;
