@@ -16,8 +16,6 @@
 typedef struct {
     color_t color;
     mbeat_t last_t;
-    int gen;
-    int has_gen;
     float pixels[BUCKET_SIZE];
 } state_t;
 
@@ -59,11 +57,13 @@ static void update(slot_t* slot, mbeat_t t) {
     for(int i = 0; i < BUCKET_SIZE; i++){
         state->pixels[i] -= decay;
     }
+    int gen = RAND_MAX * param_state_get(&slot->param_states[GEN]) / BUCKET_SIZE * 10;
     for(int i = 0; i < BUCKET_SIZE; i++){
+        if(rand() < gen)
+            state->pixels[i] = 1.;
         if(state->pixels[i] < 0)
             state->pixels[i] = 0;
     }
-    state->gen = RAND_MAX * param_state_get(&slot->param_states[GEN]) * MIN(dt, 0.5) / 20;
     struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
     state->color = colormap_color(cm, param_state_get(&slot->param_states[COLOR]));
     state->last_t = t;
@@ -76,9 +76,6 @@ static color_t pixel(pat_state_pt pat_state_p, float x, float y)
     memcpy(&hash, &x, 4);
     memcpy(((uint32_t *) &hash)+1, &y, 4);
     size_t b = hash % BUCKET_SIZE;
-
-    if(rand() < state->gen)
-        state->pixels[b] = 1.;
 
     color_t output = state->color;
     output.a = state->pixels[b];
