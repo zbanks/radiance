@@ -81,7 +81,6 @@ int main()
         param_state_setq(&slots[i].param_states[0], (rand() % 1000) / 1000.);
     }
 
-    filters_load();
 
     if (SDL_Init(config.ui.enabled ? SDL_INIT_VIDEO : 0))
     {
@@ -96,9 +95,11 @@ int main()
     midi_start();
     signal_start();
 
-    //state_load("state_0.ini");
 
     if(config.ui.enabled) ui_start(&ui_done_callback);
+
+    filters_load();
+    //state_load("state_0.ini");
 
     output_init();
     output_run();
