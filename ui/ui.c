@@ -1008,8 +1008,9 @@ static int ui_run(void* args)
     {
         ui_render();
         ui_poll();
+        SDL_framerateDelay(&fps_manager);
+
         // No @ervanalb, `SDL_getFramerate(...)` just returns whatever you *set* the framerate to (100).
-        //SDL_framerateDelay(&fps_manager);
         //stat_fps = SDL_getFramerate(&fps_manager);
         
         // Calculate fps and simple LPF

@@ -32,9 +32,11 @@ void output_run(void* args)
 
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
+    stat_ops = 100;
 
     output_running = 1;   
- 
+    unsigned int last_tick = SDL_GetTicks();
+
     while(output_running)
     {
         mbeat_t tb = timebase_get();
@@ -73,7 +75,9 @@ void output_run(void* args)
                 output_lux_push(&output_strips[i], frame, j);
         }
         SDL_framerateDelay(&fps_manager);
-        stat_ops = SDL_getFramerate(&fps_manager);
+        //stat_ops = SDL_getFramerate(&fps_manager);
+        stat_ops = 0.8 * stat_ops + 0.2 * (1000. / (SDL_GetTicks() - last_tick));
+        last_tick = SDL_GetTicks();
     }
 
     for(int i=0; i<n_output_strips; i++)
