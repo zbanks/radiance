@@ -75,7 +75,15 @@ int main()
     }else{
         state_load("state_0.ini");
         while(1){
-            stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
+            int i = 0;
+            printf("Load configuration [0-%d]: ", config.state.n_states - 1);
+            if(scanf("%d", &i)){
+                if(i < config.state.n_states && i > 0){
+                    char filename[1024];
+                    snprintf(filename, 1023, config.state.path_format, i);
+                    state_load(filename);
+                }
+            }
         }
     }
 
