@@ -17,41 +17,20 @@ void render_composite_frame(state_source_t src, float * x, float * y, size_t n, 
     for(int i = 0; i < n_slots; i++){
         if(!slots[i].pattern) continue;
         const pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
+        const pat_render_fn_pt pat_render = *slots[i].pattern->render;
 
         for(size_t j = 0; j < n; j++){
-            color_t c = (*slots[i].pattern->render)(pat_state_p, x[j], y[j]);
-            c.a *= param_state_get(&slots[i].alpha);
-            out[j].r = out[j].r * (1. - c.a) + c.r * c.a;
-            out[j].g = out[j].g * (1. - c.a) + c.g * c.a;
-            out[j].b = out[j].b * (1. - c.a) + c.b * c.a;
+            float slot_alpha = param_state_get(&slots[i].alpha);
+            if(slot_alpha > 1e-4){
+                color_t c = pat_render(pat_state_p, x[j], y[j]);
+                c.a *= slot_alpha;
+                out[j].r = out[j].r * (1. - c.a) + c.r * c.a;
+                out[j].g = out[j].g * (1. - c.a) + c.g * c.a;
+                out[j].b = out[j].b * (1. - c.a) + c.b * c.a;
+            }
         }
     }
 }
-
-/*
-color_t render_composite(float x, float y)
-{
-    color_t result;
-
-    result.r = 0;
-    result.g = 0;
-    result.b = 0;
-
-    for(int i=0; i < n_slots; i++)
-    {
-        if(slots[i].pattern)
-        {
-            color_t c = (*slots[i].pattern->render)(slots[i].ui_state, x, y);
-            c.a *= param_state_get(&slots[i].alpha);
-            result.r = result.r * (1 - c.a) + c.r * c.a;
-            result.g = result.g * (1 - c.a) + c.g * c.a;
-            result.b = result.b * (1 - c.a) + c.b * c.a;
-        }
-    }
-
-    return result;
-}
-*/
 
 void update_patterns(mbeat_t t)
 {
