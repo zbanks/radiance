@@ -107,8 +107,9 @@ static void update(slot_t* slot, mbeat_t t) {
     state->last_t = t;
 }
 
-static color_t pixel(slot_t* slot, float x, float y) {
-    state_t * state = (state_t *) slot->state;
+static color_t pixel(pat_state_pt pat_state_p, float x, float y)
+{
+    state_t * state = (state_t*)pat_state_p;
     color_t output = state->color;
     float a = 0.;
 

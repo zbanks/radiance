@@ -1,9 +1,9 @@
 #ifndef __PATTERN_H
 #define __PATTERN_H
 
-#include "core/slot.h"
 #include "core/time.h"
 #include "util/color.h"
+#include "core/parameter.h"
 
 struct pattern;
 struct slot;
@@ -34,7 +34,7 @@ typedef void* pat_state_pt;
 typedef void (*pat_init_fn_pt)(pat_state_pt);
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
 typedef int (*pat_event_fn_pt)(struct slot* slot, enum pat_event event, float event_data);
-typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
+typedef color_t (*pat_render_fn_pt)(pat_state_pt state, float x, float y);
 
 typedef struct pattern
 {

@@ -69,8 +69,9 @@ static void update(slot_t* slot, mbeat_t t) {
     state->last_t = t;
 }
 
-static color_t pixel(slot_t* slot, float x, float y) {
-    state_t * state = (state_t *) slot->state;
+static color_t pixel(pat_state_pt pat_state_p, float x, float y)
+{
+    state_t * state = (state_t*)pat_state_p;
     uint64_t hash;
     memcpy(&hash, &x, 4);
     memcpy(((uint32_t *) &hash)+1, &y, 4);

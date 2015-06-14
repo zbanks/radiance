@@ -49,11 +49,11 @@ void pat_full_update(slot_t* slot, long t)
     color->b *= v;
 }
 
-color_t pat_full_pixel(slot_t* slot, float x, float y)
+color_t pat_full_pixel(pat_state_pt pat_state_p, float x, float y)
 {
     UNUSED(x);
     UNUSED(y);
-    return *(color_t*)slot->state;
+    return *(color_t*)pat_state_p;
 }
 
 int pat_full_event(slot_t* slot, enum pat_event event, float event_data){

@@ -109,7 +109,7 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
         strip->ys[i] = alpha * vert->next->y + (1 - alpha) * vert->y;
         //buffer[i] = render_composite(x, y);
     }
-    render_composite_frame(slots, strip->xs, strip->ys, strip->length, strip->frame);
+    render_composite_frame(STATE_SOURCE_OUTPUT, strip->xs, strip->ys, strip->length, strip->frame);
 
     free(strip->xs);
     free(strip->ys);

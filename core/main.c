@@ -64,6 +64,11 @@ int main()
 
     filters_load();
 
+    if (SDL_Init(config.ui.enabled ? SDL_INIT_VIDEO : 0))
+    {
+        FAIL("SDL_Init Error: %s\n", SDL_GetError());
+    }
+
     // Set up signal handling before threads are made
     signal(SIGTERM, catch_sigterm);
     signal(SIGINT, catch_sigterm);
