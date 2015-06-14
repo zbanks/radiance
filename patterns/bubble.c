@@ -58,19 +58,13 @@ parameter_t pat_bubble_params[N_BUBBLE_PARAMS] = {
     },
 };
 
-pat_state_pt pat_bubble_init()
+void pat_bubble_init(pat_state_pt state)
 {
-    pat_bubble_state_t * state = malloc(sizeof(pat_bubble_state_t));
-    state->color = (color_t) {0., 0., 0., 0.};
-    state->r = 0.;
-    state->cx = 0.;
-    state->cy = 0.;
-    return state;
-}
-
-void pat_bubble_del(pat_state_pt state)
-{
-    free(state);
+    pat_bubble_state_t * bubble_state = (pat_bubble_state_t*)state;
+    bubble_state->color = (color_t) {0., 0., 0., 0.};
+    bubble_state->r = 0.;
+    bubble_state->cx = 0.;
+    bubble_state->cy = 0.;
 }
 
 void pat_bubble_update(slot_t* slot, long t)
@@ -99,10 +93,10 @@ int pat_bubble_event(slot_t* slot, struct pat_event event, float event_data){
     return 1;
 }
 
-color_t pat_bubble_pixel(slot_t* slot, float x, float y)
+color_t pat_bubble_pixel(pat_state_pt pat_state_p, float x, float y)
 {
     float d;
-    pat_bubble_state_t* state = (pat_bubble_state_t*)slot->state;
+    pat_bubble_state_t* state = (pat_bubble_state_t*)pat_state_p;
     color_t result = state->color;
 
     d = sqrt(pow(state->cx - x, 2) + pow(state->cy - y, 2)) / state->r;
@@ -117,10 +111,10 @@ color_t pat_bubble_pixel(slot_t* slot, float x, float y)
 pattern_t pat_bubble = {
     .render = &pat_bubble_pixel,
     .init = &pat_bubble_init,
-    .del = &pat_bubble_del,
     .update = &pat_bubble_update,
     .event = &pat_bubble_event,
     .n_params = N_BUBBLE_PARAMS,
     .parameters = pat_bubble_params,
     .name = "Bubble",
+    .state_size = sizeof(pat_bubble_state_t),
 };

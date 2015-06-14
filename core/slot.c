@@ -3,22 +3,24 @@
 #include "core/err.h"
 #include "core/slot.h"
 #include "core/time.h"
+#include "core/config.h"
 
 #define N_SLOTS 8
 
 int n_slots = N_SLOTS;
-slot_t slots[N_SLOTS] = {{0}};
+slot_t slots[N_SLOTS]; // Initialize everything to zero
 
 SDL_mutex* patterns_updating;
 
-void render_composite_frame(slot_t * fslots, float * x, float * y, size_t n, color_t * out){
+void render_composite_frame(state_source_t src, float * x, float * y, size_t n, color_t * out){
     memset(out, 0, n * sizeof(color_t)); // Initialize to black
     for(int i = 0; i < n_slots; i++){
-        if(!fslots[i].pattern) continue;
+        if(!slots[i].pattern) continue;
+        pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
 
         for(size_t j = 0; j < n; j++){
-            color_t c = (*fslots[i].pattern->render)(&fslots[i], x[j], y[j]);
-            c.a *= param_state_get(&fslots[i].alpha);
+            color_t c = (*slots[i].pattern->render)(pat_state_p, x[j], y[j]);
+            c.a *= param_state_get(&slots[i].alpha);
             out[j].r = out[j].r * (1. - c.a) + c.r * c.a;
             out[j].g = out[j].g * (1. - c.a) + c.g * c.a;
             out[j].b = out[j].b * (1. - c.a) + c.b * c.a;
@@ -26,6 +28,7 @@ void render_composite_frame(slot_t * fslots, float * x, float * y, size_t n, col
     }
 }
 
+/*
 color_t render_composite(float x, float y)
 {
     color_t result;
@@ -38,7 +41,7 @@ color_t render_composite(float x, float y)
     {
         if(slots[i].pattern)
         {
-            color_t c = (*slots[i].pattern->render)(&slots[i], x, y);
+            color_t c = (*slots[i].pattern->render)(slots[i].ui_state, x, y);
             c.a *= param_state_get(&slots[i].alpha);
             result.r = result.r * (1 - c.a) + c.r * c.a;
             result.g = result.g * (1 - c.a) + c.g * c.a;
@@ -48,6 +51,7 @@ color_t render_composite(float x, float y)
 
     return result;
 }
+*/
 
 void update_patterns(mbeat_t t)
 {
@@ -64,14 +68,36 @@ void update_patterns(mbeat_t t)
     SDL_UnlockMutex(patterns_updating); 
 }
 
+void update_ui()
+{
+    if(SDL_LockMutex(patterns_updating)) FAIL("Could not lock mutex: %s\n", SDL_GetError());
+
+    for(int i=0; i < n_slots; i++)
+    {
+        if(slots[i].pattern)
+        {
+            memcpy(slots[i].ui_state, slots[i].state, slots[i].pattern->state_size);
+        }
+    }
+
+    SDL_UnlockMutex(patterns_updating); 
+}
+
 void pat_load(slot_t* slot, pattern_t* pattern)
 {
     if(slot->pattern) pat_unload(slot);
 
     slot->pattern = pattern;
 
-    slot->state = (*pattern->init)();
+    slot->state = malloc(pattern->state_size);
     if(!slot->state) FAIL("Could not malloc pattern state\n");
+    (*pattern->init)(slot->state);
+
+    if(config.ui.enabled)
+    {
+        slot->ui_state = malloc(pattern->state_size);
+        if(!slot->ui_state) FAIL("Could not malloc pattern state\n");
+    }
 
     slot->colormap = NULL;
 
@@ -95,7 +121,11 @@ void pat_unload(slot_t* slot)
     param_state_disconnect(&slot->alpha);
     */
 
-    (*slot->pattern->del)(slot->state);
+    free(slot->state);
+    if(config.ui.enabled)
+    {
+        free(slot->ui_state);
+    }
     slot->pattern = 0;
 }
 

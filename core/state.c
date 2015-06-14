@@ -54,7 +54,7 @@ static int parse_param(const char * name, const char * value, param_state_t * pa
     return 0;
 }
 
-static int dump_param(FILE * stream, param_state_t * param_state, parameter_t * parameter, int index){
+static int dump_param(FILE * stream, param_state_t * param_state, parameter_t * parameter, int i){
     if(param_state->connected_output){
         char * sfmt = "param_%1$d=@%2$-31s";
         if(param_state->mode == PARAM_VALUE_SCALED){
@@ -62,9 +62,9 @@ static int dump_param(FILE * stream, param_state_t * param_state, parameter_t * 
         }else if(param_state->mode == PARAM_VALUE_EXPANDED){
             sfmt = "param_%1$d=@(%3$6f,%4$6f)%2$-18s";
         }
-        fprintf(stream, sfmt, index, param_state->connected_output->label, param_state->min, param_state->max);
+        fprintf(stream, sfmt, i, param_state->connected_output->label, param_state->min, param_state->max);
     }else{
-        fprintf(stream, "param_%d=%-32f", index, param_state->value);
+        fprintf(stream, "param_%d=%-32f", i, param_state->value);
     }
 
     fprintf(stream, " ; %s",  parameter->name);

@@ -20,12 +20,11 @@
 color_t** output_buffers = 0;
 
 static int output_running;
-static SDL_Thread* output_thread;
 
 static int output_on_flux = 0;
 static int output_on_lux = 0;
 
-static int output_run(void* args)
+void output_run(void* args)
 {
     UNUSED(args);
     FPSmanager fps_manager;
@@ -33,7 +32,9 @@ static int output_run(void* args)
 
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
-    
+
+    output_running = 1;   
+ 
     while(output_running)
     {
         mbeat_t tb = timebase_get();
@@ -71,12 +72,24 @@ static int output_run(void* args)
             if(output_on_lux && (output_strips[i].bus & OUTPUT_LUX))
                 output_lux_push(&output_strips[i], frame, j);
         }
-        stat_ops = 1000. / SDL_framerateDelay(&fps_manager);
+        SDL_framerateDelay(&fps_manager);
+        stat_ops = SDL_getFramerate(&fps_manager);
     }
-    return 0;
+
+    for(int i=0; i<n_output_strips; i++)
+    {
+        free(output_buffers[i]);
+    }
+
+    free(output_buffers);
+
+    if(output_on_flux)
+        output_flux_del();
+    if(output_on_lux)
+        output_lux_del();
 }
 
-void output_start()
+void output_init()
 {
     output_buffers = malloc(sizeof(color_t*) * n_output_strips);
 
@@ -108,29 +121,9 @@ void output_start()
     if(output_on_lux) n_lux = output_lux_enumerate(output_strips, n_output_strips);
 
     printf("Found %d flux devices & %d lux devices\n", n_flux, n_lux);
-
-    // Create output thread to run updates even if no serial was init'd
-    output_running = 1;
-    output_thread = SDL_CreateThread(&output_run, 0);
-    if(!output_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
 }
 
 void output_stop()
 {
     output_running = 0;
-
-    SDL_WaitThread(output_thread, 0);
-
-    for(int i=0; i<n_output_strips; i++)
-    {
-        free(output_buffers[i]);
-    }
-
-    free(output_buffers);
-
-    if(output_on_flux)
-        output_flux_del();
-    if(output_on_lux)
-        output_lux_del();
 }
-

@@ -17,6 +17,7 @@ typedef struct {
     enum osc_type type;
     float kx;
     float ky;
+    struct colormap* colormap;
 } state_t;
 
 enum param_names {
@@ -51,17 +52,12 @@ static parameter_t params[] = {
     },
 };
 
-static pat_state_pt init() {
-    state_t * state = malloc(sizeof(state_t));
+static void init(pat_state_pt pat_state_p) {
+    state_t * state = (state_t*)pat_state_p;
     freq_init(&state->freq_state, 0.5, 0);
     state->type = OSC_SINE;
     state->kx = 1.0;
     state->ky = 0.0;
-    return state;
-}
-
-static void del(pat_state_pt state) {
-    free(state);
 }
 
 static void update(slot_t* slot, mbeat_t t) {
@@ -75,13 +71,13 @@ static void update(slot_t* slot, mbeat_t t) {
     k_ang = param_state_get(&slot->param_states[K_ANGLE]) * 2 * M_PI;
     state->kx = COS(k_ang) * k_mag;
     state->ky = SIN(k_ang) * k_mag;
+    state->colormap = slot->colormap ? slot->colormap : cm_global;
 }
 
-static color_t pixel(slot_t* slot, float x, float y) {
-    state_t * state = (state_t *) slot->state;
+static color_t pixel(pat_state_pt pat_state_p, float x, float y) {
+    state_t * state = (state_t*)pat_state_p;
     float t = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
-    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
-    return colormap_color(cm, t);
+    return colormap_color(state->colormap, t);
 }
 
 static int event(slot_t* slot, struct pat_event event, float event_data){
@@ -96,10 +92,10 @@ static int event(slot_t* slot, struct pat_event event, float event_data){
 pattern_t pat_rainbow = {
     .render = &pixel,
     .init = &init,
-    .del = &del,
     .update = &update,
     .event = &event,
     .n_params = N_PARAMS,
     .parameters = params,
+    .state_size = sizeof(state_t),
     .name = "Rainbow",
 };

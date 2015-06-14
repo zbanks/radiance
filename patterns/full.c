@@ -30,16 +30,10 @@ parameter_t pat_full_params[] = {
     },
 };
 
-pat_state_pt pat_full_init()
+void pat_full_init(pat_state_pt state)
 {
-    color_t * color = malloc(sizeof(color_t));
+    color_t * color = (color_t*)state;
     *color = (color_t) {.r = 0., .g = 0., .b = 0., .a = 0.};
-    return color;
-}
-
-void pat_full_del(pat_state_pt state)
-{
-    free(state);
 }
 
 void pat_full_update(slot_t* slot, long t)
@@ -55,11 +49,11 @@ void pat_full_update(slot_t* slot, long t)
     color->b *= v;
 }
 
-color_t pat_full_pixel(slot_t* slot, float x, float y)
+color_t pat_full_pixel(pat_state_pt pat_state_p, float x, float y)
 {
     UNUSED(x);
     UNUSED(y);
-    return *(color_t*)slot->state;
+    return *(color_t*)pat_state_p;
 }
 
 int pat_full_event(slot_t* slot, struct pat_event event, float event_data){
@@ -81,10 +75,10 @@ int pat_full_event(slot_t* slot, struct pat_event event, float event_data){
 pattern_t pat_full = {
     .render = &pat_full_pixel,
     .init = &pat_full_init,
-    .del = &pat_full_del,
     .update = &pat_full_update,
     .event = &pat_full_event,
     .n_params = N_FULL_PARAMS,
     .parameters = pat_full_params,
     .name = "Full",
+    .state_size = sizeof(color_t),
 };

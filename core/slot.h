@@ -13,13 +13,20 @@ struct pattern;
 
 #define N_MAX_PARAMS 8
 
+typedef enum
+{
+    STATE_SOURCE_OUTPUT,
+    STATE_SOURCE_UI,
+} state_source_t;
+
 typedef struct slot
 {
     struct pattern * pattern;
-    void* state;
+    pat_state_pt state;
     struct colormap * colormap;
     param_state_t alpha;
     param_state_t param_states[N_MAX_PARAMS];
+    pat_state_pt ui_state;
 } slot_t;
 
 extern int n_slots;
@@ -28,11 +35,12 @@ extern slot_t slots[];
 
 void update_patterns(mbeat_t t);
 
-void render_composite_frame(slot_t * fslots, float * x, float * y, size_t n, color_t * out);
-color_t render_composite(float x, float y);
+void render_composite_frame(state_source_t src, float * x, float * y, size_t n, color_t * out);
+//color_t render_composite(float x, float y);
 
 void pat_load(slot_t* slot, struct pattern * pattern);
 void pat_unload(slot_t* slot);
+void update_ui();
 
 void slots_init();
 void slots_del();

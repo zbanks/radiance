@@ -55,21 +55,15 @@ parameter_t pat_strobe_params[N_STROBE_PARAMS] = {
     },
 };
 
-pat_state_pt pat_strobe_init()
+void pat_strobe_init(pat_state_pt pat_state_p)
 {
-    pat_strobe_state_t * state = malloc(sizeof(pat_strobe_state_t));
+    pat_strobe_state_t * state = (pat_strobe_state_t*)pat_state_p;
     state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
     freq_init(&state->freq_state, 0.5, 1);
     state->last_t = 0;
     state->a = 0.;
     state->hit_dir = 0;
     state->hit_state = 0.;
-    return state;
-}
-
-void pat_strobe_del(pat_state_pt state)
-{
-    free(state);
 }
 
 void pat_strobe_update(slot_t* slot, mbeat_t t){
@@ -130,11 +124,11 @@ int pat_strobe_event(slot_t* slot, struct pat_event event, float event_data){
     return 0;
 }
 
-color_t pat_strobe_pixel(slot_t* slot, float x, float y)
+color_t pat_strobe_pixel(pat_state_pt pat_state_p, float x, float y)
 {
     UNUSED(x);
     UNUSED(y);
-    pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
+    pat_strobe_state_t* state = (pat_strobe_state_t*)pat_state_p;
     color_t result = state->color;
     result.a = state->a;
     return result;
@@ -143,10 +137,11 @@ color_t pat_strobe_pixel(slot_t* slot, float x, float y)
 pattern_t pat_strobe = {
     .render = &pat_strobe_pixel,
     .init = &pat_strobe_init,
-    .del = &pat_strobe_del,
     .update = &pat_strobe_update,
     .event = &pat_strobe_event,
     .n_params = N_STROBE_PARAMS,
     .parameters = pat_strobe_params,
     .name = "Strobe",
+    .state_size = sizeof(pat_strobe_state_t),
 };
+

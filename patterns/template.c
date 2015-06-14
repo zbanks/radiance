@@ -29,15 +29,11 @@ static parameter_t params[] = {
     },
 };
 
-static pat_state_pt init() {
-    state_t * state = malloc(sizeof(state_t));
-    // TEMPLATE: Initialize state members here
-    return state;
-}
-
-static void del(pat_state_pt state) {
-    free(state);
-    // TEMPLATE: Free any additional regions malloc'd in init
+static void init(pat_state_pt pat_state_p) {
+    state_t* state = (state_t*)pat_state_p;
+    // TEMPLATE: Cast state to a more useful form and
+    // initialize state members here
+    UNUSED(state);
 }
 
 static void update(slot_t* slot, mbeat_t t) {
@@ -47,8 +43,8 @@ static void update(slot_t* slot, mbeat_t t) {
     // TEMPLATE: Modify state based on t & parameters
 }
 
-static color_t pixel(slot_t* slot, float x, float y) {
-    state_t * state = (state_t *) slot->state;
+static color_t pixel(pat_state_pt pat_state_p, float x, float y) {
+    state_t * state = (state_t*)pat_state_p;
     color_t output = {.r = 0., .g = 0., .b = 0., .a = 0.};
     UNUSED(x);
     UNUSED(y);
@@ -69,7 +65,6 @@ static int event(slot_t* slot, struct pat_event event, float event_data){
 pattern_t pat_template = {
     .render = &pixel,
     .init = &init,
-    .del = &del,
     .update = &update,
     .event = &event,
     .n_params = N_PARAMS,

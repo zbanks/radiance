@@ -47,19 +47,13 @@ parameter_t pat_fade_params[N_FADE_PARAMS] = {
     },
 };
 
-pat_state_pt pat_fade_init()
+void pat_fade_init(pat_state_pt state)
 {
-    pat_fade_state_t * state = malloc(sizeof(pat_fade_state_t));
-    state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
-    state->color_phase = 0.;
-    state->last_event_start = 0;
-    freq_init(&state->freq_state, 0.5, 1);
-    return state;
-}
-
-void pat_fade_del(pat_state_pt state)
-{
-    free(state);
+    pat_fade_state_t *fade_state = (pat_fade_state_t*)state;
+    fade_state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
+    fade_state->color_phase = 0.;
+    fade_state->last_event_start = 0;
+    freq_init(&fade_state->freq_state, 0.5, 1);
 }
 
 void pat_fade_update(slot_t* slot, mbeat_t t)
@@ -94,11 +88,11 @@ int pat_fade_event(slot_t* slot, struct pat_event event, float event_data){
     return 1;
 }
 
-color_t pat_fade_pixel(slot_t* slot, float x, float y)
+color_t pat_fade_pixel(pat_state_pt pat_state_p, float x, float y)
 {
     UNUSED(x);
     UNUSED(y);
-    pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
+    pat_fade_state_t* state = (pat_fade_state_t*)pat_state_p;
     color_t result = state->color;
     /*
     float a;
@@ -120,10 +114,10 @@ color_t pat_fade_pixel(slot_t* slot, float x, float y)
 pattern_t pat_fade = {
     .render = &pat_fade_pixel,
     .init = &pat_fade_init,
-    .del = &pat_fade_del,
     .update = &pat_fade_update,
     .event = &pat_fade_event,
     .n_params = N_FADE_PARAMS,
     .parameters = pat_fade_params,
+    .state_size = sizeof(pat_fade_state_t),
     .name = "Fade",
 };
