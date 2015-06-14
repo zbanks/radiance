@@ -909,7 +909,7 @@ static int mouse_click(struct xy xy)
     }
 
     // See if click is on midi reload button
-    if(xy_in_rect(&xy, &layout.midi_reload.rect,  &r)){
+    if(xy_in_rect(&xy, &layout.midi_reload.rect, &offset)){
         midi_refresh_devices();
         return 1;
     }
