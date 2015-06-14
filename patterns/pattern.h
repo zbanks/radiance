@@ -36,8 +36,7 @@ typedef void* pat_state_pt;
 typedef void (*pat_init_fn_pt)(pat_state_pt);
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
 typedef int (*pat_event_fn_pt)(struct slot* slot, struct pat_event event, float event_data);
-typedef int (*pat_event_fn_pt)(struct slot* slot, struct pat_event event, float event_data);
-typedef color_t (*pat_render_fn_pt)(pat_state_pt state, float x, float y);
+typedef color_t (*pat_render_fn_pt)(const pat_state_pt state, float x, float y);
 
 typedef struct pattern
 {

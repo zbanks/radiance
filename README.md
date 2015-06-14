@@ -97,6 +97,7 @@ The master preview pane shows what is sampled to be output to the lights.
 
 The colored lines over the pane describe the positions of the strips. Color is used to indicate which strip is which.
 
+
 Configuration
 -------------
 

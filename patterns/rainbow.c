@@ -75,8 +75,8 @@ static void update(slot_t* slot, mbeat_t t) {
     state->colormap = slot->colormap ? slot->colormap : cm_global;
 }
 
-static color_t pixel(pat_state_pt pat_state_p, float x, float y) {
-    state_t * state = (state_t*)pat_state_p;
+static color_t pixel(const pat_state_pt pat_state_p, float x, float y) {
+    const state_t * state = (const state_t*)pat_state_p;
     float t = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
     return colormap_color(state->colormap, t);
 }

@@ -88,11 +88,11 @@ int pat_fade_event(slot_t* slot, struct pat_event event, float event_data){
     return 1;
 }
 
-color_t pat_fade_pixel(pat_state_pt pat_state_p, float x, float y)
+color_t pat_fade_pixel(const pat_state_pt pat_state_p, float x, float y)
 {
     UNUSED(x);
     UNUSED(y);
-    pat_fade_state_t* state = (pat_fade_state_t*)pat_state_p;
+    const pat_fade_state_t* state = (const pat_fade_state_t*)pat_state_p;
     color_t result = state->color;
     /*
     float a;

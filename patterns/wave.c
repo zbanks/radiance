@@ -111,9 +111,9 @@ int pat_wave_event(slot_t* slot, struct pat_event event, float event_data){
     return 0;
 }
 
-color_t pat_wave_pixel(pat_state_pt pat_state_p, float x, float y)
+color_t pat_wave_pixel(const pat_state_pt pat_state_p, float x, float y)
 {
-    pat_wave_state_t* state = (pat_wave_state_t*)pat_state_p;
+    const pat_wave_state_t* state = (const pat_wave_state_t*)pat_state_p;
     color_t result = state->color;
     result.a = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
     result.a = powf(result.a, state->rho);

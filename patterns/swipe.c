@@ -106,14 +106,14 @@ static void update(slot_t* slot, mbeat_t t) {
     state->last_t = t;
 }
 
-static color_t pixel(pat_state_pt pat_state_p, float x, float y)
+static color_t pixel(const pat_state_pt pat_state_p, float x, float y)
 {
-    state_t * state = (state_t*)pat_state_p;
+    const state_t * state = (const state_t*)pat_state_p;
     color_t output = state->color;
     float a = 0.;
 
     for(int i = 0; i < N_SWIPE_BUFFER; i++){
-        struct swipe * swipe = &state->swipe_buffer[i];
+        const struct swipe * swipe = &state->swipe_buffer[i];
         if(swipe->state != SWIPE_OFF){
             double fuzz = MIN(swipe->length / 2, state->sharp);
             double v = (x - swipe->ox) * swipe->kx + (y - swipe->oy) * swipe->ky;

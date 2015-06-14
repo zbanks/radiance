@@ -16,7 +16,7 @@ void render_composite_frame(state_source_t src, float * x, float * y, size_t n, 
     memset(out, 0, n * sizeof(color_t)); // Initialize to black
     for(int i = 0; i < n_slots; i++){
         if(!slots[i].pattern) continue;
-        pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
+        const pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
 
         for(size_t j = 0; j < n; j++){
             color_t c = (*slots[i].pattern->render)(pat_state_p, x[j], y[j]);

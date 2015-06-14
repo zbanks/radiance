@@ -93,10 +93,10 @@ int pat_bubble_event(slot_t* slot, struct pat_event event, float event_data){
     return 1;
 }
 
-color_t pat_bubble_pixel(pat_state_pt pat_state_p, float x, float y)
+color_t pat_bubble_pixel(const pat_state_pt pat_state_p, float x, float y)
 {
     float d;
-    pat_bubble_state_t* state = (pat_bubble_state_t*)pat_state_p;
+    const pat_bubble_state_t* state = (const pat_bubble_state_t*)pat_state_p;
     color_t result = state->color;
 
     d = sqrt(pow(state->cx - x, 2) + pow(state->cy - y, 2)) / state->r;
