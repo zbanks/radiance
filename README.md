@@ -21,10 +21,8 @@ Internally, each beat is subdivided into 1000 *"millibeats"*. The timebase is gu
 
 All of the *patterns*, *hits*, and *signals* use times from the timebase to sync to the ambient audio.
 
-### Patterns & Hits
+### Patterns
 *Patterns* are visual effects on a plane that continuously change over time.
-
-*Hits* are visual effects on a pane that have a finite duration. While they are running, they can also take in events (e.g. `note_on` & `note_off` from MIDI). **These have been removed from the latest version & merged into patterns**
 
 Each pattern and hit also has the following things:
 
@@ -109,6 +107,10 @@ The UI is largely parametrically laid out, and is currently the largest componen
 
 However, currently beat-off just uses the default values defined in `ui/layout.def` and dumps these values to `layout.ini` when run.
 
+#### Headless mode
+
+The UI can be disabled by setting ``[ui] enabled=0`` in the configuration file (`config.ini`). Beat-off will then load the first state available and run as a daemon.
+
 ### Output Devices (LED Strips)
 Currently, beat-off only supports outputting to LED strips over flux. 
 
@@ -119,19 +121,19 @@ LED strips are laid out as a sequence of verticies placed on a [-1, 1]^2 square.
 [Flux](https://github.com/zbanks/flux) output can be configured in `config.ini`. Beat-off is a flux client, and currently only attempts to control RGB strips.
 
 ### MIDI Devices
-beat-off is built around the Korg NanoKontrol 2 and NanoPad 2, but would work well with other (slider- and knob-heavy) controllers.
+beat-off was designed with the Korg NanoKontrol 2 and NanoPad 2 in mind, but would work well with other (slider- and knob-heavy) controllers.
 
-Although most of the MIDI controls are configured while the program runs, the name(s) of the MIDI device(s) are configured at compile time in `midi/controllers.c` and "permanent" bindings are built in `midi/layout.c`
+The mapping of MIDI controls to the UI are done in the ``midi.ini`` file specified by ``config.ini``. MIDI Control Change events can be connected to sliders, and Note On/Off/Aftertouch events can be connected to generate events on patterns (see: swipe pattern).
 
-`midi/controllers.h` defines each key/knob name for the NanoKontrol 2 and NanoPad 2, but this  isn't required to get a new device running. The key thing is for the `.name` attribute of the `controllers_enabled` struct to match your device.
+*(Currently, the MIDI mapping system is still being tweaked -- more docs to come soon after it's more concrete)*
 
 ### Signals
 The signals visible in the UI are defined in the `signals` array in `signals/signal.c`.
 
 ### Filters
-The filters visible in the UI are defined in the `filters` array in `filters/filter.c`. These correspond to VAMP plugins, which should be in your VAMP path.
+The filters visible in the UI are defined in the `filters` array in `filters/filter.c`. These correspond to VAMP plugins, which should be in your VAMP path (ex. ``~/vamp/``).
 
-### Default Patterns / Hits
+### Default Patterns
 The default patterns and hits in the slots are loaded in `core/main.c`.
 
 ### Saved State
