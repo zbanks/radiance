@@ -74,11 +74,12 @@ void pat_load(slot_t* slot, pattern_t* pattern)
     if(!slot->state) FAIL("Could not malloc pattern state\n");
 
     slot->colormap = NULL;
-    //param_state_init(&slot->alpha, 0.);
 
-    slot->param_states = malloc(sizeof(param_state_t) * pattern->n_params);
+    if(pattern->n_params > N_MAX_PARAMS) FAIL("Pattern '%s' requires %d parameters; max is %d.\n", pattern->name, pattern->n_params, N_MAX_PARAMS);
+
+    param_state_setq(&slot->alpha, 0.);
     for(int i = 0; i < pattern->n_params; i++){
-        param_state_init(&slot->param_states[i], pattern->parameters[i].default_val);
+        param_state_setq(&slot->param_states[i], pattern->parameters[i].default_val);
     }
 }
 
@@ -87,14 +88,35 @@ void pat_unload(slot_t* slot)
     if(!slot->pattern) return;
     slot->colormap = NULL;
 
+    /*
     for(int i = 0; i < slot->pattern->n_params; i++){
         param_state_disconnect(&slot->param_states[i]);
     }
-    free(slot->param_states);
-
-    //param_state_disconnect(&slot->alpha);
+    param_state_disconnect(&slot->alpha);
+    */
 
     (*slot->pattern->del)(slot->state);
     slot->pattern = 0;
 }
 
+void slots_init(){
+    for(int i = 0; i < n_slots; i++){
+        slots[i].pattern = NULL;
+        slots[i].state = NULL;
+        slots[i].colormap = NULL;
+        param_state_init(&slots[i].alpha, 0.);
+        for(int j = 0; j < N_MAX_PARAMS; j++){
+            param_state_init(&slots[i].param_states[j], 0.);
+        }
+    }
+}
+
+void slots_del(){
+    for(int i = 0; i < n_slots; i++){
+        pat_unload(&slots[i]);
+        param_state_disconnect(&slots[i].alpha);
+        for(int j = 0; j < N_MAX_PARAMS; j++){
+            param_state_disconnect(&slots[i].param_states[j]);
+        }
+    }
+}

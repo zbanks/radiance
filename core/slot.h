@@ -11,13 +11,15 @@
 struct slot;
 struct pattern;
 
+#define N_MAX_PARAMS 8
+
 typedef struct slot
 {
     struct pattern * pattern;
     void* state;
     struct colormap * colormap;
     param_state_t alpha;
-    param_state_t * param_states;
+    param_state_t param_states[N_MAX_PARAMS];
 } slot_t;
 
 extern int n_slots;
@@ -31,6 +33,9 @@ color_t render_composite(float x, float y);
 
 void pat_load(slot_t* slot, struct pattern * pattern);
 void pat_unload(slot_t* slot);
+
+void slots_init();
+void slots_del();
 
 extern SDL_mutex* patterns_updating;
 

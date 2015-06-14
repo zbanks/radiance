@@ -6,6 +6,7 @@ CFGSECTION(ui,
 
 CFGSECTION(path,
     CFG(layout, STRING, "layout.ini")
+    CFG(midi, STRING, "midi.ini")
     //CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
 )
 

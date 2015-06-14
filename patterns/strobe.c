@@ -113,30 +113,20 @@ void pat_strobe_update(slot_t* slot, mbeat_t t){
 }
 
 
-int pat_strobe_event(slot_t* slot, enum pat_event event, float event_data){
+int pat_strobe_event(slot_t* slot, struct pat_event event, float event_data){
     pat_strobe_state_t* state = (pat_strobe_state_t*)slot->state;
-    switch(event){
-        case PATEV_MOUSE_DOWN_X:
-            state->hit_dir = 1.;
-            state->hit_state = 0;
-        break;
-        case PATEV_M1_NOTE_ON:
-        case PATEV_M2_NOTE_ON:
+    if(event.source == PATSRC_MOUSE_X || event.source == PATSRC_MOUSE_Y)
+        event_data = 1.;
+    switch(event.event){
+        case PATEV_START:
             state->hit_dir = event_data;
             state->hit_state = 0;
         break;
-        case PATEV_MOUSE_UP_X:
-        case PATEV_M1_NOTE_OFF:
-        case PATEV_M2_NOTE_OFF:
+        case PATEV_END:
             state->hit_dir = -state->hit_dir;
         break;
         default: return 0;
     }
-    /*
-    switch(event){
-        default:
-    }
-    */
     return 0;
 }
 

@@ -84,7 +84,7 @@ static color_t pixel(slot_t* slot, float x, float y) {
     return colormap_color(cm, t);
 }
 
-static int event(slot_t* slot, enum pat_event event, float event_data){
+static int event(slot_t* slot, struct pat_event event, float event_data){
     state_t * state = (state_t *) slot->state;
     if(isnan(event_data)) return 0;
     UNUSED(event);

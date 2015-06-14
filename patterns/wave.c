@@ -105,7 +105,7 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
     state->rho = exp(param_state_get(&slot->param_states[WAVE_RHO]) * 2 * logf(0.5 - 0.1)) + 0.1;
 }
 
-int pat_wave_event(slot_t* slot, enum pat_event event, float event_data){
+int pat_wave_event(slot_t* slot, struct pat_event event, float event_data){
     UNUSED(slot);
     UNUSED(event);
     UNUSED(event_data);

@@ -6,143 +6,116 @@
 #include <SDL/SDL_timer.h>
 
 #include "core/err.h"
-#include "midi/controllers.h"
+#include "core/config.h"
 #include "midi/midi.h"
-#include "midi/layout.h"
+#include "midi/config.h"
 #include "core/parameter.h"
 #include "ui/ui.h"
 #include "util/math.h"
 
 #define MIDI_BUFFER_SIZE 256
-//#define MIN(x, y) ((x > y) ? y : x)
-//#define MAX(x, y) ((x > y) ? x : y)
-
-#define MIDI_SELECT_DATA_THRESHOLD (127/6)  // 1/6  of the range
-#define MIDI_SELECT_RATIO_THRESHOLD 0.10
 
 static int midi_running;
 static SDL_Thread* midi_thread;
 
-static PortMidiStream** streams;
 static PmEvent events[MIDI_BUFFER_SIZE];
-
-static struct midi_connection_table * connection_table = 0;
 
 SDL_Color midi_handle_color = {150, 150, 150, 255};
 
-int n_recent_events = 0;
-
-static struct recent_event {
-    unsigned char device;   
-    PmEvent event;
-} recent_events[MIDI_BUFFER_SIZE];
-
-static struct {
-    unsigned char device;
-    unsigned char event;
-    unsigned char data1;
-    unsigned char data2_max;
-    unsigned char data2_min;
-    long time_max;
-    long time_min;
-} collapsed_events[MIDI_BUFFER_SIZE];
+struct midi_controller * midi_controllers;
+int n_midi_controllers;
 
 PmError pm_errmsg(PmError err){
     printf("CAUGHT PM ERROR\n");
     return err;
 }
 
-void midi_connect_param(param_state_t * param_state, unsigned char device, unsigned char event, unsigned char data1){
-    printf("Connecting to midi %d %d %d\n", device, event, data1); 
-    n_recent_events  = 0;
-
-    struct midi_connection_table * ct = connection_table;
-    while(ct){
-        if((ct->device == device) && (ct->event == event)){
-            param_state_connect(param_state, &ct->outputs[(int) data1]);
-            return;
-        }
-        ct = ct->next;
-    }
-    
-    // No table element, create one.
-    ct = malloc(sizeof(struct midi_connection_table));
-    //char * strings = malloc(N_DATA1 * 5); // This is never free'd
-    ct->device = device;
-    ct->event = event;
-    ct->next = connection_table;
-    connection_table = ct;
-
-    // Init outputs
-    for(int i = 0; (i < N_DATA1) && (i < controllers_enabled[device].n_inputs); i++){
-        //snprintf(strings, 5, "%d", i);
-        param_output_init(&ct->outputs[i], 0.);
-        ct->outputs[i].handle_color = controllers_enabled[device].color;
-        ct->outputs[i].label_color = controllers_enabled[device].color;
-        if(controllers_enabled[device].input_labels[i]){
-            //ct->outputs[i].label = controllers_enabled[device].input_labels[i];
-            snprintf(&ct->labels[i][0], 7, "%s%c", controllers_enabled[device].input_labels[i], controllers_enabled[device].suffix);
-        }else{
-            printf("Unlabeled input on device %d (%s): %d\n", device, controllers_enabled[device].name, i);
-            //ct->outputs[i].label = malloc(5); // Never free'd
-
-            snprintf(&ct->labels[i][0], 7, "%d%c", i, controllers_enabled[device].suffix);
-        }
-        ct->outputs[i].label = &ct->labels[i][0];
-        //strings += 5;
-    }
-
-    param_state_connect(param_state, &ct->outputs[(int) data1]);
-}
-
-void midi_refresh_devices(){
+int midi_refresh_devices(){
     PmError err;
     int n = Pm_CountDevices();
-    for(int i = 0; i < n; i++)
-    {
+
+    struct midi_controller * new_controllers = malloc(n * sizeof(struct midi_controller));
+    if(!new_controllers) FAIL("Unable to malloc for MIDI controllers.\n");
+    memset(new_controllers, 0, n * sizeof(struct midi_controller));
+    int n_new = 0;
+
+    // Check for available devices
+    for(PmDeviceID i = 0; i < n; i++) {
         const PmDeviceInfo* device = Pm_GetDeviceInfo(i);
-        if(device->input)
-        {
-            for(int j = 0; j < n_controllers_enabled; j++)
-            {
-                if(!controllers_enabled[j].enabled) continue;
-                if(controllers_enabled[j].available) continue;
-                //printf("'%s' vs '%s' %d\n", device->name, controllers_enabled[j].name, strcmp(device->name, controllers_enabled[j].name));
-                if(strcmp(device->name, controllers_enabled[j].name) == 0)
-                {
-                    err = Pm_OpenInput(&streams[j], i, 0, MIDI_BUFFER_SIZE, 0, 0);
-                    if(err != pmNoError) FAIL("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
-                    controllers_enabled[j].available = 1;
-                    printf("Connected MIDI device: '%s'", device->name);
-                    goto _connected_device;
-                }
-            }
-            printf("Unconnected MIDI device: '%s'", device->name);
+        if(!device){
+            ERROR("Unable to get device info for PM device %d\n", i);
+            goto refresh_fail;
         }
-_connected_device:
-        printf("\n");
+        if(device->input) {
+            new_controllers[n_new].device_id = i;
+            new_controllers[n_new].name = device->name;
+            n_new++;
+        }
+    }
+    // Read configuration from file, populating `.enabled` if found
+    midi_config_load(config.path.midi, new_controllers, n_new);
+
+    // Open corresponding PortMidiStream's
+    for(int i = 0; i < n_new; i++) {
+        if(new_controllers[i].enabled){
+            err = Pm_OpenInput(&new_controllers[i].stream, new_controllers[i].device_id, NULL, MIDI_BUFFER_SIZE, NULL, NULL);
+            if(err != pmNoError){
+                ERROR("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
+                goto refresh_fail;
+            }
+            printf("Connected MIDI device: %s (%s)", new_controllers[i].short_name, new_controllers[i].name);
+        }
     }
 
-    for(int i = 0; i < n_controllers_enabled; i++)
-    {
-        if(!streams[i])
-        {
-            printf("WARNING: Could not find MIDI device \"%s\"\n", controllers_enabled[i].name);
+    // Delete old midi controllers
+    if(midi_controllers){
+        for(int i = 0; i < n_midi_controllers; i++){
+            if(midi_controllers[i].stream){
+                err = Pm_Close(midi_controllers[i].stream);
+                if(err != pmNoError) 
+                    WARN("Could not close MIDI device: %s (%s); %s", 
+                            midi_controllers[i].short_name, 
+                            midi_controllers[i].name, 
+                            Pm_GetErrorText(err));
+            }
         }
+        free(midi_controllers);
     }
+
+    midi_controllers = new_controllers;
+    n_midi_controllers = n_new;
+
+    return 0;
+
+refresh_fail:
+    if(new_controllers){
+        for(int i = 0; i < n_new; i++){
+            if(new_controllers[i].stream){
+                err = Pm_Close(new_controllers[i].stream);
+                if(err != pmNoError) 
+                    WARN("Could not close MIDI device: %s (%s); %s", 
+                            new_controllers[i].short_name, 
+                            new_controllers[i].name, 
+                            Pm_GetErrorText(err));
+            }
+        }
+        free(new_controllers);
+    }
+    return -1;
 }
 
-static int midi_check_errors(int i){
-    if(!streams[i]) return 0;
-    PmError err = Pm_HasHostError(streams[i]);
+static int midi_check_errors(struct midi_controller * controller){
+    if(!controller->stream) return 0;
+    PmError err = Pm_HasHostError(controller->stream);
     if(err < 0){
-        printf("MIDI Host error: %s\n", Pm_GetErrorText(err));
+        WARN("MIDI Host error: %s\n", Pm_GetErrorText(err));
 
         // Close stream  & disconnect 
-        Pm_Close(streams[i]);
-        controllers_enabled[i].available = 0;
+        Pm_Close(controller->stream);
+        controller->stream = 0;
 
         // Refresh devices (attempt to reconnect the device that we just lost) 
+        // TODO
         //midi_refresh_devices();
         return 1;
     }
@@ -157,135 +130,59 @@ static int midi_run(void* args)
     err = Pm_Initialize();
     if(err != pmNoError) FAIL("Could not initialize PortMIDI: %s\n", Pm_GetErrorText(err));
 
-    streams = malloc(sizeof(PortMidiStream*) * n_controllers_enabled);
-    if(!streams) FAIL("Could not allocate MIDI controller streams");
-
-    for(int i = 0; i < n_controllers_enabled; i++)
-    {
-        streams[i] = 0;
-        controllers_enabled[i].available = 0;
-    }
-
     midi_refresh_devices();
-    midi_setup_layout();
-
-    int n_collapsed_events;
 
     while(midi_running)
     {
-        for(int i = 0; i < n_controllers_enabled; i++)
+        for(int i = 0; i < n_midi_controllers; i++)
         {
-            if(midi_check_errors(i)) continue;
-            if(!streams[i]) continue;
-            int n = Pm_Read(streams[i], events, MIDI_BUFFER_SIZE);
+            struct midi_controller * controller = &midi_controllers[i];
+            if(!controller->stream) continue;
+            if(midi_check_errors(controller)) continue;
+
+            int n = Pm_Read(controller->stream, events, MIDI_BUFFER_SIZE);
             if(n < 0){
-                printf("MIDI Read error: %s\n", Pm_GetErrorText(n));
+                WARN("MIDI Read error: %s\n", Pm_GetErrorText(n));
                 continue;
             }
             for(int j = 0; j < n; j++)
             {
                 PmMessage m = events[j].message;
 
-                if(active_param_source){
-                    memcpy(&recent_events[1], &recent_events[0], sizeof(struct recent_event) * (MIDI_BUFFER_SIZE - 1));
-                    memcpy(&recent_events[0].event, &events[j], sizeof(PmEvent));
-                    recent_events[0].device = i;
-
-                    n_recent_events = (n_recent_events >= MIDI_BUFFER_SIZE) ? MIDI_BUFFER_SIZE : n_recent_events + 1;
-
-                    n_collapsed_events = 0;
-                    memset(collapsed_events, 0, sizeof(collapsed_events));
-
-                    for(int k = 0; k < n_recent_events; k++){
-                        unsigned char event = Pm_MessageStatus(recent_events[k].event.message);
-                        unsigned char data1 = Pm_MessageData1(recent_events[k].event.message);
-                        unsigned char data2 = Pm_MessageData2(recent_events[k].event.message);
-
-                        for(int l = 0; l <  n_collapsed_events; l++){
-                            if((event == collapsed_events[l].event) &&
-                               (data1 == collapsed_events[l].data1) &&
-                               (recent_events[k].device == collapsed_events[l].device)){
-
-                                collapsed_events[l].data2_max = MAX(collapsed_events[l].data2_max, data2);
-                                collapsed_events[l].data2_min = MIN(collapsed_events[l].data2_min, data2);
-                                collapsed_events[l].time_max = MAX(collapsed_events[l].time_max, recent_events[k].event.timestamp);
-                                collapsed_events[l].time_min = MIN(collapsed_events[l].time_min, recent_events[k].event.timestamp);
-                                goto has_collapsed_event;
-                            }
-                        }
-                        // Add to collapsed_events
-                        collapsed_events[n_collapsed_events].event = event;
-                        collapsed_events[n_collapsed_events].data1 = data1;
-                        collapsed_events[n_collapsed_events].device = recent_events[k].device;
-                        collapsed_events[n_collapsed_events].data2_max = data2;
-                        collapsed_events[n_collapsed_events].data2_min = data2;
-                        collapsed_events[n_collapsed_events].time_max = recent_events[k].event.timestamp;
-                        collapsed_events[n_collapsed_events].time_min = recent_events[k].event.timestamp;
-                        n_collapsed_events++;
-
-has_collapsed_event:
-                        continue;
-
-                    }
-
-                    for(int l = 0; l < n_collapsed_events; l++){
-                        // (range > range_threshold AND rate > ratio_threshold) OR (event == NOTE_ON)
-                        if((((collapsed_events[l].data2_max - collapsed_events[l].data2_min) > MIDI_SELECT_DATA_THRESHOLD)
-                            && ((double) (collapsed_events[l].data2_max - collapsed_events[l].data2_min) / (double) (collapsed_events[l].time_max - collapsed_events[l].time_min) > MIDI_SELECT_RATIO_THRESHOLD))
-                           || ((collapsed_events[l].event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_ON)){
-                            midi_connect_param(active_param_source, collapsed_events[l].device, collapsed_events[l].event, collapsed_events[l].data1);
-                            active_param_source = 0;
-                            n_recent_events = 0;
-                        }
-                    }
-                }else{ // if(!active_param_source)
-                    n_recent_events = 0;
-                }
-
                 unsigned char event = Pm_MessageStatus(m);
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
                 //printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
-                struct midi_connection_table * ct;
-                ct = connection_table;
-                while(ct){
-                    if((ct->device == i) && (ct->event == event)){
-                        param_output_set(&ct->outputs[data1], data2 / 127.);
-                        /*
-                        if(ct->events[data1] < MIDI_MAX_EVENTS)
-                            ct->events[data1]++;
-                        break;
-                        */
-                    }
-                    ct = ct->next;
-                }
 
-                SDL_Event sdl_event;
-                if((event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_ON){
-                    sdl_event.type = SDL_MIDI_NOTE_ON;
-                    sdl_event.user.code = 0;
-                    sdl_event.user.data1 = malloc(sizeof(struct midi_event));
-                    *(struct midi_event *) sdl_event.user.data1 = (struct midi_event) {.device = i, .event = event, .data1 = data1, .data2 = data2};
-                    sdl_event.user.data2 = 0;
-                    SDL_PushEvent(&sdl_event);
-                } else if((event & MIDI_EV_STATUS_MASK) == MIDI_EV_NOTE_OFF){
-                    sdl_event.type = SDL_MIDI_NOTE_OFF;
-                    sdl_event.user.code = 0;
-                    sdl_event.user.data1 = malloc(sizeof(struct midi_event));
-                    *(struct midi_event *) sdl_event.user.data1 = (struct midi_event) {.device = i, .event = event, .data1 = data1, .data2 = data2};
-                    sdl_event.user.data2 = 0;
-                    SDL_PushEvent(&sdl_event);
+                for(int k = 0; k < controller->n_connections; k++){
+                    if(controller->connections[k].event == event && controller->connections[k].data1 == data1){
+                        if(controller->connections[k].param_state){
+                            param_state_setq(controller->connections[k].param_state, data2 / 127.);
+                        }
+                        if(controller->connections[k].slot_event.slot){
+                            float * data_ptr = malloc(sizeof(float));
+                            if(!data_ptr) FAIL("Unable to malloc for MIDI data ptr.\n");
+                            *data_ptr = data2 / 127.;
+
+                            SDL_Event sdl_event;
+                            sdl_event.type = SDL_MIDI_SLOT_EVENT;
+                            sdl_event.user.code = 0;
+                            sdl_event.user.data1 = &controller->connections[k].slot_event;
+                            sdl_event.user.data2 = data_ptr;
+                            SDL_PushEvent(&sdl_event);
+                        }
+                    }
                 }
             }
         }
         SDL_Delay(1); // TODO SDL rate limiting
     }
 
-    for(int i = 0; i < n_controllers_enabled; i++)
+    for(int i = 0; i < n_midi_controllers; i++)
     {
-        if(!streams[i]) continue;
-        err = Pm_Close(streams[i]);
+        if(!midi_controllers[i].stream) continue;
+        err = Pm_Close(midi_controllers[i].stream);
         if(err != pmNoError) FAIL("Could not close MIDI device: %s\n", Pm_GetErrorText(err));
     }
 
