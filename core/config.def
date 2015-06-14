@@ -1,7 +1,7 @@
 /* CFGSECTION(name, ...) */
 /* CFG(name, function, default) */
 CFGSECTION(ui,
-    CFG(enabled, INT, 0)
+    CFG(enabled, INT, 1)
 )
 
 CFGSECTION(path,

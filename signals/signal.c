@@ -39,17 +39,13 @@ parameter_t inp_lfo_parameters[N_LFO_PARAMS] = {
 
 void inp_lfo_init(signal_t * signal){
     inp_lfo_state_t * state = signal->state = malloc(sizeof(inp_lfo_state_t));
-    if(!signal->state) return;
+    if(!signal->state) FAIL("Could not allocate LFO signal state\n");
 
     state->type = OSC_SINE;
     freq_init(&state->freq_state, 0.5, 0);
 
     signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
-    if(!signal->param_states){
-        free(signal->state);
-        signal->state = 0;
-        return;
-    }
+    if(!signal->param_states) if(!signal->state) FAIL("Could not allocate LFO signal state\n");
 
     for(int i = 0; i < signal->n_params; i++){
         param_state_init(&signal->param_states[i], signal->parameters[i].default_val);

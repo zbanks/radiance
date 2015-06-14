@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include <SDL/SDL_thread.h>
 #include <SDL/SDL_framerate.h>
@@ -22,6 +23,17 @@
 #include "ui/ui.h"
 #include "ui/layout.h"
 
+static void ui_done_callback()
+{
+    output_stop();
+}
+
+void catch_sigterm(int sig)
+{
+    UNUSED(sig);
+    output_stop();
+}
+
 int main()
 {
     colormap_test_all();
@@ -31,17 +43,11 @@ int main()
     pattern_init();
     patterns_updating = SDL_CreateMutex();
 
-    config_load(&config, "config.ini");
-    layout_load(&layout, config.path.layout);
+    //config_load(&config, "config.ini");
+    //layout_load(&layout, config.path.layout);
     
     config_dump(&config, "config.ini");
     layout_dump(&layout, config.path.layout);
-
-    int ui_loaded = 0;
-    if(config.ui.enabled){
-        ui_init();
-        ui_loaded = 1;
-    }
 
     pat_load(&slots[0], &pat_rainbow);
     pat_load(&slots[1], &pat_fade);
@@ -58,47 +64,37 @@ int main()
 
     filters_load();
 
+    if (SDL_Init(config.ui.enabled ? SDL_INIT_VIDEO : 0))
+    {
+        FAIL("SDL_Init Error: %s\n", SDL_GetError());
+    }
+
+    // Set up signal handling before threads are made
+    signal(SIGTERM, catch_sigterm);
+    signal(SIGINT, catch_sigterm);
+
     audio_start();
     midi_start();
     signal_start();
-    output_start();
 
-    FPSmanager fps_manager;
-    SDL_initFramerate(&fps_manager);
-    SDL_setFramerate(&fps_manager, 100);
-    if(ui_loaded){
-        while(ui_poll())
-        {
-            ui_render();
-            stat_fps = 1000. / SDL_framerateDelay(&fps_manager);
-        }
-    }else{
-        state_load("state_0.ini");
-        while(1){
-            int i = 0;
-            printf("Load configuration [0-%d]: ", config.state.n_states - 1);
-            if(scanf("%d", &i)){
-                if(i < config.state.n_states && i > 0){
-                    char filename[1024];
-                    snprintf(filename, 1023, config.state.path_format, i);
-                    state_load(filename);
-                }
-            }
-        }
-    }
+    //state_load("state_0.ini");
 
+    if(config.ui.enabled) ui_start(&ui_done_callback);
+
+    output_init();
+    output_run();
+
+    printf("\nShutting down...\n");
+
+    if(config.ui.enabled) ui_stop();
     signal_stop();
     midi_stop();
     audio_stop();
-    output_stop();
 
     filters_unload();
 
     SDL_DestroyMutex(patterns_updating);
 
-    if(ui_loaded){
-        ui_quit();
-    }
     pattern_del();
 
     return 0;
