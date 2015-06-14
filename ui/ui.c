@@ -38,6 +38,7 @@
     X(filter_pane, layout.filter) \
     X(output_pane, layout.output) \
     X(midi_pane, layout.midi) \
+    X(midi_reload_pane, layout.midi_reload) \
     X(palette_pane, layout.palette) \
     X(palette_preview, layout.palette.preview_rect) \
     X(state_save_pane, layout.state_save) \
@@ -317,15 +318,11 @@ static void ui_update_midi(struct midi_controller * controller){
     rect_array_origin(&layout.midi.rect_array, &r);
     SDL_FillRect(midi_pane, &r, SDL_MapRGB(midi_pane->format, 20, 20, 20));
 
-    SDL_Color color = {150, 150, 150, 255};
+    if(controller->enabled && controller->short_name)
+        text_render(midi_pane, &layout.midi.short_name_txt, 0, controller->short_name);
 
-    if(controller->enabled)
-        color = (SDL_Color) {0, 255, 30, 255};
-
-    if(controller->short_name)
-        text_render(midi_pane, &layout.midi.name_txt, &color, controller->short_name);
-    else if(controller->name)
-        text_render(midi_pane, &layout.midi.name_txt, &color, controller->name);
+    if(controller->name)
+        text_render(midi_pane, &layout.midi.name_txt, 0, controller->name);
 }
 
 static void ui_update_slot(slot_t* slot)
@@ -549,6 +546,10 @@ static void ui_render()
         
         SDL_BlitSurface(midi_pane, 0, screen, &r);
     }
+
+    // Draw midi reload button
+    ui_draw_button(midi_reload_pane, &layout.midi_reload.label_txt, "Refresh MIDI Devices");
+    SDL_BlitSurface(midi_reload_pane, 0, screen, &layout.midi_reload.rect);
 
     for(int i = 0; i < config.state.n_states; i++){
         char buf[16];
@@ -905,6 +906,12 @@ static int mouse_click(struct xy xy)
         if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_midi(i, offset);
         }
+    }
+
+    // See if click is on midi reload button
+    if(xy_in_rect(&xy, &layout.midi_reload.rect,  &r)){
+        midi_refresh_devices();
+        return 1;
     }
 
     // See if click is on a save state button

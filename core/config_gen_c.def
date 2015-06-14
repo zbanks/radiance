@@ -2,12 +2,16 @@
 #error "CFGOBJ not defined in config_gen.c"
 #endif
 
+// Instance of global configuration object
+// Each value is initialized with its default value
 struct CFGOBJ CFGOBJ = {
     #define CFGSECTION(w, d...) .w = { d },
     #define CFG(n, type, default) .n = default,
     #include CFGOBJ_PATH
 };
 
+// Function to parse line of configuration file
+// Called from CFGOBJ_load
 static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char * name, const char * value){
     struct CFGOBJ * cfg = (struct CFGOBJ *) user;
     if (0) ;
@@ -17,6 +21,7 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
     return 0;
 }
 
+// Function to dump out a configuration to a file
 int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename){
     FILE * stream = fopen(filename, "w");
     if(!stream)
@@ -31,6 +36,7 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename){
     return 0;
 }
 
+// Function to load in a configuration file
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename){
     if(ini_parse(filename, CONCAT(CFGOBJ, _parse), cfg) < 0){
         printf("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);

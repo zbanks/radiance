@@ -98,8 +98,14 @@ CFGSECTION(output,
 )
 
 CFGSECTION(midi,
-    CFG_RECT_ARRAY(, 1120, 510, 160, 45,  0,  50, LAYOUT_TILE_NONE)
-    CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG_RECT_ARRAY(, 1120, 525, 160, 35,  0, 40, LAYOUT_TILE_NONE)
+    CFG_TXT(short_name, 5, 3, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#00FF33")
+    CFG_TXT(name, 155, 32, 12, LAYOUT_ALIGN_BR, "FreeSans.ttf", "#888888")
+)
+
+CFGSECTION(midi_reload,
+    CFG_RECT(, 1120, 500, 160, 20)
+    CFG_TXT(label, 80, 10, 13, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_save,

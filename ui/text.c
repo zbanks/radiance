@@ -51,13 +51,11 @@ void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * c
     if(!params->ui_font.font)
         text_load_font(params);
 
-    if(color){
-        msg = TTF_RenderText_Solid(params->ui_font.font, text, *color);
-    }else{
-        msg = TTF_RenderText_Solid(params->ui_font.font, text, params->ui_font.color);
-    }
-    if(!msg)
-        return;
+    if(!color) 
+        color = &params->ui_font.color;
+
+    msg = TTF_RenderText_Solid(params->ui_font.font, text, *color);
+    if(!msg) return;
 
     r.x = params->x;
     r.y = params->y;

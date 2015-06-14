@@ -61,9 +61,13 @@ int midi_refresh_devices(){
             err = Pm_OpenInput(&new_controllers[i].stream, new_controllers[i].device_id, NULL, MIDI_BUFFER_SIZE, NULL, NULL);
             if(err != pmNoError){
                 ERROR("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
-                goto refresh_fail;
+                new_controllers[i].device_id = 0;
+                new_controllers[i].enabled = 0;
+                new_controllers[i].stream= NULL;
+                //goto refresh_fail; // Soft fail
+            }else{
+                printf("Connected MIDI device: %s (%s)", new_controllers[i].short_name, new_controllers[i].name);
             }
-            printf("Connected MIDI device: %s (%s)", new_controllers[i].short_name, new_controllers[i].name);
         }
     }
 

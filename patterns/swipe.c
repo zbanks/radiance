@@ -141,15 +141,15 @@ static int event(slot_t* slot, struct pat_event event, float event_data){
     if(event.source == PATSRC_MOUSE_Y) return 0;
 
     if(event.event == PATEV_START){
+        for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+            if(state->swipe_buffer[i].state == SWIPE_OFF) break;
+        }
+        swipe = &state->swipe_buffer[i];
+        swipe->source = event.source;
+        swipe->length = 0;
+        swipe->state = SWIPE_GROWING;
+        swipe->alpha = event_data;
         switch(event.source){
-            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-                if(state->swipe_buffer[i].state == SWIPE_OFF) break;
-            }
-            swipe = &state->swipe_buffer[i];
-            swipe->source = event.source;
-            swipe->length = 0;
-            swipe->state = SWIPE_GROWING;
-            swipe->alpha = event_data;
             case PATSRC_MIDI_0:
                 swipe->ox = 1;
                 swipe->oy = 0;

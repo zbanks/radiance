@@ -10,6 +10,7 @@
 #include "core/config_macros.h"
 #include "ui/layout_constants.h"
 
+/*
 #define COLOR SDL_Color
 #define COLOR_FN(x) parse_color(x)
 #define COLOR_FMT(x) "#%02hhx%02hhx%02hhx", x.r, x.g, x.b
@@ -22,6 +23,7 @@ static inline SDL_Color parse_color(const char * cstr){
         return out;
     return (SDL_Color) {0, 0, 0, 0};
 }
+*/
 
 #ifdef CFGOBJ
 #undef CFGOBJ
