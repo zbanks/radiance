@@ -54,15 +54,15 @@ int main()
      * fade > 100fps
      * full > 100fps
      * strobe > 100fps
-     * sparkle ~ 50fps
+     * sparkle ~ 62fps
+     * rainbow ~ 52fps
      * bubble ~42fps
-     * rainbow ~ 38fps
-     * wave ~ 35fps
+     * wave ~ 42fps
      * swipe ~ 25fps
      */
 
     /*
-    pattern_t * test_pat = &pat_sparkle;
+    pattern_t * test_pat = &pat_swipe;
     for(int i = 0; i < n_slots; i++){
         pat_load(&slots[i], test_pat);
     }
