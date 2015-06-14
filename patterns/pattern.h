@@ -31,11 +31,10 @@ enum pat_event {
 };
 
 typedef void* pat_state_pt;
-typedef pat_state_pt (*pat_init_fn_pt)();
+typedef void (*pat_init_fn_pt)(pat_state_pt);
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
 typedef int (*pat_event_fn_pt)(struct slot* slot, enum pat_event event, float event_data);
 typedef color_t (*pat_render_fn_pt)(struct slot* slot, float x, float y);
-typedef void (*pat_del_fn_pt)(pat_state_pt state);
 
 typedef struct pattern
 {
@@ -43,9 +42,9 @@ typedef struct pattern
     pat_update_fn_pt update;
     pat_event_fn_pt event;
     pat_render_fn_pt render;
-    pat_del_fn_pt del;
     int n_params;
     parameter_t* parameters;
+    int state_size;
     char* name;
 } pattern_t;
 

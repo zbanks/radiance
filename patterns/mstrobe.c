@@ -47,19 +47,14 @@ static parameter_t pat_strobe_params[N_STROBE_PARAMS] = {
     },
 };
 
-static pat_state_pt pat_strobe_init()
+static void pat_strobe_init(pat_state_pt state)
 {
-    pat_strobe_state_t * state = malloc(sizeof(pat_strobe_state_t));
-    state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
-    state->last_t = 0;
-    state->a = 0.;
-    state->hit_dir = 0;
-    state->hit_state = 0.;
-    return state;
-}
-
-static void pat_strobe_del(pat_state_pt state) {
-    free(state);
+    pat_strobe_state_t * strobe_state = (pat_strobe_state_t*)state;
+    strobe_state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
+    strobe_state->last_t = 0;
+    strobe_state->a = 0.;
+    strobe_state->hit_dir = 0;
+    strobe_state->hit_state = 0.;
 }
 
 static void pat_strobe_update(slot_t* slot, mbeat_t t) {
@@ -125,10 +120,10 @@ static color_t pat_strobe_pixel(slot_t* slot, float x, float y)
 pattern_t pat_mstrobe = {
     .render = &pat_strobe_pixel,
     .init = &pat_strobe_init,
-    .del = &pat_strobe_del,
     .update = &pat_strobe_update,
     .event = &pat_strobe_event,
     .n_params = N_STROBE_PARAMS,
     .parameters = pat_strobe_params,
     .name = "Man Strobe",
+    .state_size = sizeof(pat_strobe_state_t),
 };

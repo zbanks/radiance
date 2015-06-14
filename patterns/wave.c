@@ -67,9 +67,9 @@ parameter_t pat_wave_params[N_WAVE_PARAMS] = {
     },
 };
 
-pat_state_pt pat_wave_init()
+void pat_wave_init(pat_state_pt pat_state_p)
 {
-    pat_wave_state_t * state = malloc(sizeof(pat_wave_state_t));
+    pat_wave_state_t * state = (pat_wave_state_t*)pat_state_p;
     state->color = (color_t) {0.0, 0.0, 0.0, 0.0};
     freq_init(&state->freq_state, 0.5, 0);
     state->type = OSC_SINE;
@@ -77,12 +77,6 @@ pat_state_pt pat_wave_init()
     state->kx = 1.0;
     state->ky = 1.0;
     state->rho = 0.5;
-    return state;
-}
-
-void pat_wave_del(pat_state_pt state)
-{
-    free(state);
 }
 
 void pat_wave_update(slot_t* slot, mbeat_t t)
@@ -129,10 +123,10 @@ color_t pat_wave_pixel(slot_t* slot, float x, float y)
 pattern_t pat_wave = {
     .render = &pat_wave_pixel,
     .init = &pat_wave_init,
-    .del = &pat_wave_del,
     .update = &pat_wave_update,
     .event = &pat_wave_event,
     .n_params = N_WAVE_PARAMS,
     .parameters = pat_wave_params,
+    .state_size = sizeof(pat_wave_state_t),
     .name = "Wave",
 };

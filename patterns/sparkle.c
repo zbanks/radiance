@@ -47,14 +47,9 @@ static parameter_t params[N_PARAMS] = {
     },
 };
 
-static pat_state_pt init() {
-    state_t * state = malloc(sizeof(state_t));
+static void init(pat_state_pt pat_state_p) {
+    state_t * state = (state_t*)pat_state_p;
     memset(state, 0, sizeof(state_t));
-    return state;
-}
-
-static void del(pat_state_pt state) {
-    free(state);
 }
 
 static void update(slot_t* slot, mbeat_t t) {
@@ -102,10 +97,10 @@ static int event(slot_t* slot, enum pat_event e, float event_data){
 pattern_t pat_sparkle = {
     .render = &pixel,
     .init = &init,
-    .del = &del,
     .update = &update,
     .event = &event,
     .n_params = N_PARAMS,
     .parameters = params,
     .name = "Sparkle",
+    .state_size = sizeof(state_t),
 };
