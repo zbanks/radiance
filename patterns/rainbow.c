@@ -58,6 +58,7 @@ static void init(pat_state_pt pat_state_p) {
     state->type = OSC_SINE;
     state->kx = 1.0;
     state->ky = 0.0;
+    state->colormap = cm_global;
 }
 
 static void update(slot_t* slot, mbeat_t t) {
