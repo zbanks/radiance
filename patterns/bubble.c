@@ -79,17 +79,13 @@ void pat_bubble_update(slot_t* slot, long t)
     state->cy = param_state_get(&slot->param_states[BUBBLE_CY]) * 2 - 1.0;
 }
 
-int pat_bubble_event(slot_t* slot, enum pat_event event, float event_data){
+int pat_bubble_event(slot_t* slot, struct pat_event event, float event_data){
     if(isnan(event_data)) return 0;
-    switch(event){
-        case PATEV_MOUSE_DOWN_X:
-        case PATEV_MOUSE_DRAG_X:
-        case PATEV_MOUSE_UP_X:
+    switch(event.source){
+        case PATSRC_MOUSE_X:
             param_state_setq(&slot->param_states[BUBBLE_CX], (event_data + 1.0) / 2);
         break;
-        case PATEV_MOUSE_DOWN_Y:
-        case PATEV_MOUSE_DRAG_Y:
-        case PATEV_MOUSE_UP_Y:
+        case PATSRC_MOUSE_Y:
             param_state_setq(&slot->param_states[BUBBLE_CY], (event_data + 1.0) / 2);
         break;
         default: return 0;

@@ -40,6 +40,7 @@ int main()
     colormap_set_global(&cm_rainbow_edged);
     colormap_set_mono(0.5);
 
+    slots_init();
     pattern_init();
     patterns_updating = SDL_CreateMutex();
 
@@ -96,6 +97,7 @@ int main()
     SDL_DestroyMutex(patterns_updating);
 
     pattern_del();
+    slots_del();
 
     return 0;
 }

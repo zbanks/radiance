@@ -8,32 +8,35 @@
 struct pattern;
 struct slot;
 
-enum pat_event {
-    PATEV_NONE = 0,
+enum pat_source {
+    PATSRC_NONE = 0,
+    PATSRC_MOUSE_X,
+    PATSRC_MOUSE_Y,
+    // PATSRC_AUDIO, // Not yet used, not sure if it will be...
+    PATSRC_MIDI_0,
+    PATSRC_MIDI_1,
+    PATSRC_MIDI_2,
+    PATSRC_MIDI_3, // Numbers up to PATSRC_MAX are also valid
 
-    PATEV_M1_NOTE_ON,
-    PATEV_M1_NOTE_OFF,
-    PATEV_M1_AFTERTOUCH, // Not currently used by any of  our midi controllers
+    PATSRC_MAX = 1024
+};
 
-    PATEV_M2_NOTE_ON,
-    PATEV_M2_NOTE_OFF,
-    PATEV_M2_AFTERTOUCH, // Not currently used by any of  our midi controllers
+enum pat_sub_event {
+    PATEV_START,  // Mouse down; MIDI note on
+    PATEV_MIDDLE, // Mouse drag; MIDI aftertouch
+    PATEV_END,    // Mosue up; MIDI note off
+};
 
-    PATEV_MOUSE_DOWN_X,
-    PATEV_MOUSE_DOWN_Y,
-    PATEV_MOUSE_DRAG_X, 
-    PATEV_MOUSE_DRAG_Y,
-    PATEV_MOUSE_UP_X, 
-    PATEV_MOUSE_UP_Y,
-
-    PATEV_AUDIO_BEAT, // Not currently used
-    PATEV_AUDIO_BAR, // Not currently used
+struct pat_event {
+    enum pat_source source;
+    enum pat_sub_event event;
 };
 
 typedef void* pat_state_pt;
 typedef void (*pat_init_fn_pt)(pat_state_pt);
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
-typedef int (*pat_event_fn_pt)(struct slot* slot, enum pat_event event, float event_data);
+typedef int (*pat_event_fn_pt)(struct slot* slot, struct pat_event event, float event_data);
+typedef int (*pat_event_fn_pt)(struct slot* slot, struct pat_event event, float event_data);
 typedef color_t (*pat_render_fn_pt)(pat_state_pt state, float x, float y);
 
 typedef struct pattern

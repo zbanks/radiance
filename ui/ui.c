@@ -22,8 +22,6 @@
 #include "filters/filter.h"
 #include "waveform/waveform.h"
 #include "midi/midi.h"
-#include "midi/layout.h"
-#include "midi/controllers.h"
 #include "output/slice.h"
 #include "patterns/pattern.h"
 #include "patterns/static.h"
@@ -321,10 +319,13 @@ static void ui_update_midi(struct midi_controller * controller){
 
     SDL_Color color = {150, 150, 150, 255};
 
-    if(controller->available)
-        color = controller->color;
+    if(controller->enabled)
+        color = (SDL_Color) {0, 255, 30, 255};
 
-    text_render(midi_pane, &layout.midi.name_txt, &color, controller->short_name);
+    if(controller->short_name)
+        text_render(midi_pane, &layout.midi.name_txt, &color, controller->short_name);
+    else if(controller->name)
+        text_render(midi_pane, &layout.midi.name_txt, &color, controller->name);
 }
 
 static void ui_update_slot(slot_t* slot)
@@ -542,8 +543,8 @@ static void ui_render()
         SDL_BlitSurface(output_pane, 0, screen, &r);
     }
 
-    for(int i = 0; i < n_controllers_enabled; i++){
-        ui_update_midi(&controllers_enabled[i]);
+    for(int i = 0; i < n_midi_controllers; i++){
+        ui_update_midi(&midi_controllers[i]);
         rect_array_layout(&layout.midi.rect_array, i, &r);
         
         SDL_BlitSurface(midi_pane, 0, screen, &r);
@@ -590,9 +591,11 @@ static void mouse_drag_pattern_ev(struct xy xy){
     struct xy offset;
     xy = xy_add(xy, active_preview.dxy);
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_DRAG_X,
+        static struct pat_event mouse_drag_x = {.source = PATSRC_MOUSE_X, .event = PATEV_MIDDLE};
+        static struct pat_event mouse_drag_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_MIDDLE};
+        active_preview.slot->pattern->event(active_preview.slot, mouse_drag_x,
                 -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
-        active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_DRAG_Y,
+        active_preview.slot->pattern->event(active_preview.slot, mouse_drag_y,
                 -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
     }
 }
@@ -649,8 +652,10 @@ static void mouse_drop_pattern_ev(struct xy xy){
         x = -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w;
         y = -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h;
     }
-    active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_X, x);
-    active_preview.slot->pattern->event(active_preview.slot, PATEV_MOUSE_UP_Y, y);
+    static struct pat_event mouse_up_x = {.source = PATSRC_MOUSE_X, .event = PATEV_END};
+    static struct pat_event mouse_up_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_END};
+    active_preview.slot->pattern->event(active_preview.slot, mouse_up_x, x);
+    active_preview.slot->pattern->event(active_preview.slot, mouse_up_y, y);
 }
 
 static int mouse_click_slot(int index, struct xy xy)
@@ -681,9 +686,11 @@ static int mouse_click_slot(int index, struct xy xy)
 
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_X,
+        static struct pat_event mouse_down_x = {.source = PATSRC_MOUSE_X, .event = PATEV_START};
+        static struct pat_event mouse_down_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_START};
+        slots[index].pattern->event(&slots[index], mouse_down_x,
                 -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
-        slots[index].pattern->event(&slots[index], PATEV_MOUSE_DOWN_Y,
+        slots[index].pattern->event(&slots[index], mouse_down_y,
                 -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
         active_preview.slot = &slots[index];
         memcpy(&active_preview.dxy, &xy, sizeof(struct xy));
@@ -893,7 +900,7 @@ static int mouse_click(struct xy xy)
     }
 
     // See if click is in midi
-    for(int i =  0; i < n_controllers_enabled; i++){
+    for(int i =  0; i < n_midi_controllers; i++){
         rect_array_layout(&layout.midi.rect_array, i, &r);
         if(xy_in_rect(&xy, &r, &offset)){
             return mouse_click_midi(i, offset);
@@ -934,7 +941,6 @@ static int mouse_click(struct xy xy)
 static void ui_poll()
 {
     SDL_Event e;
-    struct midi_event * me;
     struct xy xy;
     while(SDL_PollEvent(&e)) 
     {
@@ -973,17 +979,14 @@ static void ui_poll()
                 mouse_drop_fn_p = 0;
                 mouse_down = 0;
                 break;
-            case SDL_MIDI_NOTE_ON:
-                me = e.user.data1;
-                //printf("Note on: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
-                midi_handle_note_event(me);
-                free(me);
-                break;
-            case SDL_MIDI_NOTE_OFF:
-                me = e.user.data1;
-                //printf("Note off: %d %d %d %d\n", me->device, me->event, me->data1, me->data2);
-                midi_handle_note_event(me);
-                free(me);
+            case SDL_MIDI_SLOT_EVENT:
+                xy.x = 0; //XXX
+                struct midi_slot_event * slot_event = (struct midi_slot_event *) e.user.data1;
+                float * value = (float *) e.user.data2;
+                if(slot_event->slot->pattern){
+                    slot_event->slot->pattern->event(slot_event->slot, slot_event->event, *value);
+                }
+                free(value);
                 break;
         }
     }

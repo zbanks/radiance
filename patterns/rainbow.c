@@ -80,10 +80,10 @@ static color_t pixel(pat_state_pt pat_state_p, float x, float y) {
     return colormap_color(state->colormap, t);
 }
 
-static int event(slot_t* slot, enum pat_event e, float event_data){
+static int event(slot_t* slot, struct pat_event event, float event_data){
     state_t * state = (state_t *) slot->state;
     if(isnan(event_data)) return 0;
-    UNUSED(e);
+    UNUSED(event);
     UNUSED(state);
     // TEMPLATE: Handle click/MIDI event
     return 0;

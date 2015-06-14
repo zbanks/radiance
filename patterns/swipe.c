@@ -20,7 +20,7 @@ enum swipe_state {
 
 struct swipe;
 struct swipe {
-    enum pat_event source;
+    enum pat_source source;
     double kx; // Wave vector, normalized s.t. sqrt(kx * kx + ky * ky) == 1.0
     double ky;
     double ox; // Origin
@@ -28,7 +28,6 @@ struct swipe {
     double length; // Length so far, it grows as the button is held
     double alpha;  // Alpha
     enum swipe_state state; // State: growing, shrinking, off
-    struct swipe * next;
 };
 
 #define N_SWIPE_BUFFER 128
@@ -135,85 +134,54 @@ static color_t pixel(pat_state_pt pat_state_p, float x, float y)
     return output;
 }
 
-static int event(slot_t* slot, enum pat_event e, float event_data){
+static int event(slot_t* slot, struct pat_event event, float event_data){
     state_t * state = (state_t *) slot->state;
     if(isnan(event_data)) event_data = 0;
     struct swipe * swipe;
     int i;
-    switch(e){
-        case PATEV_M1_NOTE_ON:
+    if(event.source == PATSRC_MOUSE_Y) return 0;
+
+    if(event.event == PATEV_START){
+        switch(event.source){
             for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
                 if(state->swipe_buffer[i].state == SWIPE_OFF) break;
             }
             swipe = &state->swipe_buffer[i];
-
-            swipe->source = e;
-            swipe->ox = 1;
-            swipe->oy = 0;
+            swipe->source = event.source;
             swipe->length = 0;
-            swipe->kx = -1;
-            swipe->ky = 0;
             swipe->state = SWIPE_GROWING;
             swipe->alpha = event_data;
-        break;
-        case PATEV_M2_NOTE_ON:
-            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-                if(state->swipe_buffer[i].state == SWIPE_OFF) break;
+            case PATSRC_MIDI_0:
+                swipe->ox = 1;
+                swipe->oy = 0;
+                swipe->kx = -1;
+                swipe->ky = 0;
+            break;
+            case PATSRC_MIDI_1:
+                swipe->ox = -1;
+                swipe->oy = 0;
+                swipe->kx = 1;
+                swipe->ky = 0;
+            break;
+            default:
+            case PATSRC_MOUSE_X:
+                swipe->ox = -1;
+                swipe->oy = -1;
+                swipe->kx = .707;
+                swipe->ky = .707;
+                swipe->alpha = 1.;
+            break;
+        }
+        return 1;
+    }else if(event.event == PATEV_END){
+        for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
+            if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == event.source){
+                state->swipe_buffer[i].state = SWIPE_SHRINKING;
+                return 1;
             }
-            swipe = &state->swipe_buffer[i];
-
-            swipe->source = e;
-            swipe->ox = -1;
-            swipe->oy = 0;
-            swipe->length = 0;
-            swipe->kx = 1;
-            swipe->ky = 0;
-            swipe->state = SWIPE_GROWING;
-            swipe->alpha = event_data;
-        break;
-        case PATEV_MOUSE_DOWN_X:
-            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-                if(state->swipe_buffer[i].state == SWIPE_OFF) break;
-            }
-            swipe = &state->swipe_buffer[i];
-
-            swipe->source = e;
-            swipe->ox = -1;
-            swipe->oy = -1;
-            swipe->length = 0;
-            swipe->kx = .707;
-            swipe->ky = .707;
-            swipe->state = SWIPE_GROWING;
-            swipe->alpha = 1.;
-        break;
-        case PATEV_M1_NOTE_OFF:
-            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-                if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == PATEV_M1_NOTE_ON){
-                    state->swipe_buffer[i].state = SWIPE_SHRINKING;
-                    return 1;
-                }
-            }
-        break;
-        case PATEV_M2_NOTE_OFF:
-            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-                if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == PATEV_M2_NOTE_ON){
-                    state->swipe_buffer[i].state = SWIPE_SHRINKING;
-                    return 1;
-                }
-            }
-        break;
-        case PATEV_MOUSE_UP_X:
-            for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-                if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == PATEV_MOUSE_DOWN_X){
-                    state->swipe_buffer[i].state = SWIPE_SHRINKING;
-                    return 1;
-                }
-            }
-        break;
-        default:
-        return 0;
+        }
     }
-    return 1;
+    return 0;
 }
 
 pattern_t pat_swipe = {
