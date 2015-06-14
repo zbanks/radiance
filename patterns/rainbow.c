@@ -17,6 +17,7 @@ typedef struct {
     enum osc_type type;
     float kx;
     float ky;
+    struct colormap* colormap;
 } state_t;
 
 enum param_names {
@@ -70,15 +71,13 @@ static void update(slot_t* slot, mbeat_t t) {
     k_ang = param_state_get(&slot->param_states[K_ANGLE]) * 2 * M_PI;
     state->kx = COS(k_ang) * k_mag;
     state->ky = SIN(k_ang) * k_mag;
+    state->colormap = slot->colormap ? slot->colormap : cm_global;
 }
 
 static color_t pixel(pat_state_pt pat_state_p, float x, float y) {
     state_t * state = (state_t*)pat_state_p;
     float t = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
-    //struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
-    //return colormap_color(cm, t);
-    UNUSED(t);
-    return (color_t){0,0,0,0}; // TODO fix colormap
+    return colormap_color(state->colormap, t);
 }
 
 static int event(slot_t* slot, enum pat_event e, float event_data){
