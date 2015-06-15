@@ -29,18 +29,14 @@ static inline SDL_Color parse_color(const char * cstr){
 #undef CFGOBJ
 #undef CFGOBJ_PATH
 #endif
-
 #define CFGOBJ layout
 #define CFGOBJ_PATH "ui/layout.def"
-
-//#undef PACKED
-//#define PACKED 
 
 #define CFG(n, type, def) type n;
 
 #define CFG_XY_ATTR(n, dx, dy) \
     CFG(PREFIX(n, x), SINT16, dx) CFG(PREFIX(n, y), SINT16, dy)
-struct PACKED xy {
+struct xy {
     CFG_XY_ATTR(,,)
 };
 
@@ -52,7 +48,7 @@ struct PACKED xy {
     CFG(PREFIX(n, color), STRING, dcolor)
 
 struct txt;
-struct PACKED txt {
+struct txt {
     CFG_TXT_ATTR(,,,,,,)
     struct {
         TTF_Font * font;
@@ -72,11 +68,11 @@ typedef SDL_Rect rect_t;
 /*
 typedef union {
     SDL_Rect sdl;
-    struct PACKED {
+    struct {
         struct xy xy;
         struct xy wh;
     };
-    struct PACKED {
+    struct {
         CFG_RECT_ATTR(,,,,)
     };
 } rect_t;
@@ -91,16 +87,16 @@ typedef union {
     CFG(PREFIX(n, py), UINT16, dpy) \
     CFG(PREFIX(n, tile), INT, dtile)
 
-struct PACKED rect_array {
+struct rect_array {
     CFG_RECT_ARRAY_ATTR(,,,,,,,)
 };
 
 #undef CFG
 
-#define CFG_XY(n, args...) union { struct xy PREFIX(n, xy); struct PACKED { CFG_XY_ATTR(n, args) }; };
-#define CFG_TXT(n, args...) union { struct txt PREFIX(n, txt); struct PACKED { CFG_TXT_ATTR(n, args) }; };
-#define CFG_RECT(n, args...) union { rect_t PREFIX(n, rect); struct PACKED { CFG_RECT_ATTR(n, args) }; };
-#define CFG_RECT_ARRAY(n, args...) union { struct rect_array PREFIX(n, rect_array); struct PACKED { CFG_RECT_ARRAY_ATTR(n, args) }; };
+#define CFG_XY(n, args...) union { struct xy PREFIX(n, xy); struct { CFG_XY_ATTR(n, args) }; };
+#define CFG_TXT(n, args...) union { struct txt PREFIX(n, txt); struct { CFG_TXT_ATTR(n, args) }; };
+#define CFG_RECT(n, args...) union { rect_t PREFIX(n, rect); struct { CFG_RECT_ATTR(n, args) }; };
+#define CFG_RECT_ARRAY(n, args...) union { struct rect_array PREFIX(n, rect_array); struct { CFG_RECT_ARRAY_ATTR(n, args) }; };
 
 #include "core/config_gen_h.def"
 

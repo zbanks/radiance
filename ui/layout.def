@@ -127,4 +127,6 @@ CFGSECTION(palette,
 
 
 #undef CFGSECTION
+#undef CFGSECTION_LIST
 #undef CFG
+#undef CFG_LIST

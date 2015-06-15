@@ -1,6 +1,15 @@
 #ifndef __CORE_CONFIG_MACROS_H__
 #define __CORE_CONFIG_MACROS_H__
 
+#define N_MAX_LIST_ELEMENTS 32
+
+// LIST_NAME(slot) --> slots
+// LIST_N_NAME(slot) --> n_slots
+// LIST_PREFIX(slot) --> "slot_"
+#define LIST_NAME(name) name ## s
+#define LIST_N_NAME(name) n_ ## name ## s
+#define LIST_PREFIX(name) STRINGIFY(name) "_"
+
 #define INT int
 #define SINT16 Sint16
 #define UINT16 Uint16

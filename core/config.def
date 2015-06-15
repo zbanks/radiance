@@ -40,4 +40,6 @@ CFGSECTION(timebase,
 )
 
 #undef CFGSECTION
+#undef CFGSECTION_LIST
 #undef CFG
+#undef CFG_LIST

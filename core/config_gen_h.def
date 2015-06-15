@@ -15,8 +15,10 @@
 #define SECTIONSTRUCT(x) CONCAT(_##x##_,CFGOBJ)
 
 struct CFGOBJ {
-    #define CFGSECTION(w, d...) struct SECTIONSTRUCT(w) { d } w;
+    #define CFGSECTION(w, d) struct SECTIONSTRUCT(w) { d } w;
+    #define CFGSECTION_LIST(w, max, d) struct SECTIONSTRUCT(w) { int configured; d } LIST_NAME(w)[max]; int LIST_N_NAME(w);
     #define CFG(n, type, default) type n;
+    #define CFG_LIST(name, max, type) struct { int index; type name; } LIST_NAME(name)[max]; int LIST_N_NAME(name);
     #include CFGOBJ_PATH
 };
 
