@@ -1,7 +1,6 @@
 #include "core/err.h"
 #include "core/slot.h"
 #include "state/state.h"
-#include "state/state_ini.h"
 #include "filters/filter.h"
 #include "patterns/pattern.h"
 #include "patterns/static.h"
@@ -9,24 +8,50 @@
 #include "util/ini.h"
 #include "util/color.h"
 
+#include "core/config_macros.h"
+
+#ifdef CFGOBJ
+#undef CFGOBJ
+#undef CFGOBJ_PATH
+#endif
+
+#define CFGOBJ state_data
+#define CFGOBJ_PATH "state/state.def"
+
+#define PALETTE struct colormap *
+#define PALETTE_FN(x) _find_palette(x)
+#define PALETTE_FMT(x) "%s", (x ? x->name : cm_global->name)
+#define PALETTE_PARSE(x) _find_palette(x)
+
+static struct colormap * _find_palette(const char * palette_str){
+    if(strcmp(palette_str, "Global") == 0){
+        return NULL;
+    }
+    for(int i = 0; i < n_colormaps; i++){
+        if(strcmp(palette_str, colormaps[i]->name) == 0){
+            return colormaps[i];
+        }
+    }
+    WARN("Invalid palette name '%s'\n", palette_str);
+    return NULL;
+}
+
+#include "core/config_gen_h.def"
 #include "core/config_gen_c.def"
 
 int state_load(const char * filename){
     struct state_data state;
-    state = state_data; // Populate with defaults
+    state_data_defaults(&state); // Load with default state
     if(state_data_load(&state, filename))
         return -1;
 
     int found = 0;
-    for(int i = 0; i < n_colormaps; i++){
-        if(strcmp(state.global.palette, colormaps[i]->name) == 0){
-            colormap_set_global(colormaps[i]); 
-            found = 1;
-            break;
-        }
-    }
-    if(!found){
-        WARN("Invalid global palette name '%s'\n", state.global.palette);
+
+    if(state.global.palette == NULL){
+        ERROR("Global palette cannot be 'Global'\n");
+        colormap_set_global(colormaps[0]);
+    }else{
+        colormap_set_global(state.global.palette);
     }
 
     // Configure slots
@@ -53,22 +78,7 @@ int state_load(const char * filename){
         }
 
         // Set palette
-        found = 0;
-        if(strcmp(state.slots[i].palette, "Global") == 0){
-            slots[i].colormap = NULL;
-            found = 1;
-        }else{
-            for(int j = 0; j < n_colormaps; j++){
-                if(strcmp(state.slots[i].palette, colormaps[j]->name) == 0){
-                    slots[i].colormap = colormaps[j];
-                    found = 1;
-                    break;
-                }
-            }
-        }
-        if(!found){
-            WARN("Invalid palette name '%s'\n", state.slots[i].palette);
-        }
+        slots[i].colormap = state.slots[i].palette;
         
         // Set alpha
         param_state_setq(&slots[i].alpha, state.slots[i].alpha);

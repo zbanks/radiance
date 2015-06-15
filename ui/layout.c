@@ -5,6 +5,8 @@
 
 #include "core/config_gen_c.def"
 
+struct layout layout;
+
 void rect_array_layout(struct rect_array * array_spec, int i, rect_t * rect){
     int index_x = i;
     int index_y = i;

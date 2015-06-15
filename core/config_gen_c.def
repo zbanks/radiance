@@ -2,20 +2,12 @@
 #error "CFGOBJ not defined in config_gen.c"
 #endif
 
-// Instance of global configuration object
-// Each value is initialized with its default value
-struct CFGOBJ CFGOBJ = {
-    #define CFGSECTION(w, d...) .w = { d },
-    #define CFGSECTION_LIST(w, max, d) .LIST_NAME(w) = {{.configured = 0}}, .LIST_N_NAME(w) = 0,
-    #define CFG(n, type, default) .n = default,
-    #define CFG_LIST(name, max, type) .LIST_N_NAME(name) = 0, .LIST_NAME(name) = {0}, 
-    #include CFGOBJ_PATH
-};
 
 // Function to parse line of configuration file
 // Called from CFGOBJ_load
 static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char * key, const char * value){
     struct CFGOBJ * cfg = (struct CFGOBJ *) user;
+
     #define CFGSECTION(s, d) if(strcasecmp(section, STRINGIFY(s)) == 0){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d return 0;}
     #define CFGSECTION_LIST(name, max, d) \
         if(strncasecmp(section, LIST_PREFIX(name), strlen(LIST_PREFIX(name))) == 0){ \
@@ -84,10 +76,40 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename){
 
 // Function to load in a configuration file
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename){
+    if(!filename) return -1;
+    // Reset lists
+    #define CFGSECTION(s, d) if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; (void)(sp); d; }
+    #define CFGSECTION_LIST(name, max, d) for(int i = 0; i < max; i++){ struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i]; (void)(sp); d } 
+    #define CFG(n, type, default) 
+    #define CFG_LIST(name, max, type) sp->LIST_N_NAME(name) = 0;
+    #include CFGOBJ_PATH
+
     if(ini_parse(filename, CONCAT(CFGOBJ, _parse), cfg) < 0){
         printf("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
-        return 1;
+        return -1;
     }
     printf("Loaded " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
     return 0;
 }
+
+// Instance of global configuration object
+// Each value is initialized with its default value
+int CONCAT(CFGOBJ, _defaults)(struct CFGOBJ * cfg){
+    #define CFGSECTION(s, d) if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d; }
+    #define CFGSECTION_LIST(name, max, d) \
+        for(int i = 0; i < max; i++){ \
+            struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i]; \
+            sp->configured = 0; \
+            d \
+        } \
+        cfg->LIST_N_NAME(name) = 0;
+    #define CFG(n, type, default) sp->n = type##_PARSE(default);
+    #define CFG_LIST(name, max, type) \
+        for(int j = 0; j < max; j++) { \
+            sp->LIST_NAME(name)[j].index = 0; \
+            sp->LIST_NAME(name)[j].name = 0; \
+        } \
+        sp->LIST_N_NAME(name) = 0;
+    #include CFGOBJ_PATH
+    return 0;
+};

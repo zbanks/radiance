@@ -97,8 +97,7 @@ static int midi_config_connect_event(struct midi_conn_line * conn, slot_t * slot
 
 int midi_config_load(const char * filename, struct midi_controller * controllers, int n_controllers){
     struct midi_map map;
-    // `midi_map` is the global instance containing defaults
-    memcpy(&map, &midi_map, sizeof(struct midi_map));
+    midi_map_defaults(&map);
 
     if(midi_map_load(&map, filename))
         return -1;

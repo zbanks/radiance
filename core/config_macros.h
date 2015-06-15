@@ -10,25 +10,34 @@
 #define LIST_N_NAME(name) n_ ## name ## s
 #define LIST_PREFIX(name) STRINGIFY(name) "_"
 
+// Wrap default value in PARSE(...) to trigger parse, required for some types
+
+// Numeric types
 #define INT int
 #define SINT16 Sint16
 #define UINT16 Uint16
-#define STRING char *
-#define FLOAT float
 
 #define INT_FN(x) atoi(x)
 #define SINT16_FN(x) atoi(x)
 #define UINT16_FN(x) atoi(x)
-#define STRING_FN(x) mystrdup(x)
-#define FLOAT_FN(x) atof(x)
 
 #define INT_FMT(x) "%d", x
 #define SINT16_FMT(x) "%d", x
 #define UINT16_FMT(x) "%d", x
-#define STRING_FMT(x) "%s", x
-#define FLOAT_FMT(x) "%f", x
 
-#define PACKED __attribute__ ((__packed__))
+#define INT_PARSE(x) x
+#define SINT16_PARSE(x) x
+#define UINT16_PARSE(x) x
+
+#define FLOAT float
+#define FLOAT_FN(x) atof(x)
+#define FLOAT_FMT(x) "%f", x
+#define FLOAT_PARSE(x) x
+
+#define STRING char *
+#define STRING_FN(x) mystrdup(x)
+#define STRING_FMT(x) "%s", x
+#define STRING_PARSE(x) x
 
 #define CONCAT(x, y) CONCAT2(x, y)
 #define CONCAT2(x, y) x ## y

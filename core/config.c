@@ -4,3 +4,5 @@
 #include "core/config.h"
 
 #include "core/config_gen_c.def"
+
+struct config config;

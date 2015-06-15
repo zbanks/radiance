@@ -36,6 +36,14 @@ void catch_sigterm(int sig)
 
 int main()
 {
+    config_defaults(&config);
+    config_load(&config, "config.ini");
+    config_dump(&config, "config.ini"); // Dump parsed copy (remove "in production", useful because it adds new fields)
+
+    layout_defaults(&layout);
+    layout_load(&layout, config.path.layout);
+    layout_dump(&layout, config.path.layout);
+
     colormap_test_all();
     colormap_set_global(&cm_rainbow_edged);
     colormap_set_mono(0.5);
@@ -44,11 +52,6 @@ int main()
     pattern_init();
     patterns_updating = SDL_CreateMutex();
 
-    //config_load(&config, "config.ini");
-    //layout_load(&layout, config.path.layout);
-    
-    config_dump(&config, "config.ini");
-    layout_dump(&layout, config.path.layout);
     
     /*
      * fade > 100fps

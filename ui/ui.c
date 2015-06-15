@@ -354,7 +354,7 @@ static void ui_update_slot(slot_t* slot)
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
-            if(&slot->state[i] == active_param_source){
+            if(&slot->param_states[i] == active_param_source){
                 slider_render(&slot->pattern->parameters[i], &slot->param_states[i], highlight_c);
             }else{
                 slider_render(&slot->pattern->parameters[i], &slot->param_states[i], param_name_c);

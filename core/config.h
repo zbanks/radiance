@@ -13,4 +13,6 @@
 
 #include "core/config_gen_h.def"
 
+extern struct config config;
+
 #endif  // End of include guard

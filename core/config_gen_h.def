@@ -22,10 +22,9 @@ struct CFGOBJ {
     #include CFGOBJ_PATH
 };
 
-extern struct CFGOBJ CFGOBJ;
-
 int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename);
+int CONCAT(CFGOBJ, _defaults)(struct CFGOBJ * cfg);
 
 #ifndef __MYSTRDUMP__
 #define __MYSTRDUMP__
