@@ -15,16 +15,17 @@
 #define SECTIONSTRUCT(x) CONCAT(_##x##_,CFGOBJ)
 
 struct CFGOBJ {
-    #define CFGSECTION(w, d) struct SECTIONSTRUCT(w) { d } w;
-    #define CFGSECTION_LIST(w, max, d) struct SECTIONSTRUCT(w) { int configured; d } LIST_NAME(w)[max]; int LIST_N_NAME(w);
-    #define CFG(n, type, default) type n;
-    #define CFG_LIST(name, max, type) struct { int index; type name; } LIST_NAME(name)[max]; int LIST_N_NAME(name);
+    #define CFGSECTION(name, d) struct SECTIONSTRUCT(name) { d } name;
+    #define CFGSECTION_LIST(name, d) struct SECTIONSTRUCT(name) { int configured; d } * LIST_NAME(name); int LIST_N_NAME(name);
+    #define CFG(name, type, default) type name;
+    #define CFG_LIST(name, max, type, default) type LIST_NAME(name)[max]; int LIST_N_NAME(name);
     #include CFGOBJ_PATH
 };
 
 int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename);
-int CONCAT(CFGOBJ, _defaults)(struct CFGOBJ * cfg);
+int CONCAT(CFGOBJ, _init)(struct CFGOBJ * cfg);
+int CONCAT(CFGOBJ, _del)(struct CFGOBJ * cfg);
 
 #ifndef __MYSTRDUMP__
 #define __MYSTRDUMP__

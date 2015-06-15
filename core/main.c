@@ -36,11 +36,11 @@ void catch_sigterm(int sig)
 
 int main()
 {
-    config_defaults(&config);
+    config_init(&config);
     config_load(&config, "config.ini");
     config_dump(&config, "config.ini"); // Dump parsed copy (remove "in production", useful because it adds new fields)
 
-    layout_defaults(&layout);
+    layout_init(&layout);
     layout_load(&layout, config.path.layout);
     layout_dump(&layout, config.path.layout);
 
@@ -120,6 +120,8 @@ int main()
 
     pattern_del();
     slots_del();
+    config_del(&config);
+    layout_del(&layout);
 
     return 0;
 }

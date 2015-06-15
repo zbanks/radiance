@@ -16,28 +16,27 @@
 #define INT int
 #define SINT16 Sint16
 #define UINT16 Uint16
-
-#define INT_FN(x) atoi(x)
-#define SINT16_FN(x) atoi(x)
-#define UINT16_FN(x) atoi(x)
-
-#define INT_FMT(x) "%d", x
-#define SINT16_FMT(x) "%d", x
-#define UINT16_FMT(x) "%d", x
-
-#define INT_PARSE(x) x
-#define SINT16_PARSE(x) x
-#define UINT16_PARSE(x) x
-
 #define FLOAT float
-#define FLOAT_FN(x) atof(x)
-#define FLOAT_FMT(x) "%f", x
-#define FLOAT_PARSE(x) x
+
+#define INT_PARSE(x) atoi(x)
+#define SINT16_PARSE(x) atoi(x)
+#define UINT16_PARSE(x) atoi(x)
+#define FLOAT_PARSE(x) atof(x)
+
+#define INT_FORMAT(x) "%d", x
+#define SINT16_FORMAT(x) "%d", x
+#define UINT16_FORMAT(x) "%d", x
+#define FLOAT_FORMAT(x) "%f", x
+
+#define INT_FREE(x) (void)(x)
+#define SINT16_FREE(x) (void)(x)
+#define UINT16_FREE(x) (void)(x)
+#define FLOAT_FREE(x) (void)(x)
 
 #define STRING char *
-#define STRING_FN(x) mystrdup(x)
-#define STRING_FMT(x) "%s", x
-#define STRING_PARSE(x) x
+#define STRING_PARSE(x) mystrdup(x)
+#define STRING_FORMAT(x) "%s", x
+#define STRING_FREE(x) free(x)
 
 #define CONCAT(x, y) CONCAT2(x, y)
 #define CONCAT2(x, y) x ## y

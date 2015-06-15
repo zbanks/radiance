@@ -19,9 +19,10 @@
 #define CFGOBJ_PATH "state/state.def"
 
 #define PALETTE struct colormap *
-#define PALETTE_FN(x) _find_palette(x)
-#define PALETTE_FMT(x) "%s", (x ? x->name : cm_global->name)
 #define PALETTE_PARSE(x) _find_palette(x)
+#define PALETTE_FORMAT(x) "%s", (x ? x->name : cm_global->name)
+#define PALETTE_FREE(x) (void)(x)
+
 
 static struct colormap * _find_palette(const char * palette_str){
     if(strcmp(palette_str, "Global") == 0){
@@ -41,7 +42,7 @@ static struct colormap * _find_palette(const char * palette_str){
 
 int state_load(const char * filename){
     struct state_data state;
-    state_data_defaults(&state); // Load with default state
+    state_data_init(&state); // Load with default state
     if(state_data_load(&state, filename))
         return -1;
 
@@ -119,6 +120,7 @@ int state_load(const char * filename){
             }
         }
     }
+    state_data_del(&state);
 
     printf("Loaded state configuration file: '%s'\n", filename);
     return 0;
@@ -147,7 +149,11 @@ int state_save(const char * filename){
     FILE * stream = fopen(filename, "w");
     if(!stream) return -1;
 
-    fprintf(stream, "[global]\n");
+    fprintf(stream, "[" SIZE_SECTION_NAME "]\n");
+    fprintf(stream, "n_slots=%d\n", n_slots);
+    fprintf(stream, "n_signals=%d\n", n_signals);
+
+    fprintf(stream, "\n[global]\n");
     fprintf(stream, "palette=%s\n", cm_global->name);
 
     for(int i = 0; i < n_slots; i++){
@@ -178,6 +184,6 @@ int state_save(const char * filename){
     }
 
     fclose(stream);
-    printf("Wrote state to %s", filename);
+    printf("Wrote state to %s\n", filename);
     return 0;
 }
