@@ -1,9 +1,7 @@
 #include "core/err.h"
-#include "core/state.h"
 #include "core/slot.h"
 #include "patterns/pattern.h"
 #include "signals/signal.h"
-#include "util/ini.h"
 #include "midi/midi.h"
 #include "midi/config.h"
 
@@ -102,10 +100,8 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
     // `midi_map` is the global instance containing defaults
     memcpy(&map, &midi_map, sizeof(struct midi_map));
 
-    if(midi_map_load(&map, filename)){
-        ERROR("Unable to parse MIDI map file: %s\n", filename);
+    if(midi_map_load(&map, filename))
         return -1;
-    }
 
     // Populate the `controllers` array with devices that are listed in the config file
     struct midi_controller * device;

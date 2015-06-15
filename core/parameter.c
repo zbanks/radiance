@@ -87,12 +87,16 @@ void param_state_connect(param_state_t * state, param_output_t * output){
 }
 
 int param_state_connect_label(param_state_t * state, const char * label){
-    param_output_t * poptr = param_output_list;
-    while(poptr && strcmp(poptr->label, label) != 0)
-        poptr = poptr->next;
-    if(!poptr) return -1;
+    if(!label || !*label){
+        param_state_disconnect(state);
+    }else{
+        param_output_t * poptr = param_output_list;
+        while(poptr && strcmp(poptr->label, label) != 0)
+            poptr = poptr->next;
+        if(!poptr) return -1;
 
-    param_state_connect(state, poptr);
+        param_state_connect(state, poptr);
+    }
     return 0;
 }
 

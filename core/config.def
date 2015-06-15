@@ -12,7 +12,7 @@ CFGSECTION(path,
 
 CFGSECTION(state,
     CFG(n_states, INT, 4)
-    CFG(path_format, STRING, "config_%d.ini")
+    CFG(path_format, STRING, "state_%d.ini")
 )
 
 CFGSECTION(output,

@@ -34,7 +34,6 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
         }
     #define CFG(n, type, default) if(strcasecmp(key, STRINGIFY(n))==0){ sp->n = type##_FN(value); return 1;} 
     #define CFG_LIST(n, max, type) \
-        printf("testing: %s %s\n", key, LIST_PREFIX(n)); \
         if(strncasecmp(key, LIST_PREFIX(n), strlen(LIST_PREFIX(n))) == 0){ \
             if(sp->LIST_N_NAME(n) >= max){ \
                 ERROR("too many " STRINGIFY(n) " entries! (max is %d)\n", max); \

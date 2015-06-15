@@ -9,7 +9,7 @@
 #include "core/err.h"
 #include "core/config.h"
 #include "core/slot.h"
-#include "core/state.h"
+#include "state/state.h"
 #include "core/audio.h"
 #include "filters/filter.h"
 #include "output/output.h"
