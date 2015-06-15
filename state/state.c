@@ -86,38 +86,22 @@ int state_load(const char * filename){
         param_state_connect_label(&slots[i].alpha, state.slots[i].alpha_source);
 
         // Set params
-        for(int j = 0; j < state.slots[i].n_param_sources; j++){
-            if(state.slots[i].param_sources[j].index < N_MAX_PARAMS){
-                param_state_connect_label(&slots[i].param_states[state.slots[i].param_sources[j].index], state.slots[i].param_sources[j].param_source);
-            }else{
-                WARN("Invalid parameter source number: %d\n", j);
-            }
+        for(int j = 0; j < state.slots[i].n_param_sources && j < N_MAX_PARAMS; j++){
+            param_state_connect_label(&slots[i].param_states[j], state.slots[i].param_sources[j]);
         }
-        for(int j = 0; j < state.slots[i].n_params; j++){
-            if(state.slots[i].params[j].index < N_MAX_PARAMS){
-                param_state_setq(&slots[i].param_states[state.slots[i].params[j].index], state.slots[i].params[j].param);
-            }else{
-                WARN("Invalid parameter number: %d\n", j);
-            }
+        for(int j = 0; j < state.slots[i].n_params && j < N_MAX_PARAMS; j++){
+            param_state_setq(&slots[i].param_states[j], state.slots[i].params[j]);
         }
     }
 
     // Configure signals
     for(int i = 0; i < n_signals && i < state.n_signals; i++){
         // Set params
-        for(int j = 0; j < state.signals[i].n_param_sources; j++){
-            if(state.signals[i].param_sources[j].index < N_MAX_PARAMS){
-                param_state_connect_label(&signals[i].param_states[state.signals[i].param_sources[j].index], state.signals[i].param_sources[j].param_source);
-            }else{
-                WARN("Invalid parameter source number: %d\n", j);
-            }
+        for(int j = 0; j < state.signals[i].n_param_sources && j < N_MAX_PARAMS; j++){
+            param_state_connect_label(&signals[i].param_states[j], state.signals[i].param_sources[j]);
         }
-        for(int j = 0; j < state.signals[i].n_params; j++){
-            if(state.signals[i].params[j].index < N_MAX_PARAMS){
-                param_state_setq(&signals[i].param_states[state.signals[i].params[j].index], state.signals[i].params[j].param);
-            }else{
-                WARN("Invalid parameter number: %d\n", j);
-            }
+        for(int j = 0; j < state.signals[i].n_params && j < N_MAX_PARAMS; j++){
+            param_state_setq(&signals[i].param_states[j], state.signals[i].params[j]);
         }
     }
     state_data_del(&state);
