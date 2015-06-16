@@ -197,7 +197,7 @@ static void update_master_preview()
 
     SDL_UnlockSurface(master_preview);
 
-    for(int i=0; i<n_output_strips; i++)
+    for(i=0; i<n_output_strips; i++)
     {
         int x1;
         int y1;

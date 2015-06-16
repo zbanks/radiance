@@ -26,7 +26,7 @@ INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib -L/usr/lib
 LIB  = -ldl -lm -lSDL -lSDL_ttf -lSDL_gfx -lzmq -lczmq -lflux -lpthread -lportaudio -lvamp-hostsdk -lportmidi #-lporttime
 
 # Assembler, compiler, and linker flags
-CXXFLAGS  = -g -O0 $(INC) -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
+CXXFLAGS  = -g -Ofast $(INC) -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
 CXXFLAGS += -funsafe-loop-optimizations -Wunsafe-loop-optimizations -ffast-math
 CFLAGS = $(CXXFLAGS) -std=c99 -D_POSIX_C_SOURCE
 LFLAGS  = $(CXXFLAGS)
@@ -39,14 +39,9 @@ LFLAGS  = $(CXXFLAGS)
 
 ui/layout.o: ui/layout.c
 	$(CC) $(CFLAGS) -Wno-missing-field-initializers $(INC) $(LIB) -c -o $@ $<
-midi/midi.o: midi/midi.c
-	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
 
-ui/ui.o: ui/ui.c
-	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
-
-timebase/timebase.o: timebase/timebase.c
-	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
+#ui/ui.o: ui/ui.c
+#	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
 
 # Targets
 .PHONY: all
