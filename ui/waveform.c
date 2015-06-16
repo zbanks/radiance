@@ -46,16 +46,6 @@ void ui_waveform_render(){
             vlineRGBA(waveform_surface, layout.waveform.w - i, (layout.waveform.h + h) / 2, (layout.waveform.h - h) / 2, c.r, c.g, c.b, 255);
         }
     }
-    /*
-    c = beat_bin.color;
-    int last_h = 0;
-    for(int i = 0; i < layout.waveform.w; i++)
-    {
-        h = beat_bin.history[i * skip + skip / 2] * layout.waveform.h;
-        vlineRGBA(waveform_surface, i, h, last_h-1, c.r, c.g, c.b, 255);
-        last_h = h;
-    }
-    */
     for(int i = 0; i < layout.waveform.w; i++){
         char l = 0;
         for(int k = 0; k < skip; k++){
@@ -72,5 +62,5 @@ void ui_waveform_render(){
 }
 
 void ui_waveform_del(){
-
+    SDL_FreeSurface(waveform_surface);
 }

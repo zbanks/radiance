@@ -1,0 +1,16 @@
+/* CFGSECTION(name, ...) */
+/* CFGSECTION_LIST(name, max, ...) */
+/* CFG(name, function, default) */
+/* CFG_LIST(name, max, function) */
+
+CFGSECTION_LIST(controller, 
+    CFG(name, STRING, "")
+    CFG(short_name, STRING, "")
+    CFG_LIST(cc, 128, STRING, "")
+    CFG_LIST(note, 128, STRING, "")
+)
+
+#undef CFGSECTION
+#undef CFGSECTION_LIST
+#undef CFG
+#undef CFG_LIST

@@ -34,7 +34,7 @@ static parameter_t params[N_PARAMS] = {
         .val_to_str = NULL,
     },
     [GEN] = {
-        .name = "Generation Rate",
+        .name = "Fill Fraction",
         .default_val = 0.5,
         .val_to_str = float_to_string,
     },
@@ -55,14 +55,16 @@ static void update(slot_t* slot, mbeat_t t) {
     float dt = MB2B(t - state->last_t);
     float decay = dt * power_quantize_parameter(param_state_get(&slot->param_states[DECAY]));
     for(int i = 0; i < BUCKET_SIZE; i++){
-        state->pixels[i] -= decay;
     }
-    int gen = RAND_MAX * param_state_get(&slot->param_states[GEN]) / BUCKET_SIZE * 10;
+    // I can't explain where the extra factor of 0.1 comes from? But it seems to be right
+    int gen = RAND_MAX * param_state_get(&slot->param_states[GEN]) * (decay / dt) * 0.1;
     for(int i = 0; i < BUCKET_SIZE; i++){
-        if(rand() < gen)
-            state->pixels[i] = 1.;
+        state->pixels[i] -= decay;
         if(state->pixels[i] < 0)
             state->pixels[i] = 0;
+
+        if(rand() < gen)
+            state->pixels[i] = 1.;
     }
     struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
     state->color = colormap_color(cm, param_state_get(&slot->param_states[COLOR]));

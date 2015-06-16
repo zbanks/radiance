@@ -1,0 +1,29 @@
+/* CFGSECTION(name, ...) */
+/* CFGSECTION_LIST(name, max, ...) */
+/* CFG(name, function, default) */
+/* CFG_LIST(name, max, function) */
+
+CFGSECTION(global,
+    CFG(palette, PALETTE, "Rainbow")
+)
+
+CFGSECTION_LIST(slot,
+    CFG(pattern, STRING, "None")
+    CFG(palette, PALETTE, "Global")
+    CFG(alpha_source, STRING, "")
+    CFG(alpha, FLOAT, 0)
+    CFG_LIST(param_source, 8, STRING, "")
+    CFG_LIST(param, 8, FLOAT, 0)
+)
+
+CFGSECTION_LIST(signal,
+    CFG(signal, STRING, "None")
+    CFG(name, STRING, "None")
+    CFG_LIST(param_source, 8, STRING, "")
+    CFG_LIST(param, 8, FLOAT, 0)
+)
+
+#undef CFGSECTION
+#undef CFGSECTION_LIST
+#undef CFG
+#undef CFG_LIST
