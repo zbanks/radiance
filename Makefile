@@ -28,7 +28,7 @@ LIB  = -ldl -lm -lSDL -lSDL_ttf -lSDL_gfx -lzmq -lczmq -lflux -lpthread -lportau
 # Assembler, compiler, and linker flags
 CXXFLAGS  = -g -O0 $(INC) -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
 CXXFLAGS += -funsafe-loop-optimizations -Wunsafe-loop-optimizations -ffast-math
-CFLAGS = $(CXXFLAGS) -std=c99 
+CFLAGS = $(CXXFLAGS) -std=gnu99 
 LFLAGS  = $(CXXFLAGS)
 
 -include $(DEPS)

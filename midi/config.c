@@ -4,6 +4,7 @@
 #include "signals/signal.h"
 #include "midi/midi.h"
 #include "midi/config.h"
+#include <string.h>
 
 #include "core/config_macros.h"
 
@@ -18,22 +19,31 @@
 #include "core/config_gen_h.def"
 #include "core/config_gen_c.def"
 
-static param_state_t * midi_config_parse_param(const char * pstr){
-    if(strncmp(pstr, "slot_", strlen("slot_")) == 0){
-        int slot_idx = 0;
-        int param_idx = 0;
-        if(sscanf(pstr, "slot_%d %d", &slot_idx, &param_idx) == 2){
-            if(slot_idx > 0 && slot_idx < n_slots && param_idx > 0 && param_idx < N_MAX_PARAMS){
-                return &slots[slot_idx].param_states[param_idx];
+static param_state_t * midi_config_parse_param(char * pstr){
+    if(!pstr || !*pstr) return NULL;
+    char * sptr;
+    char * target_str = strtok_r(pstr, " ", &sptr);
+    char * target_idx_str = strtok_r(NULL, " ", &sptr);
+    char * param_str = strtok_r(NULL, " ", &sptr);
+    if(strcasecmp(target_str, "slot") == 0){
+        int i = atoi(target_idx_str);
+        if(i >= 0 && i < n_slots){
+            int param_idx = 0;
+            if(strcasecmp(param_str, "alpha") == 0){
+                return &slots[i].alpha;
+            }else if(sscanf(param_str, "%d", &param_idx) == 1){
+                if(param_idx >= 0 && param_idx < N_MAX_PARAMS){
+                    return &slots[i].param_states[param_idx];
+                }
             }
         }
-    }else if(strncmp(pstr, "signal_", strlen("signal_")) == 0){
-        int signal_idx = 0;
-        int param_idx = 0;
-        if(sscanf(pstr, "signal_%d %d", &signal_idx, &param_idx) == 2){
-            if(signal_idx > 0 && signal_idx < n_signals){
-                if(param_idx > 0 && param_idx < signals[signal_idx].n_params){
-                    return &signals[signal_idx].param_states[param_idx];
+    }else if(strcasecmp(target_str, "slot") == 0){
+        int i = atoi(target_idx_str);
+        if(i >= 0 && i < n_signals){
+            int param_idx = 0;
+            if(sscanf(param_str, "%d", &param_idx) == 1){
+                if(param_idx >= 0 && param_idx < signals[i].n_params){
+                    return &signals[i].param_states[param_idx];
                 }
             }
         }
@@ -59,7 +69,7 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
             if(!controllers[j].enabled){
                 if(strcmp(map.controllers[i].name, controllers[j].name) == 0){
                     device = &controllers[j];
-                    device->short_name = map.controllers[i].short_name;
+                    device->short_name = strdup(map.controllers[i].short_name);
                     device->enabled = 1;
                     break;
                 }
@@ -73,22 +83,28 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
         // Iterate through Control Change connections
         for(int j = 0; j < map.controllers[i].n_ccs; j++){
             // Connect `device` CC#j to `map.ccs[j]`  
-            param_state_t * param_state = midi_config_parse_param(map.controllers[i].ccs[j]);
-            if(param_state){
-                if(device->n_connections + 1 > N_MAX_MIDI_CONNECTIONS){
-                    ERROR("More than %d MIDI connections specified for device %s\n", N_MAX_MIDI_CONNECTIONS, device->short_name);
-                    return -1;
-                }
+            char * param_str_copy = strdup(map.controllers[i].ccs[j]);
+            char * sptr = NULL;
+            for(char * param_str = strtok_r(param_str_copy, ";", &sptr); param_str != NULL; param_str = strtok_r(NULL, ";", &sptr)){
+                printf("Parsing %s\n", param_str);
+                param_state_t * param_state = midi_config_parse_param(param_str);
+                if(param_state){
+                    if(device->n_connections + 1 > N_MAX_MIDI_CONNECTIONS){
+                        ERROR("More than %d MIDI connections specified for device %s\n", N_MAX_MIDI_CONNECTIONS, device->short_name);
+                        return -1;
+                    }
 
-                // Create connection to param_state
-                struct midi_connection * connection = &device->connections[device->n_connections++];
-                connection->event = MIDI_STATUS_CC;
-                connection->data1 = j;
-                connection->param_state = param_state;
-                connection->slot_event.slot = NULL;
-            }else{
-                ERROR("Unknown connection for CC%d:'%s'\n", j, map.controllers[i].ccs[j]);
+                    // Create connection to param_state
+                    struct midi_connection * connection = &device->connections[device->n_connections++];
+                    connection->event = MIDI_STATUS_CC;
+                    connection->data1 = j;
+                    connection->param_state = param_state;
+                    connection->slot_event.slot = NULL;
+                }else{
+                    ERROR("Unknown connection for CC%d:'%s'\n", j, map.controllers[i].ccs[j]);
+                }
             }
+            free(param_str_copy);
         }
 
         // Iterate through Note connections
