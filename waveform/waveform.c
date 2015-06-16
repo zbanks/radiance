@@ -1,7 +1,8 @@
 #include "waveform/waveform.h"
 #include "timebase/timebase.h"
-#include "core/audio.h"
+#include "audio/audio.h"
 #include "core/time.h"
+#include "core/config.h"
 #include "ui/graph.h"
 
 #include <math.h>
@@ -69,7 +70,7 @@ void waveform_add_beatline(){
     beat_lines[0] |= 1;
 }
 
-void waveform_update(chunk_pt chunk){
+void waveform_update(const chunk_pt chunk){
     //const float alpha = 0.98;
 
     float vall = 0.;
@@ -105,7 +106,7 @@ void waveform_update(chunk_pt chunk){
 #define HC1 0.7
 
 
-    for(int i = 0; i < FRAMES_PER_BUFFER; i++){
+    for(int i = 0; i < config.audio.chunk_size; i++){
         vall = MAX(vall, fabs(chunk[i]));
 
         //slow = slow * alpha + chunk[i] * (1 - alpha);

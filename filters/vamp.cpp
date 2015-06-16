@@ -5,7 +5,8 @@
 #include <vamp-hostsdk/PluginLoader.h>
 
 extern "C" {
-#include "core/audio.h"
+#include "audio/audio.h"
+#include "core/config.h"
 #include "filters/filter.h"
 }
 
@@ -18,6 +19,8 @@ using Vamp::HostExt::PluginLoader;
 using Vamp::HostExt::PluginWrapper;
 using Vamp::HostExt::PluginInputDomainAdapter;
 
+static unsigned long vamp_chunk_size = 128;
+
 int vamp_plugin_load(filter_t * filter){
     Plugin *plugin;
     Plugin::OutputDescriptor od;
@@ -29,7 +32,7 @@ int vamp_plugin_load(filter_t * filter){
     filter->vamp_plugin = 0;
 
     key = loader->composePluginKey(string(filter->vamp_so), string(filter->vamp_id));
-    plugin = loader->loadPlugin(key, SAMPLE_RATE, PluginLoader::ADAPT_ALL);
+    plugin = loader->loadPlugin(key, config.audio.sample_rate, PluginLoader::ADAPT_ALL);
     //plugin = loader->loadPlugin(key, SAMPLE_RATE, 0);
 
     if(!plugin){
@@ -47,7 +50,8 @@ int vamp_plugin_load(filter_t * filter){
     // TODO Do something with:
     // filter->output.label     od.identifier.c_str()
 
-    if(!plugin->initialise(1, FRAMES_PER_BUFFER, FRAMES_PER_BUFFER)){
+    vamp_chunk_size = config.audio.chunk_size;
+    if(!plugin->initialise(1, vamp_chunk_size, vamp_chunk_size)){
         printf("Error initing vamp plugin\n");
         return 1;
     }
@@ -67,9 +71,7 @@ static long rt_msec(RealTime rt){
 
 int vamp_plugin_update(filter_t * filter, chunk_pt chunk){
     // Returns number of events processed 
-    
     Plugin * plugin = (Plugin *) filter->vamp_plugin;
-    RealTime rt = RealTime::frame2RealTime(n_filtered_chunks*FRAMES_PER_BUFFER, SAMPLE_RATE);
     int n_features = 0;
     int event_time;
     double event_value;
@@ -77,6 +79,7 @@ int vamp_plugin_update(filter_t * filter, chunk_pt chunk){
     if(!plugin)
         return 0;
 
+    RealTime rt = RealTime::frame2RealTime(n_filtered_chunks*config.audio.chunk_size, config.audio.sample_rate);
     Plugin::FeatureSet features = plugin->process(&chunk, rt);
 
     for(vector<Plugin::Feature>::iterator it =features[filter->vamp_output].begin(); it != features[filter->vamp_output].end(); it++){

@@ -3,6 +3,7 @@ CXX = g++
 
 # Files to include
 C_SRC  = $(wildcard core/*.c)
+C_SRC += $(wildcard audio/*.c)
 C_SRC += $(wildcard dynamic/*.c)
 C_SRC += $(wildcard filters/*.c)
 C_SRC += $(wildcard lib/*.c)

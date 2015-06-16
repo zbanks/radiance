@@ -1,8 +1,6 @@
 #ifndef __TIMEBASE_H
 #define __TIMEBASE_H
 
-#include "core/audio.h"
-
 enum {
     TB_MANUAL,
     TB_AUTOMATIC,

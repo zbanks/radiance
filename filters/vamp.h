@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #include "filters/filter.h"
-#include "core/audio.h"
+#include "audio/audio.h"
 
 int vamp_plugin_load(filter_t * filter);
 void vamp_plugin_unload(filter_t * filter);

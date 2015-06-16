@@ -10,7 +10,7 @@
 #include "core/config.h"
 #include "core/slot.h"
 #include "state/state.h"
-#include "core/audio.h"
+#include "audio/audio.h"
 #include "filters/filter.h"
 #include "output/output.h"
 #include "output/slice.h"

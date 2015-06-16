@@ -34,6 +34,13 @@ CFGSECTION(timebase,
     CFG(beat_btrack_alpha, FLOAT, 0.95)
 )
 
+CFGSECTION(audio,
+    CFG(use_portaudio, INT, 1)
+    CFG(use_jack, INT, 1)
+    CFG(sample_rate, INT, 44100)
+    CFG(chunk_size, INT, 128)
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG

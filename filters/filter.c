@@ -153,7 +153,7 @@ void filters_unload(){
     }
 }
 
-void filters_update(chunk_pt chunk){
+void filters_update(const chunk_pt chunk){
     for(int i = 0; i < n_filters; i++){
         vamp_plugin_update(&filters[i], chunk);
     }

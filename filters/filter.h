@@ -1,7 +1,7 @@
 #ifndef __FILTER_H
 #define __FILTER_H
 
-#include "core/audio.h"
+#include "audio/audio.h"
 #include "core/parameter.h"
 #include "core/time.h"
 #include "ui/graph.h"
@@ -50,7 +50,7 @@ extern int n_filters;
 extern filter_t filters[];
 extern filter_t beat_filter;
 
-void filters_update(chunk_pt chunk);
+void filters_update(const chunk_pt chunk);
 void filters_load();
 void filters_unload();
 #endif

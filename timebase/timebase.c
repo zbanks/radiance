@@ -4,7 +4,7 @@
 #include <SDL/SDL_thread.h>
 
 #include "waveform/waveform.h"
-#include "core/audio.h"
+#include "audio/audio.h"
 #include "core/config.h"
 #include "core/err.h"
 

@@ -27,10 +27,11 @@ int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _init)(struct CFGOBJ * cfg);
 int CONCAT(CFGOBJ, _del)(struct CFGOBJ * cfg);
 
-#ifndef __MYSTRDUMP__
-#define __MYSTRDUMP__
+#ifndef __MYSTRDUP__
+#define __MYSTRDUP__
+// Fall back on library version if it exists
 inline static char* mystrdup(const char* s) {
-    char* p = malloc(strlen(s)+1);
+    char* p = (char *) malloc(strlen(s)+1);
     if (p) strcpy(p, s);
     return p;
 }
