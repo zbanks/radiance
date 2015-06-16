@@ -8,3 +8,5 @@ beat-off
 *.swo
 *.orig
 *.vim
+*.deps
+*.dirstamp
