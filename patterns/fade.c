@@ -23,9 +23,9 @@ typedef struct
 } pat_fade_state_t;
 
 enum pat_fade_param_names {
-    FADE_COLOR,
     FADE_FREQ,
     FADE_DELTA,
+    FADE_COLOR,
 
     N_FADE_PARAMS
 };

@@ -69,7 +69,7 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
             if(!controllers[j].enabled){
                 if(strcmp(map.controllers[i].name, controllers[j].name) == 0){
                     device = &controllers[j];
-                    device->short_name = strdup(map.controllers[i].short_name);
+                    device->short_name = mystrdup(map.controllers[i].short_name);
                     device->enabled = 1;
                     break;
                 }
@@ -83,10 +83,9 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
         // Iterate through Control Change connections
         for(int j = 0; j < map.controllers[i].n_ccs; j++){
             // Connect `device` CC#j to `map.ccs[j]`  
-            char * param_str_copy = strdup(map.controllers[i].ccs[j]);
+            char * param_str_copy = mystrdup(map.controllers[i].ccs[j]);
             char * sptr = NULL;
             for(char * param_str = strtok_r(param_str_copy, ";", &sptr); param_str != NULL; param_str = strtok_r(NULL, ";", &sptr)){
-                printf("Parsing %s\n", param_str);
                 param_state_t * param_state = midi_config_parse_param(param_str);
                 if(param_state){
                     if(device->n_connections + 1 > N_MAX_MIDI_CONNECTIONS){
@@ -115,7 +114,7 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                 return -1;
             }
 
-            char * param_str_copy = strdup(map.controllers[i].notes[j]);
+            char * param_str_copy = mystrdup(map.controllers[i].notes[j]);
             char * sptr = NULL;
             for(char * param_str = strtok_r(param_str_copy, ";", &sptr); param_str != NULL; param_str = strtok_r(NULL, ";", &sptr)){
                 int slot_idx = 0;

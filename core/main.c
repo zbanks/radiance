@@ -81,7 +81,11 @@ int main()
     pat_load(&slots[7], &pat_strobe);
 
     for(int i = 0; i < 8; i++){
-        param_state_setq(&slots[i].param_states[0], (rand() % 1000) / 1000.);
+        if(!slots[i].pattern) continue;
+        for(int j = 0; j < slots[i].pattern->n_params; j++){
+            if(strcmp(slots[i].pattern->parameters[j].name, "Color") == 0)
+                param_state_setq(&slots[i].param_states[j], (rand() % 1000) / 1000.);
+        }
     }
 
 

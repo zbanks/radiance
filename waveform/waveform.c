@@ -53,14 +53,16 @@ struct waveform_bin beat_bin = {
 void waveform_init(){
     for(int i = 0; i < N_WF_BINS; i++){
         memset(waveform_bins[i].history, 0, sizeof(WAVEFORM_HISTORY_SIZE * sizeof(float)));
+        waveform_bins[i].hptr = 0;
     }
     memset(beat_bin.history, 0, sizeof(WAVEFORM_HISTORY_SIZE * sizeof(float)));
+    beat_bin.hptr = 0;
 }
 
 static inline void waveform_bin_update(struct waveform_bin * bin, float value){
-    float * history = bin->history;
-    memmove(history + 1, history, (WAVEFORM_HISTORY_SIZE - 1) * sizeof(float));
-    *history = value;
+    if(bin->hptr >= WAVEFORM_HISTORY_SIZE)
+        bin->hptr = 0;
+    bin->history[bin->hptr++] = value;
 }
 
 void waveform_add_beatline(){

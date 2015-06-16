@@ -25,10 +25,10 @@ typedef struct
 } pat_strobe_state_t;
 
 enum pat_strobe_param_names {
-    STROBE_COLOR,
     STROBE_FREQ,
     STROBE_ATTACK,
     STROBE_DECAY,
+    STROBE_COLOR,
 
     N_STROBE_PARAMS
 };

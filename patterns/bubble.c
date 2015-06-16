@@ -22,9 +22,9 @@ typedef struct
 } pat_bubble_state_t;
 
 enum pat_bubble_param_names {
-    BUBBLE_COLOR,
     BUBBLE_R,
     BUBBLE_RHO,
+    BUBBLE_COLOR,
     BUBBLE_CX,
     BUBBLE_CY,
 

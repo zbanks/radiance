@@ -21,10 +21,10 @@ typedef struct {
 } state_t;
 
 enum param_names {
-    TYPE,
     OMEGA,
-    K_MAG,
     K_ANGLE,
+    TYPE,
+    K_MAG,
 
     N_PARAMS
 };

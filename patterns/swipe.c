@@ -42,9 +42,9 @@ typedef struct {
 } state_t;
 
 enum param_names {
-    COLOR,
     SPEED,
     SHARP,
+    COLOR,
 
     N_PARAMS
 };

@@ -25,16 +25,22 @@ void ui_waveform_render(){
 #define MAX(a, b) ((a > b) ? a : b)
     int h;
     SDL_Color c;
+    if(skip < 1) skip = 1;
 
     for(int j = 0; j < N_WF_BINS; j++){
         float * history = waveform_bins[j].history;
+        int hptr = waveform_bins[j].hptr; 
+        hptr -= hptr % skip;
         c = waveform_bins[j].color;
 
         for(int i = 0; i < layout.waveform.w; i++)
         {
             float x = 0.;
             for(int k = 0; k < skip; k++){
-                x = MAX(x, history[i * skip + k]);
+                hptr--;
+                if(hptr < 0)
+                    hptr = WAVEFORM_HISTORY_SIZE;
+                x = MAX(x, history[hptr]);
             }
             h = x * layout.waveform.h;
             vlineRGBA(waveform_surface, layout.waveform.w - i, (layout.waveform.h + h) / 2, (layout.waveform.h - h) / 2, c.r, c.g, c.b, 255);

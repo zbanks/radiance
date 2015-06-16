@@ -12,8 +12,8 @@
 // --------- Pattern: Full -----------
 
 enum pat_full_param_names {
-    FULL_COLOR,
     FULL_VALUE,
+    FULL_COLOR,
 
     N_FULL_PARAMS
 };

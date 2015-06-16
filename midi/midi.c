@@ -53,22 +53,9 @@ int midi_refresh_devices(){
         }
     }
     // Read configuration from file, populating `.enabled` if found
-    midi_config_load(config.path.midi, new_controllers, n_new);
-
-    // Open corresponding PortMidiStream's
-    for(int i = 0; i < n_new; i++) {
-        if(new_controllers[i].enabled){
-            err = Pm_OpenInput(&new_controllers[i].stream, new_controllers[i].device_id, NULL, MIDI_BUFFER_SIZE, NULL, NULL);
-            if(err != pmNoError){
-                ERROR("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
-                new_controllers[i].device_id = 0;
-                new_controllers[i].enabled = 0;
-                new_controllers[i].stream= NULL;
-                //goto refresh_fail; // Soft fail
-            }else{
-                printf("Connected MIDI device: %s (%s)", new_controllers[i].short_name, new_controllers[i].name);
-            }
-        }
+    if(midi_config_load(config.path.midi, new_controllers, n_new)){
+        ERROR("Unable to read MIDI configuration file %s\n", config.path.midi);
+        goto refresh_fail;
     }
 
     // Delete old midi controllers
@@ -88,6 +75,23 @@ int midi_refresh_devices(){
 
     midi_controllers = new_controllers;
     n_midi_controllers = n_new;
+
+    // Open corresponding PortMidiStream's
+    for(int i = 0; i < n_new; i++) {
+        if(new_controllers[i].enabled){
+            err = Pm_OpenInput(&new_controllers[i].stream, new_controllers[i].device_id, NULL, MIDI_BUFFER_SIZE, NULL, NULL);
+            if(err != pmNoError){
+                ERROR("Could not open MIDI device: %s\n", Pm_GetErrorText(err));
+                new_controllers[i].device_id = 0;
+                new_controllers[i].enabled = 0;
+                new_controllers[i].stream= NULL;
+                //goto refresh_fail; // Soft fail
+            }else{
+                printf("Connected MIDI device: %s (%s)", new_controllers[i].short_name, new_controllers[i].name);
+            }
+        }
+    }
+
 
     return 0;
 

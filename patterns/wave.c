@@ -25,12 +25,12 @@ typedef struct
 } pat_wave_state_t;
 
 enum pat_wave_param_names {
-    WAVE_COLOR,
-    WAVE_TYPE,
     WAVE_OMEGA,
     WAVE_K_MAG,
+    WAVE_TYPE,
     WAVE_K_ANGLE,
     WAVE_RHO,
+    WAVE_COLOR,
 
     N_WAVE_PARAMS
 };
