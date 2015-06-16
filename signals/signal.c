@@ -43,14 +43,6 @@ void inp_lfo_init(signal_t * signal){
 
     state->type = OSC_SINE;
     freq_init(&state->freq_state, 0.5, 0);
-
-    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
-    if(!signal->param_states) if(!signal->state) FAIL("Could not allocate LFO signal state\n");
-
-    for(int i = 0; i < signal->n_params; i++){
-        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
-    }
-    //signal->output = malloc(sizeof(param_output_t));
 }
 
 void inp_lfo_update(signal_t * signal, mbeat_t t){
@@ -65,10 +57,6 @@ void inp_lfo_update(signal_t * signal, mbeat_t t){
 
 void inp_lfo_del(signal_t * signal){
     if(!signal->state) return;
-
-    param_output_free(&signal->output);
-    free(signal->param_states);
-    signal->param_states = 0;
     free(signal->state);
     signal->state = 0;
 }
@@ -109,17 +97,6 @@ void inp_lpf_init(signal_t * signal){
     if(!signal->state) return;
 
     dema_init(&state->ema, signal->parameters[LPF_RISE].default_val, signal->parameters[LPF_FALL].default_val);
-
-    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
-    if(!signal->param_states){
-        free(signal->state);
-        signal->state = 0;
-        return;
-    }
-
-    for(int i = 0; i < signal->n_params; i++){
-        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
-    }
 }
 
 void inp_lpf_update(signal_t * signal, mbeat_t t){
@@ -137,10 +114,6 @@ void inp_lpf_update(signal_t * signal, mbeat_t t){
 
 void inp_lpf_del(signal_t * signal){
     if(!signal->state) return;
-
-    param_output_free(&signal->output);
-    free(signal->param_states);
-    signal->param_states = 0;
     free(signal->state);
     signal->state = 0;
 }
@@ -188,15 +161,6 @@ void inp_agc_init(signal_t * signal){
 
     agc_init(&state->agc_state, 1.0, 0.0, 0, 0, 0.5);
 
-    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
-    if(!signal->param_states){
-        free(signal->state);
-        return;
-    }
-
-    for(int i = 0; i < signal->n_params; i++){
-        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
-    }
 }
 
 void inp_agc_update(signal_t * signal, mbeat_t t){
@@ -217,9 +181,6 @@ void inp_agc_update(signal_t * signal, mbeat_t t){
 
 void inp_agc_del(signal_t * signal){
     if(!signal->state) return;
-    param_output_free(&signal->output);
-    free(signal->param_states);
-    signal->param_states = 0;
     free(signal->state);
     signal->state = 0; 
 }
@@ -264,16 +225,6 @@ void inp_qtl_init(signal_t * signal){
 
     memset(state->state, 0, QTL_MAXSIZE * sizeof(float));
     state->last_t= 0;
-
-    signal->param_states = malloc(sizeof(param_state_t) * signal->n_params);
-    if(!signal->param_states){
-        free(signal->state);
-        return;
-    }
-
-    for(int i = 0; i < signal->n_params; i++){
-        param_state_init(&signal->param_states[i], signal->parameters[i].default_val);
-    }
 }
 
 static int _fcmp(const void * a, const void * b){
@@ -311,9 +262,6 @@ void inp_qtl_update(signal_t * signal, mbeat_t t){
 
 void inp_qtl_del(signal_t * signal){
     if(!signal->state) return;
-    param_output_free(&signal->output);
-    free(signal->param_states);
-    signal->param_states = 0;
     free(signal->state);
     signal->state = 0; 
 }
@@ -437,14 +385,25 @@ void signal_start(){
     for(int i = 0; i < n_signals; i++){
         graph_create_signal(&signals[i].graph_state);
         param_output_init(&signals[i].output, 0.);
-        signals[i].init(&signals[i]);
 
+        signals[i].param_states = malloc(sizeof(param_state_t) * signals[i].n_params);
+        if(!signals[i].param_states)
+            FAIL("Unable to allocate space for signal params.\n");
+        for(int j = 0; j < signals[i].n_params; j++){
+            param_state_init(&signals[i].param_states[j], signals[i].parameters[j].default_val);
+        }
+
+        signals[i].init(&signals[i]);
     }
 }
 
 void signal_stop(){
     for(int i = 0; i < n_signals; i++){
         signals[i].del(&signals[i]);
+        for(int j = 0; j < signals[i].n_params; j++){
+            param_state_disconnect(&signals[i].param_states[j]);
+        }
+        free(signals[i].param_states);
         param_output_free(&signals[i].output);
         graph_remove(&signals[i].graph_state);
     }

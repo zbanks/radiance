@@ -20,6 +20,7 @@
 
 #define PALETTE struct colormap *
 #define PALETTE_PARSE(x) _find_palette(x)
+#define PALETTE_PREP(x) _find_palette(x)
 #define PALETTE_FORMAT(x) "%s", (x ? x->name : cm_global->name)
 #define PALETTE_FREE(x) (void)(x)
 
@@ -97,10 +98,10 @@ int state_load(const char * filename){
     // Configure signals
     for(int i = 0; i < n_signals && i < state.n_signals; i++){
         // Set params
-        for(int j = 0; j < state.signals[i].n_param_sources && j < N_MAX_PARAMS; j++){
+        for(int j = 0; j < state.signals[i].n_param_sources && j < signals[i].n_params; j++){
             param_state_connect_label(&signals[i].param_states[j], state.signals[i].param_sources[j]);
         }
-        for(int j = 0; j < state.signals[i].n_params && j < N_MAX_PARAMS; j++){
+        for(int j = 0; j < state.signals[i].n_params && j < signals[i].n_params; j++){
             param_state_setq(&signals[i].param_states[j], state.signals[i].params[j]);
         }
     }
@@ -160,7 +161,8 @@ int state_save(const char * filename){
     for(int i = 0; i < n_signals; i++){
         fprintf(stream, "\n[signal_%d]\n", i);
         if(slots[i].pattern){
-            fprintf(stream, "signal_name=%s\n", signals[i].name);
+            fprintf(stream, "signal=%s\n", signals[i].name);
+            fprintf(stream, "name=%s\n", signals[i].name);
             for(int j = 0; j < signals[i].n_params; j++){
                 dump_param(stream, &signals[i].param_states[j], &signals[i].parameters[j], j);
             }

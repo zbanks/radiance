@@ -33,8 +33,14 @@
 #define UINT16_FREE(x) (void)(x)
 #define FLOAT_FREE(x) (void)(x)
 
+#define INT_PREP(x) x
+#define SINT16_PREP(x) x
+#define UINT16_PREP(x) x
+#define FLOAT_PREP(x) x
+
 #define STRING char *
 #define STRING_PARSE(x) mystrdup(x)
+#define STRING_PREP(x) mystrdup(x)
 #define STRING_FORMAT(x) "%s", x
 #define STRING_FREE(x) free(x)
 
