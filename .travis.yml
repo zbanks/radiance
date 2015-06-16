@@ -11,6 +11,12 @@ install:
       && make 
       && sudo make install
       && popd;
+  - git clone --quiet --depth=100 "https://github.com/EddieRingle/portaudio" ~/builds/portaudio
+      && pushd ~/builds/portaudio
+      && ./configure
+      && make
+      && sudo make install
+      && popd;
   - git clone --quiet "https://github.com/zbanks/flux.git" ~/builds/flux
       && pushd ~/builds/flux
       && make all
