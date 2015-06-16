@@ -133,23 +133,23 @@ static color_t pixel(const pat_state_pt pat_state_p, float x, float y)
     return output;
 }
 
-static int event(slot_t* slot, struct pat_event event, float event_data){
+static int event(slot_t* slot, struct pat_event ev, float event_data){
     state_t * state = (state_t *) slot->state;
     if(isnan(event_data)) event_data = 0;
     struct swipe * swipe;
     int i;
-    if(event.source == PATSRC_MOUSE_Y) return 0;
+    if(ev.source == PATSRC_MOUSE_Y) return 0;
 
-    if(event.event == PATEV_START){
+    if(ev.event == PATEV_START){
         for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
             if(state->swipe_buffer[i].state == SWIPE_OFF) break;
         }
         swipe = &state->swipe_buffer[i];
-        swipe->source = event.source;
+        swipe->source = ev.source;
         swipe->length = 0;
         swipe->state = SWIPE_GROWING;
         swipe->alpha = event_data;
-        switch(event.source){
+        switch(ev.source){
             case PATSRC_MIDI_0:
                 swipe->ox = 1;
                 swipe->oy = 0;
@@ -172,9 +172,9 @@ static int event(slot_t* slot, struct pat_event event, float event_data){
             break;
         }
         return 1;
-    }else if(event.event == PATEV_END){
+    }else if(ev.event == PATEV_END){
         for(i = 0; i < N_SWIPE_BUFFER - 1; i++){
-            if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == event.source){
+            if(state->swipe_buffer[i].state == SWIPE_GROWING && state->swipe_buffer[i].source == ev.source){
                 state->swipe_buffer[i].state = SWIPE_SHRINKING;
                 return 1;
             }
