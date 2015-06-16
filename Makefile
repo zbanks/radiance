@@ -23,7 +23,7 @@ OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
 INC  = -I. -Ilib/lux/inc -Ilib -L/usr/local/lib -L/usr/lib 
-LIB  = -ldl -lm -lSDL -lSDL_ttf -lSDL_gfx -lzmq -lczmq -lflux -lpthread -lportaudio -lvamp-hostsdk -lportmidi #-lporttime
+LIB  = -ldl -lm -lSDL -lSDL_ttf -lSDL_gfx -lflux -lpthread -lportaudio -lvamp-hostsdk -lportmidi
 
 # Assembler, compiler, and linker flags
 CXXFLAGS  = -g -Ofast $(INC) -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
