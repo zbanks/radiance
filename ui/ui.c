@@ -659,15 +659,15 @@ static void mouse_drop_pattern_ev(struct xy xy){
     active_preview.slot->pattern->event(active_preview.slot, mouse_up_y, y);
 }
 
-static int mouse_click_slot(int index, struct xy xy)
+static int mouse_click_slot(int ix, struct xy xy)
 {
     rect_t r;
     struct xy offset;
-    if(!slots[index].pattern) return 0;
+    if(!slots[ix].pattern) return 0;
 
     // See if the click is on the alpha slider
     if(xy_in_rect(&xy, &layout.slot.alpha_rect, &offset)){
-        return !!mouse_click_alpha_slider(&slots[index].alpha, offset);
+        return !!mouse_click_alpha_slider(&slots[ix].alpha, offset);
     }
 
     // See if the click is on the palette indicator
@@ -676,11 +676,11 @@ static int mouse_click_slot(int index, struct xy xy)
     r.y = layout.slot.palette_y;
     r.h = layout.slot.palette_size;
     if(xy_in_rect(&xy, &r, &offset)){
-        if(active_palette_source == &slots[index].colormap){
+        if(active_palette_source == &slots[ix].colormap){
             active_palette_source = NULL;
-            slots[index].colormap = NULL;
+            slots[ix].colormap = NULL;
         }else{
-            active_palette_source = &slots[index].colormap;
+            active_palette_source = &slots[ix].colormap;
         }
         return 1;
     }
@@ -689,11 +689,11 @@ static int mouse_click_slot(int index, struct xy xy)
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
         static struct pat_event mouse_down_x = {.source = PATSRC_MOUSE_X, .event = PATEV_START};
         static struct pat_event mouse_down_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_START};
-        slots[index].pattern->event(&slots[index], mouse_down_x,
+        slots[ix].pattern->event(&slots[ix], mouse_down_x,
                 -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
-        slots[index].pattern->event(&slots[index], mouse_down_y,
+        slots[ix].pattern->event(&slots[ix], mouse_down_y,
                 -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
-        active_preview.slot = &slots[index];
+        active_preview.slot = &slots[ix];
         memcpy(&active_preview.dxy, &xy, sizeof(struct xy));
         mouse_drag_fn_p = &mouse_drag_pattern_ev;
         mouse_drop_fn_p = &mouse_drop_pattern_ev;
@@ -701,16 +701,16 @@ static int mouse_click_slot(int index, struct xy xy)
     }
 
     // See if the click is on a parameter slider
-    for(int i = 0; i < slots[index].pattern->n_params; i++)
+    for(int i = 0; i < slots[ix].pattern->n_params; i++)
     {
         rect_array_layout(&layout.slot.sliders_rect_array, i, &r);
         if(xy_in_rect(&xy, &r, &offset)){
-            return !!mouse_click_param_slider(&slots[index].param_states[i], offset);
+            return !!mouse_click_param_slider(&slots[ix].param_states[i], offset);
         }
     }
 
     // Else, drag the slot
-    active_slot.slot = &slots[index];
+    active_slot.slot = &slots[ix];
     active_slot.dxy = (struct xy) {0, 0};
 
     mouse_drag_fn_p = &mouse_drag_slot;
@@ -719,29 +719,29 @@ static int mouse_click_slot(int index, struct xy xy)
 
 }
 
-static int mouse_click_output(int index, struct xy xy){
-    UNUSED(index);
+static int mouse_click_output(int i, struct xy xy){
+    UNUSED(i);
     UNUSED(xy);
     return 0;
 }
 
-static int mouse_click_midi(int index, struct xy xy){
-    UNUSED(index);
+static int mouse_click_midi(int i, struct xy xy){
+    UNUSED(i);
     UNUSED(xy);
     //midi_refresh_devices();
     return 0;
 }
 
-static int mouse_click_signal(int index, struct xy xy)
+static int mouse_click_signal(int ix, struct xy xy)
 {
     rect_t r;
     struct xy offset;
-    for(int i = 0; i < signals[index].n_params; i++)
+    for(int i = 0; i < signals[ix].n_params; i++)
     {
         // See if the click is on a parameter slider
         rect_array_layout(&layout.signal.sliders_rect_array, i, &r);
         if(xy_in_rect(&xy, &r, &offset)){
-            return !!mouse_click_param_slider(&signals[index].param_states[i], offset);
+            return !!mouse_click_param_slider(&signals[ix].param_states[i], offset);
         }
     }
 
@@ -749,7 +749,7 @@ static int mouse_click_signal(int index, struct xy xy)
     if(xy_in_rect(&xy, &layout.graph_signal.rect, 0)){
         // Is there something looking for a source?
         if(active_param_source){
-            param_state_connect(active_param_source, &signals[index].output);
+            param_state_connect(active_param_source, &signals[ix].output);
             active_param_source = 0;
         }
     }
@@ -757,10 +757,10 @@ static int mouse_click_signal(int index, struct xy xy)
     return 0;
 }
 
-static int mouse_click_filter(int index, struct xy xy){
+static int mouse_click_filter(int i, struct xy xy){
     if(xy_in_rect(&xy, &layout.graph_filter.rect, 0)){
         if(active_param_source){
-            param_state_connect(active_param_source, &filters[index].output);
+            param_state_connect(active_param_source, &filters[i].output);
             active_param_source = 0;
         }
         return 1;
@@ -802,36 +802,36 @@ static int mouse_click_audio(struct xy xy){
     return 1;
 }
 
-static int mouse_click_state_save(int index, struct xy xy){
+static int mouse_click_state_save(int i, struct xy xy){
     UNUSED(xy);
     char filename[1024];
-    snprintf(filename, 1023, config.state.path_format, index);
+    snprintf(filename, 1023, config.state.path_format, i);
     if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
     return 1;
 }
 
-static int mouse_click_state_load(int index, struct xy xy){
+static int mouse_click_state_load(int i, struct xy xy){
     UNUSED(xy);
     char filename[1024];
-    snprintf(filename, 1023, config.state.path_format, index);
+    snprintf(filename, 1023, config.state.path_format, i);
     if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
     return 1;
 }
 
-static int mouse_click_palette(int index, struct xy xy){
+static int mouse_click_palette(int i, struct xy xy){
     struct xy offset;
     if(active_palette_source){
-        *active_palette_source = colormaps[index];
+        *active_palette_source = colormaps[i];
         active_palette_source = NULL;
     }
 
-    if(index == 0) return 1;
+    if(i == 0) return 1;
 
     if(xy_in_rect(&xy, &layout.palette.active_rect, &offset)){
-        colormap_set_global(colormaps[index]);
+        colormap_set_global(colormaps[i]);
     }
 
-    if(colormaps[index] == cm_global && xy_in_rect(&xy, &layout.palette.preview_rect, &offset)){
+    if(colormaps[i] == cm_global && xy_in_rect(&xy, &layout.palette.preview_rect, &offset)){
         colormap_set_mono((float) offset.x / (float) layout.palette.w);
     }
     return 1;
