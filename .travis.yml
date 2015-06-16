@@ -1,0 +1,22 @@
+language: c
+compiler:
+    - gcc
+    - clang
+
+install:
+  - git clone --quiet --depth=100 "https://github.com/nanomsg/nanomsg.git" ~/builds/nanomsg
+      && pushd ~/builds/nanomsg
+      && ./autogen.sh
+      && ./configure
+      && make 
+      && sudo make install
+      && popd;
+  - git clone --quiet "https://github.com/zbanks/flux.git" ~/builds/flux
+      && pushd ~/builds/flux
+      && make all
+      && sudo make install
+      && popd;
+  - sudo apt-get install -qq libsdl1.2-dev libsdl-gfx1.2-dev libsdl-ttf2.0-dev libportaudio-dev libportmidi-dev vamp-plugin-sdk
+
+script: make all
+
