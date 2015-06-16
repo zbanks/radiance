@@ -88,7 +88,8 @@ int state_load(const char * filename){
 
         // Set params
         for(int j = 0; j < state.slots[i].n_param_sources && j < N_MAX_PARAMS; j++){
-            param_state_connect_label(&slots[i].param_states[j], state.slots[i].param_sources[j]);
+            if(param_state_connect_label(&slots[i].param_states[j], state.slots[i].param_sources[j]))
+                WARN("No output with label '%s'\n", state.slots[i].param_sources[j]);
         }
         for(int j = 0; j < state.slots[i].n_params && j < N_MAX_PARAMS; j++){
             param_state_setq(&slots[i].param_states[j], state.slots[i].params[j]);
@@ -99,7 +100,8 @@ int state_load(const char * filename){
     for(int i = 0; i < n_signals && i < state.n_signals; i++){
         // Set params
         for(int j = 0; j < state.signals[i].n_param_sources && j < signals[i].n_params; j++){
-            param_state_connect_label(&signals[i].param_states[j], state.signals[i].param_sources[j]);
+            if(param_state_connect_label(&signals[i].param_states[j], state.signals[i].param_sources[j]))
+                WARN("No output with label '%s'\n", state.slots[i].param_sources[j]);
         }
         for(int j = 0; j < state.signals[i].n_params && j < signals[i].n_params; j++){
             param_state_setq(&signals[i].param_states[j], state.signals[i].params[j]);
