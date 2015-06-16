@@ -115,37 +115,43 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                 return -1;
             }
 
-            int slot_idx = 0;
-            int event_idx = 0;
-            if(sscanf(map.controllers[i].notes[j], "slot_%d %d", &slot_idx, &event_idx) == 2){
-                if(slot_idx < 0 || slot_idx >= n_slots || event_idx < 0){
-                    ERROR("Invalid event: '%s'\n", map.controllers[i].notes[j]);
-                    continue;
+            char * param_str_copy = strdup(map.controllers[i].notes[j]);
+            char * sptr = NULL;
+            for(char * param_str = strtok_r(param_str_copy, ";", &sptr); param_str != NULL; param_str = strtok_r(NULL, ";", &sptr)){
+                int slot_idx = 0;
+                int event_idx = 0;
+                printf("note %s\n", param_str);
+                if(sscanf(param_str, "slot %d %d", &slot_idx, &event_idx) == 2){
+                    if(slot_idx < 0 || slot_idx >= n_slots || event_idx < 0){
+                        ERROR("Invalid event: '%s'\n", map.controllers[i].notes[j]);
+                        continue;
+                    }
+                    printf("Making event %d %d\n", slot_idx, event_idx);
+
+                    struct midi_connection * connection = &device->connections[device->n_connections++];
+                    connection->event = MIDI_STATUS_NOTEON;
+                    connection->data1 = j;
+                    connection->param_state = NULL;
+                    connection->slot_event.slot = &slots[slot_idx];
+                    connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
+                    connection->slot_event.event.event = PATEV_START;
+
+                    connection = &device->connections[device->n_connections++];
+                    connection->event = MIDI_STATUS_AFTERTOUCH;
+                    connection->data1 = j;
+                    connection->param_state = NULL;
+                    connection->slot_event.slot = &slots[slot_idx];
+                    connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
+                    connection->slot_event.event.event = PATEV_MIDDLE;
+
+                    connection = &device->connections[device->n_connections++];
+                    connection->event = MIDI_STATUS_NOTEOFF;
+                    connection->data1 = j;
+                    connection->param_state = NULL;
+                    connection->slot_event.slot = &slots[slot_idx];
+                    connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
+                    connection->slot_event.event.event = PATEV_END;
                 }
-
-                struct midi_connection * connection = &device->connections[device->n_connections++];
-                connection->event = MIDI_STATUS_NOTEON;
-                connection->data1 = j;
-                connection->param_state = NULL;
-                connection->slot_event.slot = &slots[slot_idx];
-                connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
-                connection->slot_event.event.event = PATEV_START;
-
-                connection = &device->connections[device->n_connections++];
-                connection->event = MIDI_STATUS_AFTERTOUCH;
-                connection->data1 = j;
-                connection->param_state = NULL;
-                connection->slot_event.slot = &slots[slot_idx];
-                connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
-                connection->slot_event.event.event = PATEV_MIDDLE;
-
-                connection = &device->connections[device->n_connections++];
-                connection->event = MIDI_STATUS_NOTEOFF;
-                connection->data1 = j;
-                connection->param_state = NULL;
-                connection->slot_event.slot = &slots[slot_idx];
-                connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
-                connection->slot_event.event.event = PATEV_END;
             }
         }
     }
