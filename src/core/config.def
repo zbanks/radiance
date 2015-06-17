@@ -5,14 +5,14 @@ CFGSECTION(ui,
 )
 
 CFGSECTION(path,
-    CFG(layout, STRING, "layout.ini")
-    CFG(midi, STRING, "midi.ini")
+    CFG(layout, STRING, "conf/layout.ini")
+    CFG(midi, STRING, "conf/midi.ini")
     //CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
 )
 
 CFGSECTION(state,
     CFG(n_states, INT, 4)
-    CFG(path_format, STRING, "state_%d.ini")
+    CFG(path_format, STRING, "conf/state/state_%d.ini")
 )
 
 CFGSECTION(output,

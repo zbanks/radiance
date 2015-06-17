@@ -1,5 +1,12 @@
 CC = gcc
 CXX = g++
+PREFIX = @prefix@
+
+# cflags @CFLAGS@
+# ldflags @LDFLAGS@
+# @WITH_VAMP@
+# @with_vamp@
+# @LIBS@
 
 # Files to include
 C_SRC  = $(wildcard src/core/*.c)
@@ -23,14 +30,16 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -I. -I./src/ -L/usr/local/lib -L/usr/lib 
-LIB  = -ldl -lm -lSDL -lSDL_ttf -lSDL_gfx -lflux -lpthread -lportaudio -lvamp-hostsdk -lportmidi
+INC  = -I./src/ -L/usr/local/lib -L/usr/lib 
+LIB  = @LIBS@
 
 # Assembler, compiler, and linker flags
-CXXFLAGS  = -g -Ofast $(INC) -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
+CXXFLAGS = $(INC) 
+CXXFLAGS += @CFLAGS@ -Ofast
+CXXFLAGS += -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
 CXXFLAGS += -funsafe-loop-optimizations -Wunsafe-loop-optimizations -ffast-math
 CFLAGS = $(CXXFLAGS) -std=c99 -D_POSIX_C_SOURCE
-LFLAGS  = $(CXXFLAGS)
+LFLAGS  = $(LIB) @LDFLAGS@
 
 -include $(DEPS)
 %.d : %.c
