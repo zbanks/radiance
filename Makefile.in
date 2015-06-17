@@ -38,7 +38,7 @@ LIB  = -L/usr/local/lib -L/usr/lib @LIBS@
 CXXFLAGS = $(INC) 
 CXXFLAGS += @CFLAGS@ -Ofast
 CXXFLAGS += -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual  -Wno-missing-braces -Wuninitialized -Werror
-CXXFLAGS += -funsafe-loop-optimizations -Wunsafe-loop-optimizations -ffast-math
+#CXXFLAGS += -funsafe-loop-optimizations -Wunsafe-loop-optimizations -ffast-math
 CFLAGS = $(CXXFLAGS) -std=c99 -D_POSIX_C_SOURCE
 LFLAGS  = $(LIB) @LDFLAGS@
 
@@ -49,10 +49,7 @@ LFLAGS  = $(LIB) @LDFLAGS@
 	@$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 ui/layout.o: ui/layout.c
-	$(CC) $(CFLAGS) -Wno-missing-field-initializers $(INC) $(LIB) -c -o $@ $<
-
-#ui/ui.o: ui/ui.c
-#	$(CC) -g -O0 $(INC) -Wall -Wextra -std=c99 $(INC) $(LIB) -c -o $@ $<
+	$(CC) $(CFLAGS) -Wno-missing-field-initializers -c -o $@ $<
 
 # Targets
 .PHONY: all
