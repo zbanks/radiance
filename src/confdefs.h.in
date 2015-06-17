@@ -1,0 +1,43 @@
+/* src/confdefs.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to 1 if you have the `flux' library (-lflux). */
+#undef HAVE_LIBFLUX
+
+/* Define to 1 if you have the `portaudio' library (-lportaudio). */
+#undef HAVE_LIBPORTAUDIO
+
+/* Define to 1 if you have the `portmidi' library (-lportmidi). */
+#undef HAVE_LIBPORTMIDI
+
+/* Define to 1 if you have the `pthread' library (-lpthread). */
+#undef HAVE_LIBPTHREAD
+
+/* Define to 1 if you have the `SDL' library (-lSDL). */
+#undef HAVE_LIBSDL
+
+/* Define to 1 if you have the `SDL_gfx' library (-lSDL_gfx). */
+#undef HAVE_LIBSDL_GFX
+
+/* Define to 1 if you have the `SDL_ttf' library (-lSDL_ttf). */
+#undef HAVE_LIBSDL_TTF
+
+/* Define to 1 if you have the `vamp-hostsdk' library (-lvamp-hostsdk). */
+#undef HAVE_LIBVAMP_HOSTSDK
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION

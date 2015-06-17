@@ -1,6 +1,5 @@
 AC_INIT([beat-off], [1.0.0], [zbanks@mit.edu])
-AM_INIT_AUTOMAKE([beat-off], [1.0.0])
-AM_CONFIG_HEADER([confdefs.h])
+AC_CONFIG_HEADERS([src/confdefs.h])
 
 AC_PROG_CXX
 AC_PROG_CC
