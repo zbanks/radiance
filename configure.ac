@@ -22,8 +22,8 @@ AC_CHECK_LIB([SDL_gfx], [hlineRGBA])
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([portmidi], [Pm_Initialize])
 AC_CHECK_LIB([portaudio], [Pa_Initialize])
-AC_SEARCH_LIBS([Pa_ReadStream], [portaudio], [], [
-    AC_MSG_ERROR([unable to find the Pa_ReadStream() function])])
+#AC_SEARCH_LIBS([Pa_ReadStream], [portaudio], [], [
+#    AC_MSG_ERROR([unable to find the Pa_ReadStream() function])])
 
 AS_IF([test "x$enable_vamp" != "xno"], [
     AC_CHECK_LIB([vamp-hostsdk], [main])
