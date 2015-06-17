@@ -27,10 +27,12 @@ AC_SEARCH_LIBS([Pa_ReadStream], [portaudio], [], [
 
 AS_IF([test "x$enable_vamp" != "xno"], [
     AC_CHECK_LIB([vamp-hostsdk], [main])
+    AC_DEFINE([VAMP_ENABLED], [], [VAMP Plugin support is enabled])
 ])
 
 AS_IF([test "x$enable_flux" != "xno"], [
     AC_CHECK_LIB([flux], [flux_cli_init])
+    AC_DEFINE([FLUX_ENABLED], [], [Flux output is enabled])
 ])
 
 AC_OUTPUT([Makefile])

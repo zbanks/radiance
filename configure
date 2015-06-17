@@ -3386,6 +3386,9 @@ _ACEOF
 fi
 
 
+$as_echo "#define VAMP_ENABLED /**/" >>confdefs.h
+
+
 fi
 
 if test "x$enable_flux" != "xno"; then :
@@ -3434,6 +3437,9 @@ _ACEOF
   LIBS="-lflux $LIBS"
 
 fi
+
+
+$as_echo "#define FLUX_ENABLED /**/" >>confdefs.h
 
 
 fi

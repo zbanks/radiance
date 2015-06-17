@@ -1,5 +1,8 @@
 /* src/confdefs.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Flux output is enabled */
+#undef FLUX_ENABLED
+
 /* Define to 1 if you have the `flux' library (-lflux). */
 #undef HAVE_LIBFLUX
 
@@ -41,3 +44,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* VAMP Plugin support is enabled */
+#undef VAMP_ENABLED
