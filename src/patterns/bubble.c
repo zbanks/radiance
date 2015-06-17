@@ -63,7 +63,6 @@ static void init(state_t* state)
 
 static void update(slot_t* slot, long t)
 {
-    UNUSED(t);
     state_t* state = (state_t*)slot->state;
     struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
     state->color = colormap_color(cm, param_state_get(&slot->param_states[COLOR]));

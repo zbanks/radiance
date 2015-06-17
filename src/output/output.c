@@ -24,7 +24,6 @@ static int output_on_flux = 0;
 
 void output_run(void* args)
 {
-    UNUSED(args);
     FPSmanager fps_manager;
     unsigned char frame[4096];
 

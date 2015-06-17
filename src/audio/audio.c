@@ -25,7 +25,6 @@ static int audio_callback(chunk_pt chunk){
 }
 
 static int audio_run(void* args) {
-    UNUSED(args);
     audio_pa_run(&audio_callback, config.audio.sample_rate, config.audio.chunk_size);
 
     if(audio_running) return -1;

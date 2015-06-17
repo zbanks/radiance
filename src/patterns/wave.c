@@ -100,9 +100,6 @@ void pat_wave_update(slot_t* slot, mbeat_t t)
 }
 
 int pat_wave_event(slot_t* slot, struct pat_event event, float event_data){
-    UNUSED(slot);
-    UNUSED(event);
-    UNUSED(event_data);
     /*
     switch(event){
         default:

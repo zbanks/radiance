@@ -132,7 +132,6 @@ static int midi_check_errors(struct midi_controller * controller){
 
 static int midi_run(void* args)
 {
-    UNUSED(args);
     PmError err;
 
     err = Pm_Initialize();

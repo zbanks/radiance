@@ -126,8 +126,6 @@ int pat_strobe_event(slot_t* slot, struct pat_event event, float event_data){
 
 color_t pat_strobe_pixel(const pat_state_pt pat_state_p, float x, float y)
 {
-    UNUSED(x);
-    UNUSED(y);
     const pat_strobe_state_t* state = (const pat_strobe_state_t*)pat_state_p;
     color_t result = state->color;
     result.a = state->a;

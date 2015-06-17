@@ -38,7 +38,6 @@ void pat_full_init(pat_state_pt state)
 
 void pat_full_update(slot_t* slot, long t)
 {
-    UNUSED(t);
     color_t* color = (color_t*)slot->state;
     //*color = param_to_color(param_state_get(&slot->param_states[FULL_COLOR]));
     struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
@@ -51,8 +50,6 @@ void pat_full_update(slot_t* slot, long t)
 
 color_t pat_full_pixel(const pat_state_pt pat_state_p, float x, float y)
 {
-    UNUSED(x);
-    UNUSED(y);
     return *(const color_t*)pat_state_p;
 }
 

@@ -629,8 +629,8 @@ static void mouse_drag_pattern_ev(struct xy xy){
     }
 }
 
-static void mouse_drop_pattern(struct xy unused) {
-    UNUSED(unused);
+static void mouse_drop_pattern(struct xy unused)
+{
     rect_t r;
     struct xy xy;
     xy = xy_add(active_pattern.dxy, mouse_drag_start);
@@ -646,8 +646,8 @@ static void mouse_drop_pattern(struct xy unused) {
     active_pattern.index = -1;
 }
 
-static void mouse_drop_slot(struct xy unused) {
-    UNUSED(unused);
+static void mouse_drop_slot(struct xy unused)
+{
     rect_t r;
     struct xy xy;
     xy = xy_add(active_slot.dxy, mouse_drag_start);
@@ -773,14 +773,10 @@ static int mouse_down_slot_pane(struct xy xy) {
 }
 
 static int mouse_down_output(int i, struct xy xy){
-    UNUSED(i);
-    UNUSED(xy);
     return UNHANDLED;
 }
 
 static int mouse_down_midi(int i, struct xy xy){
-    UNUSED(i);
-    UNUSED(xy);
     //midi_refresh_devices();
     return UNHANDLED;
 }
@@ -860,7 +856,6 @@ static int mouse_down_audio(struct xy xy){
 }
 
 static int mouse_down_state_save(int i, struct xy xy){
-    UNUSED(xy);
     char filename[1024];
     snprintf(filename, 1023, config.state.path_format, i);
     if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
@@ -868,7 +863,6 @@ static int mouse_down_state_save(int i, struct xy xy){
 }
 
 static int mouse_down_state_load(int i, struct xy xy){
-    UNUSED(xy);
     char filename[1024];
     snprintf(filename, 1023, config.state.path_format, i);
     if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
@@ -1052,7 +1046,6 @@ static void ui_poll()
 
 static int ui_run(void* args)
 {
-    UNUSED(args);
     FPSmanager fps_manager;
 
     ui_init();

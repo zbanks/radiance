@@ -74,7 +74,6 @@ void pat_fade_update(slot_t* slot, mbeat_t t)
 
 int pat_fade_event(slot_t* slot, struct pat_event event, float event_data){
     pat_fade_state_t* state = (pat_fade_state_t*)slot->state;
-    UNUSED(event_data);
     switch(event.event){
         case PATEV_START:
             state->color_phase += param_state_get(&slot->param_states[FADE_DELTA]);
@@ -90,8 +89,6 @@ int pat_fade_event(slot_t* slot, struct pat_event event, float event_data){
 
 color_t pat_fade_pixel(const pat_state_pt pat_state_p, float x, float y)
 {
-    UNUSED(x);
-    UNUSED(y);
     const pat_fade_state_t* state = (const pat_fade_state_t*)pat_state_p;
     color_t result = state->color;
     /*

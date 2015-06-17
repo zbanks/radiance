@@ -42,9 +42,6 @@ void filter_lpf_agc_init(filter_t * filter){
 
 void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
 {
-    UNUSED(filter);
-    UNUSED(t_msec);
-    UNUSED(value);
 
     if(timebase_source == TB_AUTOMATIC){
         timebase_tap(config.timebase.beat_btrack_alpha);

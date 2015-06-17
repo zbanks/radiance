@@ -38,7 +38,6 @@ void timebase_del()
 /* DELETEME
 void timebase_update(chunk_pt chunk)
 {
-    UNUSED(chunk);
 }
 */
 
