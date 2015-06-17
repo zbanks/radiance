@@ -183,9 +183,9 @@ static int SDL_line(SDL_Surface* dst, int16_t x1, int16_t y1, int16_t x2, int16_
     return lineRGBA(dst, x1, y1, x2, y2, r, g, b, a);
 }
 
-static void ui_draw_button(SDL_Surface * surface, struct txt * label_fmt, const char * label){
+static void ui_draw_button(SDL_Surface * surface, SDL_Color bg_color, struct txt * label_fmt, const char * label){
     rect_t r = {.x = 0, .y = 0, .w = surface->w, .h = surface->h};
-    SDL_FillRect(surface, &r, SDL_MapRGB(surface->format, 20, 20, 20));
+    SDL_FillRect(surface, &r, map_sdl_color(surface, bg_color));
     text_render(surface, label_fmt, 0, label);
 }
 
@@ -298,7 +298,7 @@ static void ui_update_slot(slot_t* slot) {
 static void ui_update_pattern(pattern_t* pattern) {
     rect_t r;
     rect_array_origin(&layout.add_pattern.rect_array, &r);
-    SDL_FillRect(pattern_pane, &r, SDL_MapRGB(pattern_pane->format, 20, 20, 20));
+    SDL_FillRect(pattern_pane, &r, map_sdl_color(pattern_pane, layout.add_pattern.bg_color));
 
     text_render(pattern_pane, &layout.add_pattern.name_txt, 0, pattern->name);
 }
@@ -306,18 +306,14 @@ static void ui_update_pattern(pattern_t* pattern) {
 static void ui_render_slot_deck(){
     rect_t r;
 
-    rect_array_layout(&layout.slot.rect_array, 2, &r);
-    vlineRGBA(screen, r.x - 4, r.y, r.y + r.h, 255, 10, 30, 255);
-    vlineRGBA(screen, r.x - 5, r.y-1, r.y + r.h +1, 255, 10, 30, 255);
-    vlineRGBA(screen, r.x - 6, r.y, r.y + r.h, 255, 10, 30, 255);
-    rect_array_layout(&layout.slot.rect_array, 4, &r);
-    vlineRGBA(screen, r.x - 4, r.y, r.y + r.h, 200, 30, 255, 255);
-    vlineRGBA(screen, r.x - 5, r.y-1, r.y + r.h +1, 200, 30, 255, 255);
-    vlineRGBA(screen, r.x - 6, r.y, r.y + r.h, 200, 30, 255, 255);
-    rect_array_layout(&layout.slot.rect_array, 6, &r);
-    vlineRGBA(screen, r.x - 4, r.y, r.y + r.h, 10, 255, 20, 255);
-    vlineRGBA(screen, r.x - 5, r.y-1, r.y + r.h +1, 10, 255, 20, 255);
-    vlineRGBA(screen, r.x - 6, r.y, r.y + r.h, 10, 255, 20, 255);
+    for(int i = 0; i < layout.slot.n_divider_colors; i++){
+        SDL_Color c = layout.slot.divider_colors[i];
+        rect_array_layout(&layout.slot.rect_array, i+1, &r);
+        r.x -= (layout.slot.px - layout.slot.w) / 2 + 1;
+        vlineRGBA(screen, r.x - 1, r.y, r.y + r.h, c.r, c.g, c.b, 255);
+        vlineRGBA(screen, r.x, r.y - 1, r.y + r.h + 1, c.r, c.g, c.b, 255);
+        vlineRGBA(screen, r.x + 1, r.y, r.y + r.h, c.r, c.g, c.b, 255);
+    }
 
     // Render slots
     for(int i=0; i<n_slots; i++)
@@ -352,7 +348,7 @@ static void ui_render_slot_deck(){
 static void ui_update_audio_panel(){
     rect_t r;
     rect_origin(&layout.audio.rect, &r);
-    SDL_FillRect(audio_pane, &r, SDL_MapRGB(audio_pane->format, 20, 20, 20));
+    SDL_FillRect(audio_pane, &r, map_sdl_color(audio_pane, layout.audio.bg_color));
 
     ui_waveform_render();
     SDL_BlitSurface(waveform_surface, 0, audio_pane, &layout.waveform.rect);
@@ -369,9 +365,11 @@ static void ui_update_audio_panel(){
         y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * (0.4 + 0.6 * dy);
 
     int x = layout.audio.ball_x + layout.audio.ball_r + (layout.audio.ball_w - 2 * layout.audio.ball_r) * 0.5;
-    filledCircleRGBA(audio_pane, x, y, layout.audio.ball_r, 255, 10, 10, 255);
-    hlineRGBA(audio_pane, layout.audio.ball_x, layout.audio.ball_x + layout.audio.ball_w, layout.audio.ball_y + layout.audio.ball_h, 255, 255, 255, 255);
+    SDL_Color ball_c = layout.audio.ball_color;
+    filledCircleRGBA(audio_pane, x, y, layout.audio.ball_r, ball_c.r, ball_c.g, ball_c.b, 255);
 
+    SDL_Color bf_c = layout.audio.ball_floor_color;
+    hlineRGBA(audio_pane, layout.audio.ball_x, layout.audio.ball_x + layout.audio.ball_w, layout.audio.ball_y + layout.audio.ball_h, bf_c.r, bf_c.g, bf_c.b, 255);
 
     char buf[16];
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
@@ -386,61 +384,49 @@ static void ui_update_audio_panel(){
     snprintf(buf, 16, "%lu", ((time % 4000) / 1000) + 1);
     text_render(audio_pane, &layout.audio.beat_txt, 0, buf);
 
-    for(int i = 0; i < N_WF_BINS; i++){
-        rect_array_layout(&layout.audio.bins_rect_array, i, &r);
-        SDL_FillRect(audio_pane, &r, SDL_MapRGB(audio_pane->format,
-                    waveform_bins[i].color.r,
-                    waveform_bins[i].color.g,
-                    waveform_bins[i].color.b));
-    }
+    rect_array_layout(&layout.audio.bins_rect_array, WF_HIGH, &r);
+    SDL_FillRect(audio_pane, &r, map_sdl_color(audio_pane, layout.waveform.highs_color));
+    rect_array_layout(&layout.audio.bins_rect_array, WF_MID, &r);
+    SDL_FillRect(audio_pane, &r, map_sdl_color(audio_pane, layout.waveform.mids_color));
+    rect_array_layout(&layout.audio.bins_rect_array, WF_LOW, &r);
+    SDL_FillRect(audio_pane, &r, map_sdl_color(audio_pane, layout.waveform.lows_color));
 
-    if(timebase_source == TB_AUTOMATIC)
-        boxRGBA(audio_pane, layout.audio.auto_x, layout.audio.auto_y, layout.audio.auto_x + layout.audio.auto_w, layout.audio.auto_y + layout.audio.auto_h, 10, 255, 10, 255);
-    else
-        boxRGBA(audio_pane, layout.audio.auto_x, layout.audio.auto_y, layout.audio.auto_x + layout.audio.auto_w, layout.audio.auto_y + layout.audio.auto_h, 255, 10, 10, 255);
+    SDL_Color tbs_c = layout.audio.btrack_off_color;
+    if(timebase_source == TB_AUTOMATIC) {
+        tbs_c = layout.audio.btrack_on_color;
+    }
+    boxRGBA(audio_pane, layout.audio.auto_x, layout.audio.auto_y, layout.audio.auto_x + layout.audio.auto_w, layout.audio.auto_y + layout.audio.auto_h, tbs_c.r, tbs_c.g, tbs_c.b, 255);
 }
 
 static void ui_update_filter(filter_t * filter) {
     rect_t r;
-    SDL_Color white = {255, 255, 255, 255};
-
     rect_array_origin(&layout.filter.rect_array, &r);
-    SDL_FillRect(filter_pane, &r, SDL_MapRGB(filter_pane->format, 20, 20, 20));
+    SDL_FillRect(filter_pane, &r, map_sdl_color(filter_pane, layout.filter.bg_color));
 
     text_render(filter_pane, &layout.filter.name_txt, &filter->color, filter->name);
 
     graph_update(&(filter->graph_state), filter->output.value);
-    graph_render(&(filter->graph_state), white);
+    graph_render(&(filter->graph_state), layout.graph_filter.line_color);
     SDL_BlitSurface(graph_surface, 0, filter_pane, &layout.graph_filter.rect);
 }
 
 static void ui_update_signal(signal_t* signal) {
     rect_t r;
-    SDL_Color param_name_c;
-    SDL_Color signal_c;
     rect_array_origin(&layout.signal.rect_array, &r);
-    SDL_FillRect(signal_pane, &r, SDL_MapRGB(signal_pane->format, 20, 20, 20));
+    SDL_FillRect(signal_pane, &r, map_sdl_color(signal_pane, layout.signal.bg_color));
 
-    signal_c = color_to_SDL(signal->color);
+    SDL_Color signal_c = color_to_SDL(signal->color);
     text_render(signal_pane, &layout.signal.name_txt, &signal_c, signal->name);
 
     graph_update(&(signal->graph_state), signal->output.value);
-    SDL_Color white = {255, 255, 255, 255};
-    graph_render(&(signal->graph_state), white);
+    graph_render(&(signal->graph_state), layout.graph_signal.line_color);
     SDL_BlitSurface(graph_surface, 0, signal_pane, &layout.graph_signal.rect);
 
     for(int i = 0; i < signal->n_params; i++)
     {
+        SDL_Color param_name_c = layout.slider.name_color;
         if(&signal->param_states[i] == active_param_source){
-            //param_name_c = {255, 200, 0};
-            param_name_c.r = 255;
-            param_name_c.g = 200;
-            param_name_c.b =   0;
-        }else{
-            //param_name_c = {255, 255, 255};
-            param_name_c.r = 255;
-            param_name_c.g = 255;
-            param_name_c.b = 255;
+            param_name_c = layout.slider.highlight_color;
         }
         slider_render(&signal->parameters[i], &signal->param_states[i], param_name_c);
         rect_array_layout(&layout.signal.sliders_rect_array, i, &r);
@@ -473,16 +459,15 @@ static void ui_render_filter_bank(){
 static void ui_update_output(output_strip_t * output_strip){
     rect_t r;
     rect_array_origin(&layout.output.rect_array, &r);
-    SDL_FillRect(output_pane, &r, SDL_MapRGB(output_pane->format, 20, 20, 20));
+    SDL_FillRect(output_pane, &r, map_sdl_color(output_pane, layout.output.bg_color));
     char buf[16];
 
-    SDL_Color color = {150, 150, 150, 255};
-
+    SDL_Color *color = NULL;
     if(output_strip->bus > 0)
-        color = output_strip->color;
+        color = &output_strip->color;
 
     snprintf(buf, 16, "%d %s", output_strip->length, output_strip->id_str);
-    text_render(output_pane, &layout.output.name_txt, &color, buf);
+    text_render(output_pane, &layout.output.name_txt, color, buf);
 }
 
 static void ui_render_output_panel(){
@@ -498,7 +483,7 @@ static void ui_render_output_panel(){
 static void ui_update_midi(struct midi_controller * controller){
     rect_t r;
     rect_array_origin(&layout.midi.rect_array, &r);
-    SDL_FillRect(midi_pane, &r, SDL_MapRGB(midi_pane->format, 20, 20, 20));
+    SDL_FillRect(midi_pane, &r, map_sdl_color(midi_pane, layout.midi.bg_color));
 
     if(controller->enabled && controller->short_name)
         text_render(midi_pane, &layout.midi.short_name_txt, 0, controller->short_name);
@@ -517,7 +502,7 @@ static void ui_render_midi_panel(){
     }
 
     // Draw midi reload button
-    ui_draw_button(midi_reload_pane, &layout.midi_reload.label_txt, "Refresh MIDI Devices");
+    ui_draw_button(midi_reload_pane, layout.midi_reload.bg_color, &layout.midi_reload.label_txt, "Refresh MIDI Devices");
     SDL_BlitSurface(midi_reload_pane, 0, screen, &layout.midi_reload.rect);
 }
 
@@ -527,7 +512,7 @@ static void ui_render_state_panel(){
         char buf[16];
         rect_array_layout(&layout.state_save.rect_array, i, &r);
         snprintf(buf, 15, "Save %d", i);
-        ui_draw_button(state_save_pane, &layout.state_save.label_txt, buf);
+        ui_draw_button(state_save_pane, layout.state_save.bg_color, &layout.state_save.label_txt, buf);
         SDL_BlitSurface(state_save_pane, 0, screen, &r);
     }
 
@@ -535,7 +520,7 @@ static void ui_render_state_panel(){
         char buf[16];
         rect_array_layout(&layout.state_load.rect_array, i, &r);
         snprintf(buf, 15, "Load %d", i);
-        ui_draw_button(state_load_pane, &layout.state_load.label_txt, buf);
+        ui_draw_button(state_load_pane, layout.state_save.bg_color, &layout.state_load.label_txt, buf);
         SDL_BlitSurface(state_load_pane, 0, screen, &r);
     }
 }
@@ -543,7 +528,7 @@ static void ui_render_state_panel(){
 static void ui_update_palette(struct colormap * cm){
     rect_t r;
     rect_array_origin(&layout.palette.rect_array, &r);
-    SDL_FillRect(palette_pane, &r, SDL_MapRGB(palette_pane->format, 20, 20, 20));
+    SDL_FillRect(palette_pane, &r, map_sdl_color(palette_pane, layout.palette.bg_color));
 
 
     SDL_LockSurface(palette_preview);
@@ -560,14 +545,15 @@ static void ui_update_palette(struct colormap * cm){
     text_render(palette_pane, &layout.palette.name_txt, 0, cm->name);
 
     if(cm == cm_global){
-        SDL_FillRect(palette_pane, &layout.palette.active_rect, SDL_MapRGB(palette_pane->format, 255, 255, 255));
+        SDL_FillRect(palette_pane, &layout.palette.active_rect, map_sdl_color(palette_pane, layout.palette.active_color));
     }else{
+        SDL_Color c = layout.palette.active_color;
         rectangleRGBA(palette_pane, 
                 layout.palette.active_rect.x,
                 layout.palette.active_rect.y,
                 layout.palette.active_rect.x + layout.palette.active_rect.w,
                 layout.palette.active_rect.y + layout.palette.active_rect.h,
-                255, 255, 255, 255);
+                c.r, c.g, c.b, 255);
     }
 }
 
@@ -585,7 +571,7 @@ static void ui_render()
 {
     update_ui();
 
-    SDL_FillRect(screen, &layout.window.rect, SDL_MapRGB(screen->format, 0, 0, 0));
+    SDL_FillRect(screen, &layout.window.rect, map_sdl_color(screen, layout.window.bg_color));
 
     update_master_preview();
     SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect);
@@ -673,11 +659,10 @@ static void mouse_drop_slot(struct xy unused)
 
 static void mouse_drop_pattern_ev(struct xy xy){
     if(!active_preview.slot->pattern) return;
-    struct xy offset;
     xy = xy_add(xy, active_preview.dxy);
 
-    float x = (offset.x) / (float) layout.slot.preview_w;
-    float y = (offset.y) / (float) layout.slot.preview_h;
+    float x = (xy.x) / (float) layout.slot.preview_w;
+    float y = (xy.y) / (float) layout.slot.preview_h;
 
     if(x < 0) x = 0;
     if(y < 0) y = 0;

@@ -42,6 +42,13 @@ CXXFLAGS += -Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-a
 CFLAGS = $(CXXFLAGS) -std=c99 -D_POSIX_C_SOURCE
 LFLAGS  = $(LIB) @LDFLAGS@
 
+#DEBUG=DEBUG
+ifdef DEBUG
+	CXXFLAGS += -fstack-protector -fsanitize=address -g -Og
+	CFLAGS += -fstack-protector -fsanitize=address -g -Og
+	LIB += -lasan
+endif
+
 -include $(DEPS)
 %.d : %.c
 	@$(CC) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@

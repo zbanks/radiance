@@ -10,13 +10,13 @@
 /* CFG_TXT(prefix, x, y, font_size, centering, font_name, color) */
 /* `centering` is one of: LAYOUT_ALIGN_TL, LAYOUT_ALIGN_BR, LAYOUT_ALIGN_TC, LAYOUT_ALIGN_CC, LAYOUT_ALIGN_TR */
 
-
 CFGSECTION(globals,
     CFG(font_directory, STRING, "/usr/share/fonts/truetype/freefont/")
 )
 
 CFGSECTION(window,
     CFG_RECT(, 0, 0, 1366, 764)
+    CFG(bg_color, COLOR, "#000000")
 )
 
 CFGSECTION(master,
@@ -24,30 +24,37 @@ CFGSECTION(master,
 )
 
 CFGSECTION(slot,
-    CFG(n, INT, 8)
-    CFG_RECT_ARRAY(, 10, 245, 115, 350, 125, 0, 0)
+    //CFG(n, INT, 8)
+    CFG_RECT_ARRAY(, 10, 245, 115, 350, 126, 0, 0)
     CFG(bg_color, COLOR, "#141414")
+    CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_RECT(alpha, 0, 10, 20, 80)
-    CFG(palette_highlight_color, COLOR, "#FFCC00")
     CFG_TXT(palette, 62, 92, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
+    CFG(palette_highlight_color, COLOR, "#FFCC00")
     CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, LAYOUT_TILE_NONE)
 )
 
 CFGSECTION(audio,
     CFG_RECT(, 240, 30, 280, 200)
+    CFG(bg_color, COLOR, "#141414")
     CFG_RECT(auto, 190, 125, 10, 10)
     CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
+    CFG(ball_color, COLOR, "#FF0000")
+    CFG(ball_floor_color, COLOR, "#FFFFFF")
     CFG_TXT(bpm, 50, 120, 20, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(fps, 10, 160, 12, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(ops, 100, 160, 12, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(beat, 35, 130, 12, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG(btrack_on_color, COLOR, "#00FF00")
+    CFG(btrack_off_color, COLOR, "#FF0000")
     CFG_RECT_ARRAY(bins, 260, 110, 15, 15, 0, 20, LAYOUT_TILE_NONE)
 )
 
 CFGSECTION(signal,
     CFG_RECT_ARRAY(, 750, 30, 110, 200, 115, 0, 0)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(name, 55, 3, 18, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT_ARRAY(sliders, 5, 60, 100, 32, 0, 32, LAYOUT_TILE_NONE)
 )
@@ -55,77 +62,99 @@ CFGSECTION(signal,
 CFGSECTION(alpha_slider,
     CFG_RECT(, 0, 0, 20, 80)
     CFG_RECT(track, 9, 0, 3, 80)
+    CFG(track_color, COLOR, "#404040")
     CFG_RECT(handle, 5, 0, 10, 10)
-    //CFG(handle_color, COLOR, _COLOR(0,0,60))
+    CFG(handle_color, COLOR, "#000020")
 )
 
 CFGSECTION(slider,
     CFG_RECT(, 0, 0, 100, 40)
     CFG_RECT(track, 3, 16, 94, 3)
+    CFG(track_color, COLOR, "#404040")
     CFG_RECT(handle, 3, 12, 10, 10)
+    CFG(handle_color, COLOR, "#000020")
     CFG_RECT(output_indicator, 3, 12, 2, 10)
-    CFG(highlight_color, COLOR, "#FFCC00")
     CFG_TXT(name, 3, 0, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG(highlight_color, COLOR, "#FFCC00")
     CFG_TXT(source, 94, 0, 10, LAYOUT_ALIGN_TR, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(value, 3, 23, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
     
 CFGSECTION(add_pattern,
-    CFG_RECT_ARRAY(, 1010, 250, 100, 30, 0, 35, 0)
+    CFG_RECT_ARRAY(, 1015, 245, 97, 30, 0, 35, 0)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(name, 50, 15, 16, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(waveform,
     CFG_RECT(, 5, 5, 270, 100)
+    CFG(bg_color, COLOR, "#363636")
+    CFG(highs_color, COLOR, "#A0A0FF")
+    CFG(mids_color, COLOR, "#4040C0")
+    CFG(lows_color, COLOR, "#000080")
+    CFG(pbeat_color, COLOR, "#FF0000")
+    CFG(ibeat_color, COLOR, "#00FF00")
     CFG(skip, INT, 5)
 )
 
 CFGSECTION(graph_signal,
     CFG_RECT(, 3, 30, 100, 30)
+    CFG(bg_color, COLOR, "#363636")
+    CFG(line_color, COLOR, "#FFFFFF")
     CFG(scroll_rate, INT, 50)
 )
 
 CFGSECTION(graph_filter,
     CFG_RECT(, 5, 30, 190, 60)
+    CFG(bg_color, COLOR, "#363636")
+    CFG(line_color, COLOR, "#FFFFFF")
     CFG(scroll_rate, INT, 50)
 )
 
 CFGSECTION(filter,
     CFG_RECT_ARRAY(, 530, 30,  200, 98,  0,  102, LAYOUT_TILE_NONE)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(output,
     CFG_RECT_ARRAY(, 1120, 250, 160, 45,  0,  50, LAYOUT_TILE_NONE)
-    CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
+    CFG(bg_color, COLOR, "#141414")
+    CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#888888")
 )
 
 CFGSECTION(midi,
     CFG_RECT_ARRAY(, 1120, 525, 160, 35,  0, 40, LAYOUT_TILE_NONE)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(short_name, 5, 3, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#00FF33")
     CFG_TXT(name, 155, 32, 12, LAYOUT_ALIGN_BR, "FreeSans.ttf", "#888888")
 )
 
 CFGSECTION(midi_reload,
     CFG_RECT(, 1120, 500, 160, 20)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(label, 80, 10, 13, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_save,
     CFG_RECT_ARRAY(, 1120, 700, 55, 25,  60,  0, LAYOUT_TILE_NONE)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_load,
     CFG_RECT_ARRAY(, 1120, 730, 55, 25,  60,  0, LAYOUT_TILE_NONE)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(palette,
     CFG_RECT_ARRAY(, 15, 610, 265, 35, 275, 44, 4 * LAYOUT_TILE_N_ACROSS)
+    CFG(bg_color, COLOR, "#141414")
     CFG_TXT(name, 3, 2, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT(preview, 0, 26, 265, 8)
     CFG_RECT(active, 250, 8, 8, 8)
+    CFG(active_color, COLOR, "#FFFFFF")
 )
 
 
