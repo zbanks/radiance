@@ -162,21 +162,29 @@ static int midi_run(void* args)
 
                 //printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
 
-                for(int k = 0; k < controller->n_connections; k++){
-                    if(controller->connections[k].event == event && controller->connections[k].data1 == data1){
-                        if(controller->connections[k].param_state){
+                for(int k = 0; k < controller->n_connections; k++)
+                {
+                    if(controller->connections[k].event == event && controller->connections[k].data1 == data1)
+                    {
+                        if(controller->connections[k].param_state)
+                        {
                             param_state_setq(controller->connections[k].param_state, data2 / 127.);
                         }
-                        if(controller->connections[k].slot_event.slot){
-                            float * data_ptr = malloc(sizeof(float));
-                            if(!data_ptr) FAIL("Unable to malloc for MIDI data ptr.\n");
-                            *data_ptr = data2 / 127.;
+                        if(controller->connections[k].command_slot)
+                        {
+                            midi_command_event_data_t* event_data = malloc(sizeof(midi_command_event_data_t));
+                            if(!event_data) FAIL("Unable to malloc a MIDI command SDL event data\n");
+
+                            event_data->slot = controller->connections[k].command_slot;
+                            event_data->command.index = controller->connections[k].command_index;
+                            event_data->command.status = controller->connections[k].command_status;
+                            event_data->command.value = (float)data2 / 127;
 
                             SDL_Event sdl_event;
-                            sdl_event.type = SDL_MIDI_SLOT_EVENT;
+                            sdl_event.type = SDL_MIDI_COMMAND_EVENT;
                             sdl_event.user.code = 0;
-                            sdl_event.user.data1 = &controller->connections[k].slot_event;
-                            sdl_event.user.data2 = data_ptr;
+                            sdl_event.user.data1 = event_data;
+                            sdl_event.user.data2 = 0;
                             SDL_PushEvent(&sdl_event);
                         }
                     }

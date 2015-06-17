@@ -7,6 +7,8 @@
 
 // --------- Pattern: Bubble -----------
 
+static const char name[] = "Bubble";
+
 typedef struct
 {
     color_t color;
@@ -26,7 +28,7 @@ enum param_names {
     N_PARAMS
 };
 
-static parameter_t params[N_PARAMS] = {
+static const parameter_t params[N_PARAMS] = {
     [COLOR] = {
         .name = "Color",
         .default_val = 0.5,
@@ -72,20 +74,17 @@ static void update(slot_t* slot, long t)
     state->cy = param_state_get(&slot->param_states[CY]) * 2 - 1.0;
 }
 
-static int event(slot_t* slot, struct pat_event ev, float event_data)
+static void command(slot_t* slot, pat_command_t cmd)
 {
-    switch(ev.source)
+    switch(cmd.index)
     {
-        case PATSRC_MOUSE_X:
-            param_state_setq(&slot->param_states[CX], (event_data + 1.0) / 2);
+        case 0:
+            param_state_setq(&slot->param_states[CX], cmd.value);
             break;
-        case PATSRC_MOUSE_Y:
-            param_state_setq(&slot->param_states[CY], (event_data + 1.0) / 2);
+        case 1:
+            param_state_setq(&slot->param_states[CY], cmd.value);
             break;
-        default:
-            return 0;
     }
-    return 1;
 }
 
 static color_t render(const state_t* state, float x, float y)
@@ -102,13 +101,4 @@ static color_t render(const state_t* state, float x, float y)
     return result;
 }
 
-pattern_t pat_bubble = {
-    .render = (pat_render_fn_pt)&render,
-    .init = (pat_init_fn_pt)&init,
-    .update = &update,
-    .event = &event,
-    .n_params = N_PARAMS,
-    .parameters = params,
-    .state_size = sizeof(state_t),
-    .name = "Bubble",
-};
+pattern_t pat_bubble = MAKE_PATTERN;

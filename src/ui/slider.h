@@ -20,7 +20,7 @@ enum slider_event {
 
 void slider_init();
 void slider_del();
-void slider_render(parameter_t* param, param_state_t* state, SDL_Color c);
+void slider_render(const parameter_t* param, param_state_t* state, SDL_Color c);
 void slider_render_alpha(param_state_t* state);
 void slider_output_render(param_output_t * output);
 

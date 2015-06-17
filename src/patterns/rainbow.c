@@ -12,6 +12,8 @@
 
 // --------- Pattern: Template -----------
 
+static const char name[] = "Rainbow";
+
 typedef struct {
     struct freq_state freq_state;
     enum osc_type type;
@@ -29,7 +31,7 @@ enum param_names {
     N_PARAMS
 };
 
-static parameter_t params[] = {
+static const parameter_t params[] = {
     [TYPE] = {
         .name = "Wave Type",
         .default_val = 0.21,
@@ -52,8 +54,8 @@ static parameter_t params[] = {
     },
 };
 
-static void init(pat_state_pt pat_state_p) {
-    state_t * state = (state_t*)pat_state_p;
+static void init(state_t* state)
+{
     freq_init(&state->freq_state, 0.5, 0);
     state->type = OSC_SINE;
     state->kx = 1.0;
@@ -61,7 +63,8 @@ static void init(pat_state_pt pat_state_p) {
     state->colormap = cm_global;
 }
 
-static void update(slot_t* slot, mbeat_t t) {
+static void update(slot_t* slot, mbeat_t t)
+{
     state_t * state = (state_t *) slot->state;
     state->type = quantize_parameter(osc_quant_labels, param_state_get(&slot->param_states[TYPE]));
     freq_update(&state->freq_state, t, param_state_get(&slot->param_states[OMEGA]));
@@ -75,26 +78,14 @@ static void update(slot_t* slot, mbeat_t t) {
     state->colormap = slot->colormap ? slot->colormap : cm_global;
 }
 
-static color_t pixel(const pat_state_pt pat_state_p, float x, float y) {
-    const state_t * state = (const state_t*)pat_state_p;
+static color_t render(const state_t* state, float x, float y)
+{
     float t = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
     return colormap_color(state->colormap, t);
 }
 
-static int event(slot_t* slot, struct pat_event ev, float event_data){
-    //state_t * state = (state_t *) slot->state;
-    //if(isnan(event_data)) return 0;
-    // TEMPLATE: Handle click/MIDI event
-    return 0;
+static void command(slot_t* slot, pat_command_t cmd)
+{
 }
 
-pattern_t pat_rainbow = {
-    .render = &pixel,
-    .init = &init,
-    .update = &update,
-    .event = &event,
-    .n_params = N_PARAMS,
-    .parameters = params,
-    .state_size = sizeof(state_t),
-    .name = "Rainbow",
-};
+pattern_t pat_rainbow = MAKE_PATTERN;
