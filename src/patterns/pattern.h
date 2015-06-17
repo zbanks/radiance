@@ -25,7 +25,7 @@ typedef void* pat_state_pt;
 typedef void (*pat_init_fn_pt)(pat_state_pt);
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
 typedef void (*pat_command_fn_pt)(struct slot* slot, pat_command_t cmd);
-typedef color_t (*pat_render_fn_pt)(const pat_state_pt restrict state, float x, float y);
+typedef color_t (*pat_render_fn_pt)(const void * restrict state, float x, float y);
 
 typedef struct pattern
 {

@@ -23,9 +23,14 @@ CFGSECTION(master,
     CFG_RECT(, 30, 30, 200, 200)
 )
 
+CFGSECTION(slot_deck, 
+    CFG_RECT(, 10, 245, 1100, 350)
+    CFG(bg_color, COLOR, "#000000")
+)
+
 CFGSECTION(slot,
     //CFG(n, INT, 8)
-    CFG_RECT_ARRAY(, 10, 245, 115, 350, 126, 0, 0)
+    CFG_RECT_ARRAY(, 0, 0, 115, 350, 126, 0, 0)
     CFG(bg_color, COLOR, "#141414")
     CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
@@ -33,6 +38,12 @@ CFGSECTION(slot,
     CFG_TXT(palette, 62, 92, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG(palette_highlight_color, COLOR, "#FFCC00")
     CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, LAYOUT_TILE_NONE)
+)
+    
+CFGSECTION(add_pattern,
+    CFG_RECT_ARRAY(, 1005, 0, 90, 30, 0, 35, 0)
+    CFG(bg_color, COLOR, "#141414")
+    CFG_TXT(name, 45, 15, 16, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(audio,
@@ -78,12 +89,6 @@ CFGSECTION(slider,
     CFG(highlight_color, COLOR, "#FFCC00")
     CFG_TXT(source, 94, 0, 10, LAYOUT_ALIGN_TR, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(value, 3, 23, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
-)
-    
-CFGSECTION(add_pattern,
-    CFG_RECT_ARRAY(, 1015, 245, 97, 30, 0, 35, 0)
-    CFG(bg_color, COLOR, "#141414")
-    CFG_TXT(name, 50, 15, 16, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(waveform,
@@ -136,14 +141,18 @@ CFGSECTION(midi_reload,
     CFG_TXT(label, 80, 10, 13, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
+CFGSECTION(state_panel,
+    CFG_RECT(, 1120, 700, 240, 60)
+)
+
 CFGSECTION(state_save,
-    CFG_RECT_ARRAY(, 1120, 700, 55, 25,  60,  0, LAYOUT_TILE_NONE)
+    CFG_RECT_ARRAY(, 0, 0, 55, 25,  60,  0, LAYOUT_TILE_NONE)
     CFG(bg_color, COLOR, "#141414")
     CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_load,
-    CFG_RECT_ARRAY(, 1120, 730, 55, 25,  60,  0, LAYOUT_TILE_NONE)
+    CFG_RECT_ARRAY(, 0, 30, 55, 25,  60,  0, LAYOUT_TILE_NONE)
     CFG(bg_color, COLOR, "#141414")
     CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )

@@ -32,6 +32,7 @@
     X(master_preview, layout.master) \
     X(pattern_preview, layout.slot.preview_rect) \
     X(audio_pane, layout.audio) \
+    X(slot_deck_pane, layout.slot_deck) \
     X(slot_pane, layout.slot) \
     X(pattern_pane, layout.add_pattern) \
     X(signal_pane, layout.signal) \
@@ -41,6 +42,7 @@
     X(midi_reload_pane, layout.midi_reload) \
     X(palette_pane, layout.palette) \
     X(palette_preview, layout.palette.preview_rect) \
+    X(state_panel_pane, layout.state_panel) \
     X(state_save_pane, layout.state_save) \
     X(state_load_pane, layout.state_load)
 
@@ -303,16 +305,18 @@ static void ui_update_pattern(pattern_t* pattern) {
     text_render(pattern_pane, &layout.add_pattern.name_txt, 0, pattern->name);
 }
 
-static void ui_render_slot_deck(){
+static void ui_update_slot_deck(){
     rect_t r;
+    rect_origin(&layout.slot_deck.rect, &r);
+    SDL_FillRect(slot_deck_pane, &r, map_sdl_color(slot_deck_pane, layout.slot_deck.bg_color));
 
     for(int i = 0; i < layout.slot.n_divider_colors; i++){
         SDL_Color c = layout.slot.divider_colors[i];
         rect_array_layout(&layout.slot.rect_array, i+1, &r);
         r.x -= (layout.slot.px - layout.slot.w) / 2 + 1;
-        vlineRGBA(screen, r.x - 1, r.y, r.y + r.h, c.r, c.g, c.b, 255);
-        vlineRGBA(screen, r.x, r.y - 1, r.y + r.h + 1, c.r, c.g, c.b, 255);
-        vlineRGBA(screen, r.x + 1, r.y, r.y + r.h, c.r, c.g, c.b, 255);
+        vlineRGBA(slot_deck_pane, r.x - 1, r.y, r.y + r.h, c.r, c.g, c.b, 255);
+        vlineRGBA(slot_deck_pane, r.x, r.y - 1, r.y + r.h + 1, c.r, c.g, c.b, 255);
+        vlineRGBA(slot_deck_pane, r.x + 1, r.y, r.y + r.h, c.r, c.g, c.b, 255);
     }
 
     // Render slots
@@ -327,7 +331,7 @@ static void ui_render_slot_deck(){
                 rect_shift(&r, &active_slot.dxy);
             }
 
-            SDL_BlitSurface(slot_pane, 0, screen, &r);
+            SDL_BlitSurface(slot_pane, 0, slot_deck_pane, &r);
         }
     }
 
@@ -341,7 +345,7 @@ static void ui_render_slot_deck(){
             rect_shift(&r, &active_pattern.dxy);
         }
 
-        SDL_BlitSurface(pattern_pane, 0, screen, &r);
+        SDL_BlitSurface(pattern_pane, 0, slot_deck_pane, &r);
     }
 }
 
@@ -506,14 +510,14 @@ static void ui_render_midi_panel(){
     SDL_BlitSurface(midi_reload_pane, 0, screen, &layout.midi_reload.rect);
 }
 
-static void ui_render_state_panel(){
+static void ui_update_state_panel(){
     rect_t r;
     for(int i = 0; i < config.state.n_states; i++){
         char buf[16];
         rect_array_layout(&layout.state_save.rect_array, i, &r);
         snprintf(buf, 15, "Save %d", i);
         ui_draw_button(state_save_pane, layout.state_save.bg_color, &layout.state_save.label_txt, buf);
-        SDL_BlitSurface(state_save_pane, 0, screen, &r);
+        SDL_BlitSurface(state_save_pane, 0, state_panel_pane, &r);
     }
 
     for(int i = 0; i < config.state.n_states; i++){
@@ -521,7 +525,7 @@ static void ui_render_state_panel(){
         rect_array_layout(&layout.state_load.rect_array, i, &r);
         snprintf(buf, 15, "Load %d", i);
         ui_draw_button(state_load_pane, layout.state_save.bg_color, &layout.state_load.label_txt, buf);
-        SDL_BlitSurface(state_load_pane, 0, screen, &r);
+        SDL_BlitSurface(state_load_pane, 0, state_panel_pane, &r);
     }
 }
 
@@ -576,7 +580,8 @@ static void ui_render()
     update_master_preview();
     SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect);
 
-    ui_render_slot_deck();
+    ui_update_slot_deck();
+    SDL_BlitSurface(slot_deck_pane, 0, screen, &layout.slot_deck.rect);
 
     ui_update_audio_panel();
     SDL_BlitSurface(audio_pane, 0, screen, &layout.audio.rect);
@@ -585,8 +590,10 @@ static void ui_render()
     ui_render_signal_deck();
     ui_render_output_panel();
     ui_render_midi_panel();
-    ui_render_state_panel();
     ui_render_palette_panel();
+
+    ui_update_state_panel();
+    SDL_BlitSurface(state_panel_pane, 0, screen, &layout.state_panel.rect);
 
     SDL_Flip(screen);
 }
@@ -740,7 +747,7 @@ static int mouse_down_slot(int ix, struct xy xy) {
     return HANDLED;
 }
 
-static int mouse_down_slot_pane(struct xy xy) {
+static int mouse_down_slot_deck(struct xy xy) {
     rect_t r;
     struct xy offset;
 
@@ -865,7 +872,7 @@ static int mouse_down_state_load(int i, struct xy xy){
     return HANDLED;
 }
 
-static int mouse_down_state_pane(struct xy xy){
+static int mouse_down_state_panel(struct xy xy){
     rect_t r;
     struct xy offset;
 
@@ -923,7 +930,9 @@ static int mouse_down(struct xy xy) {
         return UNHANDLED;
     }
 
-    PROPAGATE(mouse_down_slot_pane(xy));
+    if(xy_in_rect(&xy, &layout.slot_deck.rect, &offset)){
+        PROPAGATE(mouse_down_slot_deck(offset));
+    }
 
     // See if click is in audio pane
     if(xy_in_rect(&xy, &layout.audio.rect, &offset)){
@@ -972,7 +981,9 @@ static int mouse_down(struct xy xy) {
         return HANDLED;
     }
 
-    PROPAGATE(mouse_down_state_pane(xy));
+    if(xy_in_rect(&xy, &layout.state_panel.rect, &offset)){
+        PROPAGATE(mouse_down_state_panel(offset));
+    }
 
     // See if click is on a palette
     for(int i = 0; i < n_colormaps; i++){
