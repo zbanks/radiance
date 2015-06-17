@@ -11,28 +11,15 @@
 static struct txt * last_txt = 0;
 
 void text_load_font(struct txt * params){
-    SDL_Color color = {255,255,255,255};
-    char filename[256];
+    char filename[1024];
 
     strncpy(filename, layout.globals.font_directory, 255);
-    //TODO XXX: no bounds checking
+    //TODO XXX: no bounds checking -- is there a better fn for joining paths?
     strcat(filename, params->font);
 
     params->ui_font.font = TTF_OpenFont(filename, params->size);
     if(!params->ui_font.font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
 
-    unsigned int r, g, b;
-    if(sscanf(params->color, "#%2x%2x%2x", &r, &g, &b) == 3){
-        color.r = r;
-        color.g = g;
-        color.b = b;
-    }else{
-        printf("Unable to parse color '%s'; using white instead.", params->color);
-    }
-    params->ui_font.color = color;
-
-    //last_txt->ui_font.next = params;
-    //params->ui_font.next = 0;
     params->ui_font.next = last_txt;
     last_txt = params;
 }
@@ -52,7 +39,7 @@ void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * c
         text_load_font(params);
 
     if(!color) 
-        color = &params->ui_font.color;
+        color = &params->color;
 
     msg = TTF_RenderText_Solid(params->ui_font.font, text, *color);
     if(!msg) return;

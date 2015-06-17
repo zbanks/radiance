@@ -5,9 +5,11 @@
 #include "SDL/SDL.h"
 
 #define COLOR SDL_Color
-#define COLOR_FN(x) _parse_color(x)
-#define COLOR_FMT(x) "#%02hhx%02hhx%02hhx", x.r, x.g, x.b
 #define COLOR_PARSE(x) _parse_color(x)
+#define COLOR_FORMAT(x) "#%02hhx%02hhx%02hhx", x.r, x.g, x.b
+#define COLOR_FREE(x) (void)(x)
+#define COLOR_PREP(x) _parse_color(x)
+
 
 static inline SDL_Color _parse_color(const char * cstr){
     SDL_Color out;

@@ -8,6 +8,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include "core/config_macros.h"
+#include "core/config_color.h"
 #include "ui/layout_constants.h"
 
 #ifdef CFGOBJ
@@ -30,14 +31,13 @@ struct xy {
     CFG(PREFIX(n, size), INT, dsize) \
     CFG(PREFIX(n, align), INT, dalign) \
     CFG(PREFIX(n, font), STRING, dfont) \
-    CFG(PREFIX(n, color), STRING, dcolor)
+    CFG(PREFIX(n, color), COLOR, dcolor)
 
 struct txt;
 struct txt {
     CFG_TXT_ATTR(,,,,,,)
     struct {
         TTF_Font * font;
-        SDL_Color color;
         struct txt * next;
     } ui_font;
 };
