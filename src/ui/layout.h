@@ -123,7 +123,7 @@ static inline void rect_copy(rect_t * dst, const rect_t * src){
 
 // Determines if an `xy` coordinate is in a given `rect` and where (`offset`) in the rect it is.
 // Returns 1 if the coordinate is in the rect & populates `offset` if non-null
-static inline int xy_in_rect(const struct xy * xy, const rect_t * rect, struct xy * offset){
+static inline int xy_in_rect(const struct xy * restrict xy, const rect_t * rect, struct xy * restrict offset){
     if((xy->x >= rect->x) && (xy->x < rect->x + rect->w) && \
        (xy->y >= rect->y) && (xy->y < rect->y + rect->h)){
         if(offset){

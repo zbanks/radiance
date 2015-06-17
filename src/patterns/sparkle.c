@@ -74,7 +74,7 @@ static void update(slot_t* slot, mbeat_t t)
     state->last_t = t;
 }
 
-static color_t render(const state_t* state, float x, float y)
+static color_t render(const state_t* restrict state, float x, float y)
 {
     uint64_t hash;
     memcpy(&hash, &x, 4);

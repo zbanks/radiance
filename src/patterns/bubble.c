@@ -87,7 +87,7 @@ static void command(slot_t* slot, pat_command_t cmd)
     }
 }
 
-static color_t render(const state_t* state, float x, float y)
+static color_t render(const state_t* restrict state, float x, float y)
 {
     float d;
     color_t result = state->color;

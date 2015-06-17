@@ -50,7 +50,7 @@ static void update(slot_t* slot, long t)
     state->color.b *= v;
 }
 
-static color_t render(const state_t* state, float x, float y)
+static color_t render(const state_t* restrict state, float x, float y)
 {
     return state->color;
 }

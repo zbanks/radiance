@@ -78,7 +78,7 @@ static void update(slot_t* slot, mbeat_t t)
     state->colormap = slot->colormap ? slot->colormap : cm_global;
 }
 
-static color_t render(const state_t* state, float x, float y)
+static color_t render(const state_t* restrict state, float x, float y)
 {
     float t = osc_fn_gen(state->type, state->freq_state.phase + y * state->ky + x * state->kx);
     return colormap_color(state->colormap, t);
