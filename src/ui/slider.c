@@ -55,7 +55,7 @@ void slider_render_alpha(param_state_t* state)
                                                 handle_color.b));
 }
 
-void slider_render(parameter_t* param, param_state_t* state, SDL_Color c)
+void slider_render(const parameter_t* param, param_state_t* state, SDL_Color c)
 {
     param_output_t * param_output = param_state_output(state);
     SDL_Color handle_color = {0, 0, 80, 255};

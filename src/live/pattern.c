@@ -47,7 +47,6 @@ static void pat_full_del(pat_state_pt state)
 
 static void pat_full_update(slot_t* slot, long t)
 {
-    UNUSED(t);
     color_t* color = (color_t*)slot->state;
     *color = param_to_color(param_state_get(&slot->param_states[FULL_COLOR]));
     float v = param_state_get(&slot->param_states[FULL_VALUE]);
@@ -57,15 +56,10 @@ static void pat_full_update(slot_t* slot, long t)
 }
 
 static void pat_full_prevclick(slot_t * slot, float x, float y){
-    UNUSED(slot);
-    UNUSED(x);
-    UNUSED(y);
 }
 
 static color_t pat_full_pixel(slot_t* slot, float x, float y)
 {
-    UNUSED(x);
-    UNUSED(y);
     return *(color_t*)slot->state;
 }
 

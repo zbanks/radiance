@@ -613,22 +613,26 @@ static void mouse_drag_slot(struct xy xy) {
     active_slot.dxy = xy; 
 }
 
-static void mouse_drag_pattern_ev(struct xy xy){
+static void mouse_drag_pattern_ev(struct xy xy)
+{
     if(!active_preview.slot->pattern) return;
     struct xy offset;
     xy = xy_add(xy, active_preview.dxy);
-    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        static struct pat_event mouse_drag_x = {.source = PATSRC_MOUSE_X, .event = PATEV_MIDDLE};
-        static struct pat_event mouse_drag_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_MIDDLE};
-        active_preview.slot->pattern->event(active_preview.slot, mouse_drag_x,
-                -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w);
-        active_preview.slot->pattern->event(active_preview.slot, mouse_drag_y,
-                -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h);
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset))
+    {
+        pat_command_t mouse_drag_x = {.index = 0,
+                                      .status = STATUS_CHANGE,
+                                      .value = (offset.x) / (float) layout.slot.preview_w};
+        pat_command_t mouse_drag_y = {.index = 1,
+                                      .status = STATUS_CHANGE,
+                                      .value = (offset.y) / (float) layout.slot.preview_h};
+        active_preview.slot->pattern->command(active_preview.slot, mouse_drag_x);
+        active_preview.slot->pattern->command(active_preview.slot, mouse_drag_y);
     }
 }
 
-static void mouse_drop_pattern(struct xy unused) {
-    UNUSED(unused);
+static void mouse_drop_pattern(struct xy unused)
+{
     rect_t r;
     struct xy xy;
     xy = xy_add(active_pattern.dxy, mouse_drag_start);
@@ -644,8 +648,8 @@ static void mouse_drop_pattern(struct xy unused) {
     active_pattern.index = -1;
 }
 
-static void mouse_drop_slot(struct xy unused) {
-    UNUSED(unused);
+static void mouse_drop_slot(struct xy unused)
+{
     rect_t r;
     struct xy xy;
     xy = xy_add(active_slot.dxy, mouse_drag_start);
@@ -671,16 +675,23 @@ static void mouse_drop_pattern_ev(struct xy xy){
     if(!active_preview.slot->pattern) return;
     struct xy offset;
     xy = xy_add(xy, active_preview.dxy);
-    float x = NAN;
-    float y = NAN;
-    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        x = -1.0 + 2.0 * (offset.x) / (float) layout.slot.preview_w;
-        y = -1.0 + 2.0 * (offset.y) / (float) layout.slot.preview_h;
-    }
-    static struct pat_event mouse_up_x = {.source = PATSRC_MOUSE_X, .event = PATEV_END};
-    static struct pat_event mouse_up_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_END};
-    active_preview.slot->pattern->event(active_preview.slot, mouse_up_x, x);
-    active_preview.slot->pattern->event(active_preview.slot, mouse_up_y, y);
+
+    float x = (offset.x) / (float) layout.slot.preview_w;
+    float y = (offset.y) / (float) layout.slot.preview_h;
+
+    if(x < 0) x = 0;
+    if(y < 0) y = 0;
+    if(x > 1) x = 1;
+    if(y > 1) y = 1;
+
+    pat_command_t mouse_up_x = { .index = 0,
+                                 .status = STATUS_STOP,
+                                 .value = x };
+    pat_command_t mouse_up_y = { .index = 1,
+                                 .status = STATUS_STOP,
+                                 .value = y };
+    active_preview.slot->pattern->command(active_preview.slot, mouse_up_x);
+    active_preview.slot->pattern->command(active_preview.slot, mouse_up_y);
 }
 
 static int mouse_down_slot(int ix, struct xy xy) {
@@ -710,13 +721,15 @@ static int mouse_down_slot(int ix, struct xy xy) {
 
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
-        static struct pat_event mouse_down_x = {.source = PATSRC_MOUSE_X, .event = PATEV_START};
-        static struct pat_event mouse_down_y = {.source = PATSRC_MOUSE_Y, .event = PATEV_START};
+        pat_command_t mouse_down_x = {.index = 0,
+                                      .status = STATUS_START,
+                                      .value = (offset.x) / (float) layout.slot.preview_w};
+        pat_command_t mouse_down_y = {.index = 1,
+                                      .status = STATUS_START,
+                                      .value = (offset.y) / (float) layout.slot.preview_h};
+        active_preview.slot->pattern->command(active_preview.slot, mouse_down_x);
+        active_preview.slot->pattern->command(active_preview.slot, mouse_down_y);
 
-        slots[ix].pattern->event(&slots[ix], mouse_down_x,
-                (offset.x) / (float) layout.slot.preview_w);
-        slots[ix].pattern->event(&slots[ix], mouse_down_y,
-                (offset.y) / (float) layout.slot.preview_h);
         active_preview.slot = &slots[ix];
         memcpy(&active_preview.dxy, &xy, sizeof(struct xy));
         mouse_drag_fn_p = &mouse_drag_pattern_ev;
@@ -771,14 +784,10 @@ static int mouse_down_slot_pane(struct xy xy) {
 }
 
 static int mouse_down_output(int i, struct xy xy){
-    UNUSED(i);
-    UNUSED(xy);
     return UNHANDLED;
 }
 
 static int mouse_down_midi(int i, struct xy xy){
-    UNUSED(i);
-    UNUSED(xy);
     //midi_refresh_devices();
     return UNHANDLED;
 }
@@ -858,7 +867,6 @@ static int mouse_down_audio(struct xy xy){
 }
 
 static int mouse_down_state_save(int i, struct xy xy){
-    UNUSED(xy);
     char filename[1024];
     snprintf(filename, 1023, config.state.path_format, i);
     if(state_save(filename)) printf("Error saving state to '%s'\n", filename);
@@ -866,7 +874,6 @@ static int mouse_down_state_save(int i, struct xy xy){
 }
 
 static int mouse_down_state_load(int i, struct xy xy){
-    UNUSED(xy);
     char filename[1024];
     snprintf(filename, 1023, config.state.path_format, i);
     if(state_load(filename)) printf("Error loading state from '%s'\n", filename);
@@ -998,6 +1005,7 @@ static void ui_poll()
 {
     SDL_Event e;
     struct xy xy;
+    midi_command_event_data_t* event_data;
     while(SDL_PollEvent(&e)) 
     {
         // Not always valid depending on event type
@@ -1035,14 +1043,13 @@ static void ui_poll()
                 mouse_drop_fn_p = 0;
                 mouse_is_down = 0;
                 break;
-            case SDL_MIDI_SLOT_EVENT:
-                xy.x = 0; //XXX
-                struct midi_slot_event * slot_event = (struct midi_slot_event *) e.user.data1;
-                float * value = (float *) e.user.data2;
-                if(slot_event->slot->pattern){
-                    slot_event->slot->pattern->event(slot_event->slot, slot_event->event, *value);
+            case SDL_MIDI_COMMAND_EVENT:
+                event_data = (midi_command_event_data_t*) e.user.data1;
+                if(event_data->slot->pattern)
+                {
+                    event_data->slot->pattern->command(event_data->slot, event_data->command);
                 }
-                free(value);
+                free(event_data);
                 break;
         }
     }
@@ -1050,7 +1057,6 @@ static void ui_poll()
 
 static int ui_run(void* args)
 {
-    UNUSED(args);
     FPSmanager fps_manager;
 
     ui_init();

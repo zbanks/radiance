@@ -11,6 +11,4 @@
 #define ERROR(...) fprintf(stderr,"ERROR: " __FILE__ " line " _ERR_STRINGIFY(__LINE__) ": " __VA_ARGS__)
 #define FAIL(...) {ERROR(__VA_ARGS__); exit(EXIT_FAILURE);}
 
-#define UNUSED(x) ((void)(x))
-
 #endif

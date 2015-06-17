@@ -5,49 +5,49 @@
 #include "util/color.h"
 #include "core/parameter.h"
 
-struct pattern;
 struct slot;
 
-enum pat_source {
-    PATSRC_NONE = 0,
-    PATSRC_MOUSE_X,
-    PATSRC_MOUSE_Y,
-    // PATSRC_AUDIO, // Not yet used, not sure if it will be...
-    PATSRC_MIDI_0,
-    PATSRC_MIDI_1,
-    PATSRC_MIDI_2,
-    PATSRC_MIDI_3, // Numbers up to PATSRC_MAX are also valid
+typedef enum pat_command_status
+{
+    STATUS_START,  // e.g. Mouse down; MIDI note on
+    STATUS_CHANGE, // e.g. Mouse drag; MIDI aftertouch
+    STATUS_STOP,   // e.g. Mouse up; MIDI note off
+} pat_command_status_t;
 
-    PATSRC_MAX = 1024
-};
-
-enum pat_sub_event {
-    PATEV_START,  // Mouse down; MIDI note on
-    PATEV_MIDDLE, // Mouse drag; MIDI aftertouch
-    PATEV_END,    // Mosue up; MIDI note off
-};
-
-struct pat_event {
-    enum pat_source source;
-    enum pat_sub_event event;
-};
+typedef struct pat_command
+{
+    int index;
+    pat_command_status_t status;
+    float value;
+} pat_command_t;
 
 typedef void* pat_state_pt;
 typedef void (*pat_init_fn_pt)(pat_state_pt);
 typedef void (*pat_update_fn_pt)(struct slot* slot, mbeat_t t);
-typedef int (*pat_event_fn_pt)(struct slot* slot, struct pat_event event, float event_data);
+typedef void (*pat_command_fn_pt)(struct slot* slot, pat_command_t cmd);
 typedef color_t (*pat_render_fn_pt)(const pat_state_pt state, float x, float y);
 
 typedef struct pattern
 {
     pat_init_fn_pt init;
     pat_update_fn_pt update;
-    pat_event_fn_pt event;
+    pat_command_fn_pt command;
     pat_render_fn_pt render;
     int n_params;
-    parameter_t* parameters;
+    const parameter_t* parameters;
     int state_size;
-    char* name;
+    const char* name;
 } pattern_t;
+
+#define MAKE_PATTERN { \
+    .render = (pat_render_fn_pt)&render, \
+    .init = (pat_init_fn_pt)&init, \
+    .update = &update, \
+    .command = &command, \
+    .n_params = N_PARAMS, \
+    .parameters = params, \
+    .state_size = sizeof(state_t), \
+    .name = name, \
+}
 
 #endif

@@ -11,6 +11,8 @@
 
 // --------- Pattern: Speckle -----------
 
+static const char name[] = "Speckle";
+
 #define BUCKET_SIZE 1031 // This should be prime
 
 typedef struct {
@@ -27,7 +29,7 @@ enum param_names {
     N_PARAMS
 };
 
-static parameter_t params[N_PARAMS] = {
+static const parameter_t params[N_PARAMS] = {
     [COLOR] = {
         .name = "Color",
         .default_val = 0.5,
@@ -45,12 +47,13 @@ static parameter_t params[N_PARAMS] = {
     },
 };
 
-static void init(pat_state_pt pat_state_p) {
-    state_t * state = (state_t*)pat_state_p;
+static void init(state_t* state)
+{
     memset(state, 0, sizeof(state_t));
 }
 
-static void update(slot_t* slot, mbeat_t t) {
+static void update(slot_t* slot, mbeat_t t)
+{
     state_t * state = (state_t *) slot->state;
     float dt = MB2B(t - state->last_t);
     float decay = dt * power_quantize_parameter(param_state_get(&slot->param_states[DECAY]));
@@ -71,9 +74,8 @@ static void update(slot_t* slot, mbeat_t t) {
     state->last_t = t;
 }
 
-static color_t pixel(const pat_state_pt pat_state_p, float x, float y)
+static color_t render(const state_t* state, float x, float y)
 {
-    const state_t * state = (const state_t*)pat_state_p;
     uint64_t hash;
     memcpy(&hash, &x, 4);
     memcpy(((uint32_t *) &hash)+1, &y, 4);
@@ -85,22 +87,8 @@ static color_t pixel(const pat_state_pt pat_state_p, float x, float y)
     return output;
 }
 
-static int event(slot_t* slot, struct pat_event ev, float event_data){
-    state_t * state = (state_t *) slot->state;
-    if(isnan(event_data)) return 0;
-    UNUSED(ev);
-    UNUSED(state);
-    // TEMPLATE: Handle click/MIDI event
-    return 0;
+static void command(slot_t* slot, pat_command_t cmd)
+{
 }
 
-pattern_t pat_sparkle = {
-    .render = &pixel,
-    .init = &init,
-    .update = &update,
-    .event = &event,
-    .n_params = N_PARAMS,
-    .parameters = params,
-    .name = "Sparkle",
-    .state_size = sizeof(state_t),
-};
+pattern_t pat_sparkle = MAKE_PATTERN;

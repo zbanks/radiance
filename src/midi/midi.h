@@ -7,7 +7,7 @@
 #include <SDL/SDL.h>
 #include <portmidi.h>
 
-#define SDL_MIDI_SLOT_EVENT (SDL_USEREVENT)
+#define SDL_MIDI_COMMAND_EVENT (SDL_USEREVENT)
 
 enum midi_status {
     MIDI_STATUS_NOTEOFF = 0x80,
@@ -16,16 +16,18 @@ enum midi_status {
     MIDI_STATUS_AFTERTOUCH = 0xD0,
 };
 
-struct midi_slot_event {
+typedef struct midi_command_event_data {
     slot_t * slot;
-    struct pat_event event;
-};
+    struct pat_command command;
+} midi_command_event_data_t;
 
 struct midi_connection {
     unsigned char event;
     unsigned char data1;
     param_state_t * param_state;
-    struct midi_slot_event slot_event;
+    slot_t* command_slot;
+    int command_index;
+    pat_command_status_t command_status;
 };
 
 #define N_MAX_MIDI_CONNECTIONS 1024

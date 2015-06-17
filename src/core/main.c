@@ -30,7 +30,6 @@ static void ui_done_callback()
 
 void catch_sigterm(int sig)
 {
-    UNUSED(sig);
     output_stop();
 }
 

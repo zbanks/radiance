@@ -113,7 +113,7 @@ int state_load(const char * filename){
     return 0;
 }
 
-static int dump_param(FILE * stream, param_state_t * param_state, parameter_t * parameter, int i){
+static int dump_param(FILE * stream, param_state_t * param_state, const parameter_t * parameter, int i){
     if(param_state->connected_output){
         fprintf(stream, "param_source_%d=%-30s", i, param_state->connected_output->label);
     }else{
@@ -152,7 +152,8 @@ int state_save(const char * filename){
             else
                 fprintf(stream, "palette=Global\n");
             fprintf(stream, "alpha=%f\n", slots[i].alpha.value);
-            for(int j = 0; j < slots[i].pattern->n_params; j++){
+            for(int j = 0; j < slots[i].pattern->n_params; j++)
+            {
                 dump_param(stream, &slots[i].param_states[j], &slots[i].pattern->parameters[j], j);
             }
         }else{

@@ -251,7 +251,6 @@ void inp_qtl_update(signal_t * signal, mbeat_t t){
     }else{
         state->last_t += 10;
     }
-    UNUSED(t);
     
     memmove(state->state+1, state->state, (QTL_MAXSIZE-1) * sizeof(float));
     state->state[0] = x;

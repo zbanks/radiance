@@ -98,7 +98,7 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                     connection->event = MIDI_STATUS_CC;
                     connection->data1 = j;
                     connection->param_state = param_state;
-                    connection->slot_event.slot = NULL;
+                    connection->command_slot = NULL;
                 }else{
                     ERROR("Unknown connection for CC%d:'%s'\n", j, map.controllers[i].ccs[j]);
                 }
@@ -131,25 +131,25 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                     connection->event = MIDI_STATUS_NOTEON;
                     connection->data1 = j;
                     connection->param_state = NULL;
-                    connection->slot_event.slot = &slots[slot_idx];
-                    connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
-                    connection->slot_event.event.event = PATEV_START;
+                    connection->command_slot = &slots[slot_idx];
+                    connection->command_index = event_idx;
+                    connection->command_status = STATUS_START;
 
                     connection = &device->connections[device->n_connections++];
                     connection->event = MIDI_STATUS_AFTERTOUCH;
                     connection->data1 = j;
                     connection->param_state = NULL;
-                    connection->slot_event.slot = &slots[slot_idx];
-                    connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
-                    connection->slot_event.event.event = PATEV_MIDDLE;
+                    connection->command_slot = &slots[slot_idx];
+                    connection->command_index = event_idx;
+                    connection->command_status = STATUS_CHANGE;
 
                     connection = &device->connections[device->n_connections++];
                     connection->event = MIDI_STATUS_NOTEOFF;
                     connection->data1 = j;
                     connection->param_state = NULL;
-                    connection->slot_event.slot = &slots[slot_idx];
-                    connection->slot_event.event.source = event_idx + PATSRC_MIDI_0;
-                    connection->slot_event.event.event = PATEV_END;
+                    connection->command_slot = &slots[slot_idx];
+                    connection->command_index = event_idx;
+                    connection->command_status = STATUS_STOP;
                 }
             }
         }
