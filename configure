@@ -3194,6 +3194,51 @@ _ACEOF
 
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Pm_Initialize in -lportmidi" >&5
+$as_echo_n "checking for Pm_Initialize in -lportmidi... " >&6; }
+if ${ac_cv_lib_portmidi_Pm_Initialize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lportmidi  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char Pm_Initialize ();
+int
+main ()
+{
+return Pm_Initialize ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_portmidi_Pm_Initialize=yes
+else
+  ac_cv_lib_portmidi_Pm_Initialize=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_portmidi_Pm_Initialize" >&5
+$as_echo "$ac_cv_lib_portmidi_Pm_Initialize" >&6; }
+if test "x$ac_cv_lib_portmidi_Pm_Initialize" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBPORTMIDI 1
+_ACEOF
+
+  LIBS="-lportmidi $LIBS"
+
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Pa_Initialize in -lportaudio" >&5
 $as_echo_n "checking for Pa_Initialize in -lportaudio... " >&6; }
 if ${ac_cv_lib_portaudio_Pa_Initialize+:} false; then :
@@ -3239,13 +3284,12 @@ _ACEOF
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Pm_Initialize in -lportmidi" >&5
-$as_echo_n "checking for Pm_Initialize in -lportmidi... " >&6; }
-if ${ac_cv_lib_portmidi_Pm_Initialize+:} false; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing Pa_ReadStream" >&5
+$as_echo_n "checking for library containing Pa_ReadStream... " >&6; }
+if ${ac_cv_search_Pa_ReadStream+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lportmidi  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3255,33 +3299,48 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char Pm_Initialize ();
+char Pa_ReadStream ();
 int
 main ()
 {
-return Pm_Initialize ();
+return Pa_ReadStream ();
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_portmidi_Pm_Initialize=yes
-else
-  ac_cv_lib_portmidi_Pm_Initialize=no
+for ac_lib in '' portaudio; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_Pa_ReadStream=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_Pa_ReadStream+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_portmidi_Pm_Initialize" >&5
-$as_echo "$ac_cv_lib_portmidi_Pm_Initialize" >&6; }
-if test "x$ac_cv_lib_portmidi_Pm_Initialize" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPORTMIDI 1
-_ACEOF
+done
+if ${ac_cv_search_Pa_ReadStream+:} false; then :
 
-  LIBS="-lportmidi $LIBS"
+else
+  ac_cv_search_Pa_ReadStream=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_Pa_ReadStream" >&5
+$as_echo "$ac_cv_search_Pa_ReadStream" >&6; }
+ac_res=$ac_cv_search_Pa_ReadStream
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+
+    as_fn_error $? "unable to find the Pa_ReadStream() function" "$LINENO" 5
 fi
 
 
