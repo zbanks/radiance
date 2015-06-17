@@ -11,10 +11,12 @@ typedef struct color
     float a;
 } color_t;
 
+static inline uint32_t map_sdl_color(const SDL_Surface * surface, SDL_Color color){
+    return SDL_MapRGB(surface->format, color.r, color.g, color.b);
+}
+
 uint32_t color_to_MapRGB(const SDL_PixelFormat * format, color_t color);
 SDL_Color color_to_SDL(color_t color);
-color_t param_to_color(float param);
-color_t param_to_cpow_color(float param);
 
 // --- Colormaps ---
 

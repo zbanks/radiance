@@ -258,10 +258,8 @@ static void update_pattern_preview(slot_t* slot) {
 
 static void ui_update_slot(slot_t* slot) {
     rect_t r;
-    SDL_Color param_name_c = {255, 255, 255, 255};
-    SDL_Color highlight_c = {255, 200, 0, 255};
     rect_array_origin(&layout.slot.rect_array, &r);
-    SDL_FillRect(slot_pane, &r, SDL_MapRGB(slot_pane->format, 20, 20, 20));
+    SDL_FillRect(slot_pane, &r, map_sdl_color(slot_pane, layout.slot.bg_color));
 
     if(slot->pattern)
     {
@@ -275,7 +273,7 @@ static void ui_update_slot(slot_t* slot) {
             palette_str = "Global";
 
         if(&slot->colormap == active_palette_source)
-            text_render(slot_pane, &layout.slot.palette_txt, &highlight_c, palette_str);
+            text_render(slot_pane, &layout.slot.palette_txt, &layout.slot.palette_highlight_color, palette_str);
         else
             text_render(slot_pane, &layout.slot.palette_txt, 0, palette_str);
 
@@ -285,9 +283,9 @@ static void ui_update_slot(slot_t* slot) {
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
             if(&slot->param_states[i] == active_param_source){
-                slider_render(&slot->pattern->parameters[i], &slot->param_states[i], highlight_c);
+                slider_render(&slot->pattern->parameters[i], &slot->param_states[i], layout.slider.highlight_color);
             }else{
-                slider_render(&slot->pattern->parameters[i], &slot->param_states[i], param_name_c);
+                slider_render(&slot->pattern->parameters[i], &slot->param_states[i], layout.slider.name_color);
             }
             rect_array_layout(&layout.slot.sliders_rect_array, i, &r);
 

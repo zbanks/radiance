@@ -26,8 +26,10 @@ CFGSECTION(master,
 CFGSECTION(slot,
     CFG(n, INT, 8)
     CFG_RECT_ARRAY(, 10, 245, 115, 350, 125, 0, 0)
+    CFG(bg_color, COLOR, "#141414")
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_RECT(alpha, 0, 10, 20, 80)
+    CFG(palette_highlight_color, COLOR, "#FFCC00")
     CFG_TXT(palette, 62, 92, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, LAYOUT_TILE_NONE)
 )
@@ -62,6 +64,7 @@ CFGSECTION(slider,
     CFG_RECT(track, 3, 16, 94, 3)
     CFG_RECT(handle, 3, 12, 10, 10)
     CFG_RECT(output_indicator, 3, 12, 2, 10)
+    CFG(highlight_color, COLOR, "#FFCC00")
     CFG_TXT(name, 3, 0, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(source, 94, 0, 10, LAYOUT_ALIGN_TR, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(value, 3, 23, 10, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
