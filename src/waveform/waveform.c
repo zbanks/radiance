@@ -55,6 +55,7 @@ void waveform_init(){
     for(int i = 0; i < N_WF_BINS; i++){
         memset(waveform_bins[i].history, 0, sizeof(WAVEFORM_HISTORY_SIZE * sizeof(float)));
         waveform_bins[i].hptr = 0;
+        param_output_init(waveformbits[i].output, 0.);
     }
     memset(beat_bin.history, 0, sizeof(WAVEFORM_HISTORY_SIZE * sizeof(float)));
     beat_bin.hptr = 0;

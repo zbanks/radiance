@@ -12,4 +12,10 @@ extern void (*mouse_drop_fn_p)();
 void ui_start(void (*ui_done)());
 void ui_stop();
 
+#define HANDLED 1
+#define UNHANDLED 0
+#define PROPAGATE(x) if(x == HANDLED){return HANDLED;}
+
+SDL_Surface * ui_create_surface_or_die(int width, int height);
+
 #endif

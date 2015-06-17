@@ -161,7 +161,7 @@ void mouse_drag_param_slider(struct xy xy)
     *active_slider.value_p = val;
 }
 
-enum slider_event mouse_click_alpha_slider(param_state_t * param_state, struct xy xy){
+int mouse_down_alpha_slider(param_state_t * param_state, struct xy xy){
     rect_t r;
     struct xy offset;
 
@@ -171,12 +171,12 @@ enum slider_event mouse_click_alpha_slider(param_state_t * param_state, struct x
         active_slider.state = param_state;
         active_slider.initial_value = param_state_get(param_state);
         mouse_drag_fn_p = &mouse_drag_alpha_slider;
-        return SLIDER_DRAG_START;
+        return HANDLED;
     }
-    return 0;
+    return UNHANDLED;
 }
 
-enum slider_event mouse_click_param_slider(param_state_t * param_state, struct xy xy){
+int mouse_down_param_slider(param_state_t * param_state, struct xy xy){
     rect_t r;
     struct xy offset;
 
@@ -201,7 +201,7 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
                     active_slider.initial_value = param_state->min;
                     active_slider.value_p = &param_state->min;
                     mouse_drag_fn_p = &mouse_drag_param_slider;
-                    return SLIDER_DRAG_START;
+                    return HANDLED;
                 }
 
                 rect_copy(&r, &layout.slider.handle_rect);
@@ -211,7 +211,7 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
                     active_slider.initial_value = param_state->max;
                     active_slider.value_p = &param_state->max;
                     mouse_drag_fn_p = &mouse_drag_param_slider;
-                    return SLIDER_DRAG_START;
+                    return HANDLED;
                 }
             break;
             default:
@@ -223,7 +223,7 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
                     active_slider.initial_value = param_state_get(param_state);
                     active_slider.value_p = &param_state->value;
                     mouse_drag_fn_p = &mouse_drag_param_slider;
-                    return SLIDER_DRAG_START;
+                    return HANDLED;
                 }
             break;
         }
@@ -239,10 +239,10 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
             param_state_disconnect(active_param_source);
         if(active_param_source == param_state){
             active_param_source = 0;
-            return SLIDER_CONNECT_CANCEL;
+            return HANDLED;
         }else{
             active_param_source = param_state;
-            return SLIDER_CONNECT_START;
+            return HANDLED;
         }
     }
 
@@ -253,6 +253,7 @@ enum slider_event mouse_click_param_slider(param_state_t * param_state, struct x
     r.h = layout.slider.h - r.y;
     if(xy_in_rect(&xy, &r, &offset)){
         param_state->mode = (param_state->mode + 1) % N_PARAM_VALUE_MODES;
+        return HANDLED;
     }
-    return 0;
+    return UNHANDLED;
 }

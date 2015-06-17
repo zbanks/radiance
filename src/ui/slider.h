@@ -26,7 +26,7 @@ void slider_output_render(param_output_t * output);
 
 void mouse_drag_alpha_slider(struct xy xy);
 void mouse_drag_param_slider(struct xy xy);
-enum slider_event mouse_click_alpha_slider(param_state_t * param_state, struct xy xy);
-enum slider_event mouse_click_param_slider(param_state_t * param_state, struct xy xy);
+int mouse_down_alpha_slider(param_state_t * param_state, struct xy xy);
+int mouse_down_param_slider(param_state_t * param_state, struct xy xy);
 
 #endif
