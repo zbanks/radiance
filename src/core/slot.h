@@ -8,9 +8,6 @@
 #include "core/time.h"
 #include "util/color.h"
 
-struct slot;
-struct pattern;
-
 #define N_MAX_PARAMS 8
 
 typedef enum

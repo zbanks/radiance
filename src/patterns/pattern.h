@@ -5,7 +5,6 @@
 #include "util/color.h"
 #include "core/parameter.h"
 
-struct pattern;
 struct slot;
 
 enum pat_source {
