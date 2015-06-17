@@ -1,5 +1,6 @@
-CC = gcc
-CXX = g++
+# @configure_input@
+CC = @CC@
+CXX = @CXX@
 PREFIX = @prefix@
 
 # cflags @CFLAGS@
@@ -30,8 +31,8 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -I./src/ -L/usr/local/lib -L/usr/lib 
-LIB  = @LIBS@
+INC  = -I./src/ 
+LIB  = -L/usr/local/lib -L/usr/lib @LIBS@
 
 # Assembler, compiler, and linker flags
 CXXFLAGS = $(INC) 
