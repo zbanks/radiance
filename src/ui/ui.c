@@ -63,7 +63,7 @@ void (*mouse_drag_fn_p)();
 void (*mouse_drop_fn_p)();
 
 int active_pattern;
-slot_t* active_slot;
+int active_slot;
 slot_t* active_preview;
 
 param_state_t * active_param_source;
@@ -109,7 +109,7 @@ SURFACES
     mouse_drag_fn_p = 0;
     mouse_drop_fn_p = 0;
     active_pattern = -1;
-    active_slot = 0;
+    active_slot = -1;
     active_preview = 0;
 
     master_pixels = layout.master.w * layout.master.h;
@@ -311,14 +311,10 @@ static void ui_update_slot_deck(){
     // Render slots
     for(int i=0; i<n_slots; i++)
     {
-        if(slots[i].pattern)
+        if(slots[i].pattern && i != active_slot)
         {
             ui_update_slot(&slots[i]);
             rect_array_layout(&layout.slot.rect_array, i, &r);
-
-            if(active_slot == &slots[i]) {
-                rect_shift(&r, &mouse_drag_delta);
-            }
 
             SDL_BlitSurface(slot_pane, 0, slot_deck_pane, &r);
         }
@@ -327,13 +323,29 @@ static void ui_update_slot_deck(){
     // Render pattern selection buttons
     for(int i=0; i<n_patterns; i++)
     {
-        ui_update_pattern(patterns[i]);
-        rect_array_layout(&layout.add_pattern.rect_array, i, &r);
-
-        if(active_pattern == i) {
-            rect_shift(&r, &mouse_drag_delta);
+        if(active_pattern != i)
+        {
+            ui_update_pattern(patterns[i]);
+            rect_array_layout(&layout.add_pattern.rect_array, i, &r);
+            SDL_BlitSurface(pattern_pane, 0, slot_deck_pane, &r);
         }
+    }
 
+    // Render floating slot
+    if(active_slot >= 0)
+    {
+        ui_update_slot(&slots[active_slot]);
+        rect_array_layout(&layout.slot.rect_array, active_slot, &r);
+        rect_shift(&r, &mouse_drag_delta);
+        SDL_BlitSurface(slot_pane, 0, slot_deck_pane, &r);
+    }
+
+    // Render floating pattern
+    if(active_pattern >= 0)
+    {
+        ui_update_pattern(patterns[active_pattern]);
+        rect_array_layout(&layout.add_pattern.rect_array, active_pattern, &r);
+        rect_shift(&r, &mouse_drag_delta);
         SDL_BlitSurface(pattern_pane, 0, slot_deck_pane, &r);
     }
 }
@@ -643,12 +655,12 @@ static void mouse_drop_slot()
         rect_array_layout(&layout.slot.rect_array, i, &r);
         if(xy_in_rect(&xy, &r, 0))
         {
-            slot_t temp_slot = *active_slot;
-            *active_slot = slots[i];
+            slot_t temp_slot = slots[active_slot];
+            slots[active_slot] = slots[i];
             slots[i] = temp_slot;
         }
     }
-    active_slot = 0;
+    active_slot = -1;
 }
 
 static void mouse_drop_pattern_ev(struct xy xy)
@@ -745,7 +757,7 @@ static int mouse_down_slot_deck(struct xy xy) {
 
             // Else, drag the slot
             mouse_drag_start = xy;
-            active_slot = &slots[i];
+            active_slot = i;
             mouse_drop_fn_p = &mouse_drop_slot;
             return HANDLED;
         }
