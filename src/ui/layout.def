@@ -25,6 +25,7 @@ CFGSECTION(slot,
     CFG_BACKGROUND(, "#141414", "slot.bmp")
     CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
+    CFG_BACKGROUND(preview, "#000000", "transparent.bmp")
     CFG_RECT(alpha, 0, 10, 20, 80)
     CFG_TXT(name, 66, 93, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(palette, 66, 112, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
