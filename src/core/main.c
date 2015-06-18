@@ -67,12 +67,13 @@ int main()
      * wave ~ 42fps
      */
 
+    /*
     pattern_t * test_pat = &pat_wave;
     for(int i = 0; i < n_slots; i++){
         pat_load(&slots[i], test_pat);
     }
+    */
 
-    /*
     pat_load(&slots[0], &pat_rainbow);
     pat_load(&slots[1], &pat_fade);
     pat_load(&slots[2], &pat_strobe);
@@ -81,7 +82,6 @@ int main()
     pat_load(&slots[5], &pat_bubble);
     pat_load(&slots[6], &pat_swipe);
     pat_load(&slots[7], &pat_strobe);
-    */
 
     for(int i = 0; i < 8; i++){
         if(!slots[i].pattern) continue;

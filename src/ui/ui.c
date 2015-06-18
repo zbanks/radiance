@@ -705,7 +705,7 @@ static int mouse_down_slot(slot_t* slot, struct xy xy)
             active_palette_source = NULL;
             slot->colormap = NULL;
         }else{
-            active_palette_source = &slots->colormap;
+            active_palette_source = &slot->colormap;
         }
         return HANDLED;
     }
