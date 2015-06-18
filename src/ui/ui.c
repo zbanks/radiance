@@ -671,14 +671,16 @@ static void mouse_drop_pattern_ev(struct xy xy)
     active_preview = 0;
 }
 
-static int mouse_down_slot(int ix, struct xy xy) {
+static int mouse_down_slot(slot_t* slot, struct xy xy)
+{
     rect_t r;
     struct xy offset;
-    if(!slots[ix].pattern) return UNHANDLED;
+    if(!slots->pattern) return UNHANDLED;
 
     // See if the click is on the alpha slider
-    if(xy_in_rect(&xy, &layout.slot.alpha_rect, &offset)){
-        PROPAGATE(mouse_down_alpha_slider(&slots[ix].alpha, offset));
+    if(xy_in_rect(&xy, &layout.slot.alpha_rect, &offset))
+    {
+        PROPAGATE(mouse_down_alpha_slider(&slot->alpha, offset));
     }
 
     // See if the click is on the palette indicator
@@ -687,11 +689,11 @@ static int mouse_down_slot(int ix, struct xy xy) {
     r.y = layout.slot.palette_y;
     r.h = layout.slot.palette_size;
     if(xy_in_rect(&xy, &r, &offset)){
-        if(active_palette_source == &slots[ix].colormap){
+        if(active_palette_source == &slot->colormap){
             active_palette_source = NULL;
-            slots[ix].colormap = NULL;
+            slot->colormap = NULL;
         }else{
-            active_palette_source = &slots[ix].colormap;
+            active_palette_source = &slots->colormap;
         }
         return HANDLED;
     }
@@ -705,30 +707,27 @@ static int mouse_down_slot(int ix, struct xy xy) {
         pat_command_t mouse_down_y = {.index = 1,
                                       .status = STATUS_START,
                                       .value = (offset.y) / (float) layout.slot.preview_h};
-        slots[ix].pattern->command(active_preview, mouse_down_x);
-        slots[ix].pattern->command(active_preview, mouse_down_y);
+        slot->pattern->command(slot, mouse_down_x);
+        slot->pattern->command(slot, mouse_down_y);
 
         mouse_drag_start = offset;
-        active_preview = &slots[ix];
+        active_preview = slot;
         mouse_drag_fn_p = &mouse_drag_pattern_ev;
         mouse_drop_fn_p = &mouse_drop_pattern_ev;
         return HANDLED;
     }
 
     // See if the click is on a parameter slider
-    for(int i = 0; i < slots[ix].pattern->n_params; i++)
+    for(int i = 0; i < slot->pattern->n_params; i++)
     {
         rect_array_layout(&layout.slot.sliders_rect_array, i, &r);
-        if(xy_in_rect(&xy, &r, &offset)){
-            return mouse_down_param_slider(&slots[ix].param_states[i], offset);
+        if(xy_in_rect(&xy, &r, &offset))
+        {
+            return mouse_down_param_slider(&slot->param_states[i], offset);
         }
     }
 
-    // Else, drag the slot
-    mouse_drag_start = xy;
-    active_slot = &slots[ix];
-    mouse_drop_fn_p = &mouse_drop_slot;
-    return HANDLED;
+    return UNHANDLED;
 }
 
 static int mouse_down_slot_deck(struct xy xy) {
@@ -736,12 +735,19 @@ static int mouse_down_slot_deck(struct xy xy) {
     struct xy offset;
 
     // See if click is in a slot
-    for(int i=0; i<n_slots; i++) {
+    for(int i=0; i<n_slots; i++)
+    {
         rect_array_layout(&layout.slot.rect_array, i, &r);
-        if(xy_in_rect(&xy, &r, &offset)){
+        if(xy_in_rect(&xy, &r, &offset))
+        {
             // If it is, see if that slot wants to handle it
-            PROPAGATE(mouse_down_slot(i, offset));
-            break;
+            PROPAGATE(mouse_down_slot(&slots[i], offset));
+
+            // Else, drag the slot
+            mouse_drag_start = xy;
+            active_slot = &slots[i];
+            mouse_drop_fn_p = &mouse_drop_slot;
+            return HANDLED;
         }
     }
 

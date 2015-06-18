@@ -188,7 +188,7 @@ int mouse_down_param_slider(param_state_t * param_state, struct xy xy){
             active_slider.initial_value = param_state_get(param_state);
             active_slider.value_p = &param_state->value;
             mouse_drag_fn_p = &mouse_drag_param_slider;
-            return SLIDER_DRAG_START;
+            return HANDLED;
         }
     }else{
         switch(param_state->mode){
