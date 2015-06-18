@@ -98,8 +98,8 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                     struct midi_connection * connection = &device->connections[device->n_connections++];
                     connection->event = MIDI_STATUS_CC;
                     connection->data1 = j;
+                    connection->type = MIDI_CONN_PARAM_STATE;
                     connection->param_state = param_state;
-                    connection->command_slot = NULL;
                 }else{
                     ERROR("Unknown connection for CC%d:'%s'\n", j, map.controllers[i].ccs[j]);
                 }
@@ -120,18 +120,17 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
             for(char * param_str = strtok_r(param_str_copy, ";", &sptr); param_str != NULL; param_str = strtok_r(NULL, ";", &sptr)){
                 int slot_idx = 0;
                 int event_idx = 0;
+                char event_str[16];
                 printf("note %s\n", param_str);
                 if(sscanf(param_str, "slot %d %d", &slot_idx, &event_idx) == 2){
                     if(slot_idx < 0 || slot_idx >= n_slots || event_idx < 0){
                         ERROR("Invalid event: '%s'\n", map.controllers[i].notes[j]);
                         continue;
                     }
-                    printf("Making event %d %d\n", slot_idx, event_idx);
-
                     struct midi_connection * connection = &device->connections[device->n_connections++];
                     connection->event = MIDI_STATUS_NOTEON;
                     connection->data1 = j;
-                    connection->param_state = NULL;
+                    connection->type = MIDI_CONN_PATTERN;
                     connection->command_slot = &slots[slot_idx];
                     connection->command_index = event_idx;
                     connection->command_status = STATUS_START;
@@ -139,7 +138,7 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                     connection = &device->connections[device->n_connections++];
                     connection->event = MIDI_STATUS_AFTERTOUCH;
                     connection->data1 = j;
-                    connection->param_state = NULL;
+                    connection->type = MIDI_CONN_PATTERN;
                     connection->command_slot = &slots[slot_idx];
                     connection->command_index = event_idx;
                     connection->command_status = STATUS_CHANGE;
@@ -147,10 +146,44 @@ int midi_config_load(const char * filename, struct midi_controller * controllers
                     connection = &device->connections[device->n_connections++];
                     connection->event = MIDI_STATUS_NOTEOFF;
                     connection->data1 = j;
-                    connection->param_state = NULL;
+                    connection->type = MIDI_CONN_PATTERN;
                     connection->command_slot = &slots[slot_idx];
                     connection->command_index = event_idx;
                     connection->command_status = STATUS_STOP;
+                }else if(sscanf(param_str, "slot %d %15s", &slot_idx, event_str) == 2){
+                    if(slot_idx < 0 || slot_idx >= n_slots || event_idx < 0){
+                        ERROR("Invalid event: '%s'\n", map.controllers[i].notes[j]);
+                        continue;
+                    }
+                    if(strcmp(event_str, "solo") == 0) {
+                        struct midi_connection * connection = &device->connections[device->n_connections++];
+                        connection->event = MIDI_STATUS_NOTEON;
+                        connection->data1 = j;
+                        connection->type = MIDI_CONN_SLOT_SOLO;
+                        connection->command_index = 1;
+                        connection->command_slot = &slots[slot_idx];
+
+                        connection = &device->connections[device->n_connections++];
+                        connection->event = MIDI_STATUS_NOTEOFF;
+                        connection->data1 = j;
+                        connection->type = MIDI_CONN_SLOT_SOLO;
+                        connection->command_index = 0;
+                        connection->command_slot = &slots[slot_idx];
+                    } else if(strcmp(event_str, "mute") == 0) {
+                        struct midi_connection * connection = &device->connections[device->n_connections++];
+                        connection->event = MIDI_STATUS_NOTEON;
+                        connection->data1 = j;
+                        connection->type = MIDI_CONN_SLOT_MUTE;
+                        connection->command_index = 1;
+                        connection->command_slot = &slots[slot_idx];
+
+                        connection = &device->connections[device->n_connections++];
+                        connection->event = MIDI_STATUS_NOTEOFF;
+                        connection->data1 = j;
+                        connection->type = MIDI_CONN_SLOT_MUTE;
+                        connection->command_index = 0;
+                        connection->command_slot = &slots[slot_idx];
+                    }
                 }
             }
         }

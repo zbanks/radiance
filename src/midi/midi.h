@@ -16,6 +16,13 @@ enum midi_status {
     MIDI_STATUS_AFTERTOUCH = 0xD0,
 };
 
+enum midi_connection_type {
+    MIDI_CONN_PARAM_STATE,
+    MIDI_CONN_PATTERN,
+    MIDI_CONN_SLOT_SOLO,
+    MIDI_CONN_SLOT_MUTE,
+};
+
 typedef struct midi_command_event_data {
     slot_t * slot;
     struct pat_command command;
@@ -24,6 +31,7 @@ typedef struct midi_command_event_data {
 struct midi_connection {
     unsigned char event;
     unsigned char data1;
+    enum midi_connection_type type;
     param_state_t * param_state;
     slot_t* command_slot;
     int command_index;

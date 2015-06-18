@@ -166,26 +166,33 @@ static int midi_run(void* args)
                 {
                     if(controller->connections[k].event == event && controller->connections[k].data1 == data1)
                     {
-                        if(controller->connections[k].param_state)
-                        {
-                            param_state_setq(controller->connections[k].param_state, data2 / 127.);
-                        }
-                        if(controller->connections[k].command_slot)
-                        {
-                            midi_command_event_data_t* event_data = malloc(sizeof(midi_command_event_data_t));
-                            if(!event_data) FAIL("Unable to malloc a MIDI command SDL event data\n");
+                        midi_command_event_data_t* event_data;
+                        switch(controller->connections[k].type){
+                            case MIDI_CONN_PARAM_STATE:
+                                param_state_setq(controller->connections[k].param_state, data2 / 127.);
+                                break;
+                            case MIDI_CONN_SLOT_MUTE:
+                                controller->connections[k].command_slot->mute = controller->connections[k].command_index;
+                                break;
+                            case MIDI_CONN_SLOT_SOLO:
+                                controller->connections[k].command_slot->solo = controller->connections[k].command_index;
+                                break;
+                            case MIDI_CONN_PATTERN:
+                                event_data = malloc(sizeof(midi_command_event_data_t));
+                                if(!event_data) FAIL("Unable to malloc a MIDI command SDL event data\n");
 
-                            event_data->slot = controller->connections[k].command_slot;
-                            event_data->command.index = controller->connections[k].command_index;
-                            event_data->command.status = controller->connections[k].command_status;
-                            event_data->command.value = (float)data2 / 127;
+                                event_data->slot = controller->connections[k].command_slot;
+                                event_data->command.index = controller->connections[k].command_index;
+                                event_data->command.status = controller->connections[k].command_status;
+                                event_data->command.value = (float)data2 / 127;
 
-                            SDL_Event sdl_event;
-                            sdl_event.type = SDL_MIDI_COMMAND_EVENT;
-                            sdl_event.user.code = 0;
-                            sdl_event.user.data1 = event_data;
-                            sdl_event.user.data2 = 0;
-                            SDL_PushEvent(&sdl_event);
+                                SDL_Event sdl_event;
+                                sdl_event.type = SDL_MIDI_COMMAND_EVENT;
+                                sdl_event.user.code = 0;
+                                sdl_event.user.data1 = event_data;
+                                sdl_event.user.data2 = 0;
+                                SDL_PushEvent(&sdl_event);
+                                break;
                         }
                     }
                 }

@@ -14,8 +14,15 @@ SDL_mutex* patterns_updating;
 
 void render_composite_frame(state_source_t src, float * x, float * y, size_t n, color_t * out){
     memset(out, 0, n * sizeof(color_t)); // Initialize to black
+    int has_solo = 0;
+    for(int i = 0; i < n_slots; i++){
+        has_solo |= slots[i].solo;
+    }
+
     for(int i = 0; i < n_slots; i++){
         if(!slots[i].pattern) continue;
+        if(slots[i].mute) continue;
+        if(has_solo && !slots[i].solo) continue;
         const pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
         const pat_render_fn_pt pat_render = *slots[i].pattern->render;
         float slot_alpha = param_state_get(&slots[i].alpha);
