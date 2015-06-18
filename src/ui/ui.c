@@ -408,8 +408,9 @@ static void ui_update_filter(filter_t * filter) {
     text_render(filter_pane, &layout.filter.name_txt, &filter->color, filter->name);
 
     graph_update(&(filter->graph_state), filter->output.value);
-    graph_render(&(filter->graph_state), layout.graph_filter.line_color);
-    SDL_BlitSurface(graph_surface, 0, filter_pane, &layout.graph_filter.rect);
+    graph_render(&(filter->graph_state), &layout.graph_filter.background, layout.graph_filter.line_color);
+    rect_origin(&layout.graph_filter.rect, &r);
+    SDL_BlitSurface(graph_surface, &r, filter_pane, &layout.graph_filter.rect);
 }
 
 static void ui_update_signal(signal_t* signal) {
@@ -421,8 +422,9 @@ static void ui_update_signal(signal_t* signal) {
     text_render(signal_pane, &layout.signal.name_txt, &signal_c, signal->name);
 
     graph_update(&(signal->graph_state), signal->output.value);
-    graph_render(&(signal->graph_state), layout.graph_signal.line_color);
-    SDL_BlitSurface(graph_surface, 0, signal_pane, &layout.graph_signal.rect);
+    graph_render(&(signal->graph_state), &layout.graph_signal.background, layout.graph_signal.line_color);
+    rect_origin(&layout.graph_signal.rect, &r);
+    SDL_BlitSurface(graph_surface, &r, signal_pane, &layout.graph_signal.rect);
 
     for(int i = 0; i < signal->n_params; i++)
     {

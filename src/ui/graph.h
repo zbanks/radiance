@@ -2,6 +2,7 @@
 #define __GRAPH_H
 
 #include <SDL/SDL.h>
+#include "ui/layout.h"
 
 typedef struct
 {
@@ -21,6 +22,6 @@ void graph_create_filter(graph_state_t* state);
 void graph_remove(graph_state_t* state);
 
 void graph_update(graph_state_t* state, float value);
-void graph_render(graph_state_t* state, SDL_Color c);
+void graph_render(graph_state_t* state, struct background * bg, SDL_Color line_color);
 
 #endif

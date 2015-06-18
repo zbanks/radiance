@@ -31,18 +31,27 @@ void text_unload_fonts(){
 }
 
 void text_render(SDL_Surface * surface, struct txt * params, const SDL_Color * color, const char * text){
-    SDL_Surface* msg;
-    rect_t r;
+    // Passing TTF_RenderText_*(...) a NULL text pointer results in "undefined behavior"
+    if(!text) return; 
 
     if(!params->ui_font.font)
         text_load_font(params);
+    // Passing TTF_RenderText_*(...) a NULL text pointer results in a segfault.
+    // Its better to not draw anything than to segfault. If we couldn't load the font, just give up.
+    if(!params->ui_font.font) return;
 
     if(!color) 
         color = &params->color;
 
+    SDL_Surface* msg;
+#ifdef TEXT_ANTIALIAS
+    msg = TTF_RenderText_Blended(params->ui_font.font, text, *color);
+#else
     msg = TTF_RenderText_Solid(params->ui_font.font, text, *color);
+#endif
     if(!msg) return;
 
+    rect_t r;
     r.x = params->x;
     r.y = params->y;
     r.w = msg->w;

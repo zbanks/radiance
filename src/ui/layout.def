@@ -26,9 +26,12 @@ CFGSECTION(slot,
     CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_RECT(alpha, 0, 10, 20, 80)
-    CFG_TXT(palette, 62, 92, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(name, 62, 92, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
+    CFG_TXT(palette, 62, 110, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG(palette_highlight_color, COLOR, "#FFCC00")
-    CFG_RECT_ARRAY(sliders, 8, 110, 110, 32, 0, 36, LAYOUT_TILE_NONE)
+    CFG_RECT(solo, 3, 92, 10, 10)
+    CFG_RECT(mute, 3, 92, 10, 10)
+    CFG_RECT_ARRAY(sliders, 8, 130, 110, 32, 0, 36, LAYOUT_TILE_NONE)
 )
     
 CFGSECTION(add_pattern,

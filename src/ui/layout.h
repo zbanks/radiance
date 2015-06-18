@@ -30,11 +30,18 @@ struct bmp {
 };
 
 static inline struct bmp _parse_bmp(const char * str){
-    struct bmp bmp;
-    bmp.filename = strcatdup(config.path.images, str);
-    if(bmp.filename){
-        bmp.image = SDL_LoadBMP(bmp.filename);
-        if(!bmp.image) ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
+    struct bmp bmp = {0, 0};
+    bmp.filename = strdup(str);
+
+    char * full_path = strcatdup(config.path.images, str);
+    if(full_path){
+        bmp.image = SDL_LoadBMP(full_path);
+        if(!bmp.image){
+            ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
+        }else{
+            // Set the color key to #FEFE00
+            //SDL_SetColorKey(bmp.image, SDL_SRCCOLORKEY | SDL_RLEACCEL, SDL_MapRGB(bmp.image->format, 254, 254, 0));
+        }
     }
     return bmp;
 }
@@ -160,7 +167,7 @@ static inline void rect_copy(rect_t * dst, const rect_t * src){
 
 // Determines if an `xy` coordinate is in a given `rect` and where (`offset`) in the rect it is.
 // Returns 1 if the coordinate is in the rect & populates `offset` if non-null
-static inline int xy_in_rect(const struct xy * restrict xy, const rect_t * rect, struct xy * restrict offset){
+static inline int xy_in_rect(const struct xy * xy, const rect_t * rect, struct xy * offset){
     if((xy->x >= rect->x) && (xy->x < rect->x + rect->w) && \
        (xy->y >= rect->y) && (xy->y < rect->y + rect->h)){
         if(offset){
@@ -174,25 +181,26 @@ static inline int xy_in_rect(const struct xy * restrict xy, const rect_t * rect,
 
 // Adds two `xy` values & returns the result
 static inline struct xy xy_add(struct xy a, struct xy b){
-    return (struct xy) {
-        .x = a.x + b.x,
-        .y = a.y + b.y
-    };
+    struct xy result;
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    return result;
 }
 
 // Subtracts two `xy` values (a - b) & returns the result
 static inline struct xy xy_sub(struct xy a, struct xy b){
-    return (struct xy) {
-        .x = a.x - b.x,
-        .y = a.y - b.y
-    };
+    struct xy result;
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    return result;
 }
 
 // Draws a background image onto a SDL_Surface, defaulting to a solid color if an image isn't found
 static inline void fill_background(SDL_Surface * surface, rect_t * rect, struct background * bg){
     if(bg->bmp.image){
         // width/height are taken from srcrect, x/y are taken from dstrect
-        SDL_BlitSurface(bg->bmp.image, rect, surface, rect);
+        rect_t rwh = {.x = 0, .y = 0, .w = rect->w, .h = rect->h};
+        SDL_BlitSurface(bg->bmp.image, &rwh, surface, rect);
     }else{
         SDL_FillRect(surface, rect, map_sdl_color(surface, bg->color));
     }
