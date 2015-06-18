@@ -23,14 +23,9 @@ CFGSECTION(master,
     CFG_RECT(, 30, 30, 200, 200)
 )
 
-CFGSECTION(slot_deck, 
-    CFG_RECT(, 10, 245, 1100, 350)
-    CFG(bg_color, COLOR, "#000000")
-)
-
 CFGSECTION(slot,
     //CFG(n, INT, 8)
-    CFG_RECT_ARRAY(, 0, 0, 115, 350, 126, 0, 0)
+    CFG_RECT_ARRAY(, 10, 245, 115, 350, 126, 0, 0)
     CFG(bg_color, COLOR, "#141414")
     CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
@@ -41,7 +36,7 @@ CFGSECTION(slot,
 )
     
 CFGSECTION(add_pattern,
-    CFG_RECT_ARRAY(, 1005, 0, 90, 30, 0, 35, 0)
+    CFG_RECT_ARRAY(, 1015, 245, 90, 30, 0, 35, 0)
     CFG(bg_color, COLOR, "#141414")
     CFG_TXT(name, 45, 15, 16, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
