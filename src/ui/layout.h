@@ -27,22 +27,13 @@
 struct bmp {
     char * filename;
     SDL_Surface * image;
+    int error;
 };
 
 static inline struct bmp _parse_bmp(const char * str){
-    struct bmp bmp = {0, 0};
+    struct bmp bmp = {0, 0, 0};
     bmp.filename = strdup(str);
 
-    char * full_path = strcatdup(config.path.images, str);
-    if(full_path){
-        bmp.image = SDL_LoadBMP(full_path);
-        if(!bmp.image){
-            ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
-        }else{
-            // Set the color key to #FEFE00
-            //SDL_SetColorKey(bmp.image, SDL_SRCCOLORKEY | SDL_RLEACCEL, SDL_MapRGB(bmp.image->format, 254, 254, 0));
-        }
-    }
     return bmp;
 }
 
@@ -195,12 +186,34 @@ static inline struct xy xy_sub(struct xy a, struct xy b){
     return result;
 }
 
+// BMP images are lazily loaded. Try to load one 
+static inline SDL_Surface * bmp_load(struct bmp *  bmp){
+    if(bmp->error) return NULL; 
+    if(!bmp->image){
+        char * full_path = strcatdup(config.path.images, bmp->filename);
+        if(full_path) {
+            bmp->image = SDL_LoadBMP(full_path);
+            if(!bmp->image) {
+                ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
+                bmp->error = 1;
+            } else {
+                SDL_DisplayFormat(bmp->image);
+                // Set the color key to #FE00FE
+                SDL_SetColorKey(bmp->image, SDL_SRCCOLORKEY, SDL_MapRGB(bmp->image->format, 254, 0, 254));
+            }
+        }
+        free(full_path);
+    }
+    return bmp->image;
+}
+
 // Draws a background image onto a SDL_Surface, defaulting to a solid color if an image isn't found
 static inline void fill_background(SDL_Surface * surface, rect_t * rect, struct background * bg){
-    if(bg->bmp.image){
+    SDL_Surface * image = bmp_load(&bg->bmp);
+    if(image){
         // width/height are taken from srcrect, x/y are taken from dstrect
         rect_t rwh = {.x = 0, .y = 0, .w = rect->w, .h = rect->h};
-        SDL_BlitSurface(bg->bmp.image, &rwh, surface, rect);
+        SDL_BlitSurface(image, &rwh, surface, rect);
     }else{
         SDL_FillRect(surface, rect, map_sdl_color(surface, bg->color));
     }

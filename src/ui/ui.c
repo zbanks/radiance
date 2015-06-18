@@ -374,18 +374,24 @@ static void ui_update_audio_panel(){
     //float dx = 1.0 - fabs(phase - 1.0);
     float dx = 1.0 - fabs(fmod(phase, 2.0) - 1.0);
     float dy = 4. * (dx - 0.5) * (dx - 0.5);
-    int y;
-    if(phase > 3.)
-        y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * dy;
-    else
-        y = layout.audio.ball_y + layout.audio.ball_r + (layout.audio.ball_h - 2 * layout.audio.ball_r) * (0.4 + 0.6 * dy);
+    if(phase < 3) 
+        dy = 0.4 + 0.6 * dy;
 
-    int x = layout.audio.ball_x + layout.audio.ball_r + (layout.audio.ball_w - 2 * layout.audio.ball_r) * 0.5;
-    SDL_Color ball_c = layout.audio.ball_color;
-    filledCircleRGBA(audio_pane, x, y, layout.audio.ball_r, ball_c.r, ball_c.g, ball_c.b, 255);
+    r.y = layout.audio.ball_area_y + layout.audio.ball_r + (layout.audio.ball_area_h - 2 * layout.audio.ball_r) * dy;
+    r.x = layout.audio.ball_area_x + layout.audio.ball_r + (layout.audio.ball_area_w - 2 * layout.audio.ball_r) * 0.5;
+
+    if(!layout.audio.ball_bmp.image) {
+        SDL_Color ball_c = layout.audio.ball_color;
+        filledCircleRGBA(audio_pane, r.x, r.y, layout.audio.ball_r, ball_c.r, ball_c.g, ball_c.b, 255);
+    } else {
+        r.x -= layout.audio.ball_r;
+        r.y -= layout.audio.ball_r;
+        r.w = r.h = layout.audio.ball_r * 2 + 3;
+        fill_background(audio_pane, &r, &layout.audio.ball_background);
+    }
 
     SDL_Color bf_c = layout.audio.ball_floor_color;
-    hlineRGBA(audio_pane, layout.audio.ball_x, layout.audio.ball_x + layout.audio.ball_w, layout.audio.ball_y + layout.audio.ball_h, bf_c.r, bf_c.g, bf_c.b, 255);
+    hlineRGBA(audio_pane, layout.audio.ball_area_x, layout.audio.ball_area_x + layout.audio.ball_area_w, layout.audio.ball_area_y + layout.audio.ball_area_h, bf_c.r, bf_c.g, bf_c.b, 255);
 
     char buf[16];
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
@@ -866,7 +872,7 @@ static int mouse_down_audio(struct xy xy){
         return HANDLED;
     }
 
-    if(xy_in_rect(&xy, &layout.audio.ball_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.audio.ball_area_rect, &offset)){
         printf("ball clicked\n");
         timebase_align();
         return HANDLED;
