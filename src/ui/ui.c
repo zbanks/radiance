@@ -256,6 +256,8 @@ static void ui_update_slot(slot_t* slot) {
         update_pattern_preview(slot);
         SDL_BlitSurface(pattern_preview, 0, slot_pane, &layout.slot.preview_rect);
 
+        text_render(slot_pane, &layout.slot.name_txt, 0, slot->pattern->name);
+
         const char * palette_str;
         if(slot->colormap)
             palette_str = slot->colormap->name;
@@ -269,6 +271,18 @@ static void ui_update_slot(slot_t* slot) {
 
         slider_render_alpha(&slot->alpha);
         SDL_BlitSurface(alpha_slider_surface, 0, slot_pane, &layout.slot.alpha_rect);
+
+        if(slot->mute) {
+            fill_background(slot_pane, &layout.slot.mute_rect, &layout.slot.mute_active_background);
+        } else {
+            fill_background(slot_pane, &layout.slot.mute_rect, &layout.slot.mute_background);
+        }
+
+        if(slot->solo) {
+            fill_background(slot_pane, &layout.slot.solo_rect, &layout.slot.solo_active_background);
+        } else {
+            fill_background(slot_pane, &layout.slot.solo_rect, &layout.slot.solo_background);
+        }
 
         for(int i = 0; i < slot->pattern->n_params; i++)
         {
@@ -692,8 +706,20 @@ static int mouse_down_slot(slot_t* slot, struct xy xy)
         PROPAGATE(mouse_down_alpha_slider(&slot->alpha, offset));
     }
 
+    // See if the click is on the solo or mute button
+    if(xy_in_rect(&xy, &layout.slot.solo_rect, &offset)) {
+        slot->solo = !slot->solo;
+        return HANDLED;
+    }
+
+    if(xy_in_rect(&xy, &layout.slot.mute_rect, &offset)) {
+        slot->mute = !slot->mute;
+        return HANDLED;
+    }
+
     // See if the click is on the palette indicator
-    r.x = 0;
+    // It has a weird bounding box...
+    r.x = layout.slot.preview_x; 
     r.w = layout.slot.w;
     r.y = layout.slot.palette_y;
     r.h = layout.slot.palette_size;
@@ -706,7 +732,7 @@ static int mouse_down_slot(slot_t* slot, struct xy xy)
         }
         return HANDLED;
     }
-
+    
     // See if the click is on the preview 
     if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset))
     {

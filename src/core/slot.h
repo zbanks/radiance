@@ -24,6 +24,8 @@ typedef struct slot
     param_state_t alpha;
     param_state_t param_states[N_MAX_PARAMS];
     pat_state_pt ui_state;
+    int solo;
+    int mute;
 } slot_t;
 
 extern int n_slots;
