@@ -9,6 +9,8 @@
 #include <SDL/SDL_ttf.h>
 #include "core/config_macros.h"
 #include "core/config_color.h"
+#include "core/config.h"
+#include "core/err.h"
 #include "ui/layout_constants.h"
 #include "util/string.h"
 #include "util/color.h"
@@ -29,8 +31,11 @@ struct bmp {
 
 static inline struct bmp _parse_bmp(const char * str){
     struct bmp bmp;
-    bmp.filename = strdup(str);
-    bmp.image = SDL_LoadBMP(str);
+    bmp.filename = strcatdup(config.path.images, str);
+    if(bmp.filename){
+        bmp.image = SDL_LoadBMP(bmp.filename);
+        if(!bmp.image) ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
+    }
     return bmp;
 }
 

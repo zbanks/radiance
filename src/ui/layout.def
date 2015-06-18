@@ -10,14 +10,9 @@
 /* CFG_TXT(prefix, x, y, font_size, centering, font_name, color) */
 /* `centering` is one of: LAYOUT_ALIGN_TL, LAYOUT_ALIGN_BR, LAYOUT_ALIGN_TC, LAYOUT_ALIGN_CC, LAYOUT_ALIGN_TR */
 
-CFGSECTION(globals,
-    CFG(font_directory, STRING, "/usr/share/fonts/truetype/freefont/")
-    CFG(assets_directory, STRING, "assets/")
-)
-
 CFGSECTION(window,
     CFG_RECT(, 0, 0, 1366, 764)
-    CFG_BACKGROUND(, "#000000", "assets/window.bmp")
+    CFG_BACKGROUND(, "#000000", "window.bmp")
 )
 
 CFGSECTION(master,
@@ -27,7 +22,7 @@ CFGSECTION(master,
 CFGSECTION(slot,
     //CFG(n, INT, 8)
     CFG_RECT_ARRAY(, 10, 245, 115, 350, 126, 0, 0)
-    CFG_BACKGROUND(, "#141414", "assets/slot.bmp")
+    CFG_BACKGROUND(, "#141414", "slot.bmp")
     CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_RECT(alpha, 0, 10, 20, 80)
@@ -38,13 +33,13 @@ CFGSECTION(slot,
     
 CFGSECTION(add_pattern,
     CFG_RECT_ARRAY(, 1015, 245, 90, 30, 0, 35, 0)
-    CFG_BACKGROUND(, "#141414", "assets/add_pattern.bmp")
+    CFG_BACKGROUND(, "#141414", "add_pattern.bmp")
     CFG_TXT(name, 45, 15, 16, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(audio,
     CFG_RECT(, 240, 30, 280, 200)
-    CFG_BACKGROUND(, "#141414", "assets/audio.bmp")
+    CFG_BACKGROUND(, "#141414", "audio.bmp")
     CFG_RECT(auto, 190, 125, 10, 10)
     CFG_RECT(ball, 10, 110, 20, 40)
     CFG(ball_r, INT, 5)
@@ -61,7 +56,7 @@ CFGSECTION(audio,
 
 CFGSECTION(signal,
     CFG_RECT_ARRAY(, 750, 30, 110, 200, 115, 0, 0)
-    CFG_BACKGROUND(, "#141414", "assets/signal.bmp")
+    CFG_BACKGROUND(, "#141414", "signal.bmp")
     CFG_TXT(name, 55, 3, 18, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT_ARRAY(sliders, 5, 60, 100, 32, 0, 32, LAYOUT_TILE_NONE)
 )
@@ -89,7 +84,7 @@ CFGSECTION(slider,
 
 CFGSECTION(waveform,
     CFG_RECT(, 5, 5, 270, 100)
-    CFG_BACKGROUND(, "#363636", "assets/waveform.bmp")
+    CFG_BACKGROUND(, "#363636", "waveform.bmp")
     CFG(highs_color, COLOR, "#A0A0FF")
     CFG(mids_color, COLOR, "#4040C0")
     CFG(lows_color, COLOR, "#000080")
@@ -100,63 +95,63 @@ CFGSECTION(waveform,
 
 CFGSECTION(graph_signal,
     CFG_RECT(, 3, 30, 100, 30)
-    CFG_BACKGROUND(, "#363636", "assets/graph_signal.bmp")
+    CFG_BACKGROUND(, "#363636", "graph_signal.bmp")
     CFG(line_color, COLOR, "#FFFFFF")
     CFG(scroll_rate, INT, 50)
 )
 
 CFGSECTION(graph_filter,
     CFG_RECT(, 5, 30, 190, 60)
-    CFG_BACKGROUND(, "#363636", "assets/graph_filter.bmp")
+    CFG_BACKGROUND(, "#363636", "graph_filter.bmp")
     CFG(line_color, COLOR, "#FFFFFF")
     CFG(scroll_rate, INT, 50)
 )
 
 CFGSECTION(filter,
     CFG_RECT_ARRAY(, 530, 30,  200, 98,  0,  102, LAYOUT_TILE_NONE)
-    CFG_BACKGROUND(, "#141414", "assets/filter.bmp")
+    CFG_BACKGROUND(, "#141414", "filter.bmp")
     CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(output,
     CFG_RECT_ARRAY(, 1120, 250, 160, 45,  0,  50, LAYOUT_TILE_NONE)
-    CFG_BACKGROUND(, "#141414", "assets/output.bmp")
+    CFG_BACKGROUND(, "#141414", "output.bmp")
     CFG_TXT(name, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#888888")
 )
 
 CFGSECTION(midi,
     CFG_RECT_ARRAY(, 1120, 525, 160, 35,  0, 40, LAYOUT_TILE_NONE)
-    CFG_BACKGROUND(, "#141414", "assets/midi.bmp")
+    CFG_BACKGROUND(, "#141414", "midi.bmp")
     CFG_TXT(short_name, 5, 3, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#00FF33")
     CFG_TXT(name, 155, 32, 12, LAYOUT_ALIGN_BR, "FreeSans.ttf", "#888888")
 )
 
 CFGSECTION(midi_reload,
     CFG_RECT(, 1120, 500, 160, 20)
-    CFG_BACKGROUND(, "#141414", "assets/midi_reload.bmp")
+    CFG_BACKGROUND(, "#141414", "midi_reload.bmp")
     CFG_TXT(label, 80, 10, 13, LAYOUT_ALIGN_CC, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_panel,
     CFG_RECT(, 1120, 700, 240, 60)
-    CFG_BACKGROUND(, "#141414", "assets/state_panel.bmp")
+    CFG_BACKGROUND(, "#141414", "state_panel.bmp")
 )
 
 CFGSECTION(state_save,
     CFG_RECT_ARRAY(, 0, 0, 55, 25,  60,  0, LAYOUT_TILE_NONE)
-    CFG_BACKGROUND(, "#141414", "assets/state_save.bmp")
+    CFG_BACKGROUND(, "#141414", "state_save.bmp")
     CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(state_load,
     CFG_RECT_ARRAY(, 0, 30, 55, 25,  60,  0, LAYOUT_TILE_NONE)
-    CFG_BACKGROUND(, "#141414", "assets/state_load.bmp")
+    CFG_BACKGROUND(, "#141414", "state_load.bmp")
     CFG_TXT(label, 5, 5, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
 )
 
 CFGSECTION(palette,
     CFG_RECT_ARRAY(, 15, 610, 265, 35, 275, 44, 4 * LAYOUT_TILE_N_ACROSS)
-    CFG_BACKGROUND(, "#141414", "assets/palette.bmp")
+    CFG_BACKGROUND(, "#141414", "palette.bmp")
     CFG_TXT(name, 3, 2, 14, LAYOUT_ALIGN_TL, "FreeSans.ttf", "#FFFFFF")
     CFG_RECT(preview, 0, 26, 265, 8)
     CFG_RECT(active, 250, 8, 8, 8)

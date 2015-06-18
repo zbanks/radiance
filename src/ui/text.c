@@ -11,14 +11,13 @@
 static struct txt * last_txt = 0;
 
 void text_load_font(struct txt * params){
-    char filename[1024];
-
-    strncpy(filename, layout.globals.font_directory, 255);
-    //TODO XXX: no bounds checking -- is there a better fn for joining paths?
-    strcat(filename, params->font);
+    char * filename = strcatdup(config.path.fonts, params->font);
+    if(!filename) return;
 
     params->ui_font.font = TTF_OpenFont(filename, params->size);
     if(!params->ui_font.font) FAIL("TTF_OpenFont Error: %s\n", SDL_GetError());
+
+    free(filename);
 
     params->ui_font.next = last_txt;
     last_txt = params;
