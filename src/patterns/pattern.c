@@ -9,7 +9,7 @@
 #include "util/math.h"
 #include "util/siggen.h"
 
-#define N_PATTERNS 9
+#define N_PATTERNS 10
 
 pattern_t * default_patterns[N_PATTERNS] = {
     &pat_full,
@@ -21,6 +21,7 @@ pattern_t * default_patterns[N_PATTERNS] = {
     &pat_rainbow,
     &pat_sparkle,
     &pat_perlin,
+    &pat_psparkle,
 };
 
 pattern_t ** patterns;

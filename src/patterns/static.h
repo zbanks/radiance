@@ -16,5 +16,6 @@ extern pattern_t pat_swipe;
 extern pattern_t pat_rainbow;
 extern pattern_t pat_sparkle;
 extern pattern_t pat_perlin;
+extern pattern_t pat_psparkle;
 
 #endif

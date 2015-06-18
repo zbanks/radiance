@@ -82,8 +82,6 @@ float perlin3d(float x, float y, float z)
         contribution(x, y, z, xi,   yi+1, zi+1) +
         contribution(x, y, z, xi+1, yi+1, zi+1);
 
-    result = (result + 0.5);
-
     return result;
 }
 
