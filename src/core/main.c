@@ -23,6 +23,8 @@
 #include "ui/ui.h"
 #include "ui/layout.h"
 
+#include "util/perlin.h"
+
 static void ui_done_callback()
 {
     output_stop();
@@ -35,6 +37,8 @@ void catch_sigterm(int sig)
 
 int main()
 {
+    perlin_init();
+
     config_init(&config);
     config_load(&config, "config.ini");
     config_dump(&config, "config.ini"); // Dump parsed copy (remove "in production", useful because it adds new fields)
