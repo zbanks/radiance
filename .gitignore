@@ -10,3 +10,4 @@ beat-off
 *.vim
 *.deps
 *.dirstamp
+conf/layout.ini
