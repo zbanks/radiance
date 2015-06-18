@@ -32,3 +32,36 @@ void rect_array_origin(struct rect_array * array_spec, rect_t * rect){
     rect->w = array_spec->w;
     rect->h = array_spec->h;
 }
+
+// BMP images are lazily loaded. Try to load one 
+SDL_Surface * bmp_load(struct bmp * bmp){
+    if(bmp->error) return NULL; 
+    if(!bmp->image){
+        char * full_path = strcatdup(config.path.images, bmp->filename);
+        if(full_path) {
+            bmp->image = SDL_LoadBMP(full_path);
+            if(!bmp->image) {
+                ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
+                bmp->error = 1;
+            } else {
+                SDL_DisplayFormat(bmp->image);
+                // Set the color key to #FE00FE
+                SDL_SetColorKey(bmp->image, SDL_SRCCOLORKEY, SDL_MapRGB(bmp->image->format, 254, 0, 254));
+            }
+        }
+        free(full_path);
+    }
+    return bmp->image;
+}
+
+// Draws a background image onto a SDL_Surface, defaulting to a solid color if an image isn't found
+void fill_background(SDL_Surface * surface, rect_t * rect, struct background * bg){
+    SDL_Surface * image = bmp_load(&bg->bmp);
+    if(image){
+        // width/height are taken from srcrect, x/y are taken from dstrect
+        rect_t rwh = {.x = 0, .y = 0, .w = rect->w, .h = rect->h};
+        SDL_BlitSurface(image, &rwh, surface, rect);
+    }else{
+        SDL_FillRect(surface, rect, map_sdl_color(surface, bg->color));
+    }
+}
