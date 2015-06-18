@@ -173,9 +173,9 @@ static int SDL_line(SDL_Surface* dst, int16_t x1, int16_t y1, int16_t x2, int16_
     return lineRGBA(dst, x1, y1, x2, y2, r, g, b, a);
 }
 
-static void ui_draw_button(SDL_Surface * surface, SDL_Color bg_color, struct txt * label_fmt, const char * label){
+static void ui_draw_button(SDL_Surface * surface, struct background * bg, struct txt * label_fmt, const char * label){
     rect_t r = {.x = 0, .y = 0, .w = surface->w, .h = surface->h};
-    SDL_FillRect(surface, &r, map_sdl_color(surface, bg_color));
+    fill_background(surface, &r, bg);
     text_render(surface, label_fmt, 0, label);
 }
 
@@ -249,7 +249,7 @@ static void update_pattern_preview(slot_t* slot) {
 static void ui_update_slot(slot_t* slot) {
     rect_t r;
     rect_array_origin(&layout.slot.rect_array, &r);
-    SDL_FillRect(slot_pane, &r, map_sdl_color(slot_pane, layout.slot.bg_color));
+    fill_background(slot_pane, &r, &layout.slot.background);
 
     if(slot->pattern)
     {
@@ -288,7 +288,7 @@ static void ui_update_slot(slot_t* slot) {
 static void ui_update_pattern(pattern_t* pattern) {
     rect_t r;
     rect_array_origin(&layout.add_pattern.rect_array, &r);
-    SDL_FillRect(pattern_pane, &r, map_sdl_color(pattern_pane, layout.add_pattern.bg_color));
+    fill_background(pattern_pane, &r, &layout.add_pattern.background);
 
     text_render(pattern_pane, &layout.add_pattern.name_txt, 0, pattern->name);
 }
@@ -350,7 +350,7 @@ static void ui_render_slot_deck(){
 static void ui_update_audio_panel(){
     rect_t r;
     rect_origin(&layout.audio.rect, &r);
-    SDL_FillRect(audio_pane, &r, map_sdl_color(audio_pane, layout.audio.bg_color));
+    fill_background(audio_pane, &r, &layout.audio.background);
 
     ui_waveform_render();
     SDL_BlitSurface(waveform_surface, 0, audio_pane, &layout.waveform.rect);
@@ -403,7 +403,7 @@ static void ui_update_audio_panel(){
 static void ui_update_filter(filter_t * filter) {
     rect_t r;
     rect_array_origin(&layout.filter.rect_array, &r);
-    SDL_FillRect(filter_pane, &r, map_sdl_color(filter_pane, layout.filter.bg_color));
+    fill_background(filter_pane, &r, &layout.filter.background);
 
     text_render(filter_pane, &layout.filter.name_txt, &filter->color, filter->name);
 
@@ -415,7 +415,7 @@ static void ui_update_filter(filter_t * filter) {
 static void ui_update_signal(signal_t* signal) {
     rect_t r;
     rect_array_origin(&layout.signal.rect_array, &r);
-    SDL_FillRect(signal_pane, &r, map_sdl_color(signal_pane, layout.signal.bg_color));
+    fill_background(signal_pane, &r, &layout.signal.background);
 
     SDL_Color signal_c = color_to_SDL(signal->color);
     text_render(signal_pane, &layout.signal.name_txt, &signal_c, signal->name);
@@ -461,13 +461,13 @@ static void ui_render_filter_bank(){
 static void ui_update_output(output_strip_t * output_strip){
     rect_t r;
     rect_array_origin(&layout.output.rect_array, &r);
-    SDL_FillRect(output_pane, &r, map_sdl_color(output_pane, layout.output.bg_color));
-    char buf[16];
+    fill_background(output_pane, &r, &layout.output.background);
 
     SDL_Color *color = NULL;
     if(output_strip->bus > 0)
         color = &output_strip->color;
 
+    char buf[16];
     snprintf(buf, 16, "%d %s", output_strip->length, output_strip->id_str);
     text_render(output_pane, &layout.output.name_txt, color, buf);
 }
@@ -485,7 +485,7 @@ static void ui_render_output_panel(){
 static void ui_update_midi(struct midi_controller * controller){
     rect_t r;
     rect_array_origin(&layout.midi.rect_array, &r);
-    SDL_FillRect(midi_pane, &r, map_sdl_color(midi_pane, layout.midi.bg_color));
+    fill_background(midi_pane, &r, &layout.midi.background);
 
     if(controller->enabled && controller->short_name)
         text_render(midi_pane, &layout.midi.short_name_txt, 0, controller->short_name);
@@ -504,7 +504,7 @@ static void ui_render_midi_panel(){
     }
 
     // Draw midi reload button
-    ui_draw_button(midi_reload_pane, layout.midi_reload.bg_color, &layout.midi_reload.label_txt, "Refresh MIDI Devices");
+    ui_draw_button(midi_reload_pane, &layout.midi_reload.background, &layout.midi_reload.label_txt, "Refresh MIDI Devices");
     SDL_BlitSurface(midi_reload_pane, 0, screen, &layout.midi_reload.rect);
 }
 
@@ -514,7 +514,7 @@ static void ui_update_state_panel(){
         char buf[16];
         rect_array_layout(&layout.state_save.rect_array, i, &r);
         snprintf(buf, 15, "Save %d", i);
-        ui_draw_button(state_save_pane, layout.state_save.bg_color, &layout.state_save.label_txt, buf);
+        ui_draw_button(state_save_pane, &layout.state_save.background, &layout.state_save.label_txt, buf);
         SDL_BlitSurface(state_save_pane, 0, state_panel_pane, &r);
     }
 
@@ -522,7 +522,7 @@ static void ui_update_state_panel(){
         char buf[16];
         rect_array_layout(&layout.state_load.rect_array, i, &r);
         snprintf(buf, 15, "Load %d", i);
-        ui_draw_button(state_load_pane, layout.state_save.bg_color, &layout.state_load.label_txt, buf);
+        ui_draw_button(state_load_pane, &layout.state_save.background, &layout.state_load.label_txt, buf);
         SDL_BlitSurface(state_load_pane, 0, state_panel_pane, &r);
     }
 }
@@ -530,8 +530,7 @@ static void ui_update_state_panel(){
 static void ui_update_palette(struct colormap * cm){
     rect_t r;
     rect_array_origin(&layout.palette.rect_array, &r);
-    SDL_FillRect(palette_pane, &r, map_sdl_color(palette_pane, layout.palette.bg_color));
-
+    fill_background(palette_pane, &r, &layout.palette.background);
 
     SDL_LockSurface(palette_preview);
     for(int x = 0; x < layout.palette.preview_w; x++){
@@ -573,7 +572,7 @@ static void ui_render()
 {
     update_ui();
 
-    SDL_FillRect(screen, &layout.window.rect, map_sdl_color(screen, layout.window.bg_color));
+    fill_background(screen, &layout.window.rect, &layout.window.background);
 
     update_master_preview();
     SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect);

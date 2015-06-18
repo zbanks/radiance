@@ -39,8 +39,8 @@
 #define FLOAT_PREP(x) x
 
 #define STRING char *
-#define STRING_PARSE(x) mystrdup(x)
-#define STRING_PREP(x) mystrdup(x)
+#define STRING_PARSE(x) strdup(x)
+#define STRING_PREP(x) strdup(x)
 #define STRING_FORMAT(x) "%s", x
 #define STRING_FREE(x) free(x)
 

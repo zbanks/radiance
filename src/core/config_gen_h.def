@@ -4,6 +4,7 @@
 #endif
 
 #include "util/ini.h"
+#include "util/string.h"
 #include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -26,14 +27,3 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _init)(struct CFGOBJ * cfg);
 int CONCAT(CFGOBJ, _del)(struct CFGOBJ * cfg);
-
-#ifndef __MYSTRDUP__
-#define __MYSTRDUP__
-// Fall back on library version if it exists
-inline static char* mystrdup(const char* s) {
-    char* p = (char *) malloc(strlen(s)+1);
-    if (p) strcpy(p, s);
-    return p;
-}
-#endif
-

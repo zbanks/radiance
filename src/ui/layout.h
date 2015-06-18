@@ -10,6 +10,8 @@
 #include "core/config_macros.h"
 #include "core/config_color.h"
 #include "ui/layout_constants.h"
+#include "util/string.h"
+#include "util/color.h"
 
 #ifdef CFGOBJ
 #undef CFGOBJ
@@ -19,6 +21,24 @@
 #define CFGOBJ_PATH "ui/layout.def"
 
 #define CFG(n, type, def) type n;
+
+struct bmp {
+    char * filename;
+    SDL_Surface * image;
+};
+
+static inline struct bmp _parse_bmp(const char * str){
+    struct bmp bmp;
+    bmp.filename = strdup(str);
+    bmp.image = SDL_LoadBMP(str);
+    return bmp;
+}
+
+#define BMP struct bmp
+#define BMP_PARSE(x) _parse_bmp(x)
+#define BMP_FORMAT(x) "%s", x.filename
+#define BMP_FREE(x) free(x.filename); SDL_FreeSurface(x.image);
+#define BMP_PREP(x) _parse_bmp(x)
 
 #define CFG_XY_ATTR(n, dx, dy) \
     CFG(PREFIX(n, x), SINT16, dx) CFG(PREFIX(n, y), SINT16, dy)
@@ -76,12 +96,21 @@ struct rect_array {
     CFG_RECT_ARRAY_ATTR(,,,,,,,)
 };
 
+#define CFG_BACKGROUND_ATTR(n, dcolor, dfilename) \
+    CFG(PREFIX(n, color), COLOR, dcolor) \
+    CFG(PREFIX(n, bmp), BMP, dfilename)
+
+struct background {
+    CFG_BACKGROUND_ATTR(,,)
+};
+
 #undef CFG
 
 #define CFG_XY(n, args...) union { struct xy PREFIX(n, xy); struct { CFG_XY_ATTR(n, args) }; };
 #define CFG_TXT(n, args...) union { struct txt PREFIX(n, txt); struct { CFG_TXT_ATTR(n, args) }; };
 #define CFG_RECT(n, args...) union { rect_t PREFIX(n, rect); struct { CFG_RECT_ATTR(n, args) }; };
 #define CFG_RECT_ARRAY(n, args...) union { struct rect_array PREFIX(n, rect_array); struct { CFG_RECT_ARRAY_ATTR(n, args) }; };
+#define CFG_BACKGROUND(n, args...) union { struct background PREFIX(n, background); struct { CFG_BACKGROUND_ATTR(n, args) }; };
 
 #include "core/config_gen_h.def"
 
@@ -96,6 +125,9 @@ struct rect_array {
 
 #undef CFG_RECT_ARRAY
 #define CFG_RECT_ARRAY CFG_RECT_ARRAY_ATTR
+
+#undef CFG_BACKGROUND
+#define CFG_BACKGROUND CFG_BACKGROUND_ATTR
 
 // Calculates the `rect` corresponding to the `index`th item in the `array_spec` layout
 void rect_array_layout(struct rect_array * array_spec, int index, rect_t * rect);
@@ -149,6 +181,16 @@ static inline struct xy xy_sub(struct xy a, struct xy b){
         .x = a.x - b.x,
         .y = a.y - b.y
     };
+}
+
+// Draws a background image onto a SDL_Surface, defaulting to a solid color if an image isn't found
+static inline void fill_background(SDL_Surface * surface, rect_t * rect, struct background * bg){
+    if(bg->bmp.image){
+        // width/height are taken from srcrect, x/y are taken from dstrect
+        SDL_BlitSurface(bg->bmp.image, rect, surface, rect);
+    }else{
+        SDL_FillRect(surface, rect, map_sdl_color(surface, bg->color));
+    }
 }
 
 extern struct layout layout;
