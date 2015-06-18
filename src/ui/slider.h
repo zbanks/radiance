@@ -24,8 +24,8 @@ void slider_render(const parameter_t* param, param_state_t* state, SDL_Color c);
 void slider_render_alpha(param_state_t* state);
 void slider_output_render(param_output_t * output);
 
-void mouse_drag_alpha_slider(struct xy xy);
-void mouse_drag_param_slider(struct xy xy);
+void mouse_drag_alpha_slider();
+void mouse_drag_param_slider();
 int mouse_down_alpha_slider(param_state_t * param_state, struct xy xy);
 int mouse_down_param_slider(param_state_t * param_state, struct xy xy);
 

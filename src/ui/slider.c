@@ -139,10 +139,10 @@ void slider_render(const parameter_t* param, param_state_t* state, SDL_Color c)
     }
 }
 
-void mouse_drag_alpha_slider(struct xy xy)
+void mouse_drag_alpha_slider()
 {
     float val = active_slider.initial_value -
-                (float)xy.y / (layout.alpha_slider.track_h - layout.alpha_slider.handle_h);
+                (float)mouse_drag_delta.y / (layout.alpha_slider.track_h - layout.alpha_slider.handle_h);
 
     if(val < 0) val = 0;
     else if(val > 1) val = 1;
@@ -150,10 +150,10 @@ void mouse_drag_alpha_slider(struct xy xy)
     param_state_setq(active_slider.state, val);
 }
 
-void mouse_drag_param_slider(struct xy xy)
+void mouse_drag_param_slider()
 {
     float val = active_slider.initial_value +
-                (float)xy.x / (layout.slider.track_w - layout.slider.handle_w);
+                (float)mouse_drag_delta.x / (layout.slider.track_w - layout.slider.handle_w);
 
     if(val < 0) val = 0;
     else if(val > 1) val = 1;

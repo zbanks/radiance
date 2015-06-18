@@ -54,28 +54,17 @@ SURFACES
 static SDL_Surface * screen;
 
 static int mouse_is_down;
-static struct xy mouse_drag_start;
+static struct xy mouse_drag_start_abs;
 
-void (*mouse_drag_fn_p)(struct xy);
-void (*mouse_drop_fn_p)(struct xy);
+struct xy mouse_drag_delta;
+struct xy mouse_drag_start;
 
-static struct
-{
-    int index;
-    struct xy dxy;
-} active_pattern;
+void (*mouse_drag_fn_p)();
+void (*mouse_drop_fn_p)();
 
-static struct
-{
-    slot_t * slot;
-    struct xy dxy;
-} active_slot;
-
-static struct
-{
-    slot_t * slot;
-    struct xy dxy;
-} active_preview;
+int active_pattern;
+slot_t* active_slot;
+slot_t* active_preview;
 
 param_state_t * active_param_source;
 struct colormap ** active_palette_source;
@@ -119,9 +108,9 @@ SURFACES
     mouse_is_down = 0;
     mouse_drag_fn_p = 0;
     mouse_drop_fn_p = 0;
-    active_pattern.index = -1;
-    active_slot.slot = 0;
-    active_preview.slot = 0;
+    active_pattern = -1;
+    active_slot = 0;
+    active_preview = 0;
 
     master_pixels = layout.master.w * layout.master.h;
     master_xs = malloc(sizeof(float) * master_pixels);
@@ -327,8 +316,8 @@ static void ui_update_slot_deck(){
             ui_update_slot(&slots[i]);
             rect_array_layout(&layout.slot.rect_array, i, &r);
 
-            if(active_slot.slot == &slots[i]) {
-                rect_shift(&r, &active_slot.dxy);
+            if(active_slot == &slots[i]) {
+                rect_shift(&r, &mouse_drag_delta);
             }
 
             SDL_BlitSurface(slot_pane, 0, slot_deck_pane, &r);
@@ -341,8 +330,8 @@ static void ui_update_slot_deck(){
         ui_update_pattern(patterns[i]);
         rect_array_layout(&layout.add_pattern.rect_array, i, &r);
 
-        if(active_pattern.index == i) {
-            rect_shift(&r, &active_pattern.dxy);
+        if(active_pattern == i) {
+            rect_shift(&r, &mouse_drag_delta);
         }
 
         SDL_BlitSurface(pattern_pane, 0, slot_deck_pane, &r);
@@ -598,92 +587,88 @@ static void ui_render()
     SDL_Flip(screen);
 }
 
-static void mouse_drag_pattern(struct xy xy) {
-    active_pattern.dxy = xy; 
-}
-
-static void mouse_drag_slot(struct xy xy) {
-    active_slot.dxy = xy; 
-}
-
-static void mouse_drag_pattern_ev(struct xy xy)
+static void get_cursor_in_preview(float* x, float* y)
 {
-    if(!active_preview.slot->pattern) return;
-    struct xy offset;
-    xy = xy_add(xy, active_preview.dxy);
-    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset))
-    {
-        pat_command_t mouse_drag_x = {.index = 0,
-                                      .status = STATUS_CHANGE,
-                                      .value = (offset.x) / (float) layout.slot.preview_w};
-        pat_command_t mouse_drag_y = {.index = 1,
-                                      .status = STATUS_CHANGE,
-                                      .value = (offset.y) / (float) layout.slot.preview_h};
-        active_preview.slot->pattern->command(active_preview.slot, mouse_drag_x);
-        active_preview.slot->pattern->command(active_preview.slot, mouse_drag_y);
-    }
+    *x = (float)(mouse_drag_start.x + mouse_drag_delta.x) / layout.slot.preview_w;
+    *y = (float)(mouse_drag_start.y + mouse_drag_delta.y) / layout.slot.preview_h;
+    if(*x < 0) *x = 0;
+    if(*y < 0) *y = 0;
+    if(*x > 1) *x = 1;
+    if(*y > 1) *y = 1;
 }
 
-static void mouse_drop_pattern(struct xy unused)
+static void mouse_drag_pattern_ev()
+{
+    if(!active_preview->pattern) return;
+
+    float x;
+    float y;
+
+    get_cursor_in_preview(&x, &y);
+
+    pat_command_t mouse_drag_x = {.index = 0,
+                                  .status = STATUS_CHANGE,
+                                  .value = x };
+    pat_command_t mouse_drag_y = {.index = 1,
+                                  .status = STATUS_CHANGE,
+                                  .value = y };
+    active_preview->pattern->command(active_preview, mouse_drag_x);
+    active_preview->pattern->command(active_preview, mouse_drag_y);
+}
+
+static void mouse_drop_pattern()
 {
     rect_t r;
-    struct xy xy;
-    xy = xy_add(active_pattern.dxy, mouse_drag_start);
 
     for(int i = 0; i < n_slots; i++)
     {
         rect_array_layout(&layout.slot.rect_array, i, &r);
-        if(xy_in_rect(&xy, &r, 0)){
+        struct xy xy = xy_add(mouse_drag_start, mouse_drag_delta);
+        if(xy_in_rect(&xy, &r, 0))
+        {
             pat_unload(&slots[i]);
-            pat_load(&slots[i],patterns[active_pattern.index]);
+            pat_load(&slots[i],patterns[active_pattern]);
         }
     }
-    active_pattern.index = -1;
+    active_pattern = -1;
 }
 
-static void mouse_drop_slot(struct xy unused)
+static void mouse_drop_slot()
 {
     rect_t r;
-    struct xy xy;
-    xy = xy_add(active_slot.dxy, mouse_drag_start);
-    int max_x = 0; // XXX This breaks in different layouts
 
     for(int i = 0; i < n_slots; i++)
     {
+        struct xy xy = xy_add(mouse_drag_start, mouse_drag_delta);
         rect_array_layout(&layout.slot.rect_array, i, &r);
-        if(xy_in_rect(&xy, &r, 0)){
-            slot_t temp_slot = *active_slot.slot;
-            *active_slot.slot = slots[i];
+        if(xy_in_rect(&xy, &r, 0))
+        {
+            slot_t temp_slot = *active_slot;
+            *active_slot = slots[i];
             slots[i] = temp_slot;
         }
-        max_x = max_x > (r.x + r.w) ? max_x : (r.x + r.w);
     }
-    if(xy.x > max_x){
-        pat_unload(active_slot.slot);
-    }
-    active_slot.slot = 0;
+    active_slot = 0;
 }
 
-static void mouse_drop_pattern_ev(struct xy xy){
-    if(!active_preview.slot->pattern) return;
-    xy = xy_add(xy, active_preview.dxy);
+static void mouse_drop_pattern_ev(struct xy xy)
+{
+    if(!active_preview->pattern) return;
 
-    float x = (xy.x) / (float) layout.slot.preview_w;
-    float y = (xy.y) / (float) layout.slot.preview_h;
+    float x;
+    float y;
 
-    if(x < 0) x = 0;
-    if(y < 0) y = 0;
-    if(x > 1) x = 1;
-    if(y > 1) y = 1;
+    get_cursor_in_preview(&x, &y);
 
-    pat_command_t mouse_up_x = { .index = 0,
-                                 .status = STATUS_STOP,
-                                 .value = x };
-    pat_command_t mouse_up_y = { .index = 1,
-                                 .status = STATUS_STOP,
-                                 .value = y };
-    active_preview.slot->pattern->command(active_preview.slot, mouse_up_x);
-    active_preview.slot->pattern->command(active_preview.slot, mouse_up_y);
+    pat_command_t mouse_drag_x = {.index = 0,
+                                  .status = STATUS_STOP,
+                                  .value = x };
+    pat_command_t mouse_drag_y = {.index = 1,
+                                  .status = STATUS_STOP,
+                                  .value = y };
+    active_preview->pattern->command(active_preview, mouse_drag_x);
+    active_preview->pattern->command(active_preview, mouse_drag_y);
+    active_preview = 0;
 }
 
 static int mouse_down_slot(int ix, struct xy xy) {
@@ -712,18 +697,19 @@ static int mouse_down_slot(int ix, struct xy xy) {
     }
 
     // See if the click is on the preview 
-    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset)){
+    if(xy_in_rect(&xy, &layout.slot.preview_rect, &offset))
+    {
         pat_command_t mouse_down_x = {.index = 0,
                                       .status = STATUS_START,
                                       .value = (offset.x) / (float) layout.slot.preview_w};
         pat_command_t mouse_down_y = {.index = 1,
                                       .status = STATUS_START,
                                       .value = (offset.y) / (float) layout.slot.preview_h};
-        active_preview.slot->pattern->command(active_preview.slot, mouse_down_x);
-        active_preview.slot->pattern->command(active_preview.slot, mouse_down_y);
+        slots[ix].pattern->command(active_preview, mouse_down_x);
+        slots[ix].pattern->command(active_preview, mouse_down_y);
 
-        active_preview.slot = &slots[ix];
-        memcpy(&active_preview.dxy, &xy, sizeof(struct xy));
+        mouse_drag_start = offset;
+        active_preview = &slots[ix];
         mouse_drag_fn_p = &mouse_drag_pattern_ev;
         mouse_drop_fn_p = &mouse_drop_pattern_ev;
         return HANDLED;
@@ -739,10 +725,8 @@ static int mouse_down_slot(int ix, struct xy xy) {
     }
 
     // Else, drag the slot
-    active_slot.slot = &slots[ix];
-    active_slot.dxy = (struct xy) {0, 0};
-
-    mouse_drag_fn_p = &mouse_drag_slot;
+    mouse_drag_start = xy;
+    active_slot = &slots[ix];
     mouse_drop_fn_p = &mouse_drop_slot;
     return HANDLED;
 }
@@ -764,10 +748,10 @@ static int mouse_down_slot_deck(struct xy xy) {
     // See if click is in a pattern
     for(int i=0; i<n_patterns; i++) {
         rect_array_layout(&layout.add_pattern.rect_array, i, &r);
-        if(xy_in_rect(&xy, &r, &offset)){
-            active_pattern.index = i;
-            active_pattern.dxy = (struct xy) {0,0};
-            mouse_drag_fn_p = &mouse_drag_pattern;
+        if(xy_in_rect(&xy, &r, &offset))
+        {
+            mouse_drag_start = xy;
+            active_pattern = i;
             mouse_drop_fn_p = &mouse_drop_pattern;
             return HANDLED;
         }
@@ -1015,25 +999,32 @@ static void ui_poll()
                 break;
             case SDL_MOUSEBUTTONDOWN:
                 // If there's an active param source, cancel it after the click
-                if(active_param_source){
+                if(active_param_source)
+                {
                     mouse_down(xy);
                     active_param_source = NULL;
-                }else{
+                }
+                else
+                {
                     mouse_down(xy);
                 }
                 mouse_is_down = 1;
-                mouse_drag_start = xy;
+                mouse_drag_start_abs = xy;
+                mouse_drag_delta.x = 0;
+                mouse_drag_delta.y = 0;
                 break;
             case SDL_MOUSEMOTION:
-                if(mouse_is_down && mouse_drag_fn_p){
-                    xy  = xy_sub(xy, mouse_drag_start);
-                    (*mouse_drag_fn_p)(xy);
+                if(mouse_is_down)
+                {
+                    mouse_drag_delta  = xy_sub(xy, mouse_drag_start_abs);
+                    if(mouse_drag_fn_p) (*mouse_drag_fn_p)();
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
-                if(mouse_drop_fn_p){
-                    xy = xy_sub(xy, mouse_drag_start);
-                    (*mouse_drop_fn_p)(xy);
+                mouse_drag_delta = xy_sub(xy, mouse_drag_start_abs);
+                if(mouse_drop_fn_p)
+                {
+                    (*mouse_drop_fn_p)();
                 }
                 mouse_drag_fn_p = 0;
                 mouse_drop_fn_p = 0;
