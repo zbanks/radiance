@@ -40,6 +40,13 @@ ifeq (@FLUX_ENABLED@,yes)
 
 endif
 
+# If we don't have any C++ files, we can use CC to do the final linking step!
+ifeq ($(CPP_SRC),)
+CC_FINAL = $(CC)
+else
+CC_FINAL = $(CXX)
+endif
+
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
@@ -81,7 +88,7 @@ clean:
 	-rm -f $(OBJECTS) $(DEPS) beat-off
 
 beat-off: $(OBJECTS)
-	$(CXX) $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
+	$(CC_FINAL) $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
 
 
 #%.o: %.c $(C_INC)
