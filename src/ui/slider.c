@@ -43,9 +43,9 @@ void slider_render_alpha(param_state_t* state)
 
     }
 
-    SDL_FillRect(alpha_slider_surface, &layout.alpha_slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));
+    fill_background(alpha_slider_surface, &layout.alpha_slider.rect, &layout.alpha_slider.background);
 
-    SDL_FillRect(alpha_slider_surface, &layout.alpha_slider.track_rect, SDL_MapRGB(slider_surface->format, 80, 80, 80));
+    SDL_FillRect(alpha_slider_surface, &layout.alpha_slider.track_rect, map_sdl_color(slider_surface, layout.alpha_slider.track_color));
 
     rect_copy(&r, &layout.alpha_slider.handle_rect);
     r.y += (1.0 - param_state_get(state)) * (layout.alpha_slider.track_h - layout.alpha_slider.handle_h);
@@ -62,7 +62,7 @@ void slider_render(const parameter_t* param, param_state_t* state, SDL_Color c)
     SDL_Color white = {255, 255, 255, 255};
 
     SDL_Rect r;
-    SDL_FillRect(slider_surface, &layout.slider.rect, SDL_MapRGB(slider_surface->format, 20, 20, 20));
+    fill_background(slider_surface, &layout.slider.rect, &layout.slider.background);
 
     text_render(slider_surface, &layout.slider.name_txt, &c, param->name);
 
@@ -72,7 +72,7 @@ void slider_render(const parameter_t* param, param_state_t* state, SDL_Color c)
         text_render(slider_surface, &layout.slider.value_txt, &white, sbuf);
     }
 
-    SDL_FillRect(slider_surface, &layout.slider.track_rect, SDL_MapRGB(slider_surface->format, 80, 80, 80));
+    SDL_FillRect(slider_surface, &layout.slider.track_rect, map_sdl_color(slider_surface, layout.slider.track_color));
 
     if(param_output){
         handle_color = param_output->handle_color;

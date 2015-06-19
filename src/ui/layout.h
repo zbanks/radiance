@@ -24,24 +24,23 @@
 
 #define CFG(n, type, def) type n;
 
-struct bmp {
+struct image {
     char * filename;
-    SDL_Surface * image;
+    SDL_Surface * surface;
     int error;
 };
 
-static inline struct bmp _parse_bmp(const char * str){
-    struct bmp bmp = {0, 0, 0};
-    bmp.filename = strdup(str);
-
-    return bmp;
+static inline struct image _parse_image(const char * str){
+    struct image image = {0, 0, 0};
+    image.filename = strdup(str);
+    return image;
 }
 
-#define BMP struct bmp
-#define BMP_PARSE(x) _parse_bmp(x)
-#define BMP_FORMAT(x) "%s", x.filename
-#define BMP_FREE(x) free(x.filename); SDL_FreeSurface(x.image);
-#define BMP_PREP(x) _parse_bmp(x)
+#define IMAGE struct image
+#define IMAGE_PARSE(x) _parse_image(x)
+#define IMAGE_FORMAT(x) "%s", x.filename
+#define IMAGE_FREE(x) free(x.filename); SDL_FreeSurface(x.surface);
+#define IMAGE_PREP(x) _parse_image(x)
 
 #define CFG_XY_ATTR(n, dx, dy) \
     CFG(PREFIX(n, x), SINT16, dx) CFG(PREFIX(n, y), SINT16, dy)
@@ -73,18 +72,6 @@ struct txt {
 
 
 typedef SDL_Rect rect_t;
-/*
-typedef union {
-    SDL_Rect sdl;
-    struct {
-        struct xy xy;
-        struct xy wh;
-    };
-    struct {
-        CFG_RECT_ATTR(,,,,)
-    };
-} rect_t;
-*/
 
 #define CFG_RECT_ARRAY_ATTR(n, dx, dy, dw, dh, dpx, dpy, dtile) \
     CFG(PREFIX(n, x), SINT16, dx) \
@@ -101,7 +88,7 @@ struct rect_array {
 
 #define CFG_BACKGROUND_ATTR(n, dcolor, dfilename) \
     CFG(PREFIX(n, color), COLOR, dcolor) \
-    CFG(PREFIX(n, bmp), BMP, dfilename)
+    CFG(PREFIX(n, image), IMAGE, dfilename)
 
 struct background {
     CFG_BACKGROUND_ATTR(,,)
@@ -186,7 +173,7 @@ static inline struct xy xy_sub(struct xy a, struct xy b){
     return result;
 }
 
-SDL_Surface * bmp_load(struct bmp * bmp);
+SDL_Surface * image_load(struct image * image);
 void fill_background(SDL_Surface * surface, rect_t * rect, struct background * bg);
 
 extern struct layout layout;

@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include "ui/text.h"
-
 #include "ui/layout.h"
-
+#include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 #include "core/config_gen_c.def"
 
 struct layout layout;
@@ -34,33 +34,37 @@ void rect_array_origin(struct rect_array * array_spec, rect_t * rect){
 }
 
 // BMP images are lazily loaded. Try to load one 
-SDL_Surface * bmp_load(struct bmp * bmp){
-    if(bmp->error) return NULL; 
-    if(!bmp->image){
-        char * full_path = strcatdup(config.path.images, bmp->filename);
-        if(full_path) {
-            bmp->image = SDL_LoadBMP(full_path);
-            if(!bmp->image) {
-                ERROR("SDL_LoadBMP: %s\n", SDL_GetError());
-                bmp->error = 1;
-            } else {
-                SDL_DisplayFormat(bmp->image);
-                // Set the color key to #FE00FE
-                SDL_SetColorKey(bmp->image, SDL_SRCCOLORKEY, SDL_MapRGB(bmp->image->format, 254, 0, 254));
+SDL_Surface * image_load(struct image * image){
+    if(image->error) return NULL; 
+    if(!image->surface){
+        char * full_path = strcatdup(config.path.images, image->filename);
+        if(!full_path) return NULL;
+
+        SDL_Surface * tmp_surf = IMG_Load(full_path);
+        if(!tmp_surf) {
+            ERROR("IMG_Load: %s\n", SDL_GetError());
+            image->error = 1;
+        } else {
+            image->surface = SDL_DisplayFormatAlpha(tmp_surf);
+            if(!image->surface){
+                ERROR("IMG_Load: %s\n", SDL_GetError());
+                image->error = 1;
             }
+            SDL_SetAlpha(image->surface, 0, 100);
+            SDL_FreeSurface(tmp_surf);
         }
         free(full_path);
     }
-    return bmp->image;
+    return image->surface;
 }
 
 // Draws a background image onto a SDL_Surface, defaulting to a solid color if an image isn't found
 void fill_background(SDL_Surface * surface, rect_t * rect, struct background * bg){
-    SDL_Surface * image = bmp_load(&bg->bmp);
-    if(image){
+    SDL_Surface * image_surface = image_load(&bg->image);
+    if(image_surface){
         // width/height are taken from srcrect, x/y are taken from dstrect
         rect_t rwh = {.x = 0, .y = 0, .w = rect->w, .h = rect->h};
-        SDL_BlitSurface(image, &rwh, surface, rect);
+        SDL_BlitSurface(image_surface, &rwh, surface, rect);
     }else{
         SDL_FillRect(surface, rect, map_sdl_color(surface, bg->color));
     }

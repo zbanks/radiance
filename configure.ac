@@ -44,17 +44,16 @@ AS_IF([test "x$with_sdl" != "xno"], [
     ])
 ])
 
-AC_LANG_CPLUSPLUS()
 AC_SUBST([VAMP_ENABLED], ["no"])
 AS_IF([test "x$with_vamp" != "xno"], [
     AC_CHECK_LIB([vamp-hostsdk], [main], [ 
+        LIBS="$LIBS -lvamp-hostsdk"
         AC_DEFINE([VAMP_ENABLED], [1], [VAMP Plugin support is enabled])
         AC_SUBST([VAMP_ENABLED], ["yes"])
     ], [
         AC_WARN(["Unable to find VAMP host sdk library! Compiling without VAMP support!"])
     ])
 ])
-AC_LANG_C()
 
 AC_SUBST([FLUX_ENABLED], ["no"])
 AS_IF([test "x$with_flux" != "xno"], [

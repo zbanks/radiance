@@ -32,6 +32,7 @@
     X(master_preview, layout.master) \
     X(pattern_preview, layout.slot.preview_rect) \
     X(audio_pane, layout.audio) \
+    X(ball_pane, layout.audio.ball_rect) \
     X(slot_pane, layout.slot) \
     X(pattern_pane, layout.add_pattern) \
     X(signal_pane, layout.signal) \
@@ -78,9 +79,11 @@ static int ui_running;
 static SDL_Thread* ui_thread;
 
 SDL_Surface * ui_create_surface_or_die(int width, int height){
-    SDL_Surface * s = SDL_CreateRGBSurface(0, width, height, 32, 0, 0, 0, 0); \
+    SDL_Surface * s = SDL_CreateRGBSurface(SDL_SRCALPHA, width, height, 32, 0, 0, 0, 0); \
     if(!s) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
-    return s;
+    SDL_SetAlpha(s, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
+    SDL_Surface * t = SDL_DisplayFormatAlpha(s);
+    return t;
 }
 
 static void ui_init()
@@ -91,7 +94,9 @@ static void ui_init()
     }
 
     screen = SDL_SetVideoMode(layout.window.w, layout.window.h, 0, SDL_DOUBLEBUF);
+    SDL_SetAlpha(screen, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
     // | SDL_ANYFORMAT | SDL_FULLSCREEN | SDL_HWSURFACE);
+    
 
     if (!screen) FAIL("SDL_SetVideoMode Error: %s\n", SDL_GetError());
 
@@ -230,17 +235,23 @@ static void update_pattern_preview(slot_t* slot) {
         {
             // Checkerboard background
             // TODO: get this from the image file
-            int i = (x / 10) + (y / 10);
-            float bg_shade = (i & 1) ? 0.05 : 0.35;
+            //int i = (x / 10) + (y / 10);
+            //float bg_shade = (i & 1) ? 0.05 : 0.35;
 
             float xf = ((float)x / (layout.slot.preview_w - 1)) * 2 - 1;
             float yf = ((float)y / (layout.slot.preview_h - 1)) * 2 - 1;
             color_t pixel = (*slot->pattern->render)(slot->ui_state, xf, yf);
+            /*
             ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview_w * y] = SDL_MapRGB(
                 pattern_preview->format,
                 (uint8_t)roundf(255 * (pixel.r * pixel.a + (1.0 - pixel.a) * bg_shade)),
                 (uint8_t)roundf(255 * (pixel.g * pixel.a + (1.0 - pixel.a) * bg_shade)),
                 (uint8_t)roundf(255 * (pixel.b * pixel.a + (1.0 - pixel.a) * bg_shade)));
+                */
+            ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview_w * y] = SDL_MapRGBA(
+                pattern_preview->format,
+                (uint8_t)roundf(255 * pixel.r), (uint8_t)roundf(255 * pixel.g),
+                (uint8_t)roundf(255 * pixel.b), (uint8_t)roundf(255 * pixel.a));
         }
     }
 
@@ -255,6 +266,7 @@ static void ui_update_slot(slot_t* slot) {
     if(slot->pattern)
     {
         update_pattern_preview(slot);
+        fill_background(slot_pane, &layout.slot.preview_rect, &layout.slot.preview_background);
         SDL_BlitSurface(pattern_preview, 0, slot_pane, &layout.slot.preview_rect);
 
         text_render(slot_pane, &layout.slot.name_txt, 0, slot->pattern->name);
@@ -376,23 +388,29 @@ static void ui_update_audio_panel(){
     float dx = 1.0 - fabs(fmod(phase, 2.0) - 1.0);
     float dy = 4. * (dx - 0.5) * (dx - 0.5);
     if(phase < 3) 
-        dy = 0.4 + 0.6 * dy;
+        dy = 0.3 + 0.7 * dy;
 
-    r.y = layout.audio.ball_area_y + layout.audio.ball_r + (layout.audio.ball_area_h - 2 * layout.audio.ball_r) * dy;
-    r.x = layout.audio.ball_area_x + layout.audio.ball_r + (layout.audio.ball_area_w - 2 * layout.audio.ball_r) * 0.5;
+    r.y = layout.audio.ball_area_y + (layout.audio.ball_area_h - layout.audio.ball_h) * dy;
+    r.x = layout.audio.ball_area_x + (layout.audio.ball_area_w - layout.audio.ball_w) * 0.5;
 
-    if(!layout.audio.ball_bmp.image) {
-        SDL_Color ball_c = layout.audio.ball_color;
-        filledCircleRGBA(audio_pane, r.x, r.y, layout.audio.ball_r, ball_c.r, ball_c.g, ball_c.b, 255);
-    } else {
-        r.x -= layout.audio.ball_r;
-        r.y -= layout.audio.ball_r;
-        r.w = r.h = layout.audio.ball_r * 2 + 3;
-        fill_background(audio_pane, &r, &layout.audio.ball_background);
+    if(layout.audio.ball_area_image.error){
+        SDL_Color bf_c = layout.audio.ball_floor_color;
+        hlineRGBA(audio_pane, layout.audio.ball_area_x, layout.audio.ball_area_x + layout.audio.ball_area_w, layout.audio.ball_area_y + layout.audio.ball_area_h, bf_c.r, bf_c.g, bf_c.b, 255);
+    }else{
+        fill_background(audio_pane, &layout.audio.ball_area_rect, &layout.audio.ball_area_background);
     }
 
-    SDL_Color bf_c = layout.audio.ball_floor_color;
-    hlineRGBA(audio_pane, layout.audio.ball_area_x, layout.audio.ball_area_x + layout.audio.ball_area_w, layout.audio.ball_area_y + layout.audio.ball_area_h, bf_c.r, bf_c.g, bf_c.b, 255);
+    if(layout.audio.ball_image.error) {
+        SDL_Color ball_c = layout.audio.ball_color;
+        rect_t br;
+        rect_origin(&layout.audio.ball_rect, &br);
+        SDL_FillRect(ball_pane, &br, map_sdl_color(ball_pane, layout.audio.color));
+        filledCircleRGBA(ball_pane, br.w/2, br.w/2, br.w/2-1, ball_c.r, ball_c.g, ball_c.b, 255);
+    } else {
+        fill_background(ball_pane, &layout.audio.ball_rect, &layout.audio.ball_background);
+    }
+    SDL_BlitSurface(ball_pane, 0, audio_pane, &r);
+
 
     char buf[16];
     snprintf(buf, 16, "bpm: %.2f", timebase_get_bpm());
