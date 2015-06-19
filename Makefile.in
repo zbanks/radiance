@@ -5,8 +5,7 @@ PREFIX = @prefix@
 
 # cflags @CFLAGS@
 # ldflags @LDFLAGS@
-# @WITH_VAMP@
-# @with_vamp@
+# vamp=@VAMP_ENABLED@, flux=@FLUX_ENABLED@, sdl=@SDL_ENABLED@, pm=@PORTMIDI_ENABLED@
 # @LIBS@
 
 # Files to include
@@ -15,17 +14,31 @@ C_SRC += $(wildcard src/audio/*.c)
 C_SRC += $(wildcard src/dynamic/*.c)
 C_SRC += $(wildcard src/filters/*.c)
 C_SRC += $(wildcard src/lib/*.c)
-C_SRC += $(wildcard src/midi/*.c)
 C_SRC += $(wildcard src/output/*.c)
 C_SRC += $(wildcard src/patterns/*.c)
 C_SRC += $(wildcard src/signals/*.c)
 C_SRC += $(wildcard src/state/*.c)
 C_SRC += $(wildcard src/timebase/*.c)
-C_SRC += $(wildcard src/ui/*.c)
 C_SRC += $(wildcard src/util/*.c)
 C_SRC += $(wildcard src/waveform/*.c)
 C_SRC += $(wildcard src/lib/lux/src/*.c)
 CPP_SRC += $(wildcard src/filters/*.cpp)
+
+ifeq (@VAMP_ENABLED@,yes)
+
+endif
+
+ifeq (@PORTMIDI_ENABLED@,yes)
+	C_SRC += $(wildcard src/midi/*.c)
+endif
+
+ifeq (@SDL_ENABLED@,yes)
+	C_SRC += $(wildcard src/ui/*.c)
+endif
+
+ifeq (@FLUX_ENABLED@,yes)
+
+endif
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))

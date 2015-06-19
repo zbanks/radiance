@@ -586,6 +586,10 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+PORTMIDI_ENABLED
+FLUX_ENABLED
+VAMP_ENABLED
+SDL_ENABLED
 ac_ct_CC
 CFLAGS
 CC
@@ -1483,6 +1487,52 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_c_try_link
+
+# ac_fn_cxx_try_link LINENO
+# -------------------------
+# Try to link conftest.$ac_ext, and return whether this succeeded.
+ac_fn_cxx_try_link ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  rm -f conftest.$ac_objext conftest$ac_exeext
+  if { { ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_link") 2>conftest.err
+  ac_status=$?
+  if test -s conftest.err; then
+    grep -v '^ *+' conftest.err >conftest.er1
+    cat conftest.er1 >&5
+    mv -f conftest.er1 conftest.err
+  fi
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } && {
+	 test -z "$ac_cxx_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 test -x conftest$ac_exeext
+       }; then :
+  ac_retval=0
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_retval=1
+fi
+  # Delete the IPA/IPO (Inter Procedural Analysis/Optimization) information
+  # created by the PGI compiler (conftest_ipa8_conftest.oo), as it would
+  # interfere with the next link command; also delete a directory that is
+  # left behind by Apple's compiler.  We do this before executing the actions.
+  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+  as_fn_set_status $ac_retval
+
+} # ac_fn_cxx_try_link
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -3034,13 +3084,12 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
-$as_echo_n "checking for pthread_create in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_create+:} false; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+$as_echo_n "checking for library containing pthread_create... " >&6; }
+if ${ac_cv_search_pthread_create+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3059,33 +3108,47 @@ return pthread_create ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_create=yes
-else
-  ac_cv_lib_pthread_pthread_create=no
+for ac_lib in '' pthread; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_pthread_create=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_pthread_create+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_create" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_create" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_create" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPTHREAD 1
-_ACEOF
+done
+if ${ac_cv_search_pthread_create+:} false; then :
 
-  LIBS="-lpthread $LIBS"
+else
+  ac_cv_search_pthread_create=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pthread_create" >&5
+$as_echo "$ac_cv_search_pthread_create" >&6; }
+ac_res=$ac_cv_search_pthread_create
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+
+    as_fn_error $? "\"unable to find the pthread_create() function\"" "$LINENO" 5
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Pa_Initialize in -lportaudio" >&5
-$as_echo_n "checking for Pa_Initialize in -lportaudio... " >&6; }
-if ${ac_cv_lib_portaudio_Pa_Initialize+:} false; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing Pa_Initialize" >&5
+$as_echo_n "checking for library containing Pa_Initialize... " >&6; }
+if ${ac_cv_search_Pa_Initialize+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lportaudio  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3104,38 +3167,55 @@ return Pa_Initialize ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_portaudio_Pa_Initialize=yes
-else
-  ac_cv_lib_portaudio_Pa_Initialize=no
+for ac_lib in '' portaudio; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_Pa_Initialize=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_Pa_Initialize+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_portaudio_Pa_Initialize" >&5
-$as_echo "$ac_cv_lib_portaudio_Pa_Initialize" >&6; }
-if test "x$ac_cv_lib_portaudio_Pa_Initialize" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPORTAUDIO 1
-_ACEOF
+done
+if ${ac_cv_search_Pa_Initialize+:} false; then :
 
-  LIBS="-lportaudio $LIBS"
+else
+  ac_cv_search_Pa_Initialize=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_Pa_Initialize" >&5
+$as_echo "$ac_cv_search_Pa_Initialize" >&6; }
+ac_res=$ac_cv_search_Pa_Initialize
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+
+    as_fn_error $? "\"unable to find the Pa_Initialize() function\"" "$LINENO" 5
 fi
 
 #AC_SEARCH_LIBS([Pa_ReadStream], [portaudio], [], [
 #    AC_MSG_ERROR([unable to find the Pa_ReadStream() function])])
 
-if text "x$enable_sdl" != "xno"; then :
+SDL_ENABLED="no"
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SDL_Init in -lSDL" >&5
-$as_echo_n "checking for SDL_Init in -lSDL... " >&6; }
-if ${ac_cv_lib_SDL_SDL_Init+:} false; then :
+if test "x$with_sdl" != "xno"; then :
+
+    found_sdl=yes
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing SDL_Init" >&5
+$as_echo_n "checking for library containing SDL_Init... " >&6; }
+if ${ac_cv_search_SDL_Init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lSDL  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3154,33 +3234,46 @@ return SDL_Init ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_SDL_SDL_Init=yes
-else
-  ac_cv_lib_SDL_SDL_Init=no
+for ac_lib in '' SDL; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_SDL_Init=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_SDL_Init+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_SDL_SDL_Init" >&5
-$as_echo "$ac_cv_lib_SDL_SDL_Init" >&6; }
-if test "x$ac_cv_lib_SDL_SDL_Init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSDL 1
-_ACEOF
+done
+if ${ac_cv_search_SDL_Init+:} false; then :
 
-  LIBS="-lSDL $LIBS"
+else
+  ac_cv_search_SDL_Init=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_SDL_Init" >&5
+$as_echo "$ac_cv_search_SDL_Init" >&6; }
+ac_res=$ac_cv_search_SDL_Init
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+  found_sdl=no
 fi
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TTF_Init in -lSDL_ttf" >&5
-$as_echo_n "checking for TTF_Init in -lSDL_ttf... " >&6; }
-if ${ac_cv_lib_SDL_ttf_TTF_Init+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing TTF_Init" >&5
+$as_echo_n "checking for library containing TTF_Init... " >&6; }
+if ${ac_cv_search_TTF_Init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lSDL_ttf  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3199,33 +3292,46 @@ return TTF_Init ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_SDL_ttf_TTF_Init=yes
-else
-  ac_cv_lib_SDL_ttf_TTF_Init=no
+for ac_lib in '' SDL_ttf; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_TTF_Init=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_TTF_Init+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_SDL_ttf_TTF_Init" >&5
-$as_echo "$ac_cv_lib_SDL_ttf_TTF_Init" >&6; }
-if test "x$ac_cv_lib_SDL_ttf_TTF_Init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSDL_TTF 1
-_ACEOF
+done
+if ${ac_cv_search_TTF_Init+:} false; then :
 
-  LIBS="-lSDL_ttf $LIBS"
+else
+  ac_cv_search_TTF_Init=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_TTF_Init" >&5
+$as_echo "$ac_cv_search_TTF_Init" >&6; }
+ac_res=$ac_cv_search_TTF_Init
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+  found_sdl=no
 fi
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for hlineRGBA in -lSDL_gfx" >&5
-$as_echo_n "checking for hlineRGBA in -lSDL_gfx... " >&6; }
-if ${ac_cv_lib_SDL_gfx_hlineRGBA+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing hlineRGBA" >&5
+$as_echo_n "checking for library containing hlineRGBA... " >&6; }
+if ${ac_cv_search_hlineRGBA+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lSDL_gfx  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3244,33 +3350,46 @@ return hlineRGBA ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_SDL_gfx_hlineRGBA=yes
-else
-  ac_cv_lib_SDL_gfx_hlineRGBA=no
+for ac_lib in '' SDL_gfx; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_hlineRGBA=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_hlineRGBA+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_SDL_gfx_hlineRGBA" >&5
-$as_echo "$ac_cv_lib_SDL_gfx_hlineRGBA" >&6; }
-if test "x$ac_cv_lib_SDL_gfx_hlineRGBA" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSDL_GFX 1
-_ACEOF
+done
+if ${ac_cv_search_hlineRGBA+:} false; then :
 
-  LIBS="-lSDL_gfx $LIBS"
+else
+  ac_cv_search_hlineRGBA=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_hlineRGBA" >&5
+$as_echo "$ac_cv_search_hlineRGBA" >&6; }
+ac_res=$ac_cv_search_hlineRGBA
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+else
+  found_sdl=no
 fi
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for IMG_Load in -lSDL_image" >&5
-$as_echo_n "checking for IMG_Load in -lSDL_image... " >&6; }
-if ${ac_cv_lib_SDL_image_IMG_Load+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing IMG_Load" >&5
+$as_echo_n "checking for library containing IMG_Load... " >&6; }
+if ${ac_cv_search_IMG_Load+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lSDL_image  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3289,33 +3408,67 @@ return IMG_Load ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_SDL_image_IMG_Load=yes
-else
-  ac_cv_lib_SDL_image_IMG_Load=no
+for ac_lib in '' SDL_image; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_IMG_Load=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_IMG_Load+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_SDL_image_IMG_Load" >&5
-$as_echo "$ac_cv_lib_SDL_image_IMG_Load" >&6; }
-if test "x$ac_cv_lib_SDL_image_IMG_Load" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSDL_IMAGE 1
-_ACEOF
+done
+if ${ac_cv_search_IMG_Load+:} false; then :
 
-  LIBS="-lSDL_image $LIBS"
+else
+  ac_cv_search_IMG_Load=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_IMG_Load" >&5
+$as_echo "$ac_cv_search_IMG_Load" >&6; }
+ac_res=$ac_cv_search_IMG_Load
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  found_sdl=no
+fi
+
+    if test "x$found_sdl" == "xyes"; then :
+
+
+$as_echo "#define SDL_ENABLED 1" >>confdefs.h
+
+        SDL_ENABLED="yes"
+
+
+else
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"Unable to find SDL libraries! Compiling without SDL support!\"" >&5
+$as_echo "$as_me: WARNING: \"Unable to find SDL libraries! Compiling without SDL support!\"" >&2;}
 
 fi
 
-
-$as_echo "#define SDL_ENABLED /**/" >>confdefs.h
-
-
 fi
 
-if test "x$enable_vamp" != "xno"; then :
+ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+VAMP_ENABLED="no"
+
+
+if test "x$with_vamp" != "xno"; then :
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lvamp-hostsdk" >&5
 $as_echo_n "checking for main in -lvamp-hostsdk... " >&6; }
@@ -3336,7 +3489,7 @@ return main ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
+if ac_fn_cxx_try_link "$LINENO"; then :
   ac_cv_lib_vamp_hostsdk_main=yes
 else
   ac_cv_lib_vamp_hostsdk_main=no
@@ -3348,29 +3501,39 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_vamp_hostsdk_main" >&5
 $as_echo "$ac_cv_lib_vamp_hostsdk_main" >&6; }
 if test "x$ac_cv_lib_vamp_hostsdk_main" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBVAMP_HOSTSDK 1
-_ACEOF
 
-  LIBS="-lvamp-hostsdk $LIBS"
+
+$as_echo "#define VAMP_ENABLED 1" >>confdefs.h
+
+        VAMP_ENABLED="yes"
+
+
+else
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"Unable to find VAMP host sdk library! Compiling without VAMP support!\"" >&5
+$as_echo "$as_me: WARNING: \"Unable to find VAMP host sdk library! Compiling without VAMP support!\"" >&2;}
 
 fi
 
 
-$as_echo "#define VAMP_ENABLED /**/" >>confdefs.h
-
-
 fi
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-if test "x$enable_flux" != "xno"; then :
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for flux_cli_init in -lflux" >&5
-$as_echo_n "checking for flux_cli_init in -lflux... " >&6; }
-if ${ac_cv_lib_flux_flux_cli_init+:} false; then :
+FLUX_ENABLED="no"
+
+if test "x$with_flux" != "xno"; then :
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing flux_cli_init" >&5
+$as_echo_n "checking for library containing flux_cli_init... " >&6; }
+if ${ac_cv_search_flux_cli_init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lflux  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3389,41 +3552,62 @@ return flux_cli_init ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_flux_flux_cli_init=yes
-else
-  ac_cv_lib_flux_flux_cli_init=no
+for ac_lib in '' flux; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_flux_cli_init=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_flux_cli_init+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_flux_flux_cli_init" >&5
-$as_echo "$ac_cv_lib_flux_flux_cli_init" >&6; }
-if test "x$ac_cv_lib_flux_flux_cli_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBFLUX 1
-_ACEOF
+done
+if ${ac_cv_search_flux_cli_init+:} false; then :
 
-  LIBS="-lflux $LIBS"
+else
+  ac_cv_search_flux_cli_init=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_flux_cli_init" >&5
+$as_echo "$ac_cv_search_flux_cli_init" >&6; }
+ac_res=$ac_cv_search_flux_cli_init
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+
+$as_echo "#define FLUX_ENABLED 1" >>confdefs.h
+
+        FLUX_ENABLED="yes"
+
+
+else
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"Unable to find flux library! Compiling without Flux support!\"" >&5
+$as_echo "$as_me: WARNING: \"Unable to find flux library! Compiling without Flux support!\"" >&2;}
 
 fi
 
 
-$as_echo "#define FLUX_ENABLED /**/" >>confdefs.h
-
-
 fi
 
-if test "x$enable_portmidi" != "xno"; then :
+PORTMIDI_ENABLED="no"
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Pm_Initialize in -lportmidi" >&5
-$as_echo_n "checking for Pm_Initialize in -lportmidi... " >&6; }
-if ${ac_cv_lib_portmidi_Pm_Initialize+:} false; then :
+if test "x$with_portmidi" != "xno"; then :
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing Pm_Initialize" >&5
+$as_echo_n "checking for library containing Pm_Initialize... " >&6; }
+if ${ac_cv_search_Pm_Initialize+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lportmidi  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3442,28 +3626,48 @@ return Pm_Initialize ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_portmidi_Pm_Initialize=yes
-else
-  ac_cv_lib_portmidi_Pm_Initialize=no
+for ac_lib in '' portmidi; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_Pm_Initialize=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_Pm_Initialize+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_portmidi_Pm_Initialize" >&5
-$as_echo "$ac_cv_lib_portmidi_Pm_Initialize" >&6; }
-if test "x$ac_cv_lib_portmidi_Pm_Initialize" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPORTMIDI 1
-_ACEOF
+done
+if ${ac_cv_search_Pm_Initialize+:} false; then :
 
-  LIBS="-lportmidi $LIBS"
+else
+  ac_cv_search_Pm_Initialize=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_Pm_Initialize" >&5
+$as_echo "$ac_cv_search_Pm_Initialize" >&6; }
+ac_res=$ac_cv_search_Pm_Initialize
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+
+$as_echo "#define PORTMIDI_ENABLED 1" >>confdefs.h
+
+        PORTMIDI_ENABLED="yes"
+
+
+else
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"Unable to find PortMIDI library! Compiling without MIDI input support!\"" >&5
+$as_echo "$as_me: WARNING: \"Unable to find PortMIDI library! Compiling without MIDI input support!\"" >&2;}
 
 fi
-
-
-$as_echo "#define PORTMIDI_ENABLED /**/" >>confdefs.h
 
 
 fi

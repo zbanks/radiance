@@ -22,32 +22,58 @@ AC_SEARCH_LIBS([dlopen], [dl dld], [], [
 AC_SEARCH_LIBS([cos], [m], [], [
     AC_MSG_ERROR([unable to find the cos() function])])
 
-AC_CHECK_LIB([pthread], [pthread_create])
-AC_CHECK_LIB([portaudio], [Pa_Initialize])
+AC_SEARCH_LIBS([pthread_create], [pthread], [], [
+    AC_MSG_ERROR(["unable to find the pthread_create() function"])])
+AC_SEARCH_LIBS([Pa_Initialize], [portaudio], [], [
+    AC_MSG_ERROR(["unable to find the Pa_Initialize() function"])])
 #AC_SEARCH_LIBS([Pa_ReadStream], [portaudio], [], [
 #    AC_MSG_ERROR([unable to find the Pa_ReadStream() function])])
 
-AS_IF([text "x$enable_sdl" != "xno"], [
-    AC_CHECK_LIB([SDL], [SDL_Init])
-    AC_CHECK_LIB([SDL_ttf], [TTF_Init])
-    AC_CHECK_LIB([SDL_gfx], [hlineRGBA])
-    AC_CHECK_LIB([SDL_image], [IMG_Load])
-    AC_DEFINE([SDL_ENABLED], [], [SDL UI is enabled])
+AC_SUBST([SDL_ENABLED], ["no"])
+AS_IF([test "x$with_sdl" != "xno"], [
+    found_sdl=yes
+    AC_SEARCH_LIBS([SDL_Init], [SDL], [], [found_sdl=no])
+    AC_SEARCH_LIBS([TTF_Init], [SDL_ttf], [], [found_sdl=no])
+    AC_SEARCH_LIBS([hlineRGBA], [SDL_gfx], [], [found_sdl=no])
+    AC_SEARCH_LIBS([IMG_Load], [SDL_image], [], [found_sdl=no])
+    AS_IF([test "x$found_sdl" == "xyes"], [
+        AC_DEFINE([SDL_ENABLED], [1], [SDL UI is enabled])
+        AC_SUBST([SDL_ENABLED], ["yes"])
+    ], [
+        AC_WARN(["Unable to find SDL libraries! Compiling without SDL support!"])
+    ])
 ])
 
-AS_IF([test "x$enable_vamp" != "xno"], [
-    AC_CHECK_LIB([vamp-hostsdk], [main])
-    AC_DEFINE([VAMP_ENABLED], [], [VAMP Plugin support is enabled])
+AC_LANG_CPLUSPLUS()
+AC_SUBST([VAMP_ENABLED], ["no"])
+AS_IF([test "x$with_vamp" != "xno"], [
+    AC_CHECK_LIB([vamp-hostsdk], [main], [ 
+        AC_DEFINE([VAMP_ENABLED], [1], [VAMP Plugin support is enabled])
+        AC_SUBST([VAMP_ENABLED], ["yes"])
+    ], [
+        AC_WARN(["Unable to find VAMP host sdk library! Compiling without VAMP support!"])
+    ])
+])
+AC_LANG_C()
+
+AC_SUBST([FLUX_ENABLED], ["no"])
+AS_IF([test "x$with_flux" != "xno"], [
+    AC_SEARCH_LIBS([flux_cli_init], [flux], [
+        AC_DEFINE([FLUX_ENABLED], [1], [Flux output is enabled])
+        AC_SUBST([FLUX_ENABLED], ["yes"])
+    ], [
+        AC_WARN(["Unable to find flux library! Compiling without Flux support!"])
+    ])
 ])
 
-AS_IF([test "x$enable_flux" != "xno"], [
-    AC_CHECK_LIB([flux], [flux_cli_init])
-    AC_DEFINE([FLUX_ENABLED], [], [Flux output is enabled])
-])
-
-AS_IF([test "x$enable_portmidi" != "xno"], [
-    AC_CHECK_LIB([portmidi], [Pm_Initialize])
-    AC_DEFINE([PORTMIDI_ENABLED], [], [PortMIDI input is enabled])
+AC_SUBST([PORTMIDI_ENABLED], ["no"])
+AS_IF([test "x$with_portmidi" != "xno"], [
+    AC_SEARCH_LIBS([Pm_Initialize], [portmidi], [
+        AC_DEFINE([PORTMIDI_ENABLED], [1], [PortMIDI input is enabled])
+        AC_SUBST([PORTMIDI_ENABLED], ["yes"])
+    ], [
+        AC_WARN(["Unable to find PortMIDI library! Compiling without MIDI input support!"])
+    ])
 ])
 
 AC_OUTPUT([Makefile])
