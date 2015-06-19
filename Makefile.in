@@ -51,7 +51,7 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -I./src/ 
+INC  = -I./src/ -I./BTrack/src/
 LIB  = -L/usr/local/lib -L/usr/lib @LIBS@
 
 # Assembler, compiler, and linker flags
