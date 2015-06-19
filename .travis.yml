@@ -4,7 +4,7 @@ compiler:
     - clang
 
 install:
-  - sudo apt-get install -qq libsdl1.2-dev libsdl-gfx1.2-dev libsdl-ttf2.0-dev libportmidi-dev vamp-plugin-sdk
+  - sudo apt-get install -qq libsdl1.2-dev libsdl-gfx1.2-dev libsdl-ttf2.0-dev libsdl-image1.2-dev libportmidi-dev vamp-plugin-sdk
   - git clone --quiet --depth=100 "https://github.com/nanomsg/nanomsg.git" ~/builds/nanomsg
       && pushd ~/builds/nanomsg
       && ./autogen.sh
