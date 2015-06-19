@@ -12,7 +12,6 @@ PREFIX = @prefix@
 C_SRC  = $(wildcard src/core/*.c)
 C_SRC += $(wildcard src/audio/*.c)
 C_SRC += $(wildcard src/dynamic/*.c)
-C_SRC += $(wildcard src/filters/*.c)
 C_SRC += $(wildcard src/lib/*.c)
 C_SRC += $(wildcard src/output/*.c)
 C_SRC += $(wildcard src/patterns/*.c)
@@ -21,19 +20,20 @@ C_SRC += $(wildcard src/state/*.c)
 C_SRC += $(wildcard src/timebase/*.c)
 C_SRC += $(wildcard src/util/*.c)
 C_SRC += $(wildcard src/waveform/*.c)
-C_SRC += $(wildcard src/lib/lux/src/*.c)
-CPP_SRC += $(wildcard src/filters/*.cpp)
+C_SRC += $(wildcard BTrack/src/*.c)
+
 
 ifeq (@VAMP_ENABLED@,yes)
-
+C_SRC += $(wildcard src/filters/*.c)
+CPP_SRC += $(wildcard src/filters/*.cpp)
 endif
 
 ifeq (@PORTMIDI_ENABLED@,yes)
-	C_SRC += $(wildcard src/midi/*.c)
+C_SRC += $(wildcard src/midi/*.c)
 endif
 
 ifeq (@SDL_ENABLED@,yes)
-	C_SRC += $(wildcard src/ui/*.c)
+C_SRC += $(wildcard src/ui/*.c)
 endif
 
 ifeq (@FLUX_ENABLED@,yes)

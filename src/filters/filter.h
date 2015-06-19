@@ -1,13 +1,16 @@
 #ifndef __FILTER_H
 #define __FILTER_H
 
+#include "confdefs.h"
+
+struct filter;
+
+#ifdef VAMP_ENABLED
 #include "audio/audio.h"
 #include "core/parameter.h"
 #include "core/time.h"
 #include "ui/graph.h"
 #include <SDL/SDL.h>
-
-struct filter;
 
 typedef void * filter_state_pt;
 typedef void * vamp_plugin_p;
@@ -16,6 +19,7 @@ typedef void (*filter_update_fn_pt)(struct filter * filter, mbeat_t t_msec, doub
 typedef void (*filter_del_fn_pt)(struct filter * filter);
 
 typedef struct filter {
+    int enabled;
     // Input parameters
     int n_params;
     parameter_t* parameters;
@@ -53,4 +57,5 @@ extern filter_t beat_filter;
 void filters_update(const chunk_pt chunk);
 void filters_load();
 void filters_unload();
+#endif
 #endif

@@ -25,9 +25,13 @@ AC_SEARCH_LIBS([cos], [m], [], [
 AC_SEARCH_LIBS([pthread_create], [pthread], [], [
     AC_MSG_ERROR(["unable to find the pthread_create() function"])])
 AC_SEARCH_LIBS([Pa_Initialize], [portaudio], [], [
-    AC_MSG_ERROR(["unable to find the Pa_Initialize() function"])])
+    AC_MSG_ERROR(["unable to find the Pa_Initialize() function (PortAudio)"])])
 #AC_SEARCH_LIBS([Pa_ReadStream], [portaudio], [], [
 #    AC_MSG_ERROR([unable to find the Pa_ReadStream() function])])
+AC_SEARCH_LIBS([src_simple], [samplerate], [], [
+    AC_MSG_ERROR(["unable to find the src_simple() function (libresample)"])])
+AC_SEARCH_LIBS([fftw_plan_dft_1d], [fftw3], [], [
+    AC_MSG_ERROR(["unable to find the fftw_plan_dft_1d() function (libfftw3)"])])
 
 AC_SUBST([SDL_ENABLED], ["no"])
 AS_IF([test "x$with_sdl" != "xno"], [

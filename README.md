@@ -153,6 +153,8 @@ libsdl-image.2-dev
 libsdl-ttf2.0-dev
 libportaudio-dev
 libportmidi-dev
+libsamplerate0-dev
+libfftw3-dev
 vamp-plugin-sdk
 libnanomsg-dev
 ```

@@ -108,7 +108,9 @@ int main()
 
     if(config.ui.enabled) ui_start(&ui_done_callback);
 
+#ifdef VAMP_ENABLED
     filters_load();
+#endif
     //state_load("state_0.ini");
 
     output_init();
@@ -121,7 +123,9 @@ int main()
     midi_stop();
     audio_stop();
 
+#ifdef VAMP_ENABLED
     filters_unload();
+#endif
 
     SDL_DestroyMutex(patterns_updating);
 

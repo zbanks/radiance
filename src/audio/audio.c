@@ -17,7 +17,9 @@ static int audio_running;
 static SDL_Thread* audio_thread;
 
 static int audio_callback(chunk_pt chunk){
+#ifdef VAMP_ENABLED
     filters_update(chunk);
+#endif
     waveform_update(chunk);
 
     if(!audio_running) return -1;

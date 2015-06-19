@@ -53,6 +53,7 @@ void filter_beat_update(filter_t * filter, mbeat_t t_msec, double value)
 int n_filters = N_FILTERS;
 filter_t filters[N_FILTERS] = {
     {
+    .enabled = 1,
     .n_params = 0,
     .parameters = 0,
     .name = "Onset Detection",
@@ -79,6 +80,7 @@ filter_t filters[N_FILTERS] = {
     .vamp_output = 1,
     },
     {
+    .enabled = 1,
     .n_params = 0,
     .parameters = 0,
     .name = "Fundamental Freq",
@@ -105,6 +107,7 @@ filter_t filters[N_FILTERS] = {
     .vamp_output = 0,
     },
     { // Beat Filter
+    .enabled = 0,
     .n_params = 0,
     .parameters = 0,
     .name = "Beat Detection",
@@ -127,6 +130,7 @@ filter_t filters[N_FILTERS] = {
 void filters_load(){
     n_filtered_chunks = 0;
     for(int i = 0; i < n_filters; i++){
+        if(!filters[i].enabled) continue;
         if(vamp_plugin_load(&filters[i])){
             printf("Error initializing filter '%s'\n", filters[i].name);
         }else{
@@ -142,6 +146,7 @@ void filters_load(){
 
 void filters_unload(){
     for(int i = 0; i < n_filters; i++){
+        if(!filters[i].enabled) continue;
         vamp_plugin_unload(&filters[i]);
         if(filters[i].del)
             filters[i].del(&filters[i]);
@@ -152,6 +157,7 @@ void filters_unload(){
 
 void filters_update(const chunk_pt chunk){
     for(int i = 0; i < n_filters; i++){
+        if(!filters[i].enabled) continue;
         vamp_plugin_update(&filters[i], chunk);
     }
     n_filtered_chunks++;

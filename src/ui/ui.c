@@ -439,7 +439,8 @@ static void ui_update_audio_panel(){
     boxRGBA(audio_pane, layout.audio.auto_x, layout.audio.auto_y, layout.audio.auto_x + layout.audio.auto_w, layout.audio.auto_y + layout.audio.auto_h, tbs_c.r, tbs_c.g, tbs_c.b, 255);
 }
 
-static void ui_update_filter(filter_t * filter) {
+#ifdef VAMP_ENABLED
+static void ui_update_filter(struct filter * filter) {
     rect_t r;
     rect_array_origin(&layout.filter.rect_array, &r);
     fill_background(filter_pane, &r, &layout.filter.background);
@@ -451,6 +452,7 @@ static void ui_update_filter(filter_t * filter) {
     rect_origin(&layout.graph_filter.rect, &r);
     SDL_BlitSurface(graph_surface, &r, filter_pane, &layout.graph_filter.rect);
 }
+#endif
 
 static void ui_update_signal(signal_t* signal) {
     rect_t r;
@@ -489,6 +491,7 @@ static void ui_render_signal_deck(){
 }
 
 static void ui_render_filter_bank(){
+#ifdef VAMP_ENABLED
     for(int i = 0; i < n_filters; i++){
         if(!filters[i].display) continue;
         ui_update_filter(&filters[i]);
@@ -497,6 +500,7 @@ static void ui_render_filter_bank(){
         rect_array_layout(&layout.filter.rect_array, i, &r);
         SDL_BlitSurface(filter_pane, 0, screen, &r);
     }
+#endif
 }
 
 static void ui_update_output(output_strip_t * output_strip){
@@ -859,15 +863,34 @@ static int mouse_down_signal(int ix, struct xy xy) {
     return UNHANDLED;
 }
 
+#ifdef VAMP_ENABLED
 static int mouse_down_filter(int i, struct xy xy){
     if(xy_in_rect(&xy, &layout.graph_filter.rect, 0)){
         if(active_param_source){
             param_state_connect(active_param_source, &filters[i].output);
             active_param_source = 0;
         }
-        return 1;
+        return HANDLED;
     }
-    return 0;
+    return UNHANDLED;
+}
+#endif
+
+static int mouse_down_filter_bank(struct xy xy){
+#ifdef VAMP_ENABLED
+    // See if click is in filter
+    PROPAGATE(mouse_down_filter_bank(xy));
+    for(int i = 0; i < n_filters; i++){
+        struct xy offset;
+        rect_t r;
+        rect_array_layout(&layout.filter.rect_array, i, &r);
+        if(xy_in_rect(&xy, &r, &offset)){
+            PROPAGATE(mouse_down_filter(i, offset));
+            break;
+        }
+    }
+#endif
+    return UNHANDLED;
 }
 
 static int mouse_down_audio(struct xy xy){
@@ -988,13 +1011,7 @@ static int mouse_down(struct xy xy) {
     }
 
     // See if click is in filter
-    for(int i = 0; i < n_filters; i++){
-        rect_array_layout(&layout.filter.rect_array, i, &r);
-        if(xy_in_rect(&xy, &r, &offset)){
-            PROPAGATE(mouse_down_filter(i, offset));
-            break;
-        }
-    }
+    PROPAGATE(mouse_down_filter_bank(xy));
 
     // See if click is in an signal
     for(int i = 0; i < n_signals; i++){
