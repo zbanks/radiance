@@ -3,6 +3,10 @@ compiler:
     - gcc
     - clang
 
+env:
+    - CONFIGURE_FLAGS=
+    - CONFIGURE_FLAGS=--without-vamp
+
 install:
     - sudo apt-get install -qq libsdl1.2-dev libsdl-gfx1.2-dev libsdl-ttf2.0-dev libsdl-image1.2-dev libportmidi-dev libfftw3-dev libsamplerate0-dev vamp-plugin-sdk
     - git clone --quiet --depth=100 "https://github.com/nanomsg/nanomsg.git" ~/builds/nanomsg
@@ -24,8 +28,6 @@ install:
       && sudo make install
       && popd;
 
-script: 
-    - ./configure && make
-    - ./configure --without-vamp && make
+script: ./configure $CONFIGURE_FLAGS && make
 
 
