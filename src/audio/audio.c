@@ -30,6 +30,7 @@ static int audio_callback(chunk_pt chunk){
     }
 
     btrack_process_audio_frame(&btrack, double_chunk);
+
     if(btrack_beat_due_in_current_frame(&btrack)){
         if(timebase_source == TB_AUTOMATIC){
             timebase_tap(config.timebase.beat_btrack_alpha);

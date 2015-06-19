@@ -879,7 +879,6 @@ static int mouse_down_filter(int i, struct xy xy){
 static int mouse_down_filter_bank(struct xy xy){
 #ifdef VAMP_ENABLED
     // See if click is in filter
-    PROPAGATE(mouse_down_filter_bank(xy));
     for(int i = 0; i < n_filters; i++){
         struct xy offset;
         rect_t r;

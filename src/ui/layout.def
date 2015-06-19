@@ -101,7 +101,7 @@ CFGSECTION(waveform,
     CFG(lows_color, COLOR, "#000080")
     CFG(pbeat_color, COLOR, "#FF0000")
     CFG(ibeat_color, COLOR, "#00FF00")
-    CFG(skip, INT, 5)
+    CFG(skip, INT, 2)
 )
 
 CFGSECTION(graph_signal,
