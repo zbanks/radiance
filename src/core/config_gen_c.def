@@ -17,65 +17,84 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
 
     if(strcasecmp(section, SIZE_SECTION_NAME) == 0){
         #define CFGSECTION(s, d) 
-        #define CFGSECTION_LIST(name, d) \
-            if(strcasecmp(key, STRINGIFY(LIST_N_NAME(name))) == 0){ \
-                int new_n = atoi(value); \
-                struct SECTIONSTRUCT(name) * new_ptr = malloc(new_n * sizeof(struct SECTIONSTRUCT(name))); \
-                if(!new_ptr){ ERROR("Unable to malloc %s[%s]\n", STRINGIFY(name), value); return HANDLER_ERROR; } \
-                memset(new_ptr, 0, cfg->LIST_N_NAME(name) * sizeof(struct SECTIONSTRUCT(name))); \
+        #define CFGSECTION_LIST(name, d) do {                                                                       \
+            if(strcasecmp(key, STRINGIFY(LIST_N_NAME(name))) == 0){                                                 \
+                int new_n = atoi(value);                                                                            \
+                struct SECTIONSTRUCT(name) * new_ptr = malloc(new_n * sizeof(struct SECTIONSTRUCT(name)));          \
+                if(!new_ptr){                                                                                       \
+                    ERROR("Unable to malloc %s[%s]\n", STRINGIFY(name), value);                                     \
+                    return HANDLER_ERROR;                                                                           \
+                }                                                                                                   \
+                memset(new_ptr, 0, cfg->LIST_N_NAME(name) * sizeof(struct SECTIONSTRUCT(name)));                    \
                 memcpy(new_ptr, cfg->LIST_NAME(name), cfg->LIST_N_NAME(name) * sizeof(struct SECTIONSTRUCT(name))); \
-                free(cfg->LIST_NAME(name)); \
-                cfg->LIST_NAME(name) = new_ptr; \
-                for(int i = cfg->LIST_N_NAME(name); i < new_n; i++){ \
-                    struct SECTIONSTRUCT(name) * sp = new_ptr + i; \
-                    d \
-                } \
-                cfg->LIST_N_NAME(name) = new_n; \
-                return HANDLER_SUCCESS; \
-            }
+                free(cfg->LIST_NAME(name));                                                                         \
+                cfg->LIST_NAME(name) = new_ptr;                                                                     \
+                for(int i = cfg->LIST_N_NAME(name); i < new_n; i++){                                                \
+                    struct SECTIONSTRUCT(name) * sp = new_ptr + i;                                                  \
+                    d                                                                                               \
+                }                                                                                                   \
+                cfg->LIST_N_NAME(name) = new_n;                                                                     \
+                return HANDLER_SUCCESS;                                                                             \
+            }                                                                                                       \
+        } while(0);
+
         // Load defaults
         #define CFG(n, type, default) sp->n = type##_PREP(default);
-        #define CFG_LIST(name, max, type, default) \
-            for(int j = 0; j < max; j++) { \
-                sp->LIST_NAME(name)[j] = type##_PREP(default); \
-            } \
-            sp->LIST_N_NAME(name) = max;
+
+        #define CFG_LIST(name, max, type, default) do {             \
+            for(int j = 0; j < max; j++) {                          \
+                sp->LIST_NAME(name)[j] = type##_PREP(default);      \
+            }                                                       \
+            sp->LIST_N_NAME(name) = max;                            \
+        } while(0);
+
+
         #include CFGOBJ_PATH
         ERROR("Invalid key %s\n", key);
         return HANDLER_ERROR;
     }
 
-    #define CFGSECTION(s, d) if(strcasecmp(section, STRINGIFY(s)) == 0){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d ERROR("Invalid key %s\n", key); return HANDLER_ERROR;}
-    #define CFGSECTION_LIST(name, d) \
-        if(strncasecmp(section, LIST_PREFIX(name), strlen(LIST_PREFIX(name))) == 0){ \
-            int i = atoi(section + strlen(LIST_PREFIX(name))); \
-            if(i >= cfg->LIST_N_NAME(name) || i < 0){  \
-                ERROR("invalid " STRINGIFY(name) " entry! (%d, max is %d)\n", i, cfg->LIST_N_NAME(name)); \
-                return HANDLER_ERROR; \
-            } \
-            struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i]; \
-            sp->configured = 1; \
-            d \
-            ERROR("Invalid key %s\n", key); \
-            return HANDLER_ERROR; \
+    #define CFGSECTION(s, d)                        \
+        if(strcasecmp(section, STRINGIFY(s)) == 0){ \
+            struct SECTIONSTRUCT(s) * sp = &cfg->s; \
+            d                                       \
+            ERROR("Invalid key %s\n", key);         \
+            return HANDLER_ERROR;                   \
         }
-    #define CFG(n, type, default) \
-        if(strcasecmp(key, STRINGIFY(n))==0){ \
-            type##_FREE(sp->n); \
-            sp->n = type##_PARSE(value); \
-            return HANDLER_SUCCESS; \
+
+    #define CFGSECTION_LIST(name, d)                                                                        \
+        if(strncasecmp(section, LIST_PREFIX(name), strlen(LIST_PREFIX(name))) == 0){                        \
+            int i = atoi(section + strlen(LIST_PREFIX(name)));                                              \
+            if(i >= cfg->LIST_N_NAME(name) || i < 0){                                                       \
+                ERROR("invalid " STRINGIFY(name) " entry! (%d, max is %d)\n", i, cfg->LIST_N_NAME(name));   \
+                return HANDLER_ERROR;                                                                       \
+            }                                                                                               \
+            struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i];                                     \
+            sp->configured = 1;                                                                             \
+            d                                                                                               \
+            ERROR("Invalid key %s\n", key);                                                                 \
+            return HANDLER_ERROR;                                                                           \
+        }
+
+    #define CFG(n, type, default)               \
+        if(strcasecmp(key, STRINGIFY(n))==0){   \
+            type##_FREE(sp->n);                 \
+            sp->n = type##_PARSE(value);        \
+            return HANDLER_SUCCESS;             \
         } 
-    #define CFG_LIST(n, max, type, default) \
-        if(strncasecmp(key, LIST_PREFIX(n), strlen(LIST_PREFIX(n))) == 0){ \
-            int idx = atoi(key + strlen(LIST_PREFIX(n))); \
-            if(idx < 0 || idx >= max) { \
-                ERROR("Invalid index: %s\n", key); \
-                return HANDLER_ERROR; \
-            } \
-            type##_FREE(sp->LIST_NAME(n)[idx]); \
-            sp->LIST_NAME(n)[idx] = type##_PARSE(value); \
-            return HANDLER_SUCCESS; \
+
+    #define CFG_LIST(n, max, type, default)                                 \
+        if(strncasecmp(key, LIST_PREFIX(n), strlen(LIST_PREFIX(n))) == 0){  \
+            int idx = atoi(key + strlen(LIST_PREFIX(n)));                   \
+            if(idx < 0 || idx >= max) {                                     \
+                ERROR("Invalid index: %s\n", key);                          \
+                return HANDLER_ERROR;                                       \
+            }                                                               \
+            type##_FREE(sp->LIST_NAME(n)[idx]);                             \
+            sp->LIST_NAME(n)[idx] = type##_PARSE(value);                    \
+            return HANDLER_SUCCESS;                                         \
         } 
+
     #include CFGOBJ_PATH
 
     ERROR("Unknown section %s\n", section);
@@ -95,21 +114,33 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename){
     #define CFG_LIST(name, max, type)
     #include CFGOBJ_PATH
 
-    #define CFGSECTION(s, d) fprintf(stream, "\n[" #s "]\n"); if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d }
-    #define CFGSECTION_LIST(name, d) \
-        for(int i = 0; i < cfg->LIST_N_NAME(name); i++){ \
-            if(!cfg->LIST_NAME(name)[i].configured) continue; \
+    #define CFGSECTION(s, d) do {               \
+        fprintf(stream, "\n[" #s "]\n");        \
+        struct SECTIONSTRUCT(s) * sp = &cfg->s; \
+        d                                       \
+    } while(0); 
+
+    #define CFGSECTION_LIST(name, d)                                    \
+        for(int i = 0; i < cfg->LIST_N_NAME(name); i++){                \
+            if(!cfg->LIST_NAME(name)[i].configured) continue;           \
             struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i]; \
-            fprintf(stream, "\n[" LIST_PREFIX(name) "%d]\n", i); \
-            d \
+            fprintf(stream, "\n[" LIST_PREFIX(name) "%d]\n", i);        \
+            d                                                           \
         } 
-    #define CFG(n, type, default) fprintf(stream, STRINGIFY(n) "="); fprintf(stream, type##_FORMAT(sp->n)); fprintf(stream, "\n");
-    #define CFG_LIST(name, max, type, default) \
-        for(int j = 0; j < sp->LIST_N_NAME(name); j++) { \
-            fprintf(stream, LIST_PREFIX(name) "%d=", j); \
+
+    #define CFG(n, type, default) do {          \
+        fprintf(stream, STRINGIFY(n) "=");      \
+        fprintf(stream, type##_FORMAT(sp->n));  \
+        fprintf(stream, "\n");                  \
+    } while(0);
+
+    #define CFG_LIST(name, max, type, default)                      \
+        for(int j = 0; j < sp->LIST_N_NAME(name); j++) {            \
+            fprintf(stream, LIST_PREFIX(name) "%d=", j);            \
             fprintf(stream, type##_FORMAT(sp->LIST_NAME(name)[j])); \
-            fprintf(stream, "\n"); \
+            fprintf(stream, "\n");                                  \
         }
+
     #include CFGOBJ_PATH
 
     fclose(stream);
@@ -134,36 +165,53 @@ int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename){
 // Instance of global configuration object
 // Each value is initialized with its default value
 int CONCAT(CFGOBJ, _init)(struct CFGOBJ * cfg){
-    #define CFGSECTION(s, d) if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d }
-    #define CFGSECTION_LIST(name, d) \
-        cfg->LIST_NAME(name) = NULL; \
-        cfg->LIST_N_NAME(name) = 0;
+    #define CFGSECTION(s, d) do {               \
+        struct SECTIONSTRUCT(s) * sp = &cfg->s; \
+        d                                       \
+    } while(0);
+
+    #define CFGSECTION_LIST(name, d) do { \
+        cfg->LIST_NAME(name) = NULL;      \
+        cfg->LIST_N_NAME(name) = 0;       \
+    } while(0); 
+
     #define CFG(n, type, default) sp->n = type##_PREP(default);
-    #define CFG_LIST(name, max, type, default) \
-        for(int j = 0; j < max; j++) { \
-            sp->LIST_NAME(name)[j] = type##_PREP(default); \
-        } \
-        sp->LIST_N_NAME(name) = max;
+
+    #define CFG_LIST(name, max, type, default) do {         \
+        for(int j = 0; j < max; j++) {                      \
+            sp->LIST_NAME(name)[j] = type##_PREP(default);  \
+        }                                                   \
+        sp->LIST_N_NAME(name) = max;                        \
+    } while(0);
+
     #include CFGOBJ_PATH
     return 0;
 };
 
 // Free all of the pointers in a configuration object
 int CONCAT(CFGOBJ, _del)(struct CFGOBJ * cfg){
-    #define CFGSECTION(s, d) if(1){ struct SECTIONSTRUCT(s) * sp = &cfg->s; d }
-    #define CFGSECTION_LIST(name, d) \
-        for(int i = 0; i < cfg->LIST_N_NAME(name); i++){ \
+    #define CFGSECTION(s, d) do {               \
+        struct SECTIONSTRUCT(s) * sp = &cfg->s; \
+        d                                       \
+    } while(0);
+
+    #define CFGSECTION_LIST(name, d) do {                               \
+        for(int i = 0; i < cfg->LIST_N_NAME(name); i++){                \
             struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i]; \
-            if(!sp->configured) continue; \
-            d \
-        } \
-        cfg->LIST_N_NAME(name) = 0; \
-        free(cfg->LIST_NAME(name));
+            if(!sp->configured) continue;                               \
+            d                                                           \
+        }                                                               \
+        cfg->LIST_N_NAME(name) = 0;                                     \
+        free(cfg->LIST_NAME(name));                                     \
+    } while(0); 
+
     #define CFG(n, type, default) type##_FREE(sp->n);
-    #define CFG_LIST(name, max, type, default) \
-        for(int j = 0; j < max; j++) { \
+
+    #define CFG_LIST(name, max, type, default)   \
+        for(int j = 0; j < max; j++) {           \
             type##_FREE(sp->LIST_NAME(name)[j]); \
-        }
+        }   
+
     #include CFGOBJ_PATH
     return 0;
 }
