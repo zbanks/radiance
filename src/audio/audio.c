@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static int audio_running;
+static volatile int audio_running;
 static SDL_Thread* audio_thread;
 static struct btrack btrack;
 static double * double_chunk;
@@ -73,5 +73,7 @@ void audio_stop()
     waveform_del();
     timebase_del();
     btrack_del(&btrack);
+
+    printf("Audio thread stopped.\n");
 }
 

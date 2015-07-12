@@ -227,5 +227,6 @@ void midi_stop()
     midi_running = 0;
 
     SDL_WaitThread(midi_thread, 0);
+    printf("MIDI thread stopped.\n");
 }
 

@@ -406,4 +406,5 @@ void signal_stop(){
         param_output_free(&signals[i].output);
         graph_remove(&signals[i].graph_state);
     }
+    printf("Signals thread stopped.\n");
 }

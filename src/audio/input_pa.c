@@ -9,8 +9,9 @@ static float * chunk;
 
 int audio_pa_callback(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData){
     audio_callback_fn_pt callback = (audio_callback_fn_pt) userData;
-    if(callback(input))
+    if(callback(input)){
         return paAbort;
+    }
     return paContinue;
 }
 
@@ -36,8 +37,8 @@ int audio_pa_run(audio_callback_fn_pt callback, double sample_rate, unsigned lon
                         sample_rate,
                         chunk_size,
                         paClipOff,
-                        audio_pa_callback,
-                        callback);
+                        0,
+                        0);
     if(err != paNoError) FAIL("Could not open PortAudio input stream\n");
 
     err = Pa_StartStream(stream);
@@ -45,6 +46,7 @@ int audio_pa_run(audio_callback_fn_pt callback, double sample_rate, unsigned lon
 
     /*
     printf("Gracefully terminated PortAudio\n");
+    */
 
     int cb_err = 0;
     while(cb_err == 0){
@@ -53,7 +55,9 @@ int audio_pa_run(audio_callback_fn_pt callback, double sample_rate, unsigned lon
         cb_err = callback(chunk);
     }
 
+    err = Pa_Terminate();
+    if(err != paNoError) FAIL("Could not terminate PortAudio\n");
+
     free(chunk);
-    */
     return 0;
 }
