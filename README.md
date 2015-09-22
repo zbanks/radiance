@@ -149,7 +149,7 @@ Theoretically, you should need the following packages installed on your system (
 ```
 libsdl1.2-dev
 libsdl-gfx1.2-dev
-libsdl-image.2-dev
+libsdl-image1.2-dev
 libsdl-ttf2.0-dev
 libportaudio-dev
 libportmidi-dev
