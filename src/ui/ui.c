@@ -4,6 +4,7 @@
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_gfxPrimitives.h>
+#include <SDL/SDL_rotozoom.h>
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_framerate.h>
 
@@ -28,9 +29,9 @@
 #include "signals/signal.h"
 #include "timebase/timebase.h"
 
+//X(master_preview, layout.master)
+//X(pattern_preview, layout.slot.preview_rect)
 #define SURFACES \
-    X(master_preview, layout.master) \
-    X(pattern_preview, layout.slot.preview_rect) \
     X(audio_pane, layout.audio) \
     X(ball_pane, layout.audio.ball_rect) \
     X(slot_pane, layout.slot) \
@@ -52,6 +53,10 @@ SURFACES
 #undef X
 
 static SDL_Surface * screen;
+static SDL_Surface * scaled_master;
+static SDL_Surface * master_preview;
+static SDL_Surface * scaled_pattern;
+static SDL_Surface * pattern_preview;
 
 static int mouse_is_down;
 static struct xy mouse_drag_start_abs;
@@ -116,7 +121,11 @@ SURFACES
     active_slot = -1;
     active_preview = 0;
 
-    master_pixels = layout.master.w * layout.master.h;
+    if (layout.master.scale < 1.0) layout.master.scale = 1.0;
+
+    int master_w = layout.master.w / layout.master.scale;
+    int master_h = layout.master.h / layout.master.scale;
+    master_pixels = master_w * master_h;
     master_xs = malloc(sizeof(float) * master_pixels);
     master_ys = malloc(sizeof(float) * master_pixels);
     master_frame = malloc(sizeof(color_t) * master_pixels);
@@ -126,13 +135,20 @@ SURFACES
     if(!master_frame) FAIL("Unable to alloc frame for master.\n");
 
     int i = 0;
-    for(int y=0;y<layout.master.h;y++) {
-        for(int x=0;x<layout.master.w;x++) {
-            master_xs[i] = ((float)x / (layout.master.w - 1)) * 2 - 1;
-            master_ys[i] = ((float)y / (layout.master.h - 1)) * 2 - 1;
+    for (int y = 0; y < master_h; y++) {
+        for (int x = 0; x < master_w; x++) {
+            master_xs[i] = ((float)x / (master_w - 1)) * 2 - 1;
+            master_ys[i] = ((float)y / (master_h - 1)) * 2 - 1;
             i++;
         }
     }
+    printf("Sizeof master = %d\n", i);
+
+    scaled_master = ui_create_surface_or_die(master_w, master_h);
+
+    int pattern_w = layout.slot.preview_w / layout.slot.preview_scale;
+    int pattern_h = layout.slot.preview_h / layout.slot.preview_scale;
+    scaled_pattern = ui_create_surface_or_die(pattern_w, pattern_h);
 }
 
 void ui_quit()
@@ -147,6 +163,11 @@ void ui_quit()
 SURFACES
 #undef X
 
+    SDL_FreeSurface(scaled_master);
+    SDL_FreeSurface(master_preview);
+    SDL_FreeSurface(scaled_pattern);
+    SDL_FreeSurface(pattern_preview);
+
     free(master_xs);
     free(master_ys);
     free(master_frame);
@@ -158,6 +179,8 @@ SURFACES
     ui_waveform_del();
 
     SDL_Quit();
+
+    SDL_FreeSurface(screen);
 }
 
 static int x_to_px(float x)
@@ -185,14 +208,17 @@ static void ui_draw_button(SDL_Surface * surface, struct background * bg, struct
 }
 
 static void update_master_preview() {
-    SDL_LockSurface(master_preview);
+    SDL_LockSurface(scaled_master);
+
+    int master_w = layout.master.w / layout.master.scale;
+    int master_h = layout.master.h / layout.master.scale;
 
     render_composite_frame(STATE_SOURCE_UI, master_xs, master_ys, master_pixels, master_frame);
     int i = 0;
-    for(int y=0;y<layout.master.h;y++) {
-        for(int x=0;x<layout.master.w;x++) {
-            ((uint32_t*)(master_preview->pixels))[i] = SDL_MapRGB(
-                master_preview->format,
+    for (int y = 0; y < master_h; y++) {
+        for (int x = 0; x < master_w; x++) {
+            ((uint32_t*)(scaled_master->pixels))[i] = SDL_MapRGB(
+                scaled_master->format,
                 (uint8_t)roundf(255 * master_frame[i].r),
                 (uint8_t)roundf(255 * master_frame[i].g),
                 (uint8_t)roundf(255 * master_frame[i].b));
@@ -200,7 +226,10 @@ static void update_master_preview() {
         }
     }
 
-    SDL_UnlockSurface(master_preview);
+    SDL_UnlockSurface(scaled_master);
+
+    SDL_FreeSurface(master_preview);
+    master_preview = zoomSurface(scaled_master, layout.master.scale, layout.master.scale, 1);
 
     for(i=0; i<n_output_strips; i++)
     {
@@ -227,19 +256,22 @@ static void update_master_preview() {
 }
 
 static void update_pattern_preview(slot_t* slot) {
-    SDL_LockSurface(pattern_preview);
+    SDL_LockSurface(scaled_pattern);
 
-    for(int x = 0; x < layout.slot.preview_w; x++)
+    int pattern_w = layout.slot.preview_w / layout.slot.preview_scale;
+    int pattern_h = layout.slot.preview_h / layout.slot.preview_scale;
+
+    for(int x = 0; x < pattern_w; x++)
     {
-        for(int y = 0; y < layout.slot.preview_h; y++)
+        for(int y = 0; y < pattern_h; y++)
         {
             // Checkerboard background
             // TODO: get this from the image file
             //int i = (x / 10) + (y / 10);
             //float bg_shade = (i & 1) ? 0.05 : 0.35;
 
-            float xf = ((float)x / (layout.slot.preview_w - 1)) * 2 - 1;
-            float yf = ((float)y / (layout.slot.preview_h - 1)) * 2 - 1;
+            float xf = ((float)x / (pattern_w - 1)) * 2 - 1;
+            float yf = ((float)y / (pattern_h - 1)) * 2 - 1;
             color_t pixel = (*slot->pattern->render)(slot->ui_state, xf, yf);
             /*
             ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview_w * y] = SDL_MapRGB(
@@ -248,14 +280,17 @@ static void update_pattern_preview(slot_t* slot) {
                 (uint8_t)roundf(255 * (pixel.g * pixel.a + (1.0 - pixel.a) * bg_shade)),
                 (uint8_t)roundf(255 * (pixel.b * pixel.a + (1.0 - pixel.a) * bg_shade)));
                 */
-            ((uint32_t*)(pattern_preview->pixels))[x + layout.slot.preview_w * y] = SDL_MapRGBA(
-                pattern_preview->format,
+            ((uint32_t*)(scaled_pattern->pixels))[x + pattern_w * y] = SDL_MapRGBA(
+                scaled_pattern->format,
                 (uint8_t)roundf(255 * pixel.r), (uint8_t)roundf(255 * pixel.g),
                 (uint8_t)roundf(255 * pixel.b), (uint8_t)roundf(255 * pixel.a));
         }
     }
 
-    SDL_UnlockSurface(pattern_preview);
+    SDL_UnlockSurface(scaled_pattern);
+
+    SDL_FreeSurface(pattern_preview);
+    pattern_preview = zoomSurface(scaled_pattern, layout.slot.preview_scale, layout.slot.preview_scale, 1);
 }
 
 static void ui_update_slot(slot_t* slot) {

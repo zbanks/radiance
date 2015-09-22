@@ -291,3 +291,31 @@ struct colormap cm_bright = {
         },
     },
 };
+
+struct colormap cm_goth = {
+    .name = "Goth",
+    .n_points = 5,
+    .state = COLORMAP_STATE_UNINITIALIZED,
+    .points = {
+        { .x = 0.00,
+          .y = {0.0, 0.0, 0.0, 1.},
+          .gamma = 1.,
+        },
+        { .x = 0.25,
+          .y = {1.0, 1.0, 1.0, 1.},
+          .gamma = 1.,
+        },
+        { .x = 0.50,
+          .y = {0.0, 0.0, 0.0, 1.},
+          .gamma = 1.,
+        },
+        { .x = 0.75,
+          .y = {1.0, 0.0, 0.0, 1.},
+          .gamma = 1.,
+        },
+        { .x = 1.00,
+          .y = {0.0, 0.0, 0.0, 1.},
+          .gamma = 1.,
+        },
+    },
+};

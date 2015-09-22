@@ -97,7 +97,7 @@ void output_init()
         output_buffers[i] = malloc(sizeof(color_t) * output_strips[i].length);
         if(!output_buffers[i]) FAIL("Could not allocate output buffer");
 
-        sprintf(output_strips[i].id_str, "lux:%08x", output_strips[i].id_int);
+        sprintf(output_strips[i].id_str, "lux:%08X", output_strips[i].id_int);
     }
 
     output_on_flux = !output_flux_init();

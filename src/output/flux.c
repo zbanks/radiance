@@ -5,9 +5,6 @@
 
 #include <flux.h>
 
-#define BROKER_URL "tcp://musicazoo.mit.edu:1365"
-//#define BROKER_URL "tcp://localhost:1365"
-//
 static flux_cli_t * flux_client;
 
 int output_flux_init(){

@@ -17,6 +17,7 @@ CFGSECTION(window,
 
 CFGSECTION(master,
     CFG_RECT(, 30, 30, 200, 200)
+    CFG(scale, FLOAT, 2)
 )
 
 CFGSECTION(slot,
@@ -26,6 +27,7 @@ CFGSECTION(slot,
     CFG_LIST(divider_color, 7, COLOR, "#101010")
     CFG_RECT(preview, 25, 10, 80, 80)
     CFG_BACKGROUND(preview, "#000000", "transparent.png")
+    CFG(preview_scale, FLOAT, 1.5);
     CFG_RECT(alpha, 5, 10, 10, 80)
     CFG_TXT(name, 66, 93, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
     CFG_TXT(palette, 66, 112, 13, LAYOUT_ALIGN_TC, "FreeSans.ttf", "#FFFFFF")
