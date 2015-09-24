@@ -38,7 +38,7 @@ static param_state_t * midi_config_parse_param(char * pstr){
                 }
             }
         }
-    }else if(strcasecmp(target_str, "slot") == 0){
+    }else if(strcasecmp(target_str, "signal") == 0){
         int i = atoi(target_idx_str);
         if(i >= 0 && i < n_signals){
             int param_idx = 0;
@@ -47,6 +47,10 @@ static param_state_t * midi_config_parse_param(char * pstr){
                     return &signals[i].param_states[param_idx];
                 }
             }
+        }
+    }else if(strcasecmp(target_str, "global") == 0) {
+        if(strcasecmp(target_idx_str, "alpha") == 0) {
+            return &global_alpha_state;
         }
     }
     ERROR("Invalid param string: '%s'\n", pstr);

@@ -45,4 +45,6 @@ void slots_del();
 
 extern SDL_mutex* patterns_updating;
 
+extern struct param_state global_alpha_state;
+
 #endif

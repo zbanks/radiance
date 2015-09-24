@@ -18,6 +18,7 @@ CFGSECTION(window,
 CFGSECTION(master,
     CFG_RECT(, 30, 30, 200, 200)
     CFG(scale, FLOAT, 2)
+    CFG_RECT(alpha, 0, 0, 10, 80) 
 )
 
 CFGSECTION(slot,

@@ -657,6 +657,9 @@ static void ui_render()
     update_master_preview();
     SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect);
 
+    slider_render_alpha(&global_alpha_state);
+    SDL_BlitSurface(alpha_slider_surface, 0, screen, &layout.master.alpha_rect);
+
     ui_render_slot_deck();
 
     ui_update_audio_panel();
@@ -1035,6 +1038,12 @@ static int mouse_down(struct xy xy) {
     // See if click is in master pane
     if(xy_in_rect(&xy, &layout.master.rect, &offset)){
         return UNHANDLED;
+    }
+
+    // See if the click is on the global alpha slider
+    if(xy_in_rect(&xy, &layout.master.alpha_rect, &offset))
+    {
+        PROPAGATE(mouse_down_alpha_slider(&global_alpha_state, offset));
     }
 
     PROPAGATE(mouse_down_slot_deck(xy));
