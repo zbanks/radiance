@@ -81,19 +81,21 @@ ui/layout.o: ui/layout.c
 
 # Targets
 .PHONY: all
-all: beat-off
+all: tags beat-off
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(DEPS) beat-off
+	-rm -f $(OBJECTS) $(DEPS) beat-off tags
 
 beat-off: $(OBJECTS)
 	$(CC_FINAL) $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
 
+tags: $(C_SRC)
+	-ctags -R
 
 #%.o: %.c $(C_INC)
 #	gcc $(CFLAGS) -std=c99 -c -o $@ $<
 #%.o: %.cpp
 #	g++ $(CFLAGS) -c -o $@ $<
 
-.DEFAULT_GOAL := beat-off
+.DEFAULT_GOAL := all

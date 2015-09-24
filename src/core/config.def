@@ -18,6 +18,11 @@ CFGSECTION(state,
 
 CFGSECTION(output,
     CFG(max_energy, FLOAT, 3.00)
+    CFG(gamma, FLOAT, 1.0)
+)
+
+CFGSECTION(render,
+    CFG(alpha_gamma, FLOAT, 1.0)
 )
 
 CFGSECTION(flux,
