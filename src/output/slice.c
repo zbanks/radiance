@@ -8,11 +8,18 @@
 
 #define SP 0.1
 
+output_vertex_t s1v3 = {
+    .x = -1.0,
+    .y = SP,
+    .index = 400,
+    .next = 0,
+};
+
 output_vertex_t s1v2 = {
     .x = -1.0,
     .y = SP,
-    .index = 340,
-    .next = 0,
+    .index = 150,
+    .next = &s1v3,
 };
 
 output_vertex_t s1v1 = {
@@ -78,7 +85,7 @@ output_strip_t output_strips[N_OUTPUT_STRIPS] = {
     {
         .id_int = 0xFFFFFFFF,
         .length = 400,
-        .first = &s3v1,
+        .first = &s1v1,
         .color = {150,255,0, 255},
     },
 };
@@ -100,7 +107,7 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
         while(i > vert->next->index)
         {
             vert = vert->next;
-            if(!vert->next) return; // Error condition
+            if(!vert->next) goto cleanup; // Error condition
         }
         if(i >= strip->length) break;
 
@@ -116,6 +123,8 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
         strip->frame[i].g = pow(strip->frame[i].g, config.output.gamma);
         strip->frame[i].b = pow(strip->frame[i].b, config.output.gamma);
     }
+
+cleanup:
 
     free(strip->xs);
     free(strip->ys);

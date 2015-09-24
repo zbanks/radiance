@@ -28,6 +28,7 @@ enum param_names
     ZOOM,
     DENSITY,
     HARDNESS,
+    COLOR,
 
     N_PARAMS
 };
@@ -49,12 +50,16 @@ static const parameter_t params[N_PARAMS] = {
         .name = "Hardness",
         .default_val = 0.5,
     },
+    [COLOR] = {
+        .name = "Color",
+        .default_val = 0.5,
+    },
 };
 
 
 static void init(state_t* state)
 {
-    state->c = (color_t){1, 0, 0, 0};
+    state->c = (color_t){0, 0, 0, 0};
     state->last_mbeat = 0;
     state->t = (float)(rand() / (RAND_MAX / 1000));
     state->zoom = 0;
@@ -77,7 +82,8 @@ static void update(slot_t* slot, mbeat_t t)
     state->t = fmod(state->t + (float)(t - state->last_mbeat) / 1000 * v, PERLIN_PERIOD);
     state->last_mbeat = t;
 
-    //state->colormap = slot->colormap ? slot->colormap : cm_global;
+    struct colormap * cm = slot->colormap ? slot->colormap : cm_global;
+    state->c = colormap_color(cm, param_state_get(&slot->param_states[COLOR]));
 }
 
 static color_t render(const state_t* restrict state, float x, float y)
