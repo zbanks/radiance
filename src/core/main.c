@@ -4,7 +4,7 @@
 #include <signal.h>
 
 #include <SDL/SDL_thread.h>
-#include <SDL/SDL_framerate.h>
+//#include <SDL/SDL_framerate.h>
 
 #include "core/err.h"
 #include "core/config.h"

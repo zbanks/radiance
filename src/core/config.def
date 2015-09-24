@@ -8,7 +8,7 @@ CFGSECTION(path,
     CFG(layout, STRING, "conf/layout.ini")
     CFG(midi, STRING, "conf/midi.ini")
     CFG(images, STRING, "assets/images/")
-    CFG(fonts, STRING, "/usr/share/fonts/truetype/freefont/")
+    CFG(fonts, STRING, "assets/fonts/")
 )
 
 CFGSECTION(state,
