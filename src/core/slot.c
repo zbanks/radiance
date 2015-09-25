@@ -1,4 +1,5 @@
 #include <SDL/SDL.h>
+#include <math.h>
 
 #include "core/err.h"
 #include "core/slot.h"
@@ -26,6 +27,7 @@ void render_composite_frame(state_source_t src, float * x, float * y, size_t n, 
         const pat_state_pt pat_state_p = (src == STATE_SOURCE_UI) ? slots[i].ui_state : slots[i].state;
         const pat_render_fn_pt pat_render = *slots[i].pattern->render;
         float slot_alpha = param_state_get(&slots[i].alpha);
+        slot_alpha = pow(slot_alpha, config.render.alpha_gamma);
 
         if(slot_alpha > 1e-4){
             for(size_t j = 0; j < n; j++){

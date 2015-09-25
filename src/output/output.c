@@ -66,6 +66,13 @@ void output_run(void* args)
                 frame[j++] = output_buffers[i][k].b * scalar;
             }
 
+            /*
+            frame[200] = 0;
+            frame[400] = 0;
+            frame[600] = 0;
+            frame[800] = 0;
+            frame[1000] = 0;
+            */
             if(output_on_flux && (output_strips[i].bus & OUTPUT_FLUX))
                 output_flux_push(&output_strips[i], frame, j);
         }

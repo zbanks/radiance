@@ -1,5 +1,7 @@
 #include <SDL/SDL_thread.h>
+#include <math.h>
 
+#include "core/config.h"
 #include "core/err.h"
 #include "core/slot.h"
 #include "output/slice.h"
@@ -13,6 +15,13 @@ output_vertex_t s1v2 = {
     .y = C_Y,
     .index = 140,
     .next = 0,
+};
+
+output_vertex_t s1v2 = {
+    .x = -1.0,
+    .y = SP,
+    .index = 150,
+    .next = &s1v3,
 };
 
 output_vertex_t s1v1 = {
@@ -133,7 +142,7 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
         while(i > vert->next->index)
         {
             vert = vert->next;
-            if(!vert->next) return; // Error condition
+            if(!vert->next) goto cleanup; // Error condition
         }
         if(i >= strip->length) break;
 
@@ -143,6 +152,14 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
         //buffer[i] = render_composite(x, y);
     }
     render_composite_frame(STATE_SOURCE_OUTPUT, strip->xs, strip->ys, strip->length, strip->frame);
+
+    for (int i = 0; i < strip->length; i++) {
+        strip->frame[i].r = pow(strip->frame[i].r, config.output.gamma);
+        strip->frame[i].g = pow(strip->frame[i].g, config.output.gamma);
+        strip->frame[i].b = pow(strip->frame[i].b, config.output.gamma);
+    }
+
+cleanup:
 
     free(strip->xs);
     free(strip->ys);
