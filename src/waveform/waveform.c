@@ -91,20 +91,20 @@ void waveform_update(const chunk_pt chunk){
 #define LB1 0.03
 #define LB2 0.0
 //#define LA2 0.9914878835315175  // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 60Hz
-//#define LA2 0.9719069870254697  // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 200Hz
-#define LA2 0.98
+#define LA2 0.9719069870254697  // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 200Hz
+//#define LA2 0.98
 #define L2A2 0.98 // DC-blocking 1-pole lpf
 #define LN  ((1. - LA2) / (LB1 + LB2)) 
 #define HB1 1.0
 #define HB2 -1.0
 //#define HA2 0.6521846367685737 // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 3000Hz
 #define HA2 0.65 // exp(-pi * f_1 / F_n); F_n = 22050Hz; f_1 = 3000Hz
-#define HN  ((1. + LA2) / 2.) * 4
+#define HN  ((1. + HA2) / 2.) * 4
 #define H2A2 0.7 // DC-blocking 1-pole lpf
 
-#define LC1 0.9
-#define MC1 0.8
-#define HC1 0.7
+#define LC1 0.95
+#define MC1 0.95
+#define HC1 0.95
 
 
     for(int i = 0; i < config.audio.chunk_size; i++){
@@ -116,19 +116,22 @@ void waveform_update(const chunk_pt chunk){
         //vlow = MAX(vlow, fabs( (chunk[i] - slow * LA2) * LB1 + slow * LB2) * LN);
         //slow = chunk[i] - slow * LA2;
 
+#define Xfabs(x) (x)
         slow = LA2 * slow + (1. - LA2) * chunk[i];
         //vlow = MAX(vlow, fabs(slow));
-        vlow = L2A2 * vlow + (1.0 - L2A2) * fabs(slow);
+        vlow = L2A2 * vlow + (1.0 - L2A2) * Xfabs(slow);
 
         //shigh = - shigh * alpha + chunk[i] * (1 - alpha);
         //vhigh = MAX(vhigh, fabs(shigh));
         
         //vhigh = MAX(vhigh, fabs( (chunk[i] - shigh * HA2) * HB1 + shigh * HB2) * HN);
-        vhigh = H2A2 * vhigh + (1.0 - H2A2) * fabs(((chunk[i] - shigh * HA2) * HB1 + shigh * HB2) * HN);
+        vhigh = H2A2 * vhigh + (1.0 - H2A2) * Xfabs(((chunk[i] - shigh * HA2) * HB1 + shigh * HB2) * HN);
         shigh = chunk[i] - shigh * HA2;
     }
     vhigh *= 1.5;
     vlow *= 2.0;
+    vhigh = fabs(vhigh);
+    vlow = fabs(vlow);
     vhigh = MIN(vhigh, vall);
     vlow = MIN(vlow, vall);
     vmid = MAX(0., vall - vlow - vhigh);
@@ -138,13 +141,19 @@ void waveform_update(const chunk_pt chunk){
     waveform_bin_update(&waveform_bins[WF_HIGH], (vhigh));
     waveform_bin_update(&beat_bin, MB2B(timebase_get() % 1000));
 
+#define DLPF(value, state, alpha) value = alpha * value + (1. - alpha) * state;
+    DLPF(qlow, vlow, LC1)
+    DLPF(qmid, vmid, MC1)
+    DLPF(qhigh, vhigh, HC1)
+    /*
     qlow = LC1 * qlow + (1. - LC1) * vlow;
     qmid = MC1 * qmid + (1. - MC1) * vmid;
     qhigh = HC1 * qhigh + (1. - HC1) * vhigh;
+    */
 
-    param_output_set(&waveform_bins[WF_LOW].output, MIN(qlow * 2., 1.));
-    param_output_set(&waveform_bins[WF_MID].output, MIN(qmid * 2., 1.));
-    param_output_set(&waveform_bins[WF_HIGH].output, MIN(qhigh * 2., 1.));
+    param_output_set(&waveform_bins[WF_LOW].output, MIN(qlow * 1.5, 1.));
+    param_output_set(&waveform_bins[WF_MID].output, MIN(qmid * 1.5, 1.));
+    param_output_set(&waveform_bins[WF_HIGH].output, MIN(qhigh * 1.5, 1.));
 
     memmove(beat_lines + 1, beat_lines, (WAVEFORM_HISTORY_SIZE - 1) * sizeof(char));
     beat_lines[0] = 0;

@@ -86,8 +86,11 @@ static SDL_Thread* ui_thread;
 SDL_Surface * ui_create_surface_or_die(int width, int height){
     SDL_Surface * s = SDL_CreateRGBSurface(SDL_SRCALPHA, width, height, 32, 0, 0, 0, 0); \
     if(!s) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+    SDL_Surface * t = s;
+#ifdef UI_ALPHA_BLENDING
     SDL_SetAlpha(s, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
-    SDL_Surface * t = SDL_DisplayFormatAlpha(s);
+    t = SDL_DisplayFormatAlpha(s);
+#endif
     return t;
 }
 
@@ -99,8 +102,10 @@ static void ui_init()
     }
 
     screen = SDL_SetVideoMode(layout.window.w, layout.window.h, 0, SDL_DOUBLEBUF);
+#ifdef UI_ALPHA_BLENDING
     SDL_SetAlpha(screen, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
     // | SDL_ANYFORMAT | SDL_FULLSCREEN | SDL_HWSURFACE);
+#endif
     
 
     if (!screen) FAIL("SDL_SetVideoMode Error: %s\n", SDL_GetError());

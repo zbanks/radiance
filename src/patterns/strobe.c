@@ -113,7 +113,7 @@ static void command(slot_t* slot, struct pat_command cmd)
             state->hit_state = 0;
             break;
         case STATUS_STOP:
-            state->hit_dir = -state->hit_dir;
+            state->hit_dir = -fabs(state->hit_dir);
             break;
         case STATUS_CHANGE:
             break;
