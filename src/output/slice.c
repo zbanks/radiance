@@ -17,13 +17,6 @@ output_vertex_t s1v2 = {
     .next = 0,
 };
 
-output_vertex_t s1v2 = {
-    .x = -1.0,
-    .y = SP,
-    .index = 150,
-    .next = &s1v3,
-};
-
 output_vertex_t s1v1 = {
     .x = 1,
     .y = -1,
