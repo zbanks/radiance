@@ -6,86 +6,114 @@
 #include "core/slot.h"
 #include "output/slice.h"
 
-#define SP 0.1
+#define C_X1 0.5
+#define C_X2 -0.5
+#define C_Y 0
 
-output_vertex_t s1v3 = {
-    .x = -1.0,
-    .y = SP,
-    .index = 400,
+output_vertex_t s1v2 = {
+    .x = C_X1,
+    .y = C_Y,
+    .index = 140,
     .next = 0,
 };
 
-output_vertex_t s1v2 = {
-    .x = -1.0,
-    .y = SP,
-    .index = 150,
-    .next = &s1v3,
-};
-
 output_vertex_t s1v1 = {
-    //.x = 0.9,
-    .x = 1.0,
-    .y = SP,
+    .x = 1,
+    .y = -1,
     .index = 0,
     .next = &s1v2,
 };
 
 output_vertex_t s2v2 = {
-    .x = -1.0,
-    .y = -SP,
-    .index = 340,
+    .x = C_X2,
+    .y = C_Y,
+    .index = 140,
     .next = 0,
 };
 
 output_vertex_t s2v1 = {
-    //.x = 0.9,
-    .x = 1.0,
-    .y = -SP,
+    .x = -1,
+    .y = -1,
     .index = 0,
     .next = &s2v2,
 };
 
 output_vertex_t s3v2 = {
-    .x = 0.9,
-    .y = 1.0,
-    .index = 340,
+    .x = C_X1,
+    .y = C_Y,
+    .index = 140,
     .next = 0,
 };
 
 output_vertex_t s3v1 = {
-    .x = 0.9,
-    .y = -0.45,
+    .x = C_X2,
+    .y = C_Y,
     .index = 0,
     .next = &s3v2,
 };
 
-#define N_OUTPUT_STRIPS 4
+output_vertex_t s4v2 = {
+    .x = 1,
+    .y = 1,
+    .index = 140,
+    .next = 0,
+};
+
+output_vertex_t s4v1 = {
+    .x = C_X1,
+    .y = C_Y,
+    .index = 0,
+    .next = &s4v2,
+};
+
+output_vertex_t s5v2 = {
+    .x = -1,
+    .y = 1,
+    .index = 140,
+    .next = 0,
+};
+
+output_vertex_t s5v1 = {
+    .x = C_X2,
+    .y = C_Y,
+    .index = 0,
+    .next = &s5v2,
+};
+
+
+#define N_OUTPUT_STRIPS 5
 
 int n_output_strips = N_OUTPUT_STRIPS;
 
 output_strip_t output_strips[N_OUTPUT_STRIPS] = {
     {
         .id_int = 0x00000001,
-        .length = 60,
+        .length = 140,
         .first = &s1v1,
         .color = {255,255,0, 255},
     },
     {
         .id_int = 0x00000002,
-        .length = 60,
+        .length = 140,
         .first = &s2v1,
         .color = {255,150,0, 255},
     },
     {
-        .id_int = 0x00000004,
-        .length = 60,
+        .id_int = 0x00000003,
+        .length = 140,
         .first = &s3v1,
         .color = {150,255,0, 255},
     },
     {
-        .id_int = 0xFFFFFFFF,
-        .length = 400,
-        .first = &s1v1,
+        .id_int = 0x00000004,
+        .length = 140,
+        .first = &s4v1,
+        .color = {150,255,0, 255},
+    },
+    {
+        .id_int = 0x00000005,
+        .length = 140,
+        .first = &s5v1,
         .color = {150,255,0, 255},
     },
 };
