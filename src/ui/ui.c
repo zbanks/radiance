@@ -86,8 +86,11 @@ static SDL_Thread* ui_thread;
 SDL_Surface * ui_create_surface_or_die(int width, int height){
     SDL_Surface * s = SDL_CreateRGBSurface(SDL_SRCALPHA, width, height, 32, 0, 0, 0, 0); \
     if(!s) FAIL("SDL_CreateRGBSurface Error: %s\n", SDL_GetError());
+    SDL_Surface * t = s;
+#ifdef UI_ALPHA_BLENDING
     SDL_SetAlpha(s, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
-    SDL_Surface * t = SDL_DisplayFormatAlpha(s);
+    t = SDL_DisplayFormatAlpha(s);
+#endif
     return t;
 }
 
@@ -99,8 +102,10 @@ static void ui_init()
     }
 
     screen = SDL_SetVideoMode(layout.window.w, layout.window.h, 0, SDL_DOUBLEBUF);
+#ifdef UI_ALPHA_BLENDING
     SDL_SetAlpha(screen, SDL_SRCALPHA, SDL_ALPHA_OPAQUE);
     // | SDL_ANYFORMAT | SDL_FULLSCREEN | SDL_HWSURFACE);
+#endif
     
 
     if (!screen) FAIL("SDL_SetVideoMode Error: %s\n", SDL_GetError());
@@ -657,6 +662,9 @@ static void ui_render()
     update_master_preview();
     SDL_BlitSurface(master_preview, 0, screen, &layout.master.rect);
 
+    slider_render_alpha(&global_alpha_state);
+    SDL_BlitSurface(alpha_slider_surface, 0, screen, &layout.master.alpha_rect);
+
     ui_render_slot_deck();
 
     ui_update_audio_panel();
@@ -1035,6 +1043,12 @@ static int mouse_down(struct xy xy) {
     // See if click is in master pane
     if(xy_in_rect(&xy, &layout.master.rect, &offset)){
         return UNHANDLED;
+    }
+
+    // See if the click is on the global alpha slider
+    if(xy_in_rect(&xy, &layout.master.alpha_rect, &offset))
+    {
+        PROPAGATE(mouse_down_alpha_slider(&global_alpha_state, offset));
     }
 
     PROPAGATE(mouse_down_slot_deck(xy));

@@ -13,7 +13,8 @@
 
 static const char name[] = "Speckle";
 
-#define BUCKET_SIZE 1031 // This should be prime
+//#define BUCKET_SIZE 1031 // This should be prime
+#define BUCKET_SIZE 2053 // This should be prime
 
 typedef struct {
     color_t color;

@@ -13,6 +13,8 @@ slot_t slots[N_SLOTS]; // Initialize everything to zero
 
 SDL_mutex* patterns_updating;
 
+struct param_state global_alpha_state;
+
 void render_composite_frame(state_source_t src, float * x, float * y, size_t n, color_t * out){
     memset(out, 0, n * sizeof(color_t)); // Initialize to black
     int has_solo = 0;
@@ -38,6 +40,13 @@ void render_composite_frame(state_source_t src, float * x, float * y, size_t n, 
                 out[j].b = out[j].b * (1. - c.a) + c.b * c.a;
             }
         }
+    }
+
+    float a = param_state_get(&global_alpha_state);
+    for (size_t j = 0; j < n; j++) {
+            out[j].r *= a;
+            out[j].g *= a;
+            out[j].b *= a;
     }
 }
 
@@ -127,6 +136,7 @@ void slots_init(){
             param_state_init(&slots[i].param_states[j], 0.);
         }
     }
+    param_state_init(&global_alpha_state, 1.);
 }
 
 void slots_del(){
@@ -137,4 +147,5 @@ void slots_del(){
             param_state_disconnect(&slots[i].param_states[j]);
         }
     }
+    param_state_disconnect(&global_alpha_state);
 }

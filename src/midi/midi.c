@@ -160,7 +160,7 @@ static int midi_run(void* args)
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                //printf("Device %d event %d %d %d %li - %d\n", i, event, data1, data2, (long int) events[j].timestamp, n_recent_events);
+                printf("Device %d event %d %d %d %li\n", i, event, data1, data2, (long int) events[j].timestamp);
 
                 for(int k = 0; k < controller->n_connections; k++)
                 {
