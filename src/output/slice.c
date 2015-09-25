@@ -20,21 +20,21 @@ output_vertex_t s1v2 = {
 output_vertex_t s1v1 = {
     .x = 1,
     .y = -1,
-    .index = 140,
+    .index = 0,
     .next = &s1v2,
 };
 
 output_vertex_t s2v2 = {
     .x = C_X2,
     .y = C_Y,
-    .index = 0,
+    .index = 140,
     .next = 0,
 };
 
 output_vertex_t s2v1 = {
     .x = -1,
     .y = -1,
-    .index = 140,
+    .index = 0,
     .next = &s2v2,
 };
 
@@ -87,31 +87,31 @@ int n_output_strips = N_OUTPUT_STRIPS;
 
 output_strip_t output_strips[N_OUTPUT_STRIPS] = {
     {
-        .id_int = 0x00000000,
+        .id_int = 0x00000001,
         .length = 140,
         .first = &s1v1,
         .color = {255,255,0, 255},
     },
     {
-        .id_int = 0x00000001,
+        .id_int = 0x00000002,
         .length = 140,
         .first = &s2v1,
         .color = {255,150,0, 255},
     },
     {
-        .id_int = 0x00000002,
+        .id_int = 0x00000003,
         .length = 140,
         .first = &s3v1,
         .color = {150,255,0, 255},
     },
     {
-        .id_int = 0x00000003,
+        .id_int = 0x00000004,
         .length = 140,
         .first = &s4v1,
         .color = {150,255,0, 255},
     },
     {
-        .id_int = 0x00000004,
+        .id_int = 0x00000005,
         .length = 140,
         .first = &s5v1,
         .color = {150,255,0, 255},
