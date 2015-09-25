@@ -552,8 +552,8 @@ static void ui_update_output(output_strip_t * output_strip){
     if(output_strip->bus > 0)
         color = &output_strip->color;
 
-    char buf[16];
-    snprintf(buf, 16, "%d %s", output_strip->length, output_strip->id_str);
+    char buf[20];
+    snprintf(buf, 20, "%d %s", output_strip->length, output_strip->id_str);
     text_render(output_pane, &layout.output.name_txt, color, buf);
 }
 
