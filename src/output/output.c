@@ -15,12 +15,14 @@
 #include "output/output.h"
 #include "output/slice.h"
 #include "output/flux.h"
+#include "output/lux.h"
 
 color_t** output_buffers = 0;
 
 static int output_running;
 
 static int output_on_flux = 0;
+static int output_on_lux = 0;
 
 void output_run(void* args)
 {
@@ -75,6 +77,8 @@ void output_run(void* args)
             */
             if(output_on_flux && (output_strips[i].bus & OUTPUT_FLUX))
                 output_flux_push(&output_strips[i], frame, j);
+            if(output_on_lux && (output_strips[i].bus & OUTPUT_LUX))
+                output_lux_push(&output_strips[i], frame, j);
         }
         SDL_framerateDelay(&fps_manager);
         //stat_ops = SDL_getFramerate(&fps_manager);
@@ -91,6 +95,8 @@ void output_run(void* args)
 
     if(output_on_flux)
         output_flux_del();
+    if(output_on_lux)
+        output_lux_del();
 }
 
 void output_init()
@@ -107,20 +113,28 @@ void output_init()
         sprintf(output_strips[i].id_str, "lux:%08X", output_strips[i].id_int);
     }
 
-    output_on_flux = !output_flux_init();
+    if (config.flux.enabled)
+        output_on_flux = !output_flux_init();
 
-    if(!output_on_flux){
-        printf("No flux initialized\n");
+    if (config.lux.enabled)
+        output_on_lux = !output_lux_init();
+
+    if(!output_on_flux && !output_on_lux){
+        printf("No output initialized\n");
         for(int i = 0; i < n_output_strips; i++){
             output_strips[i].bus = -1;
         }
+        return;
     }
 
     int n_flux = 0;
+    int n_lux = 0;
 
     if(output_on_flux) n_flux = output_flux_enumerate(output_strips, n_output_strips);
+    if(output_on_lux) n_lux = output_lux_enumerate(output_strips, n_output_strips);
 
     printf("Found %d flux devices\n", n_flux);
+    printf("Found %d lux devices\n", n_lux);
 }
 
 void output_stop()

@@ -33,6 +33,14 @@ CFGSECTION(flux,
     CFG(broker, STRING, "tcp://musicazoo.mit.edu:1365")
 )
 
+CFGSECTION(lux,
+    CFG(enabled, INT, 1)
+    //CFG(verbose, INT, 0)
+    CFG(timeout, INT, 1000)
+    CFG(address, STRING, "127.0.0.1")
+    CFG(port, INT, 1375)
+)
+
 CFGSECTION(timebase,
     CFG(antidelay_ms, INT, 5)
     CFG(ui_bpm_alpha, FLOAT, 0.9)
