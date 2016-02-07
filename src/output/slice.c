@@ -123,10 +123,16 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
     if(SDL_LockMutex(patterns_updating)) FAIL("Unable to lock update mutex: %s\n", SDL_GetError());
 
     output_vertex_t* vert = strip->first;
-    strip->xs = malloc(sizeof(float) * strip->length);
-    if(!strip->xs) FAIL("Unable to alloc xs for strip.\n");
-    strip->ys = malloc(sizeof(float) * strip->length);
-    if(!strip->ys) FAIL("Unable to alloc ys for strip.\n");
+    if (strip->point_array_length != strip->length || strip->xs == NULL || strip->ys == NULL) {
+        if (strip->xs == NULL) free(strips->xs);
+        if (strip->ys == NULL) free(strips->ys);
+
+        strip->xs = malloc(sizeof(float) * strip->length);
+        if(!strip->xs) FAIL("Unable to alloc xs for strip.\n");
+        strip->ys = malloc(sizeof(float) * strip->length);
+        if(!strip->ys) FAIL("Unable to alloc ys for strip.\n");
+        strip->point_array_length = strip->length;
+    }
 
     strip->frame = buffer;
 
@@ -137,7 +143,6 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
             vert = vert->next;
             if(!vert->next) goto cleanup; // Error condition
         }
-        if(i >= strip->length) break;
 
         float alpha = (float)(i - vert->index) / (vert->next->index - vert->index);
         strip->xs[i] = alpha * vert->next->x + (1 - alpha) * vert->x;

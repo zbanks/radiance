@@ -21,6 +21,7 @@ C_SRC += $(wildcard src/timebase/*.c)
 C_SRC += $(wildcard src/util/*.c)
 C_SRC += $(wildcard src/waveform/*.c)
 C_SRC += $(wildcard BTrack/src/*.c)
+C_SRC += $(wildcard liblux/linux/*.c)
 
 
 ifeq (@VAMP_ENABLED@,yes)
@@ -51,7 +52,7 @@ OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 OBJECTS += $(patsubst %.cpp,%.o,$(CPP_SRC))
 DEPS = $(OBJECTS:.o=.d)
 
-INC  = -I./src/ -I./BTrack/src/
+INC  = -I./src/ -I./BTrack/src/ -I./liblux/
 LIB  = -L/usr/local/lib -L/usr/lib @LIBS@
 
 # Assembler, compiler, and linker flags
