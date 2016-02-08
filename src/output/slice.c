@@ -124,8 +124,8 @@ void output_to_buffer(output_strip_t* strip, color_t* buffer)
 
     output_vertex_t* vert = strip->first;
     if (strip->point_array_length != strip->length || strip->xs == NULL || strip->ys == NULL) {
-        if (strip->xs == NULL) free(strips->xs);
-        if (strip->ys == NULL) free(strips->ys);
+        if (strip->xs == NULL) free(strip->xs);
+        if (strip->ys == NULL) free(strip->ys);
 
         strip->xs = malloc(sizeof(float) * strip->length);
         if(!strip->xs) FAIL("Unable to alloc xs for strip.\n");
