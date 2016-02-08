@@ -82,14 +82,14 @@ ui/layout.o: ui/layout.c
 
 # Targets
 .PHONY: all
-all: tags beat-off
+all: tags radiance
 
 .PHONY: clean
 clean:
-	-rm -f $(OBJECTS) $(DEPS) beat-off tags
+	-rm -f $(OBJECTS) $(DEPS) radiance tags
 
-beat-off: $(OBJECTS)
-	$(CC_FINAL) $(LFLAGS) -g -o beat-off $(OBJECTS) $(LIB)
+radiance: $(OBJECTS)
+	$(CC_FINAL) $(LFLAGS) -g -o radiance $(OBJECTS) $(LIB)
 
 tags: $(C_SRC)
 	-ctags -R

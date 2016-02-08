@@ -1,4 +1,4 @@
-AC_INIT([beat-off], [1.0.0], [zbanks@mit.edu], [https://github.com/ervanalb/beat-off])
+AC_INIT([radiance], [1.0.0], [zbanks@mit.edu], [https://github.com/ervanalb/radiance])
 AC_CONFIG_HEADERS([src/confdefs.h])
 
 AC_ARG_WITH([sdl], [
