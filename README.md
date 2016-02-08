@@ -1,14 +1,14 @@
-beat-off
+Radiance
 ========
 
-LJ software for controlling light displays. Supports beat detection, MIDI controllers, and output over [flux](http://github.com/zbanks/flux).
+LJ software for controlling light displays. Supports beat detection, MIDI controllers, and output over [lux](http://github.com/ervanalb/lux).
 
-Please [submit](http://github.com/zbanks/beat-off/issues) any feature requests or issues you have. Especially let us know if you have trouble getting it to compile.
+Please [submit](http://github.com/zbanks/radiance/issues) any feature requests or issues you have. Especially let us know if you have trouble getting it to compile.
 
 Screenshots
 -----------
 
-![screenshot](https://raw.githubusercontent.com/ervanalb/beat-off/master/beat-off-screenshot.png)
+![screenshot](https://raw.githubusercontent.com/zbanks/radiance/master/radiance-screenshot.png)
 
 How it works
 ------------
@@ -36,7 +36,7 @@ Alpha can be used to crossfade between patterns, similar to volume in an audio s
 
 For example, most patterns have a parameter to change the color or frequency. Alpha is also a parameter.
 
-A key mechanism of beat-off is that parameters can be *attached* MIDI devices or other sources. This allows you to control parameters using MIDI devices. 
+A key mechanism of Radiance is that parameters can be *attached* MIDI devices or other sources. This allows you to control parameters using MIDI devices. 
 
 ##### Connecting Parameters
 
@@ -78,7 +78,7 @@ This can be useful to filter the output of the *Onset Detection Function* to est
 *Filters* also can be used to control parameters. They are the output of VAMP plugins
 
 #### Onset Detection Function
-The *ODF* is a key part of the beat detection algorithm and describes how likely there is a beat onset at any given time.
+The *ODF* is a key part of the Radiance detection algorithm and describes how likely there is a beat onset at any given time.
 
 The output from the VAMP plugin is run through a single pole diode LPF (like one in the LPF signal). As a result, beats show up as a sharp increase, with an exponential tail.
 
@@ -106,23 +106,29 @@ Most of the configuration is done by editing the source. Some non-UI configurati
 ### UI
 The UI is largely parametrically laid out, and is currently the largest component that can be modified without recompiling. The configuration file `layout.ini` can theoretically be used to "skin" the interface. 
 
-However, currently beat-off just uses the default values defined in `ui/layout.def` and dumps these values to `layout.ini` when run.
+However, currently Radiance just uses the default values defined in `ui/layout.def` and dumps these values to `layout.ini` when run.
 
 #### Headless mode
 
-The UI can be disabled by setting ``[ui] enabled=0`` in the configuration file (`config.ini`). Beat-off will then load the first state available and run as a daemon.
+The UI can be disabled by setting ``[ui] enabled=0`` in the configuration file (`config.ini`). Radiance will then load the first state available and run as a daemon.
 
 ### Output Devices (LED Strips)
-Currently, beat-off only supports outputting to LED strips over flux. 
+Currently, Radiance only supports outputting to LED strips over flux. 
 
 LED strips are laid out as a sequence of verticies placed on a [-1, 1]^2 square. The strip id's and these verticies can be configured in `output/slice.h`.
 
 #### Flux
 
-[Flux](https://github.com/zbanks/flux) output can be configured in `config.ini`. Beat-off is a flux client, and currently only attempts to control RGB strips.
+*Note: this feature is deprecated. Use lux instead*
+
+[Flux](https://github.com/zbanks/flux) output can be configured in `config.ini`. Radiance is a flux client, and currently only attempts to control RGB strips.
+
+#### Lux
+
+[lux](https://github.com/ervanalb/lux) output can be configured in `config.ini`. It can be configured to output over UDP or serial. 
 
 ### MIDI Devices
-beat-off was designed with the Korg NanoKontrol 2 and NanoPad 2 in mind, but would work well with other (slider- and knob-heavy) controllers.
+Radiance was designed with the Korg NanoKontrol 2 and NanoPad 2 in mind, but would work well with other (slider- and knob-heavy) controllers.
 
 The mapping of MIDI controls to the UI are done in the ``midi.ini`` file specified by ``config.ini``. MIDI Control Change events can be connected to sliders, and Note On/Off/Aftertouch events can be connected to generate events on patterns (see: swipe pattern).
 
@@ -143,7 +149,7 @@ State is stored in `.ini` files. Currently, only pattern & signal states are sav
 Building
 --------
 
-beat-off is built on SDL (1.2, not 2.0), Portaudio, PortMIDI, VAMP, and [flux](http://github.com/zbanks/flux).
+Radiance is built on SDL (1.2, not 2.0), Portaudio, PortMIDI, VAMP, and [flux](http://github.com/zbanks/flux).
 
 Theoretically, you should need the following packages installed on your system (for Ubuntu 15.04):
 ```
@@ -164,9 +170,9 @@ libnanomsg-dev
 In some versions of Ubuntu, `libportaudio` is out of date and you might need to build a newer version from source if you're having issues compiling.
 
 #### Portmidi
-At least in Ubuntu, `libportmidi` is terrible. To make things worse, in Ubuntu/Debian it was [compiled with a debug option](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=765375) which prevents beat-off from catching errors. 
+At least in Ubuntu, `libportmidi` is terrible. To make things worse, in Ubuntu/Debian it was [compiled with a debug option](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=765375) which prevents Radiance from catching errors. 
 
-As a result, if your version of portmidi was compiled with this option, beat-off will crash if it encounters any MIDI errors, even if they would be recoverable. It's advised to recompile portmidi from source to prevent this.
+As a result, if your version of portmidi was compiled with this option, Radiance will crash if it encounters any MIDI errors, even if they would be recoverable. It's advised to recompile portmidi from source to prevent this.
 
 #### VAMP Plugins
 Finally, although not required to build, you'll want the following VAMP plugins. You can install them to `~/vamp`.
