@@ -75,8 +75,10 @@ void output_run(void* args)
             frame[800] = 0;
             frame[1000] = 0;
             */
+#if FLUX_ENABLED
             if(output_on_flux && (output_strips[i].bus & OUTPUT_FLUX))
                 output_flux_push(&output_strips[i], frame, j);
+#endif
             if(output_on_lux && (output_strips[i].bus & OUTPUT_LUX))
                 output_lux_push(&output_strips[i], frame, j);
         }
@@ -93,8 +95,10 @@ void output_run(void* args)
 
     free(output_buffers);
 
+#if FLUX_ENABLED
     if(output_on_flux)
         output_flux_del();
+#endif
     if(output_on_lux)
         output_lux_del();
 }
@@ -113,8 +117,10 @@ void output_init()
         sprintf(output_strips[i].id_str, "lux:%08X", output_strips[i].id_int);
     }
 
+#if FLUX_ENABLED
     if (config.flux.enabled)
         output_on_flux = !output_flux_init();
+#endif
 
     if (config.lux.enabled)
         output_on_lux = !output_lux_init();
@@ -127,13 +133,16 @@ void output_init()
         return;
     }
 
+#if FLUX_ENABLED
     int n_flux = 0;
+    if(output_on_flux) n_flux = output_flux_enumerate(output_strips, n_output_strips);
+    printf("Found %d flux devices\n", n_flux);
+#endif
+
     int n_lux = 0;
 
-    if(output_on_flux) n_flux = output_flux_enumerate(output_strips, n_output_strips);
     if(output_on_lux) n_lux = output_lux_enumerate(output_strips, n_output_strips);
 
-    printf("Found %d flux devices\n", n_flux);
     printf("Found %d lux devices\n", n_lux);
 }
 

@@ -3,6 +3,8 @@
 #include "output/flux.h"
 #include "output/slice.h"
 
+#if FLUX_ENABLED
+
 #include <flux.h>
 
 static flux_cli_t * flux_client;
@@ -74,3 +76,5 @@ int output_flux_push(output_strip_t * strip, unsigned char * frame, int length){
 void output_flux_del(){
     flux_cli_del(flux_client);
 }
+
+#endif
