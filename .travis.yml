@@ -8,23 +8,11 @@ env:
     - CONFIGURE_FLAGS=--without-vamp
 
 install:
-    - sudo apt-get install -qq libsdl1.2-dev libsdl-gfx1.2-dev libsdl-ttf2.0-dev libsdl-image1.2-dev libportmidi-dev libfftw3-dev libsamplerate0-dev vamp-plugin-sdk
-    - git clone --quiet --depth=100 "https://github.com/nanomsg/nanomsg.git" ~/builds/nanomsg
-      && pushd ~/builds/nanomsg
-      && ./autogen.sh
-      && ./configure
-      && make 
-      && sudo make install
-      && popd;
+    - sudo apt-get install -qq libsdl2-dev libgl1-mesa-dev libportmidi-dev libfftw3-dev libsamplerate0-dev vamp-plugin-sdk
     - git clone --quiet --depth=100 "https://github.com/EddieRingle/portaudio" ~/builds/portaudio
       && pushd ~/builds/portaudio
       && ./configure
       && make
-      && sudo make install
-      && popd;
-    - git clone --quiet "https://github.com/zbanks/flux.git" ~/builds/flux
-      && pushd ~/builds/flux
-      && make all
       && sudo make install
       && popd;
 
