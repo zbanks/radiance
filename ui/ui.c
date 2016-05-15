@@ -49,7 +49,9 @@ void ui_init() {
     glMatrixMode(GL_MODELVIEW);
     set_coords();
     glEnable(GL_TEXTURE_2D);
-    glClearColor(0, 0, 0, 1);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0, 0, 0, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Make a framebuffer that isn't the screen to draw on
