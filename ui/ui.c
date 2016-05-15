@@ -14,8 +14,12 @@ static SDL_Window* window;
 static SDL_GLContext context;
 static bool quit;
 static GLhandleARB main_shader;
+static GLhandleARB pat_shader;
 static int ww;
 static int wh;
+static GLuint fb;
+static GLuint * pattern_textures;
+static GLint * pattern_texture_bindings;
 
 static void set_coords() {
     glViewport(0, 0, ww, wh);
@@ -48,7 +52,38 @@ void ui_init() {
     glClearColor(0, 0, 0, 1);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error); // careful for leaks...
+    // Make a framebuffer that isn't the screen to draw on
+    glGenFramebuffersEXT(1, &fb);
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
+    // Init pattern textures
+    pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
+    pattern_texture_bindings = calloc(config.ui.n_patterns, sizeof(GLint));
+    if(pattern_textures == NULL || pattern_texture_bindings == NULL) FAIL("Could not allocate %d textures.", config.ui.n_patterns);
+    glGenTextures(config.ui.n_patterns, pattern_textures);
+    for(int i = 0; i < config.ui.n_patterns; i++) {
+        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.pattern_width, config.ui.pattern_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        pattern_texture_bindings[i] = i;
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
+    if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
+    if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
+}
+
+void ui_close() {
+    free(pattern_textures);
+    free(pattern_texture_bindings);
+    glDeleteObjectARB(main_shader);
+    SDL_DestroyWindow(window);
+    window = NULL;
+    SDL_Quit();
 }
 
 static void handle_key(SDL_Event * e) {
@@ -64,22 +99,57 @@ static void handle_window(SDL_Event * e) {
     }
 }
 
+
+static void fill(float w, float h) {
+    glBegin(GL_QUADS);
+    glVertex2f(0, 0);
+    glVertex2f(0, h);
+    glVertex2f(w, h);
+    glVertex2f(w, 0);
+    glEnd();
+}
+
 static void render() {
-    // Clear color buffer
+    GLint location;
+    GLenum e;
+
+    // Render the eight patterns
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb);
+    glPushMatrix();
+    glLoadIdentity();
+    int pw = config.ui.pattern_width;
+    int ph = config.ui.pattern_height;
+    gluOrtho2D(0, pw, 0, ph);
+    glUseProgramObjectARB(pat_shader);
+    location = glGetUniformLocationARB(main_shader, "iResolution");
+    glUniform2fARB(location, pw, ph);
+    for(int i = 0; i < config.ui.n_patterns; i++) {
+        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        fill(pw, ph);
+    }
+    glPopMatrix();
+
+    // Render to screen
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgramObjectARB(main_shader);
 
-    GLint location = glGetUniformLocationARB(main_shader, "iResolution");
+    location = glGetUniformLocationARB(main_shader, "iResolution");
     glUniform2fARB(location, ww, wh);
+    GLint pattern = glGetUniformLocationARB(main_shader, "iPattern");
+    glUniform1ivARB(pattern, config.ui.n_patterns, pattern_texture_bindings);
 
-    glBegin(GL_QUADS);
-        glVertex2f(0, 0);
-        glVertex2f(0, wh);
-        glVertex2f(ww, wh);
-        glVertex2f(ww, 0);
-    glEnd();
+    for(int i = 0; i < config.ui.n_patterns; i++) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
+    }
+
+    fill(ww, wh);
+
     glUseProgramObjectARB(0);
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
 void ui_run() {
@@ -108,11 +178,4 @@ void ui_run() {
         }
 
         SDL_StopTextInput();
-}
-
-void ui_close() {
-    glDeleteObjectARB(main_shader);
-    SDL_DestroyWindow(window);
-    window = NULL;
-    SDL_Quit();
 }

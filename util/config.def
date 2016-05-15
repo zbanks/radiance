@@ -4,6 +4,9 @@
 CFGSECTION(ui,
     CFG(window_width, INT, 1920)
     CFG(window_height, INT, 768)
+    CFG(n_patterns, INT, 8)
+    CFG(pattern_width, INT, 150)
+    CFG(pattern_height, INT, 300)
 )
 
 #undef CFGSECTION
