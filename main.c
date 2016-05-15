@@ -26,7 +26,7 @@ void update();
 void render();
 
 // Frees media and shuts down SDL
-void close();
+void myclose();
 
 // The window we'll be rendering to
 SDL_Window* gWindow = NULL;
@@ -46,8 +46,8 @@ bool init() {
         printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
         success = false;
     } else {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 
         // Create window
         gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
@@ -144,7 +144,7 @@ void render()
     }
 }
 
-void close() {
+void myclose() {
     // Destroy window    
     SDL_DestroyWindow(gWindow);
     gWindow = NULL;
@@ -191,7 +191,7 @@ int main(int argc, char* args[])
     }
 
     // Free resources and close SDL
-    close();
+    myclose();
 
     return 0;
 }
