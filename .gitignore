@@ -1,7 +1,7 @@
 *.o
 *.so
 *.d
-beat-off
+radiance
 *.swp
 *.swm
 *.swn
@@ -10,4 +10,3 @@ beat-off
 *.vim
 *.deps
 *.dirstamp
-conf/layout.ini
