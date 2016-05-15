@@ -7,7 +7,7 @@
 
 int main(int argc, char* args[]) {
     config_init(&config);
-    config_load(&config, "config.ini");
+    config_load(&config, "resources/config.ini");
 
     ui_init();
     ui_run();

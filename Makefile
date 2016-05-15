@@ -15,7 +15,7 @@ LFLAGS = $(CFLAGS)
 
 all: $(PROJECT)
 clean:
-	-rm -f *.o $(PROJECT)
+	-rm -f *.o util/*.o ui/*.o $(PROJECT)
 $(PROJECT): $(OBJECTS)
 	$(CC) $(LFLAGS) -o $(PROJECT) $(OBJECTS) $(LIBRARIES)
 %.o: %.c
