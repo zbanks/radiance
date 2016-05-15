@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <strings.h>
 #include "util/ini.h"
-#include "core/config.h"
+#include "util/config.h"
 
-#include "core/config_gen_c.def"
+#include "util/config_gen_c.def"
 
 struct config config;

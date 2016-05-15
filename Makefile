@@ -1,12 +1,14 @@
 PROJECT = radiance
 
-C_SRC = $(wildcard *.c)
+C_SRC  = $(wildcard *.c)
+C_SRC += $(wildcard util/*.c)
+C_SRC += $(wildcard ui/*.c)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 
-INC = -I/usr/include/SDL2
+INC = -I. -I/usr/include/SDL2
 
-LIBRARIES = -lSDL2 -lGL
+LIBRARIES = -lSDL2 -lGL -lGLU
 
 CFLAGS = -std=c99 -Wall -g -O1 $(INC)
 LFLAGS = $(CFLAGS)

@@ -1,7 +1,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#include "core/config_macros.h"
+#include "util/config_macros.h"
 
 #ifdef CFGOBJ
 #undef CFGOBJ
@@ -9,9 +9,9 @@
 #endif
 
 #define CFGOBJ config
-#define CFGOBJ_PATH "core/config.def"
+#define CFGOBJ_PATH "util/config.def"
 
-#include "core/config_gen_h.def"
+#include "util/config_gen_h.def"
 
 extern struct config config;
 

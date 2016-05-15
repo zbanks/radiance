@@ -1,0 +1,12 @@
+/* CFGSECTION(name, ...) */
+/* CFG(name, function, default) */
+
+CFGSECTION(ui,
+    CFG(window_width, INT, 1920)
+    CFG(window_height, INT, 768)
+)
+
+#undef CFGSECTION
+#undef CFGSECTION_LIST
+#undef CFG
+#undef CFG_LIST
