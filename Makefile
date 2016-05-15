@@ -14,7 +14,7 @@ LIBRARIES = -lSDL2 -lGL -lGLU
 CFLAGS = -std=c99 -Wall -g -O1 $(INC)
 LFLAGS = $(CFLAGS)
 
-all: $(PROJECT) tags
+all: $(PROJECT)
 clean:
 	-rm -f *.o util/*.o ui/*.o $(PROJECT) tags
 $(PROJECT): $(OBJECTS)

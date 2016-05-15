@@ -13,8 +13,6 @@ struct deck_shader {
 };
 
 struct deck_pattern {
-    struct deck_pattern * below;
-    struct deck_pattern * above;
     struct deck_pattern * replacing;
     float height;
     float width;
@@ -23,6 +21,6 @@ struct deck_pattern {
 };
 
 struct deck {
-    struct deck_pattern deck_patterns[N_PATTERNS_PER_DECK];
+    struct deck_pattern * deck_patterns[N_PATTERNS_PER_DECK];
 };
 

@@ -18,11 +18,12 @@
 #define WARN(...)  fprintf(stderr, "[warn]  [" DEBUG_INFO "] " __VA_ARGS__)
 #define INFO(...)  fprintf(stderr, "[info]  [" DEBUG_INFO "] " __VA_ARGS__)
 #define DEBUG(...) fprintf(stderr, "[debug] [" DEBUG_INFO "] " __VA_ARGS__)
+#define CONST(x) ((const typeof(x)) (x))
 
 
 int deck_pattern_init(struct deck_pattern * pattern, const char * prefix) {
-    pattern->above = NULL;
-    pattern->below = NULL;
+    memset(pattern, 0, sizeof *pattern);
+
     pattern->width = 100;
     pattern->height = 100;
     pattern->intensity = 1;
@@ -72,4 +73,20 @@ int deck_pattern_init(struct deck_pattern * pattern, const char * prefix) {
     return 0;
 }
 
+void deck_pattern_term(struct deck_pattern * pattern) {
+    // Just warn for now; we'll have to implement this later? 
+    if (pattern->replacing != NULL)
+        ERROR("Term'ing pattern that is currently replacing %p!", pattern->replacing);
 
+    for (int i = 0; i < N_LAYERS_PER_PATTERN; i++) {
+        struct deck_shader * shader = &pattern->shaders[i];
+        //if (shader->gl_prog != 0)
+        //    glDeleteProgramObjectARB(shader->gl_prog);
+        if (shader->gl_fb != 0)
+            glDeleteFramebuffers(1, &shader->gl_fb);
+        if (shader->gl_tex != 0)
+            glDeleteTextures(1, &shader->gl_tex);
+    }
+
+    memset(pattern, 0, sizeof *pattern);
+}
