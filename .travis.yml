@@ -5,7 +5,6 @@ compiler:
 
 env:
     - CONFIGURE_FLAGS=
-    - CONFIGURE_FLAGS=--without-vamp
 
 before_install:
     - sudo add-apt-repository -y ppa:kalakris/cmake
@@ -13,7 +12,7 @@ before_install:
     - sudo apt-get update -qq
 
 install:
-    - sudo apt-get install -qq libsdl2-dev libgl1-mesa-dev libportmidi-dev libfftw3-dev libsamplerate0-dev vamp-plugin-sdk
+    - sudo apt-get install -qq libsdl2-dev libgl1-mesa-dev libportmidi-dev libfftw3-dev libsamplerate0-dev
     - git clone --quiet --depth=100 "https://github.com/EddieRingle/portaudio" ~/builds/portaudio
       && pushd ~/builds/portaudio
       && ./configure
@@ -21,6 +20,6 @@ install:
       && sudo make install
       && popd;
 
-script: ./configure $CONFIGURE_FLAGS && make
+script: make
 
 
