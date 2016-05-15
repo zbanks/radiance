@@ -19,7 +19,6 @@ static int ww;
 static int wh;
 static GLuint fb;
 static GLuint * pattern_textures;
-static GLint * pattern_texture_bindings;
 
 static void set_coords() {
     glViewport(0, 0, ww, wh);
@@ -49,7 +48,10 @@ void ui_init() {
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
     set_coords();
-    glClearColor(0, 0, 0, 1);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0, 0, 0, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Make a framebuffer that isn't the screen to draw on
@@ -58,8 +60,7 @@ void ui_init() {
 
     // Init pattern textures
     pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
-    pattern_texture_bindings = calloc(config.ui.n_patterns, sizeof(GLint));
-    if(pattern_textures == NULL || pattern_texture_bindings == NULL) FAIL("Could not allocate %d textures.", config.ui.n_patterns);
+    if(pattern_textures == NULL) FAIL("Could not allocate %d textures.", config.ui.n_patterns);
     glGenTextures(config.ui.n_patterns, pattern_textures);
     for(int i = 0; i < config.ui.n_patterns; i++) {
         glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
@@ -68,7 +69,6 @@ void ui_init() {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.pattern_width, config.ui.pattern_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-        pattern_texture_bindings[i] = i;
     }
     glBindTexture(GL_TEXTURE_2D, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -79,7 +79,6 @@ void ui_init() {
 
 void ui_close() {
     free(pattern_textures);
-    free(pattern_texture_bindings);
     glDeleteObjectARB(main_shader);
     SDL_DestroyWindow(window);
     window = NULL;
@@ -106,6 +105,19 @@ static void fill(float w, float h) {
     glVertex2f(0, h);
     glVertex2f(w, h);
     glVertex2f(w, 0);
+    glEnd();
+}
+
+static void blit(float x, float y, float w, float h) {
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 0);
+    glVertex2f(x, y);
+    glTexCoord2f(0, 1);
+    glVertex2f(x, y + h);
+    glTexCoord2f(1, 1);
+    glVertex2f(x + w, y + h);
+    glTexCoord2f(1, 0);
+    glVertex2f(x + w, y);
     glEnd();
 }
 
@@ -138,17 +150,16 @@ static void render() {
 
     location = glGetUniformLocationARB(main_shader, "iResolution");
     glUniform2fARB(location, ww, wh);
-    GLint pattern = glGetUniformLocationARB(main_shader, "iPattern");
-    glUniform1ivARB(pattern, config.ui.n_patterns, pattern_texture_bindings);
-
-    for(int i = 0; i < config.ui.n_patterns; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
-    }
 
     fill(ww, wh);
 
     glUseProgramObjectARB(0);
+
+    for(int i = 0; i < config.ui.n_patterns; i++) {
+        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
+        blit(100 + 200 * i, 300, pw, ph);
+    }
+
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
