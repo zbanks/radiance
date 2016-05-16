@@ -2,11 +2,9 @@
 #error "CFGOBJ not defined in config_gen.c"
 #endif
 
-#define SIZE_SECTION_NAME "section_sizes"
+#include "util/err.h"
 
-#ifndef ERROR
-#define ERROR(...) fprintf(stderr, __VA_ARGS__)
-#endif
+#define SIZE_SECTION_NAME "section_sizes"
 
 #define HANDLER_SUCCESS 1
 #define HANDLER_ERROR 0
@@ -153,12 +151,12 @@ int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename){
     if(!filename) return -1;
     int err = 0;
     if((err = ini_parse(filename, CONCAT(CFGOBJ, _parse), cfg))){
-        printf("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
+        ERROR("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
         if(err > 0)
-            printf("Error on line %d\n", err);
+            ERROR("Error on line %d\n", err);
         return -1;
     }
-    printf("Loaded " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
+    INFO("Loaded " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
     return 0;
 }
 

@@ -3,8 +3,9 @@
 #include <SDL.h>
 #define GL_GLEXT_PROTOTYPES
 #include <SDL_opengl.h>
-#include "util/err.h"
+#include "deck/deck.h"
 #include "util/config.h"
+#include "util/err.h"
 #include "util/glsl.h"
 #include <stdio.h>
 #include <stdbool.h>
@@ -74,7 +75,9 @@ void ui_init() {
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
+    //INFO("Main shader: %d", main_shader);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
+    //INFO("Pattern shader: %d", pat_shader);
 }
 
 void ui_close() {
@@ -109,17 +112,14 @@ static void fill(float w, float h) {
 }
 
 static void blit(float x, float y, float w, float h) {
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0);
-    glVertex2f(x, y);
-    glTexCoord2f(0, 1);
-    glVertex2f(x, y + h);
-    glTexCoord2f(1, 1);
-    glVertex2f(x + w, y + h);
-    glTexCoord2f(1, 0);
-    glVertex2f(x + w, y);
-    glEnd();
+    glBlitFramebuffer(
+            0, 0, w, h,
+            x, y, x + w, y + h,
+            GL_COLOR_BUFFER_BIT, GL_LINEAR);
 }
+
+
+static GLuint xxx_pattern_tex = 0;
 
 static void render() {
     GLint location;
@@ -127,14 +127,16 @@ static void render() {
 
     // Render the eight patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb);
+
     glPushMatrix();
     glLoadIdentity();
     int pw = config.ui.pattern_width;
     int ph = config.ui.pattern_height;
     gluOrtho2D(0, pw, 0, ph);
     glUseProgramObjectARB(pat_shader);
-    location = glGetUniformLocationARB(main_shader, "iResolution");
+    location = glGetUniformLocationARB(pat_shader, "iResolution");
     glUniform2fARB(location, pw, ph);
+
     for(int i = 0; i < config.ui.n_patterns; i++) {
         glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -155,10 +157,15 @@ static void render() {
 
     glUseProgramObjectARB(0);
 
+    glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, fb);
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
+        glFramebufferTexture2DEXT(GL_READ_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
+
         blit(100 + 200 * i, 300, pw, ph);
     }
+
+    glFramebufferTexture2DEXT(GL_READ_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, xxx_pattern_tex, 0);
+    blit(10, 10, 100, 100);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
@@ -167,6 +174,11 @@ void ui_run() {
         SDL_Event e;
         SDL_StartTextInput();
 
+        struct deck_pattern pattern;
+        int rc = deck_pattern_init(&pattern, "resources/patterns/test");
+        if (rc != 0) FAIL("Unable to init pattern.");
+
+        float time = 0;
         quit = false;
         while(!quit) {
             while(SDL_PollEvent(&e) != 0) {
@@ -183,9 +195,11 @@ void ui_run() {
                 }
             }
 
+            xxx_pattern_tex = deck_pattern_render(&pattern, time, 0);
             render();
 
             SDL_GL_SwapWindow(window);
+            time += 0.1;
         }
 
         SDL_StopTextInput();
