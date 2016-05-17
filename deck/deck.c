@@ -54,13 +54,10 @@ int deck_pattern_init(struct deck_pattern * pattern, const char * prefix) {
         pattern->shaders[i].width = 100;
         pattern->shaders[i].height = 100;
 
-        glGenFramebuffersEXT(2, pattern->shaders[i].gl_fbs);
         glGenTextures(2, pattern->shaders[i].gl_texs);
 
         for (int j = 0; j < 2; j++) {
-            assert(pattern->shaders[i].gl_fbs[j] != 0);
             assert(pattern->shaders[i].gl_texs[j] != 0);
-            glGenTextures(1, &pattern->shaders[i].gl_texs[j]);
 
             glBindTexture(GL_TEXTURE_2D, pattern->shaders[i].gl_texs[j]);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -70,16 +67,15 @@ int deck_pattern_init(struct deck_pattern * pattern, const char * prefix) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 
                     pattern->shaders[i].width, pattern->shaders[i].height, 0, 
                     GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-            glBindTexture(GL_TEXTURE_2D, 0);
 
-            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->shaders[i].gl_fbs[j]);
-            glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
-                    pattern->shaders[i].gl_texs[j], 0);
         }
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         DEBUG("Loaded shader #%d", i);
     }
+
+    glGenFramebuffersEXT(1, &pattern->gl_fb);
 
     GLenum e;
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -95,25 +91,22 @@ void deck_pattern_term(struct deck_pattern * pattern) {
         struct deck_shader * shader = &pattern->shaders[i];
         if (shader->gl_prog != 0) {
             //glDeleteProgramObjectARB(shader->gl_prog);
-            glDeleteFramebuffers(2, shader->gl_fbs);
             glDeleteTextures(2, shader->gl_texs);
         }
     }
+
+    glDeleteFramebuffers(1, &pattern->gl_fb);
 
     memset(pattern, 0, sizeof *pattern);
 }
 
 GLuint deck_pattern_render(struct deck_pattern * pattern, float time, GLuint base_tex) {
     GLenum e;
+
     // Reset The View
     glGetError();
     glPushMatrix();
     glLoadIdentity();
-
-	// Enable blending
-	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     size_t src_idx = pattern->bidx ? 0 : 1;
     size_t dst_idx = pattern->bidx ? 1 : 0;
@@ -131,14 +124,6 @@ GLuint deck_pattern_render(struct deck_pattern * pattern, float time, GLuint bas
 
     for (int z = N_LAYERS_PER_PATTERN - 1; z >= 0; z--) {
         if(pattern->shaders[z].gl_prog == 0) continue;
-        /*
-        INFO("%d %d %d %d %d",
-            pattern->shaders[z].gl_prog,
-            pattern->shaders[z].gl_fbs[0],
-            pattern->shaders[z].gl_fbs[1],
-            pattern->shaders[z].gl_texs[0],
-            pattern->shaders[z].gl_texs[1]);
-        */
 
         glUseProgramObjectARB(pattern->shaders[z].gl_prog);
 
@@ -155,12 +140,9 @@ GLuint deck_pattern_render(struct deck_pattern * pattern, float time, GLuint bas
             glUniform1iARB(loc, i);
         }
 
-        glEnable(GL_TEXTURE_2D);
-
-        //INFO("binding %d %d", z, pattern->shaders[z].gl_fbs[dst_idx]);
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->shaders[z].gl_fbs[dst_idx]);
-        //glClearColor(1,1,1,1);
-        //glClear(GL_COLOR_BUFFER_BIT);
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->gl_fb);
+        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
+                pattern->shaders[z].gl_texs[dst_idx], 0);
 
         glEnable(GL_TEXTURE_2D);
         glBegin(GL_QUADS);                // start drawing a polygon (4 sided)

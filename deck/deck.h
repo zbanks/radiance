@@ -10,7 +10,6 @@
 
 struct deck_shader {
     GLhandleARB gl_prog;
-    GLuint gl_fbs[2];
     GLuint gl_texs[2];
     float width;
     float height;
@@ -20,6 +19,7 @@ struct deck_pattern {
     struct deck_pattern * replacing;
     float intensity;
     bool bidx;
+    GLuint gl_fb;
     struct deck_shader shaders[N_LAYERS_PER_PATTERN];
 };
 
