@@ -100,7 +100,6 @@ static void handle_window(SDL_Event * e) {
     }
 }
 
-
 static void fill(float w, float h) {
     glBegin(GL_QUADS);
     glVertex2f(0, 0);
@@ -125,7 +124,6 @@ static void blit(float x, float y, float w, float h) {
     glEnd();
 }
 
-
 static GLuint xxx_pattern_tex = 0;
 
 static void render() {
@@ -143,6 +141,9 @@ static void render() {
     glUseProgramObjectARB(pat_shader);
     location = glGetUniformLocationARB(pat_shader, "iResolution");
     glUniform2fARB(location, pw, ph);
+    glUseProgramObjectARB(pat_shader);
+    location = glGetUniformLocationARB(pat_shader, "iSelection");
+    glUniform1iARB(location, false);
     GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
 
     for(int i = 0; i < config.ui.n_patterns; i++) {
@@ -170,13 +171,12 @@ static void render() {
     location = glGetUniformLocationARB(blit_shader, "iTexture");
     glUniform1iARB(location, 0);
 
-    //glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, fb);
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        //glFramebufferTexture2DEXT(GL_READ_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
         glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
         blit(100 + 200 * i, 300, pw, ph);
     }
 
+    // Blit zbank's thing
     glBindTexture(GL_TEXTURE_2D, xxx_pattern_tex);
     blit(10, 10, 100, 100);
 
