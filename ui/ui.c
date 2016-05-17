@@ -16,6 +16,7 @@ static SDL_GLContext context;
 static bool quit;
 static GLhandleARB main_shader;
 static GLhandleARB pat_shader;
+static GLhandleARB blit_shader;
 static int ww;
 static int wh;
 static GLuint fb;
@@ -49,7 +50,6 @@ void ui_init() {
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
     set_coords();
-    glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0, 0, 0, 0);
@@ -74,10 +74,9 @@ void ui_init() {
     glBindTexture(GL_TEXTURE_2D, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
+    if((blit_shader = load_shader("resources/blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", load_shader_error);
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
-    //INFO("Main shader: %d", main_shader);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
-    //INFO("Pattern shader: %d", pat_shader);
 }
 
 void ui_close() {
@@ -112,14 +111,16 @@ static void fill(float w, float h) {
 }
 
 static void blit(float x, float y, float w, float h) {
+    GLint location;
+    location = glGetUniformLocationARB(blit_shader, "iPosition");
+    glUniform2fARB(location, x, y);
+    location = glGetUniformLocationARB(blit_shader, "iResolution");
+    glUniform2fARB(location, w, h);
+
     glBegin(GL_QUADS);
-    glTexCoord2f(0, 0);
     glVertex2f(x, y);
-    glTexCoord2f(0, 1);
     glVertex2f(x, y + h);
-    glTexCoord2f(1, 1);
     glVertex2f(x + w, y + h);
-    glTexCoord2f(1, 0);
     glVertex2f(x + w, y);
     glEnd();
 }
@@ -133,7 +134,6 @@ static void render() {
 
     // Render the eight patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb);
-    glActiveTexture(GL_TEXTURE0);
 
     glPushMatrix();
     glLoadIdentity();
@@ -164,7 +164,11 @@ static void render() {
 
     fill(ww, wh);
 
-    glUseProgramObjectARB(0);
+    // Blit UI elements on top
+    glUseProgramObjectARB(blit_shader);
+    glActiveTexture(GL_TEXTURE0);
+    location = glGetUniformLocationARB(blit_shader, "iTexture");
+    glUniform1iARB(location, 0);
 
     //glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, fb);
     for(int i = 0; i < config.ui.n_patterns; i++) {
