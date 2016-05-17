@@ -29,7 +29,16 @@ static int wh; // Window height
 // Mouse
 static int mx; // Mouse X
 static int my; // Mouse Y
-static bool ml; // Mouse left button
+static int mcx; // Mouse click X
+static int mcy; // Mouse click Y
+static enum {MOUSE_NONE, MOUSE_DRAG_INTENSITY} ma; // Mouse action
+static int mp; // Mouse pattern (index)
+static double mci; // Mouse click intensity
+
+// False colors
+#define HIT_NOTHING 0
+#define HIT_PATTERN 1
+#define HIT_INTENSITY 2
 
 static void set_coords() {
     glViewport(0, 0, ww, wh);
@@ -219,17 +228,46 @@ static struct rgba test_hit(int x, int y) {
     return data;
 }
 
-static void handle_mouse() {
+static void handle_mouse_move() {
+    switch(ma) {
+        case MOUSE_NONE:
+            break;
+        case MOUSE_DRAG_INTENSITY:
+            printf("intensity %d %lf\n", mp, mci + (mx - mcx) * config.ui.intensity_gain_x + (my - mcy) * config.ui.intensity_gain_y);
+            break;
+    }
+}
+
+static void handle_mouse_up() {
+    ma = MOUSE_NONE;
+}
+
+static void handle_mouse_down() {
     struct rgba hit;
     hit = test_hit(mx, wh - my);
-    if(hit.r == 0 && hit.g == 0 && hit.b == 0) {
-        return;
+    switch(hit.r) {
+        case HIT_NOTHING:
+            break;
+        case HIT_PATTERN:
+            printf("Click pattern. Doesn't do anything\n");
+            break;
+        case HIT_INTENSITY:
+            if(hit.g < config.ui.n_patterns) {
+                ma = MOUSE_DRAG_INTENSITY;
+                mp = hit.g;
+                mcx = mx;
+                mcy = my;
+                mci = 0.5;
+            }
+            break;
+        default:
+            printf("UNHANDLED %d\n", hit.r);
+            break;
     }
 }
 
 void ui_run() {
         SDL_Event e;
-        //SDL_StartTextInput();
 
         struct deck_pattern pattern;
         int rc = deck_pattern_init(&pattern, "resources/patterns/test");
@@ -251,25 +289,25 @@ void ui_run() {
                     case SDL_MOUSEMOTION:
                         mx = e.motion.x;
                         my = e.motion.y;
-                        handle_mouse();
+                        handle_mouse_move();
                         break;
                     case SDL_MOUSEBUTTONDOWN:
                         mx = e.button.x;
                         my = e.button.y;
                         switch(e.button.button) {
                             case SDL_BUTTON_LEFT:
-                                ml = true; break;
+                                handle_mouse_down();
+                                break;
                         }
-                        handle_mouse();
                         break;
                     case SDL_MOUSEBUTTONUP:
                         mx = e.button.x;
                         my = e.button.y;
                         switch(e.button.button) {
                             case SDL_BUTTON_LEFT:
-                                ml = false; break;
+                                handle_mouse_up();
+                                break;
                         }
-                        handle_mouse();
                         break;
                 }
             }
@@ -280,7 +318,5 @@ void ui_run() {
             SDL_GL_SwapWindow(window);
             time += 0.1;
         }
-
-        //SDL_StopTextInput();
 }
 
