@@ -17,10 +17,19 @@ static bool quit;
 static GLhandleARB main_shader;
 static GLhandleARB pat_shader;
 static GLhandleARB blit_shader;
-static int ww;
-static int wh;
-static GLuint fb;
+static GLuint pat_fb;
+static GLuint select_fb;
+static GLuint select_tex;
 static GLuint * pattern_textures;
+
+// Window
+static int ww; // Window width
+static int wh; // Window height
+
+// Mouse
+static int mx; // Mouse X
+static int my; // Mouse Y
+static bool ml; // Mouse left button
 
 static void set_coords() {
     glViewport(0, 0, ww, wh);
@@ -55,9 +64,24 @@ void ui_init() {
     glClearColor(0, 0, 0, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    // Make a framebuffer that isn't the screen to draw on
-    glGenFramebuffersEXT(1, &fb);
+    // Make framebuffers
+    glGenFramebuffersEXT(1, &select_fb);
+    glGenFramebuffersEXT(1, &pat_fb);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
+    // Init select texture
+    glGenTextures(1, &select_tex);
+    glBindTexture(GL_TEXTURE_2D, select_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ww, wh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
+    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, select_tex, 0);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
     // Init pattern textures
     pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
@@ -88,16 +112,6 @@ void ui_close() {
 }
 
 static void handle_key(SDL_Event * e) {
-    printf("key\n");
-}
-
-static void handle_window(SDL_Event * e) {
-    switch(e->window.event) {
-        case SDL_WINDOWEVENT_SIZE_CHANGED:
-            ww = e->window.data1;
-            wh = e->window.data2;
-            set_coords();
-    }
 }
 
 static void fill(float w, float h) {
@@ -126,12 +140,12 @@ static void blit(float x, float y, float w, float h) {
 
 static GLuint xxx_pattern_tex = 0;
 
-static void render() {
+static void render(bool select) {
     GLint location;
     GLenum e;
 
     // Render the eight patterns
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
 
     glPushMatrix();
     glLoadIdentity();
@@ -143,7 +157,7 @@ static void render() {
     glUniform2fARB(location, pw, ph);
     glUseProgramObjectARB(pat_shader);
     location = glGetUniformLocationARB(pat_shader, "iSelection");
-    glUniform1iARB(location, false);
+    glUniform1iARB(location, select);
     GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
 
     for(int i = 0; i < config.ui.n_patterns; i++) {
@@ -154,14 +168,20 @@ static void render() {
     }
     glPopMatrix();
 
-    // Render to screen
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    // Render to screen (or select fb)
+    if(select) {
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
+    } else {
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    }
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgramObjectARB(main_shader);
 
     location = glGetUniformLocationARB(main_shader, "iResolution");
     glUniform2fARB(location, ww, wh);
+    location = glGetUniformLocationARB(main_shader, "iSelection");
+    glUniform1iARB(location, select);
 
     fill(ww, wh);
 
@@ -183,9 +203,33 @@ static void render() {
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
+struct rgba {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+};
+
+static struct rgba test_hit(int x, int y) {
+    struct rgba data;
+
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
+    glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    return data;
+}
+
+static void handle_mouse() {
+    struct rgba hit;
+    hit = test_hit(mx, wh - my);
+    if(hit.r == 0 && hit.g == 0 && hit.b == 0) {
+        return;
+    }
+}
+
 void ui_run() {
         SDL_Event e;
-        SDL_StartTextInput();
+        //SDL_StartTextInput();
 
         struct deck_pattern pattern;
         int rc = deck_pattern_init(&pattern, "resources/patterns/test");
@@ -194,27 +238,49 @@ void ui_run() {
         float time = 0;
         quit = false;
         while(!quit) {
+            render(true);
+
             while(SDL_PollEvent(&e) != 0) {
                 switch(e.type) {
                     case SDL_QUIT:
                         quit = true;
                         break;
-                    case SDL_TEXTINPUT:
+                    case SDL_KEYDOWN:
                         handle_key(&e);
                         break;
-                    case SDL_WINDOWEVENT:
-                        handle_window(&e);
+                    case SDL_MOUSEMOTION:
+                        mx = e.motion.x;
+                        my = e.motion.y;
+                        handle_mouse();
+                        break;
+                    case SDL_MOUSEBUTTONDOWN:
+                        mx = e.button.x;
+                        my = e.button.y;
+                        switch(e.button.button) {
+                            case SDL_BUTTON_LEFT:
+                                ml = true; break;
+                        }
+                        handle_mouse();
+                        break;
+                    case SDL_MOUSEBUTTONUP:
+                        mx = e.button.x;
+                        my = e.button.y;
+                        switch(e.button.button) {
+                            case SDL_BUTTON_LEFT:
+                                ml = false; break;
+                        }
+                        handle_mouse();
                         break;
                 }
             }
 
             xxx_pattern_tex = deck_pattern_render(&pattern, time, 0);
-            render();
+            render(false);
 
             SDL_GL_SwapWindow(window);
             time += 0.1;
         }
 
-        SDL_StopTextInput();
+        //SDL_StopTextInput();
 }
 
