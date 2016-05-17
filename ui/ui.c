@@ -112,10 +112,16 @@ static void fill(float w, float h) {
 }
 
 static void blit(float x, float y, float w, float h) {
-    glBlitFramebuffer(
-            0, 0, w, h,
-            x, y, x + w, y + h,
-            GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 0);
+    glVertex2f(x, y);
+    glTexCoord2f(0, 1);
+    glVertex2f(x, y + h);
+    glTexCoord2f(1, 1);
+    glVertex2f(x + w, y + h);
+    glTexCoord2f(1, 0);
+    glVertex2f(x + w, y);
+    glEnd();
 }
 
 
@@ -127,6 +133,7 @@ static void render() {
 
     // Render the eight patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb);
+    glActiveTexture(GL_TEXTURE0);
 
     glPushMatrix();
     glLoadIdentity();
@@ -136,8 +143,10 @@ static void render() {
     glUseProgramObjectARB(pat_shader);
     location = glGetUniformLocationARB(pat_shader, "iResolution");
     glUniform2fARB(location, pw, ph);
+    GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
 
     for(int i = 0; i < config.ui.n_patterns; i++) {
+        glUniform1iARB(pattern_index, i);
         glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
         glClear(GL_COLOR_BUFFER_BIT);
         fill(pw, ph);
@@ -157,14 +166,14 @@ static void render() {
 
     glUseProgramObjectARB(0);
 
-    glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, fb);
+    //glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, fb);
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        glFramebufferTexture2DEXT(GL_READ_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
-
+        //glFramebufferTexture2DEXT(GL_READ_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
+        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
         blit(100 + 200 * i, 300, pw, ph);
     }
 
-    glFramebufferTexture2DEXT(GL_READ_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, xxx_pattern_tex, 0);
+    glBindTexture(GL_TEXTURE_2D, xxx_pattern_tex);
     blit(10, 10, 100, 100);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -204,3 +213,4 @@ void ui_run() {
 
         SDL_StopTextInput();
 }
+
