@@ -3,7 +3,7 @@
 #include <SDL.h>
 #define GL_GLEXT_PROTOTYPES
 #include <SDL_opengl.h>
-#include "deck/deck.h"
+#include "deck/pattern.h"
 #include "util/config.h"
 #include "util/err.h"
 #include "util/glsl.h"
@@ -40,11 +40,20 @@ static double mci; // Mouse click intensity
 #define HIT_PATTERN 1
 #define HIT_INTENSITY 2
 
+// Temp pattern
+static GLuint blank_tex; // input
+struct pattern pat;
+struct render_target rt;
+
 static void set_coords() {
     glViewport(0, 0, ww, wh);
     glLoadIdentity();
     gluOrtho2D(0, ww, 0, wh);
 }
+
+static const double identity[9] = {1, 0, 0,
+                                   0, 1, 0,
+                                   0, 0, 1};
 
 void ui_init() {
     // Init SDL
@@ -110,6 +119,18 @@ void ui_init() {
     if((blit_shader = load_shader("resources/blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", load_shader_error);
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
+
+    pattern_init(&pat, "resources/patterns/test");
+    pattern_render_target_init(&rt, 100, 100, identity);
+
+    glGenTextures(1, &blank_tex);
+    glBindTexture(GL_TEXTURE_2D, blank_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 100, 100, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void ui_close() {
@@ -146,8 +167,6 @@ static void blit(float x, float y, float w, float h) {
     glVertex2f(x + w, y);
     glEnd();
 }
-
-static GLuint xxx_pattern_tex = 0;
 
 static void render(bool select) {
     GLint location;
@@ -205,9 +224,11 @@ static void render(bool select) {
         blit(100 + 200 * i, 300, pw, ph);
     }
 
-    // Blit zbank's thing
-    glBindTexture(GL_TEXTURE_2D, xxx_pattern_tex);
-    blit(10, 10, 100, 100);
+    if(!select) {
+        // Blit zbank's thing
+        glBindTexture(GL_TEXTURE_2D, rt.tex_screen[0]);
+        blit(10, 10, 100, 100);
+    }
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
@@ -269,10 +290,6 @@ static void handle_mouse_down() {
 void ui_run() {
         SDL_Event e;
 
-        struct deck_pattern pattern;
-        int rc = deck_pattern_init(&pattern, "resources/patterns/test");
-        if (rc != 0) FAIL("Unable to init pattern.");
-
         float time = 0;
         quit = false;
         while(!quit) {
@@ -312,7 +329,7 @@ void ui_run() {
                 }
             }
 
-            xxx_pattern_tex = deck_pattern_render(&pattern, time, 0);
+            pattern_render(&pat, &rt, 0, blank_tex);
             render(false);
 
             SDL_GL_SwapWindow(window);
