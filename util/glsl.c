@@ -8,6 +8,15 @@
 
 char * load_shader_error = 0;
 
+/*
+const char default_vertex_shader[] = "                          \n\
+#version 130                                                    \n\
+void main(void) {                                               \n\
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;     \n\
+}                                                               \n\
+";
+*/
+
 GLhandleARB load_shader(const char * filename) {
     // Load file
     GLcharARB * buffer = 0;
@@ -44,12 +53,13 @@ GLhandleARB load_shader(const char * filename) {
     fread(buffer, 1, length, f);
     fclose (f);
 
+    GLint compiled;
+
     // Compile
     GLhandleARB fragmentShaderObj;
     fragmentShaderObj = glCreateShaderObjectARB(GL_FRAGMENT_SHADER);
     glShaderSourceARB(fragmentShaderObj, 1, (const GLcharARB **)&buffer, (const GLint *)&length);
     glCompileShader(fragmentShaderObj);
-    GLint compiled;
     glGetShaderiv(fragmentShaderObj, GL_COMPILE_STATUS, &compiled);
     if(!compiled) {
         GLint blen = 0; 
@@ -70,9 +80,45 @@ GLhandleARB load_shader(const char * filename) {
     }
     free(buffer);
 
+    /*
+    length = sizeof(default_vertex_shader) - 1;
+    buffer = calloc(length, 1);
+    if(buffer == NULL) {
+        load_shader_error = rsprintf("Could not allocate memory for default vertex shader");
+        return 0;
+    }
+    memcpy(buffer, default_vertex_shader, sizeof(default_vertex_shader) - 1);
+
+    // Compile default vertex shader
+    GLhandleARB vertexShaderObj;
+    vertexShaderObj = glCreateShaderObjectARB(GL_VERTEX_SHADER);
+    glShaderSourceARB(vertexShaderObj, 1, (const GLcharARB **)&buffer, (const GLint *)&length);
+    glCompileShader(vertexShaderObj);
+    glGetShaderiv(vertexShaderObj, GL_COMPILE_STATUS, &compiled);
+    if(!compiled) {
+        GLint blen = 0; 
+        GLsizei slen = 0;
+
+        glGetShaderiv(vertexShaderObj, GL_INFO_LOG_LENGTH , &blen);
+        if(blen > 1) {
+            GLchar* compiler_log = (GLchar*)calloc(blen, 1);
+            glGetShaderInfoLog(vertexShaderObj, blen, &slen, compiler_log);
+            load_shader_error = rsprintf("Shader compilation failed!\n%s", compiler_log);
+            free(compiler_log);
+        } else {
+            load_shader_error = strdup("Shader compilation failed!");
+        }
+        glDeleteObjectARB(vertexShaderObj);
+        free(buffer);
+        return 0;
+    }
+    free(buffer);
+    */
+
     // Link
     GLhandleARB programObj;
     programObj = glCreateProgramObjectARB();
+    //glAttachShader(programObj, vertexShaderObj);
     glAttachShader(programObj, fragmentShaderObj);
     glLinkProgram(programObj);
 

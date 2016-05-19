@@ -45,12 +45,6 @@ static GLuint blank_tex; // input
 struct pattern pat;
 struct render_target rt;
 
-static void set_coords() {
-    glViewport(0, 0, ww, wh);
-    glLoadIdentity();
-    gluOrtho2D(0, ww, 0, wh);
-}
-
 static const double identity[9] = {1, 0, 0,
                                    0, 1, 0,
                                    0, 0, 1};
@@ -76,7 +70,6 @@ void ui_init() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
-    set_coords();
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0, 0, 0, 0);
@@ -154,6 +147,17 @@ static void fill(float w, float h) {
 }
 
 static void blit(float x, float y, float w, float h) {
+    //double invMVP[16];
+
+    //const double MVP[16] = {
+    //    2 / w, 0, 0, 0,
+    //    0, 2 / h, 0, 0,
+    //    0, 0, 2, 0,
+    //    -1 - 2 * x / w, -1 - 2 * y / h, -1, 1
+    //}
+
+    //gluInvertMatrix(invMVP
+
     GLint location;
     location = glGetUniformLocationARB(blit_shader, "iPosition");
     glUniform2fARB(location, x, y);
@@ -175,11 +179,8 @@ static void render(bool select) {
     // Render the eight patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
 
-    glPushMatrix();
-    glLoadIdentity();
     int pw = config.ui.pattern_width;
     int ph = config.ui.pattern_height;
-    gluOrtho2D(0, pw, 0, ph);
     glUseProgramObjectARB(pat_shader);
     location = glGetUniformLocationARB(pat_shader, "iResolution");
     glUniform2fARB(location, pw, ph);
@@ -188,13 +189,16 @@ static void render(bool select) {
     glUniform1iARB(location, select);
     GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
 
+    glLoadIdentity();
+    gluOrtho2D(0, pw, 0, ph);
+    glViewport(0, 0, pw, ph);
+
     for(int i = 0; i < config.ui.n_patterns; i++) {
         glUniform1iARB(pattern_index, i);
         glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
         glClear(GL_COLOR_BUFFER_BIT);
         fill(pw, ph);
     }
-    glPopMatrix();
 
     // Render to screen (or select fb)
     if(select) {
@@ -202,6 +206,11 @@ static void render(bool select) {
     } else {
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
     }
+
+    glLoadIdentity();
+    gluOrtho2D(0, ww, 0, wh);
+    glViewport(0, 0, ww, wh);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgramObjectARB(main_shader);

@@ -145,7 +145,7 @@ void pattern_term(struct pattern * pattern) {
     memset(pattern, 0, sizeof *pattern);
 }
 
-static void render(GLhandleARB prog, double time, int width, int height) {
+static void render(GLhandleARB prog, double time, int width, int height, double * transform) {
     GLint loc;
     glUseProgramObjectARB(prog);
 
@@ -161,6 +161,18 @@ static void render(GLhandleARB prog, double time, int width, int height) {
     loc = glGetUniformLocationARB(prog, "iScratchpad");
     glUniform1iARB(loc, 1);
 
+    const GLfloat mat[9] = {
+        transform[0] / width, transform[1], transform[2],
+        transform[3], transform[4] / height, transform[5],
+        transform[6], transform[7], transform[8]
+    };
+
+    loc = glGetUniformLocationARB(prog, "iTransform");
+    glUniformMatrix3fvARB(loc, 1, false, mat);
+
+    GLenum e;
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
     char layer_uniform_name[8] = "iLayerX";
     for (int i = 0; i < N_LAYERS_PER_PATTERN; i++) {
         layer_uniform_name[sizeof(layer_uniform_name) - 2] = '0' + i;
@@ -168,16 +180,12 @@ static void render(GLhandleARB prog, double time, int width, int height) {
         glUniform1iARB(loc, 2 + i);
     }
 
-    glLoadIdentity();
-    //glViewport(0, 0, width, height);
-    gluOrtho2D(0, width, 0, height);
-
     glClear(GL_COLOR_BUFFER_BIT);
     glBegin(GL_QUADS);
-    glVertex2d(0, 0);
-    glVertex2d(0, height);
-    glVertex2d(width, height);
-    glVertex2d(width, 0);
+    glVertex2d(-1, -1);
+    glVertex2d(-1, 1);
+    glVertex2d(1, 1);
+    glVertex2d(1, -1);
     glEnd();
 }
 
@@ -196,12 +204,14 @@ static void bind_textures(struct render_target * render_target, GLuint input_tex
 void pattern_render(struct pattern * pattern, struct render_target * render_target, double time, GLuint input_tex) {
     GLenum e;
 
-    glPushMatrix();
     bind_textures(render_target, input_tex);
+
+    glLoadIdentity();
+    glViewport(0, 0, SCRATCHPAD_WIDTH, SCRATCHPAD_HEIGHT);
 
     if(pattern->shader_scratchpad != 0) {
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, render_target->fb_scratchpad);
-        render(pattern->shader_scratchpad, time, SCRATCHPAD_WIDTH, SCRATCHPAD_HEIGHT);
+        render(pattern->shader_scratchpad, time, SCRATCHPAD_WIDTH, SCRATCHPAD_HEIGHT, render_target->transform);
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, render_target->fb_scratchpad_dest);
         glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, render_target->fb_scratchpad);
         glBlitFramebuffer(0, 0, SCRATCHPAD_WIDTH, SCRATCHPAD_HEIGHT,
@@ -209,13 +219,16 @@ void pattern_render(struct pattern * pattern, struct render_target * render_targ
                           GL_COLOR_BUFFER_BIT, GL_NEAREST);
     }
 
+    glViewport(0, 0, render_target->width, render_target->height);
+
     for (int z = N_LAYERS_PER_PATTERN; z >= 0; z--) {
         if(pattern->shader_layer[z] == 0) continue;
 
         bind_textures(render_target, input_tex); // Necessary?
 
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, render_target->fb_screen);
-        render(pattern->shader_layer[z], time, render_target->width, render_target->height);
+        render(pattern->shader_layer[z], time, render_target->width, render_target->height, render_target->transform);
+
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, render_target->fb_screen_dest);
         glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
                                   render_target->tex_screen[z], 0);
@@ -226,7 +239,5 @@ void pattern_render(struct pattern * pattern, struct render_target * render_targ
 
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     }
-
-    glPopMatrix();
 }
 
