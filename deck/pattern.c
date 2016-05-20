@@ -162,9 +162,9 @@ static void render(GLhandleARB prog, double time, int width, int height, double 
     glUniform1iARB(loc, 1);
 
     const GLfloat mat[9] = {
-        transform[0] / width, transform[1], transform[2],
-        transform[3], transform[4] / height, transform[5],
-        transform[6], transform[7], transform[8]
+        2 * transform[0] / width, transform[1], transform[2],
+        transform[3], 2 * transform[4] / height, transform[5],
+        -1 - 2 * transform[6] / width, -1 - 2 * transform[7] / height, transform[8]
     };
 
     loc = glGetUniformLocationARB(prog, "iTransform");
