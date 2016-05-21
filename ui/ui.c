@@ -41,9 +41,10 @@ static double mci; // Mouse click intensity
 #define HIT_INTENSITY 2
 
 // Temp pattern
-static GLuint blank_tex; // input
+static GLuint blank_tex[1]; // input
 struct pattern pat;
 struct render_target rt;
+struct render_target * rts[2] = {&rt, NULL};
 
 static const double identity[9] = {1, 0, 0,
                                    0, 1, 0,
@@ -113,11 +114,11 @@ void ui_init() {
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
 
-    pattern_init(&pat, "resources/patterns/test");
+    pattern_init(&pat, "resources/patterns/test", rts);
     pattern_render_target_init(&rt, 100, 100, identity);
 
-    glGenTextures(1, &blank_tex);
-    glBindTexture(GL_TEXTURE_2D, blank_tex);
+    glGenTextures(1, &blank_tex[0]);
+    glBindTexture(GL_TEXTURE_2D, blank_tex[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -147,17 +148,6 @@ static void fill(float w, float h) {
 }
 
 static void blit(float x, float y, float w, float h) {
-    //double invMVP[16];
-
-    //const double MVP[16] = {
-    //    2 / w, 0, 0, 0,
-    //    0, 2 / h, 0, 0,
-    //    0, 0, 2, 0,
-    //    -1 - 2 * x / w, -1 - 2 * y / h, -1, 1
-    //}
-
-    //gluInvertMatrix(invMVP
-
     GLint location;
     location = glGetUniformLocationARB(blit_shader, "iPosition");
     glUniform2fARB(location, x, y);
@@ -338,7 +328,7 @@ void ui_run() {
                 }
             }
 
-            pattern_render(&pat, &rt, 0, blank_tex);
+            pattern_render(&pat, 0, blank_tex);
             render(false);
 
             SDL_GL_SwapWindow(window);

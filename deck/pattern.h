@@ -28,7 +28,8 @@ struct pattern {
     GLhandleARB shader_layer[N_LAYERS_PER_PATTERN];
     GLhandleARB shader_scratchpad;
     char * name;
-    float intensity;
+    double intensity;
+    struct render_target ** rt; // Null-terminated array of render target pointers
 };
 
 /*
@@ -40,6 +41,7 @@ struct deck {
 void pattern_render_target_init(struct render_target * render_target, int width, int height, const double * transform);
 void pattern_render_target_term(struct render_target * render_target);
 
-int pattern_init(struct pattern * pattern, const char * prefix);
+int pattern_init(struct pattern * pattern, const char * prefix, struct render_target ** render_targets);
 void pattern_term(struct pattern * pattern);
-void pattern_render(struct pattern * pattern, struct render_target * render_target, double time, GLuint input_tex);
+void pattern_render(struct pattern * pattern, double time, GLuint * input_tex);
+
