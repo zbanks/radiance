@@ -27,6 +27,8 @@ static void setup_texture(GLuint tex, int width, int height) {
 }
 
 void pattern_render_target_init(struct render_target * render_target, int width, int height, const double * transform) {
+    GLenum e;
+
     memset(render_target, 0, sizeof *render_target);
     render_target->width = width;
     render_target->height = height;
@@ -37,10 +39,14 @@ void pattern_render_target_init(struct render_target * render_target, int width,
     glGenFramebuffersEXT(1, &render_target->fb_screen_dest);
     glGenFramebuffersEXT(1, &render_target->fb_scratchpad_dest);
 
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
     glGenTextures(N_LAYERS_PER_PATTERN, render_target->tex_screen);
     glGenTextures(1, &render_target->tex_scratchpad);
     glGenTextures(1, &render_target->tex_screen_out);
     glGenTextures(1, &render_target->tex_scratchpad_out);
+
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     for (int i = 0; i < N_LAYERS_PER_PATTERN; i++) {
         setup_texture(render_target->tex_screen[i], width, height);
@@ -63,7 +69,6 @@ void pattern_render_target_init(struct render_target * render_target, int width,
                               render_target->tex_scratchpad, 0);
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
-    GLenum e;
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
@@ -82,6 +87,18 @@ void pattern_render_target_term(struct render_target * render_target) {
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
+void clear_render_target(struct render_target * rt) {
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, rt->fb_scratchpad);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, rt->fb_screen);
+    for(int i = 0; i < N_LAYERS_PER_PATTERN; i++) {
+        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
+                                  rt->tex_screen[i], 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+}
+
 GLhandleARB try_load_shader(char * filename) {
     struct stat statbuf;
     int rc = stat(filename, &statbuf);
@@ -98,14 +115,18 @@ GLhandleARB try_load_shader(char * filename) {
     return h;
 }
 
-int pattern_init(struct pattern * pattern, const char * prefix, struct render_target ** render_targets) {
+int pattern_init(struct pattern * pattern, const char * prefix, struct render_target ** render_targets, int n_render_targets) {
     memset(pattern, 0, sizeof *pattern);
 
     pattern->intensity = 1;
     pattern->name = strdup("unnamed");
     if(pattern->name == NULL) ERROR("Could not allocate memory");
     pattern->rt = render_targets;
-    // TODO glClear out all the render target buffers since they will be re-used
+    pattern->n_rt = n_render_targets;
+
+    for(int i = 0; i < pattern->n_rt; i++) {
+        clear_render_target(pattern->rt[i]);
+    }
 
     char * filename;
     for (int i = 0; i < N_LAYERS_PER_PATTERN; i++) {
@@ -213,7 +234,7 @@ void pattern_render(struct pattern * pattern, double time, GLuint * input_tex) {
 
     if(pattern->shader_scratchpad != 0) {
         glUseProgramObjectARB(pattern->shader_scratchpad);
-        for(int i = 0; pattern->rt[i] != NULL; i++) {
+        for(int i = 0; i < pattern->n_rt; i++) {
             bind_textures(pattern->rt[i], input_tex[i]);
             glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->rt[i]->fb_scratchpad);
             render(pattern->shader_scratchpad, time, pattern->intensity, SCRATCHPAD_WIDTH, SCRATCHPAD_HEIGHT, pattern->rt[i]->transform);
@@ -230,7 +251,7 @@ void pattern_render(struct pattern * pattern, double time, GLuint * input_tex) {
 
         glUseProgramObjectARB(pattern->shader_layer[z]);
 
-        for(int i = 0; pattern->rt[i] != NULL; i++) {
+        for(int i = 0; i < pattern->n_rt; i++) {
             bind_textures(pattern->rt[i], input_tex[i]);
             glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->rt[i]->fb_screen);
             glViewport(0, 0, pattern->rt[i]->width, pattern->rt[i]->height);

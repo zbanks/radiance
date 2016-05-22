@@ -15,5 +15,6 @@
 #define WARN(...)  _ERR_MSG("warn",  ## __VA_ARGS__)
 #define INFO(...)  _ERR_MSG("info",  ## __VA_ARGS__)
 #define DEBUG(...) _ERR_MSG("debug", ## __VA_ARGS__)
+#define MEMFAIL() FAIL("Could not allocate memory")
 
 #endif

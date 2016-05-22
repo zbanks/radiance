@@ -7,6 +7,7 @@
 #include "util/config.h"
 #include "util/err.h"
 #include "util/glsl.h"
+#include "main.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <GL/glu.h>
@@ -39,16 +40,6 @@ static double mci; // Mouse click intensity
 #define HIT_NOTHING 0
 #define HIT_PATTERN 1
 #define HIT_INTENSITY 2
-
-// Temp pattern
-static GLuint blank_tex[1]; // input
-struct pattern pat;
-struct render_target rt;
-struct render_target * rts[2] = {&rt, NULL};
-
-static const double identity[9] = {1, 0, 0,
-                                   0, 1, 0,
-                                   0, 0, 1};
 
 void ui_init() {
     // Init SDL
@@ -113,18 +104,6 @@ void ui_init() {
     if((blit_shader = load_shader("resources/blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", load_shader_error);
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
-
-    pattern_init(&pat, "resources/patterns/test", rts);
-    pattern_render_target_init(&rt, 100, 100, identity);
-
-    glGenTextures(1, &blank_tex[0]);
-    glBindTexture(GL_TEXTURE_2D, blank_tex[0]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 100, 100, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void ui_close() {
@@ -225,7 +204,7 @@ static void render(bool select) {
 
     if(!select) {
         // Blit zbank's thing
-        glBindTexture(GL_TEXTURE_2D, rt.tex_screen[0]);
+        glBindTexture(GL_TEXTURE_2D, deck->tex_output[0]);
         blit(10, 10, 100, 100);
     }
 
@@ -328,7 +307,7 @@ void ui_run() {
                 }
             }
 
-            pattern_render(&pat, 0, blank_tex);
+            deck_render(&deck[0], 0);
             render(false);
 
             SDL_GL_SwapWindow(window);

@@ -29,19 +29,14 @@ struct pattern {
     GLhandleARB shader_scratchpad;
     char * name;
     double intensity;
-    struct render_target ** rt; // Null-terminated array of render target pointers
+    struct render_target ** rt; // Array of render target pointers
+    int n_rt; // Length of rt
 };
-
-/*
-struct deck {
-    struct deck_pattern * deck_patterns[N_PATTERNS_PER_DECK];
-};
-*/
 
 void pattern_render_target_init(struct render_target * render_target, int width, int height, const double * transform);
 void pattern_render_target_term(struct render_target * render_target);
 
-int pattern_init(struct pattern * pattern, const char * prefix, struct render_target ** render_targets);
+int pattern_init(struct pattern * pattern, const char * prefix, struct render_target ** render_targets, int n_render_targets);
 void pattern_term(struct pattern * pattern);
 void pattern_render(struct pattern * pattern, double time, GLuint * input_tex);
 
