@@ -42,6 +42,7 @@ static double mci; // Mouse click intensity
 #define HIT_INTENSITY 2
 
 // Mapping from UI pattern -> deck & slot
+// TODO make this live in the INI file
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
 
@@ -274,7 +275,7 @@ static void handle_mouse_down() {
             break;
         case HIT_INTENSITY:
             if(hit.g < config.ui.n_patterns) {
-                struct pattern * p = deck[map_deck[mp]].pattern[map_pattern[mp]];
+                struct pattern * p = deck[map_deck[hit.g]].pattern[map_pattern[hit.g]];
                 if(p != NULL) {
                     ma = MOUSE_DRAG_INTENSITY;
                     mp = hit.g;

@@ -48,9 +48,15 @@ void main(void) {
         gl_FragColor = composite(gl_FragColor, vec4(1., 1., 1., (1. - smoothBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w), w))));
         gl_FragColor = composite(gl_FragColor, vec4(0., 0., 0.3, smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         gl_FragColor = composite(gl_FragColor, vec4(0., 0., 1., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
+
+        ivec2 grid_cell = ivec2(5. * (gl_FragCoord.xy - preview_origin) / preview_size);
+        vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
+        gl_FragColor = composite(gl_FragColor, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
+
         vec4 p = texture2D(iPreview, (gl_FragCoord.xy - preview_origin) / preview_size);
         p.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
         gl_FragColor = composite(gl_FragColor, p);
+
     }
 
     //if(inBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w)) == 0.) {
