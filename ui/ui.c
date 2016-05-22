@@ -41,6 +41,10 @@ static double mci; // Mouse click intensity
 #define HIT_PATTERN 1
 #define HIT_INTENSITY 2
 
+// Mapping from UI pattern -> deck & slot
+static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
+static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
+
 void ui_init() {
     // Init SDL
     if(SDL_Init(SDL_INIT_VIDEO) < 0) FAIL("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
@@ -156,17 +160,26 @@ static void render(bool select) {
     glUseProgramObjectARB(pat_shader);
     location = glGetUniformLocationARB(pat_shader, "iSelection");
     glUniform1iARB(location, select);
+    location = glGetUniformLocationARB(pat_shader, "iPreview");
+    glUniform1iARB(location, 0);
     GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
+    GLint pattern_intensity = glGetUniformLocationARB(pat_shader, "iIntensity");
 
     glLoadIdentity();
     gluOrtho2D(0, pw, 0, ph);
     glViewport(0, 0, pw, ph);
 
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        glUniform1iARB(pattern_index, i);
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        fill(pw, ph);
+        struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
+        if(p != NULL) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, p->rt[0]->tex_screen[0]);
+            glUniform1iARB(pattern_index, i);
+            glUniform1fARB(pattern_intensity, p->intensity);
+            glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            fill(pw, ph);
+        }
     }
 
     // Render to screen (or select fb)
@@ -198,8 +211,11 @@ static void render(bool select) {
     glUniform1iARB(location, 0);
 
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
-        blit(100 + 200 * i, 300, pw, ph);
+        struct pattern * pattern = deck[map_deck[i]].pattern[map_pattern[i]];
+        if(pattern != NULL) {
+            glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
+            blit(100 + 200 * i, 300, pw, ph);
+        }
     }
 
     if(!select) {
@@ -228,11 +244,17 @@ static struct rgba test_hit(int x, int y) {
 }
 
 static void handle_mouse_move() {
+    struct pattern * p;
     switch(ma) {
         case MOUSE_NONE:
             break;
         case MOUSE_DRAG_INTENSITY:
-            printf("intensity %d %lf\n", mp, mci + (mx - mcx) * config.ui.intensity_gain_x + (my - mcy) * config.ui.intensity_gain_y);
+            p = deck[map_deck[mp]].pattern[map_pattern[mp]];
+            if(p != NULL) {
+                p->intensity = mci + (mx - mcx) * config.ui.intensity_gain_x + (my - mcy) * config.ui.intensity_gain_y;
+                if(p->intensity > 1) p->intensity = 1;
+                if(p->intensity < 0) p->intensity = 0;
+            }
             break;
     }
 }
@@ -252,11 +274,14 @@ static void handle_mouse_down() {
             break;
         case HIT_INTENSITY:
             if(hit.g < config.ui.n_patterns) {
-                ma = MOUSE_DRAG_INTENSITY;
-                mp = hit.g;
-                mcx = mx;
-                mcy = my;
-                mci = 0.5;
+                struct pattern * p = deck[map_deck[mp]].pattern[map_pattern[mp]];
+                if(p != NULL) {
+                    ma = MOUSE_DRAG_INTENSITY;
+                    mp = hit.g;
+                    mcx = mx;
+                    mcy = my;
+                    mci = p->intensity;
+                }
             }
             break;
         default:
