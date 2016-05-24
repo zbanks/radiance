@@ -10,11 +10,14 @@ CFGSECTION(ui,
     CFG(intensity_gain_x, FLOAT, 0.01)
     CFG(intensity_gain_y, FLOAT, 0.01)
 )
-
+ 
 CFGSECTION(deck,
     CFG(n_patterns, INT, 100)
-    CFG(preview_width, INT, 100)
-    CFG(preview_height, INT, 100)
+)
+
+CFGSECTION(pattern,
+    CFG(master_width, INT, 100)
+    CFG(master_height, INT, 100)
 )
  
 #undef CFGSECTION

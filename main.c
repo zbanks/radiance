@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "ui/ui.h"
 #include "util/config.h"
-#include "deck/deck.h"
+#include "pattern/deck.h"
 #include "main.h"
 
 struct deck deck[N_DECKS];

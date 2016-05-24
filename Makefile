@@ -3,7 +3,7 @@ PROJECT = radiance
 C_SRC  = $(wildcard *.c)
 C_SRC += $(wildcard util/*.c)
 C_SRC += $(wildcard ui/*.c)
-C_SRC += $(wildcard deck/*.c)
+C_SRC += $(wildcard pattern/*.c)
 
 OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
 

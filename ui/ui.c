@@ -3,7 +3,7 @@
 #include <SDL.h>
 #define GL_GLEXT_PROTOTYPES
 #include <SDL_opengl.h>
-#include "deck/pattern.h"
+#include "pattern/pattern.h"
 #include "util/config.h"
 #include "util/err.h"
 #include "util/glsl.h"
@@ -43,6 +43,8 @@ static double mci; // Mouse click intensity
 
 // Mapping from UI pattern -> deck & slot
 // TODO make this live in the INI file
+static const int map_x[8] = {100, 300, 500, 700, 900, 1100, 1300, 1500};
+static const int map_y[8] = {300, 300, 300, 300, 300, 300, 300, 300};
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
 
@@ -174,7 +176,7 @@ static void render(bool select) {
         struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
         if(p != NULL) {
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, p->rt[0]->tex_screen[0]);
+            glBindTexture(GL_TEXTURE_2D, p->tex_output);
             glUniform1iARB(pattern_index, i);
             glUniform1fARB(pattern_intensity, p->intensity);
             glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
@@ -215,13 +217,13 @@ static void render(bool select) {
         struct pattern * pattern = deck[map_deck[i]].pattern[map_pattern[i]];
         if(pattern != NULL) {
             glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
-            blit(100 + 200 * i, 300, pw, ph);
+            blit(map_x[i], map_y[i], pw, ph);
         }
     }
 
     if(!select) {
         // Blit zbank's thing
-        glBindTexture(GL_TEXTURE_2D, deck->tex_output[0]);
+        glBindTexture(GL_TEXTURE_2D, deck->tex_output);
         blit(10, 10, 100, 100);
     }
 
@@ -333,7 +335,7 @@ void ui_run() {
                 }
             }
 
-            deck_render(&deck[0], 0);
+            deck_render(&deck[0]);
             render(false);
 
             SDL_GL_SwapWindow(window);
