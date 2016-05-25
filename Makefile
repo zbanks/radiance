@@ -13,7 +13,9 @@ $(shell mkdir -p $(OBJDIR) >/dev/null)
 OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 
 # Compiler flags
-INC = -I. -I/usr/include -I/usr/include/SDL2
+INC = -I.
+# Everything compiles fine on my system, but if it can't find headers try uncommenting this line?
+#INC += -I./usr/include
 
 LIBRARIES = -lSDL2 -lGL -lGLU -lm
 
