@@ -17,4 +17,4 @@ struct crossfader {
 
 void deck_crossfader_init(struct crossfader * crossfader);
 void deck_crossfader_term(struct crossfader * crossfader);
-GLuint deck_crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right);
+void deck_crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right);

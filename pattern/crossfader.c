@@ -12,6 +12,5 @@ void crossfader_term(struct crossfader * crossfader) {
     memset(crossfader, 0, sizeof *crossfader);
 }
 
-GLuint deck_crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right) {
-    return crossfader->tex_output;
+void deck_crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right) {
 }

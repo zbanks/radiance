@@ -5,9 +5,11 @@
 #include "ui/ui.h"
 #include "util/config.h"
 #include "pattern/deck.h"
+#include "pattern/crossfader.h"
 #include "main.h"
 
 struct deck deck[N_DECKS];
+struct crossfader crossfader;
 
 int main(int argc, char* args[]) {
     config_init(&config);

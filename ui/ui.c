@@ -18,10 +18,13 @@ static bool quit;
 static GLhandleARB main_shader;
 static GLhandleARB pat_shader;
 static GLhandleARB blit_shader;
+static GLhandleARB crossfader_shader;
 static GLuint pat_fb;
 static GLuint select_fb;
+static GLuint crossfader_fb;
 static GLuint select_tex;
 static GLuint * pattern_textures;
+static GLuint crossfader_texture;
 
 // Window
 static int ww; // Window width
@@ -32,7 +35,7 @@ static int mx; // Mouse X
 static int my; // Mouse Y
 static int mcx; // Mouse click X
 static int mcy; // Mouse click Y
-static enum {MOUSE_NONE, MOUSE_DRAG_INTENSITY} ma; // Mouse action
+static enum {MOUSE_NONE, MOUSE_DRAG_INTENSITY, MOUSE_DRAG_CROSSFADER} ma; // Mouse action
 static int mp; // Mouse pattern (index)
 static double mci; // Mouse click intensity
 
@@ -40,10 +43,12 @@ static double mci; // Mouse click intensity
 #define HIT_NOTHING 0
 #define HIT_PATTERN 1
 #define HIT_INTENSITY 2
+#define HIT_CROSSFADER 3
+#define HIT_CROSSFADER_POSITION 4
 
 // Mapping from UI pattern -> deck & slot
 // TODO make this live in the INI file
-static const int map_x[8] = {100, 300, 500, 700, 900, 1100, 1300, 1500};
+static const int map_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
 static const int map_y[8] = {300, 300, 300, 300, 300, 300, 300, 300};
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
@@ -77,6 +82,7 @@ void ui_init() {
     // Make framebuffers
     glGenFramebuffersEXT(1, &select_fb);
     glGenFramebuffersEXT(1, &pat_fb);
+    glGenFramebuffersEXT(1, &crossfader_fb);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Init select texture
@@ -91,7 +97,6 @@ void ui_init() {
 
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, select_tex, 0);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
     // Init pattern textures
     pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
@@ -105,12 +110,26 @@ void ui_init() {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.pattern_width, config.ui.pattern_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     }
+
+    // Init crossfader texture
+    glGenTextures(1, &crossfader_texture);
+    glBindTexture(GL_TEXTURE_2D, crossfader_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.crossfader_width, config.ui.crossfader_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, crossfader_fb);
+    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, crossfader_texture, 0);
+
     glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     if((blit_shader = load_shader("resources/blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", load_shader_error);
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
+    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", load_shader_error);
 }
 
 void ui_close() {
@@ -185,6 +204,29 @@ static void render(bool select) {
         }
     }
 
+    // Render the crossfader
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, crossfader_fb);
+
+    int cw = config.ui.crossfader_width;
+    int ch = config.ui.crossfader_height;
+    glUseProgramObjectARB(crossfader_shader);
+    location = glGetUniformLocationARB(crossfader_shader, "iResolution");
+    glUniform2fARB(location, cw, ch);
+    location = glGetUniformLocationARB(crossfader_shader, "iSelection");
+    glUniform1iARB(location, select);
+    location = glGetUniformLocationARB(crossfader_shader, "iPreview");
+    glUniform1iARB(location, 0);
+    location = glGetUniformLocationARB(crossfader_shader, "iPosition");
+    glUniform1fARB(location, crossfader.position);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
+
+    glLoadIdentity();
+    gluOrtho2D(0, cw, 0, ch);
+    glViewport(0, 0, cw, ch);
+    glClear(GL_COLOR_BUFFER_BIT);
+    fill(cw, ch);
+
     // Render to screen (or select fb)
     if(select) {
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
@@ -220,6 +262,9 @@ static void render(bool select) {
             blit(map_x[i], map_y[i], pw, ph);
         }
     }
+
+    glBindTexture(GL_TEXTURE_2D, crossfader_texture);
+    blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
 
     if(!select) {
         // Blit zbank's thing
@@ -259,6 +304,11 @@ static void handle_mouse_move() {
                 if(p->intensity < 0) p->intensity = 0;
             }
             break;
+        case MOUSE_DRAG_CROSSFADER:
+            crossfader.position = mci + (mx - mcx) * config.ui.crossfader_gain_x + (my - mcy) * config.ui.crossfader_gain_y;
+            if(crossfader.position > 1) crossfader.position = 1;
+            if(crossfader.position < 0) crossfader.position = 0;
+            break;
     }
 }
 
@@ -286,6 +336,15 @@ static void handle_mouse_down() {
                     mci = p->intensity;
                 }
             }
+            break;
+        case HIT_CROSSFADER:
+            printf("Click crossfader. Doesn't do anything\n");
+            break;
+        case HIT_CROSSFADER_POSITION:
+            ma = MOUSE_DRAG_CROSSFADER;
+            mcx = mx;
+            mcy = my;
+            mci = crossfader.position;
             break;
         default:
             printf("UNHANDLED %d\n", hit.r);
