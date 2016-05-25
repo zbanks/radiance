@@ -44,8 +44,10 @@ void main(void) {
         gl_FragColor.rgb = mix(gl_FragColor.rgb, dataColor(ivec3(2, iPatternIndex, 0)), inBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
         gl_FragColor = vec4(0.);
+        /*
         gl_FragColor = composite(gl_FragColor, vec4(0.2, 0.2, 0.2, 0.8));
         gl_FragColor = composite(gl_FragColor, vec4(1., 1., 1., (1. - smoothBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w), w))));
+        */
         gl_FragColor = composite(gl_FragColor, vec4(0., 0., 0.3, smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         gl_FragColor = composite(gl_FragColor, vec4(0., 0., 0.8, smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
 
