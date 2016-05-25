@@ -394,8 +394,10 @@ void ui_run() {
                 }
             }
 
-            deck_render(&deck[0]);
-            crossfader_render(&crossfader, deck[0].tex_output, deck[0].tex_output);
+            for(int i=0; i<N_DECKS; i++) {
+                deck_render(&deck[i]);
+            }
+            crossfader_render(&crossfader, deck[0].tex_output, deck[1].tex_output);
             render(false);
 
             SDL_GL_SwapWindow(window);

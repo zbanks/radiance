@@ -85,4 +85,10 @@ void crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right
 
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
+    if(crossfader->position == 1.) {
+        crossfader->left_on_top = true;
+    } else if(crossfader->position == 0.) {
+        crossfader->left_on_top = false;
+    }
 }

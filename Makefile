@@ -15,7 +15,7 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I.
 # Everything compiles fine on my system, but if it can't find headers try uncommenting this line?
-#INC += -I./usr/include
+INC += -I/usr/include/SDL2
 
 LIBRARIES = -lSDL2 -lGL -lGLU -lm
 
