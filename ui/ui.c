@@ -395,6 +395,7 @@ void ui_run() {
             }
 
             deck_render(&deck[0]);
+            crossfader_render(&crossfader, deck[0].tex_output, deck[0].tex_output);
             render(false);
 
             SDL_GL_SwapWindow(window);

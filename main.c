@@ -22,6 +22,7 @@ int main(int argc, char* args[]) {
     }
     deck_load_pattern(&deck[0], 0, "resources/patterns/test");
     deck_load_pattern(&deck[0], 1, "resources/patterns/test");
+    crossfader_init(&crossfader);
 
     ui_run();
     ui_close();

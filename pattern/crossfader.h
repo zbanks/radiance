@@ -11,10 +11,11 @@ struct crossfader {
 
     GLhandleARB shader;
     GLuint tex_output;
+    GLuint fb;
 
     float position;
 };
 
-void deck_crossfader_init(struct crossfader * crossfader);
-void deck_crossfader_term(struct crossfader * crossfader);
-void deck_crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right);
+void crossfader_init(struct crossfader * crossfader);
+void crossfader_term(struct crossfader * crossfader);
+void crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right);
