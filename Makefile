@@ -1,17 +1,21 @@
 PROJECT = radiance
+CC = gcc
 
 C_SRC  = $(wildcard *.c)
-C_SRC += $(wildcard util/*.c)
-C_SRC += $(wildcard ui/*.c)
 C_SRC += $(wildcard pattern/*.c)
+C_SRC += $(wildcard time/*.c)
+C_SRC += $(wildcard ui/*.c)
+C_SRC += $(wildcard util/*.c)
 
-OBJECTS = $(patsubst %.c,%.o,$(C_SRC))
+OBJECTS = $(C_SRC:.c=.o)
 
-INC = -I. -I/usr/include/SDL2
+INC = -I. -I/usr/include -I/usr/include/SDL2
 
-LIBRARIES = -lSDL2 -lGL -lGLU
+LIBRARIES = -lSDL2 -lGL -lGLU -lm
 
-CFLAGS = -std=c99 -Wall -g -O1 $(INC)
+CFLAGS = -std=c99 -ggdb3 -Og $(INC)
+CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
+CFLAGS += -D_POSIX_C_SOURCE=20160524
 LFLAGS = $(CFLAGS)
 
 all: $(PROJECT)

@@ -50,7 +50,11 @@ GLhandleARB load_shader(const char * filename) {
         return 0;
     }
 
-    fread(buffer, 1, length, f);
+    if(fread(buffer, 1, length, f) != (size_t) length) {
+        load_shader_error = rsprintf("Could not read entire contents of %s", filename);
+        return 0;
+    }
+
     fclose (f);
 
     GLint compiled;

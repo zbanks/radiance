@@ -1,8 +1,10 @@
 #ifndef __ERR_H
 #define __ERR_H
 
-#include <stdlib.h>
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define _ERR_STRINGIFY2(x) #x
 #define _ERR_STRINGIFY(x) _ERR_STRINGIFY2(x)
@@ -16,5 +18,8 @@
 #define INFO(...)  _ERR_MSG("info",  ## __VA_ARGS__)
 #define DEBUG(...) _ERR_MSG("debug", ## __VA_ARGS__)
 #define MEMFAIL() FAIL("Could not allocate memory")
+
+#define FAIL_P(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
+#define ERROR_P(msg, ...) _ERR_MSG("error","[%s] ", strerror(errno), ## __VA_ARGS__)
 
 #endif
