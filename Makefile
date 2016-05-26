@@ -15,11 +15,11 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I.
 # Everything compiles fine on my system, but if it can't find headers try uncommenting this line?
-#INC += -I./usr/include
+INC += -I/usr/include/SDL2
 
 LIBRARIES = -lSDL2 -lGL -lGLU -lm
 
-CFLAGS = -std=c99 -ggdb3 -Og $(INC)
+CFLAGS = -std=c99 -ggdb3 -O2 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
 CFLAGS += -D_POSIX_C_SOURCE=20160524
 LFLAGS = $(CFLAGS)

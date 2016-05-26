@@ -14,6 +14,19 @@ vec4 composite(vec4 under, vec4 over) {
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
-    gl_FragColor = texture2D(iFrameLeft, uv);
-    gl_FragColor = composite(gl_FragColor, texture2D(iFrameRight, uv));
+
+    float left_alpha = min((1. - iPosition) * 2., 1.);
+    float right_alpha = min(iPosition * 2., 1.);
+
+    vec4 left = texture2D(iFrameLeft, uv);
+    vec4 right = texture2D(iFrameRight, uv);
+
+    left.a *= left_alpha;
+    right.a *= right_alpha;
+
+    if(iLeftOnTop) {
+        gl_FragColor = composite(right, left);
+    } else {
+        gl_FragColor = composite(left, right);
+    }
 }

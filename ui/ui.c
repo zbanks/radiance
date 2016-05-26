@@ -39,6 +39,9 @@ static enum {MOUSE_NONE, MOUSE_DRAG_INTENSITY, MOUSE_DRAG_CROSSFADER} ma; // Mou
 static int mp; // Mouse pattern (index)
 static double mci; // Mouse click intensity
 
+// Selection
+static int selected = 0;
+
 // False colors
 #define HIT_NOTHING 0
 #define HIT_PATTERN 1
@@ -52,6 +55,13 @@ static const int map_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
 static const int map_y[8] = {300, 300, 300, 300, 300, 300, 300, 300};
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
+static const int map_selection[8] = {1, 2, 3, 4, 6, 7, 8, 9};
+//static const int crossfader_selection = 5;
+
+static const int map_left[10] =  {8, 1, 1, 2, 3, 4, 5, 6, 7, 8};
+static const int map_right[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 9};
+static const int map_up[10] =    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+static const int map_down[10] =  {9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
 void ui_init() {
     // Init SDL
@@ -140,7 +150,73 @@ void ui_close() {
     SDL_Quit();
 }
 
-static void handle_key(SDL_Event * e) {
+static struct pattern * selected_pattern() {
+    for(int i=0; i<config.ui.n_patterns; i++) {
+        if(map_selection[i] == selected) return deck[map_deck[i]].pattern[map_pattern[i]];
+    }
+    return NULL;
+}
+
+static void set_slider_to(float v) {
+    struct pattern * p = selected_pattern();
+    if(p != NULL) {
+        p->intensity = v;
+    }
+}
+
+static void handle_key(SDL_KeyboardEvent * e) {
+    switch(e->keysym.scancode) {
+        case SDL_SCANCODE_LEFT:
+            selected = map_left[selected];
+            break;
+        case SDL_SCANCODE_RIGHT:
+            selected = map_right[selected];
+            break;
+        case SDL_SCANCODE_UP:
+            selected = map_up[selected];
+            break;
+        case SDL_SCANCODE_DOWN:
+            selected = map_down[selected];
+            break;
+        case SDL_SCANCODE_ESCAPE:
+            selected = 0;
+            break;
+        case SDL_SCANCODE_GRAVE:
+            set_slider_to(0);
+            break;
+        case SDL_SCANCODE_1:
+            set_slider_to(0.1);
+            break;
+        case SDL_SCANCODE_2:
+            set_slider_to(0.2);
+            break;
+        case SDL_SCANCODE_3:
+            set_slider_to(0.3);
+            break;
+        case SDL_SCANCODE_4:
+            set_slider_to(0.4);
+            break;
+        case SDL_SCANCODE_5:
+            set_slider_to(0.5);
+            break;
+        case SDL_SCANCODE_6:
+            set_slider_to(0.6);
+            break;
+        case SDL_SCANCODE_7:
+            set_slider_to(0.7);
+            break;
+        case SDL_SCANCODE_8:
+            set_slider_to(0.8);
+            break;
+        case SDL_SCANCODE_9:
+            set_slider_to(0.9);
+            break;
+        case SDL_SCANCODE_0:
+            set_slider_to(1);
+            break;
+        default:
+            break;
+    }
 }
 
 static void fill(float w, float h) {
@@ -246,6 +322,8 @@ static void render(bool select) {
     glUniform2fARB(location, ww, wh);
     location = glGetUniformLocationARB(main_shader, "iSelection");
     glUniform1iARB(location, select);
+    location = glGetUniformLocationARB(main_shader, "iSelected");
+    glUniform1iARB(location, selected);
 
     fill(ww, wh);
 
@@ -366,7 +444,7 @@ void ui_run() {
                         quit = true;
                         break;
                     case SDL_KEYDOWN:
-                        handle_key(&e);
+                        handle_key(&e.key);
                         break;
                     case SDL_MOUSEMOTION:
                         mx = e.motion.x;
@@ -394,8 +472,10 @@ void ui_run() {
                 }
             }
 
-            deck_render(&deck[0]);
-            crossfader_render(&crossfader, deck[0].tex_output, deck[0].tex_output);
+            for(int i=0; i<N_DECKS; i++) {
+                deck_render(&deck[i]);
+            }
+            crossfader_render(&crossfader, deck[0].tex_output, deck[1].tex_output);
             render(false);
 
             SDL_GL_SwapWindow(window);
