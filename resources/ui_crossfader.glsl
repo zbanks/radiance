@@ -25,6 +25,10 @@ vec4 composite(vec4 under, vec4 over) {
     return vec4(a_over + a_under * (1. - over.a), over.a + under.a * (1 - over.a));
 }
 
+float rounded_rect_df(vec2 center, vec2 size, float radius) {
+    return length(max(abs(gl_FragCoord.xy - center) - size, 0.0)) - radius;
+}
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     float g = uv.y * 0.5 + 0.1;
@@ -43,8 +47,8 @@ void main(void) {
         gl_FragColor.rgb = mix(gl_FragColor.rgb, dataColor(ivec3(4, 0, 0)), inBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
         gl_FragColor = vec4(0.);
-        gl_FragColor = composite(gl_FragColor, vec4(0.2, 0.2, 0.2, 0.8));
-        gl_FragColor = composite(gl_FragColor, vec4(1., 1., 1., (1. - smoothBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w), w))));
+        float df = max(rounded_rect_df(vec2(75., 150.), vec2(45., 120.), 25.), 0.);
+        gl_FragColor = composite(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
         gl_FragColor = composite(gl_FragColor, vec4(0., 0.3, 0., smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         gl_FragColor = composite(gl_FragColor, vec4(0., 0.8, 0., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
 

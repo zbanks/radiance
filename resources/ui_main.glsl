@@ -14,23 +14,25 @@ float rounded_rect_df(vec2 center, vec2 size, float radius) {
 }
 
 vec4 fancy_rect(vec2 center) {
-    float radius = 30.;
-    vec2 size = vec2(75., 150.) - radius;
+    float radius = 25.;
+    vec2 size = vec2(45., 120.);
     float df = rounded_rect_df(center, size, radius);
-    float shadow_df = rounded_rect_df(center + vec2(5., -5.), size, radius);
+    float shadow_df = rounded_rect_df(center + vec2(5., -5.), size, radius - 10.);
     vec4 color = vec4(vec3(0.1) * (center.y + size.y + radius - gl_FragCoord.y) / (2. * (size.y + radius)), clamp(1. - df, 0., 1.));
-    vec4 shadow = vec4(0., 0., 0., clamp(0.5 - 0.05 * shadow_df, 0., 0.5));
+    vec4 shadow = vec4(0., 0., 0., 0.5 * (1. - smoothstep(max(shadow_df, 0.), 0., 10.)));
     return composite(shadow, color);
 }
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
-    float g = uv.y * 0.3;
+    float g = uv.y * 0.1 + 0.2;
 
     if(iSelection) {
         gl_FragColor = vec4(0., 0., 0., 1.);
     } else {
         gl_FragColor = vec4(g, g, g, 1.);
-        gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(175., 450.)));
+        for(float i=0; i < 9; i++) {
+            gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(175. + i * 200., 450.)));
+        }
     }
 }
