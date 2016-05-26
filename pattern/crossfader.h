@@ -1,7 +1,7 @@
 #pragma once
 
 #define GL_GLEXT_PROTOTYPES
-#include <SDL_opengl.h>
+#include <SDL2/SDL_opengl.h>
 #include <GL/glu.h>
 #include <stdbool.h>
 #include "pattern/deck.h"

@@ -1,8 +1,8 @@
 #include "ui/ui.h"
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES
-#include <SDL_opengl.h>
+#include <SDL2/SDL_opengl.h>
 #include "pattern/pattern.h"
 #include "util/config.h"
 #include "util/err.h"

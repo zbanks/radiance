@@ -2,7 +2,7 @@
 #define __UTIL_GLSL_H
 
 #define GL_GLEXT_PROTOTYPES
-#include <SDL_opengl.h>
+#include <SDL2/SDL_opengl.h>
 
 extern char * load_shader_error;
 

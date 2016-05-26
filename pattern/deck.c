@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define GL_GLEXT_PROTOTYPES
-#include <SDL_opengl.h>
+#include <SDL2/SDL_opengl.h>
 #include <assert.h>
 
 void deck_init(struct deck * deck) {
