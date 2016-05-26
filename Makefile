@@ -19,7 +19,7 @@ INC += -I/usr/include/SDL2
 
 LIBRARIES = -lSDL2 -lGL -lGLU -lm
 
-CFLAGS = -std=c99 -ggdb3 -Og $(INC)
+CFLAGS = -std=c99 -ggdb3 -O2 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
 CFLAGS += -D_POSIX_C_SOURCE=20160524
 LFLAGS = $(CFLAGS)
