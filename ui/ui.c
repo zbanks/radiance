@@ -21,15 +21,15 @@ static GLhandleARB main_shader;
 static GLhandleARB pat_shader;
 static GLhandleARB blit_shader;
 static GLhandleARB crossfader_shader;
+static GLhandleARB text_shader;
 static GLuint pat_fb;
 static GLuint select_fb;
 static GLuint crossfader_fb;
+static GLuint pat_entry_fb;
 static GLuint select_tex;
 static GLuint * pattern_textures;
 static GLuint crossfader_texture;
-static int pat_entry_width;
-static int pat_entry_height;
-static SDL_Texture * sdltex_pat_entry;
+static GLuint pat_entry_texture;
 
 // Window
 static int ww; // Window width
@@ -72,6 +72,15 @@ static const int map_down[10] =  {9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 TTF_Font * font;
 static const SDL_Color font_color = {255, 255, 255, 255};
 
+static void fill(float w, float h) {
+    glBegin(GL_QUADS);
+    glVertex2f(0, 0);
+    glVertex2f(0, h);
+    glVertex2f(w, h);
+    glVertex2f(w, 0);
+    glEnd();
+}
+
 static SDL_Texture * render_text(char * text, int * w, int * h) {
     // We need to first render to a surface as that's what TTF_RenderText
     // returns, then load that surface into a texture
@@ -84,6 +93,33 @@ static SDL_Texture * render_text(char * text, int * w, int * h) {
     // Clean up the surface and font
     SDL_FreeSurface(surf);
     return texture;
+}
+
+static void render_textbox(char * text, int width, int height) {
+    GLint location;
+
+    glUseProgramObjectARB(text_shader);
+    location = glGetUniformLocationARB(text_shader, "iResolution");
+    glUniform2fARB(location, width, height);
+
+    int text_w;
+    int text_h;
+
+    SDL_Texture * tex = render_text(text, &text_w, &text_h);
+
+    location = glGetUniformLocationARB(text_shader, "iTextResolution");
+    glUniform2fARB(location, text_w, text_h);
+    location = glGetUniformLocationARB(text_shader, "iText");
+    glUniform1iARB(location, 0);
+    glActiveTexture(GL_TEXTURE0);
+    SDL_GL_BindTexture(tex, NULL, NULL);
+
+    glLoadIdentity();
+    gluOrtho2D(0, width, 0, height);
+    glViewport(0, 0, width, height);
+    glClear(GL_COLOR_BUFFER_BIT);
+    fill(width, height);
+    SDL_DestroyTexture(tex);
 }
 
 void ui_init() {
@@ -119,6 +155,7 @@ void ui_init() {
     glGenFramebuffersEXT(1, &select_fb);
     glGenFramebuffersEXT(1, &pat_fb);
     glGenFramebuffersEXT(1, &crossfader_fb);
+    glGenFramebuffersEXT(1, &pat_entry_fb);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Init select texture
@@ -158,6 +195,17 @@ void ui_init() {
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, crossfader_fb);
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, crossfader_texture, 0);
 
+    // Init pattern entry texture
+    glGenTextures(1, &pat_entry_texture);
+    glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.pat_entry_width, config.ui.pat_entry_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
+    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pat_entry_texture, 0);
+
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -166,12 +214,16 @@ void ui_init() {
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
     if((crossfader_shader = load_shader("resources/ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", load_shader_error);
+    if((text_shader = load_shader("resources/ui_text.glsl")) == 0) FAIL("Could not load UI text shader!\n%s", load_shader_error);
 
     // Open the font
     font = TTF_OpenFont(config.ui.font, config.ui.fontsize);
     if(font == NULL) FAIL("Could not open font %s: %s\n", config.ui.font, SDL_GetError());
 
-    sdltex_pat_entry = render_text("Fuck text", &pat_entry_width, &pat_entry_height);
+    // TEMP
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
+    render_textbox("Fuck text", config.ui.pat_entry_width, config.ui.pat_entry_height);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 }
 
 void ui_close() {
@@ -181,6 +233,7 @@ void ui_close() {
     glDeleteObjectARB(main_shader);
     glDeleteObjectARB(pat_shader);
     glDeleteObjectARB(crossfader_shader);
+    glDeleteObjectARB(text_shader);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     window = NULL;
@@ -256,15 +309,6 @@ static void handle_key(SDL_KeyboardEvent * e) {
         default:
             break;
     }
-}
-
-static void fill(float w, float h) {
-    glBegin(GL_QUADS);
-    glVertex2f(0, 0);
-    glVertex2f(0, h);
-    glVertex2f(w, h);
-    glVertex2f(w, 0);
-    glEnd();
 }
 
 static void blit(float x, float y, float w, float h) {
@@ -384,10 +428,8 @@ static void render(bool select) {
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
 
     if(!select) {
-        // Blit some text
-        glActiveTexture(GL_TEXTURE0);
-        SDL_GL_BindTexture(sdltex_pat_entry, NULL, NULL);
-        blit(10, 10, pat_entry_width, pat_entry_height);
+        glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
+        blit(100, 100, config.ui.pat_entry_width, config.ui.pat_entry_height);
     }
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
