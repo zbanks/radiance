@@ -56,7 +56,7 @@ static const int map_y[8] = {300, 300, 300, 300, 300, 300, 300, 300};
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
 static const int map_selection[8] = {1, 2, 3, 4, 6, 7, 8, 9};
-//static const int crossfader_selection = 5;
+static const int crossfader_selection = 5;
 
 static const int map_left[10] =  {8, 1, 1, 2, 3, 4, 5, 6, 7, 8};
 static const int map_right[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 9};
@@ -161,6 +161,8 @@ static void set_slider_to(float v) {
     struct pattern * p = selected_pattern();
     if(p != NULL) {
         p->intensity = v;
+    } else if(selected == crossfader_selection) {
+        crossfader.position = v;
     }
 }
 
@@ -344,12 +346,6 @@ static void render(bool select) {
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
 
-    if(!select) {
-        // Blit zbank's thing
-        glBindTexture(GL_TEXTURE_2D, deck->tex_output);
-        blit(10, 10, 100, 100);
-    }
-
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
@@ -399,9 +395,10 @@ static void handle_mouse_down() {
     hit = test_hit(mx, wh - my);
     switch(hit.r) {
         case HIT_NOTHING:
+            selected = 0;
             break;
         case HIT_PATTERN:
-            printf("Click pattern. Doesn't do anything\n");
+            if(hit.g < config.ui.n_patterns) selected = map_selection[hit.g];
             break;
         case HIT_INTENSITY:
             if(hit.g < config.ui.n_patterns) {
@@ -416,16 +413,13 @@ static void handle_mouse_down() {
             }
             break;
         case HIT_CROSSFADER:
-            printf("Click crossfader. Doesn't do anything\n");
+            selected = crossfader_selection;
             break;
         case HIT_CROSSFADER_POSITION:
             ma = MOUSE_DRAG_CROSSFADER;
             mcx = mx;
             mcy = my;
             mci = crossfader.position;
-            break;
-        default:
-            printf("UNHANDLED %d\n", hit.r);
             break;
     }
 }
