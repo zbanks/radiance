@@ -34,7 +34,7 @@ int time_master_register_source(struct time_source * source) {
 }
 
 void time_master_update() {
-    struct timespec tv = {0};
+    struct timespec tv = {0, 0};
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &tv) != 0) {
         ERROR_P("clock_gettime failed");
         return;
