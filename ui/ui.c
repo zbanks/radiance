@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES
 #include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_ttf.h>
 #include "pattern/pattern.h"
 #include "util/config.h"
 #include "util/err.h"
@@ -12,8 +13,9 @@
 #include <stdbool.h>
 #include <GL/glu.h>
 
-static SDL_Window* window;
+static SDL_Window * window;
 static SDL_GLContext context;
+static SDL_Renderer * renderer;
 static bool quit;
 static GLhandleARB main_shader;
 static GLhandleARB pat_shader;
@@ -25,6 +27,9 @@ static GLuint crossfader_fb;
 static GLuint select_tex;
 static GLuint * pattern_textures;
 static GLuint crossfader_texture;
+static int pat_entry_width;
+static int pat_entry_height;
+static SDL_Texture * sdltex_pat_entry;
 
 // Window
 static int ww; // Window width
@@ -63,6 +68,24 @@ static const int map_right[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 9};
 static const int map_up[10] =    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 static const int map_down[10] =  {9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
+// Font
+TTF_Font * font;
+static const SDL_Color font_color = {255, 255, 255, 255};
+
+static SDL_Texture * render_text(char * text, int * w, int * h) {
+    // We need to first render to a surface as that's what TTF_RenderText
+    // returns, then load that surface into a texture
+    SDL_Surface *surf = TTF_RenderText_Blended(font, text, font_color);
+    if(surf == NULL) FAIL("Could not create surface: %s", SDL_GetError());
+    if(w != NULL) *w = surf->w;
+    if(h != NULL) *h = surf->h;
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
+    if(texture == NULL) FAIL("Could not create texture: %s", SDL_GetError());
+    // Clean up the surface and font
+    SDL_FreeSurface(surf);
+    return texture;
+}
+
 void ui_init() {
     // Init SDL
     if(SDL_Init(SDL_INIT_VIDEO) < 0) FAIL("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
@@ -74,10 +97,13 @@ void ui_init() {
     wh = config.ui.window_height;
 
     window = SDL_CreateWindow("Radiance", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, ww, wh, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
-    if(window == NULL) FAIL("Window could not be created! SDL Error: %s\n", SDL_GetError());
+    if(window == NULL) FAIL("Window could not be created: %s\n", SDL_GetError());
     context = SDL_GL_CreateContext(window);
-    if(context == NULL) FAIL("OpenGL context could not be created! SDL Error: %s\n", SDL_GetError());
-    if(SDL_GL_SetSwapInterval(1) < 0) fprintf(stderr, "Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
+    if(context == NULL) FAIL("OpenGL context could not be created: %s\n", SDL_GetError());
+    if(SDL_GL_SetSwapInterval(1) < 0) fprintf(stderr, "Warning: Unable to set VSync: %s\n", SDL_GetError());
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if(renderer == NULL) FAIL("Could not create renderer: %s\n", SDL_GetError());
+    if(TTF_Init() < 0) FAIL("Could not initialize font library: %s\n", TTF_GetError());
 
     // Init OpenGL
     GLenum e;
@@ -140,11 +166,22 @@ void ui_init() {
     if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
     if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
     if((crossfader_shader = load_shader("resources/ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", load_shader_error);
+
+    // Open the font
+    font = TTF_OpenFont(config.ui.font, config.ui.fontsize);
+    if(font == NULL) FAIL("Could not open font %s: %s\n", config.ui.font, SDL_GetError());
+
+    sdltex_pat_entry = render_text("Fuck text", &pat_entry_width, &pat_entry_height);
 }
 
 void ui_close() {
+    TTF_CloseFont(font);
     free(pattern_textures);
+    glDeleteObjectARB(blit_shader);
     glDeleteObjectARB(main_shader);
+    glDeleteObjectARB(pat_shader);
+    glDeleteObjectARB(crossfader_shader);
+    SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     window = NULL;
     SDL_Quit();
@@ -345,6 +382,13 @@ static void render(bool select) {
 
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
+
+    if(!select) {
+        // Blit some text
+        glActiveTexture(GL_TEXTURE0);
+        SDL_GL_BindTexture(sdltex_pat_entry, NULL, NULL);
+        blit(10, 10, pat_entry_width, pat_entry_height);
+    }
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }

@@ -15,6 +15,8 @@ CFGSECTION(ui,
     CFG(crossfader_height, INT, 300)
     CFG(crossfader_gain_x, FLOAT, 0.01)
     CFG(crossfader_gain_y, FLOAT, 0.01)
+    CFG(font, STRING, "FreeSans.ttf")
+    CFG(fontsize, INT, 24)
 )
  
 CFGSECTION(deck,
