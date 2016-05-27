@@ -31,8 +31,10 @@ void main(void) {
     c = vec4(vec3(0.1) * (center.y + size.y + RADIUS - gl_FragCoord.y) / (2. * (size.y + RADIUS)), clamp(1. - df, 0., 1.));
     color = composite(color, c);
 
-    vec2 tex_coord = (vec2(1, -1) * (gl_FragCoord.xy - vec2(RADIUS + SHRINK, 50. + iTextResolution.y))) / iTextResolution;
-    color = composite(color, texture2D(iText, tex_coord));
+    vec2 tex_coord = (vec2(1, -1) * (gl_FragCoord.xy - vec2(RADIUS + SHRINK, 45. + iTextResolution.y))) / iTextResolution;
+    c = texture2D(iText, tex_coord);
+    c.a *= 1. - smoothstep(0., 1., df);
+    color = composite(color, c);
 
     gl_FragColor = color;
 }
