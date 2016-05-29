@@ -20,15 +20,15 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
 
     memset(pattern, 0, sizeof *pattern);
 
-    pattern->intensity = 1;
-    pattern->name = strdup("unnamed");
+    pattern->intensity = 0;
+    pattern->name = strdup(prefix);
     if(pattern->name == NULL) ERROR("Could not allocate memory");
 
     int n = 0;
     for(;;) {
         char * filename;
         struct stat statbuf;
-        filename = rsprintf("%s.%d.glsl", prefix, n);
+        filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, n);
         if(filename == NULL) MEMFAIL();
 
         int rc = stat(filename, &statbuf);
@@ -54,11 +54,10 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     bool success = true;
     for(int i = 0; i < pattern->n_shaders; i++) {
         char * filename;
-        filename = rsprintf("%s.%d.glsl", prefix, i);
+        filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
         if(filename == NULL) MEMFAIL();
 
         GLhandleARB h = load_shader(filename);
-        free(filename);
 
         if (h == 0) {
             fprintf(stderr, "%s", load_shader_error);
@@ -68,6 +67,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
             pattern->shader[i] = h;
             DEBUG("Loaded shader #%d", i);
         }
+        free(filename);
     }
     if(!success) {
         ERROR("Failed to load some shaders.");
@@ -126,6 +126,7 @@ void pattern_term(struct pattern * pattern) {
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
+    free(pattern->name);
     memset(pattern, 0, sizeof *pattern);
 }
 

@@ -58,6 +58,8 @@ static int selected = 0;
 // TODO make this live in the INI file
 static const int map_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
 static const int map_y[8] = {300, 300, 300, 300, 300, 300, 300, 300};
+static const int map_pe_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
+static const int map_pe_y[8] = {200, 200, 200, 200, 200, 200, 200, 200};
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
 static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
 static const int map_selection[8] = {1, 2, 3, 4, 6, 7, 8, 9};
@@ -72,6 +74,13 @@ static const int map_down[10] =  {9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 TTF_Font * font;
 static const SDL_Color font_color = {255, 255, 255, 255};
 
+// Pat entry
+static bool pat_entry;
+static char pat_entry_text[255];
+
+// Timing
+static double l_t;
+
 static void fill(float w, float h) {
     glBegin(GL_QUADS);
     glVertex2f(0, 0);
@@ -84,13 +93,17 @@ static void fill(float w, float h) {
 static SDL_Texture * render_text(char * text, int * w, int * h) {
     // We need to first render to a surface as that's what TTF_RenderText
     // returns, then load that surface into a texture
-    SDL_Surface *surf = TTF_RenderText_Blended(font, text, font_color);
-    if(surf == NULL) FAIL("Could not create surface: %s", SDL_GetError());
+    SDL_Surface * surf;
+    if(strlen(text) > 0) {
+        surf = TTF_RenderText_Blended(font, text, font_color);
+    } else {
+        surf = TTF_RenderText_Blended(font, " ", font_color);
+    }
+    if(surf == NULL) FAIL("Could not create surface: %s\n", SDL_GetError());
     if(w != NULL) *w = surf->w;
     if(h != NULL) *h = surf->h;
     SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
-    if(texture == NULL) FAIL("Could not create texture: %s", SDL_GetError());
-    // Clean up the surface and font
+    if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
     SDL_FreeSurface(surf);
     return texture;
 }
@@ -146,7 +159,6 @@ void ui_init() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
-    glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0, 0, 0, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -216,14 +228,23 @@ void ui_init() {
     if((crossfader_shader = load_shader("resources/ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", load_shader_error);
     if((text_shader = load_shader("resources/ui_text.glsl")) == 0) FAIL("Could not load UI text shader!\n%s", load_shader_error);
 
+    // Stop text input
+    SDL_StopTextInput();
+
     // Open the font
     font = TTF_OpenFont(config.ui.font, config.ui.fontsize);
     if(font == NULL) FAIL("Could not open font %s: %s\n", config.ui.font, SDL_GetError());
 
-    // TEMP
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
-    render_textbox("Fuck text", config.ui.pat_entry_width, config.ui.pat_entry_height);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    // Init statics
+    pat_entry = false;
+
+    SDL_Surface * surf;
+    surf = TTF_RenderText_Blended(font, "wtf, why is this necessary", font_color);
+    if(surf == NULL) FAIL("Could not create surface: %s\n", SDL_GetError());
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
+    if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
+    SDL_FreeSurface(surf);
+    SDL_DestroyTexture(texture);
 }
 
 void ui_close() {
@@ -257,57 +278,98 @@ static void set_slider_to(float v) {
 }
 
 static void handle_key(SDL_KeyboardEvent * e) {
-    switch(e->keysym.scancode) {
-        case SDL_SCANCODE_LEFT:
-            selected = map_left[selected];
-            break;
-        case SDL_SCANCODE_RIGHT:
-            selected = map_right[selected];
-            break;
-        case SDL_SCANCODE_UP:
-            selected = map_up[selected];
-            break;
-        case SDL_SCANCODE_DOWN:
-            selected = map_down[selected];
-            break;
-        case SDL_SCANCODE_ESCAPE:
-            selected = 0;
-            break;
-        case SDL_SCANCODE_GRAVE:
-            set_slider_to(0);
-            break;
-        case SDL_SCANCODE_1:
-            set_slider_to(0.1);
-            break;
-        case SDL_SCANCODE_2:
-            set_slider_to(0.2);
-            break;
-        case SDL_SCANCODE_3:
-            set_slider_to(0.3);
-            break;
-        case SDL_SCANCODE_4:
-            set_slider_to(0.4);
-            break;
-        case SDL_SCANCODE_5:
-            set_slider_to(0.5);
-            break;
-        case SDL_SCANCODE_6:
-            set_slider_to(0.6);
-            break;
-        case SDL_SCANCODE_7:
-            set_slider_to(0.7);
-            break;
-        case SDL_SCANCODE_8:
-            set_slider_to(0.8);
-            break;
-        case SDL_SCANCODE_9:
-            set_slider_to(0.9);
-            break;
-        case SDL_SCANCODE_0:
-            set_slider_to(1);
-            break;
-        default:
-            break;
+    if(pat_entry) {
+        switch(e->keysym.scancode) {
+            case SDL_SCANCODE_RETURN:
+                for(int i=0; i<config.ui.n_patterns; i++) {
+                    if(map_selection[i] == selected) {
+                        deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text);
+                        break;
+                    }
+                }
+                pat_entry = false;
+                SDL_StopTextInput();
+                break;
+            case SDL_SCANCODE_ESCAPE:
+                pat_entry = false;
+                SDL_StopTextInput();
+                break;
+            default:
+                break;
+        }
+    } else {
+        switch(e->keysym.scancode) {
+            case SDL_SCANCODE_LEFT:
+                selected = map_left[selected];
+                break;
+            case SDL_SCANCODE_RIGHT:
+                selected = map_right[selected];
+                break;
+            case SDL_SCANCODE_UP:
+                selected = map_up[selected];
+                break;
+            case SDL_SCANCODE_DOWN:
+                selected = map_down[selected];
+                break;
+            case SDL_SCANCODE_ESCAPE:
+                selected = 0;
+                break;
+            case SDL_SCANCODE_DELETE:
+                for(int i=0; i<config.ui.n_patterns; i++) {
+                    if(map_selection[i] == selected) {
+                        deck_unload_pattern(&deck[map_deck[i]], map_pattern[i]);
+                        break;
+                    }
+                }
+                break;
+            case SDL_SCANCODE_GRAVE:
+                set_slider_to(0);
+                break;
+            case SDL_SCANCODE_1:
+                set_slider_to(0.1);
+                break;
+            case SDL_SCANCODE_2:
+                set_slider_to(0.2);
+                break;
+            case SDL_SCANCODE_3:
+                set_slider_to(0.3);
+                break;
+            case SDL_SCANCODE_4:
+                set_slider_to(0.4);
+                break;
+            case SDL_SCANCODE_5:
+                set_slider_to(0.5);
+                break;
+            case SDL_SCANCODE_6:
+                set_slider_to(0.6);
+                break;
+            case SDL_SCANCODE_7:
+                set_slider_to(0.7);
+                break;
+            case SDL_SCANCODE_8:
+                set_slider_to(0.8);
+                break;
+            case SDL_SCANCODE_9:
+                set_slider_to(0.9);
+                break;
+            case SDL_SCANCODE_0:
+                set_slider_to(1);
+                break;
+            case SDL_SCANCODE_L:
+                for(int i=0; i<config.ui.n_patterns; i++) {
+                    if(map_selection[i] == selected) {
+                        pat_entry = true;
+                        pat_entry_text[0] = '\0';
+                        SDL_StartTextInput();
+                        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
+                        render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
+                        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -329,6 +391,8 @@ static void blit(float x, float y, float w, float h) {
 static void render(bool select) {
     GLint location;
     GLenum e;
+
+    glEnable(GL_BLEND);
 
     // Render the eight patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
@@ -427,10 +491,17 @@ static void render(bool select) {
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
 
-    if(!select) {
-        glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
-        blit(100, 100, config.ui.pat_entry_width, config.ui.pat_entry_height);
+    if(!select && pat_entry) {
+        for(int i = 0; i < config.ui.n_patterns; i++) {
+            if(map_selection[i] == selected) {
+                glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
+                blit(map_pe_x[i], map_pe_y[i], config.ui.pat_entry_width, config.ui.pat_entry_height);
+                break;
+            }
+        }
     }
+
+    glDisable(GL_BLEND);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
@@ -476,6 +547,17 @@ static void handle_mouse_up() {
     ma = MOUSE_NONE;
 }
 
+static void handle_text(char * text) {
+    if(pat_entry) {
+        if(strlen(pat_entry_text) + strlen(text) < sizeof(pat_entry_text)) {
+            strcat(pat_entry_text, text);
+        }
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
+        render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    }
+}
+
 static void handle_mouse_down() {
     struct rgba hit;
     hit = test_hit(mx, wh - my);
@@ -513,7 +595,6 @@ static void handle_mouse_down() {
 void ui_run() {
         SDL_Event e;
 
-        float time = 0;
         quit = false;
         while(!quit) {
             render(true);
@@ -549,6 +630,9 @@ void ui_run() {
                                 break;
                         }
                         break;
+                    case SDL_TEXTINPUT:
+                        handle_text(e.text.text);
+                        break;
                 }
             }
 
@@ -559,7 +643,11 @@ void ui_run() {
             render(false);
 
             SDL_GL_SwapWindow(window);
-            time += 0.1;
+
+            double cur_t = SDL_GetTicks();
+            double dt = cur_t - l_t;
+            if(dt > 0) time += dt / 1000;
+            l_t = cur_t;
         }
 }
 

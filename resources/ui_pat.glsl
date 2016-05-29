@@ -21,9 +21,7 @@ vec3 dataColor(ivec3 data) {
 }
 
 vec4 composite(vec4 under, vec4 over) {
-    vec3 a_under = under.rgb * under.a;
-    vec3 a_over = over.rgb * over.a;
-    return vec4(a_over + a_under * (1. - over.a), over.a + under.a * (1 - over.a));
+    return vec4(over.rgb * over.a  + under.rgb * under.a * (1. - over.a), over.a + under.a * (1. - over.a));
 }
 
 float rounded_rect_df(vec2 center, vec2 size, float radius) {

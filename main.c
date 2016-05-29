@@ -10,6 +10,7 @@
 
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
+double time;
 
 int main(int argc, char* args[]) {
     config_init(&config);
@@ -20,8 +21,6 @@ int main(int argc, char* args[]) {
     for(int i=0; i < N_DECKS; i++) {
         deck_init(&deck[i]);
     }
-    deck_load_pattern(&deck[0], 0, "resources/patterns/test");
-    deck_load_pattern(&deck[1], 1, "resources/patterns/test");
     crossfader_init(&crossfader);
 
     ui_run();

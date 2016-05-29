@@ -11,6 +11,6 @@ struct deck {
 
 void deck_init(struct deck * deck);
 void deck_term(struct deck * deck);
-void deck_load_pattern(struct deck * deck, int slot, const char * prefix);
+int deck_load_pattern(struct deck * deck, int slot, const char * prefix);
 void deck_unload_pattern(struct deck * deck, int slot);
 void deck_render(struct deck * deck);
