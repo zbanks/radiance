@@ -58,7 +58,6 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         if(filename == NULL) MEMFAIL();
 
         GLhandleARB h = load_shader(filename);
-        free(filename);
 
         if (h == 0) {
             fprintf(stderr, "%s", load_shader_error);
@@ -68,6 +67,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
             pattern->shader[i] = h;
             DEBUG("Loaded shader #%d", i);
         }
+        free(filename);
     }
     if(!success) {
         ERROR("Failed to load some shaders.");

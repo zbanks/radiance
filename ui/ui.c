@@ -159,7 +159,6 @@ void ui_init() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
-    glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0, 0, 0, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -474,6 +473,7 @@ static void render(bool select) {
     fill(ww, wh);
 
     // Blit UI elements on top
+    glEnable(GL_BLEND);
     glUseProgramObjectARB(blit_shader);
     glActiveTexture(GL_TEXTURE0);
     location = glGetUniformLocationARB(blit_shader, "iTexture");
@@ -499,6 +499,8 @@ static void render(bool select) {
             }
         }
     }
+
+    glDisable(GL_BLEND);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
@@ -643,7 +645,7 @@ void ui_run() {
 
             double cur_t = SDL_GetTicks();
             double dt = cur_t - l_t;
-            if(dt > 0) time += dt;
+            if(dt > 0) time += dt / 1000;
             l_t = cur_t;
         }
 }
