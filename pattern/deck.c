@@ -51,14 +51,20 @@ void deck_term(struct deck * deck) {
     memset(deck, 0, sizeof *deck);
 }
 
-void deck_load_pattern(struct deck * deck, int slot, const char * prefix) {
+int deck_load_pattern(struct deck * deck, int slot, const char * prefix) {
     assert(slot >= 0 && slot < config.deck.n_patterns);
+    struct pattern * p = calloc(1, sizeof *p);
+    int result = pattern_init(p, prefix);
+    if(result != 0) {
+        free(p);
+        return result;
+    }
     if(deck->pattern[slot]) {
         pattern_term(deck->pattern[slot]);
-    } else {
-        deck->pattern[slot] = calloc(1, sizeof *deck->pattern[slot]);
+        free(deck->pattern[slot]);
     }
-    pattern_init(deck->pattern[slot], prefix);
+    deck->pattern[slot] = p;
+    return 0;
 }
 
 void deck_unload_pattern(struct deck * deck, int slot) {

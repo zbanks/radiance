@@ -28,6 +28,7 @@ CFGSECTION(deck,
 CFGSECTION(pattern,
     CFG(master_width, INT, 100)
     CFG(master_height, INT, 100)
+    CFG(dir, STRING, "resources/patterns/")
 )
  
 #undef CFGSECTION

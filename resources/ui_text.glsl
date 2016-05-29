@@ -34,6 +34,8 @@ void main(void) {
     vec2 tex_coord = (vec2(1, -1) * (gl_FragCoord.xy - vec2(RADIUS + SHRINK, 45. + iTextResolution.y))) / iTextResolution;
     c = texture2D(iText, tex_coord);
     c.a *= 1. - smoothstep(0., 1., df);
+    vec2 in_box = step(vec2(0.), tex_coord) - step(vec2(1.), tex_coord);
+    c.a *= in_box.x * in_box.y;
     color = composite(color, c);
 
     gl_FragColor = color;
