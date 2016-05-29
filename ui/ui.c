@@ -78,6 +78,9 @@ static const SDL_Color font_color = {255, 255, 255, 255};
 static bool pat_entry;
 static char pat_entry_text[255];
 
+// Timing
+static double l_t;
+
 static void fill(float w, float h) {
     glBegin(GL_QUADS);
     glVertex2f(0, 0);
@@ -589,7 +592,6 @@ static void handle_mouse_down() {
 void ui_run() {
         SDL_Event e;
 
-        float time = 0;
         quit = false;
         while(!quit) {
             render(true);
@@ -638,7 +640,11 @@ void ui_run() {
             render(false);
 
             SDL_GL_SwapWindow(window);
-            time += 0.1;
+
+            double cur_t = SDL_GetTicks();
+            double dt = cur_t - l_t;
+            if(dt > 0) time += dt;
+            l_t = cur_t;
         }
 }
 

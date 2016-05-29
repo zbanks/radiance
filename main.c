@@ -10,6 +10,7 @@
 
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
+double time;
 
 int main(int argc, char* args[]) {
     config_init(&config);
