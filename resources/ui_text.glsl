@@ -21,7 +21,7 @@ void main(void) {
     vec2 center = iResolution / 2.;
 
     float shadow_df = rounded_rect_df(center + vec2(5., -5.), size, RADIUS - 10.);
-    vec4 color = vec4(0., 0., 0., 0.5 * (1. - smoothstep(max(shadow_df, 0.), 0., 10.)));
+    vec4 color = vec4(0., 0., 0., 0.5 * (1. - smoothstep(0., 10., max(shadow_df, 0.))));
 
     vec4 c;
     float df = max(rounded_rect_df(center, size, RADIUS), 0.);

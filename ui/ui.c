@@ -392,6 +392,8 @@ static void render(bool select) {
     GLint location;
     GLenum e;
 
+    glEnable(GL_BLEND);
+
     // Render the eight patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
 
@@ -473,7 +475,6 @@ static void render(bool select) {
     fill(ww, wh);
 
     // Blit UI elements on top
-    glEnable(GL_BLEND);
     glUseProgramObjectARB(blit_shader);
     glActiveTexture(GL_TEXTURE0);
     location = glGetUniformLocationARB(blit_shader, "iTexture");
