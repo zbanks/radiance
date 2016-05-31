@@ -6,6 +6,8 @@
 #include "util/config.h"
 #include "pattern/deck.h"
 #include "pattern/crossfader.h"
+#include "audio/audio.h"
+#include "audio/analyze.h"
 #include "main.h"
 
 struct deck deck[N_DECKS];
@@ -23,8 +25,14 @@ int main(int argc, char* args[]) {
     }
     crossfader_init(&crossfader);
 
+    analyze_init();
+    audio_start();
+
     ui_run();
-    ui_close();
+    ui_term();
+
+    audio_stop();
+    analyze_term();
 
     for(int i=0; i < N_DECKS; i++) {
         deck_term(&deck[i]);

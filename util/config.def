@@ -19,6 +19,10 @@ CFGSECTION(ui,
     CFG(fontsize, INT, 24)
     CFG(pat_entry_width, INT, 200)
     CFG(pat_entry_height, INT, 50)
+    CFG(spectrum_x, INT, 200)
+    CFG(spectrum_y, INT, 200)
+    CFG(spectrum_width, INT, 200)
+    CFG(spectrum_height, INT, 200)
 )
  
 CFGSECTION(deck,
@@ -31,6 +35,17 @@ CFGSECTION(pattern,
     CFG(dir, STRING, "resources/patterns/")
 )
  
+CFGSECTION(audio,
+    CFG(chunk_size, INT, 256)
+    CFG(sample_rate, INT, 48000)
+    CFG(fft_length, INT, 2048)
+    CFG(spectrum_bins, INT, 256)
+    CFG(spectrum_up_alpha, FLOAT, 0.5)
+    CFG(spectrum_down_alpha, FLOAT, 0.1)
+    CFG(spectrum_gain, FLOAT, 0.1)
+    CFG(spectrum_offset, FLOAT, 0.1)
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG
