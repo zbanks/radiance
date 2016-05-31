@@ -23,6 +23,10 @@ CFGSECTION(ui,
     CFG(spectrum_y, INT, 200)
     CFG(spectrum_width, INT, 200)
     CFG(spectrum_height, INT, 200)
+    CFG(waveform_x, INT, 200)
+    CFG(waveform_y, INT, 200)
+    CFG(waveform_width, INT, 200)
+    CFG(waveform_height, INT, 200)
 )
  
 CFGSECTION(deck,
@@ -44,6 +48,10 @@ CFGSECTION(audio,
     CFG(spectrum_down_alpha, FLOAT, 0.1)
     CFG(spectrum_gain, FLOAT, 0.1)
     CFG(spectrum_offset, FLOAT, 0.1)
+    CFG(low_cutoff, FLOAT, 0.3)
+    CFG(hi_cutoff, FLOAT, 0.7)
+    CFG(waveform_length, INT, 512)
+    CFG(waveform_gain, FLOAT, 0.1)
 )
 
 #undef CFGSECTION

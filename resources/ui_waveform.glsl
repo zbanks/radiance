@@ -1,8 +1,8 @@
 #version 130
 
 uniform vec2 iResolution;
-uniform int iBins;
-uniform sampler1D iSpectrum;
+uniform int iLength;
+uniform sampler1D iWaveform;
 
 float rounded_rect_df(vec2 center, vec2 size, float radius) {
     return length(max(abs(gl_FragCoord.xy - center) - size, 0.0)) - radius;
@@ -24,10 +24,12 @@ void main(void) {
     float shrink_freq = 190. / 200.;
     float shrink_mag = 90. / 100.;
     float freq = (uv.x - 0.5) / shrink_freq + 0.5;
-    float mag = (uv.y - 0.5) * shrink_mag + 0.5;
-    float d = (texture1D(iSpectrum, freq).r - mag) * 90.;
-    float a = smoothstep(0., 1., d) * (1. - step(1., df));
-    float gb = 0.5 * clamp(0., 1., d / 30.);
-    gl_FragColor = composite(gl_FragColor, vec4(1., gb, gb, a));
+    float mag = abs(uv.y - 0.5) * shrink_mag;
+    vec3 d = (texture1D(iWaveform, freq).rgb - mag) * 90.;
+    vec3 a = smoothstep(0., 1., d) * (1. - step(1., df));
+    //float rg = 0.5 * clamp(0., 1., d.r / 30.);
+    gl_FragColor = composite(gl_FragColor, vec4(0., 0., 0.6, a.b));
+    gl_FragColor = composite(gl_FragColor, vec4(0.3, 0.3, 1., a.g));
+    gl_FragColor = composite(gl_FragColor, vec4(0.7, 0.7, 1., a.r));
     gl_FragColor = composite(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
 }
