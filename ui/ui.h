@@ -3,6 +3,6 @@
 
 void ui_init();
 void ui_run();
-void ui_close();
+void ui_term();
 
 #endif
