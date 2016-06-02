@@ -17,8 +17,8 @@ vec4 composite(vec4 under, vec4 over) {
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 
-    float factor = 1. - 5. * iIntensity * (iAudioLow - 0.3);
-    factor = clamp(0.1, 2., factor);
+    float factor = 1. - 10. * iIntensity * (iAudioLow - 0.3);
+    factor = clamp(0.05, 2., factor);
 
     gl_FragColor = texture2D(iFrame, (uv - 0.5) * factor + 0.5);
 }
