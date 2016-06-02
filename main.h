@@ -9,4 +9,8 @@ extern struct deck deck[N_DECKS];
 extern struct crossfader crossfader;
 extern double time;
 
+extern double audio_hi;
+extern double audio_mid;
+extern double audio_low;
+
 #endif
