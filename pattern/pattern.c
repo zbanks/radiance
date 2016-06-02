@@ -154,6 +154,12 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         GLint loc;
         loc = glGetUniformLocationARB(pattern->shader[i], "iTime");
         glUniform1fARB(loc, time);
+        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioHi");
+        glUniform1fARB(loc, audio_hi);
+        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioMid");
+        glUniform1fARB(loc, audio_mid);
+        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioLow");
+        glUniform1fARB(loc, audio_low);
         loc = glGetUniformLocationARB(pattern->shader[i], "iResolution");
         glUniform2fARB(loc, config.pattern.master_width, config.pattern.master_height);
         loc = glGetUniformLocationARB(pattern->shader[i], "iIntensity");

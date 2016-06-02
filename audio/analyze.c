@@ -1,9 +1,11 @@
 #include "audio/analyze.h"
 #include "util/config.h"
 #include "util/err.h"
+#include "main.h"
 #include <fftw3.h>
 #define  M_PI 3.14159265358979323846
 #include <math.h>
+#include <SDL2/SDL.h>
 
 static float * samp_queue;
 static int samp_queue_ptr;
@@ -16,6 +18,10 @@ static GLfloat * spectrum_gl;
 static int * spectrum_n;
 static GLfloat * waveform_gl;
 static int waveform_ptr;
+static SDL_mutex * mutex;
+static double audio_thread_hi;
+static double audio_thread_mid;
+static double audio_thread_low;
 
 void analyze_init() {
     // Audio processing
@@ -38,6 +44,11 @@ void analyze_init() {
     samp_queue_ptr = 0;
     waveform_ptr = 0;
     plan = fftw_plan_dft_r2c_1d(config.audio.fft_length, fft_in, fft_out, FFTW_ESTIMATE);
+    mutex = SDL_CreateMutex();
+    if(mutex == NULL) FAIL("Could not create mutex: %s\n", SDL_GetError());
+    audio_thread_hi = 0;
+    audio_thread_mid = 0;
+    audio_thread_low = 0;
 }
 
 static double window(int n) {
@@ -102,39 +113,46 @@ void analyze_chunk(chunk_pt chunk) {
         }
     }
 
-    hi = hi / (1. - config.audio.hi_cutoff) * config.audio.waveform_gain;
-    mid = mid / (config.audio.hi_cutoff - config.audio.low_cutoff) * config.audio.waveform_gain;
-    low = low / config.audio.low_cutoff * config.audio.waveform_gain;
-
     // Convert to OpenGL floats
-    // TODO lock here
+    if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
+
+    audio_thread_hi = hi / (1. - config.audio.hi_cutoff) * config.audio.waveform_gain;
+    audio_thread_mid = mid / (config.audio.hi_cutoff - config.audio.low_cutoff) * config.audio.waveform_gain;
+    audio_thread_low = low / config.audio.low_cutoff * config.audio.waveform_gain;
+
     for(int i=0; i<config.audio.spectrum_bins; i++) {
         spectrum_gl[i] = spectrum_lpf[i];
     }
 
-    waveform_gl[waveform_ptr * 4] = hi;
-    waveform_gl[waveform_ptr * 4 + 1] = mid;
-    waveform_gl[waveform_ptr * 4 + 2] = low;
-    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4] = hi;
-    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4 + 1] = mid;
-    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4 + 2] = low;
+    waveform_gl[waveform_ptr * 4] = audio_thread_hi;
+    waveform_gl[waveform_ptr * 4 + 1] = audio_thread_mid;
+    waveform_gl[waveform_ptr * 4 + 2] = audio_thread_low;
+    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4] = audio_thread_hi;
+    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4 + 1] = audio_thread_mid;
+    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4 + 2] = audio_thread_low;
     waveform_ptr = (waveform_ptr + 1) % config.audio.waveform_length;
 
-    // TODO unlock here
+    SDL_UnlockMutex(mutex);
 }
 
 // This is called from the OpenGL Thread
 void analyze_render(GLuint tex_spectrum, GLuint tex_waveform) {
-    // TODO lock here
+    if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
     glBindTexture(GL_TEXTURE_1D, tex_spectrum);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, config.audio.spectrum_bins, 0, GL_RED, GL_FLOAT, spectrum_gl);
     glBindTexture(GL_TEXTURE_1D, tex_waveform);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_gl[waveform_ptr * 4]);
     glBindTexture(GL_TEXTURE_1D, 0);
-    // TODO unlock here
+
+    audio_hi = audio_thread_hi;
+    audio_mid = audio_thread_mid;
+    audio_low = audio_thread_low;
+
+    SDL_UnlockMutex(mutex);
 }
 
 void analyze_term() {
+    SDL_DestroyMutex(mutex);
     fftw_destroy_plan(plan);
     free(samp_queue);
     free(fft_in);

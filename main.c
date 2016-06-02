@@ -13,6 +13,9 @@
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
 double time;
+double audio_hi;
+double audio_mid;
+double audio_low;
 
 int main(int argc, char* args[]) {
     config_init(&config);
