@@ -2,10 +2,14 @@
 #include "util/config.h"
 #include "util/err.h"
 #include "main.h"
+#include "BTrack/src/BTrack.h"
 #include <fftw3.h>
-#define  M_PI 3.14159265358979323846
 #include <math.h>
 #include <SDL2/SDL.h>
+
+#ifndef M_PI
+#define  M_PI 3.14159265358979323846
+#endif
 
 static float * samp_queue;
 static int samp_queue_ptr;
@@ -22,6 +26,28 @@ static SDL_mutex * mutex;
 static double audio_thread_hi;
 static double audio_thread_mid;
 static double audio_thread_low;
+static struct btrack btrack; 
+
+// BTrack-based Timebase
+
+/* TODO
+static const struct time_source analyze_audio_time_source = {
+    .name = "Audio Beat Tracking",
+    .update = analyze_audio_time_update,
+    .destroy = NULL,
+};
+
+double analyze_audio_time_update(struct time_source * source, long wall_ms) {
+    ASSERT(source == analyze_audio_time_source);
+    if (!init) return FP_NAN;
+
+    // Naive; doesn't try to match phases or anything
+    double beats_per_minute = btrack_get_bpm(&btrack);
+    return wall_ms * MINUTES_PER_MILLISECOND * beats_per_minute;
+}
+*/
+
+// Audio Analyze
 
 void analyze_init() {
     // Audio processing
@@ -49,6 +75,10 @@ void analyze_init() {
     audio_thread_hi = 0;
     audio_thread_mid = 0;
     audio_thread_low = 0;
+    if (btrack_init(&btrack, config.audio.chunk_size, config.audio.fft_length) != 0)
+        FAIL_P("Could not initialize BTrack");
+    //if (time_master_register_source(&analyze_audio_time_source) != 0)
+    //    FAIL_P("Could not register btrack time source");
 }
 
 static double window(int n) {
@@ -113,6 +143,26 @@ void analyze_chunk(chunk_pt chunk) {
         }
     }
 
+    // Pass to BTrack. TODO: use already FFT'd values
+    btrack_process_audio_frame(&btrack, chunk);
+    if (btrack_beat_due_in_current_frame(&btrack))
+        INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
+
+    static double beat_lpf = 0.0;
+    if (btrack_beat_due_in_current_frame(&btrack))
+        beat_lpf = 1.0;
+    else
+        beat_lpf *= 0.95;
+
+    /*
+    static double odf = 0.0;
+    static double odf_max = 0.0;
+    double odf_cur = btrack_get_latest_odf(&btrack);
+    odf_max *= 0.99;
+    if (odf_max < odf_cur) odf_max = odf_cur;
+    odf = 0.9 * odf + 0.1 * (odf_cur / odf_max);
+    */
+
     // Convert to OpenGL floats
     if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
 
@@ -127,9 +177,9 @@ void analyze_chunk(chunk_pt chunk) {
     waveform_gl[waveform_ptr * 4] = audio_thread_hi;
     waveform_gl[waveform_ptr * 4 + 1] = audio_thread_mid;
     waveform_gl[waveform_ptr * 4 + 2] = audio_thread_low;
-    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4] = audio_thread_hi;
-    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4 + 1] = audio_thread_mid;
-    waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4 + 2] = audio_thread_low;
+    waveform_gl[waveform_ptr * 4 + 3] = beat_lpf;
+    memcpy(&waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_gl[waveform_ptr * 4], 4 * sizeof *waveform_gl);
+
     waveform_ptr = (waveform_ptr + 1) % config.audio.waveform_length;
 
     SDL_UnlockMutex(mutex);
@@ -160,5 +210,7 @@ void analyze_term() {
     free(spectrum);
     free(spectrum_lpf);
     free(spectrum_n);
+    btrack_del(&btrack);
     samp_queue = 0;
 }
+

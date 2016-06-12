@@ -22,4 +22,14 @@
 #define FAIL_P(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
 #define ERROR_P(msg, ...) _ERR_MSG("error","[%s] ", strerror(errno), ## __VA_ARGS__)
 
+/*
+#include <execinfo.h>
+#define BACKTRACE() ({ \
+    INFO("Backtrace:"); \
+    void * _buffer[100]; \
+    int _nptrs = backtrace(_buffer, 100); \
+    backtrace_symbols_fd(_buffer, _nptrs, fileno(stderr)); \
+})
+*/
+
 #endif

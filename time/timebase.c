@@ -29,6 +29,8 @@ void time_master_term() {
 }
 
 int time_master_register_source(struct time_source * source) {
+    if (source == NULL) return -1;
+    INFO("Registered time source '%s'", source->name);
     time_sources[n_time_sources] = source;
     return n_time_sources++;
 }
@@ -48,8 +50,9 @@ void time_master_update() {
 
     // Update all time sources
     for (size_t i = 0; i < n_time_sources; i++) {
-        double delta_phase = time_sources[i]->update(time_sources[i], delta_time_ms);
+        if (time_sources[i] == NULL) continue;
 
+        double delta_phase = time_sources[i]->update(time_sources[i], delta_time_ms);
         // error condition
         if (isnan(delta_phase)) continue;
 

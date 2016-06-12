@@ -8,6 +8,7 @@ C_SRC += $(wildcard time/*.c)
 C_SRC += $(wildcard ui/*.c)
 C_SRC += $(wildcard util/*.c)
 C_SRC += $(wildcard audio/*.c)
+C_SRC += $(wildcard BTrack/src/*.c)
 
 OBJDIR = build
 $(shell mkdir -p $(OBJDIR) >/dev/null)
@@ -18,7 +19,7 @@ INC = -I.
 # Everything compiles fine on my system, but if it can't find headers try uncommenting this line?
 #INC += -I/usr/include/SDL2
 
-LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lfftw3
+LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lfftw3 -lsamplerate
 
 CFLAGS = -std=c99 -ggdb3 -O0 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter

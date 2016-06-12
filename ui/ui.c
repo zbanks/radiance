@@ -91,6 +91,11 @@ static char pat_entry_text[255];
 // Timing
 static double l_t;
 
+// Forward declarations
+static void handle_text(const char * text);
+
+//
+
 static void fill(float w, float h) {
     glBegin(GL_QUADS);
     glVertex2f(0, 0);
@@ -351,6 +356,12 @@ static void handle_key(SDL_KeyboardEvent * e) {
             case SDL_SCANCODE_ESCAPE:
                 pat_entry = false;
                 SDL_StopTextInput();
+                break;
+            case SDL_SCANCODE_BACKSPACE:
+                if (pat_entry_text[0] != '\0') {
+                    pat_entry_text[strlen(pat_entry_text)-1] = '\0';
+                    handle_text("\0");
+                }
                 break;
             default:
                 break;
@@ -663,7 +674,7 @@ static void handle_mouse_up() {
     ma = MOUSE_NONE;
 }
 
-static void handle_text(char * text) {
+static void handle_text(const char * text) {
     if(pat_entry) {
         if(strlen(pat_entry_text) + strlen(text) < sizeof(pat_entry_text)) {
             strcat(pat_entry_text, text);

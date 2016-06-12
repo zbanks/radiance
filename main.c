@@ -8,6 +8,7 @@
 #include "pattern/crossfader.h"
 #include "audio/audio.h"
 #include "audio/analyze.h"
+#include "time/timebase.h"
 #include "main.h"
 
 struct deck deck[N_DECKS];
@@ -28,6 +29,7 @@ int main(int argc, char* args[]) {
     }
     crossfader_init(&crossfader);
 
+    time_master_init();
     analyze_init();
     audio_start();
 
