@@ -16,6 +16,6 @@ install:
       && sudo make install
       && popd;
 
-script: make
+script: make CC="$CC"
 
 
