@@ -3,13 +3,9 @@
 #include "audio/audio.h"
 #include "audio/input_pa.h"
 #include "audio/analyze.h"
-//#include "filters/filter.h"
-//#include "waveform/waveform.h"
-//#include "timebase/timebase.h"
-//#include "BTrack.h"
 
-#include <SDL/SDL_thread.h>
-#include <SDL/SDL_timer.h>
+#include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_timer.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +53,7 @@ void audio_start() {
 
     audio_running = 1;
 
-    audio_thread = SDL_CreateThread(&audio_run, 0);
+    audio_thread = SDL_CreateThread(&audio_run, "Audio", 0);
     if(!audio_thread) FAIL("Could not create output thread: %s\n",SDL_GetError());
 }
 

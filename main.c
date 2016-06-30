@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "ui/ui.h"
 #include "util/config.h"
+#include "util/err.h"
 #include "pattern/deck.h"
 #include "pattern/crossfader.h"
 #include "audio/audio.h"
@@ -11,6 +12,7 @@
 #include "time/timebase.h"
 #include "main.h"
 
+enum loglevel loglevel = LOGLEVEL_INFO;
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
 double time;

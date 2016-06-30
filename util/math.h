@@ -7,5 +7,6 @@
 #endif
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define ABS(a) ((a) > 0 ? (a) : -(a))
+#define CLAMP(x, min, max) MIN(MAX((x), (min)), (max))

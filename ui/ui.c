@@ -8,6 +8,7 @@
 #include "util/config.h"
 #include "util/err.h"
 #include "util/glsl.h"
+#include "util/math.h"
 #include "audio/analyze.h"
 #include "main.h"
 #include <stdio.h>
@@ -340,10 +341,24 @@ static void set_slider_to(float v) {
     }
 }
 
+static void increment_slider(float v) {
+    struct pattern * p = selected_pattern();
+    if(p != NULL) {
+        p->intensity = CLAMP(p->intensity + v, 0., 1.);
+    } else if(selected == crossfader_selection) {
+        crossfader.position = CLAMP(crossfader.position + v, 0., 1.);
+    }
+}
+
 static void handle_key(SDL_KeyboardEvent * e) {
+    bool shift = e->keysym.mod & KMOD_SHIFT;
+    bool ctrl = e->keysym.mod & KMOD_SHIFT;
+    bool alt = e->keysym.mod & KMOD_SHIFT;
+    (void) (shift & ctrl & alt);
+
     if(pat_entry) {
-        switch(e->keysym.scancode) {
-            case SDL_SCANCODE_RETURN:
+        switch(e->keysym.sym) {
+            case SDLK_RETURN:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text);
@@ -353,11 +368,11 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 pat_entry = false;
                 SDL_StopTextInput();
                 break;
-            case SDL_SCANCODE_ESCAPE:
+            case SDLK_ESCAPE:
                 pat_entry = false;
                 SDL_StopTextInput();
                 break;
-            case SDL_SCANCODE_BACKSPACE:
+            case SDLK_BACKSPACE:
                 if (pat_entry_text[0] != '\0') {
                     pat_entry_text[strlen(pat_entry_text)-1] = '\0';
                     handle_text("\0");
@@ -367,23 +382,27 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 break;
         }
     } else {
-        switch(e->keysym.scancode) {
-            case SDL_SCANCODE_LEFT:
+        DEBUG("Keysym: %u '%c'", e->keysym.sym, e->keysym.sym);
+        switch(e->keysym.sym) {
+            case SDLK_h:
+            case SDLK_LEFT:
                 selected = map_left[selected];
                 break;
-            case SDL_SCANCODE_RIGHT:
+            case SDLK_l:
+            case SDLK_RIGHT:
                 selected = map_right[selected];
                 break;
-            case SDL_SCANCODE_UP:
+            case SDLK_UP:
                 selected = map_up[selected];
                 break;
-            case SDL_SCANCODE_DOWN:
+            case SDLK_DOWN:
                 selected = map_down[selected];
                 break;
-            case SDL_SCANCODE_ESCAPE:
+            case SDLK_ESCAPE:
                 selected = 0;
                 break;
-            case SDL_SCANCODE_DELETE:
+            case SDLK_DELETE:
+            case SDLK_x:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         deck_unload_pattern(&deck[map_deck[i]], map_pattern[i]);
@@ -391,40 +410,46 @@ static void handle_key(SDL_KeyboardEvent * e) {
                     }
                 }
                 break;
-            case SDL_SCANCODE_GRAVE:
+            case SDLK_k:
+                increment_slider(+0.1);
+                break;
+            case SDLK_j:
+                increment_slider(-0.1);
+                break;
+            case SDLK_BACKQUOTE:
                 set_slider_to(0);
                 break;
-            case SDL_SCANCODE_1:
+            case SDLK_1:
                 set_slider_to(0.1);
                 break;
-            case SDL_SCANCODE_2:
+            case SDLK_2:
                 set_slider_to(0.2);
                 break;
-            case SDL_SCANCODE_3:
+            case SDLK_3:
                 set_slider_to(0.3);
                 break;
-            case SDL_SCANCODE_4:
+            case SDLK_4:
                 set_slider_to(0.4);
                 break;
-            case SDL_SCANCODE_5:
+            case SDLK_5:
                 set_slider_to(0.5);
                 break;
-            case SDL_SCANCODE_6:
+            case SDLK_6:
                 set_slider_to(0.6);
                 break;
-            case SDL_SCANCODE_7:
+            case SDLK_7:
                 set_slider_to(0.7);
                 break;
-            case SDL_SCANCODE_8:
+            case SDLK_8:
                 set_slider_to(0.8);
                 break;
-            case SDL_SCANCODE_9:
+            case SDLK_9:
                 set_slider_to(0.9);
                 break;
-            case SDL_SCANCODE_0:
+            case SDLK_0:
                 set_slider_to(1);
                 break;
-            case SDL_SCANCODE_L:
+            case SDLK_SEMICOLON: if(!shift) break;
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         pat_entry = true;

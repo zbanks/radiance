@@ -10,16 +10,34 @@
 
 #define DEBUG_INFO __FILE__ ":" _ERR_STRINGIFY(__LINE__) ":" _ERR_STRINGIFY(__func__)
 
-#define _ERR_MSG(severity, msg, ...) fprintf(stderr, "[%-5s] [%s:%s:%d] " msg "\n", severity, __FILE__, __func__, __LINE__, ## __VA_ARGS__)
+extern enum loglevel {
+    LOGLEVEL_ALL = 0,
+    LOGLEVEL_DEBUG,
+    LOGLEVEL_INFO,
+    LOGLEVEL_WARN,
+    LOGLEVEL_ERROR,
+} loglevel;
+
+#define LOGLIMIT(command) ({            \
+    static unsigned long _ntimes = 0;   \
+    static unsigned long _limit = 4;    \
+    if (_ntimes > _limit)               \
+        _limit *= 2;                    \
+    if (_ntimes <= _limit)              \
+        command;                        \
+})
+
+#define _ERR_MSG(severity, msg, ...) if (loglevel <= LOGLEVEL_ ## severity) { fprintf(stderr, "[%-5s] [%s:%s:%d] " msg "\n", _ERR_STRINGIFY(severity), __FILE__, __func__, __LINE__, ## __VA_ARGS__); }
+
 #define FAIL(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
-#define ERROR(...) _ERR_MSG("error", ## __VA_ARGS__)
-#define WARN(...)  _ERR_MSG("warn",  ## __VA_ARGS__)
-#define INFO(...)  _ERR_MSG("info",  ## __VA_ARGS__)
-#define DEBUG(...) _ERR_MSG("debug", ## __VA_ARGS__)
+#define ERROR(...) _ERR_MSG(ERROR, ## __VA_ARGS__)
+#define WARN(...)  _ERR_MSG(WARN,  ## __VA_ARGS__)
+#define INFO(...)  _ERR_MSG(INFO,  ## __VA_ARGS__)
+#define DEBUG(...) _ERR_MSG(DEBUG, ## __VA_ARGS__)
 #define MEMFAIL() FAIL("Could not allocate memory")
 
 #define FAIL_P(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
-#define ERROR_P(msg, ...) _ERR_MSG("error","[%s] ", strerror(errno), ## __VA_ARGS__)
+#define ERROR_P(msg, ...) _ERR_MSG(ERROR,"[%s] ", strerror(errno), ## __VA_ARGS__)
 
 /*
 #include <execinfo.h>
