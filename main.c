@@ -29,7 +29,7 @@ int main(int argc, char* args[]) {
     }
     crossfader_init(&crossfader);
 
-    time_master_init();
+    time_init();
     analyze_init();
     audio_start();
 

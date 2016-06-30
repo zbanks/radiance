@@ -1,4 +1,5 @@
 #include "pattern/pattern.h"
+#include "time/timebase.h"
 #include "util/glsl.h"
 #include "util/string.h"
 #include "util/err.h"
@@ -153,7 +154,7 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
 
         GLint loc;
         loc = glGetUniformLocationARB(pattern->shader[i], "iTime");
-        glUniform1fARB(loc, time);
+        glUniform1fARB(loc, time_master.beat_frac + time_master.beat_index);
         loc = glGetUniformLocationARB(pattern->shader[i], "iAudioHi");
         glUniform1fARB(loc, audio_hi);
         loc = glGetUniformLocationARB(pattern->shader[i], "iAudioMid");

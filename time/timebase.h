@@ -1,19 +1,29 @@
 #pragma once
 #include <stdint.h>
 
+#define MINUTES_PER_MILLISECOND (60. * 1000.)
+
 extern struct time_master {
     long wall_ms;
     double beat_frac;
     uint8_t beat_index;
+    double bpm;
 } time_master;
 
-struct time_source {
-    const char * name;
-    double (*update)(struct time_source * source, long wall_ms);
-    void (*destroy)(struct time_source * source);
+enum time_source {
+    TIME_SOURCE_AUDIO,
+    TIME_SOURCE_USER,
+    TIME_SOURCE_CLOCK,
+    //TIME_SOURCE_NETWORK,
 };
 
-int time_master_init();
-void time_master_term();
-int time_master_register_source(struct time_source * source);
-void time_master_update();
+enum time_source_event {
+    TIME_SOURCE_EVENT_NONE,
+    TIME_SOURCE_EVENT_BEAT,
+    TIME_SOURCE_EVENT_BAR,
+    TIME_SOURCE_EVENT_BPM,
+};
+
+int time_init();
+void time_term();
+void time_update(enum time_source source, enum time_source_event event, double ms_until_event);

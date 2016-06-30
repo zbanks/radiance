@@ -24,34 +24,34 @@ GLhandleARB load_shader(const char * filename) {
     FILE * f = fopen(filename, "r");
 
     if(f == NULL) {
-        load_shader_error = rsprintf("Could not open file: %s", filename);
+        load_shader_error = rsprintf("Could not open file: %s (%s)", filename, strerror(errno));
         return 0;
     }
 
     int r;
 
     if((r = fseek(f, 0, SEEK_END)) != 0) {
-        load_shader_error = rsprintf("fseek returned %d on file: %s", r, filename);
+        load_shader_error = rsprintf("fseek returned %d on file: %s (%s)", r, filename, strerror(errno));
         return 0;
     }
     if((length = ftell(f)) < 0) {
-        load_shader_error = rsprintf("ftell returned %d on file: %s (ERRNO: %d)", r, filename, errno);
+        load_shader_error = rsprintf("ftell returned %d on file: %s (%s)", r, filename, strerror(errno));
         return 0;
     }
     
     if((r = fseek(f, 0, SEEK_SET)) != 0) {
-        load_shader_error = rsprintf("fseek returned %d on file: %s", r, filename);
+        load_shader_error = rsprintf("fseek returned %d on file: %s (%s)", r, filename, strerror(errno));
         return 0;
     }
 
     buffer = calloc(length, 1);
     if(buffer == NULL) {
-        load_shader_error = rsprintf("Could not allocate memory for contents of %s", filename);
+        load_shader_error = rsprintf("Could not allocate memory for contents of %s (%s)", filename, strerror(errno));
         return 0;
     }
 
     if(fread(buffer, 1, length, f) != (size_t) length) {
-        load_shader_error = rsprintf("Could not read entire contents of %s", filename);
+        load_shader_error = rsprintf("Could not read entire contents of %s (%s)", filename, strerror(errno));
         return 0;
     }
 
@@ -73,7 +73,7 @@ GLhandleARB load_shader(const char * filename) {
         if(blen > 1) {
             GLchar* compiler_log = (GLchar*)calloc(blen, 1);
             glGetShaderInfoLog(fragmentShaderObj, blen, &slen, compiler_log);
-            load_shader_error = rsprintf("Shader compilation failed!\n%s", compiler_log);
+            load_shader_error = rsprintf("Shader compilation failed, Log:\n%s", compiler_log);
             free(compiler_log);
         } else {
             load_shader_error = strdup("Shader compilation failed!");
@@ -136,7 +136,7 @@ GLhandleARB load_shader(const char * filename) {
         if(blen > 1) {
             GLchar* linker_log = (GLchar*)calloc(blen, 1);
             glGetProgramInfoLog(programObj, blen, &slen, linker_log);
-            load_shader_error = rsprintf("Shader linking failed!\n%s", linker_log);
+            load_shader_error = rsprintf("Shader linking failed; Log:\n%s", linker_log);
             free(linker_log);
         } else {
             load_shader_error = strdup("Shader linking failed!");

@@ -1,5 +1,4 @@
-#ifndef __ERR_H
-#define __ERR_H
+#pragma once
 
 #include <errno.h>
 #include <stdio.h>
@@ -31,5 +30,3 @@
     backtrace_symbols_fd(_buffer, _nptrs, fileno(stderr)); \
 })
 */
-
-#endif

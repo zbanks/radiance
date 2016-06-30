@@ -3,6 +3,9 @@
 #endif
 
 #include "util/err.h"
+// Uncomment if ERROR and INFO functions do not terminate msg with a \n
+//#define ERRNL "\n"
+#define ERRNL
 
 #define SIZE_SECTION_NAME "section_sizes"
 
@@ -20,7 +23,7 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
                 int new_n = atoi(value);                                                                            \
                 struct SECTIONSTRUCT(name) * new_ptr = malloc(new_n * sizeof(struct SECTIONSTRUCT(name)));          \
                 if(!new_ptr){                                                                                       \
-                    ERROR("Unable to malloc %s[%s]\n", STRINGIFY(name), value);                                     \
+                    ERROR("Unable to malloc %s[%s]" ERRNL, STRINGIFY(name), value);                                     \
                     return HANDLER_ERROR;                                                                           \
                 }                                                                                                   \
                 memset(new_ptr, 0, cfg->LIST_N_NAME(name) * sizeof(struct SECTIONSTRUCT(name)));                    \
@@ -48,7 +51,7 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
 
 
         #include CFGOBJ_PATH
-        ERROR("Invalid key %s\n", key);
+        ERROR("Invalid key %s" ERRNL, key);
         return HANDLER_ERROR;
     }
 
@@ -56,7 +59,7 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
         if(strcasecmp(section, STRINGIFY(s)) == 0){ \
             struct SECTIONSTRUCT(s) * sp = &cfg->s; \
             d                                       \
-            ERROR("Invalid key %s\n", key);         \
+            ERROR("Invalid key %s" ERRNL, key);         \
             return HANDLER_ERROR;                   \
         }
 
@@ -64,13 +67,13 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
         if(strncasecmp(section, LIST_PREFIX(name), strlen(LIST_PREFIX(name))) == 0){                        \
             int i = atoi(section + strlen(LIST_PREFIX(name)));                                              \
             if(i >= cfg->LIST_N_NAME(name) || i < 0){                                                       \
-                ERROR("invalid " STRINGIFY(name) " entry! (%d, max is %d)\n", i, cfg->LIST_N_NAME(name));   \
+                ERROR("invalid " STRINGIFY(name) " entry! (%d, max is %d)" ERRNL, i, cfg->LIST_N_NAME(name));   \
                 return HANDLER_ERROR;                                                                       \
             }                                                                                               \
             struct SECTIONSTRUCT(name) * sp = &cfg->LIST_NAME(name)[i];                                     \
             sp->configured = 1;                                                                             \
             d                                                                                               \
-            ERROR("Invalid key %s\n", key);                                                                 \
+            ERROR("Invalid key %s" ERRNL, key);                                                                 \
             return HANDLER_ERROR;                                                                           \
         }
 
@@ -85,7 +88,7 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
         if(strncasecmp(key, LIST_PREFIX(n), strlen(LIST_PREFIX(n))) == 0){  \
             int idx = atoi(key + strlen(LIST_PREFIX(n)));                   \
             if(idx < 0 || idx >= max) {                                     \
-                ERROR("Invalid index: %s\n", key);                          \
+                ERROR("Invalid index: %s" ERRNL, key);                          \
                 return HANDLER_ERROR;                                       \
             }                                                               \
             type##_FREE(sp->LIST_NAME(n)[idx]);                             \
@@ -95,7 +98,7 @@ static int CONCAT(CFGOBJ, _parse)(void * user, const char * section, const char 
 
     #include CFGOBJ_PATH
 
-    ERROR("Unknown section %s\n", section);
+    ERROR("Unknown section %s" ERRNL, section);
     return HANDLER_ERROR;
 }
 
@@ -151,12 +154,12 @@ int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename){
     if(!filename) return -1;
     int err = 0;
     if((err = ini_parse(filename, CONCAT(CFGOBJ, _parse), cfg))){
-        ERROR("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
+        ERROR("Unable to load " STRINGIFY(CFGOBJ) " configuration file: '%s'" ERRNL, filename);
         if(err > 0)
-            ERROR("Error on line %d\n", err);
+            ERROR("Error on line %d" ERRNL, err);
         return -1;
     }
-    INFO("Loaded " STRINGIFY(CFGOBJ) " configuration file: '%s'\n", filename);
+    INFO("Loaded " STRINGIFY(CFGOBJ) " configuration file: '%s'" ERRNL, filename);
     return 0;
 }
 
@@ -213,3 +216,5 @@ int CONCAT(CFGOBJ, _del)(struct CFGOBJ * cfg){
     #include CFGOBJ_PATH
     return 0;
 }
+
+#undef ERRNL
