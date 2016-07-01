@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <math.h>
 
 int pattern_init(struct pattern * pattern, const char * prefix) {
     GLenum e;
@@ -22,6 +23,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     memset(pattern, 0, sizeof *pattern);
 
     pattern->intensity = 0;
+    pattern->intensity_integral = 0;
     pattern->name = strdup(prefix);
     if(pattern->name == NULL) ERROR("Could not allocate memory");
 
@@ -138,6 +140,8 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->fb);
 
+    pattern->intensity_integral = fmod(pattern->intensity_integral + pattern->intensity / config.ui.fps, MAX_INTEGRAL);
+
     for (int i = pattern->n_shaders - 1; i >= 0; i--) {
         glUseProgramObjectARB(pattern->shader[i]);
 
@@ -165,6 +169,10 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         glUniform2fARB(loc, config.pattern.master_width, config.pattern.master_height);
         loc = glGetUniformLocationARB(pattern->shader[i], "iIntensity");
         glUniform1fARB(loc, pattern->intensity);
+        loc = glGetUniformLocationARB(pattern->shader[i], "iIntensityIntegral");
+        glUniform1fARB(loc, pattern->intensity_integral);
+        loc = glGetUniformLocationARB(pattern->shader[i], "iFPS");
+        glUniform1fARB(loc, config.ui.fps);
         loc = glGetUniformLocationARB(pattern->shader[i], "iFrame");
         glUniform1iARB(loc, 0);
         loc = glGetUniformLocationARB(pattern->shader[i], "iChannel");

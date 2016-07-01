@@ -5,6 +5,7 @@ uniform float iTime;
 uniform sampler2D iChannel[2];
 uniform sampler2D iFrame;
 uniform float iIntensity;
+uniform float iIntensityIntegral;
 uniform float iAudioHi;
 uniform float iAudioMid;
 uniform float iAudioLow;
@@ -36,11 +37,7 @@ void main(void) {
     gl_FragColor = texture2D(iFrame, uv);
 
     float deviation;
-    if(iIntensity < 0.25) {
-        deviation = iIntensity * cos(M_PI * mod(iTime, 2.) - 1.);
-    } else { 
-        deviation = iTime * (iIntensity - 0.25) * (1. / 0.75);
-    }
+    deviation = smoothstep(0., 0.3, iIntensity) * mod(iIntensityIntegral, 1.);
 
     vec3 hsv = rgb2hsv(gl_FragColor.rgb);
     hsv.r = mod(hsv.r + 1. + deviation, 1.);

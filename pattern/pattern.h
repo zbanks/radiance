@@ -5,13 +5,14 @@
 #include <GL/glu.h>
 #include <stdbool.h>
 
-#define N_SHADERS_PER_PATTERN 3
+#define MAX_INTEGRAL 1024
 
 struct pattern {
     GLhandleARB * shader;
     int n_shaders;
     char * name;
     double intensity;
+    double intensity_integral;
 
     int flip;
     GLuint * tex;
