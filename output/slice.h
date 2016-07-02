@@ -1,39 +1,38 @@
-#ifndef __SLICE_H
-#define __SLICE_H
+#pragma once
+#include <SDL2/SDL.h>
+#include <stdbool.h>
 
-#include "core/slot.h"
-#include <SDL/SDL.h>
-
-enum output_bus {
-    OUTPUT_FLUX = 1,
-    OUTPUT_LUX = 2, // bitmask
-};
-
-typedef struct output_vertex
-{
-    float x;
-    float y;
-    int index;
-    struct output_vertex* next;
-} output_vertex_t;
-
-typedef struct output_strip
-{
-    char id_str[16];
-    int id_int;
-    int length;
-    output_vertex_t* first;
-    SDL_Color color;
-    int bus;
-    int point_array_length;
+struct output_pixels {
+    size_t length;
     float * xs;
     float * ys;
-    color_t * frame;
-} output_strip_t;
+    SDL_Color * colors;
+};
 
-extern int n_output_strips;
-extern output_strip_t output_strips[];
+struct output_vertex;
+struct output_vertex {
+    struct output_vertex * next;
+    float x;
+    float y;
+    float scale;
+};
 
-void output_to_buffer(output_strip_t* strip, color_t* buffer);
+struct output_device;
+struct output_device {
+    struct output_device * next;
+    struct output_pixels pixels;
+    struct output_vertex * vertex_head;
+    bool active;
 
-#endif
+    SDL_Color ui_color;
+    char * ui_name;
+};
+
+extern struct output_device * output_device_head;
+extern unsigned int output_render_count;
+
+// Calculate pixel coordinates from vertex coordinates
+int output_device_arrange(struct output_device * dev);
+
+// Render all of the output device pixel buffers
+int output_render();

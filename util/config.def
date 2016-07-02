@@ -55,6 +55,12 @@ CFGSECTION(audio,
     CFG(waveform_gain, FLOAT, 0.1)
 )
 
+CFGSECTION(lux,
+    CFG(enabled, INT, 1)
+    CFG(uri, STRING, "127.0.0.1:1365")
+    CFG(timeout_ms, INT, 150)
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG

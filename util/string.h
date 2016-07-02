@@ -1,7 +1,6 @@
-#ifndef __UTIL_STRING_H
-#define __UTIL_STRING_H
+#pragma once
+#include <string.h>
 
 char * rsprintf(const char * fmt, ...);
 char * strdup(const char * s);
-
-#endif
+char * strsep(char ** s, const char * delim);

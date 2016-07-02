@@ -73,9 +73,9 @@ void analyze_init() {
     audio_thread_mid = 0;
     audio_thread_low = 0;
     if (btrack_init(&btrack, config.audio.chunk_size, config.audio.fft_length, config.audio.sample_rate) != 0)
-        FAIL_P("Could not initialize BTrack");
+        PFAIL("Could not initialize BTrack");
     //if (time_master_register_source(&analyze_audio_time_source) != 0)
-    //    FAIL_P("Could not register btrack time source");
+    //    PFAIL("Could not register btrack time source");
 }
 
 static double window(int n) {
@@ -145,7 +145,7 @@ void analyze_chunk(chunk_pt chunk) {
 
     static double beat_lpf = 0.0;
     if (btrack_beat_due_in_current_frame(&btrack)) {
-        INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
+        DEBUG("Beat; BPM=%lf", btrack_get_bpm(&btrack));
         beat_lpf = 1.0;
     } else {
         beat_lpf *= 0.95;

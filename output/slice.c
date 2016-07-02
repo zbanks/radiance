@@ -1,167 +1,54 @@
-#include <SDL/SDL_thread.h>
-#include <math.h>
-
-#include "core/config.h"
-#include "core/err.h"
-#include "core/slot.h"
 #include "output/slice.h"
+#include "util/math.h"
 
-#define C_X1 0.5
-#define C_X2 -0.5
-#define C_Y 0
+struct output_device * output_device_head = NULL;
+unsigned int output_render_count = 0;
 
-output_vertex_t s1v2 = {
-    .x = C_X1,
-    .y = C_Y,
-    .index = 140,
-    .next = 0,
-};
+int output_device_arrange(struct output_device * dev) {
+    size_t length = dev->pixels.length;
+    if (length <= 0) return -1;
+    if (dev->vertex_head == NULL) return -1;
 
-output_vertex_t s1v1 = {
-    .x = 1,
-    .y = -1,
-    .index = 0,
-    .next = &s1v2,
-};
-
-output_vertex_t s2v2 = {
-    .x = C_X2,
-    .y = C_Y,
-    .index = 140,
-    .next = 0,
-};
-
-output_vertex_t s2v1 = {
-    .x = -1,
-    .y = -1,
-    .index = 0,
-    .next = &s2v2,
-};
-
-output_vertex_t s3v2 = {
-    .x = C_X1,
-    .y = C_Y,
-    .index = 140,
-    .next = 0,
-};
-
-output_vertex_t s3v1 = {
-    .x = C_X2,
-    .y = C_Y,
-    .index = 0,
-    .next = &s3v2,
-};
-
-output_vertex_t s4v2 = {
-    .x = 1,
-    .y = 1,
-    .index = 140,
-    .next = 0,
-};
-
-output_vertex_t s4v1 = {
-    .x = C_X1,
-    .y = C_Y,
-    .index = 0,
-    .next = &s4v2,
-};
-
-output_vertex_t s5v2 = {
-    .x = -1,
-    .y = 1,
-    .index = 140,
-    .next = 0,
-};
-
-output_vertex_t s5v1 = {
-    .x = C_X2,
-    .y = C_Y,
-    .index = 0,
-    .next = &s5v2,
-};
-
-
-#define N_OUTPUT_STRIPS 5
-
-int n_output_strips = N_OUTPUT_STRIPS;
-
-output_strip_t output_strips[N_OUTPUT_STRIPS] = {
-    {
-        .id_int = 0x00000001,
-        .length = 140,
-        .first = &s1v1,
-        .color = {255,255,0, 255},
-    },
-    {
-        .id_int = 0x00000002,
-        .length = 140,
-        .first = &s2v1,
-        .color = {255,150,0, 255},
-    },
-    {
-        .id_int = 0x00000003,
-        .length = 140,
-        .first = &s3v1,
-        .color = {150,255,0, 255},
-    },
-    {
-        .id_int = 0x00000004,
-        .length = 140,
-        .first = &s4v1,
-        .color = {150,255,0, 255},
-    },
-    {
-        .id_int = 0x00000005,
-        .length = 140,
-        .first = &s5v1,
-        .color = {150,255,0, 255},
-    },
-};
-
-void output_to_buffer(output_strip_t* strip, color_t* buffer)
-{
-    if(SDL_LockMutex(patterns_updating)) FAIL("Unable to lock update mutex: %s\n", SDL_GetError());
-
-    output_vertex_t* vert = strip->first;
-    if (strip->point_array_length != strip->length || strip->xs == NULL || strip->ys == NULL) {
-        if (strip->xs == NULL) free(strip->xs);
-        if (strip->ys == NULL) free(strip->ys);
-
-        strip->xs = malloc(sizeof(float) * strip->length);
-        if(!strip->xs) FAIL("Unable to alloc xs for strip.\n");
-        strip->ys = malloc(sizeof(float) * strip->length);
-        if(!strip->ys) FAIL("Unable to alloc ys for strip.\n");
-        strip->point_array_length = strip->length;
-    }
-
-    strip->frame = buffer;
-
-    for(int i=0; i<strip->length; i++)
-    {
-        while(i > vert->next->index)
-        {
-            vert = vert->next;
-            if(!vert->next) goto cleanup; // Error condition
+    if (dev->vertex_head->next == NULL) {
+        // Special case - only a single point
+        for (size_t i = 0; i < length; i++) {
+            dev->pixels.xs[i] = dev->vertex_head->x;
+            dev->pixels.ys[i] = dev->vertex_head->y;
         }
-
-        float alpha = (float)(i - vert->index) / (vert->next->index - vert->index);
-        strip->xs[i] = alpha * vert->next->x + (1 - alpha) * vert->x;
-        strip->ys[i] = alpha * vert->next->y + (1 - alpha) * vert->y;
-        //buffer[i] = render_composite(x, y);
-    }
-    render_composite_frame(STATE_SOURCE_OUTPUT, strip->xs, strip->ys, strip->length, strip->frame);
-
-    for (int i = 0; i < strip->length; i++) {
-        strip->frame[i].r = pow(strip->frame[i].r, config.output.gamma);
-        strip->frame[i].g = pow(strip->frame[i].g, config.output.gamma);
-        strip->frame[i].b = pow(strip->frame[i].b, config.output.gamma);
+        return 0;
     }
 
-cleanup:
+    // Sum up scales of all the verticies except the last
+    double scale_sum = 0.;
+    for (const struct output_vertex * vert = dev->vertex_head; vert->next; vert = vert->next)
+        scale_sum += vert->scale * hypot(vert->x - vert->next->x, vert->y - vert->next->y);
 
-    free(strip->xs);
-    free(strip->ys);
+    // Interpolate pixel values
+    double scale_per_pixel = scale_sum / (double) length;
+    double cumulative_scale = 0.;
+    size_t pixel_idx = 0;
+    for (const struct output_vertex * vert = dev->vertex_head; vert->next; vert = vert->next) {
+        double vert_scale = vert->scale * hypot(vert->x - vert->next->x, vert->y - vert->next->y);
+        while (pixel_idx * scale_per_pixel <= cumulative_scale + vert_scale) {
+            double alpha = (pixel_idx * scale_per_pixel - cumulative_scale) / vert_scale;
+            dev->pixels.xs[pixel_idx] = INTERP(alpha, vert->x, vert->next->x);
+            dev->pixels.ys[pixel_idx] = INTERP(alpha, vert->y, vert->next->y);
+            pixel_idx++;
+        }
+        cumulative_scale += vert_scale;
+    }
 
-    SDL_UnlockMutex(patterns_updating);
+    return 0;
+}
+
+int output_render() {
+    for (struct output_device * dev = output_device_head; dev; dev = dev->next) {
+        if (!dev->active) continue;
+
+        int rc = 0; //TODO: __todo_render(&dev->pixels);
+        if (rc < 0) return rc;
+    }
+    output_render_count++;
+    return 0;
 }
 

@@ -3,11 +3,14 @@ CC = gcc
 
 # Source files
 C_SRC  = $(wildcard *.c)
+C_SRC += $(wildcard audio/*.c)
+C_SRC += $(wildcard output/*.c)
 C_SRC += $(wildcard pattern/*.c)
 C_SRC += $(wildcard time/*.c)
 C_SRC += $(wildcard ui/*.c)
 C_SRC += $(wildcard util/*.c)
-C_SRC += $(wildcard audio/*.c)
+
+C_SRC += $(wildcard liblux/*.c)
 C_SRC += $(wildcard BTrack/src/*.c)
 
 OBJDIR = build
@@ -16,8 +19,6 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 
 # Compiler flags
 INC = -I.
-# Everything compiles fine on my system, but if it can't find headers try uncommenting this line?
-#INC += -I/usr/include/SDL2
 
 LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lfftw3 -lsamplerate
 

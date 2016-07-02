@@ -51,7 +51,7 @@ void time_term() {
 void time_update(enum time_source source, enum time_source_event event, double event_arg) {
     struct timespec tv = {0, 0};
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &tv) != 0) {
-        ERROR_P("clock_gettime failed");
+        PERROR("clock_gettime failed");
         return;
     }
 

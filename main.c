@@ -10,6 +10,7 @@
 #include "audio/audio.h"
 #include "audio/analyze.h"
 #include "time/timebase.h"
+#include "output/output.h"
 #include "main.h"
 
 enum loglevel loglevel = LOGLEVEL_INFO;
@@ -34,10 +35,12 @@ int main(int argc, char* args[]) {
     time_init();
     analyze_init();
     audio_start();
+    output_init();
 
     ui_run();
     ui_term();
 
+    output_term();
     audio_stop();
     analyze_term();
 

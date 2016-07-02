@@ -3,6 +3,6 @@
 
 void output_init();
 void output_run();
-void output_stop();
+void output_term();
 
 #endif
