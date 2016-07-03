@@ -36,7 +36,7 @@ char * strsep(char ** s, const char * delim) {
     if (*s == NULL) return NULL;
     char * original = *s;
     char * next = strpbrk(*s, delim);
-    if (*next != '\0')
+    if (next != NULL && *next != '\0')
         *next++ = '\0';
     *s = next;
     return original;

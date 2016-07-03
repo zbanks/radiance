@@ -17,6 +17,12 @@ struct output_vertex {
     float scale;
 };
 
+struct output_vertex * output_vertex_list_parse(const char * str);
+const char * output_vertex_list_serialize(struct output_vertex * head); // not re-entrant!!!
+void output_vertex_list_destroy(struct output_vertex * head);
+
+//
+
 struct output_device;
 struct output_device {
     struct output_device * next;

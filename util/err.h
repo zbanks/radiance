@@ -37,7 +37,7 @@ extern enum loglevel {
 #define MEMFAIL() PFAIL("Could not allocate memory")
 
 #define PFAIL(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
-#define PERROR(msg, ...) _ERR_MSG(ERROR,"[%s] ", strerror(errno), ## __VA_ARGS__)
+#define PERROR(msg, ...) _ERR_MSG(ERROR,"[%s] " msg, strerror(errno), ## __VA_ARGS__)
 
 /*
 #include <execinfo.h>

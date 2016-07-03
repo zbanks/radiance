@@ -13,10 +13,10 @@
 #include "liblux/crc.h"
 #include "liblux/lux.h"
 
-#ifndef DEBUG
+#ifndef LUX_DEBUG
 #define _LUX_STR(x) _LUX_STR2(x)
 #define _LUX_STR2(x) # x
-#define DEBUG(x) printf("[debug] line " _LUX_STR(__LINE__) ": " x "\n")
+#define LUX_DEBUG(x, ...) printf("[debug] line " _LUX_STR(__LINE__) ": " x "\n", ## __VA_ARGS__)
 #endif
 
 int lux_timeout_ms = 150; // Timeout for response, in milliseconds
@@ -86,6 +86,18 @@ int lux_network_open(const char * address, uint16_t port) {
     if (sock < 0) return -1;
     int rc = connect(sock, (struct sockaddr *) &addr, sizeof addr);
     if (rc < 0) return -1;
+    
+    // Send a 0-byte packet to make sure the bridge is up
+    char buf[1];
+    rc = send(sock, buf, 0, 0);
+    if (rc < 0) return -1;
+    rc = recv(sock, buf, 1, 0);
+    if (rc != 0) {
+        LUX_DEBUG("No response from %s:%d", address, port);
+        close(sock);
+        errno = ECONNREFUSED;
+        return -1;
+    }
 
     return sock;
 }
@@ -120,7 +132,7 @@ static int cobs_decode(uint8_t* in_buf, int n, uint8_t* out_buf) {
 
     for(int i = 0; i < n; i++) {
         if(in_buf[i] == 0) {
-            DEBUG("Invalid character\n");
+            LUX_DEBUG("Invalid character\n");
             errno = EINVAL;
             return -1;
         }
@@ -138,7 +150,7 @@ static int cobs_decode(uint8_t* in_buf, int n, uint8_t* out_buf) {
     }
 
     if(ctr != total) {
-        DEBUG("Generic decode error\n");
+        LUX_DEBUG("Generic decode error\n");
         errno = EINVAL;
         return -2;
     }
@@ -186,7 +198,7 @@ static int unframe(uint8_t * raw_data, int raw_len, struct lux_packet * packet) 
     if(len < 0) return len;
 
     if(len < 8) {
-        DEBUG("");
+        LUX_DEBUG("");
         errno = EINVAL;
         return -1;
     }
@@ -195,7 +207,7 @@ static int unframe(uint8_t * raw_data, int raw_len, struct lux_packet * packet) 
     crc = crc_update(crc, tmp, len);
     crc = crc_finalize(crc);
     if(crc != 0x2144DF1C) {
-        DEBUG("Bad CRC");
+        LUX_DEBUG("Bad CRC");
         errno = EINVAL;
         return -1;
     }
@@ -230,7 +242,7 @@ static int lowlevel_read(int fd, uint8_t data[static 2048]) {
         int rc = poll(&pfd, 1, lux_timeout_ms);
         if(rc < 0) return rc;
         if(rc == 0) { // Read timeout
-            DEBUG("Read timeout");
+            LUX_DEBUG("Read timeout");
             errno = ETIMEDOUT;
             return n;
         }

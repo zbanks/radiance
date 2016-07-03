@@ -3,8 +3,9 @@
 #include "util/err.h"
 #include "output/lux.h"
 #include "output/slice.h"
-//#include "output/config.h"
+#include "output/config.h"
 
+#define LUX_DEBUG INFO
 #include "liblux/lux.h"
 
 #define LUX_BROADCAST_ADDRESS 0xFFFFFFFF
@@ -132,6 +133,7 @@ static struct lux_channel * lux_channel_create (const char * uri) {
     free(address);
     
     // Success!
+    INFO("Initialized lux output channel '%s'", uri);
     channel->next = channel_head;
     channel_head = channel;
     return channel;
@@ -160,16 +162,14 @@ static void lux_channel_destroy_all() {
 //
 
 static int lux_strip_setup(struct lux_device * device) {
-    //TODO
+    if (device->strip_quantize > 0)
+        device->base.pixels.length = device->oversample * device->strip_quantize;
+    else
+        device->base.pixels.length = device->oversample * device->strip_length;
     return 0;
 }
 
 static int lux_strip_prepare_frame(struct lux_device * device) {
-    //TODO
-    return 0;
-}
-
-static int lux_spot_setup(struct lux_device * device) {
     //TODO
     return 0;
 }
@@ -188,9 +188,13 @@ int output_lux_init() {
         return -1;
     }
 
-    lux_timeout_ms = config.lux.timeout_ms;
-    struct lux_channel * channel = lux_channel_create(config.lux.uri);
-    if (channel == NULL) return -1;
+    lux_timeout_ms = config.output.lux_timeout_ms;
+    for (int i = 0; i < output_config.n_lux_channels; i++) {
+        if (!output_config.lux_channels[i].configured) continue;
+
+        struct lux_channel * channel = lux_channel_create(output_config.lux_channels[i].uri);
+        if (channel == NULL) return -1;
+    }
 
     int rc = output_lux_enumerate();
     if (rc < 0) return rc;
@@ -206,6 +210,8 @@ void output_lux_term() {
 
 int output_lux_enumerate() {
     int found = 0;
+    int config_devices = 0;
+    DEBUG("Starting lux enumeration");
     for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
         for (struct lux_device * device = channel->device_head; device; device = device->next) {
             device->base.active = false;
@@ -229,18 +235,15 @@ int output_lux_enumerate() {
 
             case LUX_DEVICE_TYPE_SPOT:;
                 ERROR("Can't enumerate spot devices yet"); // TODO
-
-                rc = lux_spot_setup(device);
-                if (rc < 0) {
-                    WARN("Unable to set up lux device %#08x (length %d)", device->address, length);
-                    goto device_fail;
-                }
-                break;
+                goto device_fail;
 
             default:
                 ERROR("Unknown device type %d", device->type);
                 goto device_fail;
             }
+
+            rc = output_device_arrange(&device->base);
+            if (rc < 0) goto device_fail;
 
             device->base.active = true;
             found++;
@@ -248,6 +251,7 @@ int output_lux_enumerate() {
 device_fail:;
         }
     }
+    INFO("Finished lux enumeration and found %d/%d devices", found, config_devices);
     return found;
 }
 

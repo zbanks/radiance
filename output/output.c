@@ -5,6 +5,7 @@
 #include "util/err.h"
 #include "util/math.h"
 #include "output/output.h"
+#include "output/config.h"
 #include "output/slice.h"
 #include "output/lux.h"
 
@@ -41,13 +42,20 @@ void output_run(void* args) {
         last_tick = SDL_GetTicks();
     }
 
-    if(output_on_lux)
-        output_lux_term();
+    // Destroy output
+    if(output_on_lux) output_lux_term();
+    output_config_del(&output_config);
 }
 
 void output_init() {
-    if (config.lux.enabled) {
-        int rc = output_lux_init();
+    output_config_init(&output_config);
+    int rc = output_config_load(&output_config, config.output.config);
+    if (rc < 0) FAIL("Unable to load configuration");
+
+    output_config_dump(&output_config, config.output.config);
+    
+    if (config.output.lux_enabled) {
+        rc = output_lux_init();
         if (rc < 0) PERROR("Unable to initialize lux");
         else output_on_lux = true;
     }

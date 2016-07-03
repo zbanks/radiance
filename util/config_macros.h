@@ -10,7 +10,12 @@
 #define LIST_N_NAME(name) n_ ## name ## s
 #define LIST_PREFIX(name) STRINGIFY(name) "_"
 
-// Wrap default value in PARSE(...) to trigger parse, required for some types
+// Each type FOO must define FOO_PARSE, FOO_FORMAT, FOO_FREE, FOO_PREP macros
+// FOO                      valid C type, e.g. `int`, `struct foo`, `char *`
+// FOO FOO_PARSE(char * s)  Parse the input from a string. `s` can be modified after this call, so strdup if nessassary
+// FOO_FORMAT(FOO f)        Give a suitable representation to printf. `printf(FOO_FORMAT(f));` should be valid. See examples.
+// void FOO_FREE(FOO f)     Free/destroy the object f; or nop with `(void)(f)`
+// FOO FOO_PREP(F)          Macro to convert a set of C tokens `F` into a FOO object. Only used at compile/start-up time.
 
 // Numeric types
 #define INT int
@@ -38,6 +43,7 @@
 #define UINT16_PREP(x) x
 #define FLOAT_PREP(x) x
 
+// String type
 #define STRING char *
 #define STRING_PARSE(x) strdup(x)
 #define STRING_PREP(x) strdup(x)
