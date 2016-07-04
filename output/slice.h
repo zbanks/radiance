@@ -26,6 +26,7 @@ void output_vertex_list_destroy(struct output_vertex * head);
 struct output_device;
 struct output_device {
     struct output_device * next;
+    struct output_device * prev;
     struct output_pixels pixels;
     struct output_vertex * vertex_head;
     bool active;

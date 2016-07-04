@@ -26,8 +26,8 @@ struct lux_channel {
 
 struct lux_device {
     struct output_device base;
-    struct lux_device * next;
 
+    struct lux_channel * channel;
     enum lux_device_type type;
     uint32_t address;
     char * descriptor;
@@ -45,6 +45,10 @@ struct lux_device {
 };
 
 static struct lux_channel * channel_head = NULL;
+static struct lux_device * strip_devices = NULL;
+static size_t n_strip_devices = 0;
+static struct lux_device * spot_devices = NULL;
+static size_t n_spot_devices = 0;
 
 //
 
@@ -161,14 +165,6 @@ static void lux_channel_destroy_all() {
 
 //
 
-static int lux_strip_setup(struct lux_device * device) {
-    if (device->strip_quantize > 0)
-        device->base.pixels.length = device->oversample * device->strip_quantize;
-    else
-        device->base.pixels.length = device->oversample * device->strip_length;
-    return 0;
-}
-
 static int lux_strip_prepare_frame(struct lux_device * device) {
     //TODO
     return 0;
@@ -179,16 +175,34 @@ static int lux_spot_prepare_frame(struct lux_device * device) {
     return 0;
 }
 
+static void lux_device_term(struct lux_device * device) {
+    free(device->base.pixels.xs);
+    free(device->base.pixels.ys);
+    free(device->base.pixels.colors);
+    //output_vertex_list_destroy(device->base.vertex_head);
+    free(device->descriptor);
+    free(device->frame_buffer);
+    //free(device->ui_name);
+    device->base.prev->next = device->base.next;
+    device->base.next->prev = device->base.prev;
+}
+
 // 
 
-int output_lux_init() {
-    if (channel_head != NULL) {
-        // Already connected
-        ERROR("Cannot init lux; already inited");
-        return -1;
-    }
+void output_lux_term() {
+    lux_channel_destroy_all();
+    for (size_t i = 0; i < n_strip_devices; i++)
+        lux_device_term(&strip_devices[i]);
+    for (size_t i = 0; i < n_spot_devices; i++)
+        lux_device_term(&spot_devices[i]);
+    INFO("Lux terminated");
+}
 
+int output_lux_init() {
+    // Set global configuration
     lux_timeout_ms = config.output.lux_timeout_ms;
+
+    // Configure the channels
     for (int i = 0; i < output_config.n_lux_channels; i++) {
         if (!output_config.lux_channels[i].configured) continue;
 
@@ -196,93 +210,117 @@ int output_lux_init() {
         if (channel == NULL) return -1;
     }
 
-    int rc = output_lux_enumerate();
-    if (rc < 0) return rc;
+    // Initialize the devices, unconnected
+    n_strip_devices = output_config.n_lux_strips;
+    strip_devices = realloc(strip_devices, n_strip_devices);
+    if (strip_devices == NULL) MEMFAIL();
 
+    n_spot_devices = output_config.n_lux_spots;
+    spot_devices = realloc(spot_devices, n_spot_devices);
+    if (spot_devices == NULL) MEMFAIL();
+
+    // Search the open lux channels for the configured devices
+    DEBUG("Starting lux device enumeration");
+    int found_count = 0;
+    for (size_t i = 0; i < n_strip_devices; i++) {
+        struct lux_device * device = &strip_devices[i];
+        if (!output_config.lux_strips[i].configured) {
+            memset(device, 0, sizeof *device);
+            continue;
+        }
+        output_device_head->prev = &device->base;
+        device->base.next = output_device_head;
+        device->base.prev = NULL;
+
+        device->base.vertex_head = output_config.lux_strips[i].vertexlist;
+        device->base.active = false;
+        device->base.ui_color = output_config.lux_strips[i].ui_color;
+        device->base.ui_name = output_config.lux_strips[i].ui_name;
+
+        device->address  = output_config.lux_strips[i].address;
+        device->max_energy = output_config.lux_strips[i].max_energy;
+        device->oversample = output_config.lux_strips[i].oversample;
+        device->strip_quantize = output_config.lux_strips[i].quantize;
+        device->strip_length = -1;
+
+        for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+            int length = lux_strip_get_length(channel->fd, device->address);
+            if (length < 0)
+                continue;
+
+            device->strip_length = length;
+            device->channel = channel;
+            device->base.active = true;
+            found_count++;
+            break;
+        }
+
+        if (device->strip_length <= 0)
+            device->base.pixels.length = 100;
+        else if (device->strip_quantize > 0)
+            device->base.pixels.length = device->oversample * device->strip_quantize;
+        else
+            device->base.pixels.length = device->oversample * device->strip_length;
+        output_device_arrange(&device->base);
+    }
+    for (size_t i = 0; i < n_spot_devices; i++) {
+        struct lux_device * device = &spot_devices[i];
+        if (!output_config.lux_spots[i].configured) {
+            memset(device, 0, sizeof *device);
+            continue;
+        }
+        output_device_head->prev = &device->base;
+        device->base.next = output_device_head;
+        device->base.prev = NULL;
+
+        device->base.vertex_head = output_config.lux_spots[i].vertexlist;
+        device->base.active = false;
+        device->base.ui_color = output_config.lux_spots[i].ui_color;
+        device->base.ui_name = output_config.lux_spots[i].ui_name;
+
+        device->address  = output_config.lux_spots[i].address;
+        device->max_energy = output_config.lux_spots[i].max_energy;
+        device->oversample = output_config.lux_spots[i].oversample;
+
+        for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+            continue;
+
+            device->channel = channel;
+            device->base.active = false;
+            found_count++;
+            break;
+        }
+        device->base.pixels.length = device->oversample;
+        output_device_arrange(&device->base);
+    }
+
+    INFO("Finished lux enumeration and found %d/%lu devices",
+         found_count, n_strip_devices + n_spot_devices);
     INFO("Lux initialized");
     return 0;
 }
 
-void output_lux_term() {
-    lux_channel_destroy_all();
-    INFO("Lux terminated");
-}
-
-int output_lux_enumerate() {
-    int found = 0;
-    int config_devices = 0;
-    DEBUG("Starting lux enumeration");
-    for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
-        for (struct lux_device * device = channel->device_head; device; device = device->next) {
-            device->base.active = false;
-
-            int rc, length;
-            switch (device->type) {
-            case LUX_DEVICE_TYPE_STRIP:
-                length = lux_strip_get_length(channel->fd, device->address);
-                if (length < 0) {
-                    INFO("No response from device %#08x", device->address);
-                    goto device_fail;
-                }
-
-                device->strip_length = length;
-                rc = lux_strip_setup(device);
-                if (rc < 0) {
-                    WARN("Unable to set up lux device %#08x (length %d)", device->address, length);
-                    goto device_fail;
-                }
-                break;
-
-            case LUX_DEVICE_TYPE_SPOT:;
-                ERROR("Can't enumerate spot devices yet"); // TODO
-                goto device_fail;
-
-            default:
-                ERROR("Unknown device type %d", device->type);
-                goto device_fail;
-            }
-
-            rc = output_device_arrange(&device->base);
-            if (rc < 0) goto device_fail;
-
-            device->base.active = true;
-            found++;
-            continue;
-device_fail:;
-        }
-    }
-    INFO("Finished lux enumeration and found %d/%d devices", found, config_devices);
-    return found;
-}
-
 int output_lux_prepare_frame() {
     int rc = 0; (void) rc;
-    for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
-        for (struct lux_device * device = channel->device_head; device; device = device->next) {
-            if (!device->base.active) continue;
-
-            switch (device->type) {
-            case LUX_DEVICE_TYPE_STRIP:
-                rc = lux_strip_prepare_frame(device);
-                rc = lux_strip_frame(
-                        channel->fd,
-                        device->address,
-                        device->frame_buffer,
-                        device->frame_buffer_size);
-                break;
-            case LUX_DEVICE_TYPE_SPOT:
-                rc = lux_spot_prepare_frame(device);
-                rc = lux_spot_frame(
-                        channel->fd,
-                        device->address,
-                        device->frame_buffer,
-                        device->frame_buffer_size);
-                break;
-            default:
-                WARN("Invalid lux device '%u'; skipping", device->type);
-                break;
-            }
-        }
+    for (size_t i = 0; i < n_strip_devices; i++) {
+        struct lux_device * device = &strip_devices[i];
+        rc = lux_strip_prepare_frame(device);
+        rc = lux_strip_frame(
+                device->channel->fd,
+                device->address,
+                device->frame_buffer,
+                device->frame_buffer_size);
+        // TODO
+    }
+    for (size_t i = 0; i < n_spot_devices; i++) {
+        struct lux_device * device = &spot_devices[i];
+        rc = lux_spot_prepare_frame(device);
+        rc = lux_spot_frame(
+                device->channel->fd,
+                device->address,
+                device->frame_buffer,
+                device->frame_buffer_size);
+        // TODO
     }
     return 0;
 }

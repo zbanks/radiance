@@ -5,7 +5,7 @@ Core
 ----
 
 - MIDI Controllers
-- Strip output
+- Output/rendering integration into main loop
 
 UI
 --
@@ -30,6 +30,15 @@ Audio / Beats
 - Remove double FFT (better integration with BTrack)
 - Expose controls to fix tempo
 - Disable audio beat tracking and use wall time + fixed tempo
+
+Output / Lux
+------------
+
+- Proper channel-agnostic enumeration
+- Pixel list -> frame payload
+- `FRAME_HOLD` + `SYNC`
+- Stat collection (`PKTCNT` commands)
+- Reloading device list/configuration
 
 Misc
 ----

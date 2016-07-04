@@ -17,8 +17,8 @@ CFGSECTION_LIST(lux_spot,
     CFG(address, LUXADDR, 0x00000001)
     CFG(ui_name, STRING, "spot")
     CFG(ui_color, COLOR, "#FFFF00")
-    CFG(max_energy, FLOAT, -1)
-    CFG(oversample, INT, -1)
+    CFG(max_energy, FLOAT, 1)
+    CFG(oversample, INT, 1)
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
 
