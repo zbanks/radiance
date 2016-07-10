@@ -10,6 +10,7 @@
 #include "util/glsl.h"
 #include "util/math.h"
 #include "audio/analyze.h"
+#include "ui/render.h"
 #include "main.h"
 #include <stdio.h>
 #include <stdbool.h>
@@ -482,7 +483,7 @@ static void blit(float x, float y, float w, float h) {
     glEnd();
 }
 
-static void render(bool select) {
+static void ui_render(bool select) {
     GLint location;
     GLenum e;
 
@@ -749,7 +750,7 @@ void ui_run() {
 
         quit = false;
         while(!quit) {
-            render(true);
+            ui_render(true);
 
             while(SDL_PollEvent(&e) != 0) {
                 switch(e.type) {
@@ -792,7 +793,9 @@ void ui_run() {
                 deck_render(&deck[i]);
             }
             crossfader_render(&crossfader, deck[0].tex_output, deck[1].tex_output);
-            render(false);
+            ui_render(false);
+
+            render_readback(&render);
 
             SDL_GL_SwapWindow(window);
 

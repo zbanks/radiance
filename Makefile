@@ -1,6 +1,6 @@
 PROJECT = radiance
 #CC = gcc
-CC = clang
+#CC = clang
 
 # Source files
 C_SRC  = $(wildcard *.c)
