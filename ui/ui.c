@@ -99,6 +99,10 @@ static char pat_entry_text[255];
 // Timing
 static double l_t;
 
+// Deck selector
+static int left_deck_selector = 0;
+static int right_deck_selector = 1;
+
 // Forward declarations
 static void handle_text(const char * text);
 
@@ -409,7 +413,7 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 selected = 0;
                 break;
             case SDLK_DELETE:
-            case SDLK_x:
+            case SDLK_d:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         deck_unload_pattern(&deck[map_deck[i]], map_pattern[i]);
@@ -465,6 +469,21 @@ static void handle_key(SDL_KeyboardEvent * e) {
                         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
                         render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
                         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+                    }
+                }
+                break;
+            case SDLK_RETURN:
+                for(int i=0; i<config.ui.n_patterns; i++) {
+                    if(map_selection[i] == selected) {
+                        if(i < 4) {
+                            left_deck_selector = 0;
+                        } else if(i < 8) {
+                            right_deck_selector = 1;
+                        } else if(i < 12) {
+                            left_deck_selector = 2;
+                        } else if(i < 16) {
+                            right_deck_selector = 3;
+                        }
                     }
                 }
                 break;
@@ -622,6 +641,10 @@ static void ui_render(bool select) {
     glUniform1iARB(location, select);
     location = glGetUniformLocationARB(main_shader, "iSelected");
     glUniform1iARB(location, selected);
+    location = glGetUniformLocationARB(main_shader, "iLeftDeckSelector");
+    glUniform1iARB(location, left_deck_selector);
+    location = glGetUniformLocationARB(main_shader, "iRightDeckSelector");
+    glUniform1iARB(location, right_deck_selector);
 
     fill(ww, wh);
 
@@ -798,7 +821,7 @@ void ui_run() {
             for(int i=0; i<N_DECKS; i++) {
                 deck_render(&deck[i]);
             }
-            crossfader_render(&crossfader, deck[0].tex_output, deck[1].tex_output);
+            crossfader_render(&crossfader, deck[left_deck_selector].tex_output, deck[right_deck_selector].tex_output);
             ui_render(false);
 
             render_readback(&render);
