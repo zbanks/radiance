@@ -3,6 +3,8 @@
 uniform vec2 iResolution;
 uniform bool iSelection;
 uniform int iSelected;
+uniform int iLeftDeckSelector;
+uniform int iRightDeckSelector;
 
 float RADIUS = 25.;
 
@@ -38,6 +40,19 @@ vec3 dataColor(ivec3 data) {
 
 vec2 PAT_SIZE = vec2(45., 75.);
 
+float sdCapsule( vec2 p, vec2 a, vec2 b, float r )
+{
+    vec2 pa = p - a, ba = b - a;
+    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+    return length( pa - ba*h ) - r;
+}
+
+void glow(vec2 p) {
+    vec2 LEN = vec2(300., 0.);
+    float FRINGE = 75.;
+    gl_FragColor = composite(gl_FragColor, vec4(0., 1., 1., 0.1 * max(0., 1. - sdCapsule(gl_FragCoord.xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
+}
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 
@@ -56,6 +71,10 @@ void main(void) {
     } else {
         float g = uv.y * 0.1 + 0.2;
         gl_FragColor = vec4(g, g, g, 1.);
+
+        glow(vec2(475., iLeftDeckSelector == 0 ? 420. : 180.));
+        glow(vec2(1475., iRightDeckSelector == 1 ? 420. : 180.));
+
         for(int i=0; i < 8; i++) {
             vec2 p;
             p = vec2(175. + (i + int(i >= 4)) * 200., 420.);
