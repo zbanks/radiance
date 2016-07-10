@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "ui/ui.h"
+#include "ui/render.h"
 #include "util/config.h"
 #include "util/err.h"
 #include "pattern/deck.h"
@@ -16,6 +17,7 @@
 enum loglevel loglevel = LOGLEVEL_INFO;
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
+struct render render;
 double time;
 double audio_hi;
 double audio_mid;
@@ -31,22 +33,25 @@ int main(int argc, char* args[]) {
         deck_init(&deck[i]);
     }
     crossfader_init(&crossfader);
-
+    render_init(&render, crossfader.tex_output);
     time_init();
     analyze_init();
     audio_start();
-    output_init();
+    //output_init();
 
     ui_run();
     ui_term();
 
-    output_term();
+    //output_term();
     audio_stop();
     analyze_term();
 
     for(int i=0; i < N_DECKS; i++) {
         deck_term(&deck[i]);
     }
+
+    render_term(&render);
+    crossfader_term(&crossfader);
 
     return 0;
 }

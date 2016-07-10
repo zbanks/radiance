@@ -14,6 +14,7 @@ struct crossfader {
     GLuint fb;
 
     float position;
+    uint8_t * rb_buf;
 };
 
 void crossfader_init(struct crossfader * crossfader);
