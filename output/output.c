@@ -63,7 +63,7 @@ void output_init(struct render * _render) {
     output_config_init(&output_config);
     int rc = output_config_load(&output_config, config.output.config);
     if (rc < 0) FAIL("Unable to load configuration");
-    output_config_dump(&output_config, config.output.config);
+    //output_config_dump(&output_config, config.output.config);
     render = _render;
 
     output_thread = SDL_CreateThread(&output_run, "Output", 0);

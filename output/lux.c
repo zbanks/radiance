@@ -88,6 +88,7 @@ static int lux_strip_frame (int fd, uint32_t lux_id, unsigned char * data, size_
     return lux_write(fd, &packet, 0);
 }
 
+/*
 static int lux_spot_frame (int fd, uint32_t lux_id, unsigned char * data, size_t data_size) {
     struct lux_packet packet = {
         .destination = lux_id,
@@ -99,6 +100,7 @@ static int lux_spot_frame (int fd, uint32_t lux_id, unsigned char * data, size_t
 
     return lux_write(fd, &packet, 0);
 }
+*/
 
 static int lux_frame_sync (int fd, uint32_t lux_id) {
     return 0;
@@ -157,9 +159,11 @@ fail:
 static void lux_channel_destroy_all() {
     struct lux_channel * channel = channel_head;
     while (channel != NULL) {
+        /*
         struct lux_device * device= channel->device_head;
         //TODO: Destroy devices
         (void) (device);
+        */
 
         lux_close(channel->fd);
         struct lux_channel * prev_channel = channel;
@@ -181,15 +185,15 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
         for (int i = 0; i < device->strip_quantize; i++) {
             unsigned int r = 0, g = 0, b = 0; 
             for (int k = 0; k < device->oversample; k++) {
-                r += pixel_ptr->r;
-                g += pixel_ptr->g;
-                b += pixel_ptr->b;
+                r += pixel_ptr->r * pixel_ptr->a;
+                g += pixel_ptr->g * pixel_ptr->a;
+                b += pixel_ptr->b * pixel_ptr->a;
                 pixel_ptr++;
             }
             while (l * device->strip_quantize < i * device->strip_length) {
-                *frame_ptr++ = r / device->oversample;
-                *frame_ptr++ = g / device->oversample;
-                *frame_ptr++ = b / device->oversample;
+                *frame_ptr++ = r / (255 * device->oversample);
+                *frame_ptr++ = g / (255 * device->oversample);
+                *frame_ptr++ = b / (255 * device->oversample);
                 l++;
             }
         }
@@ -197,28 +201,30 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
         for (int l = 0; l < device->strip_length; l++) {
             unsigned int r = 0, g = 0, b = 0; 
             for (int k = 0; k < device->oversample; k++) {
-                r += pixel_ptr->r;
-                g += pixel_ptr->g;
-                b += pixel_ptr->b;
+                r += pixel_ptr->r * pixel_ptr->a;
+                g += pixel_ptr->g * pixel_ptr->a;
+                b += pixel_ptr->b * pixel_ptr->a;
                 pixel_ptr++;
             }
-            *frame_ptr++ = r / device->oversample;
-            *frame_ptr++ = g / device->oversample;
-            *frame_ptr++ = b / device->oversample;
+            *frame_ptr++ = r / (255 * device->oversample);
+            *frame_ptr++ = g / (255 * device->oversample);
+            *frame_ptr++ = b / (255 * device->oversample);
         }
     }
     return 0;
 }
 
+/*
 static int lux_spot_prepare_frame(struct lux_device * device) {
     //TODO
     return 0;
 }
+*/
 
 static void lux_device_term(struct lux_device * device) {
-    free(device->base.pixels.xs);
-    free(device->base.pixels.ys);
-    free(device->base.pixels.colors);
+    //free(device->base.pixels.xs);
+    //free(device->base.pixels.ys);
+    //free(device->base.pixels.colors);
     //output_vertex_list_destroy(device->base.vertex_head);
     free(device->descriptor);
     free(device->frame_buffer);
@@ -227,6 +233,7 @@ static void lux_device_term(struct lux_device * device) {
         device->base.prev->next = device->base.next;
     if (device->base.next != NULL)
         device->base.next->prev = device->base.prev;
+    memset(device, 0, sizeof *device);
 }
 
 // 
@@ -299,18 +306,21 @@ int output_lux_init() {
             break;
         }
 
-        if (device->strip_length <= 0)
-            device->base.pixels.length = 100;
-        else if (device->strip_quantize > 0)
-            device->base.pixels.length = device->oversample * device->strip_quantize;
-        else
-            device->base.pixels.length = device->oversample * device->strip_length;
-        device->frame_buffer_size = 3 * device->base.pixels.length;
-        device->frame_buffer = calloc(1, device->frame_buffer_size);
-        if (device->frame_buffer == NULL) MEMFAIL();
+        if (device->base.active) {
+            device->frame_buffer_size = device->strip_length * 3;
+            if (device->strip_quantize > 0) {
+                device->base.pixels.length = device->oversample * device->strip_quantize;
+            } else {
+                device->base.pixels.length = device->oversample * device->strip_length;
+            }
 
-        output_device_arrange(&device->base);
+            device->frame_buffer = calloc(1, device->frame_buffer_size);
+            if (device->frame_buffer == NULL) MEMFAIL();
+
+            output_device_arrange(&device->base);
+        }
     }
+    /*
     for (size_t i = 0; i < n_spot_devices; i++) {
         struct lux_device * device = &spot_devices[i];
         memset(device, 0, sizeof *device);
@@ -342,6 +352,7 @@ int output_lux_init() {
         device->base.pixels.length = device->oversample;
         output_device_arrange(&device->base);
     }
+    */
 
     INFO("Finished lux enumeration and found %d/%lu devices",
          found_count, n_strip_devices + n_spot_devices);
@@ -363,6 +374,7 @@ int output_lux_prepare_frame() {
                 device->frame_buffer_size);
         if (rc < 0) LOGLIMIT(WARN("Unable to send frame to %#08x", device->address));
     }
+    /*
     for (size_t i = 0; i < n_spot_devices; i++) {
         struct lux_device * device = &spot_devices[i];
         if (device->channel == NULL) continue;
@@ -375,6 +387,7 @@ int output_lux_prepare_frame() {
                 device->frame_buffer_size);
         if (rc < 0) LOGLIMIT(WARN("Unable to send frame to %#08x", device->address));
     }
+    */
     return 0;
 }
 
