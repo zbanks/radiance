@@ -9,6 +9,7 @@ void main(void) {
     float his  = 1. - smoothstep(iAudioHi , iAudioHi  + SMOOTH, abs(uv.x - 0.5));
 
     vec4 c = composite(composite(vec4(0., 0., 0.5, lows), vec4(0., 0., 1., mids)), vec4(0.3, 0.3, 1., his));
+    c.a = clamp(c.a, 0., 1.);
     c.a *= iIntensity;
     gl_FragColor = composite(gl_FragColor, c);
 }
