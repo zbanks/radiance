@@ -68,19 +68,23 @@ static int selected = 0;
 
 // Mapping from UI pattern -> deck & slot
 // TODO make this live in the INI file
-static const int map_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
-static const int map_y[8] = {100, 100, 100, 100, 100, 100, 100, 100};
-static const int map_pe_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
-static const int map_pe_y[8] = {180, 180, 180, 180, 180, 180, 180, 180};
-static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
-static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
-static const int map_selection[8] = {1, 2, 3, 4, 6, 7, 8, 9};
-static const int crossfader_selection = 5;
+static const int map_x[16] = {100, 300, 500, 700, 1100, 1300, 1500, 1700,
+                             100, 300, 500, 700, 1100, 1300, 1500, 1700};
+static const int map_y[16] = {100, 100, 100, 100, 100, 100, 100, 100,
+                             300, 300, 300, 300, 300, 300, 300, 300};
+static const int map_pe_x[16] = {100, 300, 500, 700, 1100, 1300, 1500, 1700,
+                                100, 300, 500, 700, 1100, 1300, 1500, 1700};
+static const int map_pe_y[16] = {180, 180, 180, 180, 180, 180, 180, 180,
+                                380, 380, 380, 380, 380, 380, 380, 380};
+static const int map_deck[16] = {0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3};
+static const int map_pattern[16] = {0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0};
+static const int map_selection[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+static const int crossfader_selection = 17;
 
-static const int map_left[10] =  {8, 1, 1, 2, 3, 4, 5, 6, 7, 8};
-static const int map_right[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 9};
-static const int map_up[10] =    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-static const int map_down[10] =  {9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
+static const int map_left[18] =  {8, 1, 1, 2, 3, 17, 5, 6, 7, 9, 9, 10, 11, 17, 13, 14, 15, 4};
+static const int map_right[18] = {1, 2, 3, 4, 17, 6, 7, 8, 8, 10, 11, 12, 17, 14, 15, 16, 16, 5};
+static const int map_up[18] =    {1, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 17};
+static const int map_down[18] =  {9, 9, 10, 11, 12, 13, 14, 15, 16, 9, 10, 11, 12, 13, 14, 15, 16, 17};
 
 // Font
 TTF_Font * font;
