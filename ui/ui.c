@@ -68,19 +68,25 @@ static int selected = 0;
 
 // Mapping from UI pattern -> deck & slot
 // TODO make this live in the INI file
-static const int map_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
-static const int map_y[8] = {100, 100, 100, 100, 100, 100, 100, 100};
-static const int map_pe_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
-static const int map_pe_y[8] = {180, 180, 180, 180, 180, 180, 180, 180};
-static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
-static const int map_pattern[8] = {0, 1, 2, 3, 3, 2, 1, 0};
-static const int map_selection[8] = {1, 2, 3, 4, 6, 7, 8, 9};
-static const int crossfader_selection = 5;
+static const int map_x[16] = {100, 300, 500, 700, 1100, 1300, 1500, 1700,
+                             100, 300, 500, 700, 1100, 1300, 1500, 1700};
+static const int map_y[16] = {295, 295, 295, 295, 295, 295, 295, 295,
+                             55, 55, 55, 55, 55, 55, 55, 55};
+static const int map_pe_x[16] = {100, 300, 500, 700, 1100, 1300, 1500, 1700,
+                                100, 300, 500, 700, 1100, 1300, 1500, 1700};
+static const int map_pe_y[16] = {420, 420, 420, 420, 420, 420, 420, 420,
+                                180, 180, 180, 180, 180, 180, 180, 180};
+static const int map_deck[16] = {0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3};
+static const int map_pattern[16] = {0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0};
+static const int map_selection[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 
-static const int map_left[10] =  {8, 1, 1, 2, 3, 4, 5, 6, 7, 8};
-static const int map_right[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 9};
-static const int map_up[10] =    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-static const int map_down[10] =  {9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
+static const int crossfader_selection_top = 17;
+static const int crossfader_selection_bot = 18;
+
+static const int map_left[19] =  {8, 1, 1, 2, 3, 17, 5, 6, 7, 9, 9, 10, 11, 18, 13, 14, 15, 4, 12};
+static const int map_right[19] = {1, 2, 3, 4, 17, 6, 7, 8, 8, 10, 11, 12, 18, 14, 15, 16, 16, 5, 13};
+static const int map_up[19] =    {1, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 17, 17};
+static const int map_down[19] =  {9, 9, 10, 11, 12, 13, 14, 15, 16, 9, 10, 11, 12, 13, 14, 15, 16, 18, 18};
 
 // Font
 TTF_Font * font;
@@ -337,7 +343,7 @@ static void set_slider_to(float v) {
     struct pattern * p = selected_pattern();
     if(p != NULL) {
         p->intensity = v;
-    } else if(selected == crossfader_selection) {
+    } else if(selected == crossfader_selection_top || selected == crossfader_selection_bot) {
         crossfader.position = v;
     }
 }
@@ -346,7 +352,7 @@ static void increment_slider(float v) {
     struct pattern * p = selected_pattern();
     if(p != NULL) {
         p->intensity = CLAMP(p->intensity + v, 0., 1.);
-    } else if(selected == crossfader_selection) {
+    } else if(selected == crossfader_selection_top || selected == crossfader_selection_bot) {
         crossfader.position = CLAMP(crossfader.position + v, 0., 1.);
     }
 }
@@ -734,7 +740,7 @@ static void handle_mouse_down() {
             }
             break;
         case HIT_CROSSFADER:
-            selected = crossfader_selection;
+            selected = crossfader_selection_top;
             break;
         case HIT_CROSSFADER_POSITION:
             ma = MOUSE_DRAG_CROSSFADER;
