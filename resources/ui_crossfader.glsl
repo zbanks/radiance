@@ -5,7 +5,7 @@ void main(void) {
 
     vec2 slider_origin = vec2(25., 45.);
     vec2 slider_gain = vec2(100., 0.);
-    vec2 slider_pos = slider_origin + slider_gain * iPosition;
+    vec2 slider_pos = slider_origin + slider_gain * iIntensity;
     vec2 slider_size = vec2(10.);
     vec2 preview_origin = vec2(25., 75.);
     vec2 preview_size = vec2(100., 100.);
