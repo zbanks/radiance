@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL2/SDL.h>
 #include <stdbool.h>
+#include "ui/render.h"
 
 struct output_pixels {
     size_t length;
@@ -42,4 +43,4 @@ extern unsigned int output_render_count;
 int output_device_arrange(struct output_device * dev);
 
 // Render all of the output device pixel buffers
-int output_render();
+int output_render(struct render * render);

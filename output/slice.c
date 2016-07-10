@@ -119,14 +119,14 @@ int output_device_arrange(struct output_device * dev) {
     return 0;
 }
 
-int output_render() {
-    render_freeze(&render);
+int output_render(struct render * render) {
+    render_freeze(render);
     for (struct output_device * dev = output_device_head; dev; dev = dev->next) {
         if (!dev->active) continue;
         for (size_t i = 0; i < dev->pixels.length; i++)
-            dev->pixels.colors[i] = render_sample(&render, dev->pixels.xs[i], dev->pixels.ys[i]);
+            dev->pixels.colors[i] = render_sample(render, dev->pixels.xs[i], dev->pixels.ys[i]);
     }
-    render_thaw(&render);
+    render_thaw(render);
     output_render_count++;
     return 0;
 }

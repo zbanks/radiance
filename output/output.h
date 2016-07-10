@@ -1,7 +1,5 @@
-#ifndef __OUTPUT_H
-#define __OUTPUT_H
+#pragma once
+#include "ui/render.h"
 
-void output_init();
+void output_init(struct render * render);
 void output_term();
-
-#endif

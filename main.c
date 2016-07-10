@@ -37,7 +37,7 @@ int main(int argc, char* args[]) {
     time_init();
     analyze_init();
     audio_start();
-    output_init();
+    output_init(&render);
 
     ui_run();
     ui_term();
