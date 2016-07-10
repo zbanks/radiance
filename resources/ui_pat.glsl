@@ -33,11 +33,11 @@ void main(void) {
     float g = uv.y * 0.5 + 0.1;
     float w = 4.;
 
-    vec2 slider_origin = vec2(iResolution.x / 2. - 50., 100.);
+    vec2 slider_origin = vec2(25., 45.);
     vec2 slider_gain = vec2(100., 0.);
     vec2 slider_pos = slider_origin + slider_gain * iIntensity;
     vec2 slider_size = vec2(10.);
-    vec2 preview_origin = vec2(iResolution.x / 2. - 50., iResolution.y - 120.);
+    vec2 preview_origin = vec2(25., 75.);
     vec2 preview_size = vec2(100., 100.);
 
     if(iSelection) {
@@ -51,7 +51,7 @@ void main(void) {
         gl_FragColor = composite(gl_FragColor, vec4(1., 1., 1., (1. - smoothBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w), w))));
         */
 
-        float df = max(rounded_rect_df(vec2(75., 150.), vec2(45., 120.), 25.), 0.);
+        float df = max(rounded_rect_df(vec2(75., 125.), vec2(45., 75.), 25.), 0.);
         gl_FragColor = composite(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
 
         gl_FragColor = composite(gl_FragColor, vec4(0., 0., 0.3, smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));

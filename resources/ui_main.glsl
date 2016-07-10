@@ -36,7 +36,7 @@ vec3 dataColor(ivec3 data) {
     return vec3(data) / vec3(255.);
 }
 
-vec2 PAT_SIZE = vec2(45., 120.);
+vec2 PAT_SIZE = vec2(45., 75.);
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
@@ -59,7 +59,7 @@ void main(void) {
         float g = uv.y * 0.1 + 0.2;
         gl_FragColor = vec4(g, g, g, 1.);
         for(int i=0; i < 9; i++) {
-            vec2 p = vec2(175. + i * 200., 200.);
+            vec2 p = vec2(175. + i * 200., 225.);
             gl_FragColor = composite(gl_FragColor, fancy_rect(p, PAT_SIZE, iSelected == i + 1));
         }
         gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(300., 650.), vec2(165., 65.), false));

@@ -69,7 +69,7 @@ static int selected = 0;
 // Mapping from UI pattern -> deck & slot
 // TODO make this live in the INI file
 static const int map_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
-static const int map_y[8] = {50, 50, 50, 50, 50, 50, 50, 50};
+static const int map_y[8] = {100, 100, 100, 100, 100, 100, 100, 100};
 static const int map_pe_x[8] = {100, 300, 500, 700, 1100, 1300, 1500, 1700};
 static const int map_pe_y[8] = {180, 180, 180, 180, 180, 180, 180, 180};
 static const int map_deck[8] = {0, 0, 0, 0, 1, 1, 1, 1};
