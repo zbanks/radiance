@@ -36,12 +36,10 @@ int output_run(void * args) {
     while(output_running) {
         //if (last_output_render_count == output_render_count)
         last_output_render_count = output_render_count;
-        INFO("Rendering");
         int rc = output_render(render);
         if (rc < 0) PERROR("Unable to render");
 
         if (output_on_lux) {
-            INFO("Outputting");
             int rc = output_lux_prepare_frame();
             if (rc < 0) PERROR("Unable to prepare lux frame");
             rc = output_lux_sync_frame();

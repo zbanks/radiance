@@ -305,7 +305,8 @@ int output_lux_init() {
             device->base.pixels.length = device->oversample * device->strip_quantize;
         else
             device->base.pixels.length = device->oversample * device->strip_length;
-        device->frame_buffer = calloc(3, device->base.pixels.length);
+        device->frame_buffer_size = 3 * device->base.pixels.length;
+        device->frame_buffer = calloc(1, device->frame_buffer_size);
         if (device->frame_buffer == NULL) MEMFAIL();
 
         output_device_arrange(&device->base);

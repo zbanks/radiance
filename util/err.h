@@ -18,13 +18,11 @@ extern enum loglevel {
     LOGLEVEL_ERROR,
 } loglevel;
 
-#define LOGLIMIT(command) ({            \
-    static unsigned long _ntimes = 0;   \
-    static unsigned long _limit = 4;    \
-    if (_ntimes > _limit)               \
-        _limit *= 2;                    \
-    if (_ntimes <= _limit)              \
-        command;                        \
+#define LOGLIMIT(command) ({                \
+    static unsigned long _ntimes = 0;       \
+    static unsigned long _limit = 4;        \
+    if (_ntimes == 2 *_limit)  _limit *= 2; \
+    if (_ntimes++ < _limit) command;        \
 })
 
 #define _ERR_MSG(severity, msg, ...) ({if (loglevel <= LOGLEVEL_ ## severity) { fprintf(stderr, "[%-5s] [%s:%s:%d] " msg "\n", _ERR_STRINGIFY(severity), __FILE__, __func__, __LINE__, ## __VA_ARGS__); } })
