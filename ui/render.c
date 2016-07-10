@@ -53,10 +53,19 @@ void render_thaw(struct render * render) {
 }
 
 SDL_Color render_sample(struct render * render, float x, float y) {
+    int col = 0.5 * (x + 1) * config.pattern.master_width;
+    int row = 0.5 * (-y + 1) * config.pattern.master_height;
+    if(col < 0) col = 0;
+    if(row < 0) row = 0;
+    if(col >= config.pattern.master_width) col = config.pattern.master_width - 1;
+    if(row >= config.pattern.master_height) row = config.pattern.master_height - 1;
+    long index = BYTES_PER_PIXEL * (row * config.pattern.master_height + col);
+
+    // Use NEAREST interpolation for now
     SDL_Color c;
-    c.r = 0;
-    c.g = 0;
-    c.b = 0;
-    c.a = 0;
+    c.r = render->pixels[index];
+    c.g = render->pixels[index + 1];
+    c.b = render->pixels[index + 2];
+    c.a = render->pixels[index + 3];
     return c;
 }
