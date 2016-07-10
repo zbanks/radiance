@@ -534,7 +534,7 @@ static void ui_render(bool select) {
     glUniform1iARB(location, select);
     location = glGetUniformLocationARB(crossfader_shader, "iPreview");
     glUniform1iARB(location, 0);
-    location = glGetUniformLocationARB(crossfader_shader, "iPosition");
+    location = glGetUniformLocationARB(crossfader_shader, "iIntensity");
     glUniform1fARB(location, crossfader.position);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);

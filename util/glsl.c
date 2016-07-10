@@ -1,4 +1,5 @@
 #include "util/glsl.h"
+#include "util/err.h"
 
 #include "util/string.h"
 #include <errno.h>
@@ -17,10 +18,8 @@ void main(void) {                                               \n\
 ";
 */
 
-GLhandleARB load_shader(const char * filename) {
-    // Load file
-    GLcharARB * buffer = 0;
-    GLint length;
+static char * read_file(const char * filename, ssize_t * length) {
+    char * buffer = 0;
     FILE * f = fopen(filename, "r");
 
     if(f == NULL) {
@@ -34,7 +33,7 @@ GLhandleARB load_shader(const char * filename) {
         load_shader_error = rsprintf("fseek returned %d on file: %s (%s)", r, filename, strerror(errno));
         return 0;
     }
-    if((length = ftell(f)) < 0) {
+    if((*length = ftell(f)) < 0) {
         load_shader_error = rsprintf("ftell returned %d on file: %s (%s)", r, filename, strerror(errno));
         return 0;
     }
@@ -44,18 +43,35 @@ GLhandleARB load_shader(const char * filename) {
         return 0;
     }
 
-    buffer = calloc(length, 1);
+    buffer = calloc(*length, 1);
     if(buffer == NULL) {
         load_shader_error = rsprintf("Could not allocate memory for contents of %s (%s)", filename, strerror(errno));
         return 0;
     }
 
-    if(fread(buffer, 1, length, f) != (size_t) length) {
+    if(fread(buffer, 1, *length, f) != (size_t) *length) {
         load_shader_error = rsprintf("Could not read entire contents of %s (%s)", filename, strerror(errno));
         return 0;
     }
 
     fclose (f);
+    return buffer;
+}
+
+GLhandleARB load_shader(const char * filename) {
+    // Load file
+    GLcharARB * buffer = NULL;
+    GLint length;
+    ssize_t prog_len = 0, head_len = 0;
+    char * prog_buffer = read_file(filename, &prog_len);
+    char * head_buffer = read_file("resources/header.glsl", &head_len);
+    if (prog_buffer != NULL || head_buffer != NULL) {
+        buffer = rsprintf("%s\n%s", head_buffer, prog_buffer);
+        length = prog_len + head_len + 1;
+    }
+    free(prog_buffer);
+    free(head_buffer);
+    if (buffer == NULL) return 0;
 
     GLint compiled;
 

@@ -13,6 +13,7 @@
 #include "liblux/crc.h"
 #include "liblux/lux.h"
 
+#define LUX_DEBUG(...)
 #ifndef LUX_DEBUG
 #define _LUX_STR(x) _LUX_STR2(x)
 #define _LUX_STR2(x) # x

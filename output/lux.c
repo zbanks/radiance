@@ -53,7 +53,7 @@ static size_t n_spot_devices = 0;
 
 //
 
-static int lux_strip_get_length (int fd, uint32_t lux_id) {
+static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
     // TODO: replace with get_descriptor
     struct lux_packet packet = {
         .destination = lux_id,
@@ -62,7 +62,7 @@ static int lux_strip_get_length (int fd, uint32_t lux_id) {
         .payload_length = 0,
     };
     struct lux_packet response;
-    int rc = lux_command(fd, &packet, &response, LUX_RETRY);
+    int rc = lux_command(fd, &packet, &response, flags);
     if (rc < 0 || response.payload_length != 2) {
         printf("No/invalid response to length query on %#08x\n", lux_id);
         return -1;
@@ -256,8 +256,9 @@ int output_lux_init() {
         if (!output_config.lux_channels[i].configured) continue;
 
         struct lux_channel * channel = lux_channel_create(output_config.lux_channels[i].uri);
-        if (channel == NULL) return -1;
+        if (channel == NULL) continue;
     }
+    if (channel_head == NULL) return -1;
 
     // Initialize the devices, unconnected
     n_strip_devices = output_config.n_lux_strips;
@@ -294,17 +295,20 @@ int output_lux_init() {
         device->strip_quantize = output_config.lux_strips[i].quantize;
         device->strip_length = -1;
 
-        for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
-            int length = lux_strip_get_length(channel->fd, device->address);
-            if (length < 0)
-                continue;
+        for (int i = 0; i < 2; i++) { // Try twice to find the strips
+            for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+                int length = lux_strip_get_length(channel->fd, device->address, 0);
+                if (length < 0)
+                    continue;
 
-            device->strip_length = length;
-            device->channel = channel;
-            device->base.active = true;
-            found_count++;
-            break;
+                device->strip_length = length;
+                device->channel = channel;
+                device->base.active = true;
+                found_count++;
+                goto found;
+            }
         }
+        found:
 
         if (device->base.active) {
             device->frame_buffer_size = device->strip_length * 3;
