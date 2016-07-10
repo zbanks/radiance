@@ -63,7 +63,7 @@ void main(void) {
             p = vec2(175. + (i + int(i >= 4)) * 200., 180.);
             gl_FragColor = composite(gl_FragColor, fancy_rect(p, PAT_SIZE, iSelected == i + 9));
         }
-        gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(975., 300.), PAT_SIZE, iSelected == 17));
+        gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(975., 300.), PAT_SIZE, iSelected == 17 || iSelected == 18));
         gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(300., 650.), vec2(165., 65.), false));
         gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(700., 650.), vec2(165., 65.), false));
     }
