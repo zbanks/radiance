@@ -9,6 +9,7 @@ void main(void) {
     vec2 slider_size = vec2(10.);
     vec2 preview_origin = vec2(25., 75.);
     vec2 preview_size = vec2(100., 100.);
+    vec2 name_origin = vec2(25., 210.);
 
     if(iSelection) {
         gl_FragColor.a = 1.;
@@ -35,6 +36,11 @@ void main(void) {
         p.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
         gl_FragColor = compositeCR(gl_FragColor, p);
 
+        vec2 tex_coord = vec2(1., -1.) * ((gl_FragCoord.xy - name_origin) / iNameResolution);
+        vec4 n = texture2D(iName, tex_coord);
+        vec2 in_box = step(vec2(0.), tex_coord) - step(vec2(1.), tex_coord);
+        n.a *= in_box.x * in_box.y;
+        gl_FragColor = compositeCR(gl_FragColor, n);
     }
 
     //if(inBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w)) == 0.) {

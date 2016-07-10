@@ -23,9 +23,11 @@ uniform sampler2D iFrameRight;
 uniform sampler2D iPreview;
 uniform sampler2D iTexture;
 uniform sampler2D iText;
+uniform sampler2D iName;
 uniform vec2 iPosition;
 uniform vec2 iResolution;
 uniform vec2 iTextResolution;
+uniform vec2 iNameResolution;
 
 #define M_PI 3.1415926535897932384626433832795
 

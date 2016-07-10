@@ -37,6 +37,9 @@ static GLuint spectrum_fb;
 static GLuint waveform_fb;
 static GLuint select_tex;
 static GLuint * pattern_textures;
+static SDL_Texture ** pattern_name_textures;
+static int * pattern_name_width;
+static int * pattern_name_height;
 static GLuint crossfader_texture;
 static GLuint pat_entry_texture;
 static GLuint tex_spectrum_data;
@@ -215,8 +218,13 @@ void ui_init() {
 
     // Init pattern textures
     pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
-    if(pattern_textures == NULL) FAIL("Could not allocate %d textures.", config.ui.n_patterns);
+    if(pattern_textures == NULL) MEMFAIL();
+    pattern_name_textures = calloc(config.ui.n_patterns, sizeof(SDL_Texture *));
+    pattern_name_width = calloc(config.ui.n_patterns, sizeof(int));
+    pattern_name_height = calloc(config.ui.n_patterns, sizeof(int));
+    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
     glGenTextures(config.ui.n_patterns, pattern_textures);
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     for(int i = 0; i < config.ui.n_patterns; i++) {
         glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -322,7 +330,13 @@ void ui_init() {
 
 void ui_term() {
     TTF_CloseFont(font);
+    for(int i=0; i<config.ui.n_patterns; i++) {
+        if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
+    }
     free(pattern_textures);
+    free(pattern_name_textures);
+    free(pattern_name_width);
+    free(pattern_name_height);
     // TODO glDeleteTextures...
     glDeleteObjectARB(blit_shader);
     glDeleteObjectARB(main_shader);
@@ -376,6 +390,8 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text);
+                        if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
+                        pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_width[i], &pattern_name_height[i]);
                         break;
                     }
                 }
@@ -515,7 +531,7 @@ static void ui_render(bool select) {
 
     glEnable(GL_BLEND);
 
-    // Render the eight patterns
+    // Render the patterns
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
 
     int pw = config.ui.pattern_width;
@@ -528,8 +544,11 @@ static void ui_render(bool select) {
     glUniform1iARB(location, select);
     location = glGetUniformLocationARB(pat_shader, "iPreview");
     glUniform1iARB(location, 0);
+    location = glGetUniformLocationARB(pat_shader, "iName");
+    glUniform1iARB(location, 1);
     GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
     GLint pattern_intensity = glGetUniformLocationARB(pat_shader, "iIntensity");
+    GLint name_resolution = glGetUniformLocationARB(pat_shader, "iNameResolution");
 
     glLoadIdentity();
     gluOrtho2D(0, pw, 0, ph);
@@ -540,8 +559,11 @@ static void ui_render(bool select) {
         if(p != NULL) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, p->tex_output);
+            glActiveTexture(GL_TEXTURE1);
+            SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
             glUniform1iARB(pattern_index, i);
             glUniform1fARB(pattern_intensity, p->intensity);
+            glUniform2fARB(name_resolution, pattern_name_width[i], pattern_name_height[i]);
             glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
             glClear(GL_COLOR_BUFFER_BIT);
             fill(pw, ph);
