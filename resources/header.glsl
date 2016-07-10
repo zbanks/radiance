@@ -6,6 +6,7 @@ uniform float iAudioHi;
 uniform float iAudioLow;
 uniform float iAudioMid;
 uniform float iIntensity;
+uniform float iIntensityIntegral;
 uniform float iTime;
 uniform int iBins;
 uniform int iLeftDeckSelector;
