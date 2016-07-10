@@ -65,7 +65,7 @@ void crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right
     GLint loc;
     loc = glGetUniformLocationARB(crossfader->shader, "iResolution");
     glUniform2fARB(loc, config.pattern.master_width, config.pattern.master_height);
-    loc = glGetUniformLocationARB(crossfader->shader, "iPosition");
+    loc = glGetUniformLocationARB(crossfader->shader, "iIntensity");
     glUniform1fARB(loc, crossfader->position);
     loc = glGetUniformLocationARB(crossfader->shader, "iFrameLeft");
     glUniform1iARB(loc, 0);
