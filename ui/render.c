@@ -34,7 +34,7 @@ void render_term(struct render * render) {
 void render_readback(struct render * render) {
     GLenum e;
 
-    if(SDL_TryLockMutex(render->mutex)) {
+    if(SDL_TryLockMutex(render->mutex) == 0) {
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, render->fb);
         glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
         glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)render->pixels);
