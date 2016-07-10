@@ -84,7 +84,7 @@ static int lux_strip_frame (int fd, uint32_t lux_id, unsigned char * data, size_
         .payload_length = data_size,
     };
     memcpy(packet.payload, data, data_size);
-
+    LOGLIMIT(INFO("Writing %ld bytes to %#08x", data_size, lux_id));
     return lux_write(fd, &packet, 0);
 }
 

@@ -2,6 +2,8 @@
 #include "util/err.h"
 #include "util/math.h"
 #include "util/string.h"
+#include "ui/render.h"
+#include "main.h" // FIXME
 
 struct output_vertex * output_vertex_list_parse(const char * _str) {
     if (_str == NULL) return NULL;
@@ -118,12 +120,13 @@ int output_device_arrange(struct output_device * dev) {
 }
 
 int output_render() {
+    render_freeze(&render);
     for (struct output_device * dev = output_device_head; dev; dev = dev->next) {
         if (!dev->active) continue;
-
-        int rc = 0; //TODO: __todo_render(&dev->pixels);
-        if (rc < 0) return rc;
+        for (size_t i = 0; i < dev->pixels.length; i++)
+            dev->pixels.colors[i] = render_sample(&render, dev->pixels.xs[i], dev->pixels.ys[i]);
     }
+    render_thaw(&render);
     output_render_count++;
     return 0;
 }

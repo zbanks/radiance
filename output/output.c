@@ -35,8 +35,12 @@ int output_run(void * args) {
     while(output_running) {
         //if (last_output_render_count == output_render_count)
         last_output_render_count = output_render_count;
+        INFO("Rendering");
+        int rc = output_render();
+        if (rc < 0) PERROR("Unable to render");
 
         if (output_on_lux) {
+            INFO("Outputting");
             int rc = output_lux_prepare_frame();
             if (rc < 0) PERROR("Unable to prepare lux frame");
             rc = output_lux_sync_frame();
@@ -52,6 +56,7 @@ int output_run(void * args) {
     if(output_on_lux) output_lux_term();
     output_config_del(&output_config);
 
+    INFO("Output stopped");
     return 0;
 }
 
@@ -61,7 +66,6 @@ void output_init() {
     if (rc < 0) FAIL("Unable to load configuration");
     output_config_dump(&output_config, config.output.config);
 
-    output_running = 1;
     output_thread = SDL_CreateThread(&output_run, "Output", 0);
     if(!output_thread) FAIL("Could not create output thread: %s\n", SDL_GetError());
 }
