@@ -345,20 +345,22 @@ static struct pattern * selected_pattern(int s) {
 }
 
 static void set_slider_to(int s, float v) {
-    struct pattern * p = selected_pattern(s);
-    if(p != NULL) {
-        p->intensity = v;
-    } else if(selected == crossfader_selection_top || selected == crossfader_selection_bot) {
+    if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = v;
+    } else {
+        struct pattern * p = selected_pattern(s);
+        if(p != NULL)
+            p->intensity = v;
     }
 }
 
 static void increment_slider(int s, float v) {
-    struct pattern * p = selected_pattern(s);
-    if(p != NULL) {
-        p->intensity = CLAMP(p->intensity + v, 0., 1.);
-    } else if(selected == crossfader_selection_top || selected == crossfader_selection_bot) {
+    if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = CLAMP(crossfader.position + v, 0., 1.);
+    } else {
+        struct pattern * p = selected_pattern(s);
+        if(p != NULL)
+            p->intensity = CLAMP(p->intensity + v, 0., 1.);
     }
 }
 

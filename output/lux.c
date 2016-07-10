@@ -122,6 +122,20 @@ static struct lux_channel * lux_channel_create (const char * uri) {
     struct lux_channel * channel = calloc(1, sizeof *channel);
     if (channel == NULL) MEMFAIL();
 
+    if (uri[0] == '/') {
+        channel->fd = lux_serial_open();
+        if (channel->fd < 0) {
+            PERROR("Unable to open lux socket");
+            free(channel);
+            return NULL;
+        }
+        // Success!
+        INFO("Initialized lux output channel '%s'", uri);
+        channel->next = channel_head;
+        channel_head = channel;
+        return channel;
+    }
+
     char * portstr = strdup(uri);
     if (portstr == NULL) MEMFAIL();
     char * address = strsep(&portstr, ":");

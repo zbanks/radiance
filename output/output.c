@@ -1,5 +1,6 @@
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_timer.h>
+#include <unistd.h>
 
 #include "util/config.h"
 #include "util/err.h"
@@ -49,6 +50,7 @@ int output_run(void * args) {
         //SDL_framerateDelay(&fps_manager);
         stat_ops = INTERP(0.8, stat_ops, 1000. / (SDL_GetTicks() - last_tick));
         last_tick = SDL_GetTicks();
+        SDL_Delay(10);
     }
 
     // Destroy output
