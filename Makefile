@@ -5,6 +5,7 @@ PROJECT = radiance
 # Source files
 C_SRC  = $(wildcard *.c)
 C_SRC += $(wildcard audio/*.c)
+C_SRC += $(wildcard midi/*.c)
 C_SRC += $(wildcard output/*.c)
 C_SRC += $(wildcard pattern/*.c)
 C_SRC += $(wildcard time/*.c)
@@ -21,7 +22,7 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I.
 
-LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lfftw3 -lsamplerate
+LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lportmidi -lfftw3 -lsamplerate
 
 CFLAGS = -std=c99 -ggdb3 -O0 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter

@@ -8,6 +8,7 @@
 #include "util/err.h"
 #include "pattern/deck.h"
 #include "pattern/crossfader.h"
+#include "midi/midi.h"
 #include "audio/audio.h"
 #include "audio/analyze.h"
 #include "time/timebase.h"
@@ -37,12 +38,14 @@ int main(int argc, char* args[]) {
     time_init();
     analyze_init();
     audio_start();
+    midi_start();
     output_init(&render);
 
     ui_run();
     ui_term();
 
     output_term();
+    midi_stop();
     audio_stop();
     analyze_term();
 

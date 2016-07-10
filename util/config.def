@@ -61,6 +61,10 @@ CFGSECTION(output,
     CFG(lux_timeout_ms, INT, 150)
 )
 
+CFGSECTION(midi,
+    CFG(config, STRING, "resources/midi.ini")
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG

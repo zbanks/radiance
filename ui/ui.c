@@ -9,6 +9,7 @@
 #include "util/err.h"
 #include "util/glsl.h"
 #include "util/math.h"
+#include "midi/midi.h"
 #include "audio/analyze.h"
 #include "ui/render.h"
 #include "main.h"
@@ -336,15 +337,15 @@ void ui_term() {
     SDL_Quit();
 }
 
-static struct pattern * selected_pattern() {
+static struct pattern * selected_pattern(int s) {
     for(int i=0; i<config.ui.n_patterns; i++) {
-        if(map_selection[i] == selected) return deck[map_deck[i]].pattern[map_pattern[i]];
+        if(map_selection[i] == s) return deck[map_deck[i]].pattern[map_pattern[i]];
     }
     return NULL;
 }
 
-static void set_slider_to(float v) {
-    struct pattern * p = selected_pattern();
+static void set_slider_to(int s, float v) {
+    struct pattern * p = selected_pattern(s);
     if(p != NULL) {
         p->intensity = v;
     } else if(selected == crossfader_selection_top || selected == crossfader_selection_bot) {
@@ -352,8 +353,8 @@ static void set_slider_to(float v) {
     }
 }
 
-static void increment_slider(float v) {
-    struct pattern * p = selected_pattern();
+static void increment_slider(int s, float v) {
+    struct pattern * p = selected_pattern(s);
     if(p != NULL) {
         p->intensity = CLAMP(p->intensity + v, 0., 1.);
     } else if(selected == crossfader_selection_top || selected == crossfader_selection_bot) {
@@ -363,8 +364,8 @@ static void increment_slider(float v) {
 
 static void handle_key(SDL_KeyboardEvent * e) {
     bool shift = e->keysym.mod & KMOD_SHIFT;
-    bool ctrl = e->keysym.mod & KMOD_SHIFT;
-    bool alt = e->keysym.mod & KMOD_SHIFT;
+    bool ctrl = e->keysym.mod & KMOD_CTRL;
+    bool alt = e->keysym.mod & KMOD_ALT;
     (void) (shift & ctrl & alt);
 
     if(pat_entry) {
@@ -404,10 +405,14 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 selected = map_right[selected];
                 break;
             case SDLK_UP:
-                selected = map_up[selected];
+            case SDLK_k:
+                if (shift) increment_slider(selected, +0.1);
+                else selected = map_up[selected];
                 break;
             case SDLK_DOWN:
-                selected = map_down[selected];
+            case SDLK_j:
+                if (shift) increment_slider(selected, -0.1);
+                else selected = map_down[selected];
                 break;
             case SDLK_ESCAPE:
                 selected = 0;
@@ -421,44 +426,38 @@ static void handle_key(SDL_KeyboardEvent * e) {
                     }
                 }
                 break;
-            case SDLK_k:
-                increment_slider(+0.1);
-                break;
-            case SDLK_j:
-                increment_slider(-0.1);
-                break;
             case SDLK_BACKQUOTE:
-                set_slider_to(0);
+                set_slider_to(selected, 0);
                 break;
             case SDLK_1:
-                set_slider_to(0.1);
+                set_slider_to(selected, 0.1);
                 break;
             case SDLK_2:
-                set_slider_to(0.2);
+                set_slider_to(selected, 0.2);
                 break;
             case SDLK_3:
-                set_slider_to(0.3);
+                set_slider_to(selected, 0.3);
                 break;
             case SDLK_4:
-                set_slider_to(0.4);
+                set_slider_to(selected, 0.4);
                 break;
             case SDLK_5:
-                set_slider_to(0.5);
+                set_slider_to(selected, 0.5);
                 break;
             case SDLK_6:
-                set_slider_to(0.6);
+                set_slider_to(selected, 0.6);
                 break;
             case SDLK_7:
-                set_slider_to(0.7);
+                set_slider_to(selected, 0.7);
                 break;
             case SDLK_8:
-                set_slider_to(0.8);
+                set_slider_to(selected, 0.8);
                 break;
             case SDLK_9:
-                set_slider_to(0.9);
+                set_slider_to(selected, 0.9);
                 break;
             case SDLK_0:
-                set_slider_to(1);
+                set_slider_to(selected, 1);
                 break;
             case SDLK_SEMICOLON: if(!shift) break;
                 for(int i=0; i<config.ui.n_patterns; i++) {
@@ -782,6 +781,13 @@ void ui_run() {
             ui_render(true);
 
             while(SDL_PollEvent(&e) != 0) {
+                if (midi_command_event != (Uint32) -1 && 
+                    e.type == midi_command_event) {
+                    set_slider_to(e.user.code, *(float *) e.user.data1);
+                    free(e.user.data1);
+                    free(e.user.data2);
+                    continue;
+                }
                 switch(e.type) {
                     case SDL_QUIT:
                         quit = true;
