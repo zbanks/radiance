@@ -1,6 +1,7 @@
 #include "util/config.h"
 #include "util/string.h"
 #include "util/err.h"
+#include "util/math.h"
 #include "output/lux.h"
 #include "output/slice.h"
 #include "output/config.h"
@@ -63,12 +64,14 @@ static int lux_strip_get_length (int fd, uint32_t lux_id) {
     struct lux_packet response;
     int rc = lux_command(fd, &packet, &response, LUX_RETRY);
     if (rc < 0 || response.payload_length != 2) {
-        printf("No/invalid response to length query on %#X\n", lux_id);
+        printf("No/invalid response to length query on %#08x\n", lux_id);
         return -1;
     }
 
     uint16_t length;
     memcpy(&length, response.payload, sizeof length);
+
+    INFO("Found strip on %#08x with length %d", lux_id, length);
 
     return length;
 }
@@ -98,6 +101,8 @@ static int lux_spot_frame (int fd, uint32_t lux_id, unsigned char * data, size_t
 }
 
 static int lux_frame_sync (int fd, uint32_t lux_id) {
+    return 0;
+    /*
     struct lux_packet packet = {
         .destination = lux_id,
         .command = LUX_CMD_SYNC,
@@ -106,6 +111,7 @@ static int lux_frame_sync (int fd, uint32_t lux_id) {
     };
 
     return lux_write(fd, &packet, 0);
+    */
 }
 
 //
@@ -166,7 +172,41 @@ static void lux_channel_destroy_all() {
 //
 
 static int lux_strip_prepare_frame(struct lux_device * device) {
-    //TODO
+    uint8_t * frame_ptr = device->frame_buffer;
+    SDL_Color * pixel_ptr = device->base.pixels.colors;
+    if (frame_ptr == NULL || pixel_ptr == NULL) return -1;
+
+    if (device->strip_quantize > 0) {
+        int l = 0; 
+        for (int i = 0; i < device->strip_quantize; i++) {
+            unsigned int r = 0, g = 0, b = 0; 
+            for (int k = 0; k < device->oversample; k++) {
+                r += pixel_ptr->r;
+                g += pixel_ptr->g;
+                b += pixel_ptr->b;
+                pixel_ptr++;
+            }
+            while (l * device->strip_quantize < i * device->strip_length) {
+                *frame_ptr++ = r / device->oversample;
+                *frame_ptr++ = g / device->oversample;
+                *frame_ptr++ = b / device->oversample;
+                l++;
+            }
+        }
+    } else {
+        for (int l = 0; l < device->strip_length; l++) {
+            unsigned int r = 0, g = 0, b = 0; 
+            for (int k = 0; k < device->oversample; k++) {
+                r += pixel_ptr->r;
+                g += pixel_ptr->g;
+                b += pixel_ptr->b;
+                pixel_ptr++;
+            }
+            *frame_ptr++ = r / device->oversample;
+            *frame_ptr++ = g / device->oversample;
+            *frame_ptr++ = b / device->oversample;
+        }
+    }
     return 0;
 }
 
@@ -183,8 +223,10 @@ static void lux_device_term(struct lux_device * device) {
     free(device->descriptor);
     free(device->frame_buffer);
     //free(device->ui_name);
-    device->base.prev->next = device->base.next;
-    device->base.next->prev = device->base.prev;
+    if (device->base.prev != NULL)
+        device->base.prev->next = device->base.next;
+    if (device->base.next != NULL)
+        device->base.next->prev = device->base.prev;
 }
 
 // 
@@ -212,11 +254,11 @@ int output_lux_init() {
 
     // Initialize the devices, unconnected
     n_strip_devices = output_config.n_lux_strips;
-    strip_devices = realloc(strip_devices, n_strip_devices);
+    strip_devices = calloc(sizeof *strip_devices, n_strip_devices);
     if (strip_devices == NULL) MEMFAIL();
 
     n_spot_devices = output_config.n_lux_spots;
-    spot_devices = realloc(spot_devices, n_spot_devices);
+    spot_devices = calloc(sizeof *spot_devices, n_spot_devices);
     if (spot_devices == NULL) MEMFAIL();
 
     // Search the open lux channels for the configured devices
@@ -224,12 +266,14 @@ int output_lux_init() {
     int found_count = 0;
     for (size_t i = 0; i < n_strip_devices; i++) {
         struct lux_device * device = &strip_devices[i];
-        if (!output_config.lux_strips[i].configured) {
-            memset(device, 0, sizeof *device);
+        memset(device, 0, sizeof *device);
+        if (!output_config.lux_strips[i].configured)
             continue;
-        }
-        output_device_head->prev = &device->base;
+        if (output_device_head != NULL)
+            output_device_head->prev = &device->base;
         device->base.next = output_device_head;
+        output_device_head = &device->base;
+
         device->base.prev = NULL;
 
         device->base.vertex_head = output_config.lux_strips[i].vertexlist;
@@ -238,8 +282,8 @@ int output_lux_init() {
         device->base.ui_name = output_config.lux_strips[i].ui_name;
 
         device->address  = output_config.lux_strips[i].address;
-        device->max_energy = output_config.lux_strips[i].max_energy;
-        device->oversample = output_config.lux_strips[i].oversample;
+        device->max_energy = CLAMP(output_config.lux_strips[i].max_energy, 0, 1);
+        device->oversample = MAX(1, output_config.lux_strips[i].oversample);
         device->strip_quantize = output_config.lux_strips[i].quantize;
         device->strip_length = -1;
 
@@ -261,17 +305,21 @@ int output_lux_init() {
             device->base.pixels.length = device->oversample * device->strip_quantize;
         else
             device->base.pixels.length = device->oversample * device->strip_length;
+        device->frame_buffer = calloc(3, device->base.pixels.length);
+        if (device->frame_buffer == NULL) MEMFAIL();
+
         output_device_arrange(&device->base);
     }
     for (size_t i = 0; i < n_spot_devices; i++) {
         struct lux_device * device = &spot_devices[i];
-        if (!output_config.lux_spots[i].configured) {
-            memset(device, 0, sizeof *device);
+        memset(device, 0, sizeof *device);
+        if (!output_config.lux_spots[i].configured)
             continue;
-        }
-        output_device_head->prev = &device->base;
+        if (output_device_head != NULL)
+            output_device_head->prev = &device->base;
         device->base.next = output_device_head;
         device->base.prev = NULL;
+        output_device_head = &device->base;
 
         device->base.vertex_head = output_config.lux_spots[i].vertexlist;
         device->base.active = false;
@@ -304,23 +352,27 @@ int output_lux_prepare_frame() {
     int rc = 0; (void) rc;
     for (size_t i = 0; i < n_strip_devices; i++) {
         struct lux_device * device = &strip_devices[i];
+        if (device->channel == NULL) continue;
         rc = lux_strip_prepare_frame(device);
+        if (rc < 0) continue;
         rc = lux_strip_frame(
                 device->channel->fd,
                 device->address,
                 device->frame_buffer,
                 device->frame_buffer_size);
-        // TODO
+        if (rc < 0) LOGLIMIT(WARN("Unable to send frame to %#08x", device->address));
     }
     for (size_t i = 0; i < n_spot_devices; i++) {
         struct lux_device * device = &spot_devices[i];
+        if (device->channel == NULL) continue;
         rc = lux_spot_prepare_frame(device);
+        if (rc < 0) continue;
         rc = lux_spot_frame(
                 device->channel->fd,
                 device->address,
                 device->frame_buffer,
                 device->frame_buffer_size);
-        // TODO
+        if (rc < 0) LOGLIMIT(WARN("Unable to send frame to %#08x", device->address));
     }
     return 0;
 }

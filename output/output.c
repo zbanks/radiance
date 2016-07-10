@@ -9,17 +9,23 @@
 #include "output/slice.h"
 #include "output/lux.h"
 
-static bool output_running;
-static bool output_on_lux = 0;
-static double stat_ops;
+static volatile int output_running;
+static SDL_Thread * output_thread;
 
-void output_run(void* args) {
+int output_run(void * args) {
+    bool output_on_lux = false;
+    if (config.output.lux_enabled) {
+        int rc = output_lux_init();
+        if (rc < 0) PERROR("Unable to initialize lux");
+        else output_on_lux = true;
+    }
+
     /*
     FPSmanager fps_manager;
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
     */
-    stat_ops = 100;
+    double stat_ops = 100;
 
     output_running = true;   
     unsigned int last_tick = SDL_GetTicks();
@@ -45,20 +51,19 @@ void output_run(void* args) {
     // Destroy output
     if(output_on_lux) output_lux_term();
     output_config_del(&output_config);
+
+    return 0;
 }
 
 void output_init() {
     output_config_init(&output_config);
     int rc = output_config_load(&output_config, config.output.config);
     if (rc < 0) FAIL("Unable to load configuration");
-
     output_config_dump(&output_config, config.output.config);
-    
-    if (config.output.lux_enabled) {
-        rc = output_lux_init();
-        if (rc < 0) PERROR("Unable to initialize lux");
-        else output_on_lux = true;
-    }
+
+    output_running = 1;
+    output_thread = SDL_CreateThread(&output_run, "Output", 0);
+    if(!output_thread) FAIL("Could not create output thread: %s\n", SDL_GetError());
 }
 
 void output_term() {

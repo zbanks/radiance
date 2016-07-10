@@ -50,7 +50,7 @@ const char * output_vertex_list_serialize(struct output_vertex * head) {
     size_t len = 0;
     for (struct output_vertex * v = head; v; v = v->next)
         len += sprintf(buf + len, format, v->x, v->y, v->scale);
-    if (len > buflen) FAIL("Vertex list grew as writing (%lu > %lu)", len, buflen);
+    if (len >= buflen) FAIL("Vertex list grew as writing (%lu > %lu)", len, buflen);
     
 
     buf[len-1] = '\0'; // Overwrite last ','
@@ -80,6 +80,9 @@ int output_device_arrange(struct output_device * dev) {
     dev->pixels.ys = realloc(dev->pixels.ys, length * sizeof *dev->pixels.ys);
     dev->pixels.colors = realloc(dev->pixels.colors, length * sizeof *dev->pixels.colors);
     if (dev->pixels.xs == NULL || dev->pixels.ys == NULL || dev->pixels.colors == NULL) MEMFAIL();
+    memset(dev->pixels.xs, 0, length * sizeof *dev->pixels.xs);
+    memset(dev->pixels.ys, 0, length * sizeof *dev->pixels.ys);
+    memset(dev->pixels.colors, 0, length * sizeof *dev->pixels.colors);
 
     // Special case - only a single point
     if (dev->vertex_head->next == NULL) {
@@ -102,6 +105,7 @@ int output_device_arrange(struct output_device * dev) {
     for (const struct output_vertex * vert = dev->vertex_head; vert->next; vert = vert->next) {
         double vert_scale = vert->scale * hypot(vert->x - vert->next->x, vert->y - vert->next->y);
         while (pixel_idx * scale_per_pixel <= cumulative_scale + vert_scale) {
+            if (pixel_idx >= length) break;
             double alpha = (pixel_idx * scale_per_pixel - cumulative_scale) / vert_scale;
             dev->pixels.xs[pixel_idx] = INTERP(alpha, vert->x, vert->next->x);
             dev->pixels.ys[pixel_idx] = INTERP(alpha, vert->y, vert->next->y);
