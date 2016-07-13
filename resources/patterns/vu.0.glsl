@@ -4,12 +4,13 @@ void main(void) {
 
     float SMOOTH = 0.01;
 
-    float lows = 1. - smoothstep(iAudioLow, iAudioLow + SMOOTH, abs(uv.x - 0.5));
-    float mids = 1. - smoothstep(iAudioMid, iAudioMid + SMOOTH, abs(uv.x - 0.5));
-    float his  = 1. - smoothstep(iAudioHi , iAudioHi  + SMOOTH, abs(uv.x - 0.5));
+    vec3 audio = vec3(iAudioLow, iAudioMid, iAudioHi);
 
-    vec4 c = composite(composite(vec4(0., 0., 0.5, lows), vec4(0., 0., 1., mids)), vec4(0.3, 0.3, 1., his));
+    audio = audio * 2. * iIntensity;
+
+    vec3 draw = 1. - smoothstep(audio - SMOOTH, audio, vec3(abs(uv.x - 0.5)));
+
+    vec4 c = composite(composite(vec4(0., 0., 0.5, draw.x), vec4(0., 0., 1., draw.y)), vec4(0.3, 0.3, 1., draw.z));
     c.a = clamp(c.a, 0., 1.);
-    c.a *= iIntensity;
     gl_FragColor = composite(gl_FragColor, c);
 }

@@ -1,10 +1,13 @@
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 
-    float deviation;
-    deviation = smoothstep(0., 0.3, iIntensity) * mod(iIntensityIntegral, 1.);
+    vec2 deviation = vec2(iIntensityIntegral, 0.);
 
-    uv.x = mod(uv.x + deviation, 1.);
+    vec4 oc = texture2D(iFrame, uv);
+    vec4 c = texture2D(iFrame, abs(mod(uv + deviation, 2.) - 1.));
 
-    gl_FragColor = texture2D(iFrame, uv);
+    oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
+    c.a *= smoothstep(0, 0.1, iIntensity);
+
+    gl_FragColor = composite(oc, c);
 }
