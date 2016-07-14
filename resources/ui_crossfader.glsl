@@ -3,12 +3,12 @@ void main(void) {
     float g = uv.y * 0.5 + 0.1;
     float w = 4.;
 
-    vec2 slider_origin = vec2(25., 45.);
+    vec2 slider_origin = vec2(125., 50.);
     vec2 slider_gain = vec2(100., 0.);
     vec2 slider_pos = slider_origin + slider_gain * iIntensity;
     vec2 slider_size = vec2(10.);
-    vec2 preview_origin = vec2(25., 75.);
-    vec2 preview_size = vec2(100., 100.);
+    vec2 preview_origin = vec2(35., 100.);
+    vec2 preview_size = vec2(280., 280.);
 
     if(iSelection) {
         gl_FragColor.a = 1.;
@@ -16,7 +16,7 @@ void main(void) {
         gl_FragColor.rgb = mix(gl_FragColor.rgb, dataColor(ivec3(4, 0, 0)), inBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
         gl_FragColor = vec4(0.);
-        float df = max(rounded_rect_df(vec2(75., 125.), vec2(45., 75.), 25.), 0.);
+        float df = max(rounded_rect_df(vec2(175., 250.), vec2(130., 200.), 25.), 0.);
         gl_FragColor = compositeCR(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
         gl_FragColor = compositeCR(gl_FragColor, vec4(0., 0.3, 0., smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         gl_FragColor = compositeCR(gl_FragColor, vec4(0., 0.8, 0., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));

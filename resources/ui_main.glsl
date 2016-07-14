@@ -40,9 +40,9 @@ void main(void) {
         for(int i=0; i < 8; i++) {
             ivec3 c;
             c = ivec3(1, i, 0);
-            vec2 p = vec2(175. + (i + int(i >= 4)) * 200., 420.);
+            vec2 p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 420.);
             gl_FragColor = compositeCR(gl_FragColor, vec4(dataColor(c), rounded_rect_df(p, PAT_SIZE, RADIUS) <= 1.));
-            p = vec2(175. + (i + int(i >= 4)) * 200., 180.);
+            p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 180.);
             c.y += 8;
             gl_FragColor = compositeCR(gl_FragColor, vec4(dataColor(c), rounded_rect_df(p, PAT_SIZE, RADIUS) <= 1.));
         }
@@ -56,12 +56,12 @@ void main(void) {
 
         for(int i=0; i < 8; i++) {
             vec2 p;
-            p = vec2(175. + (i + int(i >= 4)) * 200., 420.);
+            p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 420.);
             gl_FragColor = compositeCR(gl_FragColor, fancy_rect(p, PAT_SIZE, iSelected == i + 1));
-            p = vec2(175. + (i + int(i >= 4)) * 200., 180.);
+            p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 180.);
             gl_FragColor = compositeCR(gl_FragColor, fancy_rect(p, PAT_SIZE, iSelected == i + 9));
         }
-        gl_FragColor = compositeCR(gl_FragColor, fancy_rect(vec2(975., 300.), PAT_SIZE, iSelected == 17 || iSelected == 18));
+        gl_FragColor = compositeCR(gl_FragColor, fancy_rect(vec2(962.5, 300.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
         gl_FragColor = compositeCR(gl_FragColor, fancy_rect(vec2(300., 650.), vec2(165., 65.), false));
         gl_FragColor = compositeCR(gl_FragColor, fancy_rect(vec2(700., 650.), vec2(165., 65.), false));
     }
