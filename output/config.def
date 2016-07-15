@@ -1,6 +1,5 @@
 CFGSECTION_LIST(lux_channel,
-    CFG(uri, STRING, "127.0.0.1:1365")
-    CFG(serial_path, STRING, "")
+    CFG(uri, STRING, "udp://127.0.0.1:1365")
 )
  
 CFGSECTION_LIST(lux_strip,

@@ -65,6 +65,10 @@ CFGSECTION(midi,
     CFG(config, STRING, "resources/midi.ini")
 )
 
+CFGSECTION(debug,
+    CFG(loglevel, INT, 2)
+)
+
 #undef CFGSECTION
 #undef CFGSECTION_LIST
 #undef CFG

@@ -27,6 +27,7 @@ double audio_low;
 int main(int argc, char* args[]) {
     config_init(&config);
     config_load(&config, "resources/config.ini");
+    loglevel = config.debug.loglevel;
 
     ui_init();
 

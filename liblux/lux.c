@@ -13,14 +13,32 @@
 #include "liblux/crc.h"
 #include "liblux/lux.h"
 
-//#define LUX_DEBUG(...)
+// Comment out the following lines to remove radiance dependence
+#include "util/err.h"
+#define LUX_DEBUG INFO
+#define LUX_ERROR ERROR
+
+
 #ifndef LUX_DEBUG
 #define _LUX_STR(x) _LUX_STR2(x)
 #define _LUX_STR2(x) # x
 #define LUX_DEBUG(x, ...) printf("[debug] line " _LUX_STR(__LINE__) ": " x "\n", ## __VA_ARGS__)
+#define LUX_ERROR(x, ...) printf("[error] line " _LUX_STR(__LINE__) ": " x "\n", ## __VA_ARGS__)
 #endif
 
 int lux_timeout_ms = 150; // Timeout for response, in milliseconds
+
+int lux_uri_open(const char * uri) {
+    char buf[512];
+    uint16_t port;
+    if (sscanf(uri, "serial://%511s", buf) == 1) {
+        return lux_serial_open(buf);
+    } else if (sscanf(uri, "udp://%511[^:]:%hu", buf, &port) == 2) {
+        return lux_network_open(buf, port);
+    }
+    LUX_DEBUG("Invalid uri '%s'", uri);
+    return -1;
+}
 
 static int serial_set_attribs(int fd) {
         struct termios tty;
@@ -45,28 +63,9 @@ static int serial_set_attribs(int fd) {
         return 0;
 }
 
-int lux_serial_open() {
-    int fd;
-
-    char dbuf[32];
-    for(int i = 0; i < 9; i++) {
-        snprintf(dbuf, sizeof dbuf, "/dev/ttyUSB%d", i);
-        fd = open(dbuf, O_RDWR | O_NOCTTY | O_SYNC);
-        if(fd >= 0) {
-            printf("Found output on '%s', %d\n", dbuf, fd);
-            break;
-        }
-
-        snprintf(dbuf, sizeof dbuf, "/dev/ttyACM%d", i);
-        fd = open(dbuf, O_RDWR | O_NOCTTY | O_SYNC);
-        if(fd >= 0) {
-            printf("Found output on '%s', %d\n", dbuf, fd);
-            break;
-        }
-    }
-
-    if(fd < 0) return -1;
-
+int lux_serial_open(const char * path) {
+    int fd = open(path, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0) return -1;
     if(serial_set_attribs(fd) < 0) return -2;
 
     return fd;
@@ -88,11 +87,7 @@ int lux_network_open(const char * address, uint16_t port) {
     int rc = connect(sock, (struct sockaddr *) &addr, sizeof addr);
     if (rc < 0) return -1;
     
-    // Send a 0-byte packet to make sure the bridge is up
-    char buf[1];
-    rc = send(sock, buf, 0, 0);
-    if (rc < 0) return -1;
-    rc = recv(sock, buf, 1, 0);
+    rc = lux_sync(sock, 10);
     if (rc != 0) {
         LUX_DEBUG("No response from %s:%d", address, port);
         close(sock);
@@ -333,7 +328,7 @@ int lux_command(int fd, struct lux_packet * packet, struct lux_packet * response
         rc = lux_read(fd, response);
         if (rc < 0) continue;
         if (response->destination != 0) {
-            printf("Invalid destination %#08X\n", response->destination);
+            LUX_ERROR("Invalid destination %#08X", response->destination);
             continue;
         }
 
@@ -347,5 +342,33 @@ int lux_command(int fd, struct lux_packet * packet, struct lux_packet * response
         return 0;
     }
 
+    return -1;
+}
+
+int lux_sync(int fd, int tries) {
+    while (tries--) {
+        // Send a 0-byte packet to make sure the bridge is up
+        char buf[1];
+        int rc = send(fd, buf, 0, 0);
+        if (rc < 0) {
+            if (errno == ENOTSOCK) return 0;
+            return -1;
+        }
+
+        // Wait up to 1 ms for a response
+        struct pollfd pfd = {.fd = fd, .events = POLLIN};
+        rc = poll(&pfd, 1, 1 /*ms*/);
+        if(rc < 0) return rc;
+        if(rc == 0) continue;
+
+        rc = recv(fd, buf, 1, 0);
+        if (rc == 0) return 0;
+        if (rc < 0) {
+            LUX_DEBUG("Bad response from socket %d", fd);
+            errno = ECONNREFUSED;
+            return -1;
+        }
+    }
+    errno = ETIMEDOUT;
     return -1;
 }

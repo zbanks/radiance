@@ -64,7 +64,7 @@ static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
     struct lux_packet response;
     int rc = lux_command(fd, &packet, &response, flags);
     if (rc < 0 || response.payload_length != 2) {
-        printf("No/invalid response to length query on %#08x\n", lux_id);
+        ERROR("No/invalid response to length query on %#08x", lux_id);
         return -1;
     }
 
@@ -84,7 +84,7 @@ static int lux_strip_frame (int fd, uint32_t lux_id, unsigned char * data, size_
         .payload_length = data_size,
     };
     memcpy(packet.payload, data, data_size);
-    LOGLIMIT(INFO("Writing %ld bytes to %#08x", data_size, lux_id));
+    LOGLIMIT(INFO, "Writing %ld bytes to %#08x", data_size, lux_id);
     return lux_write(fd, &packet, 0);
 }
 
@@ -103,7 +103,7 @@ static int lux_spot_frame (int fd, uint32_t lux_id, unsigned char * data, size_t
 */
 
 static int lux_frame_sync (int fd, uint32_t lux_id) {
-    return 0;
+    return lux_sync(fd, 10);
     /*
     struct lux_packet packet = {
         .destination = lux_id,
@@ -122,52 +122,17 @@ static struct lux_channel * lux_channel_create (const char * uri) {
     struct lux_channel * channel = calloc(1, sizeof *channel);
     if (channel == NULL) MEMFAIL();
 
-    if (uri[0] == '/') {
-        channel->fd = lux_serial_open();
-        if (channel->fd < 0) {
-            PERROR("Unable to open lux socket");
-            free(channel);
-            return NULL;
-        }
-        // Success!
-        INFO("Initialized lux output channel '%s'", uri);
-        channel->next = channel_head;
-        channel_head = channel;
-        return channel;
-    }
-
-    char * portstr = strdup(uri);
-    if (portstr == NULL) MEMFAIL();
-    char * address = strsep(&portstr, ":");
-    if (portstr == NULL || portstr[0] == '\0' || address[0] == '\0') {
-        ERROR("Invalid lux uri '%s'; expected 'ip:port'", uri);
-        errno = EINVAL;
-        goto fail;
-    }
-    int port = atoi(portstr);
-    if (port <= 0) {
-        ERROR("Invalid lux port '%s'", portstr);
-        errno = EINVAL;
-        goto fail;
-    }
-
-    channel->fd = lux_network_open(address, port);
+    channel->fd = lux_uri_open(uri);
     if (channel->fd < 0) {
         PERROR("Unable to open lux socket");
-        goto fail;
+        free(channel);
+        return NULL;
     }
-    free(address);
-    
     // Success!
     INFO("Initialized lux output channel '%s'", uri);
     channel->next = channel_head;
     channel_head = channel;
     return channel;
-
-fail:
-    free(channel);
-    free(address);
-    return NULL;
 }
 
 static void lux_channel_destroy_all() {
@@ -390,7 +355,7 @@ int output_lux_prepare_frame() {
                 device->address,
                 device->frame_buffer,
                 device->frame_buffer_size);
-        if (rc < 0) LOGLIMIT(WARN("Unable to send frame to %#08x", device->address));
+        if (rc < 0) LOGLIMIT(WARN, "Unable to send frame to %#08x", device->address);
     }
     /*
     for (size_t i = 0; i < n_spot_devices; i++) {
@@ -412,7 +377,7 @@ int output_lux_prepare_frame() {
 int output_lux_sync_frame() {
     for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
         int rc = lux_frame_sync(channel->fd, LUX_BROADCAST_ADDRESS);
-        if (rc < 0) LOGLIMIT(WARN("Unable to send sync message on fd"));
+        if (rc < 0) LOGLIMIT(WARN, "Unable to send sync message on fd");
     }
     return 0;
 }

@@ -8,8 +8,6 @@
 #define _ERR_STRINGIFY2(x) #x
 #define _ERR_STRINGIFY(x) _ERR_STRINGIFY2(x)
 
-#define DEBUG_INFO __FILE__ ":" _ERR_STRINGIFY(__LINE__) ":" _ERR_STRINGIFY(__func__)
-
 extern enum loglevel {
     LOGLEVEL_ALL = 0,
     LOGLEVEL_DEBUG,
@@ -18,14 +16,15 @@ extern enum loglevel {
     LOGLEVEL_ERROR,
 } loglevel;
 
-#define LOGLIMIT(command) ({                \
+#define LOGLIMIT(LVL, msg, ...) ({          \
     static unsigned long _ntimes = 0;       \
     static unsigned long _limit = 4;        \
     if (_ntimes == 2 *_limit)  _limit *= 2; \
-    if (_ntimes++ < _limit) command;        \
+    if (_ntimes++ <= _limit)                \
+        LVL("[%8lu] " msg, _ntimes, ## __VA_ARGS__); \
 })
 
-#define _ERR_MSG(severity, msg, ...) ({if (loglevel <= LOGLEVEL_ ## severity) { fprintf(stderr, "[%-5s] [%s:%s:%d] " msg "\n", _ERR_STRINGIFY(severity), __FILE__, __func__, __LINE__, ## __VA_ARGS__); } })
+#define _ERR_MSG(severity, msg, ...) ({if (loglevel <= LOGLEVEL_ ## severity) { fprintf(stderr, "[%-5s] [%s:%d:%s] " msg "\n", _ERR_STRINGIFY(severity), __FILE__, __LINE__, __func__, ## __VA_ARGS__); } })
 
 #define FAIL(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
 #define ERROR(...) _ERR_MSG(ERROR, ## __VA_ARGS__)

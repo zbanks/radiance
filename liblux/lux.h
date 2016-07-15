@@ -17,9 +17,14 @@ enum lux_flags {
     LUX_RETRY = (1 << 1),
 };
 
+// Opens a lux channel from a URI, with one of two prefixes:
+// "udp://127.0.0.1:1365"  -- UDP
+// "serial:///dev/ttyUSB0" -- Serial
+int lux_uri_open(const char * uri);
+
 // Open a serial-port lux channel. Tries /dev/ttyACM* and /dev/ttyUSB*
 // Returns fd on succes, -1 on failure, setting errno
-int lux_serial_open();
+int lux_serial_open(const char * path);
 
 // Open a network (UDP) lux channel. Address should be an IPv4 address.
 // Returns fd on succes, -1 on failure, setting errno
@@ -40,6 +45,11 @@ int lux_write(int fd, struct lux_packet * packet, enum lux_flags flags);
 // Returns -1 on failure and 0 on success if LUX_ACK is not set.
 // If LUX_ACK is set, the error code from the response (0 <= rc <= 255, 0 is success) is returned.
 int lux_command(int fd, struct lux_packet * packet, struct lux_packet * response, enum lux_flags flags);
+
+// For UDP lux: send a 0-length ping to the bridge and wait for a response
+// For serial; no-op
+// Returns 0 on success; -1 on failure
+int lux_sync(int fd, int tries);
 
 // Timeout (in milliseconds) to wait for a response from commands
 extern int lux_timeout_ms;
