@@ -55,10 +55,12 @@ int deck_load_pattern(struct deck * deck, int slot, const char * prefix) {
     assert(slot >= 0 && slot < config.deck.n_patterns);
     struct pattern * p = calloc(1, sizeof *p);
     float intensity = 0;
+
+    if(deck->pattern[slot]) intensity = deck->pattern[slot]->intensity;
+
     if(prefix[0] == '\0') {
         if(deck->pattern[slot]) {
             prefix = deck->pattern[slot]->name;
-            intensity = deck->pattern[slot]->intensity;
         } else return -1;
     }
 
