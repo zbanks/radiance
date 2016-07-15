@@ -11,6 +11,6 @@ void main(void) {
     vec3 draw = 1. - smoothstep(audio - SMOOTH, audio, vec3(abs(uv.x - 0.5)));
 
     vec4 c = composite(composite(vec4(0., 0., 0.5, draw.x), vec4(0., 0., 1., draw.y)), vec4(0.3, 0.3, 1., draw.z));
-    c.a = clamp(c.a, 0., 1.);
+    c = clamp(c, 0., 1.);
     gl_FragColor = composite(gl_FragColor, c);
 }
