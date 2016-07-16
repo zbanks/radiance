@@ -2,7 +2,7 @@ void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 
     float t = mod(iTime, 4.0) / 4.0;
-    float factor = iIntensity * t;
+    float factor = pow(iIntensity * t, 2.5);
 
     vec4 samp = texture2D(iFrame, uv);
     vec3 hsl = rgb2hsv(samp.rgb);

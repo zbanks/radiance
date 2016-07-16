@@ -7,7 +7,7 @@ CFGSECTION_LIST(controller,
     CFG(name, STRING, "")
     CFG(short_name, STRING, "")
     CFG_LIST(cc, 128, INT, -1)
-    CFG_LIST(note, 128, INT, -1)
+    CFG_LIST(note, 128, STRING, "")
 )
 
 #undef CFGSECTION

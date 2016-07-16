@@ -22,7 +22,8 @@ void main(void) {
         gl_FragColor = compositeCR(gl_FragColor, vec4(0., 0.8, 0., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
 
         ivec2 grid_cell = ivec2(5. * (gl_FragCoord.xy - preview_origin) / preview_size);
-        vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
+        //vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
+        vec3 grid = vec3(0., 0., 0.); // solid black
         gl_FragColor = compositeCR(gl_FragColor, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
 
         vec4 p = texture2D(iPreview, (gl_FragCoord.xy - preview_origin) / preview_size);

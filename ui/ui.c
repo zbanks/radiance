@@ -854,7 +854,19 @@ void ui_run() {
             while(SDL_PollEvent(&e) != 0) {
                 if (midi_command_event != (Uint32) -1 && 
                     e.type == midi_command_event) {
-                    set_slider_to(e.user.code, *(float *) e.user.data1);
+                    struct midi_event * me = e.user.data1;
+                    switch (me->type) {
+                    case MIDI_EVENT_SLIDER:
+                        set_slider_to(me->slider.index, me->slider.value);
+                        break;
+                    case MIDI_EVENT_KEY:;
+                        SDL_KeyboardEvent fakekeyev = {0};
+                        fakekeyev.type = SDL_KEYDOWN;
+                        fakekeyev.state = SDL_PRESSED;
+                        fakekeyev.keysym.sym = me->key.keycode[0];
+                        handle_key(&fakekeyev);
+                        break;
+                    }
                     free(e.user.data1);
                     free(e.user.data2);
                     continue;

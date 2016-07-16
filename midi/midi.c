@@ -164,30 +164,46 @@ static int midi_run(void* args) {
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                //INFO("Device %d event %d %d %d %li", i, event, data1, data2, (long int) events[j].timestamp);
+                DEBUG("Device %d event %d %d %d %li", i, event, data1, data2, (long int) events[j].timestamp);
                 int slot = -1;
+                struct midi_event * event_data = NULL;
+                SDL_Event sdl_event = {0};
                 switch (event) {
                 case MIDI_STATUS_CC:
                     if (data1 >= controller->config->n_ccs) break;
                     slot = controller->config->ccs[data1];
                     if (slot < 0) break;
 
-                    float * event_data = calloc(1, sizeof *event_data);
+                    event_data = calloc(1, sizeof *event_data);
                     if (event_data == NULL) MEMFAIL();
-                    *event_data = (float) data2 / 127.0;
+                    event_data->type = MIDI_EVENT_SLIDER;
+                    event_data->slider.index = slot;
+                    event_data->slider.value = (float) data2 / 127.0;
 
-                    SDL_Event sdl_event;
                     sdl_event.type = midi_command_event;
-                    sdl_event.user.code = slot;
+                    sdl_event.user.code = 0;
                     sdl_event.user.data1 = event_data;
                     sdl_event.user.data2 = 0;
                     SDL_PushEvent(&sdl_event);
                     break;
                 case MIDI_STATUS_NOTEON:
-                case MIDI_STATUS_NOTEOFF:
                     if (data1 >= controller->config->n_notes) break;
-                    slot = controller->config->notes[data1];
-                    if (slot < 0) break;
+                    char * keysym = controller->config->notes[data1];
+                    if (keysym == NULL || keysym[0] == '\0') break;
+                    if (data2 < 65) break; // Note on has value 127
+
+                    event_data = calloc(1, sizeof *event_data);
+                    if (event_data == NULL) MEMFAIL();
+                    event_data->type = MIDI_EVENT_KEY;
+                    event_data->key.keycode = keysym;
+
+                    sdl_event.type = midi_command_event;
+                    sdl_event.user.code = 0;
+                    sdl_event.user.data1 = event_data;
+                    sdl_event.user.data2 = 0;
+                    SDL_PushEvent(&sdl_event);
+                    break;
+                case MIDI_STATUS_NOTEOFF:
                     break;
                 }
             }
