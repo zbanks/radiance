@@ -23,12 +23,17 @@ void main(void) {
 
         ivec2 grid_cell = ivec2(5. * (gl_FragCoord.xy - preview_origin) / preview_size);
         //vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
-        vec3 grid = vec3(0., 0., 0.); // solid black
-        gl_FragColor = compositeCR(gl_FragColor, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
+
+        //vec3 grid = vec3(0., 0., 0.); // solid black
+        //gl_FragColor = compositeCR(gl_FragColor, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
 
         vec4 p = texture2D(iPreview, (gl_FragCoord.xy - preview_origin) / preview_size);
+        vec4 p2 = texture2D(iStrips, (gl_FragCoord.xy - preview_origin) / preview_size);
         p.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
-        gl_FragColor = compositeCR(gl_FragColor, p);
+        p2.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
+
+        if(iIndicator != 2) gl_FragColor = compositeCR(gl_FragColor, p);
+        if(iIndicator != 0) gl_FragColor = compositeCR(gl_FragColor, p2);
     }
 
     //if(inBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w)) == 0.) {

@@ -29,6 +29,7 @@ static GLhandleARB crossfader_shader;
 static GLhandleARB text_shader;
 static GLhandleARB spectrum_shader;
 static GLhandleARB waveform_shader;
+static GLhandleARB strip_shader;
 
 static GLuint pat_fb;
 static GLuint select_fb;
@@ -36,6 +37,7 @@ static GLuint crossfader_fb;
 static GLuint pat_entry_fb;
 static GLuint spectrum_fb;
 static GLuint waveform_fb;
+static GLuint strip_fb;
 static GLuint select_tex;
 static GLuint * pattern_textures;
 static SDL_Texture ** pattern_name_textures;
@@ -47,6 +49,7 @@ static GLuint tex_spectrum_data;
 static GLuint spectrum_texture;
 static GLuint tex_waveform_data;
 static GLuint waveform_texture;
+static GLuint strip_texture;
 
 // Window
 static int ww; // Window width
@@ -63,6 +66,9 @@ static double mci; // Mouse click intensity
 
 // Selection
 static int selected = 0;
+
+// Strip indicators
+static enum {STRIPS_NONE, STRIPS_SOLID, STRIPS_COLORED} strip_indicator = STRIPS_NONE;
 
 // False colors
 #define HIT_NOTHING 0
@@ -208,6 +214,7 @@ void ui_init() {
     glGenFramebuffersEXT(1, &pat_entry_fb);
     glGenFramebuffersEXT(1, &spectrum_fb);
     glGenFramebuffersEXT(1, &waveform_fb);
+    glGenFramebuffersEXT(1, &strip_fb);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Init select texture
@@ -303,6 +310,17 @@ void ui_init() {
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, waveform_fb);
     glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, waveform_texture, 0);
 
+    // Strip indicators
+    glGenTextures(1, &strip_texture);
+    glBindTexture(GL_TEXTURE_2D, strip_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, strip_fb);
+    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, strip_texture, 0);
+
     // Done allocating textures & FBOs, unbind and check for errors
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
@@ -315,6 +333,7 @@ void ui_init() {
     if((text_shader = load_shader("resources/ui_text.glsl")) == 0) FAIL("Could not load UI text shader!\n%s", load_shader_error);
     if((spectrum_shader = load_shader("resources/ui_spectrum.glsl")) == 0) FAIL("Could not load UI spectrum shader!\n%s", load_shader_error);
     if((waveform_shader = load_shader("resources/ui_waveform.glsl")) == 0) FAIL("Could not load UI waveform shader!\n%s", load_shader_error);
+    if((strip_shader = load_shader("resources/strip.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", load_shader_error);
 
     // Stop text input
     SDL_StopTextInput();
@@ -558,6 +577,20 @@ static void handle_key(SDL_KeyboardEvent * e) {
                     output_refresh();
                 }
                 break;
+            case SDLK_q:
+                switch(strip_indicator) {
+                    case STRIPS_NONE:
+                        strip_indicator = STRIPS_SOLID;
+                        break;
+                    case STRIPS_SOLID:
+                        strip_indicator = STRIPS_COLORED;
+                        break;
+                    case STRIPS_COLORED:
+                    default:
+                        strip_indicator = STRIPS_NONE;
+                        break;
+                }
+                break;
             default:
                 break;
         }
@@ -624,6 +657,38 @@ static void ui_render(bool select) {
         }
     }
 
+    // Set up the master output
+    switch(strip_indicator) {
+        case STRIPS_SOLID:
+        case STRIPS_COLORED:
+            glLoadIdentity();
+            glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
+            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, strip_fb);
+            glUseProgramObjectARB(strip_shader);
+
+            location = glGetUniformLocationARB(strip_shader, "iPreview");
+            glUniform1iARB(location, 0);
+            location = glGetUniformLocationARB(strip_shader, "iResolution");
+            glUniform2fARB(location, config.pattern.master_width, config.pattern.master_height);
+            location = glGetUniformLocationARB(strip_shader, "iIndicator");
+            glUniform1iARB(location, strip_indicator);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
+
+            glClear(GL_COLOR_BUFFER_BIT);
+            glBegin(GL_LINES);
+            glVertex2d(-.1, -.1);
+            glVertex2d(-.1, .1);
+            glVertex2d(.1, .1);
+            glVertex2d(.1, -.1);
+            glEnd();
+            break;
+        default:
+        case STRIPS_NONE:
+            break;
+    }
+
     // Render the crossfader
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, crossfader_fb);
 
@@ -636,10 +701,18 @@ static void ui_render(bool select) {
     glUniform1iARB(location, select);
     location = glGetUniformLocationARB(crossfader_shader, "iPreview");
     glUniform1iARB(location, 0);
+    location = glGetUniformLocationARB(crossfader_shader, "iStrips");
+    glUniform1iARB(location, 1);
     location = glGetUniformLocationARB(crossfader_shader, "iIntensity");
     glUniform1fARB(location, crossfader.position);
+    location = glGetUniformLocationARB(crossfader_shader, "iIndicator");
+    glUniform1iARB(location, strip_indicator);
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, strip_texture);
 
     glLoadIdentity();
     gluOrtho2D(0, cw, 0, ch);
