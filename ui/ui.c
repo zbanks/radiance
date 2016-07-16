@@ -551,6 +551,9 @@ static void handle_key(SDL_KeyboardEvent * e) {
             case SDLK_END:
                 selected = map_end[selected];
                 break;
+            case SDLK_r:
+                if (shift) midi_refresh();
+                break;
             default:
                 break;
         }

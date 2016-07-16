@@ -45,6 +45,6 @@ extern Uint32 midi_command_event;
 
 void midi_start();
 void midi_stop();
-int midi_refresh_devices();
+void midi_refresh();
 
 PmError pm_errmsg(PmError err);

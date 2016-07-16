@@ -14,7 +14,8 @@
 
 #define MIDI_BUFFER_SIZE 256
 
-static int midi_running;
+static volatile int midi_running = 0;
+static volatile int midi_refresh_request = 0;
 static SDL_Thread* midi_thread;
 
 static PmEvent events[MIDI_BUFFER_SIZE];
@@ -29,7 +30,7 @@ PmError pm_errmsg(PmError err){
     return err;
 }
 
-int midi_refresh_devices(){
+static int midi_refresh_devices(){
     PmError err;
     // Delete old midi controllers
     if(midi_controllers){
@@ -45,8 +46,10 @@ int midi_refresh_devices(){
         }
         free(midi_controllers);
         midi_controllers = NULL;
+        Pm_Terminate();
     }
 
+    Pm_Initialize();
     int n = Pm_CountDevices();
     struct midi_controller * new_controllers = calloc(n, sizeof(struct midi_controller));
     if(!new_controllers) FAIL("Unable to malloc for MIDI controllers.");
@@ -147,6 +150,10 @@ static int midi_run(void* args) {
     midi_refresh_devices();
 
     while(midi_running) {
+        if (midi_refresh_request) {
+            midi_refresh_devices();
+            midi_refresh_request = 0;
+        }
         for(int i = 0; i < n_midi_controllers; i++) {
             struct midi_controller * controller = &midi_controllers[i];
             if(!controller->stream) continue;
@@ -242,3 +249,7 @@ void midi_stop() {
     INFO("MIDI thread stopped.");
 }
 
+void midi_refresh() {
+    // Holy race conditions batman! XXX FIXME TODO
+    midi_refresh_request = 1;
+}

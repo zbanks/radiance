@@ -48,9 +48,11 @@ int output_run(void * args) {
         }
 
         //SDL_framerateDelay(&fps_manager);
-        stat_ops = INTERP(0.8, stat_ops, 1000. / (SDL_GetTicks() - last_tick));
-        last_tick = SDL_GetTicks();
-        SDL_Delay(10);
+        unsigned int tick = SDL_GetTicks();
+        stat_ops = INTERP(0.8, stat_ops, 1000. / (tick - last_tick));
+        last_tick = tick;
+        SDL_Delay(CLAMP(10 - (tick - last_tick), 0, 10));
+        LOGLIMIT(DEBUG, "Sleeping for %u ms", CLAMP(10 - (tick - last_tick), 0, 10));
     }
 
     // Destroy output
