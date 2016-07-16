@@ -109,8 +109,8 @@ int output_device_arrange(struct output_device * dev) {
         while (pixel_idx * scale_per_pixel <= cumulative_scale + vert_scale) {
             if (pixel_idx >= length) break;
             double alpha = (pixel_idx * scale_per_pixel - cumulative_scale) / vert_scale;
-            dev->pixels.xs[pixel_idx] = INTERP(alpha, vert->x, vert->next->x);
-            dev->pixels.ys[pixel_idx] = INTERP(alpha, vert->y, vert->next->y);
+            dev->pixels.xs[pixel_idx] = INTERP(alpha, vert->next->x, vert->x);
+            dev->pixels.ys[pixel_idx] = INTERP(alpha, vert->next->y, vert->y);
             pixel_idx++;
         }
         cumulative_scale += vert_scale;

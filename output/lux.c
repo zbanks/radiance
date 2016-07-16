@@ -124,7 +124,7 @@ static struct lux_channel * lux_channel_create (const char * uri) {
 
     channel->fd = lux_uri_open(uri);
     if (channel->fd < 0) {
-        PERROR("Unable to open lux socket");
+        PERROR("Unable to open lux socket '%s'", uri);
         free(channel);
         return NULL;
     }
@@ -156,7 +156,7 @@ static void lux_channel_destroy_all() {
 
 static int lux_strip_prepare_frame(struct lux_device * device) {
     uint8_t * frame_ptr = device->frame_buffer;
-    SDL_Color * pixel_ptr = device->base.pixels.colors;
+    SDL_Color * pixel_ptr = device->base.pixels.colors + device->base.pixels.length - 1;
     if (frame_ptr == NULL || pixel_ptr == NULL) return -1;
 
     if (device->strip_quantize > 0) {
@@ -167,7 +167,7 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
                 r += pixel_ptr->r * pixel_ptr->a;
                 g += pixel_ptr->g * pixel_ptr->a;
                 b += pixel_ptr->b * pixel_ptr->a;
-                pixel_ptr++;
+                pixel_ptr--;
             }
             while (l * device->strip_quantize < i * device->strip_length) {
                 *frame_ptr++ = r / (255 * device->oversample);
@@ -183,7 +183,7 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
                 r += pixel_ptr->r * pixel_ptr->a;
                 g += pixel_ptr->g * pixel_ptr->a;
                 b += pixel_ptr->b * pixel_ptr->a;
-                pixel_ptr++;
+                pixel_ptr--;
             }
             *frame_ptr++ = r / (255 * device->oversample);
             *frame_ptr++ = g / (255 * device->oversample);

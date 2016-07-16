@@ -164,7 +164,7 @@ static int midi_run(void* args) {
                 unsigned char data1 = Pm_MessageData1(m);
                 unsigned char data2 = Pm_MessageData2(m);
 
-                INFO("Device %d event %d %d %d %li", i, event, data1, data2, (long int) events[j].timestamp);
+                //INFO("Device %d event %d %d %d %li", i, event, data1, data2, (long int) events[j].timestamp);
                 int slot = -1;
                 switch (event) {
                 case MIDI_STATUS_CC:
