@@ -29,7 +29,7 @@ float sdCapsule( vec2 p, vec2 a, vec2 b, float r )
 void glow(vec2 p) {
     vec2 LEN = vec2(300., 0.);
     float FRINGE = 75.;
-    gl_FragColor = compositeCR(gl_FragColor, vec4(0., 1., 1., 0.1 * max(0., 1. - sdCapsule(gl_FragCoord.xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
+    gl_FragColor = compositeCR(gl_FragColor, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule(gl_FragCoord.xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
 }
 
 void main(void) {

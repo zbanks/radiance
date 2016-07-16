@@ -87,10 +87,16 @@ static const int map_selection[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
 static const int crossfader_selection_top = 17;
 static const int crossfader_selection_bot = 18;
 
-static const int map_left[19] =  {8, 1, 1, 2, 3, 17, 5, 6, 7, 9, 9, 10, 11, 18, 13, 14, 15, 4, 12};
-static const int map_right[19] = {1, 2, 3, 4, 17, 6, 7, 8, 8, 10, 11, 12, 18, 14, 15, 16, 16, 5, 13};
-static const int map_up[19] =    {1, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 17, 17};
-static const int map_down[19] =  {9, 9, 10, 11, 12, 13, 14, 15, 16, 9, 10, 11, 12, 13, 14, 15, 16, 18, 18};
+//                                0   1   2   3   4   5   6   7   8   9  10   11  12  13  14  15  16  17  18
+static const int map_left[19] =  {8,  1,  1,  2,  3,  17, 5,  6,  7,  9,  9,  10, 11, 18, 13, 14, 15, 4,  12};
+static const int map_right[19] = {1,  2,  3,  4,  17, 6,  7,  8,  8,  10, 11, 12, 18, 14, 15, 16, 16, 5,  13};
+static const int map_up[19] =    {1,  1,  2,  3,  4,  5,  6,  7,  8,  1,  2,  3,  4,  5,  6,  7,  8,  17, 17};
+static const int map_down[19] =  {9,  9,  10, 11, 12, 13, 14, 15, 16, 9,  10, 11, 12, 13, 14, 15, 16, 18, 18};
+static const int map_space[19] = {17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 17, 18};
+static const int map_tab[19] =   {1,  2,  3,  4,  17, 17, 5,  6,  7,  10, 11, 12, 18, 18, 13, 14, 15, 17, 18};
+static const int map_stab[19] =  {15, 1,  1,  2,  3,  6,  7,  8,  8,  9,  9,  10, 11, 14, 15, 16, 16, 17, 18};
+static const int map_home[19] =  {1,  1,  1,  1,  1,  1,  1,  1,  1,  9,  9,  9,  9,  9,  9,  9,  9,  1,  9};
+static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8, 16, 16, 16, 16, 16, 16, 16, 16,  8, 16};
 
 // Font
 TTF_Font * font;
@@ -460,13 +466,21 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 set_slider_to(selected, 0.3);
                 break;
             case SDLK_4:
-                set_slider_to(selected, 0.4);
+                if(shift) {
+                    selected = map_end[selected];
+                } else {
+                    set_slider_to(selected, 0.4);
+                }
                 break;
             case SDLK_5:
                 set_slider_to(selected, 0.5);
                 break;
             case SDLK_6:
-                set_slider_to(selected, 0.6);
+                if(shift) {
+                    selected = map_home[selected];
+                } else {
+                    set_slider_to(selected, 0.6);
+                }
                 break;
             case SDLK_7:
                 set_slider_to(selected, 0.7);
@@ -506,6 +520,36 @@ static void handle_key(SDL_KeyboardEvent * e) {
                         }
                     }
                 }
+                break;
+            case SDLK_LEFTBRACKET:
+                if(left_deck_selector == 0) {
+                    left_deck_selector = 2;
+                } else {
+                    left_deck_selector = 0;
+                }
+                break;
+            case SDLK_RIGHTBRACKET:
+                if(right_deck_selector == 1) {
+                    right_deck_selector = 3;
+                } else {
+                    right_deck_selector = 1;
+                }
+                break;
+            case SDLK_SPACE:
+                selected = map_space[selected];
+                break;
+            case SDLK_TAB:
+                if(shift) {
+                    selected = map_stab[selected];
+                } else {
+                    selected = map_tab[selected];
+                }
+                break;
+            case SDLK_HOME:
+                selected = map_home[selected];
+                break;
+            case SDLK_END:
+                selected = map_end[selected];
                 break;
             default:
                 break;
