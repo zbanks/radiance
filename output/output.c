@@ -11,16 +11,37 @@
 #include "output/lux.h"
 
 static volatile int output_running;
+static volatile int output_refresh_request = false;
 static SDL_Thread * output_thread;
 static struct render * render = NULL;
+static bool output_on_lux = false;
 
-int output_run(void * args) {
-    bool output_on_lux = false;
+static int output_reload_devices() {
+    // Tear down
+    if (output_on_lux) {
+        output_lux_term();
+    }
+
+    // Reload configuration
+    output_on_lux = false;
+    int rc = output_config_load(&output_config, config.output.config);
+    if (rc < 0) {
+        ERROR("Unable to load output configuration");
+        return -1;
+    }
+
+    // Initialize
     if (config.output.lux_enabled) {
         int rc = output_lux_init();
         if (rc < 0) PERROR("Unable to initialize lux");
         else output_on_lux = true;
     }
+
+    return 0;
+}
+
+int output_run(void * args) {
+    output_reload_devices();
 
     /*
     FPSmanager fps_manager;
@@ -35,6 +56,11 @@ int output_run(void * args) {
     (void) last_output_render_count; //TODO
 
     while(output_running) {
+        if (output_refresh_request) {
+            output_reload_devices();
+            output_refresh_request = 0;
+        }
+
         //if (last_output_render_count == output_render_count)
         last_output_render_count = output_render_count;
         int rc = output_render(render);
@@ -65,9 +91,6 @@ int output_run(void * args) {
 
 void output_init(struct render * _render) {
     output_config_init(&output_config);
-    int rc = output_config_load(&output_config, config.output.config);
-    if (rc < 0) FAIL("Unable to load configuration");
-    //output_config_dump(&output_config, config.output.config);
     render = _render;
 
     output_thread = SDL_CreateThread(&output_run, "Output", 0);
@@ -76,4 +99,8 @@ void output_init(struct render * _render) {
 
 void output_term() {
     output_running = false;
+}
+
+void output_refresh() {
+    output_refresh_request = true;
 }

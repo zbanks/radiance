@@ -138,12 +138,6 @@ static struct lux_channel * lux_channel_create (const char * uri) {
 static void lux_channel_destroy_all() {
     struct lux_channel * channel = channel_head;
     while (channel != NULL) {
-        /*
-        struct lux_device * device= channel->device_head;
-        //TODO: Destroy devices
-        (void) (device);
-        */
-
         lux_close(channel->fd);
         struct lux_channel * prev_channel = channel;
         channel = channel->next;

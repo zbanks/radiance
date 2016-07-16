@@ -10,6 +10,7 @@
 #include "util/glsl.h"
 #include "util/math.h"
 #include "midi/midi.h"
+#include "output/output.h"
 #include "audio/analyze.h"
 #include "ui/render.h"
 #include "main.h"
@@ -552,7 +553,10 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 selected = map_end[selected];
                 break;
             case SDLK_r:
-                if (shift) midi_refresh();
+                if (shift) {
+                    midi_refresh();
+                    output_refresh();
+                }
                 break;
             default:
                 break;
@@ -863,7 +867,8 @@ void ui_run() {
                         set_slider_to(me->slider.index, me->slider.value);
                         break;
                     case MIDI_EVENT_KEY:;
-                        SDL_KeyboardEvent fakekeyev = {0};
+                        SDL_KeyboardEvent fakekeyev;
+                        memset(&fakekeyev, 0, sizeof fakekeyev);
                         fakekeyev.type = SDL_KEYDOWN;
                         fakekeyev.state = SDL_PRESSED;
                         fakekeyev.keysym.sym = me->key.keycode[0];
