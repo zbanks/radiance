@@ -50,14 +50,8 @@ vec3 hsv2rgb(vec3 c) {
 }
 
 vec4 composite(vec4 under, vec4 over) {
-    // Takes in non premultiplied and outputs non-premultiplied!?!
-    float a_out = over.a + under.a * (1. - over.a);
-    return vec4((over.rgb * over.a  + under.rgb * under.a * (1. - over.a)) / a_out, a_out);
-}
-
-vec4 compositeCR(vec4 under, vec4 over) {
-    // Takes non-premultiplied and outputs premultiplied?!?
-    return vec4(over.rgb * over.a  + under.rgb * under.a * (1. - over.a), over.a + under.a * (1. - over.a));
+    float a_out = 1. - (1. - over.a) * (1. - under.a);
+    return clamp(vec4((over.rgb * over.a  + under.rgb * under.a * (1. - over.a)) / a_out, a_out), vec4(0.), vec4(1.));
 }
 
 float rounded_rect_df(vec2 center, vec2 size, float radius) {

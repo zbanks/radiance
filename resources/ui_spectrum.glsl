@@ -14,6 +14,6 @@ void main(void) {
     float d = (texture1D(iSpectrum, freq).r - mag) * 90.;
     float a = smoothstep(0., 1., d) * (1. - step(1., df));
     float gb = 0.5 * clamp(0., 1., d / 30.);
-    gl_FragColor = compositeCR(gl_FragColor, vec4(1., gb, gb, a));
-    gl_FragColor = compositeCR(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
+    gl_FragColor = composite(gl_FragColor, vec4(1., gb, gb, a));
+    gl_FragColor = composite(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
 }

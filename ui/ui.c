@@ -617,48 +617,7 @@ static void ui_render(bool select) {
     GLint location;
     GLenum e;
 
-    glEnable(GL_BLEND);
-
-    // Render the patterns
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
-
-    int pw = config.ui.pattern_width;
-    int ph = config.ui.pattern_height;
-    glUseProgramObjectARB(pat_shader);
-    location = glGetUniformLocationARB(pat_shader, "iResolution");
-    glUniform2fARB(location, pw, ph);
-    glUseProgramObjectARB(pat_shader);
-    location = glGetUniformLocationARB(pat_shader, "iSelection");
-    glUniform1iARB(location, select);
-    location = glGetUniformLocationARB(pat_shader, "iPreview");
-    glUniform1iARB(location, 0);
-    location = glGetUniformLocationARB(pat_shader, "iName");
-    glUniform1iARB(location, 1);
-    GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
-    GLint pattern_intensity = glGetUniformLocationARB(pat_shader, "iIntensity");
-    GLint name_resolution = glGetUniformLocationARB(pat_shader, "iNameResolution");
-
-    glLoadIdentity();
-    gluOrtho2D(0, pw, 0, ph);
-    glViewport(0, 0, pw, ph);
-
-    for(int i = 0; i < config.ui.n_patterns; i++) {
-        struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
-        if(p != NULL) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, p->tex_output);
-            glActiveTexture(GL_TEXTURE1);
-            SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
-            glUniform1iARB(pattern_index, i);
-            glUniform1fARB(pattern_intensity, p->intensity);
-            glUniform2fARB(name_resolution, pattern_name_width[i], pattern_name_height[i]);
-            glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            fill(pw, ph);
-        }
-    }
-
-    // Set up the master output
+    // Render strip indicators
     switch(strip_indicator) {
         case STRIPS_SOLID:
         case STRIPS_COLORED:
@@ -706,6 +665,45 @@ static void ui_render(bool select) {
         default:
         case STRIPS_NONE:
             break;
+    }
+
+    // Render the patterns
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
+
+    int pw = config.ui.pattern_width;
+    int ph = config.ui.pattern_height;
+    glUseProgramObjectARB(pat_shader);
+    location = glGetUniformLocationARB(pat_shader, "iResolution");
+    glUniform2fARB(location, pw, ph);
+    glUseProgramObjectARB(pat_shader);
+    location = glGetUniformLocationARB(pat_shader, "iSelection");
+    glUniform1iARB(location, select);
+    location = glGetUniformLocationARB(pat_shader, "iPreview");
+    glUniform1iARB(location, 0);
+    location = glGetUniformLocationARB(pat_shader, "iName");
+    glUniform1iARB(location, 1);
+    GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
+    GLint pattern_intensity = glGetUniformLocationARB(pat_shader, "iIntensity");
+    GLint name_resolution = glGetUniformLocationARB(pat_shader, "iNameResolution");
+
+    glLoadIdentity();
+    gluOrtho2D(0, pw, 0, ph);
+    glViewport(0, 0, pw, ph);
+
+    for(int i = 0; i < config.ui.n_patterns; i++) {
+        struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
+        if(p != NULL) {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, p->tex_output);
+            glActiveTexture(GL_TEXTURE1);
+            SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
+            glUniform1iARB(pattern_index, i);
+            glUniform1fARB(pattern_intensity, p->intensity);
+            glUniform2fARB(name_resolution, pattern_name_width[i], pattern_name_height[i]);
+            glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            fill(pw, ph);
+        }
     }
 
     // Render the crossfader
@@ -818,6 +816,7 @@ static void ui_render(bool select) {
     fill(ww, wh);
 
     // Blit UI elements on top
+    glEnable(GL_BLEND);
     glUseProgramObjectARB(blit_shader);
     glActiveTexture(GL_TEXTURE0);
     location = glGetUniformLocationARB(blit_shader, "iTexture");
