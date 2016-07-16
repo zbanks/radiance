@@ -11,8 +11,8 @@ void main(void) {
     right.a *= right_alpha;
 
     if(iLeftOnTop) {
-        gl_FragColor = compositeCR(right, left);
+        gl_FragColor = composite(right, left);
     } else {
-        gl_FragColor = compositeCR(left, right);
+        gl_FragColor = composite(left, right);
     }
 }

@@ -17,23 +17,28 @@ void main(void) {
     } else {
         gl_FragColor = vec4(0.);
         float df = max(rounded_rect_df(vec2(175., 250.), vec2(130., 200.), 25.), 0.);
-        gl_FragColor = compositeCR(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
-        gl_FragColor = compositeCR(gl_FragColor, vec4(0., 0.3, 0., smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
-        gl_FragColor = compositeCR(gl_FragColor, vec4(0., 0.8, 0., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
+        gl_FragColor = composite(gl_FragColor, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
+        gl_FragColor = clamp(gl_FragColor, vec4(0.), vec4(1.));
+        gl_FragColor = composite(gl_FragColor, vec4(0., 0.3, 0., smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
+        gl_FragColor = clamp(gl_FragColor, vec4(0.), vec4(1.));
+        gl_FragColor = composite(gl_FragColor, vec4(0., 0.8, 0., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
+        gl_FragColor = clamp(gl_FragColor, vec4(0.), vec4(1.));
 
         ivec2 grid_cell = ivec2(5. * (gl_FragCoord.xy - preview_origin) / preview_size);
         //vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
 
         //vec3 grid = vec3(0., 0., 0.); // solid black
-        //gl_FragColor = compositeCR(gl_FragColor, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
+        //gl_FragColor = composite(gl_FragColor, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
 
         vec4 p = texture2D(iPreview, (gl_FragCoord.xy - preview_origin) / preview_size);
         vec4 p2 = texture2D(iStrips, (gl_FragCoord.xy - preview_origin) / preview_size);
         p.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
         p2.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
 
-        if(iIndicator != 2) gl_FragColor = compositeCR(gl_FragColor, p);
-        if(iIndicator != 0) gl_FragColor = compositeCR(gl_FragColor, p2);
+        if(iIndicator != 2) gl_FragColor = composite(gl_FragColor, p);
+        gl_FragColor = clamp(gl_FragColor, vec4(0.), vec4(1.));
+        if(iIndicator != 0) gl_FragColor = composite(gl_FragColor, p2);
+        gl_FragColor = clamp(gl_FragColor, vec4(0.), vec4(1.));
     }
 
     //if(inBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w)) == 0.) {
