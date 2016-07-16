@@ -13,6 +13,7 @@
 #include "output/output.h"
 #include "audio/analyze.h"
 #include "ui/render.h"
+#include "output/slice.h"
 #include "main.h"
 #include <stdio.h>
 #include <stdbool.h>
@@ -677,11 +678,29 @@ static void ui_render(bool select) {
             glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
 
             glClear(GL_COLOR_BUFFER_BIT);
-            glBegin(GL_LINES);
-            glVertex2d(-.1, -.1);
-            glVertex2d(-.1, .1);
-            glVertex2d(.1, .1);
-            glVertex2d(.1, -.1);
+            glBegin(GL_QUADS);
+            for(struct output_device * d = output_device_head; d != NULL; d = d->next) {
+                bool first = true;
+                double x;
+                double y;
+                for(struct output_vertex * v = d->vertex_head; v != NULL; v = v->next) {
+                    if(!first) {
+                        double dx = v->x - x;
+                        double dy = v->y - y;
+                        double dl = hypot(dx, dy);
+                        dx = config.ui.strip_thickness * dx / dl;
+                        dy = config.ui.strip_thickness * dy / dl;
+                        glVertex2d(x + dy, y - dx);
+                        glVertex2d(v->x + dy, v->y - dx);
+                        glVertex2d(v->x - dy, v->y + dx);
+                        glVertex2d(x - dy, y + dx);
+                    } else {
+                        first = false;
+                    }
+                    x = v->x;
+                    y = v->y;
+                }
+            }
             glEnd();
             break;
         default:
