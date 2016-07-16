@@ -70,8 +70,8 @@ static int midi_refresh_devices(){
         }
     }
     // Read configuration from file
-    if(midi_config_load(&midi_config, config.midi.config)){
-        ERROR("Unable to read MIDI configuration file %s", config.midi.config);
+    if(midi_config_load(&midi_config, config.paths.midi_config)){
+        ERROR("Unable to read MIDI configuration file %s", config.paths.midi_config);
         goto refresh_fail;
     }
 

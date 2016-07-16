@@ -24,14 +24,14 @@ static int output_reload_devices() {
 
     // Reload configuration
     output_on_lux = false;
-    int rc = output_config_load(&output_config, config.output.config);
+    int rc = output_config_load(&output_config, config.paths.output_config);
     if (rc < 0) {
         ERROR("Unable to load output configuration");
         return -1;
     }
 
     // Initialize
-    if (config.output.lux_enabled) {
+    if (output_config.lux.enabled) {
         int rc = output_lux_init();
         if (rc < 0) PERROR("Unable to initialize lux");
         else output_on_lux = true;
@@ -49,6 +49,7 @@ int output_run(void * args) {
     SDL_setFramerate(&fps_manager, 100);
     */
     double stat_ops = 100;
+    int render_count = 0;
 
     output_running = true;   
     unsigned int last_tick = SDL_GetTicks();
@@ -75,10 +76,20 @@ int output_run(void * args) {
 
         //SDL_framerateDelay(&fps_manager);
         unsigned int tick = SDL_GetTicks();
-        stat_ops = INTERP(0.8, stat_ops, 1000. / (tick - last_tick));
+        int delta = MAX(tick - last_tick, 1);
+        stat_ops = INTERP(0.99, stat_ops, 1000. / delta);
+
+        if (delta < 10) {
+            SDL_Delay(10 - delta);
+            LOGLIMIT(DEBUG, "Sleeping for %d ms", 10 - delta);
+        } else {
+            SDL_Delay(1);
+        }
         last_tick = tick;
-        SDL_Delay(CLAMP(10 - (tick - last_tick), 0, 10));
-        LOGLIMIT(DEBUG, "Sleeping for %u ms", CLAMP(10 - (tick - last_tick), 0, 10));
+
+        render_count++;
+        if (render_count % 100 == 0)
+            DEBUG("Output FPS: %0.2f", stat_ops);
     }
 
     // Destroy output

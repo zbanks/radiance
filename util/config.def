@@ -55,14 +55,9 @@ CFGSECTION(audio,
     CFG(waveform_gain, FLOAT, 0.1)
 )
 
-CFGSECTION(output,
-    CFG(config, STRING, "resources/output.ini")
-    CFG(lux_enabled, INT, 1)
-    CFG(lux_timeout_ms, INT, 150)
-)
-
-CFGSECTION(midi,
-    CFG(config, STRING, "resources/midi.ini")
+CFGSECTION(paths,
+    CFG(output_config, STRING, "resources/output.ini")
+    CFG(midi_config, STRING, "resources/midi.ini")
 )
 
 CFGSECTION(debug,

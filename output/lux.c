@@ -21,6 +21,7 @@ struct lux_device;
 
 struct lux_channel {
     int fd;
+    bool sync;
     struct lux_channel * next;
     struct lux_device * device_head;
 };
@@ -37,6 +38,7 @@ struct lux_device {
 
     double max_energy;
     int oversample;
+    double gamma;
 
     // Strip-only
     int strip_length;
@@ -84,7 +86,7 @@ static int lux_strip_frame (int fd, uint32_t lux_id, unsigned char * data, size_
         .payload_length = data_size,
     };
     memcpy(packet.payload, data, data_size);
-    LOGLIMIT(INFO, "Writing %ld bytes to %#08x", data_size, lux_id);
+    LOGLIMIT(DEBUG, "Writing %ld bytes to %#08x", data_size, lux_id);
     return lux_write(fd, &packet, 0);
 }
 
@@ -149,9 +151,12 @@ static void lux_channel_destroy_all() {
 //
 
 static int lux_strip_prepare_frame(struct lux_device * device) {
+    if (device->frame_buffer == NULL ||
+        device->base.pixels.colors == NULL) return -1;
+
     uint8_t * frame_ptr = device->frame_buffer;
     SDL_Color * pixel_ptr = device->base.pixels.colors + device->base.pixels.length - 1;
-    if (frame_ptr == NULL || pixel_ptr == NULL) return -1;
+#define PXL(x) pow(((double) x) / (255. * 255. * device->oversample), device->gamma) * 255.
 
     if (device->strip_quantize > 0) {
         int l = 0; 
@@ -163,10 +168,10 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
                 b += pixel_ptr->b * pixel_ptr->a;
                 pixel_ptr--;
             }
-            while (l * device->strip_quantize < i * device->strip_length) {
-                *frame_ptr++ = r / (255 * device->oversample);
-                *frame_ptr++ = g / (255 * device->oversample);
-                *frame_ptr++ = b / (255 * device->oversample);
+            while (l * device->strip_quantize < (i+1) * device->strip_length) {
+                *frame_ptr++ = PXL(r);
+                *frame_ptr++ = PXL(g);
+                *frame_ptr++ = PXL(b);
                 l++;
             }
         }
@@ -179,10 +184,23 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
                 b += pixel_ptr->b * pixel_ptr->a;
                 pixel_ptr--;
             }
-            *frame_ptr++ = r / (255 * device->oversample);
-            *frame_ptr++ = g / (255 * device->oversample);
-            *frame_ptr++ = b / (255 * device->oversample);
+            *frame_ptr++ = PXL(r);
+            *frame_ptr++ = PXL(g);
+            *frame_ptr++ = PXL(b);
         }
+    }
+#undef PXL
+
+    double energy = 0;
+    frame_ptr = device->frame_buffer;
+    for (size_t l = 0; l < device->frame_buffer_size; l++)
+        energy += *frame_ptr++;
+    energy /= device->frame_buffer_size * 255; 
+    if (energy > device->max_energy) {
+        double ratio = device->max_energy / energy;
+        frame_ptr = device->frame_buffer;
+        for (size_t l = 0; l < device->frame_buffer_size; l++)
+            *frame_ptr++ *= ratio;
     }
     return 0;
 }
@@ -222,7 +240,7 @@ void output_lux_term() {
 
 int output_lux_init() {
     // Set global configuration
-    lux_timeout_ms = config.output.lux_timeout_ms;
+    lux_timeout_ms = output_config.lux.timeout_ms;
 
     // Configure the channels
     for (int i = 0; i < output_config.n_lux_channels; i++) {
@@ -230,6 +248,7 @@ int output_lux_init() {
 
         struct lux_channel * channel = lux_channel_create(output_config.lux_channels[i].uri);
         if (channel == NULL) continue;
+        channel->sync = output_config.lux_channels[i].sync;
     }
     if (channel_head == NULL) return -1;
 
@@ -265,6 +284,7 @@ int output_lux_init() {
         device->address  = output_config.lux_strips[i].address;
         device->max_energy = CLAMP(output_config.lux_strips[i].max_energy, 0, 1);
         device->oversample = MAX(1, output_config.lux_strips[i].oversample);
+        device->gamma = output_config.lux_strips[i].gamma;
         device->strip_quantize = output_config.lux_strips[i].quantize;
         device->strip_length = -1;
 
@@ -370,8 +390,9 @@ int output_lux_prepare_frame() {
 
 int output_lux_sync_frame() {
     for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+        if (!channel->sync) continue;
         int rc = lux_frame_sync(channel->fd, LUX_BROADCAST_ADDRESS);
-        if (rc < 0) LOGLIMIT(WARN, "Unable to send sync message on fd");
+        if (rc < 0) LOGLIMIT(WARN, "Unable to send sync message on fd %d", channel->fd);
     }
     return 0;
 }

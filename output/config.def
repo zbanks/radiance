@@ -1,5 +1,11 @@
+CFGSECTION(lux,
+    CFG(enabled, INT, 1)
+    CFG(timeout_ms, INT, 150)
+)
+
 CFGSECTION_LIST(lux_channel,
     CFG(uri, STRING, "udp://127.0.0.1:1365")
+    CFG(sync, INT, 0)
 )
  
 CFGSECTION_LIST(lux_strip,
@@ -9,6 +15,7 @@ CFGSECTION_LIST(lux_strip,
     CFG(max_energy, FLOAT, -1)
     CFG(oversample, INT, -1)
     CFG(quantize, INT, -1)
+    CFG(gamma, FLOAT, 1.0)
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
  
