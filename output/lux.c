@@ -250,7 +250,6 @@ int output_lux_init() {
         if (channel == NULL) continue;
         channel->sync = output_config.lux_channels[i].sync;
     }
-    if (channel_head == NULL) return -1;
 
     // Initialize the devices, unconnected
     n_strip_devices = output_config.n_lux_strips;

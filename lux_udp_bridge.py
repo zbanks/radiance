@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
+import select
 import serial
 import socket
-import select
 
 def run_lux_udp(host, port, dev):
     with serial.Serial(dev, baudrate=3000000, xonxoff=False) as ser:
@@ -28,4 +28,9 @@ def run_lux_udp(host, port, dev):
                     #print "<", repr(packet)
 
 if __name__ == "__main__":
-    run_lux_udp(host="0.0.0.0", port=1365, dev="/dev/ttyACM0")
+    while True:
+        try:
+            run_lux_udp(host="0.0.0.0", port=1365, dev="/dev/ttyACM0")
+        except Exception as e:
+            print e
+            select.select([], [], [], 5)

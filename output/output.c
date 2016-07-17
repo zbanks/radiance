@@ -52,7 +52,7 @@ int output_run(void * args) {
     int render_count = 0;
 
     output_running = true;   
-    unsigned int last_tick = SDL_GetTicks();
+    int last_tick = SDL_GetTicks();
     unsigned int last_output_render_count = output_render_count;
     (void) last_output_render_count; //TODO
 
@@ -75,21 +75,20 @@ int output_run(void * args) {
         }
 
         //SDL_framerateDelay(&fps_manager);
-        unsigned int tick = SDL_GetTicks();
+        SDL_Delay(1);
+        int tick = SDL_GetTicks();
         int delta = MAX(tick - last_tick, 1);
         stat_ops = INTERP(0.99, stat_ops, 1000. / delta);
 
-        if (delta < 10) {
+        if ((delta < 10) && (delta > 0)) {
             SDL_Delay(10 - delta);
             LOGLIMIT(DEBUG, "Sleeping for %d ms", 10 - delta);
-        } else {
-            SDL_Delay(1);
         }
         last_tick = tick;
 
         render_count++;
-        if (render_count % 100 == 0)
-            DEBUG("Output FPS: %0.2f", stat_ops);
+        if (render_count % 101 == 0)
+            DEBUG("Output FPS: %0.2f; delta=%d", stat_ops, delta);
     }
 
     // Destroy output
