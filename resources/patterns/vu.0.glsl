@@ -2,7 +2,7 @@ void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     gl_FragColor = texture2D(iFrame, uv);
 
-    float SMOOTH = 0.01;
+    float SMOOTH = 0.03;
 
     vec3 audio = vec3(iAudioLow, iAudioMid, iAudioHi);
 

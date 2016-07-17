@@ -8,6 +8,7 @@ uniform float iAudioMid;
 uniform float iIntensity;
 uniform float iIntensityIntegral;
 uniform float iTime;
+uniform float iFPS;
 uniform int iBins;
 uniform int iLeftDeckSelector;
 uniform int iLength;
@@ -135,3 +136,5 @@ float sawtooth(float x, float t_up) {
     return x / t_up * step(x, t_up) +
            (1. - x) / (1 - t_up) * (1. - step(x, t_up));
 }
+
+#line 0

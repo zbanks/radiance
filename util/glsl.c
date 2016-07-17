@@ -43,7 +43,7 @@ static char * read_file(const char * filename, ssize_t * length) {
         return 0;
     }
 
-    buffer = calloc(*length, 1);
+    buffer = calloc(*length + 1, 1);
     if(buffer == NULL) {
         load_shader_error = rsprintf("Could not allocate memory for contents of %s (%s)", filename, strerror(errno));
         return 0;
@@ -55,6 +55,9 @@ static char * read_file(const char * filename, ssize_t * length) {
     }
 
     fclose (f);
+
+    buffer[*length] = '\0';
+
     return buffer;
 }
 
@@ -66,12 +69,12 @@ GLhandleARB load_shader(const char * filename) {
     char * prog_buffer = read_file(filename, &prog_len);
     char * head_buffer = read_file("resources/header.glsl", &head_len);
     if (prog_buffer != NULL || head_buffer != NULL) {
-        buffer = rsprintf("%s\n%s", head_buffer, prog_buffer);
-        length = prog_len + head_len + 1;
+        buffer = rsprintf("%s%s", head_buffer, prog_buffer);
     }
     free(prog_buffer);
     free(head_buffer);
     if (buffer == NULL) return 0;
+    length = strlen(buffer);
 
     GLint compiled;
 

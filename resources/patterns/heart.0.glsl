@@ -1,5 +1,3 @@
-#line 1
-
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     gl_FragColor = texture2D(iFrame, uv);
