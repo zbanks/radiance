@@ -148,7 +148,7 @@ void analyze_chunk(chunk_pt chunk) {
         DEBUG("Beat; BPM=%lf", btrack_get_bpm(&btrack));
         beat_lpf = 1.0;
     } else {
-        beat_lpf *= 0.95;
+        beat_lpf *= 0.90;
     }
 
     double btrack_bpm = btrack_get_bpm(&btrack);

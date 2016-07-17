@@ -17,7 +17,7 @@ uniform int iSelected;
 uniform int iIndicator;
 uniform sampler1D iSpectrum;
 uniform sampler1D iWaveform;
-uniform sampler2D iChannel[2];
+uniform sampler2D iChannel[3];
 uniform sampler2D iFrame;
 uniform sampler2D iFrameLeft;
 uniform sampler2D iFrameRight;
