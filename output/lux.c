@@ -149,6 +149,11 @@ static void lux_channel_destroy_all() {
 }
 
 //
+static uint8_t apply_gamma(double x, double gamma) {
+    if (abs(gamma - 1.) > 0.01)
+        x = pow(x / 255., gamma) * 255.;
+    return x;
+}
 
 static int lux_strip_prepare_frame(struct lux_device * device) {
     if (device->frame_buffer == NULL ||
@@ -156,7 +161,7 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
 
     uint8_t * frame_ptr = device->frame_buffer;
     SDL_Color * pixel_ptr = device->base.pixels.colors + device->base.pixels.length - 1;
-#define PXL(x) pow(((double) x) / (255. * 255. * device->oversample), device->gamma) * 255.
+#define PXL(x) apply_gamma((x) / (255. * device->oversample), device->gamma)
 
     if (device->strip_quantize > 0) {
         int l = 0; 

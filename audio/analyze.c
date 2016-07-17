@@ -24,6 +24,7 @@ static double audio_thread_hi;
 static double audio_thread_mid;
 static double audio_thread_low;
 static struct btrack btrack; 
+static double * window;
 
 // BTrack-based Timebase
 
@@ -43,6 +44,11 @@ double analyze_audio_time_update(struct time_source * source, long wall_ms) {
     return wall_ms * MINUTES_PER_MILLISECOND * beats_per_minute;
 }
 */
+
+static double hann_window(int n) {
+    // Hann window
+    return 0.5 * (1 - cos(2 * M_PI * n / (config.audio.fft_length - 1)));
+}
 
 // Audio Analyze
 
@@ -64,6 +70,11 @@ void analyze_init() {
     if(spectrum_n == NULL) MEMFAIL();
     waveform_gl = calloc(config.audio.waveform_length * 8, sizeof *waveform_gl);
     if(waveform_gl == NULL) MEMFAIL();
+    window = calloc(config.audio.fft_length, sizeof *window);
+    if(window == NULL) MEMFAIL();
+    for(int i=0; i<config.audio.fft_length; i++)
+        window[i] = hann_window(i);
+
     samp_queue_ptr = 0;
     waveform_ptr = 0;
     plan = fftw_plan_dft_r2c_1d(config.audio.fft_length, fft_in, fft_out, FFTW_ESTIMATE);
@@ -72,15 +83,11 @@ void analyze_init() {
     audio_thread_hi = 0;
     audio_thread_mid = 0;
     audio_thread_low = 0;
-    if (btrack_init(&btrack, config.audio.chunk_size, config.audio.fft_length, config.audio.sample_rate) != 0)
+    //if (btrack_init(&btrack, config.audio.chunk_size, config.audio.fft_length, config.audio.sample_rate) != 0)
+    if (btrack_init(&btrack, config.audio.chunk_size, 1024, config.audio.sample_rate) != 0)
         PFAIL("Could not initialize BTrack");
     //if (time_master_register_source(&analyze_audio_time_source) != 0)
     //    PFAIL("Could not register btrack time source");
-}
-
-static double window(int n) {
-    // Hann window
-    return 0.5 * (1 - cos(2 * M_PI * n / (config.audio.fft_length - 1)));
 }
 
 void analyze_chunk(chunk_pt chunk) {
@@ -92,7 +99,7 @@ void analyze_chunk(chunk_pt chunk) {
 
     // Window the data in queue and prepare it for FFTW
     for(int i=0; i<config.audio.fft_length; i++) {
-        fft_in[i] = samp_queue[(samp_queue_ptr + i) % config.audio.fft_length] * window(i);
+        fft_in[i] = samp_queue[(samp_queue_ptr + i) % config.audio.fft_length] * window[i];
     }
 
     // Run the FFT

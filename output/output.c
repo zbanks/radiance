@@ -82,7 +82,7 @@ int output_run(void * args) {
 
         if ((delta < 10) && (delta > 0)) {
             SDL_Delay(10 - delta);
-            LOGLIMIT(DEBUG, "Sleeping for %d ms", 10 - delta);
+            //LOGLIMIT(DEBUG, "Sleeping for %d ms", 10 - delta);
         }
         last_tick = tick;
 
