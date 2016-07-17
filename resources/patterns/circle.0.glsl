@@ -3,7 +3,7 @@ void main(void) {
     float t = iTime / 4.0;
     vec2 center = vec2(sin(t), cos(t));
     //center *= 0.5;
-    center *= iAudioLow * 0.9 + 0.1;
+    center *= iAudioLevel * 0.9 + 0.1;
     center += 0.5;
 
     vec4 c = vec4(1., 1., 0., 1.);

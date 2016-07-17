@@ -49,6 +49,7 @@ static GLuint pat_entry_texture;
 static GLuint tex_spectrum_data;
 static GLuint spectrum_texture;
 static GLuint tex_waveform_data;
+static GLuint tex_waveform_beats_data;
 static GLuint waveform_texture;
 static GLuint strip_texture;
 
@@ -294,6 +295,14 @@ void ui_init() {
     // Waveform data texture
     glGenTextures(1, &tex_waveform_data);
     glBindTexture(GL_TEXTURE_1D, tex_waveform_data);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, NULL);
+
+    glGenTextures(1, &tex_waveform_beats_data);
+    glBindTexture(GL_TEXTURE_1D, tex_waveform_beats_data);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -746,7 +755,7 @@ static void ui_render(bool select) {
     int vw = 0;
     int vh = 0;
     if(!select) {
-        analyze_render(tex_spectrum_data, tex_waveform_data);
+        analyze_render(tex_spectrum_data, tex_waveform_data, tex_waveform_beats_data);
 
         // Render the spectrum
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, spectrum_fb);
@@ -781,8 +790,12 @@ static void ui_render(bool select) {
         glUniform1iARB(location, config.audio.waveform_length);
         location = glGetUniformLocationARB(waveform_shader, "iWaveform");
         glUniform1iARB(location, 0);
+        location = glGetUniformLocationARB(waveform_shader, "iBeats");
+        glUniform1iARB(location, 1);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, tex_waveform_data);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_1D, tex_waveform_beats_data);
 
         glLoadIdentity();
         gluOrtho2D(0, vw, 0, vh);

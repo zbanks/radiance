@@ -23,6 +23,7 @@ double time;
 double audio_hi;
 double audio_mid;
 double audio_low;
+double audio_level;
 
 int main(int argc, char* args[]) {
     config_init(&config);

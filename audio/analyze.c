@@ -18,11 +18,13 @@ static double * spectrum_lpf;
 static GLfloat * spectrum_gl;
 static int * spectrum_n;
 static GLfloat * waveform_gl;
+static GLfloat * waveform_beats_gl;
 static int waveform_ptr;
 static SDL_mutex * mutex;
 static double audio_thread_hi;
 static double audio_thread_mid;
 static double audio_thread_low;
+static double audio_thread_level;
 static struct btrack btrack; 
 static double * window;
 
@@ -70,6 +72,8 @@ void analyze_init() {
     if(spectrum_n == NULL) MEMFAIL();
     waveform_gl = calloc(config.audio.waveform_length * 8, sizeof *waveform_gl);
     if(waveform_gl == NULL) MEMFAIL();
+    waveform_beats_gl = calloc(config.audio.waveform_length * 8, sizeof *waveform_beats_gl);
+    if(waveform_beats_gl == NULL) MEMFAIL();
     window = calloc(config.audio.fft_length, sizeof *window);
     if(window == NULL) MEMFAIL();
     for(int i=0; i<config.audio.fft_length; i++)
@@ -83,6 +87,7 @@ void analyze_init() {
     audio_thread_hi = 0;
     audio_thread_mid = 0;
     audio_thread_low = 0;
+    audio_thread_level = 0;
     //if (btrack_init(&btrack, config.audio.chunk_size, config.audio.fft_length, config.audio.sample_rate) != 0)
     if (btrack_init(&btrack, config.audio.chunk_size, 1024, config.audio.sample_rate) != 0)
         PFAIL("Could not initialize BTrack");
@@ -130,6 +135,7 @@ void analyze_chunk(chunk_pt chunk) {
     double hi = 0;
     double mid = 0;
     double low = 0;
+    double level = 0;
 
     for(int i=0; i<config.audio.spectrum_bins; i++) {
         if(spectrum[i] > spectrum_gl[i]) {
@@ -170,15 +176,30 @@ void analyze_chunk(chunk_pt chunk) {
     audio_thread_mid = mid / (config.audio.hi_cutoff - config.audio.low_cutoff) * config.audio.waveform_gain;
     audio_thread_low = low / config.audio.low_cutoff * config.audio.waveform_gain;
 
+    level = audio_thread_hi;
+    if(audio_thread_mid > level) level = audio_thread_mid;
+    if(audio_thread_low > level) level = audio_thread_low;
+
+    if(level > audio_thread_level) {
+        level = level * config.audio.level_up_alpha + audio_thread_level * (1 - config.audio.level_up_alpha);
+    } else {
+        level = level * config.audio.level_down_alpha + audio_thread_level * (1 - config.audio.level_down_alpha);
+    }
+
+    audio_thread_level = level;
+
     for(int i=0; i<config.audio.spectrum_bins; i++) {
         spectrum_gl[i] = spectrum_lpf[i];
     }
 
-    waveform_gl[waveform_ptr * 4] = audio_thread_hi;
+    waveform_gl[waveform_ptr * 4 + 0] = audio_thread_hi;
     waveform_gl[waveform_ptr * 4 + 1] = audio_thread_mid;
     waveform_gl[waveform_ptr * 4 + 2] = audio_thread_low;
-    waveform_gl[waveform_ptr * 4 + 3] = beat_lpf;
+    waveform_gl[waveform_ptr * 4 + 3] = audio_thread_level;
+    waveform_beats_gl[waveform_ptr * 4] = beat_lpf;
+
     memcpy(&waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_gl[waveform_ptr * 4], 4 * sizeof *waveform_gl);
+    memcpy(&waveform_beats_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_beats_gl[waveform_ptr * 4], 4 * sizeof *waveform_beats_gl);
 
     waveform_ptr = (waveform_ptr + 1) % config.audio.waveform_length;
 
@@ -186,17 +207,20 @@ void analyze_chunk(chunk_pt chunk) {
 }
 
 // This is called from the OpenGL Thread
-void analyze_render(GLuint tex_spectrum, GLuint tex_waveform) {
+void analyze_render(GLuint tex_spectrum, GLuint tex_waveform, GLuint tex_waveform_beats) {
     if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
     glBindTexture(GL_TEXTURE_1D, tex_spectrum);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, config.audio.spectrum_bins, 0, GL_RED, GL_FLOAT, spectrum_gl);
     glBindTexture(GL_TEXTURE_1D, tex_waveform);
     glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_gl[waveform_ptr * 4]);
+    glBindTexture(GL_TEXTURE_1D, tex_waveform_beats);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_beats_gl[waveform_ptr * 4]);
     glBindTexture(GL_TEXTURE_1D, 0);
 
     audio_hi = audio_thread_hi;
     audio_mid = audio_thread_mid;
     audio_low = audio_thread_low;
+    audio_level = audio_thread_level;
 
     SDL_UnlockMutex(mutex);
 }

@@ -47,13 +47,15 @@ CFGSECTION(audio,
     CFG(fft_length, INT, 2048)
     CFG(spectrum_bins, INT, 256)
     CFG(spectrum_up_alpha, FLOAT, 0.5)
-    CFG(spectrum_down_alpha, FLOAT, 0.1)
+    CFG(spectrum_down_alpha, FLOAT, 0.2)
     CFG(spectrum_gain, FLOAT, 0.1)
     CFG(spectrum_offset, FLOAT, 0.1)
     CFG(low_cutoff, FLOAT, 0.3)
     CFG(hi_cutoff, FLOAT, 0.7)
     CFG(waveform_length, INT, 512)
     CFG(waveform_gain, FLOAT, 0.1)
+    CFG(level_up_alpha, FLOAT, 0.9)
+    CFG(level_down_alpha, FLOAT, 0.01)
 )
 
 CFGSECTION(paths,
