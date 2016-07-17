@@ -150,7 +150,7 @@ static void lux_channel_destroy_all() {
 
 //
 static uint8_t apply_gamma(double x, double gamma) {
-    if (abs(gamma - 1.) > 0.01)
+    if (fabs(gamma - 1.) > 0.01)
         x = pow(x / 255., gamma) * 255.;
     return x;
 }

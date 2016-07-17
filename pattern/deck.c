@@ -1,6 +1,8 @@
 #include "pattern/deck.h"
 #include "util/err.h"
 #include "util/config.h"
+#include "util/string.h"
+#include "util/ini.h"
 #include <stdlib.h>
 #include <string.h>
 #define GL_GLEXT_PROTOTYPES
@@ -85,6 +87,47 @@ void deck_unload_pattern(struct deck * deck, int slot) {
         free(deck->pattern[slot]);
         deck->pattern[slot] = NULL;
     }
+}
+
+struct deck_ini_data {
+    struct deck * deck;
+    const char * name;
+    bool found;
+};
+
+static int deck_ini_handler(void * user, const char * section, const char * name, const char * value) {
+    struct deck_ini_data * data = user;
+
+    INFO("%s %s %s", section, name, value);
+    if (data->found) return 1;
+    if (strcmp(section, "decks") != 0) return 1;
+    if (strcmp(name, data->name) != 0) return 1;
+    data->found = true;
+
+    char * val = strdup(value);
+    if (val == NULL) MEMFAIL();
+    
+    int slot = 0;
+    while (slot < config.deck.n_patterns) {
+        char * prefix = strsep(&val, " ");
+        if (prefix == NULL || prefix[0] == '\0') break;
+        int rc = deck_load_pattern(data->deck, slot++, prefix);
+        if (rc < 0) return 0;
+    }
+    free(val);
+    return 1;
+}
+
+int deck_load_set(struct deck * deck, const char * name) {
+    for (int slot = 0; slot < config.deck.n_patterns; slot++)
+        deck_unload_pattern(deck, slot);
+
+    struct deck_ini_data data = {
+        .deck = deck, .name = name, .found = false
+    };
+    int rc = ini_parse(config.paths.decks_config, deck_ini_handler, &data);
+    if (!data.found) ERROR("No deck set named '%s'", name);
+    return rc;
 }
 
 void deck_render(struct deck * deck) {

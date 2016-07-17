@@ -416,7 +416,11 @@ static void handle_key(SDL_KeyboardEvent * e) {
             case SDLK_RETURN:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
-                        if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text) == 0) {
+                        if(pat_entry_text[0] == ':') {
+                            if (deck_load_set(&deck[map_deck[i]], pat_entry_text+1) == 0) {
+                                // TODO: Load in the correct pattern names
+                            }
+                        } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text) == 0) {
                             if(pat_entry_text[0] != '\0') {
                                 if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
                                 pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_width[i], &pattern_name_height[i]);

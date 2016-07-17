@@ -59,6 +59,7 @@ CFGSECTION(audio,
 CFGSECTION(paths,
     CFG(output_config, STRING, "resources/output.ini")
     CFG(midi_config, STRING, "resources/midi.ini")
+    CFG(decks_config, STRING, "resources/decks.ini")
 )
 
 CFGSECTION(debug,
