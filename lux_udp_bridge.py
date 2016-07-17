@@ -13,8 +13,11 @@ def run_lux_udp(host, port, dev):
 
         while True:
             inputs, outputs, errors = select.select([sock.fileno(), ser.fileno()], [], [])
-            if sock.fileno() in inputs:
-                packet, last_addr = sock.recvfrom(1100)
+            while sock.fileno() in inputs:
+                try:
+                    packet, last_addr = sock.recvfrom(1100, socket.MSG_DONTWAIT)
+                except socket.error:
+                    break
                 #print ">", repr(packet)
                 if len(packet) == 0: # Ping, respond back
                     sock.sendto("", 0, last_addr)
