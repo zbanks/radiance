@@ -3,7 +3,7 @@ void main(void) {
     gl_FragColor = texture2D(iFrame, uv);
 
     // heart from shadertoy
-    uv += vec2(-0.5, -0.7);
+    uv += vec2(-0.5, -0.55);
     uv *= 2. / iIntensity;
     float a = atan(uv.x, uv.y) / M_PI;
     float r = length(uv);
