@@ -11,19 +11,22 @@ def run_lux_udp(host, port, dev):
         last_addr = None
         serial_buffer = ""
 
+        epoll = select.epoll()
+        epoll.register(sock.fileno())
+        epoll.register(ser.fileno())
+
         while True:
-            inputs, outputs, errors = select.select([sock.fileno(), ser.fileno()], [], [])
-            while sock.fileno() in inputs:
-                try:
-                    packet, last_addr = sock.recvfrom(1100, socket.MSG_DONTWAIT)
-                except socket.error:
-                    break
+            events = epoll.poll()
+            if not events: continue
+            fds = zip(*events)[0]
+            if sock.fileno() in fds:
+                packet, last_addr = sock.recvfrom(1100)
                 #print ">", repr(packet)
                 if len(packet) == 0: # Ping, respond back
                     sock.sendto("", 0, last_addr)
                 else:
                     ser.write(packet)
-            if ser.fileno() in inputs:
+            if ser.fileno() in fds:
                 serial_buffer += ser.read()
                 while "\0" in serial_buffer:
                     packet, null, serial_buffer = serial_buffer.partition("\0")
