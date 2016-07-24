@@ -364,7 +364,7 @@ int lux_sync(int fd, int tries) {
         rc = recv(fd, buf, 1, 0);
         if (rc == 0) return 0;
         if (rc < 0) {
-            LUX_DEBUG("Bad response from socket %d", fd);
+            LUX_DEBUG("Bad response from socket %d (%s)", fd, strerror(errno));
             errno = ECONNREFUSED;
             return -1;
         }

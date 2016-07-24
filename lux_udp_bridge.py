@@ -12,8 +12,8 @@ def run_lux_udp(host, port, dev):
         serial_buffer = ""
 
         epoll = select.epoll()
-        epoll.register(sock.fileno())
-        epoll.register(ser.fileno())
+        epoll.register(sock.fileno(), select.EPOLLIN)
+        epoll.register(ser.fileno(), select.EPOLLIN)
 
         while True:
             events = epoll.poll()
