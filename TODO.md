@@ -4,24 +4,19 @@ Radiance Todo List
 Core
 ----
 
-- MIDI Controllers
-- Output/rendering integration into main loop
-
 UI
 --
 
 - Remove `#define GL_GLEXT_PROTOTYPES`
 - Autocomplete/matching of pattern names
-- More decks
-- Strip output visualization / editing
+- Strip output editing
+- Loading deck doesn't show pattern names
 
 
 Patterns
 --------
 
 - Document/re-write existing patterns
-- Color palette patterns?
-- Speckle
 
 Audio / Beats
 -------------
@@ -34,11 +29,7 @@ Audio / Beats
 Output / Lux
 ------------
 
-- Proper channel-agnostic enumeration
-- Pixel list -> frame payload
-- `FRAME_HOLD` + `SYNC`
 - Stat collection (`PKTCNT` commands)
-- Reloading device list/configuration
 
 Misc
 ----
