@@ -1,41 +1,35 @@
 #version 130
 
-uniform bool iLeftOnTop;
-uniform bool iSelection;
+// Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
+uniform float iTime;
+
+// Audio levels, high/mid/low/level, [0.0, 1.0]
 uniform float iAudioHi;
 uniform float iAudioLow;
 uniform float iAudioMid;
 uniform float iAudioLevel;
-uniform float iIntensity;
-uniform float iIntensityIntegral;
-uniform float iTime;
-uniform float iFPS;
-uniform int iBins;
-uniform int iLeftDeckSelector;
-uniform int iLength;
-uniform int iPatternIndex;
-uniform int iRightDeckSelector;
-uniform int iSelected;
-uniform int iIndicator;
-uniform sampler1D iSpectrum;
-uniform sampler1D iWaveform;
-uniform sampler1D iBeats;
-uniform sampler2D iChannel[3];
-uniform sampler2D iFrame;
-uniform sampler2D iFrameLeft;
-uniform sampler2D iFrameRight;
-uniform sampler2D iPreview;
-uniform sampler2D iStrips;
-uniform sampler2D iTexture;
-uniform sampler2D iText;
-uniform sampler2D iName;
-uniform vec2 iPosition;
+
+// Resolution of the output pattern
 uniform vec2 iResolution;
-uniform vec2 iTextResolution;
-uniform vec2 iNameResolution;
+
+// Intensity slider, [0.0, 1.0]
+uniform float iIntensity;
+
+// Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
+uniform float iIntensityIntegral;
+
+// (Ideal) output rate in frames per second
+uniform float iFPS;
+
+// Output of the previous pattern
+uniform sampler2D iFrame;
+
+// Previous outputs of the other channels (e.g. foo.1.glsl) 
+uniform sampler2D iChannel[3];
 
 #define M_PI 3.1415926535897932384626433832795
 
+// Utilities to convert from an RGB vec3 to an HSV vec3
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
     vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
@@ -52,29 +46,20 @@ vec3 hsv2rgb(vec3 c) {
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+// Alpha-compsite two colors, putting one on top of the other
 vec4 composite(vec4 under, vec4 over) {
     float a_out = 1. - (1. - over.a) * (1. - under.a);
     return clamp(vec4((over.rgb * over.a  + under.rgb * under.a * (1. - over.a)) / a_out, a_out), vec4(0.), vec4(1.));
 }
 
-float rounded_rect_df(vec2 center, vec2 size, float radius) {
-    return length(max(abs(gl_FragCoord.xy - center) - size, 0.0)) - radius;
+// Sawtooth wave
+float sawtooth(float x, float t_up) {
+    x = mod(x + t_up, 1.);
+    return x / t_up * step(x, t_up) +
+           (1. - x) / (1 - t_up) * (1. - step(x, t_up));
 }
 
-vec3 dataColor(ivec3 data) {
-    return vec3(data) / vec3(255.);
-}
-
-float inBox(vec2 coord, vec2 bottomLeft, vec2 topRight) {
-    vec2 a = step(bottomLeft, coord) - step(topRight, coord);
-    return a.x * a.y;
-}
-
-float smoothBox(vec2 coord, vec2 bottomLeft, vec2 topRight, float width) {
-    vec2 a = smoothstep(bottomLeft, bottomLeft + vec2(width), coord) - smoothstep(topRight - vec2(width), topRight, coord);
-    return min(a.x, a.y);
-}
-
+// Predictable randomness
 float rand(float c){
     return fract(sin(c * 12.9898) * 43758.5453);
 }
@@ -133,10 +118,48 @@ float noise(vec3 p) {
     return mix(y1, y2, xyz.z);
 }
 
-float sawtooth(float x, float t_up) {
-    x = mod(x + t_up, 1.);
-    return x / t_up * step(x, t_up) +
-           (1. - x) / (1 - t_up) * (1. - step(x, t_up));
+//
+// The following is only used for UI; not for patterns
+//
+
+uniform bool iLeftOnTop;
+uniform bool iSelection;
+uniform int iBins;
+uniform int iLeftDeckSelector;
+uniform int iLength;
+uniform int iPatternIndex;
+uniform int iRightDeckSelector;
+uniform int iSelected;
+uniform int iIndicator;
+uniform sampler1D iSpectrum;
+uniform sampler1D iWaveform;
+uniform sampler1D iBeats;
+uniform sampler2D iFrameLeft;
+uniform sampler2D iFrameRight;
+uniform sampler2D iPreview;
+uniform sampler2D iStrips;
+uniform sampler2D iTexture;
+uniform sampler2D iText;
+uniform sampler2D iName;
+uniform vec2 iPosition;
+uniform vec2 iTextResolution;
+uniform vec2 iNameResolution;
+
+float rounded_rect_df(vec2 center, vec2 size, float radius) {
+    return length(max(abs(gl_FragCoord.xy - center) - size, 0.0)) - radius;
 }
 
+vec3 dataColor(ivec3 data) {
+    return vec3(data) / vec3(255.);
+}
+
+float inBox(vec2 coord, vec2 bottomLeft, vec2 topRight) {
+    vec2 a = step(bottomLeft, coord) - step(topRight, coord);
+    return a.x * a.y;
+}
+
+float smoothBox(vec2 coord, vec2 bottomLeft, vec2 topRight, float width) {
+    vec2 a = smoothstep(bottomLeft, bottomLeft + vec2(width), coord) - smoothstep(topRight - vec2(width), topRight, coord);
+    return min(a.x, a.y);
+}
 #line 0
