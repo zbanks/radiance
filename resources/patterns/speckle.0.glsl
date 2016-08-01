@@ -1,3 +1,5 @@
+// Per-pixel twinkle effect
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 

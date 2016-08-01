@@ -1,3 +1,5 @@
+// Green and blue base pattern
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     vec4 c = vec4(0., 0., 0., 1.);

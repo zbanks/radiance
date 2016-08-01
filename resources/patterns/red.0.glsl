@@ -1,3 +1,5 @@
+// Change the color (in HSV) to red
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     vec4 c = texture2D(iFrame, uv);

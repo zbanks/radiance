@@ -1,3 +1,5 @@
+// Spatial edge detect filter (HPF)
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     float d = 0.05;

@@ -1,3 +1,5 @@
+// Zoom in (bounce) to the beat & audio
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 

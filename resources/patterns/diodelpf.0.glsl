@@ -1,3 +1,5 @@
+// Apply smoothing over time with new hits happening instantly
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 

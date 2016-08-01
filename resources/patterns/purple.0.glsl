@@ -1,3 +1,5 @@
+// Organic purple waves
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     //mat2 rot = mat2(cos(iTime), -sin(iTime), sin(iTime), cos(iTime));

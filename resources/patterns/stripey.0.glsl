@@ -1,3 +1,5 @@
+// Vertical stripes with a twinkle effect
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     float xv = round(uv.x * 20); 

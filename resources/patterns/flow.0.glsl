@@ -1,3 +1,5 @@
+// Radiate color from the center based on audio
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 

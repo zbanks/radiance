@@ -1,3 +1,5 @@
+// Pixelate/quantize the output
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     uv -= 0.5;

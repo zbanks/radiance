@@ -1,3 +1,5 @@
+// Convert vertical lines to rings
+
 void main(void) {
     vec2 xy = gl_FragCoord.xy / iResolution;
     vec2 xy_cent = 2. * xy - 1.;

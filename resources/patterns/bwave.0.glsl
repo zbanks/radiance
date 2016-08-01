@@ -1,3 +1,5 @@
+// Black sine wave from left to right.
+
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
     float x = (uv.x + uv.y) * 15 + iTime * 1;
