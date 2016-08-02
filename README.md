@@ -200,6 +200,7 @@ Patterns
 - `starfield` - Pixels radiating from the center 
 - `stripey` - Vertical stripes with a twinkle effect 
 - `strobe` - Strobe alpha to the beat 
+- `swipe` - Only update a vertical stripe that slides across
 - `test` - A green & red circle in the center 
 - `vu` - Blue vertical VU meter 
 - `wave` - Green and blue base pattern 
