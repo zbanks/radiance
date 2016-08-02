@@ -47,7 +47,7 @@ int lux_write(int fd, struct lux_packet * packet, enum lux_flags flags);
 int lux_command(int fd, struct lux_packet * packet, struct lux_packet * response, enum lux_flags flags);
 
 // For UDP lux: send a 0-length ping to the bridge and wait for a response
-// For serial; no-op
+// Do not use with serial channels!
 // Returns 0 on success; -1 on failure
 int lux_sync(int fd, int tries);
 

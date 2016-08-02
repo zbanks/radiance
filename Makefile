@@ -12,7 +12,7 @@ C_SRC += $(wildcard time/*.c)
 C_SRC += $(wildcard ui/*.c)
 C_SRC += $(wildcard util/*.c)
 
-C_SRC += $(wildcard liblux/*.c)
+C_SRC += liblux/lux.c liblux/crc.c
 C_SRC += $(wildcard BTrack/src/*.c)
 
 OBJDIR = build

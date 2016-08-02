@@ -41,26 +41,26 @@ int lux_uri_open(const char * uri) {
 }
 
 static int serial_set_attribs(int fd) {
-        struct termios tty;
+    struct termios tty;
 
-        memset (&tty, 0, sizeof tty);
-        
-        tcgetattr(fd, &tty);
-        cfsetispeed(&tty, 0010015);
-        cfsetospeed(&tty, 0010015);
+    memset (&tty, 0, sizeof tty);
+    
+    tcgetattr(fd, &tty);
+    cfsetispeed(&tty, 0010015);
+    cfsetospeed(&tty, 0010015);
 
-        tty.c_cflag &= ~CSIZE;     // 8-bit chars
-        tty.c_cflag |= CS8;     // 8-bit chars
-        tty.c_cflag |= (CLOCAL | CREAD);
-        tty.c_cflag &= ~CSTOPB; // 1 stop bit
-        tty.c_cflag &= ~(PARENB|PARODD);
-        tty.c_iflag &= ~(INPCK|ISTRIP);
-        tty.c_iflag &= ~(IXON | IXOFF);
-        tty.c_iflag |= IXANY;
+    tty.c_cflag &= ~CSIZE;     // 8-bit chars
+    tty.c_cflag |= CS8;     // 8-bit chars
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~CSTOPB; // 1 stop bit
+    tty.c_cflag &= ~(PARENB|PARODD);
+    tty.c_iflag &= ~(INPCK|ISTRIP);
+    tty.c_iflag &= ~(IXON | IXOFF);
+    tty.c_iflag |= IXANY;
 
-        if (tcsetattr(fd, TCSANOW, &tty) != 0) return -1;
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) return -1;
 
-        return 0;
+    return 0;
 }
 
 int lux_serial_open(const char * path) {
@@ -298,6 +298,7 @@ static int lux_read(int fd, struct lux_packet * packet) {
 }
 
 int lux_write(int fd, struct lux_packet * packet, enum lux_flags flags) {
+    (void) flags;
     uint8_t tx_buf[2048];
     int r;
 

@@ -156,18 +156,21 @@ void analyze_chunk(chunk_pt chunk) {
     // Pass to BTrack. TODO: use already FFT'd values
     btrack_process_audio_frame(&btrack, chunk);
 
-    static double beat_lpf = 0.0;
-    if (btrack_beat_due_in_current_frame(&btrack)) {
-        DEBUG("Beat; BPM=%lf", btrack_get_bpm(&btrack));
-        beat_lpf = 1.0;
-    } else {
-        beat_lpf *= 0.90;
-    }
-
     double btrack_bpm = btrack_get_bpm(&btrack);
     time_update(TIME_SOURCE_AUDIO, TIME_SOURCE_EVENT_BPM, btrack_bpm);
     double ms_until_beat = btrack_get_time_until_beat(&btrack) * 1000.;
     time_update(TIME_SOURCE_AUDIO, TIME_SOURCE_EVENT_BEAT, ms_until_beat);
+
+    static double beat_lpf = 0.0;
+    if (btrack_beat_due_in_current_frame(&btrack)) {
+        INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
+        if (time_master.beat_index % 4 == 0)
+            beat_lpf = 1.0;
+        else
+            beat_lpf = 0.6;
+    } else {
+        beat_lpf *= 0.88;
+    }
 
     // Convert to OpenGL floats
     if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
