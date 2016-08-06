@@ -1,9 +1,6 @@
+#include "util/common.h"
 #include "ui/ui.h"
 
-#include <SDL2/SDL.h>
-#define GL_GLEXT_PROTOTYPES
-#include <SDL2/SDL_opengl.h>
-#include <SDL2/SDL_ttf.h>
 #include "pattern/pattern.h"
 #include "util/config.h"
 #include "util/err.h"
@@ -15,22 +12,19 @@
 #include "ui/render.h"
 #include "output/slice.h"
 #include "main.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include <GL/glu.h>
 
 static SDL_Window * window;
 static SDL_GLContext context;
 static SDL_Renderer * renderer;
 static bool quit;
-static GLhandleARB main_shader;
-static GLhandleARB pat_shader;
-static GLhandleARB blit_shader;
-static GLhandleARB crossfader_shader;
-static GLhandleARB text_shader;
-static GLhandleARB spectrum_shader;
-static GLhandleARB waveform_shader;
-static GLhandleARB strip_shader;
+static GLuint main_shader;
+static GLuint pat_shader;
+static GLuint blit_shader;
+static GLuint crossfader_shader;
+static GLuint text_shader;
+static GLuint spectrum_shader;
+static GLuint waveform_shader;
+static GLuint strip_shader;
 
 static GLuint pat_fb;
 static GLuint select_fb;
@@ -157,19 +151,19 @@ static SDL_Texture * render_text(char * text, int * w, int * h) {
 static void render_textbox(char * text, int width, int height) {
     GLint location;
 
-    glUseProgramObjectARB(text_shader);
-    location = glGetUniformLocationARB(text_shader, "iResolution");
-    glUniform2fARB(location, width, height);
+    glUseProgram(text_shader);
+    location = glGetUniformLocation(text_shader, "iResolution");
+    glUniform2f(location, width, height);
 
     int text_w;
     int text_h;
 
     SDL_Texture * tex = render_text(text, &text_w, &text_h);
 
-    location = glGetUniformLocationARB(text_shader, "iTextResolution");
-    glUniform2fARB(location, text_w, text_h);
-    location = glGetUniformLocationARB(text_shader, "iText");
-    glUniform1iARB(location, 0);
+    location = glGetUniformLocation(text_shader, "iTextResolution");
+    glUniform2f(location, text_w, text_h);
+    location = glGetUniformLocation(text_shader, "iText");
+    glUniform1i(location, 0);
     glActiveTexture(GL_TEXTURE0);
     SDL_GL_BindTexture(tex, NULL, NULL);
 
@@ -185,8 +179,8 @@ void ui_init() {
     // Init SDL
     if(SDL_Init(SDL_INIT_VIDEO) < 0) FAIL("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
     ww = config.ui.window_width;
     wh = config.ui.window_height;
@@ -210,13 +204,13 @@ void ui_init() {
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Make framebuffers
-    glGenFramebuffersEXT(1, &select_fb);
-    glGenFramebuffersEXT(1, &pat_fb);
-    glGenFramebuffersEXT(1, &crossfader_fb);
-    glGenFramebuffersEXT(1, &pat_entry_fb);
-    glGenFramebuffersEXT(1, &spectrum_fb);
-    glGenFramebuffersEXT(1, &waveform_fb);
-    glGenFramebuffersEXT(1, &strip_fb);
+    glGenFramebuffers(1, &select_fb);
+    glGenFramebuffers(1, &pat_fb);
+    glGenFramebuffers(1, &crossfader_fb);
+    glGenFramebuffers(1, &pat_entry_fb);
+    glGenFramebuffers(1, &spectrum_fb);
+    glGenFramebuffers(1, &waveform_fb);
+    glGenFramebuffers(1, &strip_fb);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Init select texture
@@ -229,8 +223,8 @@ void ui_init() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ww, wh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, select_tex, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, select_tex, 0);
 
     // Init pattern textures
     pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
@@ -258,8 +252,8 @@ void ui_init() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.crossfader_width, config.ui.crossfader_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, crossfader_fb);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, crossfader_texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, crossfader_texture, 0);
 
     // Init pattern entry texture
     glGenTextures(1, &pat_entry_texture);
@@ -269,8 +263,8 @@ void ui_init() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.pat_entry_width, config.ui.pat_entry_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pat_entry_texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pat_entry_texture, 0);
 
     // Spectrum data texture
     glGenTextures(1, &tex_spectrum_data);
@@ -289,8 +283,8 @@ void ui_init() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.spectrum_width, config.ui.spectrum_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, spectrum_fb);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, spectrum_texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, spectrum_texture, 0);
 
     // Waveform data texture
     glGenTextures(1, &tex_waveform_data);
@@ -317,8 +311,8 @@ void ui_init() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.waveform_width, config.ui.waveform_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, waveform_fb);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, waveform_texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, waveform_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, waveform_texture, 0);
 
     // Strip indicators
     glGenTextures(1, &strip_texture);
@@ -328,12 +322,12 @@ void ui_init() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, strip_fb);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, strip_texture, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, strip_fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, strip_texture, 0);
 
     // Done allocating textures & FBOs, unbind and check for errors
     glBindTexture(GL_TEXTURE_2D, 0);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     if((blit_shader = load_shader("resources/blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", load_shader_error);
@@ -374,13 +368,13 @@ void ui_term() {
     free(pattern_name_width);
     free(pattern_name_height);
     // TODO glDeleteTextures...
-    glDeleteObjectARB(blit_shader);
-    glDeleteObjectARB(main_shader);
-    glDeleteObjectARB(pat_shader);
-    glDeleteObjectARB(crossfader_shader);
-    glDeleteObjectARB(text_shader);
-    glDeleteObjectARB(spectrum_shader);
-    glDeleteObjectARB(waveform_shader);
+    glDeleteProgram(blit_shader);
+    glDeleteProgram(main_shader);
+    glDeleteProgram(pat_shader);
+    glDeleteProgram(crossfader_shader);
+    glDeleteProgram(text_shader);
+    glDeleteProgram(spectrum_shader);
+    glDeleteProgram(waveform_shader);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     window = NULL;
@@ -534,9 +528,9 @@ static void handle_key(SDL_KeyboardEvent * e) {
                         pat_entry = true;
                         pat_entry_text[0] = '\0';
                         SDL_StartTextInput();
-                        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
+                        glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
                         render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
-                        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     }
                 }
                 break;
@@ -613,10 +607,10 @@ static void handle_key(SDL_KeyboardEvent * e) {
 
 static void blit(float x, float y, float w, float h) {
     GLint location;
-    location = glGetUniformLocationARB(blit_shader, "iPosition");
-    glUniform2fARB(location, x, y);
-    location = glGetUniformLocationARB(blit_shader, "iResolution");
-    glUniform2fARB(location, w, h);
+    location = glGetUniformLocation(blit_shader, "iPosition");
+    glUniform2f(location, x, y);
+    location = glGetUniformLocation(blit_shader, "iResolution");
+    glUniform2f(location, w, h);
 
     glBegin(GL_QUADS);
     glVertex2f(x, y);
@@ -636,15 +630,15 @@ static void ui_render(bool select) {
         case STRIPS_COLORED:
             glLoadIdentity();
             glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
-            glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, strip_fb);
-            glUseProgramObjectARB(strip_shader);
+            glBindFramebuffer(GL_FRAMEBUFFER, strip_fb);
+            glUseProgram(strip_shader);
 
-            location = glGetUniformLocationARB(strip_shader, "iPreview");
-            glUniform1iARB(location, 0);
-            location = glGetUniformLocationARB(strip_shader, "iResolution");
-            glUniform2fARB(location, config.pattern.master_width, config.pattern.master_height);
-            location = glGetUniformLocationARB(strip_shader, "iIndicator");
-            glUniform1iARB(location, strip_indicator);
+            location = glGetUniformLocation(strip_shader, "iPreview");
+            glUniform1i(location, 0);
+            location = glGetUniformLocation(strip_shader, "iResolution");
+            glUniform2f(location, config.pattern.master_width, config.pattern.master_height);
+            location = glGetUniformLocation(strip_shader, "iIndicator");
+            glUniform1i(location, strip_indicator);
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
@@ -681,23 +675,23 @@ static void ui_render(bool select) {
     }
 
     // Render the patterns
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, pat_fb);
 
     int pw = config.ui.pattern_width;
     int ph = config.ui.pattern_height;
-    glUseProgramObjectARB(pat_shader);
-    location = glGetUniformLocationARB(pat_shader, "iResolution");
-    glUniform2fARB(location, pw, ph);
-    glUseProgramObjectARB(pat_shader);
-    location = glGetUniformLocationARB(pat_shader, "iSelection");
-    glUniform1iARB(location, select);
-    location = glGetUniformLocationARB(pat_shader, "iPreview");
-    glUniform1iARB(location, 0);
-    location = glGetUniformLocationARB(pat_shader, "iName");
-    glUniform1iARB(location, 1);
-    GLint pattern_index = glGetUniformLocationARB(pat_shader, "iPatternIndex");
-    GLint pattern_intensity = glGetUniformLocationARB(pat_shader, "iIntensity");
-    GLint name_resolution = glGetUniformLocationARB(pat_shader, "iNameResolution");
+    glUseProgram(pat_shader);
+    location = glGetUniformLocation(pat_shader, "iResolution");
+    glUniform2f(location, pw, ph);
+    glUseProgram(pat_shader);
+    location = glGetUniformLocation(pat_shader, "iSelection");
+    glUniform1i(location, select);
+    location = glGetUniformLocation(pat_shader, "iPreview");
+    glUniform1i(location, 0);
+    location = glGetUniformLocation(pat_shader, "iName");
+    glUniform1i(location, 1);
+    GLint pattern_index = glGetUniformLocation(pat_shader, "iPatternIndex");
+    GLint pattern_intensity = glGetUniformLocation(pat_shader, "iIntensity");
+    GLint name_resolution = glGetUniformLocation(pat_shader, "iNameResolution");
 
     glLoadIdentity();
     gluOrtho2D(0, pw, 0, ph);
@@ -710,33 +704,33 @@ static void ui_render(bool select) {
             glBindTexture(GL_TEXTURE_2D, p->tex_output);
             glActiveTexture(GL_TEXTURE1);
             SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
-            glUniform1iARB(pattern_index, i);
-            glUniform1fARB(pattern_intensity, p->intensity);
-            glUniform2fARB(name_resolution, pattern_name_width[i], pattern_name_height[i]);
-            glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, pattern_textures[i], 0);
+            glUniform1i(pattern_index, i);
+            glUniform1f(pattern_intensity, p->intensity);
+            glUniform2f(name_resolution, pattern_name_width[i], pattern_name_height[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pattern_textures[i], 0);
             glClear(GL_COLOR_BUFFER_BIT);
             fill(pw, ph);
         }
     }
 
     // Render the crossfader
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, crossfader_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
 
     int cw = config.ui.crossfader_width;
     int ch = config.ui.crossfader_height;
-    glUseProgramObjectARB(crossfader_shader);
-    location = glGetUniformLocationARB(crossfader_shader, "iResolution");
-    glUniform2fARB(location, cw, ch);
-    location = glGetUniformLocationARB(crossfader_shader, "iSelection");
-    glUniform1iARB(location, select);
-    location = glGetUniformLocationARB(crossfader_shader, "iPreview");
-    glUniform1iARB(location, 0);
-    location = glGetUniformLocationARB(crossfader_shader, "iStrips");
-    glUniform1iARB(location, 1);
-    location = glGetUniformLocationARB(crossfader_shader, "iIntensity");
-    glUniform1fARB(location, crossfader.position);
-    location = glGetUniformLocationARB(crossfader_shader, "iIndicator");
-    glUniform1iARB(location, strip_indicator);
+    glUseProgram(crossfader_shader);
+    location = glGetUniformLocation(crossfader_shader, "iResolution");
+    glUniform2f(location, cw, ch);
+    location = glGetUniformLocation(crossfader_shader, "iSelection");
+    glUniform1i(location, select);
+    location = glGetUniformLocation(crossfader_shader, "iPreview");
+    glUniform1i(location, 0);
+    location = glGetUniformLocation(crossfader_shader, "iStrips");
+    glUniform1i(location, 1);
+    location = glGetUniformLocation(crossfader_shader, "iIntensity");
+    glUniform1f(location, crossfader.position);
+    location = glGetUniformLocation(crossfader_shader, "iIndicator");
+    glUniform1i(location, strip_indicator);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
@@ -758,17 +752,17 @@ static void ui_render(bool select) {
         analyze_render(tex_spectrum_data, tex_waveform_data, tex_waveform_beats_data);
 
         // Render the spectrum
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, spectrum_fb);
+        glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
 
         sw = config.ui.spectrum_width;
         sh = config.ui.spectrum_height;
-        glUseProgramObjectARB(spectrum_shader);
-        location = glGetUniformLocationARB(spectrum_shader, "iResolution");
-        glUniform2fARB(location, sw, sh);
-        location = glGetUniformLocationARB(spectrum_shader, "iBins");
-        glUniform1iARB(location, config.audio.spectrum_bins);
-        location = glGetUniformLocationARB(spectrum_shader, "iSpectrum");
-        glUniform1iARB(location, 0);
+        glUseProgram(spectrum_shader);
+        location = glGetUniformLocation(spectrum_shader, "iResolution");
+        glUniform2f(location, sw, sh);
+        location = glGetUniformLocation(spectrum_shader, "iBins");
+        glUniform1i(location, config.audio.spectrum_bins);
+        location = glGetUniformLocation(spectrum_shader, "iSpectrum");
+        glUniform1i(location, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, tex_spectrum_data);
 
@@ -779,19 +773,19 @@ static void ui_render(bool select) {
         fill(sw, sh);
 
         // Render the waveform
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, waveform_fb);
+        glBindFramebuffer(GL_FRAMEBUFFER, waveform_fb);
 
         vw = config.ui.waveform_width;
         vh = config.ui.waveform_height;
-        glUseProgramObjectARB(waveform_shader);
-        location = glGetUniformLocationARB(waveform_shader, "iResolution");
-        glUniform2fARB(location, sw, sh);
-        location = glGetUniformLocationARB(waveform_shader, "iLength");
-        glUniform1iARB(location, config.audio.waveform_length);
-        location = glGetUniformLocationARB(waveform_shader, "iWaveform");
-        glUniform1iARB(location, 0);
-        location = glGetUniformLocationARB(waveform_shader, "iBeats");
-        glUniform1iARB(location, 1);
+        glUseProgram(waveform_shader);
+        location = glGetUniformLocation(waveform_shader, "iResolution");
+        glUniform2f(location, sw, sh);
+        location = glGetUniformLocation(waveform_shader, "iLength");
+        glUniform1i(location, config.audio.waveform_length);
+        location = glGetUniformLocation(waveform_shader, "iWaveform");
+        glUniform1i(location, 0);
+        location = glGetUniformLocation(waveform_shader, "iBeats");
+        glUniform1i(location, 1);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, tex_waveform_data);
         glActiveTexture(GL_TEXTURE1);
@@ -806,9 +800,9 @@ static void ui_render(bool select) {
 
     // Render to screen (or select fb)
     if(select) {
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
+        glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
     } else {
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     glLoadIdentity();
@@ -817,27 +811,27 @@ static void ui_render(bool select) {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgramObjectARB(main_shader);
+    glUseProgram(main_shader);
 
-    location = glGetUniformLocationARB(main_shader, "iResolution");
-    glUniform2fARB(location, ww, wh);
-    location = glGetUniformLocationARB(main_shader, "iSelection");
-    glUniform1iARB(location, select);
-    location = glGetUniformLocationARB(main_shader, "iSelected");
-    glUniform1iARB(location, selected);
-    location = glGetUniformLocationARB(main_shader, "iLeftDeckSelector");
-    glUniform1iARB(location, left_deck_selector);
-    location = glGetUniformLocationARB(main_shader, "iRightDeckSelector");
-    glUniform1iARB(location, right_deck_selector);
+    location = glGetUniformLocation(main_shader, "iResolution");
+    glUniform2f(location, ww, wh);
+    location = glGetUniformLocation(main_shader, "iSelection");
+    glUniform1i(location, select);
+    location = glGetUniformLocation(main_shader, "iSelected");
+    glUniform1i(location, selected);
+    location = glGetUniformLocation(main_shader, "iLeftDeckSelector");
+    glUniform1i(location, left_deck_selector);
+    location = glGetUniformLocation(main_shader, "iRightDeckSelector");
+    glUniform1i(location, right_deck_selector);
 
     fill(ww, wh);
 
     // Blit UI elements on top
     glEnable(GL_BLEND);
-    glUseProgramObjectARB(blit_shader);
+    glUseProgram(blit_shader);
     glActiveTexture(GL_TEXTURE0);
-    location = glGetUniformLocationARB(blit_shader, "iTexture");
-    glUniform1iARB(location, 0);
+    location = glGetUniformLocation(blit_shader, "iTexture");
+    glUniform1i(location, 0);
 
     for(int i = 0; i < config.ui.n_patterns; i++) {
         struct pattern * pattern = deck[map_deck[i]].pattern[map_pattern[i]];
@@ -883,9 +877,9 @@ struct rgba {
 static struct rgba test_hit(int x, int y) {
     struct rgba data;
 
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, select_fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
     glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     return data;
 }
 
@@ -919,9 +913,9 @@ static void handle_text(const char * text) {
         if(strlen(pat_entry_text) + strlen(text) < sizeof(pat_entry_text)) {
             strcat(pat_entry_text, text);
         }
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pat_entry_fb);
+        glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
         render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 

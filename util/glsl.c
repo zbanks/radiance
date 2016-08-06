@@ -61,9 +61,9 @@ static char * read_file(const char * filename, ssize_t * length) {
     return buffer;
 }
 
-GLhandleARB load_shader(const char * filename) {
+GLuint load_shader(const char * filename) {
     // Load file
-    GLcharARB * buffer = NULL;
+    GLchar* buffer = NULL;
     GLint length;
     ssize_t prog_len = 0, head_len = 0;
     char * prog_buffer = read_file(filename, &prog_len);
@@ -79,30 +79,28 @@ GLhandleARB load_shader(const char * filename) {
     GLint compiled;
 
     // Compile
-    GLhandleARB fragmentShaderObj;
-    fragmentShaderObj = glCreateShaderObjectARB(GL_FRAGMENT_SHADER);
-    glShaderSourceARB(fragmentShaderObj, 1, (const GLcharARB **)&buffer, (const GLint *)&length);
-    glCompileShader(fragmentShaderObj);
-    glGetShaderiv(fragmentShaderObj, GL_COMPILE_STATUS, &compiled);
+    GLuint fragmentShader;
+    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, (const GLchar**)&buffer, (const GLint *)&length);
+    glCompileShader(fragmentShader);
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &compiled);
     if(!compiled) {
         GLint blen = 0; 
         GLsizei slen = 0;
 
-        glGetShaderiv(fragmentShaderObj, GL_INFO_LOG_LENGTH , &blen);
+        glGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH , &blen);
         if(blen > 1) {
-            GLchar* compiler_log = (GLchar*)calloc(blen, 1);
-            glGetShaderInfoLog(fragmentShaderObj, blen, &slen, compiler_log);
+            GLchar compiler_log[blen + 1];
+            glGetShaderInfoLog(fragmentShader, blen, &slen, compiler_log);
             load_shader_error = rsprintf("Shader compilation failed, Log:\n%s", compiler_log);
-            free(compiler_log);
         } else {
             load_shader_error = strdup("Shader compilation failed!");
         }
-        glDeleteObjectARB(fragmentShaderObj);
+        glDeleteShader(fragmentShader);
         free(buffer);
         return 0;
     }
     free(buffer);
-
     /*
     length = sizeof(default_vertex_shader) - 1;
     buffer = calloc(length, 1);
@@ -113,7 +111,7 @@ GLhandleARB load_shader(const char * filename) {
     memcpy(buffer, default_vertex_shader, sizeof(default_vertex_shader) - 1);
 
     // Compile default vertex shader
-    GLhandleARB vertexShaderObj;
+    GLuint vertexShaderObj;
     vertexShaderObj = glCreateShaderObjectARB(GL_VERTEX_SHADER);
     glShaderSourceARB(vertexShaderObj, 1, (const GLcharARB **)&buffer, (const GLint *)&length);
     glCompileShader(vertexShaderObj);
@@ -139,10 +137,10 @@ GLhandleARB load_shader(const char * filename) {
     */
 
     // Link
-    GLhandleARB programObj;
-    programObj = glCreateProgramObjectARB();
+    GLuint programObj;
+    programObj = glCreateProgram();
     //glAttachShader(programObj, vertexShaderObj);
-    glAttachShader(programObj, fragmentShaderObj);
+    glAttachShader(programObj, fragmentShader);
     glLinkProgram(programObj);
 
     GLint linked;
@@ -153,19 +151,18 @@ GLhandleARB load_shader(const char * filename) {
 
         glGetProgramiv(programObj, GL_INFO_LOG_LENGTH , &blen);
         if(blen > 1) {
-            GLchar* linker_log = (GLchar*)calloc(blen, 1);
+            GLchar linker_log[blen + 1];
             glGetProgramInfoLog(programObj, blen, &slen, linker_log);
             load_shader_error = rsprintf("Shader linking failed; Log:\n%s", linker_log);
-            free(linker_log);
         } else {
             load_shader_error = strdup("Shader linking failed!");
         }
-        glDetachShader(programObj, fragmentShaderObj);
-        glDeleteObjectARB(fragmentShaderObj);
-        glDeleteObjectARB(programObj);
+        glDetachShader(programObj, fragmentShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(programObj);
         return 0;
     }
-    glDetachShader(programObj, fragmentShaderObj);
-    glDeleteShader(fragmentShaderObj);
+    glDetachShader(programObj, fragmentShader);
+    glDeleteShader(fragmentShader);
     return programObj;
 }

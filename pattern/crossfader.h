@@ -9,7 +9,7 @@
 struct crossfader {
     bool left_on_top;
 
-    GLhandleARB shader;
+    GLuint shader;
     GLuint tex_output;
     GLuint fb;
 

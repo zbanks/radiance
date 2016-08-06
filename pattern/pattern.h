@@ -8,7 +8,7 @@
 #define MAX_INTEGRAL 1024
 
 struct pattern {
-    GLhandleARB * shader;
+    GLuint * shader;
     int n_shaders;
     char * name;
     double intensity;

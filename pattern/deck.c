@@ -1,13 +1,10 @@
+#include "util/common.h"
+
 #include "pattern/deck.h"
 #include "util/err.h"
 #include "util/config.h"
 #include "util/string.h"
 #include "util/ini.h"
-#include <stdlib.h>
-#include <string.h>
-#define GL_GLEXT_PROTOTYPES
-#include <SDL2/SDL_opengl.h>
-#include <assert.h>
 
 void deck_init(struct deck * deck) {
     GLenum e;
@@ -17,7 +14,7 @@ void deck_init(struct deck * deck) {
     if(deck->pattern == NULL) MEMFAIL();
 
     glGenTextures(1, &deck->tex_input);
-    glGenFramebuffersEXT(1, &deck->fb_input);
+    glGenFramebuffers(1, &deck->fb_input);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     glBindTexture(GL_TEXTURE_2D, deck->tex_input);
@@ -29,18 +26,18 @@ void deck_init(struct deck * deck) {
     glBindTexture(GL_TEXTURE_2D, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, deck->fb_input);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
+    glBindFramebuffer(GL_FRAMEBUFFER, deck->fb_input);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                               deck->tex_input, 0);
     glClear(GL_COLOR_BUFFER_BIT);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
 void deck_term(struct deck * deck) {
     glDeleteTextures(1, &deck->tex_input);
-    glDeleteFramebuffersEXT(1, &deck->fb_input);
+    glDeleteFramebuffers(1, &deck->fb_input);
     glDeleteTextures(1, &deck->tex_output);
 
     for(int i = 0; i < config.deck.n_patterns; i++) {

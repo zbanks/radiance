@@ -15,7 +15,7 @@
 #include "output/output.h"
 #include "main.h"
 
-enum loglevel loglevel = LOGLEVEL_INFO;
+enum loglevel loglevel = LOGLEVEL_ALL;
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
 struct render render;

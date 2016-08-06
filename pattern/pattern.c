@@ -1,21 +1,12 @@
+#include "util/common.h"
 #include "pattern/pattern.h"
 #include "time/timebase.h"
 #include "util/glsl.h"
 #include "util/string.h"
+#include "sys/stat.h"
 #include "util/err.h"
 #include "util/config.h"
 #include "main.h"
-
-#include <assert.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <math.h>
 
 int pattern_init(struct pattern * pattern, const char * prefix) {
     GLenum e;
@@ -60,7 +51,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
         if(filename == NULL) MEMFAIL();
 
-        GLhandleARB h = load_shader(filename);
+        GLuint h = load_shader(filename);
 
         if (h == 0) {
             fprintf(stderr, "%s", load_shader_error);
@@ -80,7 +71,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Render targets
-    glGenFramebuffersEXT(1, &pattern->fb);
+    glGenFramebuffers(1, &pattern->fb);
     glGenTextures(pattern->n_shaders + 1, pattern->tex);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -98,9 +89,9 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, pattern->fb);
     for(int i = 0; i < pattern->n_shaders + 1; i++) {
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                                   pattern->tex[i], 0);
         glClear(GL_COLOR_BUFFER_BIT);
     }
@@ -121,11 +112,11 @@ void pattern_term(struct pattern * pattern) {
     GLenum e;
 
     for (int i = 0; i < pattern->n_shaders; i++) {
-        glDeleteObjectARB(pattern->shader[i]);
+        glDeleteProgram(pattern->shader[i]);
     }
 
     glDeleteTextures(pattern->n_shaders + 1, pattern->tex);
-    glDeleteFramebuffersEXT(1, &pattern->fb);
+    glDeleteFramebuffers(1, &pattern->fb);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
@@ -138,12 +129,12 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
 
     glLoadIdentity();
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, pattern->fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, pattern->fb);
 
     pattern->intensity_integral = fmod(pattern->intensity_integral + pattern->intensity / config.ui.fps, MAX_INTEGRAL);
 
     for (int i = pattern->n_shaders - 1; i >= 0; i--) {
-        glUseProgramObjectARB(pattern->shader[i]);
+        glUseProgram(pattern->shader[i]);
 
         // Don't worry about this part.
         for(int j = 0; j < pattern->n_shaders; j++) {
@@ -151,34 +142,34 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
             glActiveTexture(GL_TEXTURE1 + j);
             glBindTexture(GL_TEXTURE_2D, pattern->tex[(pattern->flip + j + (i < j)) % (pattern->n_shaders + 1)]);
         }
-        glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D,
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
                                   pattern->tex[(pattern->flip + i + 1) % (pattern->n_shaders + 1)], 0);
 
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
         GLint loc;
-        loc = glGetUniformLocationARB(pattern->shader[i], "iTime");
-        glUniform1fARB(loc, time_master.beat_frac + time_master.beat_index);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioHi");
-        glUniform1fARB(loc, audio_hi);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioMid");
-        glUniform1fARB(loc, audio_mid);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioLow");
-        glUniform1fARB(loc, audio_low);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iAudioLevel");
-        glUniform1fARB(loc, audio_level);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iResolution");
-        glUniform2fARB(loc, config.pattern.master_width, config.pattern.master_height);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iIntensity");
-        glUniform1fARB(loc, pattern->intensity);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iIntensityIntegral");
-        glUniform1fARB(loc, pattern->intensity_integral);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iFPS");
-        glUniform1fARB(loc, config.ui.fps);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iFrame");
-        glUniform1iARB(loc, 0);
-        loc = glGetUniformLocationARB(pattern->shader[i], "iChannel");
-        glUniform1ivARB(loc, pattern->n_shaders, pattern->uni_tex);
+        loc = glGetUniformLocation(pattern->shader[i], "iTime");
+        glUniform1f(loc, time_master.beat_frac + time_master.beat_index);
+        loc = glGetUniformLocation(pattern->shader[i], "iAudioHi");
+        glUniform1f(loc, audio_hi);
+        loc = glGetUniformLocation(pattern->shader[i], "iAudioMid");
+        glUniform1f(loc, audio_mid);
+        loc = glGetUniformLocation(pattern->shader[i], "iAudioLow");
+        glUniform1f(loc, audio_low);
+        loc = glGetUniformLocation(pattern->shader[i], "iAudioLevel");
+        glUniform1f(loc, audio_level);
+        loc = glGetUniformLocation(pattern->shader[i], "iResolution");
+        glUniform2f(loc, config.pattern.master_width, config.pattern.master_height);
+        loc = glGetUniformLocation(pattern->shader[i], "iIntensity");
+        glUniform1f(loc, pattern->intensity);
+        loc = glGetUniformLocation(pattern->shader[i], "iIntensityIntegral");
+        glUniform1f(loc, pattern->intensity_integral);
+        loc = glGetUniformLocation(pattern->shader[i], "iFPS");
+        glUniform1f(loc, config.ui.fps);
+        loc = glGetUniformLocation(pattern->shader[i], "iFrame");
+        glUniform1i(loc, 0);
+        loc = glGetUniformLocation(pattern->shader[i], "iChannel");
+        glUniform1iv(loc, pattern->n_shaders, pattern->uni_tex);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, input_tex);
@@ -196,7 +187,7 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     }
     pattern->flip = (pattern->flip + 1) % (pattern->n_shaders + 1);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     pattern->tex_output = pattern->tex[pattern->flip];

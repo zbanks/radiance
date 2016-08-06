@@ -1,6 +1,8 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
+#include "util/common.h"
+
 #include "pattern/deck.h"
 #include "pattern/crossfader.h"
 #include "ui/render.h"
