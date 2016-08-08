@@ -1,3 +1,6 @@
 [submodule "BTrack"]
 	path = BTrack
 	url = https://github.com/zbanks/BTrack
+[submodule "stb"]
+	path = stb
+	url = git@github.com:nothings/stb.git
