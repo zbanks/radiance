@@ -1,3 +1,4 @@
+#include "util/common.h"
 #include "util/config.h"
 #include "util/string.h"
 #include "util/err.h"

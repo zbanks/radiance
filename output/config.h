@@ -1,9 +1,8 @@
 #pragma once
-
-#include "SDL2/SDL.h"
+#include "util/common.h"
 #include "output/slice.h"
 #include "util/config_macros.h"
-
+NOT_CXX
 #ifdef CFGOBJ
 #undef CFGOBJ
 #undef CFGOBJ_PATH
@@ -42,3 +41,5 @@ static inline SDL_Color _parse_color(const char * cstr){
 #include "util/config_gen_h.def"
 
 extern struct output_config output_config;
+
+CXX_OK

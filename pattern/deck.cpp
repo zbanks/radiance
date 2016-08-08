@@ -10,7 +10,7 @@ void deck_init(struct deck * deck) {
     GLenum e;
 
     memset(deck, 0, sizeof *deck);
-    deck->pattern = calloc(config.deck.n_patterns, sizeof *deck->pattern);
+    deck->pattern = static_cast<pattern**>(calloc(config.deck.n_patterns, sizeof *deck->pattern));
     if(deck->pattern == NULL) MEMFAIL();
 
     glGenTextures(1, &deck->tex_input);
@@ -52,7 +52,7 @@ void deck_term(struct deck * deck) {
 
 int deck_load_pattern(struct deck * deck, int slot, const char * prefix) {
     assert(slot >= 0 && slot < config.deck.n_patterns);
-    struct pattern * p = calloc(1, sizeof *p);
+    struct pattern * p = static_cast<pattern*>(calloc(1, sizeof *p));
     float intensity = 0;
 
     if(deck->pattern[slot]) intensity = deck->pattern[slot]->intensity;
@@ -93,7 +93,7 @@ struct deck_ini_data {
 };
 
 static int deck_ini_handler(void * user, const char * section, const char * name, const char * value) {
-    struct deck_ini_data * data = user;
+    struct deck_ini_data * data = static_cast<deck_ini_data*>(user);
 
     INFO("%s %s %s", section, name, value);
     if (data->found) return 1;

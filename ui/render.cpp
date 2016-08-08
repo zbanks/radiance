@@ -9,7 +9,7 @@ void render_init(struct render * render, GLint texture) {
     GLenum e;
 
     memset(render, 0, sizeof *render);
-    render->pixels = calloc(config.pattern.master_width * config.pattern.master_height * BYTES_PER_PIXEL, sizeof(uint8_t));
+    render->pixels = static_cast<uint8_t*>(::calloc(config.pattern.master_width * config.pattern.master_height * BYTES_PER_PIXEL, sizeof(uint8_t)));
     if(render->pixels == NULL) MEMFAIL();
 
     glGenFramebuffers(1, &render->fb);

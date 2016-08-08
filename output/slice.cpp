@@ -18,7 +18,7 @@ struct output_vertex * output_vertex_list_parse(const char * _str) {
             ERROR("Unable to parse term '%s'", vstr);
             goto fail;
         }
-        struct output_vertex * new_vertex = calloc(1, sizeof *new_vertex);
+        output_vertex * new_vertex = static_cast<output_vertex*>(calloc(1, sizeof *new_vertex));
         *new_vertex = (struct output_vertex) {
             .next = vertex_head,
             .x = x, .y = y,
@@ -44,7 +44,7 @@ const char * output_vertex_list_serialize(struct output_vertex * head) {
         len_needed += snprintf(NULL, 0, format, v->x, v->y, v->scale);
 
     if (buflen < len_needed || buf == NULL) {
-        buf = realloc(buf, len_needed);
+        buf = static_cast<char*>(realloc(buf, len_needed));
         buflen = len_needed;
         if (buf == NULL) MEMFAIL();
     }
@@ -78,9 +78,9 @@ int output_device_arrange(struct output_device * dev) {
     if (dev->vertex_head == NULL) return -1;
 
     // Realloc pixel arrays
-    dev->pixels.xs = realloc(dev->pixels.xs, length * sizeof *dev->pixels.xs);
-    dev->pixels.ys = realloc(dev->pixels.ys, length * sizeof *dev->pixels.ys);
-    dev->pixels.colors = realloc(dev->pixels.colors, length * sizeof *dev->pixels.colors);
+    dev->pixels.xs = static_cast<decltype(dev->pixels.xs)>(realloc(dev->pixels.xs, length * sizeof *dev->pixels.xs));
+    dev->pixels.ys = static_cast<decltype(dev->pixels.ys)>(realloc(dev->pixels.ys, length * sizeof *dev->pixels.ys));
+    dev->pixels.colors = static_cast<decltype(dev->pixels.colors)>(realloc(dev->pixels.colors, length * sizeof *dev->pixels.colors));
     if (dev->pixels.xs == NULL || dev->pixels.ys == NULL || dev->pixels.colors == NULL) MEMFAIL();
     memset(dev->pixels.xs, 0, length * sizeof *dev->pixels.xs);
     memset(dev->pixels.ys, 0, length * sizeof *dev->pixels.ys);

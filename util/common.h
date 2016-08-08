@@ -1,6 +1,14 @@
-#pragma once
+_Pragma("once")
 
-#define _DEFAULT_SOURCE
+#ifdef __cplusplus
+#define NOT_CXX \
+extern "C" {
+#define CXX_OK \
+}
+#else
+#define NOT_CXX
+#define CXX_OK
+#endif
 #define GL_GLEXT_PROTOTYPES
 #define GL3_PROTOTYPES 1
 #include <SDL2/SDL.h>

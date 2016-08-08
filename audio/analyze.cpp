@@ -7,19 +7,18 @@
 #include "main.h"
 #include "BTrack/src/BTrack.h"
 #include <fftw3.h>
-#include <SDL2/SDL.h>
 
-static float * samp_queue;
+std::unique_ptr<float[]> samp_queue;
 static int samp_queue_ptr;
 static fftw_plan plan;
-static double * fft_in;
-static fftw_complex * fft_out;
-static double * spectrum;
-static double * spectrum_lpf;
-static GLfloat * spectrum_gl;
-static int * spectrum_n;
-static GLfloat * waveform_gl;
-static GLfloat * waveform_beats_gl;
+std::unique_ptr<double[]> fft_in;
+std::unique_ptr<fftw_complex[]> fft_out;
+std::unique_ptr<double[]> spectrum;
+std::unique_ptr<double[]> spectrum_lpf;
+std::unique_ptr<GLfloat[]> spectrum_gl;
+std::unique_ptr<int[]> spectrum_n;
+std::unique_ptr<GLfloat[]> waveform_gl;
+std::unique_ptr<GLfloat[]> waveform_beats_gl;
 static int waveform_ptr;
 static SDL_mutex * mutex;
 static double audio_thread_hi;
@@ -27,7 +26,7 @@ static double audio_thread_mid;
 static double audio_thread_low;
 static double audio_thread_level;
 static struct btrack btrack; 
-static double * window;
+std::unique_ptr<double[]> window;
 
 // BTrack-based Timebase
 
@@ -57,32 +56,22 @@ static double hann_window(int n) {
 
 void analyze_init() {
     // Audio processing
-    samp_queue = calloc(config.audio.fft_length, sizeof *samp_queue);
-    if(samp_queue == NULL) MEMFAIL();
-    fft_in = calloc(config.audio.fft_length, sizeof *fft_in);
-    if(fft_in == NULL) MEMFAIL();
-    fft_out = calloc(config.audio.fft_length / 2 + 1, sizeof *fft_out);
-    if(fft_out == NULL) MEMFAIL();
-    spectrum = calloc(config.audio.spectrum_bins, sizeof *spectrum);
-    if(spectrum == NULL) MEMFAIL();
-    spectrum_lpf = calloc(config.audio.spectrum_bins, sizeof *spectrum_lpf);
-    if(spectrum_lpf == NULL) MEMFAIL();
-    spectrum_gl = calloc(config.audio.spectrum_bins, sizeof *spectrum_gl);
-    if(spectrum_gl == NULL) MEMFAIL();
-    spectrum_n = calloc(config.audio.spectrum_bins, sizeof *spectrum_n);
-    if(spectrum_n == NULL) MEMFAIL();
-    waveform_gl = calloc(config.audio.waveform_length * 8, sizeof *waveform_gl);
-    if(waveform_gl == NULL) MEMFAIL();
-    waveform_beats_gl = calloc(config.audio.waveform_length * 8, sizeof *waveform_beats_gl);
-    if(waveform_beats_gl == NULL) MEMFAIL();
-    window = calloc(config.audio.fft_length, sizeof *window);
-    if(window == NULL) MEMFAIL();
+    samp_queue = std::make_unique<float[]>(config.audio.fft_length);
+    fft_in = std::make_unique<double[]>(config.audio.fft_length);
+    fft_out = std::make_unique<fftw_complex[]>(config.audio.fft_length / 2 + 1);
+    spectrum = std::make_unique<double[]>(config.audio.spectrum_bins);
+    spectrum_lpf = std::make_unique<double[]>(config.audio.spectrum_bins);
+    spectrum_gl = std::make_unique<GLfloat[]>(config.audio.spectrum_bins);
+    spectrum_n = std::make_unique<int[]>(config.audio.spectrum_bins);
+    waveform_gl = std::make_unique<GLfloat[]>(config.audio.waveform_length * 8);
+    waveform_beats_gl = std::make_unique<GLfloat[]>(config.audio.waveform_length * 8);
+    window = std::make_unique<double[]>(config.audio.fft_length);
     for(int i=0; i<config.audio.fft_length; i++)
         window[i] = hann_window(i);
 
     samp_queue_ptr = 0;
     waveform_ptr = 0;
-    plan = fftw_plan_dft_r2c_1d(config.audio.fft_length, fft_in, fft_out, FFTW_ESTIMATE);
+    plan = fftw_plan_dft_r2c_1d(config.audio.fft_length, fft_in.get(), fft_out.get(), FFTW_ESTIMATE);
     mutex = SDL_CreateMutex();
     if(mutex == NULL) FAIL("Could not create mutex: %s\n", SDL_GetError());
     audio_thread_hi = 0;
@@ -112,8 +101,8 @@ void analyze_chunk(chunk_pt chunk) {
     fftw_execute(plan);
 
     // Convert to spectrum (log(freq))
-    memset(spectrum, 0, config.audio.spectrum_bins * sizeof *spectrum);
-    memset(spectrum_n, 0, config.audio.spectrum_bins * sizeof *spectrum_n);
+    memset(spectrum.get(), 0, config.audio.spectrum_bins * sizeof spectrum[0]);
+    memset(spectrum_n.get(), 0, config.audio.spectrum_bins * sizeof spectrum_n[0]);
     double bin_factor = config.audio.spectrum_bins / log(config.audio.fft_length / 2);
     for(int i=1; i<config.audio.fft_length / 2; i++) {
         int bin = (int)(log(i) * bin_factor);
@@ -202,8 +191,8 @@ void analyze_chunk(chunk_pt chunk) {
     waveform_gl[waveform_ptr * 4 + 3] = audio_thread_level;
     waveform_beats_gl[waveform_ptr * 4] = beat_lpf;
 
-    memcpy(&waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_gl[waveform_ptr * 4], 4 * sizeof *waveform_gl);
-    memcpy(&waveform_beats_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_beats_gl[waveform_ptr * 4], 4 * sizeof *waveform_beats_gl);
+    memcpy(&waveform_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_gl[waveform_ptr * 4], 4 * sizeof waveform_gl[0]);
+    memcpy(&waveform_beats_gl[(config.audio.waveform_length + waveform_ptr) * 4], &waveform_beats_gl[waveform_ptr * 4], 4 * sizeof waveform_beats_gl[0]);
 
     waveform_ptr = (waveform_ptr + 1) % config.audio.waveform_length;
 
@@ -214,7 +203,7 @@ void analyze_chunk(chunk_pt chunk) {
 void analyze_render(GLuint tex_spectrum, GLuint tex_waveform, GLuint tex_waveform_beats) {
     if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
     glBindTexture(GL_TEXTURE_1D,tex_spectrum);
-    glTexSubImage1D(GL_TEXTURE_1D, 0,0,  config.audio.spectrum_bins, GL_RED, GL_FLOAT, spectrum_gl);
+    glTexSubImage1D(GL_TEXTURE_1D, 0,0,  config.audio.spectrum_bins, GL_RED, GL_FLOAT, spectrum_gl.get());
     glBindTexture(GL_TEXTURE_1D,tex_waveform);
     glTexSubImage1D(GL_TEXTURE_1D, 0, 0,config.audio.waveform_length, GL_RGBA, GL_FLOAT, &waveform_gl[waveform_ptr * 4]);
     glBindTexture(GL_TEXTURE_1D,tex_waveform_beats);
@@ -231,12 +220,6 @@ void analyze_render(GLuint tex_spectrum, GLuint tex_waveform, GLuint tex_wavefor
 void analyze_term() {
     SDL_DestroyMutex(mutex);
     fftw_destroy_plan(plan);
-    free(samp_queue);
-    free(fft_in);
-    free(fft_out);
-    free(spectrum);
-    free(spectrum_lpf);
-    free(spectrum_n);
     btrack_del(&btrack);
     samp_queue = 0;
 }

@@ -24,10 +24,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         float w = config.pattern.master_width,h =  config.pattern.master_height;
         float x = 0.f, y = 0.f;
         GLfloat vertices[] = {
-            x, y, w, h, x + 0, y + 0,
-            x, y, w, h, x + 0, y + h,
-            x, y, w, h, x + w, y + 0,
-            x, y, w, h, x + w, y + h
+            x, y, w, h
         };
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
@@ -35,15 +32,12 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     if(new_buffers){
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBindVertexArray(vao);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(4*sizeof(GLfloat)));
-        glEnableVertexAttribArray(2);
     }
     GLenum e;
-
     memset(pattern, 0, sizeof *pattern);
 
     pattern->intensity = 0;
@@ -73,9 +67,9 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     }
     pattern->n_shaders = n;
 
-    pattern->shader = calloc(pattern->n_shaders, sizeof *pattern->shader);
+    pattern->shader = static_cast<GLuint*>(calloc(pattern->n_shaders, sizeof *pattern->shader));
     if(pattern->shader == NULL) MEMFAIL();
-    pattern->tex = calloc(pattern->n_shaders, sizeof *pattern->tex);
+    pattern->tex = static_cast<GLuint*>(calloc(pattern->n_shaders, sizeof *pattern->tex));
     if(pattern->tex == NULL) MEMFAIL();
 
     bool success = true;
@@ -86,7 +80,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         GLuint h = load_shader(filename,false);
         glProgramUniform2f(h, 0,  config.pattern.master_width, config.pattern.master_height);
         if (h == 0) {
-            fprintf(stderr, "%s", load_shader_error);
+            fprintf(stderr, "%s", get_load_shader_error().c_str());
             WARN("Unable to load shader %s", filename);
             success = false;
         } else {
@@ -129,7 +123,7 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     // Some OpenGL API garbage
-    pattern->uni_tex = calloc(pattern->n_shaders, sizeof *pattern->uni_tex);
+    pattern->uni_tex = static_cast<GLint*>(calloc(pattern->n_shaders, sizeof *pattern->uni_tex));
     if(pattern->uni_tex == NULL) MEMFAIL();
     for(int i = 0; i < pattern->n_shaders; i++) {
         pattern->uni_tex[i] = i + 1;
@@ -194,7 +188,7 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
         glClear(GL_COLOR_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDrawArrays(GL_POINTS, 0, 1);
 
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     }

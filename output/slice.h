@@ -3,6 +3,9 @@
 #include "util/common.h"
 #include "ui/render.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct output_pixels {
     size_t length;
     float * xs;
@@ -44,3 +47,6 @@ int output_device_arrange(struct output_device * dev);
 
 // Render all of the output device pixel buffers
 int output_render(struct render * render);
+#ifdef __cplusplus
+}
+#endif

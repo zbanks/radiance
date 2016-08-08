@@ -1,8 +1,9 @@
 #pragma once
+#include "util/common.h"
 #include <stdint.h>
 
 #define MINUTES_PER_MILLISECOND (60. * 1000.)
-
+NOT_CXX
 extern struct time_master {
     long wall_ms;
     double beat_frac;
@@ -27,3 +28,4 @@ enum time_source_event {
 int time_init();
 void time_term();
 void time_update(enum time_source source, enum time_source_event event, double ms_until_event);
+CXX_OK

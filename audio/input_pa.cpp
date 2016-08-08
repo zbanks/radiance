@@ -5,18 +5,17 @@
 
 #define NUM_CHANNELS 1
 #define PA_SAMPLE_TYPE paFloat32
-static float * chunk;
 
+std::unique_ptr<float[]> chunk;
 int audio_pa_callback(const void *input, void *output, unsigned long frameCount, const PaStreamCallbackTimeInfo *timeInfo, PaStreamCallbackFlags statusFlags, void *userData) {
     audio_callback_fn_pt callback = (audio_callback_fn_pt) userData;
-    if(callback(input)) return paAbort;
+    if(callback(static_cast<const float*>(input))) return paAbort;
     return paContinue;
 }
 
 
 int audio_pa_run(audio_callback_fn_pt callback, double sample_rate, unsigned long chunk_size) {
-    chunk = calloc(chunk_size, sizeof *chunk);
-    if(chunk == NULL) MEMFAIL();
+    chunk = std::make_unique<float[]>(chunk_size);
 
     PaError err = Pa_Initialize();
     if(err != paNoError) FAIL("Could not initialize PortAudio\n");
@@ -48,14 +47,13 @@ int audio_pa_run(audio_callback_fn_pt callback, double sample_rate, unsigned lon
 
     int cb_err = 0;
     while(cb_err == 0){
-        err = Pa_ReadStream(stream, chunk, chunk_size );
+        err = Pa_ReadStream(stream, chunk.get(), chunk_size );
         if(err != paNoError) FAIL("Could not read audio chunk\n");
-        cb_err = callback(chunk);
+        cb_err = callback(chunk.get());
     }
 
     err = Pa_Terminate();
     if(err != paNoError) FAIL("Could not terminate PortAudio\n");
 
-    free(chunk);
     return 0;
 }

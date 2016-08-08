@@ -7,8 +7,14 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-char * load_shader_error = 0;
 
+namespace {
+    std::string load_shader_error{};
+}
+std::string get_load_shader_error(void)
+{
+    return std::exchange(load_shader_error,std::string{});
+}
 /*
 const char default_vertex_shader[] = "                          \n\
 #version 130                                                    \n\
@@ -57,6 +63,7 @@ static std::string getProgramInfoLog(GLuint id)
 
 }
 static GLuint vertexShader = 0;
+static GLuint geometryShader = 0;
 bool configure_vertex_area(float ww, float wh)
 {
     glUniform2f(0, ww, wh);
@@ -74,10 +81,24 @@ GLuint load_shader(const char * filename, bool is_ui)
         glShaderSource(vertexShader, GLsizei{1}, sources, lengths);
         glCompileShader(vertexShader);
         if(!getShaderStatus(vertexShader)) {
-            if(load_shader_error)
-                ::free(load_shader_error);
-            load_shader_error = ::strdup(getShaderInfoLog(vertexShader).c_str());
+            load_shader_error = getShaderInfoLog(vertexShader);
             glDeleteShader(vertexShader);
+            vertexShader = 0;
+            return false;
+        }
+    }
+    if(!geometryShader) {
+        auto vert_buffer = read_file("resources/geometry.glsl");
+        if(vert_buffer.empty())
+            return 0;
+        geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
+        const GLchar * sources[] = { vert_buffer.c_str() };
+        const GLint   lengths[] = { static_cast<GLint>(vert_buffer.size()) };
+        glShaderSource(geometryShader, GLsizei{1}, sources, lengths);
+        glCompileShader(geometryShader);
+        if(!getShaderStatus(geometryShader)) {
+            load_shader_error = getShaderInfoLog(geometryShader);
+            glDeleteShader(geometryShader);
             vertexShader = 0;
             return false;
         }
@@ -102,9 +123,7 @@ GLuint load_shader(const char * filename, bool is_ui)
     glShaderSource(fragmentShader, GLsizei{1}, sources, lengths);
     glCompileShader(fragmentShader);
     if(!getShaderStatus(fragmentShader)) {
-        if(load_shader_error)
-            ::free(load_shader_error);
-        load_shader_error = ::strdup(getShaderInfoLog(fragmentShader).c_str());
+        load_shader_error = getShaderInfoLog(fragmentShader);
         glDeleteShader(fragmentShader);
         return 0;
     }
@@ -113,17 +132,17 @@ GLuint load_shader(const char * filename, bool is_ui)
     auto program = glCreateProgram();
     //glAttachShader(programObj, vertexShaderObj);
     glAttachShader(program, vertexShader);
+    glAttachShader(program, geometryShader);
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
     
     if(!getProgramStatus(program)) {
-        if(load_shader_error)
-            ::free(load_shader_error);
-        load_shader_error = ::strdup(getProgramInfoLog(program).c_str());
+        load_shader_error = getProgramInfoLog(program);
         glDeleteProgram(program);
         program = 0;
     }
     glDetachShader(program, fragmentShader);
+    glDetachShader(program, geometryShader);
     glDetachShader(program, vertexShader);
     glDeleteShader(fragmentShader);
     return program;

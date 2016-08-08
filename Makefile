@@ -17,6 +17,12 @@ C_SRC += $(wildcard BTrack/src/*.c)
 
 CXX_SRC = $(wildcard *.cpp)
 CXX_SRC += $(wildcard util/*.cpp)
+CXX_SRC += $(wildcard ui/*.cpp)
+CXX_SRC += $(wildcard pattern/*.cpp)
+CXX_SRC += $(wildcard output/*.cpp)
+CXX_SRC += $(wildcard audio/*.cpp)
+CXX_SRC += $(wildcard midi/*.cpp)
+CXX_SRC += $(wildcard time/*.cpp)
 
 OBJDIR = build
 $(shell mkdir -p $(OBJDIR) >/dev/null)
@@ -33,8 +39,8 @@ CXXFLAGS = -std=gnu++14 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl gl
 
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
 CXXFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
-CFLAGS += -D_POSIX_C_SOURCE=20160524
-CXXFLAGS += -D_POSIX_C_SOURCE=20160524
+CFLAGS += -D_DEFAULT_SOURCE
+CXXFLAGS += -D_DEFAULT_SOURCE
 LFLAGS = $(CFLAGS)
 
 # File dependency generation

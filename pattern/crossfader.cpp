@@ -21,10 +21,7 @@ void crossfader_init(struct crossfader * crossfader) {
         float w = config.pattern.master_width,h =  config.pattern.master_height;
         float x = 0.f, y = 0.f;
         GLfloat vertices[] = {
-            x, y, w, h, x + 0, y + 0,
-            x, y, w, h, x + 0, y + h,
-            x, y, w, h, x + w, y + 0,
-            x, y, w, h, x + w, y + h
+            x, y, w, h
         };
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
@@ -33,12 +30,10 @@ void crossfader_init(struct crossfader * crossfader) {
     if(new_buffers){
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBindVertexArray(vao);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(4*sizeof(GLfloat)));
-        glEnableVertexAttribArray(2);
     }
 
     GLenum e;
@@ -48,7 +43,7 @@ void crossfader_init(struct crossfader * crossfader) {
     crossfader->position = 0.5;
 
     crossfader->shader = load_shader("resources/crossfader.glsl",true);
-    if(crossfader->shader == 0) FAIL("Unable to load crossfader shader:\n%s", load_shader_error);
+    if(crossfader->shader == 0) FAIL("Unable to load crossfader shader:\n%s", get_load_shader_error().c_str());
 
     glProgramUniform2f(crossfader->shader,0,  config.pattern.master_width, config.pattern.master_height);
     // Render targets
@@ -112,7 +107,7 @@ void crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_POINTS, 0, 1);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
     if(crossfader->position == 1.) {

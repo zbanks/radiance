@@ -1,6 +1,7 @@
 #pragma once
+#include "util/common.h"
 
-#include "SDL2/SDL.h"
+NOT_CXX
 #include "util/config_macros.h"
 
 #ifdef CFGOBJ
@@ -13,3 +14,5 @@
 #include "util/config_gen_h.def"
 
 extern struct midi_config midi_config;
+
+CXX_OK

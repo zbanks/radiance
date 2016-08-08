@@ -34,10 +34,13 @@ static GLuint spectrum_fb;
 static GLuint waveform_fb;
 static GLuint strip_fb;
 static GLuint select_tex;
-static GLuint * pattern_textures;
-static SDL_Texture ** pattern_name_textures;
-static int * pattern_name_width;
-static int * pattern_name_height;
+std::vector<GLuint> pattern_textures;
+std::vector<SDL_Texture*> pattern_name_textures;
+std::vector<std::pair<int,int> > pattern_name_sizes;
+//static GLuint * pattern_textures;
+//static SDL_Texture ** pattern_name_textures;
+//static int * pattern_name_width;
+//static int * pattern_name_height;
 static GLuint crossfader_texture;
 static GLuint pat_entry_texture;
 static GLuint tex_spectrum_data;
@@ -119,16 +122,10 @@ static int right_deck_selector = 1;
 
 // Forward declarations
 static void handle_text(const char * text);
-
 //
-void bind_vao_fill_vbo(float x, float y, float w, float h)
+static void bind_vao_fill_vbo(float x, float y, float w, float h)
 {
-    GLfloat vertices[] = {
-        x, y, w, h, x + 0, y + 0,
-        x, y, w, h, x + 0, y + h,
-        x, y, w, h, x + w, y + 0,
-        x, y, w, h, x + w, y + h
-    };
+    GLfloat vertices[] = { x, y, w, h };
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     void *_vbo = glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(vertices), GL_MAP_INVALIDATE_BUFFER_BIT|GL_MAP_WRITE_BIT); 
@@ -139,7 +136,7 @@ void bind_vao_fill_vbo(float x, float y, float w, float h)
 }
 static void fill(float w, float h) {
     bind_vao_fill_vbo(0., 0., w, h);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_POINTS, 0, 1);
 }
 
 static SDL_Texture * render_text(char * text, int * w, int * h) {
@@ -192,7 +189,10 @@ void ui_init() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_RELEASE_BEHAVIOR,SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
+    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_TRUE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,SDL_GL_CONTEXT_DEBUG_FLAG|
+                                             SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
     ww = config.ui.window_width;
     wh = config.ui.window_height;
 
@@ -210,15 +210,12 @@ void ui_init() {
     glGenBuffers(1,&vbo);
     glGenVertexArrays(1,&vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 6 * 4, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4, NULL, GL_STATIC_DRAW);
     glBindVertexArray(vao);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(4*sizeof(GLfloat)));
-    glEnableVertexAttribArray(2);
-    
     glBindVertexArray(0);
     // Init OpenGL
     GLenum e;
@@ -250,13 +247,16 @@ void ui_init() {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, select_tex, 0);
 
     // Init pattern textures
-    pattern_textures = calloc(config.ui.n_patterns, sizeof(GLuint));
-    if(pattern_textures == NULL) MEMFAIL();
-    pattern_name_textures = calloc(config.ui.n_patterns, sizeof(SDL_Texture *));
-    pattern_name_width = calloc(config.ui.n_patterns, sizeof(int));
-    pattern_name_height = calloc(config.ui.n_patterns, sizeof(int));
-    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
-    glGenTextures(config.ui.n_patterns, pattern_textures);
+    pattern_textures.resize(config.ui.n_patterns);
+//    pattern_textures = (GLuint*)calloc(config.ui.n_patterns, sizeof(GLuint));
+//    if(pattern_textures == NULL) MEMFAIL();
+    pattern_name_textures.resize(config.ui.n_patterns);
+    pattern_name_sizes.resize(config.ui.n_patterns);
+//    pattern_name_textures = (SDL_Texture**)calloc(config.ui.n_patterns, sizeof(SDL_Texture *));
+//    pattern_name_width = (int*)calloc(config.ui.n_patterns, sizeof(int));
+//    pattern_name_height = (int*)calloc(config.ui.n_patterns, sizeof(int));
+//    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
+    glGenTextures(config.ui.n_patterns, &pattern_textures[0]);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     for(int i = 0; i < config.ui.n_patterns; i++) {
         glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
@@ -354,14 +354,14 @@ void ui_init() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    if((blit_shader = load_shader("resources/blit.glsl",true)) == 0) FAIL("Could not load blit shader!\n%s", load_shader_error);
-    if((main_shader = load_shader("resources/ui_main.glsl",true)) == 0) FAIL("Could not load UI main shader!\n%s", load_shader_error);
-    if((pat_shader = load_shader("resources/ui_pat.glsl",true)) == 0) FAIL("Could not load UI pattern shader!\n%s", load_shader_error);
-    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl",true)) == 0) FAIL("Could not load UI crossfader shader!\n%s", load_shader_error);
-    if((text_shader = load_shader("resources/ui_text.glsl",true)) == 0) FAIL("Could not load UI text shader!\n%s", load_shader_error);
-    if((spectrum_shader = load_shader("resources/ui_spectrum.glsl",true)) == 0) FAIL("Could not load UI spectrum shader!\n%s", load_shader_error);
-    if((waveform_shader = load_shader("resources/ui_waveform.glsl",true)) == 0) FAIL("Could not load UI waveform shader!\n%s", load_shader_error);
-    if((strip_shader = load_shader("resources/strip.glsl",true)) == 0) FAIL("Could not load strip indicator shader!\n%s", load_shader_error);
+    if((blit_shader = load_shader("resources/blit.glsl",true)) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
+    if((main_shader = load_shader("resources/ui_main.glsl",true)) == 0) FAIL("Could not load UI main shader!\n%s", get_load_shader_error().c_str());
+    if((pat_shader = load_shader("resources/ui_pat.glsl",true)) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_shader_error().c_str());
+    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl",true)) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_shader_error().c_str());
+    if((text_shader = load_shader("resources/ui_text.glsl",true)) == 0) FAIL("Could not load UI text shader!\n%s", get_load_shader_error().c_str());
+    if((spectrum_shader = load_shader("resources/ui_spectrum.glsl",true)) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_shader_error().c_str());
+    if((waveform_shader = load_shader("resources/ui_waveform.glsl",true)) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
+    if((strip_shader = load_shader("resources/strip.glsl",true)) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
@@ -387,10 +387,6 @@ void ui_term() {
     for(int i=0; i<config.ui.n_patterns; i++) {
         if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
     }
-    free(pattern_textures);
-    free(pattern_name_textures);
-    free(pattern_name_width);
-    free(pattern_name_height);
     // TODO glDeleteTextures...
     glDeleteProgram(blit_shader);
     glDeleteProgram(main_shader);
@@ -450,7 +446,7 @@ static void handle_key(SDL_KeyboardEvent * e) {
                         } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text) == 0) {
                             if(pat_entry_text[0] != '\0') {
                                 if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
-                                pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_width[i], &pattern_name_height[i]);
+                                pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_sizes[i].first, &pattern_name_sizes[i].second);
                             }
                         }
                         break;
@@ -637,7 +633,7 @@ static void blit(float x, float y, float w, float h) {
     location = glGetUniformLocation(blit_shader, "iResolution");
     glUniform2f(location, w, h);
 
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_POINTS, 0, 1);
 }
 
 static void ui_render(bool select) {
@@ -691,7 +687,6 @@ static void ui_render(bool select) {
         case STRIPS_NONE:
             break;
     }
-    glEnable(GL_BLEND);
 
     // Render the patterns
     glBindFramebuffer(GL_FRAMEBUFFER, pat_fb);
@@ -713,23 +708,29 @@ static void ui_render(bool select) {
     glProgramUniform2f(pat_shader, 0, pw, ph);
 
     glViewport(0, 0, pw, ph);
-
-    for(int i = 0; i < config.ui.n_patterns; i++) {
-        struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
-        if(p != NULL) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, p->tex_output);
-            glActiveTexture(GL_TEXTURE1);
-            SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
-            glUniform1i(pattern_index, i);
-            glUniform1f(pattern_intensity, p->intensity);
-            glUniform2f(name_resolution, pattern_name_width[i], pattern_name_height[i]);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pattern_textures[i], 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            fill(pw, ph);
+    {
+        bool first = true;
+        for(int i = 0; i < config.ui.n_patterns; i++) {
+            struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
+            if(p != NULL) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, p->tex_output);
+                glActiveTexture(GL_TEXTURE1);
+                SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
+                glUniform1i(pattern_index, i);
+                glUniform1f(pattern_intensity, p->intensity);
+                glUniform2f(name_resolution, pattern_name_sizes[i].first, pattern_name_sizes[i].second);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pattern_textures[i], 0);
+                glClear(GL_COLOR_BUFFER_BIT);
+                if(first) {
+                    fill(pw, ph);
+                    first = false;
+                }else{
+                    glDrawArrays(GL_POINTS,0,1);
+                }
+            }
         }
     }
-
     // Render the crossfader
     glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
 
@@ -767,10 +768,8 @@ static void ui_render(bool select) {
     int vh = 0;
     if(!select) {
         analyze_render(tex_spectrum_data, tex_waveform_data, tex_waveform_beats_data);
-
         // Render the spectrum
         glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
-
         sw = config.ui.spectrum_width;
         sh = config.ui.spectrum_height;
         glUseProgram(spectrum_shader);
@@ -826,12 +825,9 @@ static void ui_render(bool select) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(main_shader);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     glProgramUniform2f(main_shader, 0, ww, wh);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    location = glGetUniformLocation(main_shader, "iResolution");
-    glUniform2f(location, ww, wh);
+    glUniform2f(3, ww, wh);
     location = glGetUniformLocation(main_shader, "iSelection");
     glUniform1i(location, select);
     location = glGetUniformLocation(main_shader, "iSelected");
@@ -847,18 +843,14 @@ static void ui_render(bool select) {
 
     // Blit UI elements on top
     glUseProgram(blit_shader);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     glProgramUniform2f(blit_shader, 0, ww, wh);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     glActiveTexture(GL_TEXTURE0);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     location = glGetUniformLocation(blit_shader, "iTexture");
     glUniform1i(location, 0);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-    glEnable(GL_BLEND);
 
     GLint blit_loc_pos = glGetUniformLocation(blit_shader, "iPosition");
     GLint blit_loc_res = glGetUniformLocation(blit_shader, "iResolution");
+    glEnable(GL_BLEND);
     for(int i = 0; i < config.ui.n_patterns; i++) {
         struct pattern * pattern = deck[map_deck[i]].pattern[map_pattern[i]];
         if(pattern != NULL) {
@@ -994,12 +986,13 @@ void ui_run() {
             while(SDL_PollEvent(&e) != 0) {
                 if (midi_command_event != (Uint32) -1 && 
                     e.type == midi_command_event) {
-                    struct midi_event * me = e.user.data1;
+                    midi_event * me = static_cast<midi_event*>(e.user.data1);
                     switch (me->type) {
-                    case MIDI_EVENT_SLIDER:
+                    case midi_event::MIDI_EVENT_SLIDER: {
                         set_slider_to(me->slider.index, me->slider.value);
                         break;
-                    case MIDI_EVENT_KEY:;
+                    }
+                    case midi_event::MIDI_EVENT_KEY: {
                         SDL_KeyboardEvent fakekeyev;
                         memset(&fakekeyev, 0, sizeof fakekeyev);
                         fakekeyev.type = SDL_KEYDOWN;
@@ -1007,6 +1000,7 @@ void ui_run() {
                         fakekeyev.keysym.sym = me->key.keycode[0];
                         handle_key(&fakekeyev);
                         break;
+                        }
                     }
                     free(e.user.data1);
                     free(e.user.data2);
@@ -1053,12 +1047,12 @@ void ui_run() {
             }
             crossfader_render(&crossfader, deck[left_deck_selector].tex_output, deck[right_deck_selector].tex_output);
             ui_render(false);
-            render_readback(&render);
             SDL_GL_SwapWindow(window);
+            render_readback(&render);
 
             double cur_t = SDL_GetTicks();
             double dt = cur_t - l_t;
-            if(dt > 0) time += dt / 1000;
+            if(dt > 0) current_time += dt / 1000;
             l_t = cur_t;
         }
 }

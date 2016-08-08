@@ -1,3 +1,4 @@
+#include "util/common.h"
 #include <portmidi.h>
 #include <string.h>
 #include <stdbool.h>
@@ -14,8 +15,8 @@
 
 #define MIDI_BUFFER_SIZE 256
 
-static volatile int midi_running = 0;
-static volatile int midi_refresh_request = 0;
+static _Atomic int midi_running = 0;
+static _Atomic int midi_refresh_request = 0;
 static SDL_Thread* midi_thread;
 
 static PmEvent events[MIDI_BUFFER_SIZE];

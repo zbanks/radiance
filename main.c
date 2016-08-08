@@ -19,7 +19,7 @@ enum loglevel loglevel = LOGLEVEL_ALL;
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
 struct render render;
-double time;
+double current_time;
 double audio_hi;
 double audio_mid;
 double audio_low;

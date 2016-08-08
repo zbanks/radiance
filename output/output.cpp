@@ -1,5 +1,4 @@
-#include <SDL2/SDL_thread.h>
-#include <SDL2/SDL_timer.h>
+#include "util/common.h"
 #include <unistd.h>
 
 #include "util/config.h"
@@ -10,8 +9,8 @@
 #include "output/slice.h"
 #include "output/lux.h"
 
-static volatile int output_running;
-static volatile int output_refresh_request = false;
+static std::atomic<int> output_running{0};
+static std::atomic<int> output_refresh_request{false};
 static SDL_Thread * output_thread;
 static struct render * render = NULL;
 static bool output_on_lux = false;
