@@ -13,5 +13,5 @@ void main(void) {
     oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
     c.a *= smoothstep(0, 0.1, iIntensity);
 
-    gl_FragColor = composite(oc, c);
+    f_color0 = composite(oc, c);
 }

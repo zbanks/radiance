@@ -2,7 +2,6 @@ float RADIUS = 10.;
 float SHRINK = 30.;
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
     vec2 size = iResolution / 2. - RADIUS - SHRINK;
     vec2 center = iResolution / 2.;
 
@@ -22,5 +21,5 @@ void main(void) {
     c.a *= in_box.x * in_box.y;
     color = composite(color, c);
 
-    gl_FragColor = color;
+    f_color0 = color;
 }

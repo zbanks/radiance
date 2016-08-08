@@ -9,6 +9,6 @@ void main(void) {
     vec4 samp = texture2D(iFrame, uv);
     vec3 hsl = rgb2hsv(samp.rgb);
     hsl.g *= 1.0 - factor;
-    gl_FragColor.rgb = hsv2rgb(hsl);
-    gl_FragColor.a = samp.a;
+    f_color0.rgb = hsv2rgb(hsl);
+    f_color0.a = samp.a;
 }

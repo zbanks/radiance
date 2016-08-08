@@ -1,5 +1,9 @@
 #pragma once
 
+#include "util/common.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,3 +49,6 @@ extern enum loglevel {
     backtrace_symbols_fd(_buffer, _nptrs, fileno(stderr)); \
 })
 */
+#ifdef __cplusplus
+}
+#endif

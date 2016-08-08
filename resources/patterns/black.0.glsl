@@ -1,7 +1,6 @@
 // Reduce alpha
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    gl_FragColor = texture2D(iFrame, uv);
-    gl_FragColor.a *= (1. - iIntensity);
+    f_color0 = texture2D(iFrame, v_uv);
+    f_color0.a *= (1. - iIntensity);
 }

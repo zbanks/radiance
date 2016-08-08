@@ -2,7 +2,7 @@
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
-    gl_FragColor = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, uv);
     vec4 c;
 
     float freq;
@@ -14,8 +14,8 @@ void main(void) {
     else freq = 0.25;
 
     if(freq > 0) {
-        vec3 hsv = rgb2hsv(gl_FragColor.rgb);
+        vec3 hsv = rgb2hsv(f_color0.rgb);
         hsv.y = hsv.y * (1. - sawtooth(iTime / freq, 0.1));
-        gl_FragColor.rgb = hsv2rgb(hsv);
+        f_color0.rgb = hsv2rgb(hsv);
     }
 }

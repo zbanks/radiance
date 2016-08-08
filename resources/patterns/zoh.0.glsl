@@ -14,5 +14,5 @@ void main(void) {
     else if (mod(iTime, t) < 0.1)
         a = 0;
 
-    gl_FragColor = mix(next, prev, a);
+    f_color0 = mix(next, prev, a);
 }

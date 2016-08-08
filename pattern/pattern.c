@@ -1,4 +1,5 @@
 #include "util/common.h"
+#include "ui/ui.h"
 #include "pattern/pattern.h"
 #include "time/timebase.h"
 #include "util/glsl.h"
@@ -8,7 +9,39 @@
 #include "util/config.h"
 #include "main.h"
 
+static GLuint vao = 0;
+static GLuint vbo = 0;
 int pattern_init(struct pattern * pattern, const char * prefix) {
+    bool new_buffers = false;
+    if(!vao) {
+        glGenVertexArrays(1,&vao);
+        new_buffers = true;
+    }
+    if(!vbo)  {
+        glGenBuffers(1,&vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        new_buffers = true;
+        float w = config.pattern.master_width,h =  config.pattern.master_height;
+        float x = 0.f, y = 0.f;
+        GLfloat vertices[] = {
+            x, y, w, h, x + 0, y + 0,
+            x, y, w, h, x + 0, y + h,
+            x, y, w, h, x + w, y + 0,
+            x, y, w, h, x + w, y + h
+        };
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+    }
+    if(new_buffers){
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBindVertexArray(vao);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(4*sizeof(GLfloat)));
+        glEnableVertexAttribArray(2);
+    }
     GLenum e;
 
     memset(pattern, 0, sizeof *pattern);
@@ -50,9 +83,8 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         char * filename;
         filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
         if(filename == NULL) MEMFAIL();
-
-        GLuint h = load_shader(filename);
-
+        GLuint h = load_shader(filename,false);
+        glProgramUniform2f(h, 0,  config.pattern.master_width, config.pattern.master_height);
         if (h == 0) {
             fprintf(stderr, "%s", load_shader_error);
             WARN("Unable to load shader %s", filename);
@@ -82,10 +114,8 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0, 
-                     GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexStorage2D(GL_TEXTURE_2D, 1,GL_RGBA32F, config.pattern.master_width, config.pattern.master_height);
     }
-    glBindTexture(GL_TEXTURE_2D, 0);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
@@ -116,6 +146,8 @@ void pattern_term(struct pattern * pattern) {
     }
 
     glDeleteTextures(pattern->n_shaders + 1, pattern->tex);
+    glDeleteBuffers(1,&vbo);
+    glDeleteVertexArrays(1,&vao);
     glDeleteFramebuffers(1, &pattern->fb);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
@@ -126,8 +158,8 @@ void pattern_term(struct pattern * pattern) {
 
 void pattern_render(struct pattern * pattern, GLuint input_tex) {
     GLenum e;
-
-    glLoadIdentity();
+    glBindBuffer(GL_ARRAY_BUFFER,vbo);
+    glBindVertexArray(vao);
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
     glBindFramebuffer(GL_FRAMEBUFFER, pattern->fb);
 
@@ -147,29 +179,14 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
 
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-        GLint loc;
-        loc = glGetUniformLocation(pattern->shader[i], "iTime");
-        glUniform1f(loc, time_master.beat_frac + time_master.beat_index);
-        loc = glGetUniformLocation(pattern->shader[i], "iAudioHi");
-        glUniform1f(loc, audio_hi);
-        loc = glGetUniformLocation(pattern->shader[i], "iAudioMid");
-        glUniform1f(loc, audio_mid);
-        loc = glGetUniformLocation(pattern->shader[i], "iAudioLow");
-        glUniform1f(loc, audio_low);
-        loc = glGetUniformLocation(pattern->shader[i], "iAudioLevel");
-        glUniform1f(loc, audio_level);
-        loc = glGetUniformLocation(pattern->shader[i], "iResolution");
-        glUniform2f(loc, config.pattern.master_width, config.pattern.master_height);
-        loc = glGetUniformLocation(pattern->shader[i], "iIntensity");
-        glUniform1f(loc, pattern->intensity);
-        loc = glGetUniformLocation(pattern->shader[i], "iIntensityIntegral");
-        glUniform1f(loc, pattern->intensity_integral);
-        loc = glGetUniformLocation(pattern->shader[i], "iFPS");
-        glUniform1f(loc, config.ui.fps);
-        loc = glGetUniformLocation(pattern->shader[i], "iFrame");
-        glUniform1i(loc, 0);
-        loc = glGetUniformLocation(pattern->shader[i], "iChannel");
-        glUniform1iv(loc, pattern->n_shaders, pattern->uni_tex);
+        glUniform1f(1, time_master.beat_frac + time_master.beat_index);
+        glUniform4f(2, audio_low, audio_mid, audio_hi, audio_level);
+        glUniform2f(3, config.pattern.master_width, config.pattern.master_height);
+        glUniform1f(4, pattern->intensity);
+        glUniform1f(5, pattern->intensity_integral);
+        glUniform1f(6, config.ui.fps);
+        glUniform1i(7, 0);
+        glUniform1iv(8, pattern->n_shaders, pattern->uni_tex);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, input_tex);
@@ -177,12 +194,7 @@ void pattern_render(struct pattern * pattern, GLuint input_tex) {
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
         glClear(GL_COLOR_BUFFER_BIT);
-        glBegin(GL_QUADS);
-        glVertex2d(-1, -1);
-        glVertex2d(-1, 1);
-        glVertex2d(1, 1);
-        glVertex2d(1, -1);
-        glEnd();
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     }

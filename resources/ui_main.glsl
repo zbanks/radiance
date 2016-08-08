@@ -29,27 +29,27 @@ float sdCapsule( vec2 p, vec2 a, vec2 b, float r )
 void glow(vec2 p) {
     vec2 LEN = vec2(300., 0.);
     float FRINGE = 75.;
-    gl_FragColor = composite(gl_FragColor, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule(gl_FragCoord.xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
+    f_color0 = composite(f_color0, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule(gl_FragCoord.xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
 }
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
 
     if(iSelection) {
-        gl_FragColor = vec4(0., 0., 0., 1.);
+        f_color0 = vec4(0., 0., 0., 1.);
         for(int i=0; i < 8; i++) {
             ivec3 c;
             c = ivec3(1, i, 0);
             vec2 p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 420.);
-            gl_FragColor = composite(gl_FragColor, vec4(dataColor(c), rounded_rect_df(p, PAT_SIZE, RADIUS) <= 1.));
+            f_color0 = composite(f_color0, vec4(dataColor(c), rounded_rect_df(p, PAT_SIZE, RADIUS) <= 1.));
             p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 180.);
             c.y += 8;
-            gl_FragColor = composite(gl_FragColor, vec4(dataColor(c), rounded_rect_df(p, PAT_SIZE, RADIUS) <= 1.));
+            f_color0 = composite(f_color0, vec4(dataColor(c), rounded_rect_df(p, PAT_SIZE, RADIUS) <= 1.));
         }
-        gl_FragColor = composite(gl_FragColor, vec4(dataColor(ivec3(3, 0, 0)), rounded_rect_df(vec2(975., 300.), PAT_SIZE, RADIUS) <= 1.));
+        f_color0 = composite(f_color0, vec4(dataColor(ivec3(3, 0, 0)), rounded_rect_df(vec2(975., 300.), PAT_SIZE, RADIUS) <= 1.));
     } else {
         float g = uv.y * 0.1 + 0.2;
-        gl_FragColor = vec4(g, g, g, 1.);
+        f_color0 = vec4(g, g, g, 1.);
 
         glow(vec2(475., iLeftDeckSelector == 0 ? 420. : 180.));
         glow(vec2(1475., iRightDeckSelector == 1 ? 420. : 180.));
@@ -57,12 +57,12 @@ void main(void) {
         for(int i=0; i < 8; i++) {
             vec2 p;
             p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 420.);
-            gl_FragColor = composite(gl_FragColor, fancy_rect(p, PAT_SIZE, iSelected == i + 1));
+            f_color0 = composite(f_color0, fancy_rect(p, PAT_SIZE, iSelected == i + 1));
             p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 180.);
-            gl_FragColor = composite(gl_FragColor, fancy_rect(p, PAT_SIZE, iSelected == i + 9));
+            f_color0 = composite(f_color0, fancy_rect(p, PAT_SIZE, iSelected == i + 9));
         }
-        gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(962.5, 300.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
-        gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(300., 650.), vec2(165., 65.), false));
-        gl_FragColor = composite(gl_FragColor, fancy_rect(vec2(700., 650.), vec2(165., 65.), false));
+        f_color0 = composite(f_color0, fancy_rect(vec2(962.5, 300.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
+        f_color0 = composite(f_color0, fancy_rect(vec2(300., 650.), vec2(165., 65.), false));
+        f_color0 = composite(f_color0, fancy_rect(vec2(700., 650.), vec2(165., 65.), false));
     }
 }

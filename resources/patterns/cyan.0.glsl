@@ -2,7 +2,7 @@
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
-    gl_FragColor = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, uv);
 
     float t = uv.x * 3.0 + uv.y * 3.0;
     float y = smoothstep(0.2, 0.7, abs(mod(t - 3. * iIntensityIntegral, 2.) - 1.));
@@ -13,5 +13,5 @@ void main(void) {
 
     c.a *= smoothstep(0., 0.1, iIntensity);
     c = clamp(c, 0., 1.);
-    gl_FragColor = composite(gl_FragColor, c);
+    f_color0 = composite(f_color0, c);
 }

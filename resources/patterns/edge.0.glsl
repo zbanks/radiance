@@ -13,7 +13,7 @@ void main(void) {
     up.rgb *= up.a;
     down.rgb *= down.a;
     vec4 outc = abs(left - right) + abs(up - down);
-    gl_FragColor = clamp(outc * 1.5, 0, 1);
-    gl_FragColor.a = center.a;
-    gl_FragColor = mix(center, gl_FragColor, vec4(iIntensity));
+    f_color0 = clamp(outc * 1.5, 0, 1);
+    f_color0.a = center.a;
+    f_color0 = mix(center, f_color0, vec4(iIntensity));
 }

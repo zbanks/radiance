@@ -38,7 +38,7 @@ void render_readback(struct render * render) {
         glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)render->pixels);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+//        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
         SDL_UnlockMutex(render->mutex);
     }

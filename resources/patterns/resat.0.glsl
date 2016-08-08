@@ -13,6 +13,6 @@ void main(void) {
     vec3 hsl = rgb2hsv(samp.rgb);
     hsl.g = 1.0 - (1.0 - hsl.g) * (1.0 - factor);
     hsl.r = mix(hsl.r, n, iIntensity);
-    gl_FragColor.rgb = hsv2rgb(hsl);
-    gl_FragColor.a = samp.a;
+    f_color0.rgb = hsv2rgb(hsl);
+    f_color0.a = samp.a;
 }

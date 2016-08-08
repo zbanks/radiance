@@ -9,5 +9,5 @@ void main(void) {
     uv = round(uv * bins) / bins;
     uv += 0.5;
 
-    gl_FragColor = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, uv);
 }

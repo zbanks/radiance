@@ -1,6 +1,6 @@
 #pragma once
-#include <SDL2/SDL.h>
-#include <stdbool.h>
+
+#include "util/common.h"
 #include "ui/render.h"
 
 struct output_pixels {

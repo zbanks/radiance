@@ -2,7 +2,7 @@
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
-    gl_FragColor = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, uv);
     
     float t;
     if (iIntensity < 0.85)
@@ -15,7 +15,7 @@ void main(void) {
     float deviation = floor(mod(t, 4.0)) / 4;
     deviation *= clamp(iIntensity / 0.8, 0., 1.);
 
-    vec3 hsv = rgb2hsv(gl_FragColor.rgb);
+    vec3 hsv = rgb2hsv(f_color0.rgb);
     hsv.r = mod(hsv.r + 1. + deviation, 1.);
-    gl_FragColor.rgb = hsv2rgb(hsv);
+    f_color0.rgb = hsv2rgb(hsv);
 }

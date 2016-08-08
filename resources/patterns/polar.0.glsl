@@ -6,5 +6,5 @@ void main(void) {
 
     vec2 uv = vec2(mix(xy.x, length(xy_cent) / sqrt(2.), iIntensity), mix(xy.y, abs(atan(xy_cent.x, -xy_cent.y) / M_PI), iIntensity));
 
-    gl_FragColor = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, uv);
 }

@@ -1,3 +1,4 @@
+#include "util/common.h"
 #include "audio/analyze.h"
 #include "util/config.h"
 #include "util/err.h"
@@ -212,13 +213,12 @@ void analyze_chunk(chunk_pt chunk) {
 // This is called from the OpenGL Thread
 void analyze_render(GLuint tex_spectrum, GLuint tex_waveform, GLuint tex_waveform_beats) {
     if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
-    glBindTexture(GL_TEXTURE_1D, tex_spectrum);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, config.audio.spectrum_bins, 0, GL_RED, GL_FLOAT, spectrum_gl);
-    glBindTexture(GL_TEXTURE_1D, tex_waveform);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_gl[waveform_ptr * 4]);
-    glBindTexture(GL_TEXTURE_1D, tex_waveform_beats);
-    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_beats_gl[waveform_ptr * 4]);
-    glBindTexture(GL_TEXTURE_1D, 0);
+    glBindTexture(GL_TEXTURE_1D,tex_spectrum);
+    glTexSubImage1D(GL_TEXTURE_1D, 0,0,  config.audio.spectrum_bins, GL_RED, GL_FLOAT, spectrum_gl);
+    glBindTexture(GL_TEXTURE_1D,tex_waveform);
+    glTexSubImage1D(GL_TEXTURE_1D, 0, 0,config.audio.waveform_length, GL_RGBA, GL_FLOAT, &waveform_gl[waveform_ptr * 4]);
+    glBindTexture(GL_TEXTURE_1D,tex_waveform_beats);
+    glTexSubImage1D(GL_TEXTURE_1D, 0, 0, config.audio.waveform_length, GL_RGBA, GL_FLOAT, &waveform_beats_gl[waveform_ptr * 4]);
 
     audio_hi = audio_thread_hi;
     audio_mid = audio_thread_mid;

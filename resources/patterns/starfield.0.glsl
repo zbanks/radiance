@@ -1,10 +1,8 @@
 // Pixels radiating from the center
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
-    gl_FragColor = texture2D(iFrame, uv);
-    vec4 c = texture2D(iChannel[1], uv);
+    f_color0 = texture2D(iFrame, v_uv);
+    vec4 c = texture2D(iChannel[1], v_uv);
     c.a *= smoothstep(0., 0.2, iIntensity);
-    gl_FragColor = composite(gl_FragColor, c);
+    f_color0 = composite(f_color0, c);
 }

@@ -21,23 +21,3 @@ char * rsprintf(const char * fmt, ...) {
 
     return buf;
 }
-
-// Fall back on library version if it exists
-#pragma weak strdup
-char * strdup(const char* s) {
-    // Returns a copy of the string 
-    char* p = (char *) malloc(strlen(s)+1);
-    if (p) strcpy(p, s);
-    return p;
-}
-
-#pragma weak strsep
-char * strsep(char ** s, const char * delim) {
-    if (*s == NULL) return NULL;
-    char * original = *s;
-    char * next = strpbrk(*s, delim);
-    if (next != NULL && *next != '\0')
-        *next++ = '\0';
-    *s = next;
-    return original;
-}

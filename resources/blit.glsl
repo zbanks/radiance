@@ -1,4 +1,4 @@
 void main(void) {
     vec2 uv = (gl_FragCoord.xy - iPosition) / iResolution;
-    gl_FragColor = texture2D(iTexture, uv);
+    f_color0 = texture2D(iTexture, uv);
 }

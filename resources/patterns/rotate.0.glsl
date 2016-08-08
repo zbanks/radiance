@@ -8,5 +8,5 @@ void main(void) {
     float c = cos(r * M_PI);
     mat2 rot = mat2(c, -s, s, c);
 
-    gl_FragColor = texture2D(iFrame, (uv - 0.5) * rot + 0.5);
+    f_color0 = texture2D(iFrame, (uv - 0.5) * rot + 0.5);
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #define _DEFAULT_SOURCE
-#define _ISO_C11_SOURCE
 #define GL_GLEXT_PROTOTYPES
 #define GL3_PROTOTYPES 1
 #include <SDL2/SDL.h>
@@ -41,6 +40,12 @@
 #include <numeric>
 #include <type_traits>
 #include <limits>
+#include <regex>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <locale>
+#include <clocale>
 #else
 #include <stdint.h>
 #include <stddef.h>
