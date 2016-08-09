@@ -3,6 +3,8 @@
 #error "CFGOBJ not defined in config_gen.h"
 #endif
 
+#include "util/common.h"
+NOT_CXX
 #include "util/ini.h"
 #include <string.h>
 #include <stddef.h>
@@ -26,3 +28,4 @@ int CONCAT(CFGOBJ, _dump)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _load)(struct CFGOBJ * cfg, const char * filename);
 int CONCAT(CFGOBJ, _init)(struct CFGOBJ * cfg);
 int CONCAT(CFGOBJ, _del)(struct CFGOBJ * cfg);
+CXX_OK

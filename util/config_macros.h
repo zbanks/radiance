@@ -1,6 +1,8 @@
 #ifndef __CORE_CONFIG_MACROS_H__
 #define __CORE_CONFIG_MACROS_H__
 
+#include "util/common.h"
+NOT_CXX
 #define N_MAX_LIST_ELEMENTS 32
 
 // LIST_NAME(slot) --> slots
@@ -89,6 +91,6 @@ _ISEMPTY(                                                               \
 #define PREFIX(prefix, suffix) CONCAT(CONCAT(PREFIX_, ISEMPTY(prefix))(prefix), suffix)
 #define PREFIX_1(prefix) prefix
 #define PREFIX_0(prefix) CONCAT(prefix, _)
-
+CXX_OK
 #endif // End of include guard
 

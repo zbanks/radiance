@@ -354,14 +354,14 @@ void ui_init() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    if((blit_shader = load_shader("resources/blit.glsl",true)) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
-    if((main_shader = load_shader("resources/ui_main.glsl",true)) == 0) FAIL("Could not load UI main shader!\n%s", get_load_shader_error().c_str());
-    if((pat_shader = load_shader("resources/ui_pat.glsl",true)) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_shader_error().c_str());
-    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl",true)) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_shader_error().c_str());
-    if((text_shader = load_shader("resources/ui_text.glsl",true)) == 0) FAIL("Could not load UI text shader!\n%s", get_load_shader_error().c_str());
-    if((spectrum_shader = load_shader("resources/ui_spectrum.glsl",true)) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_shader_error().c_str());
-    if((waveform_shader = load_shader("resources/ui_waveform.glsl",true)) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
-    if((strip_shader = load_shader("resources/strip.glsl",true)) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
+    if((blit_shader = load_shader("resources/blit.glsl",true)) == 0) FAIL("Could not load blit shader!\n%s", get_shader_error().c_str());
+    if((main_shader = load_generic_program("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", get_shader_error().c_str());
+    if((pat_shader = load_generic_program("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", get_shader_error().c_str());
+    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl",true)) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_shader_error().c_str());
+    if((text_shader = load_shader("resources/ui_text.glsl",true)) == 0) FAIL("Could not load UI text shader!\n%s", get_shader_error().c_str());
+    if((spectrum_shader = load_shader("resources/ui_spectrum.glsl",true)) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_shader_error().c_str());
+    if((waveform_shader = load_shader("resources/ui_waveform.glsl",true)) == 0) FAIL("Could not load UI waveform shader!\n%s", get_shader_error().c_str());
+    if((strip_shader = load_shader("resources/strip.glsl",true)) == 0) FAIL("Could not load strip indicator shader!\n%s", get_shader_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
@@ -988,11 +988,11 @@ void ui_run() {
                     e.type == midi_command_event) {
                     midi_event * me = static_cast<midi_event*>(e.user.data1);
                     switch (me->type) {
-                    case midi_event::MIDI_EVENT_SLIDER: {
+                    case MIDI_EVENT_SLIDER: {
                         set_slider_to(me->slider.index, me->slider.value);
                         break;
                     }
-                    case midi_event::MIDI_EVENT_KEY: {
+                    case MIDI_EVENT_KEY: {
                         SDL_KeyboardEvent fakekeyev;
                         memset(&fakekeyev, 0, sizeof fakekeyev);
                         fakekeyev.type = SDL_KEYDOWN;

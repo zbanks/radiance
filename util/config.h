@@ -1,6 +1,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#include "util/common.h"
+NOT_CXX
 #include "util/config_macros.h"
 
 #ifdef CFGOBJ
@@ -15,4 +17,5 @@
 
 extern struct config config;
 
+CXX_OK
 #endif  // End of include guard

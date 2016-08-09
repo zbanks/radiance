@@ -77,10 +77,10 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         char * filename;
         filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
         if(filename == NULL) MEMFAIL();
-        GLuint h = load_shader(filename,false);
+        GLuint h = load_pattern_shader(filename);
         glProgramUniform2f(h, 0,  config.pattern.master_width, config.pattern.master_height);
         if (h == 0) {
-            fprintf(stderr, "%s", get_load_shader_error().c_str());
+            fprintf(stderr, "%s", get_shader_error().c_str());
             WARN("Unable to load shader %s", filename);
             success = false;
         } else {

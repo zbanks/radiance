@@ -2,6 +2,8 @@
 #error "CFGOBJ not defined in config_gen.c"
 #endif
 
+#include "util/common.h"
+
 #include "util/err.h"
 // Uncomment if ERROR and INFO functions do not terminate msg with a \n
 //#define ERRNL "\n"

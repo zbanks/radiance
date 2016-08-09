@@ -1,8 +1,8 @@
 #pragma once
 #include "util/common.h"
 #include "output/slice.h"
-#include "util/config_macros.h"
 NOT_CXX
+#include "util/config_macros.h"
 #ifdef CFGOBJ
 #undef CFGOBJ
 #undef CFGOBJ_PATH
@@ -17,7 +17,7 @@ NOT_CXX
 #define COLOR_FREE(x) (void)(x)
 #define COLOR_PREP(x) _parse_color(x)
 
-static inline SDL_Color _parse_color(const char * cstr){
+inline SDL_Color _parse_color(const char * cstr){
     SDL_Color out;
     if(sscanf(cstr, "#%02hhx%02hhx%02hhx", &out.r, &out.g, &out.b) == 3)
         return out;

@@ -2,8 +2,8 @@
 #include "util/common.h"
 
 #include <portmidi.h>
-#include <SDL2/SDL.h>
 
+#include "midi/config.h"
 #ifdef __cplusplus
 extern "C" { 
 #endif
@@ -15,7 +15,6 @@ enum midi_status {
     MIDI_STATUS_CC = 0xB0,
     MIDI_STATUS_AFTERTOUCH = 0xD0,
 };
-
 struct midi_controller {
     const char * name;
     const char * short_name;
@@ -23,27 +22,30 @@ struct midi_controller {
     PortMidiStream * stream;
 
     int enabled;
-    struct _controller_midi_config * config;
+    midi_config::_controller_midi_config * config;
+};
+enum midi_event_type {
+    MIDI_EVENT_SLIDER,
+    MIDI_EVENT_KEY,
 };
 
 struct midi_event {
-    enum {
-        MIDI_EVENT_SLIDER,
-        MIDI_EVENT_KEY,
-    } type;
+    midi_event_type type;
+    struct midi_slider {
+        int index;
+        float value;
+    };
+    struct midi_key {
+        char *keycode;
+    };
     union {
-        struct {
-            int index;
-            float value;
-        } slider;
-        struct {
-            char * keycode;
-        } key;
+        midi_slider slider;
+        midi_key    key;
     };
 };
 
-extern struct midi_controller * midi_controllers;
-extern int n_midi_controllers;
+//extern struct midi_controller * midi_controllers;
+//extern int n_midi_controllers;
 
 extern Uint32 midi_command_event;
 

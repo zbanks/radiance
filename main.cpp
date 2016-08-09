@@ -1,7 +1,5 @@
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include "util/common.h"
+
 #include "ui/ui.h"
 #include "ui/render.h"
 #include "util/config.h"
@@ -15,7 +13,16 @@
 #include "output/output.h"
 #include "main.h"
 
-enum loglevel loglevel = LOGLEVEL_ALL;
+auto current_loglevel = LOGLEVEL_ALL;
+
+loglevel get_loglevel(void)
+{
+    return current_loglevel;
+}
+loglevel set_loglevel(loglevel level)
+{
+    return std::exchange(current_loglevel,level);
+}
 struct deck deck[N_DECKS];
 struct crossfader crossfader;
 struct render render;
@@ -28,13 +35,11 @@ double audio_level;
 int main(int argc, char* args[]) {
     config_init(&config);
     config_load(&config, "resources/config.ini");
-    loglevel = config.debug.loglevel;
+    current_loglevel = static_cast<loglevel>(config.debug.loglevel);
 
     ui_init();
+    for(auto & d : deck) deck_init(&d);
 
-    for(int i=0; i < N_DECKS; i++) {
-        deck_init(&deck[i]);
-    }
     crossfader_init(&crossfader);
     render_init(&render, crossfader.tex_output);
     time_init();
@@ -51,9 +56,7 @@ int main(int argc, char* args[]) {
     audio_stop();
     analyze_term();
 
-    for(int i=0; i < N_DECKS; i++) {
-        deck_term(&deck[i]);
-    }
+    for(auto & d : deck) deck_term(&d);
 
     render_term(&render);
     crossfader_term(&crossfader);

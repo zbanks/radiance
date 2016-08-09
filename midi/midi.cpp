@@ -1,7 +1,5 @@
 #include "util/common.h"
 #include <portmidi.h>
-#include <string.h>
-#include <stdbool.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
@@ -15,15 +13,15 @@
 
 #define MIDI_BUFFER_SIZE 256
 
-static _Atomic int midi_running = 0;
-static _Atomic int midi_refresh_request = 0;
+static std::atomic<int> midi_running {0};
+static std::atomic<int> midi_refresh_request {0};
 static SDL_Thread* midi_thread;
 
 static PmEvent events[MIDI_BUFFER_SIZE];
 
 Uint32 midi_command_event = -1;
 
-struct midi_controller * midi_controllers;
+std::unique_ptr<midi_controller[]> midi_controllers{};
 int n_midi_controllers;
 
 PmError pm_errmsg(PmError err){
@@ -45,15 +43,13 @@ static int midi_refresh_devices(){
                             Pm_GetErrorText(err));
             }
         }
-        free(midi_controllers);
-        midi_controllers = NULL;
+        midi_controllers.reset();
         Pm_Terminate();
     }
 
     Pm_Initialize();
-    int n = Pm_CountDevices();
-    struct midi_controller * new_controllers = calloc(n, sizeof(struct midi_controller));
-    if(!new_controllers) FAIL("Unable to malloc for MIDI controllers.");
+    auto n = Pm_CountDevices();
+    auto new_controllers = std::make_unique<midi_controller[]>(n);
     int n_new = 0;
 
     // Check for available devices
@@ -101,8 +97,7 @@ static int midi_refresh_devices(){
             }
         }
     }
-
-    midi_controllers = new_controllers;
+    midi_controllers.swap(new_controllers);
     n_midi_controllers = n_new;
 
     return 0;
@@ -119,16 +114,15 @@ refresh_fail:
                             Pm_GetErrorText(err));
             }
         }
-        free(new_controllers);
     }
     return -1;
 }
 
 static int midi_check_errors(struct midi_controller * controller){
     if(!controller->stream) return 0;
-    PmError err = Pm_HasHostError(controller->stream);
+    auto err = Pm_HasHostError(controller->stream);
     if(err < 0){
-        WARN("MIDI Host error: %s", Pm_GetErrorText(err));
+        WARN("MIDI Host error: %s", Pm_GetErrorText(static_cast<PmError>(err)));
 
         // Close stream  & disconnect 
         Pm_Close(controller->stream);
@@ -160,29 +154,29 @@ static int midi_run(void* args) {
             if(!controller->stream) continue;
             if(midi_check_errors(controller)) continue;
 
-            int n = Pm_Read(controller->stream, events, MIDI_BUFFER_SIZE);
+            auto n = Pm_Read(controller->stream, events, MIDI_BUFFER_SIZE);
             if(n < 0){
-                WARN("MIDI Read error: %s", Pm_GetErrorText(n));
+                WARN("MIDI Read error: %s", Pm_GetErrorText(static_cast<PmError>(n)));
                 continue;
             }
-            for(int j = 0; j < n; j++) {
-                PmMessage m = events[j].message;
+            for(auto j = 0; j < n; j++) {
+                auto m = events[j].message;
 
-                unsigned char event = Pm_MessageStatus(m);
-                unsigned char data1 = Pm_MessageData1(m);
-                unsigned char data2 = Pm_MessageData2(m);
+                auto event = Pm_MessageStatus(m);
+                auto data1 = Pm_MessageData1(m);
+                auto data2 = Pm_MessageData2(m);
 
                 DEBUG("Device %d event %d %d %d %li", i, event, data1, data2, (long int) events[j].timestamp);
-                int slot = -1;
+                auto  slot = -1;
                 struct midi_event * event_data = NULL;
                 SDL_Event sdl_event = {0};
                 switch (event) {
-                case MIDI_STATUS_CC:
+                case MIDI_STATUS_CC: {
                     if (data1 >= controller->config->n_ccs) break;
                     slot = controller->config->ccs[data1];
                     if (slot < 0) break;
 
-                    event_data = calloc(1, sizeof *event_data);
+                    event_data = static_cast<midi_event*>(calloc(1, sizeof *event_data));
                     if (event_data == NULL) MEMFAIL();
                     event_data->type = MIDI_EVENT_SLIDER;
                     event_data->slider.index = slot;
@@ -194,14 +188,16 @@ static int midi_run(void* args) {
                     sdl_event.user.data2 = 0;
                     SDL_PushEvent(&sdl_event);
                     break;
-                case MIDI_STATUS_NOTEON:
+                }
+                case MIDI_STATUS_NOTEON: {
                     if (data1 >= controller->config->n_notes) break;
-                    char * keysym = controller->config->notes[data1];
+                    auto keysym = controller->config->notes[data1];
                     if (keysym == NULL || keysym[0] == '\0') break;
                     if (data2 < 65) break; // Note on has value 127
 
-                    event_data = calloc(1, sizeof *event_data);
-                    if (event_data == NULL) MEMFAIL();
+                    event_data = static_cast<midi_event*>(calloc(1, sizeof *event_data));
+                    if (event_data == NULL)
+                        MEMFAIL();
                     event_data->type = MIDI_EVENT_KEY;
                     event_data->key.keycode = keysym;
 
@@ -211,6 +207,7 @@ static int midi_run(void* args) {
                     sdl_event.user.data2 = 0;
                     SDL_PushEvent(&sdl_event);
                     break;
+                }
                 case MIDI_STATUS_NOTEOFF:
                     break;
                 }

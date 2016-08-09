@@ -1,6 +1,5 @@
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    float g = uv.y * 0.5 + 0.1;
+    float g = v_uv.y * 0.5 + 0.1;
     float w = 4.;
 
     vec2 slider_origin = vec2(125., 50.);
@@ -21,14 +20,14 @@ void main(void) {
         f_color0 = composite(f_color0, vec4(0., 0.3, 0., smoothBox(gl_FragCoord.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         f_color0 = composite(f_color0, vec4(0., 0.8, 0., smoothBox(gl_FragCoord.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
 
-        ivec2 grid_cell = ivec2(5. * (gl_FragCoord.xy - preview_origin) / preview_size);
+        ivec2 grid_cell = ivec2(5. * v_uv);
         //vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
 
         //vec3 grid = vec3(0., 0., 0.); // solid black
         //f_color0 = composite(f_color0, vec4(grid, inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size)));
 
-        vec4 p = texture2D(iPreview, (gl_FragCoord.xy - preview_origin) / preview_size);
-        vec4 p2 = texture2D(iStrips, (gl_FragCoord.xy - preview_origin) / preview_size);
+        vec4 p = texture2D(iPreview, v_uv);
+        vec4 p2 = texture2D(iStrips, v_uv);
         p.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
         p2.a *= inBox(gl_FragCoord.xy, preview_origin, preview_origin + preview_size);
 
