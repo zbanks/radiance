@@ -1,5 +1,4 @@
 void main(void) {
-//    vec2 uv = gl_FragCoord.xy / iResolution;
     float g = v_uv.y * 0.5 + 0.1;
     float w = 4.;
 

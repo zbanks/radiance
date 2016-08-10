@@ -57,11 +57,18 @@ void main(void) {                                               \n\
 }                                                               \n\
 ";
 */
-
 static std::string read_file(const char * filename) {
-    std::ifstream ifs(filename);
+    auto fn = std::string{filename};
+    if(fn.size() && fn[0] == '#') {
+        fn = "resources/" + fn.substr(1);
+        INFO("Loading adjusted filename \"%s\"\n", fn.c_str());
+    }
+    std::ifstream ifs(fn);
     return std::string(std::istreambuf_iterator<char>(ifs),
                        std::istreambuf_iterator<char>());
+}
+static std::string read_file(const std::string &filename) {
+    return read_file(filename.c_str());
 }
 
 static bool getShaderStatus(GLuint id)
@@ -103,61 +110,52 @@ bool configure_vertex_area(float ww, float wh)
     glUniform2f(0, ww, wh);
     return true;
 }
+GLuint compile_shader(GLenum type, const std::string &filename)
+{
+    auto src = read_file(filename);
+    if(src.empty()) {
+        WARN("file unreadable or empty when compiling file %s\n", filename.c_str());
+        return 0;
+    }
+    return compile_shader_src(type, src);
+}
+GLuint compile_shader_src(GLenum type, const std::string &src)
+{
+    auto shader = glCreateShader(type);
+    if(!shader) {
+        return 0;
+    }
+    const GLchar *srcp[] = { src.c_str()};
+    const GLint   lenp[] = { GLint(src.size())};
+    glShaderSource(shader, GLsizei{1}, srcp, lenp);
+    glCompileShader(shader);
+    if(!getShaderStatus(shader)) {
+        load_shader_error = getShaderInfoLog(shader);
+        WARN("Failed to compile shader \"%s\"\n %s\n", src.c_str(), load_shader_error.c_str());
+        glDeleteShader(shader);
+        shader = 0;
+    }
+    return shader;
+}
 GLuint load_shader(const char * filename)
 {
-    if(!vertexShader) {
-        auto vert_buffer = read_file("resources/vertex.glsl");
-        if(vert_buffer.empty())
-            return 0;
-        vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        const GLchar * sources[] = { vert_buffer.c_str() };
-        const GLint   lengths[] = { static_cast<GLint>(vert_buffer.size()) };
-        glShaderSource(vertexShader, GLsizei{1}, sources, lengths);
-        glCompileShader(vertexShader);
-        if(!getShaderStatus(vertexShader)) {
-            load_shader_error = getShaderInfoLog(vertexShader);
-            glDeleteShader(vertexShader);
-            vertexShader = 0;
-            return false;
-        }
+    if(!vertexShader && !(vertexShader = compile_shader(GL_VERTEX_SHADER,std::string{"#vertex_framed.glsl"}))) {
+        WARN("Failed to compile vertex shader\n");
+        return 0;
     }
-    if(!geometryShader) {
-        auto vert_buffer = read_file("resources/geometry.glsl");
-        if(vert_buffer.empty())
-            return 0;
-        geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
-        const GLchar * sources[] = { vert_buffer.c_str() };
-        const GLint   lengths[] = { static_cast<GLint>(vert_buffer.size()) };
-        glShaderSource(geometryShader, GLsizei{1}, sources, lengths);
-        glCompileShader(geometryShader);
-        if(!getShaderStatus(geometryShader)) {
-            load_shader_error = getShaderInfoLog(geometryShader);
-            glDeleteShader(geometryShader);
-            vertexShader = 0;
-            return false;
-        }
+    if(!geometryShader && !(geometryShader = compile_shader(GL_GEOMETRY_SHADER,std::string{"#geometry_framed.glsl"}))) {
+        WARN("Failed to compile geometry shader\n");
+        return 0;
     }
     // Load file
+    auto head_buffer = read_file("#header.glsl");
     auto prog_buffer = read_file(filename);
-
-    auto head_buffer = read_file("resources/header.glsl");
 
     if(prog_buffer.empty() || head_buffer.empty())
         return 0;
-    // Compile
-    auto fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    auto merged = head_buffer + prog_buffer;
-    
-    const GLchar * sources[] = { merged.c_str() };
-    const GLint   lengths[] = { static_cast<GLint>(merged.size()) };
-    glShaderSource(fragmentShader, GLsizei{1}, sources, lengths);
-    glCompileShader(fragmentShader);
-    if(!getShaderStatus(fragmentShader)) {
-        load_shader_error = getShaderInfoLog(fragmentShader);
-        glDeleteShader(fragmentShader);
+    auto fragmentShader = compile_shader_src(GL_FRAGMENT_SHADER, head_buffer + "\n" + prog_buffer);
+    if(!fragmentShader)
         return 0;
-    }
-
     // Link
     auto program = glCreateProgram();
     //glAttachShader(programObj, vertexShaderObj);
@@ -175,5 +173,36 @@ GLuint load_shader(const char * filename)
     glDetachShader(program, geometryShader);
     glDetachShader(program, vertexShader);
     glDeleteShader(fragmentShader);
+    return program;
+}
+GLuint load_shader(const char *vert,const char * frag)
+{
+
+    // Load file
+    auto vshader = compile_shader(GL_VERTEX_SHADER, std::string{vert});
+    auto head_buffer = read_file("#header.glsl");
+    auto prog_buffer = read_file(frag);
+
+    auto fshader = compile_shader_src(GL_FRAGMENT_SHADER, head_buffer + "\n" + prog_buffer);
+    if(!fshader) {
+        glDeleteShader(vshader);
+        return 0;
+    }
+    // Link
+    auto program = glCreateProgram();
+    //glAttachShader(programObj, vertexShaderObj);
+    glAttachShader(program, vshader);
+    glAttachShader(program, fshader);
+    glLinkProgram(program);
+    
+    if(!getProgramStatus(program)) {
+        load_shader_error = getProgramInfoLog(program);
+        glDeleteProgram(program);
+        program = 0;
+    }
+    glDetachShader(program, vshader);
+    glDetachShader(program, fshader);
+    glDeleteShader(fshader);
+    glDeleteShader(vshader);
     return program;
 }

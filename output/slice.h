@@ -13,7 +13,6 @@ struct output_pixels {
     SDL_Color * colors;
 };
 
-struct output_vertex;
 struct output_vertex {
     struct output_vertex * next;
     float x;
@@ -27,7 +26,6 @@ void output_vertex_list_destroy(struct output_vertex * head);
 
 //
 
-struct output_device;
 struct output_device {
     struct output_device * next;
     struct output_device * prev;

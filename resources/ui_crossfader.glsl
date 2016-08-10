@@ -35,9 +35,4 @@ void main(void) {
         if(iIndicator != 0) f_color0 = composite(f_color0, p2);
     }
 
-    //if(inBox(gl_FragCoord.xy, vec2(w), iResolution - vec2(w)) == 0.) {
-    //    f_color0 = vec4(0.9, 0.9, 0.9, 1.);
-    //} else if(length(gl_FragCoord.xy - slider) < 10) {
-    //    f_color0 = vec4(0., 0., 0.5, 1.);
-    //}
 }

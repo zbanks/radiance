@@ -171,12 +171,11 @@ void pattern::render(GLuint input_tex) {
         GL_CHECK_ERROR();
         glUniform1f(1, time_master.beat_frac + time_master.beat_index);
         glUniform4f(2, audio_low, audio_mid, audio_hi, audio_level);
-        glUniform2f(3, config.pattern.master_width, config.pattern.master_height);
-        glUniform1f(4, intensity);
-        glUniform1f(5, intensity_integral);
-        glUniform1f(6, config.ui.fps);
-        glUniform1i(7, 0);
-        glUniform1iv(8, uni_tex.size(), &uni_tex[0]);
+        glUniform1f(3, intensity);
+        glUniform1f(4, intensity_integral);
+        glUniform1f(5, config.ui.fps);
+        glUniform1i(6, 0);
+        glUniform1iv(7, uni_tex.size(), &uni_tex[0]);
 
         glActiveTexture(GL_TEXTURE0);
         GL_CHECK_ERROR();

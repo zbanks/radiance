@@ -33,8 +33,6 @@ void glow(vec2 p) {
 }
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
     if(iSelection) {
         f_color0 = vec4(0., 0., 0., 1.);
         for(int i=0; i < 8; i++) {
@@ -48,7 +46,7 @@ void main(void) {
         }
         f_color0 = composite(f_color0, vec4(dataColor(ivec3(3, 0, 0)), rounded_rect_df(vec2(975., 300.), PAT_SIZE, RADIUS) <= 1.));
     } else {
-        float g = uv.y * 0.1 + 0.2;
+        float g = v_uv.y * 0.1 + 0.2;
         f_color0 = vec4(g, g, g, 1.);
 
         glow(vec2(475., iLeftDeckSelector == 0 ? 420. : 180.));

@@ -2,8 +2,8 @@ float RADIUS = 10.;
 float SHRINK = 30.;
 
 void main(void) {
-    vec2 size = iResolution / 2. - RADIUS - SHRINK;
-    vec2 center = iResolution / 2.;
+    vec2 size = v_size / 2 - RADIUS - SHRINK;
+    vec2 center = v_size / 2;
 
     float shadow_df = rounded_rect_df(center + vec2(10., -10.), size, RADIUS - 5.);
     vec4 color = vec4(0., 0., 0., 0.5 * (1. - smoothstep(0., 20., max(shadow_df, 0.))));

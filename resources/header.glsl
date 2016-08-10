@@ -15,25 +15,21 @@ uniform layout(location = 2) vec4 iAudio;
 #define iAudioHi  iAudio.z
 #define iAudioLevel iAudio.w
 
-// Resolution of the output pattern
-uniform layout(location = 3) vec2 iResolution;
-uniform vec2                      iPosition;
-
 // Intensity slider, [0.0, 1.0]
 
-uniform layout(location = 4) float iIntensity;
+uniform layout(location = 3) float iIntensity;
 
 // Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
-uniform layout(location = 5) float iIntensityIntegral;
+uniform layout(location = 4) float iIntensityIntegral;
 
 // (Ideal) output rate in frames per second
-uniform layout(location = 6) float iFPS;
+uniform layout(location = 5) float iFPS;
 
 // Output of the previous pattern
-uniform layout(location = 7) sampler2D iFrame;
+uniform layout(location = 6) sampler2D iFrame;
 
 // Previous outputs of the other channels (e.g. foo.1.glsl) 
-uniform layout(location = 8) sampler2D iChannel[3];
+uniform layout(location = 7) sampler2D iChannel[3];
 
 #define M_PI 3.1415926535897932384626433832795
 
