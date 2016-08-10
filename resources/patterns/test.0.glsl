@@ -1,7 +1,7 @@
 // A green & red circle in the center
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 uv = gl_FragCoord.xy / v_size;
     f_color0 = texture2D(iFrame, uv);
     vec4 c;
 

@@ -1,7 +1,7 @@
 // Big purple soft circle 
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 uv = gl_FragCoord.xy / v_size;
     float t = iTime / 4.0;
     vec2 center = vec2(sin(t), cos(t));
     //center *= 0.5;

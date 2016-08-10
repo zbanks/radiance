@@ -9,12 +9,46 @@
 #include <cstdlib>
 
 namespace {
-    std::string _shader_error{};
+    std::string load_shader_error{};
 }
-std::string get_shader_error(void)
+std::string get_load_shader_error(void)
 {
-    return std::exchange(_shader_error,std::string{});
+    return std::exchange(load_shader_error,std::string{});
 }
+
+GLuint make_texture(int w, int h)
+{
+    auto tex = GLuint{};
+    glGenTextures(1, &tex);
+    if(!tex)
+        return 0;
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, w, h);
+    if(auto e = glGetError())
+        FAIL("GL Error: %s\n",gluErrorString(e));
+    return tex;
+}
+GLuint make_texture(int length)
+{
+    auto tex = GLuint{};
+    glGenTextures(1, &tex);
+    if(!tex)
+        return 0;
+    glBindTexture(GL_TEXTURE_1D, tex);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexStorage1D(GL_TEXTURE_1D, 1, GL_RGBA32F, length);
+    if(auto e = glGetError())
+        FAIL("GL Error: %s\n",gluErrorString(e));
+    return tex;
+}
+
+
 /*
 const char default_vertex_shader[] = "                          \n\
 #version 130                                                    \n\
@@ -69,119 +103,47 @@ bool configure_vertex_area(float ww, float wh)
     glUniform2f(0, ww, wh);
     return true;
 }
-GLuint load_one_shader(GLenum type, const char *filename)
+GLuint load_shader(const char * filename)
 {
-    auto fn = std::string(filename);
-    if(fn[0] == '#')
-        fn = "resources/" + fn.substr(1);
-
-    auto buffer = read_file(filename);
-    if(buffer.empty())
-        return 0;
-    auto shader = glCreateShader(type);
-    const GLchar * sources[] = { buffer.c_str() };
-    const GLint   lengths[] = { static_cast<GLint>(buffer.size()) };
-    glShaderSource(shader, GLsizei{1}, sources, lengths);
-    glCompileShader(shader);
-    if(!getShaderStatus(shader)) {
-        _shader_error = getShaderInfoLog(shader);
-        glDeleteShader(shader);
-        shader = 0;
-        return false;
+    if(!vertexShader) {
+        auto vert_buffer = read_file("resources/vertex.glsl");
+        if(vert_buffer.empty())
+            return 0;
+        vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        const GLchar * sources[] = { vert_buffer.c_str() };
+        const GLint   lengths[] = { static_cast<GLint>(vert_buffer.size()) };
+        glShaderSource(vertexShader, GLsizei{1}, sources, lengths);
+        glCompileShader(vertexShader);
+        if(!getShaderStatus(vertexShader)) {
+            load_shader_error = getShaderInfoLog(vertexShader);
+            glDeleteShader(vertexShader);
+            vertexShader = 0;
+            return false;
+        }
     }
-    return shader;
-}
-GLuint make_shader_program(std::initializer_list<GLuint> shaders)
-{
-    auto program = glCreateProgram();
-    if(!program)
-        return program;
-    for(auto && shader : shaders)
-        glAttachShader(program,shader);
-    glLinkProgram(program);
-    if(!getProgramStatus(program)) {
-        _shader_error = getProgramInfoLog(program);
-        glDeleteProgram(program);
-        program = 0;
-    }else{
-        for(auto && shader : shaders)
-            glDetachShader(program,shader);
-    }
-    return program;
-}
-GLuint load_generic_program(const char * filename)
-{
-    auto vshader = load_one_shader(GL_VERTEX_SHADER, "#gvertex.glsl");
-    if(!vshader)
-        return 0;
-    auto gshader = load_one_shader(GL_GEOMETRY_SHADER,"#ggeometry.glsl");
-    if(!gshader){
-        glDeleteShader(vshader);
-        return 0;
-    }
-    auto fshader = load_one_shader(GL_FRAGMENT_SHADER,filename);
-    if(!fshader) {
-        glDeleteShader(vshader);
-        glDeleteShader(gshader);
-        return 0;
-    }
-    auto prog = make_shader_program({vshader,gshader,fshader});
-    glDeleteShader(vshader);
-    glDeleteShader(gshader);
-    glDeleteShader(fshader);
-    return prog;
-}
-GLuint load_generic_program(const char *vert, const char * frag)
-{
-    auto vshader = load_one_shader(GL_VERTEX_SHADER, vert);
-    if(!vshader)
-        return 0;
-    auto fshader = load_one_shader(GL_FRAGMENT_SHADER,frag);
-    if(!fshader) {
-        glDeleteShader(vshader);
-        return 0;
-    }
-    auto prog = make_shader_program({vshader,fshader});
-    glDeleteShader(vshader);
-    glDeleteShader(fshader);
-    return prog;
-}
-GLuint load_generic_program(const char *vert, const char *geom, const char *frag)
-{
-    auto vshader = load_one_shader(GL_VERTEX_SHADER, vert);
-    if(!vshader)
-        return 0;
-    auto gshader = load_one_shader(GL_GEOMETRY_SHADER,geom);
-    if(!gshader){
-        glDeleteShader(vshader);
-        return 0;
-    }
-    auto fshader = load_one_shader(GL_FRAGMENT_SHADER,frag);
-    if(!fshader) {
-        glDeleteShader(vshader);
-        glDeleteShader(gshader);
-        return 0;
-    }
-    auto prog = make_shader_program({vshader,gshader,fshader});
-    glDeleteShader(vshader);
-    glDeleteShader(gshader);
-    glDeleteShader(fshader);
-    return prog;
-}
-GLuint load_pattern_shader(const char * filename)
-{
-    if(!vertexShader && !(vertexShader = load_one_shader(GL_VERTEX_SHADER, "#vertex_framed.glsl"))){
-        return 0;
-    }
-    if(!geometryShader && !(geometryShader = load_one_shader(GL_GEOMETRY_SHADER, "#geometry_framed.glsl"))) {
-        return 0;
+    if(!geometryShader) {
+        auto vert_buffer = read_file("resources/geometry.glsl");
+        if(vert_buffer.empty())
+            return 0;
+        geometryShader = glCreateShader(GL_GEOMETRY_SHADER);
+        const GLchar * sources[] = { vert_buffer.c_str() };
+        const GLint   lengths[] = { static_cast<GLint>(vert_buffer.size()) };
+        glShaderSource(geometryShader, GLsizei{1}, sources, lengths);
+        glCompileShader(geometryShader);
+        if(!getShaderStatus(geometryShader)) {
+            load_shader_error = getShaderInfoLog(geometryShader);
+            glDeleteShader(geometryShader);
+            vertexShader = 0;
+            return false;
+        }
     }
     // Load file
     auto prog_buffer = read_file(filename);
+
     auto head_buffer = read_file("resources/header.glsl");
+
     if(prog_buffer.empty() || head_buffer.empty())
         return 0;
-    head_buffer = "#version 430\n" + head_buffer;
     // Compile
     auto fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     auto merged = head_buffer + prog_buffer;
@@ -191,12 +153,27 @@ GLuint load_pattern_shader(const char * filename)
     glShaderSource(fragmentShader, GLsizei{1}, sources, lengths);
     glCompileShader(fragmentShader);
     if(!getShaderStatus(fragmentShader)) {
-        _shader_error = getShaderInfoLog(fragmentShader);
+        load_shader_error = getShaderInfoLog(fragmentShader);
         glDeleteShader(fragmentShader);
         return 0;
     }
+
+    // Link
+    auto program = glCreateProgram();
+    //glAttachShader(programObj, vertexShaderObj);
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, geometryShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
     
-    auto program = make_shader_program({vertexShader,geometryShader,fragmentShader});
+    if(!getProgramStatus(program)) {
+        load_shader_error = getProgramInfoLog(program);
+        glDeleteProgram(program);
+        program = 0;
+    }
+    glDetachShader(program, fragmentShader);
+    glDetachShader(program, geometryShader);
+    glDetachShader(program, vertexShader);
     glDeleteShader(fragmentShader);
     return program;
 }

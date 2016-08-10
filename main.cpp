@@ -38,7 +38,8 @@ int main(int argc, char* args[]) {
     current_loglevel = static_cast<loglevel>(config.debug.loglevel);
 
     ui_init();
-    for(auto & d : deck) deck_init(&d);
+    for(auto & d : deck)
+        d.init();
 
     crossfader_init(&crossfader);
     render_init(&render, crossfader.tex_output);
@@ -56,7 +57,8 @@ int main(int argc, char* args[]) {
     audio_stop();
     analyze_term();
 
-    for(auto & d : deck) deck_term(&d);
+    for(auto & d : deck)
+        d.term();
 
     render_term(&render);
     crossfader_term(&crossfader);

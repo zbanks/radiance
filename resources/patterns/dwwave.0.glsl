@@ -1,7 +1,7 @@
 // Diagonal white wave
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 uv = gl_FragCoord.xy / v_size;
     float xpos = iIntensityIntegral * 1.5;
     float xfreq = (iIntensity + 0.5) * 2.;
     float x = mod((uv.x + uv.y) * 0.5 * xfreq + xpos, 1.);

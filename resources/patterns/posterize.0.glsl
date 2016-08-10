@@ -1,8 +1,7 @@
 // Reduce number of colors
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    f_color0 = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, v_uv);
 
     //float bins = 256. * pow(2, -8. * iIntensity);
     float bins = min(256., 1. / iIntensity);

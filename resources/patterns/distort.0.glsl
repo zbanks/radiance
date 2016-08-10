@@ -1,7 +1,7 @@
 // Distort the screen to the beat
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 uv = gl_FragCoord.xy / v_size;
 
     vec3 noise_input = vec3(uv, iTime * 0.3);
     vec2 shift = (vec2(noise(noise_input), noise(noise_input + 100.)) - 0.5);

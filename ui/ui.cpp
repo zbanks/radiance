@@ -13,6 +13,12 @@
 #include "output/slice.h"
 #include "main.h"
 
+#define GL_CHECK_ERROR() \
+do { \
+if(auto e = glGetError()) \
+    FAIL("OpenGL error: %s\n", gluErrorString(e)); \
+}while(false);
+
 static SDL_Window * window;
 static SDL_GLContext context;
 static SDL_Renderer * renderer;
@@ -218,10 +224,9 @@ void ui_init() {
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
     // Init OpenGL
-    GLenum e;
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0, 0, 0, 0);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
     // Make framebuffers
     glGenFramebuffers(1, &select_fb);
@@ -231,17 +236,10 @@ void ui_init() {
     glGenFramebuffers(1, &spectrum_fb);
     glGenFramebuffers(1, &waveform_fb);
     glGenFramebuffers(1, &strip_fb);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
     // Init select texture
-    glGenTextures(1, &select_tex);
-    glBindTexture(GL_TEXTURE_2D, select_tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, ww, wh);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    select_tex = make_texture(ww,wh);
 
     glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, select_tex, 0);
@@ -256,112 +254,56 @@ void ui_init() {
 //    pattern_name_width = (int*)calloc(config.ui.n_patterns, sizeof(int));
 //    pattern_name_height = (int*)calloc(config.ui.n_patterns, sizeof(int));
 //    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
-    glGenTextures(config.ui.n_patterns, &pattern_textures[0]);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, config.ui.pattern_width, config.ui.pattern_height);
+        pattern_textures[i] = make_texture( config.ui.pattern_width, config.ui.pattern_height);
     }
 
     // Init crossfader texture
-    glGenTextures(1, &crossfader_texture);
-    glBindTexture(GL_TEXTURE_2D, crossfader_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, config.ui.crossfader_width, config.ui.crossfader_height);
+    crossfader_texture = make_texture( config.ui.crossfader_width, config.ui.crossfader_height);
+    
     glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, crossfader_texture, 0);
 
     // Init pattern entry texture
-    glGenTextures(1, &pat_entry_texture);
-    glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, config.ui.pat_entry_width, config.ui.pat_entry_height);
+    pat_entry_texture = make_texture( config.ui.pat_entry_width, config.ui.pat_entry_height);
+
     glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pat_entry_texture, 0);
 
     // Spectrum data texture
-    glGenTextures(1, &tex_spectrum_data);
-    glBindTexture(GL_TEXTURE_1D, tex_spectrum_data);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage1D(GL_TEXTURE_1D, 1, GL_R32F, config.audio.spectrum_bins);
-
+    tex_spectrum_data = make_texture(config.audio.spectrum_bins);
+    spectrum_texture = make_texture( config.ui.spectrum_width, config.ui.spectrum_height);
     // Spectrum UI element
-    glGenTextures(1, &spectrum_texture);
-    glBindTexture(GL_TEXTURE_2D, spectrum_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.spectrum_width, config.ui.spectrum_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, spectrum_texture, 0);
 
     // Waveform data texture
-    glGenTextures(1, &tex_waveform_data);
-    glBindTexture(GL_TEXTURE_1D, tex_waveform_data);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage1D(GL_TEXTURE_1D, 1, GL_RGBA32F, config.audio.waveform_length);
-
-    glGenTextures(1, &tex_waveform_beats_data);
-    glBindTexture(GL_TEXTURE_1D, tex_waveform_beats_data);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage1D(GL_TEXTURE_1D, 1, GL_RGBA32F, config.audio.waveform_length);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
+    tex_waveform_data = make_texture( config.audio.waveform_length);
+    tex_waveform_beats_data = make_texture( config.audio.waveform_length);
     // Waveform UI element
-    glGenTextures(1, &waveform_texture);
-    glBindTexture(GL_TEXTURE_2D, waveform_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.ui.waveform_width, config.ui.waveform_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    waveform_texture = make_texture( config.ui.waveform_width, config.ui.waveform_height);
     glBindFramebuffer(GL_FRAMEBUFFER, waveform_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, waveform_texture, 0);
 
     // Strip indicators
-    glGenTextures(1, &strip_texture);
-    glBindTexture(GL_TEXTURE_2D, strip_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    strip_texture = make_texture ( config.pattern.master_width, config.pattern.master_height);
     glBindFramebuffer(GL_FRAMEBUFFER, strip_fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, strip_texture, 0);
 
     // Done allocating textures & FBOs, unbind and check for errors
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
-    if((blit_shader = load_shader("resources/blit.glsl",true)) == 0) FAIL("Could not load blit shader!\n%s", get_shader_error().c_str());
-    if((main_shader = load_generic_program("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", get_shader_error().c_str());
-    if((pat_shader = load_generic_program("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", get_shader_error().c_str());
-    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl",true)) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_shader_error().c_str());
-    if((text_shader = load_shader("resources/ui_text.glsl",true)) == 0) FAIL("Could not load UI text shader!\n%s", get_shader_error().c_str());
-    if((spectrum_shader = load_shader("resources/ui_spectrum.glsl",true)) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_shader_error().c_str());
-    if((waveform_shader = load_shader("resources/ui_waveform.glsl",true)) == 0) FAIL("Could not load UI waveform shader!\n%s", get_shader_error().c_str());
-    if((strip_shader = load_shader("resources/strip.glsl",true)) == 0) FAIL("Could not load strip indicator shader!\n%s", get_shader_error().c_str());
+    if((blit_shader = load_shader("resources/blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
+    if((main_shader = load_shader("resources/ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", get_load_shader_error().c_str());
+    if((pat_shader = load_shader("resources/ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_shader_error().c_str());
+    if((crossfader_shader = load_shader("resources/ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_shader_error().c_str());
+    if((text_shader = load_shader("resources/ui_text.glsl")) == 0) FAIL("Could not load UI text shader!\n%s", get_load_shader_error().c_str());
+    if((spectrum_shader = load_shader("resources/ui_spectrum.glsl")) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_shader_error().c_str());
+    if((waveform_shader = load_shader("resources/ui_waveform.glsl")) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
+    if((strip_shader = load_shader("resources/strip.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
@@ -403,7 +345,8 @@ void ui_term() {
 
 static struct pattern * selected_pattern(int s) {
     for(int i=0; i<config.ui.n_patterns; i++) {
-        if(map_selection[i] == s) return deck[map_deck[i]].pattern[map_pattern[i]];
+        if(map_selection[i] == s)
+            return deck[map_deck[i]].patterns[map_pattern[i]].get();
     }
     return NULL;
 }
@@ -412,9 +355,9 @@ static void set_slider_to(int s, float v) {
     if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = v;
     } else {
-        struct pattern * p = selected_pattern(s);
-        if(p != NULL)
+        if(auto  &&p = selected_pattern(s)) {
             p->intensity = v;
+        }
     }
 }
 
@@ -422,8 +365,7 @@ static void increment_slider(int s, float v) {
     if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = CLAMP(crossfader.position + v, 0., 1.);
     } else {
-        struct pattern * p = selected_pattern(s);
-        if(p != NULL)
+        if(auto && p = selected_pattern(s))
             p->intensity = CLAMP(p->intensity + v, 0., 1.);
     }
 }
@@ -440,12 +382,13 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         if(pat_entry_text[0] == ':') {
-                            if (deck_load_set(&deck[map_deck[i]], pat_entry_text+1) == 0) {
+                            if (deck[map_deck[i]].load_set(pat_entry_text+1) == 0) {
                                 // TODO: Load in the correct pattern names
                             }
-                        } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text) == 0) {
+                        } else if(deck[map_deck[i]].load_pattern( map_pattern[i], pat_entry_text) == 0) {
                             if(pat_entry_text[0] != '\0') {
-                                if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
+                                if(pattern_name_textures[i] )
+                                    SDL_DestroyTexture(pattern_name_textures[i]);
                                 pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_sizes[i].first, &pattern_name_sizes[i].second);
                             }
                         }
@@ -496,7 +439,7 @@ static void handle_key(SDL_KeyboardEvent * e) {
             case SDLK_d:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
-                        deck_unload_pattern(&deck[map_deck[i]], map_pattern[i]);
+                        deck[map_deck[i]].unload_pattern( map_pattern[i]);
                         break;
                     }
                 }
@@ -638,7 +581,6 @@ static void blit(float x, float y, float w, float h) {
 
 static void ui_render(bool select) {
     GLint location;
-    GLenum e;
     // Render strip indicators
     switch(strip_indicator) {
         case STRIPS_SOLID:
@@ -711,7 +653,7 @@ static void ui_render(bool select) {
     {
         bool first = true;
         for(int i = 0; i < config.ui.n_patterns; i++) {
-            struct pattern * p = deck[map_deck[i]].pattern[map_pattern[i]];
+            auto &p = deck[map_deck[i]].patterns[map_pattern[i]];
             if(p != NULL) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, p->tex_output);
@@ -821,7 +763,7 @@ static void ui_render(bool select) {
 
     glViewport(0, 0, ww, wh);
 
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(main_shader);
@@ -836,10 +778,10 @@ static void ui_render(bool select) {
     glUniform1i(location, left_deck_selector);
     location = glGetUniformLocation(main_shader, "iRightDeckSelector");
     glUniform1i(location, right_deck_selector);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
     fill(ww, wh);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
     // Blit UI elements on top
     glUseProgram(blit_shader);
@@ -852,42 +794,41 @@ static void ui_render(bool select) {
     GLint blit_loc_res = glGetUniformLocation(blit_shader, "iResolution");
     glEnable(GL_BLEND);
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        struct pattern * pattern = deck[map_deck[i]].pattern[map_pattern[i]];
-        if(pattern != NULL) {
+        if(deck[map_deck[i]].patterns[map_pattern[i]]) {
             glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
             glUniform2f(blit_loc_pos, map_x[i],map_y[i]);
             glUniform2f(blit_loc_res, pw, ph);
             blit(map_x[i],map_y[i], pw,ph);
-            if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+            GL_CHECK_ERROR();
         }
     }
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
     if(!select) {
         glBindTexture(GL_TEXTURE_2D, spectrum_texture);
         blit(config.ui.spectrum_x, config.ui.spectrum_y, sw, sh);
-        if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+        GL_CHECK_ERROR();
 
         glBindTexture(GL_TEXTURE_2D, waveform_texture);
         blit(config.ui.waveform_x, config.ui.waveform_y, vw, vh);
-        if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+        GL_CHECK_ERROR();
 
         if(pat_entry) {
             for(int i = 0; i < config.ui.n_patterns; i++) {
                 if(map_selection[i] == selected) {
                     glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
                     blit(map_pe_x[i], map_pe_y[i], config.ui.pat_entry_width, config.ui.pat_entry_height);
-                    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+                    GL_CHECK_ERROR();
                     break;
                 }
             }
         }
     }
     glDisable(GL_BLEND);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 }
 
 struct rgba {
@@ -907,18 +848,17 @@ static struct rgba test_hit(int x, int y) {
 }
 
 static void handle_mouse_move() {
-    struct pattern * p;
     switch(ma) {
         case MOUSE_NONE:
             break;
-        case MOUSE_DRAG_INTENSITY:
-            p = deck[map_deck[mp]].pattern[map_pattern[mp]];
-            if(p != NULL) {
+        case MOUSE_DRAG_INTENSITY: {
+            if(auto &p = deck[map_deck[mp]].patterns[map_pattern[mp]]) {
                 p->intensity = mci + (mx - mcx) * config.ui.intensity_gain_x + (my - mcy) * config.ui.intensity_gain_y;
                 if(p->intensity > 1) p->intensity = 1;
                 if(p->intensity < 0) p->intensity = 0;
             }
             break;
+        }
         case MOUSE_DRAG_CROSSFADER:
             crossfader.position = mci + (mx - mcx) * config.ui.crossfader_gain_x + (my - mcy) * config.ui.crossfader_gain_y;
             if(crossfader.position > 1) crossfader.position = 1;
@@ -954,8 +894,7 @@ static void handle_mouse_down() {
             break;
         case HIT_INTENSITY:
             if(hit.g < config.ui.n_patterns) {
-                struct pattern * p = deck[map_deck[hit.g]].pattern[map_pattern[hit.g]];
-                if(p != NULL) {
+                if(auto &p = deck[map_deck[hit.g]].patterns[map_pattern[hit.g]]) {
                     ma = MOUSE_DRAG_INTENSITY;
                     mp = hit.g;
                     mcx = mx;
@@ -1041,14 +980,12 @@ void ui_run() {
                         break;
                 }
             }
-
-            for(int i=0; i<N_DECKS; i++) {
-                deck_render(&deck[i]);
-            }
+            for(auto & d : deck)
+                d.render();
             crossfader_render(&crossfader, deck[left_deck_selector].tex_output, deck[right_deck_selector].tex_output);
+            render_readback(&render);
             ui_render(false);
             SDL_GL_SwapWindow(window);
-            render_readback(&render);
 
             double cur_t = SDL_GetTicks();
             double dt = cur_t - l_t;

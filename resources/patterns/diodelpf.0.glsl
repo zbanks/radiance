@@ -1,10 +1,9 @@
 // Apply smoothing over time with new hits happening instantly
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
 
-    vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iFrame, uv);
+    vec4 prev = texture2D(iChannel[0], v_uv);
+    vec4 next = texture2D(iFrame, v_uv);
     f_color0.rgb = next.rgb;
     if (next.a > prev.a) {
         f_color0 = next;

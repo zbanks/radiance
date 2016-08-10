@@ -1,10 +1,9 @@
 // First order (expontential) hold
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
 
-    vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iChannel[1], uv);
+    vec4 prev = texture2D(iChannel[0], v_uv);
+    vec4 next = texture2D(iChannel[1], v_uv);
 
 /*
     float t = pow(2, round(6 * iIntensity - 4));

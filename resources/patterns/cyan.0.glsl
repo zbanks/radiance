@@ -1,10 +1,9 @@
 // Cyan diagonal stripes
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    f_color0 = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, v_uv);
 
-    float t = uv.x * 3.0 + uv.y * 3.0;
+    float t = v_uv.x * 3.0 + v_uv.y * 3.0;
     float y = smoothstep(0.2, 0.7, abs(mod(t - 3. * iIntensityIntegral, 2.) - 1.));
     float g = smoothstep(0.5, 0.9, abs(mod(1. + t - 3. * iIntensityIntegral, 2.) - 1.));
 

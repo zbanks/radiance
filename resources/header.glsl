@@ -1,9 +1,10 @@
-
+#version 430
 
 in flat vec2 v_corner;
 in flat vec2 v_size;
 in      vec2 v_uv;
 out layout(location = 0) vec4 f_color0;
+
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform layout(location = 1) float iTime;
 // Audio levels, high/mid/low/level, [0.0, 1.0]
@@ -16,6 +17,7 @@ uniform layout(location = 2) vec4 iAudio;
 
 // Resolution of the output pattern
 uniform layout(location = 3) vec2 iResolution;
+uniform vec2                      iPosition;
 
 // Intensity slider, [0.0, 1.0]
 
@@ -34,6 +36,33 @@ uniform layout(location = 7) sampler2D iFrame;
 uniform layout(location = 8) sampler2D iChannel[3];
 
 #define M_PI 3.1415926535897932384626433832795
+
+//
+// The following is only used for UI; not for patterns
+//
+uniform vec2 iTextResolution;
+uniform vec2 iNameResolution;
+
+uniform bool iLeftOnTop;
+uniform bool iSelection;
+uniform int  iBins;
+uniform int  iLeftDeckSelector;
+uniform int  iLength;
+uniform int  iPatternIndex;
+uniform int  iRightDeckSelector;
+uniform int  iSelected;
+uniform int  iIndicator;
+
+uniform sampler1D iSpectrum;
+uniform sampler1D iWaveform;
+uniform sampler1D iBeats;
+uniform sampler2D iFrameLeft;
+uniform sampler2D iFrameRight;
+uniform sampler2D iPreview;
+uniform sampler2D iStrips;
+uniform sampler2D iTexture;
+uniform sampler2D iText;
+uniform sampler2D iName;
 
 // Utilities to convert from an RGB vec3 to an HSV vec3
 vec3 rgb2hsv(vec3 c) {
@@ -124,33 +153,6 @@ float noise(vec3 p) {
     return mix(y1, y2, xyz.z);
 }
 
-//
-// The following is only used for UI; not for patterns
-//
-#ifdef RENDERING_UI
-uniform bool iLeftOnTop;
-uniform bool iSelection;
-uniform int iBins;
-uniform int iLeftDeckSelector;
-uniform int iLength;
-uniform int iPatternIndex;
-uniform int iRightDeckSelector;
-uniform int iSelected;
-uniform int iIndicator;
-uniform sampler1D iSpectrum;
-uniform sampler1D iWaveform;
-uniform sampler1D iBeats;
-uniform sampler2D iFrameLeft;
-uniform sampler2D iFrameRight;
-uniform sampler2D iPreview;
-uniform sampler2D iStrips;
-uniform sampler2D iTexture;
-uniform sampler2D iText;
-uniform sampler2D iName;
-uniform vec2 iPosition;
-uniform vec2 iTextResolution;
-uniform vec2 iNameResolution;
-#endif
 float rounded_rect_df(vec2 center, vec2 size, float radius) {
     return length(max(abs(gl_FragCoord.xy - center) - size, 0.0)) - radius;
 }

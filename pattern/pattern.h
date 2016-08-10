@@ -1,26 +1,21 @@
 #pragma once
 
-#define GL_GLEXT_PROTOTYPES
-#include <SDL2/SDL_opengl.h>
-#include <GL/glu.h>
-#include <stdbool.h>
+#include "util/common.h"
 
 #define MAX_INTEGRAL 1024
 
 struct pattern {
-    GLuint * shader;
-    int n_shaders;
-    char * name;
+    std::vector<GLuint> shader;
+    std::string name{};
     double intensity;
     double intensity_integral;
 
     int flip;
-    GLuint * tex;
+    std::vector<GLuint> tex;
+    std::vector<GLint> uni_tex;
     GLuint fb;
-    GLint * uni_tex;
     GLuint tex_output;
+    pattern( const char *prefix );
+    virtual ~pattern();
+    void render(GLuint input_tex);
 };
-
-int pattern_init(struct pattern * pattern, const char * prefix);
-void pattern_term(struct pattern * pattern);
-void pattern_render(struct pattern * pattern, GLuint input_tex);

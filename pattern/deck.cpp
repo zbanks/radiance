@@ -6,18 +6,18 @@
 #include "util/string.h"
 #include "util/ini.h"
 
-void deck_init(struct deck * deck) {
+deck::deck() = default;
+
+void deck::init()
+{
     GLenum e;
+    patterns.resize(config.deck.n_patterns);
 
-    memset(deck, 0, sizeof *deck);
-    deck->pattern = static_cast<pattern**>(calloc(config.deck.n_patterns, sizeof *deck->pattern));
-    if(deck->pattern == NULL) MEMFAIL();
-
-    glGenTextures(1, &deck->tex_input);
-    glGenFramebuffers(1, &deck->fb_input);
+    glGenTextures(1, &tex_input);
+    glGenFramebuffers(1, &fb_input);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    glBindTexture(GL_TEXTURE_2D, deck->tex_input);
+    glBindTexture(GL_TEXTURE_2D, tex_input);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -26,64 +26,61 @@ void deck_init(struct deck * deck) {
     glBindTexture(GL_TEXTURE_2D, 0);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    glBindFramebuffer(GL_FRAMEBUFFER, deck->fb_input);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb_input);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                              deck->tex_input, 0);
+                              tex_input, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
 
-void deck_term(struct deck * deck) {
-    glDeleteTextures(1, &deck->tex_input);
-    glDeleteFramebuffers(1, &deck->fb_input);
-    glDeleteTextures(1, &deck->tex_output);
-
-    for(int i = 0; i < config.deck.n_patterns; i++) {
-        if(deck->pattern[i] != NULL) {
-            pattern_term(deck->pattern[i]);
-            free(deck->pattern[i]);
-            deck->pattern[i] = NULL;
-        }
-    }
-    memset(deck, 0, sizeof *deck);
+void deck::term()
+{
+    if(tex_input)
+        glDeleteTextures(1, &tex_input);
+    if(fb_input)
+        glDeleteFramebuffers(1, &fb_input);
+    if(tex_output)
+        glDeleteTextures(1, &tex_output);
+    tex_input = 0;
+    fb_input = 0;
+    tex_output = 0;
+    patterns.clear();
 }
-
-int deck_load_pattern(struct deck * deck, int slot, const char * prefix) {
+deck::~deck()
+{
+    term();
+}
+int deck::load_pattern(int slot, const char * prefix)
+{
     assert(slot >= 0 && slot < config.deck.n_patterns);
-    struct pattern * p = static_cast<pattern*>(calloc(1, sizeof *p));
     float intensity = 0;
 
-    if(deck->pattern[slot]) intensity = deck->pattern[slot]->intensity;
+    if(patterns[slot])
+        intensity = patterns[slot]->intensity;
 
     if(prefix[0] == '\0') {
-        if(deck->pattern[slot]) {
-            prefix = deck->pattern[slot]->name;
-        } else return -1;
+        if(patterns[slot]) {
+            prefix = patterns[slot]->name.c_str();
+        } else {
+            return -1;
+        }
     }
-
-    int result = pattern_init(p, prefix);
-    if(result != 0) {
-        free(p);
-        return result;
+    try {
+        auto p = std::make_unique<pattern>(prefix);
+        p->intensity = intensity;
+        patterns[slot].swap(p);
+    }catch(const std::exception &e) {
+        ERROR("failed to load pattern: %s",e.what());
     }
-    if(deck->pattern[slot]) {
-        pattern_term(deck->pattern[slot]);
-        free(deck->pattern[slot]);
-    }
-    deck->pattern[slot] = p;
-    p->intensity = intensity;
     return 0;
 }
 
-void deck_unload_pattern(struct deck * deck, int slot) {
+void deck::unload_pattern(int slot)
+{
     assert(slot >= 0 && slot < config.deck.n_patterns);
-    if(deck->pattern[slot]) {
-        pattern_term(deck->pattern[slot]);
-        free(deck->pattern[slot]);
-        deck->pattern[slot] = NULL;
-    }
+    patterns[slot].reset();
 }
 
 struct deck_ini_data {
@@ -108,32 +105,32 @@ static int deck_ini_handler(void * user, const char * section, const char * name
     while (slot < config.deck.n_patterns) {
         char * prefix = strsep(&val, " ");
         if (prefix == NULL || prefix[0] == '\0') break;
-        int rc = deck_load_pattern(data->deck, slot++, prefix);
+        auto rc = data->deck->load_pattern(slot++, prefix);
         if (rc < 0) return 0;
     }
     free(val);
     return 1;
 }
 
-int deck_load_set(struct deck * deck, const char * name) {
+int deck::load_set(const char * name)
+{
     for (int slot = 0; slot < config.deck.n_patterns; slot++)
-        deck_unload_pattern(deck, slot);
+        unload_pattern(slot);
 
     struct deck_ini_data data = {
-        .deck = deck, .name = name, .found = false
+        .deck = this, .name = name, .found = false
     };
-    int rc = ini_parse(config.paths.decks_config, deck_ini_handler, &data);
+    auto rc = ini_parse(config.paths.decks_config, deck_ini_handler, &data);
     if (!data.found) ERROR("No deck set named '%s'", name);
     return rc;
 }
 
-void deck_render(struct deck * deck) {
-    deck->tex_output = deck->tex_input;
-
-    for(int i = 0; i < config.deck.n_patterns; i++) {
-        if(deck->pattern[i] != NULL) {
-            pattern_render(deck->pattern[i], deck->tex_output);
-            deck->tex_output = deck->pattern[i]->tex_output;
+void deck::render() {
+    tex_output = tex_input;
+    for(auto &pat : patterns) {
+        if(pat) {
+            pat->render(tex_output);
+            tex_output = pat->tex_output;
         }
     }
 }

@@ -42,7 +42,7 @@ void crossfader_init(struct crossfader * crossfader) {
 
     crossfader->position = 0.5;
 
-    crossfader->shader = load_shader("resources/crossfader.glsl",true);
+    crossfader->shader = load_shader("resources/crossfader.glsl");
     if(crossfader->shader == 0) FAIL("Unable to load crossfader shader:\n%s", get_load_shader_error().c_str());
 
     glProgramUniform2f(crossfader->shader,0,  config.pattern.master_width, config.pattern.master_height);

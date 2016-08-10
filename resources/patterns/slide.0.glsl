@@ -1,7 +1,7 @@
 // Slide the screen left-to-right
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 uv = gl_FragCoord.xy / v_size;
 
     float deviation = iIntensityIntegral;
     vec2 uv2 = uv;

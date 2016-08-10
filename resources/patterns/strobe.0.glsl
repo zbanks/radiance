@@ -1,8 +1,7 @@
 // Strobe alpha to the beat
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    f_color0 = texture2D(iFrame, uv);
+    f_color0 = texture2D(iFrame, v_uv);
     vec4 c;
 
     float freq;

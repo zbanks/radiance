@@ -8,10 +8,20 @@
 #include "util/err.h"
 #include "util/config.h"
 #include "main.h"
+#include <stdexcept>
+#include <exception>
+#include <system_error>
+
+#define GL_CHECK_ERROR() \
+do { \
+if(auto e = glGetError()) \
+    FAIL("OpenGL error: %s\n", gluErrorString(e)); \
+}while(false);
 
 static GLuint vao = 0;
 static GLuint vbo = 0;
-int pattern_init(struct pattern * pattern, const char * prefix) {
+pattern::pattern(const char * prefix)
+{
     bool new_buffers = false;
     if(!vao) {
         glGenVertexArrays(1,&vao);
@@ -37,164 +47,149 @@ int pattern_init(struct pattern * pattern, const char * prefix) {
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
         glEnableVertexAttribArray(1);
     }
-    GLenum e;
-    memset(pattern, 0, sizeof *pattern);
 
-    pattern->intensity = 0;
-    pattern->intensity_integral = 0;
-    pattern->name = strdup(prefix);
-    if(pattern->name == NULL) ERROR("Could not allocate memory");
+    intensity = 0;
+    intensity_integral = 0;
+    name = prefix;
 
     int n = 0;
     for(;;) {
-        char * filename;
         struct stat statbuf;
-        filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, n);
-        if(filename == NULL) MEMFAIL();
+        auto filename = std::string{config.pattern.dir} + std::string{prefix} + "." + std::to_string(n) + ".glsl";
+        int rc = stat(filename.c_str(), &statbuf);
 
-        int rc = stat(filename, &statbuf);
-        free(filename);
-
-        if (rc != 0 || S_ISDIR(statbuf.st_mode)) {
+        if (rc != 0 || S_ISDIR(statbuf.st_mode))
             break;
-        }
         n++;
     }
-
     if(n == 0) {
         ERROR("Could not find any shaders for %s", prefix);
-        return 1;
+        throw std::system_error(EINVAL,std::system_category(),"failed to load shader.");
     }
-    pattern->n_shaders = n;
+    shader.clear();
+    shader.reserve(n);
+    tex.resize(n + 1);
 
-    pattern->shader = static_cast<GLuint*>(calloc(pattern->n_shaders, sizeof *pattern->shader));
-    if(pattern->shader == NULL) MEMFAIL();
-    pattern->tex = static_cast<GLuint*>(calloc(pattern->n_shaders, sizeof *pattern->tex));
-    if(pattern->tex == NULL) MEMFAIL();
-
-    bool success = true;
-    for(int i = 0; i < pattern->n_shaders; i++) {
-        char * filename;
-        filename = rsprintf("%s%s.%d.glsl", config.pattern.dir, prefix, i);
-        if(filename == NULL) MEMFAIL();
-        GLuint h = load_pattern_shader(filename);
-        glProgramUniform2f(h, 0,  config.pattern.master_width, config.pattern.master_height);
+    auto success = true;
+    for(auto i = 0; i < n; i++) {
+        auto filename = std::string{config.pattern.dir} + std::string{prefix} + "." + std::to_string(i) + ".glsl";
+        auto h = load_shader(filename.c_str());
+        if(!h) {
+            success = false;
+        }
         if (h == 0) {
-            fprintf(stderr, "%s", get_shader_error().c_str());
-            WARN("Unable to load shader %s", filename);
+            fprintf(stderr, "%s", get_load_shader_error().c_str());
+            WARN("Unable to load shader %s", filename.c_str());
             success = false;
         } else {
-            pattern->shader[i] = h;
+            glProgramUniform2f(h, 0,  config.pattern.master_width, config.pattern.master_height);
+            shader.push_back(h);
             DEBUG("Loaded shader #%d", i);
         }
-        free(filename);
     }
     if(!success) {
         ERROR("Failed to load some shaders.");
-        return 2;
+        throw std::system_error(EINVAL,std::system_category(),"failed to load shader.");
     }
-
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    GL_CHECK_ERROR();
 
     // Render targets
-    glGenFramebuffers(1, &pattern->fb);
-    glGenTextures(pattern->n_shaders + 1, pattern->tex);
-
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
-    for(int i = 0; i < pattern->n_shaders + 1; i++) {
-        glBindTexture(GL_TEXTURE_2D, pattern->tex[i]);
+    glGenFramebuffers(1, &fb);
+    GL_CHECK_ERROR();
+    glGenTextures(tex.size(), &tex[0]);
+    GL_CHECK_ERROR();
+    
+    for(auto & t : tex) {
+        glBindTexture(GL_TEXTURE_2D, t);
+        GL_CHECK_ERROR();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        GL_CHECK_ERROR();
         glTexStorage2D(GL_TEXTURE_2D, 1,GL_RGBA32F, config.pattern.master_width, config.pattern.master_height);
+        GL_CHECK_ERROR();
+        glClearTexImage(t, 0, GL_RGBA, GL_FLOAT, nullptr);
     }
+    GL_CHECK_ERROR();
 
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    GL_CHECK_ERROR();
 
-    glBindFramebuffer(GL_FRAMEBUFFER, pattern->fb);
-    for(int i = 0; i < pattern->n_shaders + 1; i++) {
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                                  pattern->tex[i], 0);
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
-
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
+    uni_tex.resize(shader.size());
+    std::iota(uni_tex.begin(),uni_tex.end(),1);
     // Some OpenGL API garbage
-    pattern->uni_tex = static_cast<GLint*>(calloc(pattern->n_shaders, sizeof *pattern->uni_tex));
-    if(pattern->uni_tex == NULL) MEMFAIL();
-    for(int i = 0; i < pattern->n_shaders; i++) {
-        pattern->uni_tex[i] = i + 1;
-    }
-
-    return 0;
 }
 
-void pattern_term(struct pattern * pattern) {
-    GLenum e;
-
-    for (int i = 0; i < pattern->n_shaders; i++) {
-        glDeleteProgram(pattern->shader[i]);
+pattern::~pattern()
+{
+    for(auto & shader : shader) {
+        glDeleteProgram(shader);
+        shader = 0;
     }
+    shader.clear();
 
-    glDeleteTextures(pattern->n_shaders + 1, pattern->tex);
-    glDeleteBuffers(1,&vbo);
-    glDeleteVertexArrays(1,&vao);
-    glDeleteFramebuffers(1, &pattern->fb);
-
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
-    free(pattern->name);
-    memset(pattern, 0, sizeof *pattern);
+    glDeleteTextures(tex.size(), &tex[0]);
+    GL_CHECK_ERROR();
+    tex.clear();
+    glDeleteFramebuffers(1, &fb);
+    GL_CHECK_ERROR();
+    fb = 0;
+    GL_CHECK_ERROR();
 }
 
-void pattern_render(struct pattern * pattern, GLuint input_tex) {
-    GLenum e;
+void pattern::render(GLuint input_tex) {
+
     glBindBuffer(GL_ARRAY_BUFFER,vbo);
     glBindVertexArray(vao);
+    GL_CHECK_ERROR();
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
-    glBindFramebuffer(GL_FRAMEBUFFER, pattern->fb);
+    GL_CHECK_ERROR();
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    GL_CHECK_ERROR();
 
-    pattern->intensity_integral = fmod(pattern->intensity_integral + pattern->intensity / config.ui.fps, MAX_INTEGRAL);
+    intensity_integral = fmod(intensity_integral + intensity / config.ui.fps, MAX_INTEGRAL);
 
-    for (int i = pattern->n_shaders - 1; i >= 0; i--) {
-        glUseProgram(pattern->shader[i]);
-
+    for (auto i = int(shader.size()) - 1; i >= 0; --i){
+        glUseProgram(shader[i]);
+        GL_CHECK_ERROR();
+        
+        auto tex_bindings = std::vector<GLuint>{};
         // Don't worry about this part.
-        for(int j = 0; j < pattern->n_shaders; j++) {
-            // Or, worry about it, but don't think about it.
-            glActiveTexture(GL_TEXTURE1 + j);
-            glBindTexture(GL_TEXTURE_2D, pattern->tex[(pattern->flip + j + (i < j)) % (pattern->n_shaders + 1)]);
+        for(int j = 0; j < int(tex.size()) - 1; j++) {
+            tex_bindings.push_back(tex[(flip + j + (i < j)) % (tex.size())]);
         }
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                                  pattern->tex[(pattern->flip + i + 1) % (pattern->n_shaders + 1)], 0);
+        glBindTextures(1, tex_bindings.size(), &tex_bindings[0]);
+        GL_CHECK_ERROR();
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER
+          , GL_COLOR_ATTACHMENT0
+          , GL_TEXTURE_2D
+          , tex[(flip + i + 1) % (tex.size())]
+          , 0);
 
-        if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
+        GL_CHECK_ERROR();
         glUniform1f(1, time_master.beat_frac + time_master.beat_index);
         glUniform4f(2, audio_low, audio_mid, audio_hi, audio_level);
         glUniform2f(3, config.pattern.master_width, config.pattern.master_height);
-        glUniform1f(4, pattern->intensity);
-        glUniform1f(5, pattern->intensity_integral);
+        glUniform1f(4, intensity);
+        glUniform1f(5, intensity_integral);
         glUniform1f(6, config.ui.fps);
         glUniform1i(7, 0);
-        glUniform1iv(8, pattern->n_shaders, pattern->uni_tex);
+        glUniform1iv(8, uni_tex.size(), &uni_tex[0]);
 
         glActiveTexture(GL_TEXTURE0);
+        GL_CHECK_ERROR();
         glBindTexture(GL_TEXTURE_2D, input_tex);
-
-        if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+        GL_CHECK_ERROR();
 
         glClear(GL_COLOR_BUFFER_BIT);
         glDrawArrays(GL_POINTS, 0, 1);
 
-        if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+        GL_CHECK_ERROR();
     }
-    pattern->flip = (pattern->flip + 1) % (pattern->n_shaders + 1);
+    flip = (flip + 1) % (tex.size());
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-    pattern->tex_output = pattern->tex[pattern->flip];
+    GL_CHECK_ERROR();
+    tex_output = tex[flip];
 }

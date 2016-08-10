@@ -1,7 +1,7 @@
 // Rotate the screen
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 uv = gl_FragCoord.xy / v_size;
 
     float r = iIntensity;
     float s = sin(r * M_PI);
