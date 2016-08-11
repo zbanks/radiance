@@ -2,8 +2,11 @@
 	path = BTrack
 	url = https://github.com/zbanks/BTrack
 [submodule "stb"]
-	path = stb
+	path = submodules/stb
 	url = git@github.com:nothings/stb.git
 [submodule "gl3w"]
-	path = gl3w
+	path = submodules/gl3w
 	url = git@github.com:skaslev/gl3w.git
+[submodule "submodules/freetype-gl"]
+	path = submodules/freetype-gl
+	url = git@github.com:gdkar/freetype-gl.git

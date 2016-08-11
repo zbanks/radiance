@@ -1,6 +1,7 @@
 #include "util/common.h"
 #include <unistd.h>
 
+#include "ui/ui.h"
 #include "util/config.h"
 #include "util/err.h"
 #include "util/math.h"
@@ -8,22 +9,27 @@
 #include "output/config.h"
 #include "output/slice.h"
 #include "output/lux.h"
+#include <thread>
+#include <chrono>
+#include <condition_variable>
 
-static std::atomic<int> output_running{0};
+static std::atomic<int> output_running        {false};
 static std::atomic<int> output_refresh_request{false};
+
 static SDL_Thread * output_thread;
-static struct render * render = NULL;
+static struct render * render = nullptr;
 static bool output_on_lux = false;
+
+static SDL_GLContext output_context{nullptr};
 
 static int output_reload_devices() {
     // Tear down
     if (output_on_lux) {
         output_lux_term();
     }
-
     // Reload configuration
     output_on_lux = false;
-    int rc = output_config_load(&output_config, config.paths.output_config);
+    auto rc= output_config_load(&output_config, config.paths.output_config);
     if (rc < 0) {
         ERROR("Unable to load output configuration");
         return -1;
@@ -31,15 +37,18 @@ static int output_reload_devices() {
 
     // Initialize
     if (output_config.lux.enabled) {
-        int rc = output_lux_init();
-        if (rc < 0) PERROR("Unable to initialize lux");
-        else output_on_lux = true;
+        auto rc = output_lux_init();
+        if (rc < 0)
+            PERROR("Unable to initialize lux");
+        else
+            output_on_lux = true;
     }
-
     return 0;
 }
 
-int output_run(void * args) {
+int output_run(void * args)
+{
+    ui_make_context_current(output_context);
     output_reload_devices();
 
     /*
@@ -47,12 +56,12 @@ int output_run(void * args) {
     SDL_initFramerate(&fps_manager);
     SDL_setFramerate(&fps_manager, 100);
     */
-    double stat_ops = 100;
-    int render_count = 0;
+    auto stat_ops = 100.;
+    auto render_count = 0;
 
     output_running = true;   
-    int last_tick = SDL_GetTicks();
-    unsigned int last_output_render_count = output_render_count;
+    auto last_tick = SDL_GetTicks();
+    auto last_output_render_count = output_render_count;
     (void) last_output_render_count; //TODO
 
     while(output_running) {
@@ -60,23 +69,22 @@ int output_run(void * args) {
             output_reload_devices();
             output_refresh_request = 0;
         }
-
         //if (last_output_render_count == output_render_count)
         last_output_render_count = output_render_count;
-        int rc = output_render(render);
-        if (rc < 0) PERROR("Unable to render");
+        if(output_render(render) < 0)
+            PERROR("Unable to render");
 
         if (output_on_lux) {
-            int rc = output_lux_prepare_frame();
-            if (rc < 0) PERROR("Unable to prepare lux frame");
-            rc = output_lux_sync_frame();
-            if (rc < 0) PERROR("Unable to sync lux frame");
+            if( output_lux_prepare_frame() < 0)
+                PERROR("Unable to prepare lux frame");
+            if(output_lux_sync_frame() < 0)
+                PERROR("Unable to sync lux frame");
         }
 
         //SDL_framerateDelay(&fps_manager);
         SDL_Delay(1);
-        int tick = SDL_GetTicks();
-        int delta = MAX(tick - last_tick, 1);
+        auto tick = SDL_GetTicks();
+        auto delta = std::max<int>(tick - last_tick, 1);
         stat_ops = INTERP(0.99, stat_ops, 1000. / delta);
 
         if ((delta < 10) && (delta > 0)) {
@@ -98,18 +106,14 @@ int output_run(void * args) {
     return 0;
 }
 
-void output_init(struct render * _render) {
+void output_init(struct render * _render)
+{
     output_config_init(&output_config);
     render = _render;
-
+    output_context = ui_make_secondary_context();
     output_thread = SDL_CreateThread(&output_run, "Output", 0);
-    if(!output_thread) FAIL("Could not create output thread: %s\n", SDL_GetError());
+    if(!output_thread)
+        FAIL("Could not create output thread: %s\n", SDL_GetError());
 }
-
-void output_term() {
-    output_running = false;
-}
-
-void output_refresh() {
-    output_refresh_request = true;
-}
+void output_term() { output_running = false; }
+void output_refresh() { output_refresh_request = true; }

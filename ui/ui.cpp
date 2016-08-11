@@ -297,9 +297,7 @@ void ui_init() {
     // Done allocating textures & FBOs, unbind and check for errors
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    GL_CHECK_ERROR();
 
-    if((blit_shader = load_shader("#blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
     if((main_shader = load_shader("#ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", get_load_shader_error().c_str());
     if((pat_shader = load_shader("#ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_shader_error().c_str());
     if((crossfader_shader = load_shader("#ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_shader_error().c_str());
@@ -307,6 +305,7 @@ void ui_init() {
     if((spectrum_shader = load_shader("#ui_spectrum.glsl")) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_shader_error().c_str());
     if((waveform_shader = load_shader("#ui_waveform.glsl")) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
     if((strip_shader = load_shader("#strip.v.glsl","#strip.f.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
+    if((blit_shader = load_shader("#blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
@@ -325,8 +324,27 @@ void ui_init() {
     if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
     SDL_FreeSurface(surf);
     SDL_DestroyTexture(texture);
+    GL_CHECK_ERROR();
 }
+void ui_make_context_current(SDL_GLContext ctx)
+{
+    SDL_GL_MakeCurrent(window,ctx);
+}
+SDL_GLContext ui_make_secondary_context()
+{
+    SDL_GL_MakeCurrent(window,context);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_RELEASE_BEHAVIOR,SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
+    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_TRUE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,SDL_GL_CONTEXT_DEBUG_FLAG|
+                                             SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    auto extra_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window,context);
+    return extra_context;
 
+}
 void ui_term() {
     TTF_CloseFont(font);
     for(int i=0; i<config.ui.n_patterns; i++) {
@@ -607,9 +625,9 @@ static void ui_render(bool select) {
                     double y;
                     for(auto v = d->vertex_head; v ; v = v->next) {
                         if(!first) {
-                            double dx = v->x - x;
-                            double dy = v->y - y;
-                            double dl = hypot(dx, dy);
+                            auto dx = v->x - x;
+                            auto dy = v->y - y;
+                            auto dl = hypot(dx, dy);
                             dx = config.ui.strip_thickness * dx / dl;
                             dy = config.ui.strip_thickness * dy / dl;
                             vertex2d(x + dy, y - dx);
@@ -686,8 +704,8 @@ static void ui_render(bool select) {
     // Render the crossfader
     glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
 
-    int cw = config.ui.crossfader_width;
-    int ch = config.ui.crossfader_height;
+    auto cw = config.ui.crossfader_width;
+    auto ch = config.ui.crossfader_height;
     glUseProgram(crossfader_shader);
     location = glGetUniformLocation(crossfader_shader, "iSelection");
     glUniform1i(location, select);
@@ -712,10 +730,10 @@ static void ui_render(bool select) {
     fill(cw, ch);
 
     glDisable(GL_BLEND);
-    int sw = 0;
-    int sh = 0;
-    int vw = 0;
-    int vh = 0;
+    auto sw = 0;
+    auto sh = 0;
+    auto vw = 0;
+    auto vh = 0;
     if(!select) {
         analyze_render(tex_spectrum_data, tex_waveform_data, tex_waveform_beats_data);
         // Render the spectrum
@@ -989,7 +1007,8 @@ void ui_run() {
 
             double cur_t = SDL_GetTicks();
             double dt = cur_t - l_t;
-            if(dt > 0) current_time += dt / 1000;
+            if(dt > 0)
+                current_time += dt / 1000;
             l_t = cur_t;
         }
 }

@@ -70,3 +70,6 @@ extern "C" {
 #include <stdbool.h>
 #include <stdatomic.h>
 #endif
+
+#include "util/err.h"
+

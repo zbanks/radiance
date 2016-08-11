@@ -1,3 +1,4 @@
+#include "util/common.h"
 #include "output/slice.h"
 #include "util/err.h"
 #include "util/math.h"
@@ -121,13 +122,44 @@ int output_device_arrange(struct output_device * dev) {
 
 int output_render(struct render * render) {
     render_freeze(render);
-    for (struct output_device * dev = output_device_head; dev; dev = dev->next) {
-        if (!dev->active) continue;
-        for (size_t i = 0; i < dev->pixels.length; i++)
-            dev->pixels.colors[i] = render_sample(render, dev->pixels.xs[i], dev->pixels.ys[i]);
-    }
+    auto &rb = render->readback[render->cons_idx&1];
+    auto &fence = rb.fence;
     render_thaw(render);
-    output_render_count++;
+    if(fence) {
+//        INFO("Found a fence!");
+        auto res = glClientWaitSync(fence, 0, 1000000);
+        CHECK_GL();
+//        INFO("Woke up again!");
+        if((res & GL_CONDITION_SATISFIED) || (res & GL_ALREADY_SIGNALED)) {
+//            INFO("And rendering shit!");
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, rb.pbo);
+            rb.pixels = static_cast<uint8_t*>(glMapBufferRange(
+                GL_PIXEL_PACK_BUFFER
+            , 0
+            , rb.width * rb.height * 4
+            , GL_MAP_READ_BIT//|GL_MAP_PERSISTENT_BIT
+            ));
+            render->pixels = rb.pixels;
+            for (struct output_device * dev = output_device_head; dev; dev = dev->next) {
+                if (!dev->active)
+                    continue;
+                for (size_t i = 0; i < dev->pixels.length; i++)
+                    dev->pixels.colors[i] = render_sample(render, dev->pixels.xs[i], dev->pixels.ys[i]);
+            }
+            output_render_count++;
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+            rb.pixels = nullptr;
+            render_freeze(render);
+            glDeleteSync(rb.fence);
+            rb.fence = 0;
+          ++render->cons_idx;
+            render->pixels = nullptr;
+            render_thaw(render);
+        }else{
+            WARN("Failure????????");
+        }
+    }
     return 0;
 }
 

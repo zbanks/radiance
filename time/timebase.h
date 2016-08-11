@@ -3,12 +3,11 @@
 #include <stdint.h>
 
 #define MINUTES_PER_MILLISECOND (60. * 1000.)
-NOT_CXX
 extern struct time_master {
-    long wall_ms;
-    double beat_frac;
+    long    wall_ms;
+    double  beat_frac;
     uint8_t beat_index;
-    double bpm;
+    double  bpm;
 } time_master;
 
 enum time_source {
@@ -27,5 +26,4 @@ enum time_source_event {
 
 int time_init();
 void time_term();
-void time_update(enum time_source source, enum time_source_event event, double ms_until_event);
-CXX_OK
+void time_update(time_source source, time_source_event event, double ms_until_event);

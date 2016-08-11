@@ -4,9 +4,6 @@
 #include <portmidi.h>
 
 #include "midi/config.h"
-#ifdef __cplusplus
-extern "C" { 
-#endif
 #define SDL_MIDI_COMMAND_EVENT (SDL_USEREVENT)
 
 enum midi_status {
@@ -54,7 +51,3 @@ void midi_stop();
 void midi_refresh();
 
 PmError pm_errmsg(PmError err);
-
-#ifdef __cplusplus
-}
-#endif

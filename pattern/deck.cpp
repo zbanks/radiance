@@ -14,6 +14,7 @@ void deck::init()
     patterns.resize(config.deck.n_patterns);
 
     glGenTextures(1, &tex_input);
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     glGenFramebuffers(1, &fb_input);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 

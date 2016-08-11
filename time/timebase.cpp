@@ -20,35 +20,39 @@ static double error_wrap(double x_est, double x_obs) {
     // Error of `x_est` from `x_obs` in the space [-1, 1]
     // D(0.1, 0) == -D(0.9, 0) == 0.1
     // D(0.5, 0) == +0.5; D(0.51, 0) == -0.49
-    double d = x_est - x_obs + 100;
-    return fmod(d + 0.5, 1.0) - 0.5;
+    auto d = x_est - x_obs + 100;
+    return std::fmod(d + 0.5, 1.0) - 0.5;
 }
 
-static void error_wrap_test() {
-    for(double x = -0.95; x <= 1.0; x += 0.05) {
-        for (double d = -0.99; d <= 1.0; d += 0.01) {
-            double e = x + d;
-            while(e >= 1.0) e -= 1.0;
-            while(e < 0) e += 1.0;
-            double r = error_wrap(e, x);
-            if (fabs(r - d) > 1e6) FAIL("x=%lf, d=%lf, e=%lf, r=%lf", x, d, e, r);
+static void error_wrap_test()
+{
+    for(auto x = -0.95; x <= 1.0; x += 0.05) {
+        for (auto d = -0.99; d <= 1.0; d += 0.01) {
+            auto e = x + d;
+            while(e >= 1.0)
+                e -= 1.0;
+            while(e < 0)
+                e += 1.0;
+            auto r = error_wrap(e, x);
+            if (std::abs(r - d) > 1e6)
+                FAIL("x=%lf, d=%lf, e=%lf, r=%lf", x, d, e, r);
         }
     }
 }
 
 // Time master
-int time_init() {
+int time_init()
+{
     memset(&time_master, 0, sizeof time_master);
     time_master.bpm = 140;
     error_wrap_test();
     return 0;
 }
 
-void time_term() {
-    return;
-}
+void time_term() { return; }
 
-void time_update(enum time_source source, enum time_source_event event, double event_arg) {
+void time_update(enum time_source source, enum time_source_event event, double event_arg)
+{
     struct timespec tv = {0, 0};
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &tv) != 0) {
         PERROR("clock_gettime failed");
@@ -56,10 +60,11 @@ void time_update(enum time_source source, enum time_source_event event, double e
     }
 
     // Convert to milliseconds
-    long time_ms = tv.tv_sec * 1000 + tv.tv_nsec / (1000 * 1000);
+    auto time_ms = tv.tv_sec * 1000 + tv.tv_nsec / (1000 * 1000);
 
-    long delta_time_ms = time_ms - time_master.wall_ms;
-    if (time_master.wall_ms == 0) delta_time_ms = 0;
+    auto delta_time_ms = time_ms - time_master.wall_ms;
+    if (time_master.wall_ms == 0)
+        delta_time_ms = 0;
     (void) delta_time_ms;
 
     switch (event) {
@@ -68,10 +73,10 @@ void time_update(enum time_source source, enum time_source_event event, double e
     case TIME_SOURCE_EVENT_BPM:
         time_master.bpm = event_arg;
         break;
-    case TIME_SOURCE_EVENT_BEAT:
+    case TIME_SOURCE_EVENT_BEAT: {
         ;
-        double ms_until_event = event_arg;
-        double master_beat_per_ms = time_master.bpm / MINUTES_PER_MILLISECOND;
+        auto ms_until_event = event_arg;
+        auto master_beat_per_ms = time_master.bpm / MINUTES_PER_MILLISECOND;
         char status = '!';
         (void) status;
         if (event_arg == 0) {
@@ -88,6 +93,7 @@ void time_update(enum time_source source, enum time_source_event event, double e
         INFO("Beat: %c %0.1f %u %0.3f", status, time_master.bpm, time_master.beat_index, time_master.beat_frac);
 #endif
         break;
+    }
     case TIME_SOURCE_EVENT_NONE:
     default:
         break;
@@ -98,17 +104,17 @@ void time_update(enum time_source source, enum time_source_event event, double e
     double master_beat_per_ms = time_master.bpm / MINUTES_PER_MILLISECOND;
     phase += delta_time_ms * master_beat_per_ms;
 
-    double phase_est_at_event = phase + master_beat_per_ms * ms_until_event;
-    double error = error_wrap(phase_est_at_event, 0.0);
+    auto phase_est_at_event = phase + master_beat_per_ms * ms_until_event;
+    auto error = error_wrap(phase_est_at_event, 0.0);
     time_master.bpm += error * 0.5;
 
-    static int n_errors = 0;
-    static double total_error = 0;
+    static auto n_errors = 0;
+    static auto total_error = 0;
     n_errors++;
-    total_error += fabs(error);
+    total_error += std::abs(error);
 
     // Update time_master
-    long phase_idx = (long) phase;
+    auto phase_idx = (long) phase;
     if (phase > 1.0) {
         phase -= phase_idx;
         INFO("Predicted %ld beat(s) at bpm=%lf error=%lf", phase_idx, time_master.bpm, total_error / n_errors);

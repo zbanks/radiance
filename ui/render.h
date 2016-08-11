@@ -5,9 +5,19 @@
 extern "C" {
 #endif
 
+struct async_reader{
+    GLuint    pbo;
+    int       width;
+    int       height;
+    uint8_t  *pixels;
+    GLsync    fence;
+};
 struct render {
     GLuint fb;
-    uint8_t * pixels;
+    uint8_t     *pixels; 
+    async_reader readback[2];
+    int          prod_idx;
+    int          cons_idx;
     SDL_mutex * mutex;
 };
 
