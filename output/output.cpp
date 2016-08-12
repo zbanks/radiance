@@ -1,6 +1,7 @@
 #include "util/common.h"
 #include <unistd.h>
 
+#include "time/timebase.h"
 #include "ui/ui.h"
 #include "util/config.h"
 #include "util/err.h"
@@ -57,10 +58,11 @@ int output_run(void * args)
     SDL_setFramerate(&fps_manager, 100);
     */
     auto stat_ops = 100.;
+    auto stat_time= 0.;
     auto render_count = 0;
 
     output_running = true;   
-    auto last_tick = SDL_GetTicks();
+    auto last_tick = time_cpu_time();
     auto last_output_render_count = output_render_count;
     (void) last_output_render_count; //TODO
 
@@ -82,20 +84,28 @@ int output_run(void * args)
         }
 
         //SDL_framerateDelay(&fps_manager);
-        SDL_Delay(1);
-        auto tick = SDL_GetTicks();
-        auto delta = std::max<int>(tick - last_tick, 1);
-        stat_ops = INTERP(0.99, stat_ops, 1000. / delta);
+//        time_cpu_nanosleep_estimate(1000000);
+//        SDL_Delay(1);
+        
+        auto tick = time_cpu_time();
+        auto delta = std::max<double>(tick - last_tick, 1e-9);
+        stat_ops += 1;
+        stat_time+= delta;
+//        stat_ops = INTERP(0.99, stat_ops, 1000. / delta);
 
-        if ((delta < 10) && (delta > 0)) {
-            SDL_Delay(10 - delta);
+//        if (delta < 10e-3) {
+//            time_cpu_nanosleep_estimate(int64_t((10e-3 - delta) * 1e6) - 6000);
+//            SDL_Delay(10 - delta);
             //LOGLIMIT(DEBUG, "Sleeping for %d ms", 10 - delta);
-        }
+//        }
         last_tick = tick;
 
         render_count++;
-        if (render_count % 101 == 0)
-            DEBUG("Output FPS: %0.2f; delta=%d", stat_ops, delta);
+        if (render_count % 101 == 0) {
+            DEBUG("Output FPS: %0.2f; delta=%E", stat_ops / stat_time, delta);
+            stat_ops = 0;
+            stat_time = 0;
+        }
     }
 
     // Destroy output

@@ -121,16 +121,17 @@ int output_device_arrange(struct output_device * dev) {
 }
 
 int output_render(struct render * render) {
-    render_freeze(render);
+    render_wait(render);
+//    render_freeze(render);
     auto &rb = render->readback[render->cons_idx&1];
     auto &fence = rb.fence;
-    render_thaw(render);
+//    render_thaw(render);
     if(fence) {
 //        INFO("Found a fence!");
-        auto res = glClientWaitSync(fence, 0, 1000000);
+        auto res = glClientWaitSync(fence, 0, 1000 * 1000 * 50);
         CHECK_GL();
 //        INFO("Woke up again!");
-        if((res & GL_CONDITION_SATISFIED) || (res & GL_ALREADY_SIGNALED)) {
+        if((res == GL_CONDITION_SATISFIED) || (res == GL_ALREADY_SIGNALED)) {
 //            INFO("And rendering shit!");
             glBindBuffer(GL_PIXEL_PACK_BUFFER, rb.pbo);
             rb.pixels = static_cast<uint8_t*>(glMapBufferRange(
@@ -146,19 +147,18 @@ int output_render(struct render * render) {
                 for (size_t i = 0; i < dev->pixels.length; i++)
                     dev->pixels.colors[i] = render_sample(render, dev->pixels.xs[i], dev->pixels.ys[i]);
             }
-            output_render_count++;
             glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
             glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-            rb.pixels = nullptr;
-            render_freeze(render);
-            glDeleteSync(rb.fence);
-            rb.fence = 0;
-          ++render->cons_idx;
-            render->pixels = nullptr;
-            render_thaw(render);
         }else{
             WARN("Failure????????");
         }
+        output_render_count++;
+        render->pixels = nullptr;
+        ++render->cons_idx;
+        glDeleteSync(rb.fence);
+        render_freeze(render);
+        rb.fence = 0;
+        render_thaw(render);
     }
     return 0;
 }

@@ -942,7 +942,6 @@ void ui_run() {
 
         quit = false;
         while(!quit) {
-            ui_render(true);
 
             while(SDL_PollEvent(&e) != 0) {
                 if (midi_command_event != (Uint32) -1 && 
@@ -1006,7 +1005,9 @@ void ui_run() {
                 d.render();
             crossfader_render(&crossfader, deck[left_deck_selector].tex_output, deck[right_deck_selector].tex_output);
             render_readback(&render);
+            ui_render(true);
             ui_render(false);
+
             SDL_GL_SwapWindow(window);
 
             double cur_t = SDL_GetTicks();

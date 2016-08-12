@@ -8,6 +8,7 @@
 void render_init(struct render * render, GLint texture)
 {
     memset(render, 0, sizeof *render);
+    sem_init(&render->semaphore, 0, 0);
 //    render->pixels = static_cast<uint8_t*>(::calloc(config.pattern.master_width * config.pattern.master_height * BYTES_PER_PIXEL, sizeof(uint8_t)));
 //    if(render->pixels == NULL) MEMFAIL();
 
@@ -50,6 +51,7 @@ void render_term(struct render * render)
 {
 //    free(render->pixels);
     glDeleteFramebuffers(1, &render->fb);
+    sem_destroy(&render->semaphore);
     for(auto &rb : render->readback){
         glDeleteSync(rb.fence);
         rb.fence = 0;
@@ -69,7 +71,7 @@ void render_term(struct render * render)
 
 void render_readback(struct render * render)
 {
-    if(SDL_TryLockMutex(render->mutex) == 0) {
+    if(SDL_LockMutex(render->mutex) == 0) {
         auto &rb = render->readback[render->prod_idx&1];
         if(!rb.fence) {
 //            INFO("Starting another fetch, prod_idx is %d\n",render->prod_idx);
@@ -85,11 +87,12 @@ void render_readback(struct render * render)
             CHECK_GL();
             rb.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
           ++render->prod_idx;
-    //        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             CHECK_GL();
             glBindBuffer(GL_PIXEL_PACK_BUFFER,0);
             CHECK_GL();
             SDL_UnlockMutex(render->mutex);
+            sem_post(&render->semaphore);
         }
     }
 }
@@ -114,4 +117,13 @@ SDL_Color render_sample(struct render * render, float x, float y)
     c.b = render->pixels[index + 2];
     c.a = render->pixels[index + 3];
     return c;
+}
+void render_wait(struct render *render)
+{
+    while(sem_wait(&render->semaphore) < 0 && errno == EINTR)
+    {}
+}
+void render_post(struct render *render)
+{
+    sem_post(&render->semaphore);
 }
