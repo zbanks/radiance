@@ -192,6 +192,7 @@ static void render_textbox(char * text, int width, int height) {
 
 void ui_init() {
     // Init SDL
+
     if(SDL_Init(SDL_INIT_VIDEO) < 0) FAIL("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -213,6 +214,9 @@ void ui_init() {
     if(TTF_Init() < 0) FAIL("Could not initialize font library: %s\n", TTF_GetError());
     
     SDL_GL_MakeCurrent(window,context);
+    if(gl3wInit()) {
+        FAIL("Could not initialize gl3w and load OpenGL functions.");
+    }
     glGetError();
     glGenBuffers(1,&vbo);
     glGenVertexArrays(1,&vao);

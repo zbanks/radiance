@@ -9,8 +9,7 @@ extern "C" {
 #define NOT_CXX
 #define CXX_OK
 #endif
-#define GL_GLEXT_PROTOTYPES
-#define GL3_PROTOTYPES 1
+#include <GL/gl3w.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_opengl.h>
