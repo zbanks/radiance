@@ -30,7 +30,7 @@ loglevel set_loglevel(loglevel level);
         LVL("[%8lu] " msg, _ntimes, ## __VA_ARGS__); \
 })
 
-#define _ERR_MSG(severity, msg, ...) ({if (get_loglevel() <= LOGLEVEL_ ## severity) { fprintf(stderr, "[%-5s] [%s:%d:%s] " msg "\n", _ERR_STRINGIFY(severity), __FILE__, __LINE__, __func__, ## __VA_ARGS__); } })
+#define _ERR_MSG(severity, msg, ...) ({if (get_loglevel() <= LOGLEVEL_ ## severity) { fprintf(stderr, "[%-5s] [%s:%d:%s] " msg "\n", _ERR_STRINGIFY(severity), __FILE__, __LINE__, __func__, ## __VA_ARGS__);fflush(stderr); } })
 
 #define FAIL(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
 #define ERROR(...) _ERR_MSG(ERROR, ## __VA_ARGS__)

@@ -4,6 +4,7 @@ in flat vec2 v_corner;
 in flat vec2 v_size;
 in      vec2 v_uv;
 out layout(location = 0) vec4 f_color0;
+out layout(location = 1) int  f_color1;
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform layout(location = 1) float iTime;

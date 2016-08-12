@@ -66,6 +66,7 @@ CFGSECTION(paths,
 
 CFGSECTION(debug,
     CFG(loglevel, INT, 2)
+    CFG(gl_level, INT, GL_DEBUG_SEVERITY_MEDIUM)
 )
 
 #undef CFGSECTION

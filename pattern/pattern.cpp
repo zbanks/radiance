@@ -153,7 +153,7 @@ void pattern::render(GLuint input_tex) {
     for (auto i = int(shader.size()) - 1; i >= 0; --i){
         glUseProgram(shader[i]);
         GL_CHECK_ERROR();
-        
+
         auto tex_bindings = std::vector<GLuint>{};
         // Don't worry about this part.
         for(int j = 0; j < int(tex.size()) - 1; j++) {
@@ -161,10 +161,9 @@ void pattern::render(GLuint input_tex) {
         }
         glBindTextures(1, tex_bindings.size(), &tex_bindings[0]);
         GL_CHECK_ERROR();
-        glFramebufferTexture2D(
+        glFramebufferTexture(
             GL_FRAMEBUFFER
           , GL_COLOR_ATTACHMENT0
-          , GL_TEXTURE_2D
           , tex[(flip + i + 1) % (tex.size())]
           , 0);
 

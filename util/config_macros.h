@@ -25,6 +25,12 @@ NOT_CXX
 #define UINT16 Uint16
 #define FLOAT float
 
+#define GEENUM GLenum
+#define GLENUM_FORMAT(x) "%d", x
+#define GLENUM_PARSE(x) atoi(x)
+#define GLENUM_FREE(x) (void)sizeof(x)
+#define GLENUM_PREP(x) x
+
 #define INT_PARSE(x) atoi(x)
 #define SINT16_PARSE(x) atoi(x)
 #define UINT16_PARSE(x) atoi(x)

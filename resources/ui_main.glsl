@@ -33,6 +33,7 @@ void glow(vec2 p) {
 }
 
 void main(void) {
+    f_color0 = vec4(0.);
     if(iSelection) {
         f_color0 = vec4(0., 0., 0., 1.);
         for(int i=0; i < 8; i++) {

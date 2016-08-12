@@ -42,8 +42,26 @@ void crossfader_init(struct crossfader * crossfader) {
 
     crossfader->shader = load_shader("resources/crossfader.glsl");
     if(crossfader->shader == 0) FAIL("Unable to load crossfader shader:\n%s", get_load_shader_error().c_str());
+    auto h = crossfader->shader;
+    glUseProgram(h);
+    glProgramUniform2f(h,0,  config.pattern.master_width, config.pattern.master_height);
+    CHECK_GL();
+    auto loc = crossfader->loc.iResolution = glGetUniformLocation(crossfader->shader, "iResolution");
+    glProgramUniform2f(h,loc, config.pattern.master_width, config.pattern.master_height);
+    CHECK_GL();
+    loc = crossfader->loc.iIntensity  = glGetUniformLocation(crossfader->shader, "iIntensity");
+    glProgramUniform1f(h,loc, crossfader->position);
+    CHECK_GL();
+    loc = crossfader->loc.iFrameLeft = glGetUniformLocation(crossfader->shader, "iFrameLeft");
+    glProgramUniform1i(h,loc, 0);
+    CHECK_GL();
+    loc = crossfader->loc.iFrameRight = glGetUniformLocation(crossfader->shader, "iFrameRight");
+    glProgramUniform1i(h,loc, 1);
+    CHECK_GL();
+    loc = crossfader->loc.iLeftOnTop = glGetUniformLocation(crossfader->shader, "iLeftOnTop");
+    glProgramUniform1i(h, loc, crossfader->left_on_top);
+    CHECK_GL();
 
-    glProgramUniform2f(crossfader->shader,0,  config.pattern.master_width, config.pattern.master_height);
     // Render targets
     glGenFramebuffers(1, &crossfader->fb);
     glGenTextures(1, &crossfader->tex_output);
@@ -58,7 +76,7 @@ void crossfader_init(struct crossfader * crossfader) {
     CHECK_GL();
 
     glBindFramebuffer(GL_FRAMEBUFFER, crossfader->fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,crossfader->tex_output, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,crossfader->tex_output, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     CHECK_GL();
 }
@@ -74,31 +92,18 @@ void crossfader_term(struct crossfader * crossfader) {
 
 void crossfader_render(struct crossfader * crossfader, GLuint left, GLuint right) {
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
-    CHECK_GL();
-    glBindFramebuffer(GL_FRAMEBUFFER, crossfader->fb);
-    CHECK_GL();
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, crossfader->fb);
     glUseProgram(crossfader->shader);
     CHECK_GL();
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER,vbo);
     CHECK_GL();
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, left);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, right);
+    GLuint texs[] = { left, right};
+    glBindTextures(0, 2, texs);
     CHECK_GL();
-    GLint loc;
-    loc = glGetUniformLocation(crossfader->shader, "iResolution");
-    glUniform2f(loc, config.pattern.master_width, config.pattern.master_height);
-    loc = glGetUniformLocation(crossfader->shader, "iIntensity");
-    glUniform1f(loc, crossfader->position);
-    loc = glGetUniformLocation(crossfader->shader, "iFrameLeft");
-    glUniform1i(loc, 0);
-    loc = glGetUniformLocation(crossfader->shader, "iFrameRight");
-    glUniform1i(loc, 1);
-    loc = glGetUniformLocation(crossfader->shader, "iLeftOnTop");
-    glUniform1i(loc, crossfader->left_on_top);
+    auto &loc = crossfader->loc;
+    glProgramUniform1f(crossfader->fb,loc.iIntensity, crossfader->position);
+    glProgramUniform1i(crossfader->fb, loc.iLeftOnTop, crossfader->left_on_top);
     CHECK_GL();
 
     glClear(GL_COLOR_BUFFER_BIT);

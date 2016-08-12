@@ -8,7 +8,13 @@ struct crossfader {
     GLuint shader;
     GLuint tex_output;
     GLuint fb;
-
+    struct {
+        GLint  iResolution;
+        GLint  iIntensity;
+        GLint  iFrameLeft;
+        GLint  iFrameRight;
+        GLint  iLeftOnTop;
+    } loc;
     float position;
 };
 

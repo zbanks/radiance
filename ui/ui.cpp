@@ -137,7 +137,7 @@ static void bind_vao_fill_vbo(float x, float y, float w, float h)
     GLfloat vertices[] = { x, y, w, h };
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    void *_vbo = glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(vertices), GL_MAP_INVALIDATE_BUFFER_BIT|GL_MAP_WRITE_BIT); 
+    void *_vbo = glMapBufferRange(GL_ARRAY_BUFFER, 0, sizeof(vertices), GL_MAP_INVALIDATE_BUFFER_BIT|GL_MAP_WRITE_BIT);
     memcpy(_vbo,vertices,sizeof(vertices));
     glUnmapBuffer(GL_ARRAY_BUFFER);
 //    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
@@ -183,13 +183,90 @@ static void render_textbox(char * text, int width, int height) {
     glUniform1i(location, 0);
     glActiveTexture(GL_TEXTURE0);
     SDL_GL_BindTexture(tex, NULL, NULL);
-    
+
     glViewport(0, 0, width, height);
     glClear(GL_COLOR_BUFFER_BIT);
     fill(width, height);
     SDL_DestroyTexture(tex);
 }
 
+constexpr const char *uiDebugType(GLenum type)
+{
+    switch(type) {
+#define CASE(x) case GL_DEBUG_TYPE_ ## x: return #x
+        CASE(ERROR);
+        CASE(DEPRECATED_BEHAVIOR);
+        CASE(UNDEFINED_BEHAVIOR);
+        CASE(PORTABILITY);
+        CASE(PERFORMANCE);
+        CASE(MARKER);
+        CASE(PUSH_GROUP);
+        CASE(POP_GROUP);
+        default: return "UNKNOWN";
+#undef CASE
+    }
+}
+constexpr const char *uiDebugSource(GLenum type)
+{
+#define CASE(x) case GL_DEBUG_SOURCE_ ## x: return #x
+    switch(type) {
+        CASE(API);
+        CASE(WINDOW_SYSTEM);
+        CASE(SHADER_COMPILER);
+        CASE(THIRD_PARTY);
+        CASE(APPLICATION);
+        CASE(OTHER);
+        default:
+            return "unknown";
+    }
+#undef CASE
+}
+constexpr const char * uiDebugSeverity(GLenum sev)
+{
+
+#define CASE(x) case GL_DEBUG_SEVERITY_ ## x: return #x
+    switch(sev){
+        CASE(HIGH);
+        CASE(MEDIUM);
+        CASE(LOW);
+        CASE(NOTIFICATION);
+        default: return "unknown severity";
+    }
+#undef CASE
+}
+constexpr loglevel to_loglevel(GLenum severity)
+{
+#define CASE(x,y) case GL_DEBUG_SEVERITY_ ## x: return LOGLEVEL_ ## y
+    switch(severity){
+        CASE(HIGH,ERROR);
+        CASE(MEDIUM,INFO);
+        CASE(LOW,DEBUG);
+        CASE(NOTIFICATION,ALL);
+        default: return LOGLEVEL_ALL;
+    }
+#undef CASE
+}
+constexpr const char *ERR_STRINGIFY(loglevel l)
+{
+    switch(l){
+        case LOGLEVEL_ALL: return "ALL";
+        case LOGLEVEL_DEBUG: return "DEBUG";
+        case LOGLEVEL_INFO: return "INFO";
+        case LOGLEVEL_WARN: return "WARN";
+        case LOGLEVEL_ERROR: return "ERROR";
+        default: return "INVALID";
+    }
+}
+
+static void debug_callback(GLenum source, GLenum type, GLuint id,
+    GLenum severity, GLsizei length, const char *message, const void *opaque)
+{
+
+    if (get_loglevel() <= to_loglevel(severity)) {
+        ::fprintf(stderr, "[%-5s] [gl debug: %s, %s] ( id = %u ) %s\n", ERR_STRINGIFY(to_loglevel(severity)),uiDebugSource(source),uiDebugType(type),id,message );
+        fflush(stderr);
+    }
+}
 void ui_init() {
     // Init SDL
 
@@ -208,20 +285,22 @@ void ui_init() {
     if(window == NULL) FAIL("Window could not be created: %s\n", SDL_GetError());
     context = SDL_GL_CreateContext(window);
     if(context == NULL) FAIL("OpenGL context could not be created: %s\n", SDL_GetError());
-    if(SDL_GL_SetSwapInterval(1) < 0) fprintf(stderr, "Warning: Unable to set VSync: %s\n", SDL_GetError());
+    if(SDL_GL_SetSwapInterval(0) < 0) fprintf(stderr, "Warning: Unable to set VSync: %s\n", SDL_GetError());
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
     if(renderer == NULL) FAIL("Could not create renderer: %s\n", SDL_GetError());
     if(TTF_Init() < 0) FAIL("Could not initialize font library: %s\n", TTF_GetError());
-    
+
     SDL_GL_MakeCurrent(window,context);
     if(gl3wInit()) {
         FAIL("Could not initialize gl3w and load OpenGL functions.");
     }
+    glDebugMessageCallback(debug_callback,nullptr);
+    glEnable(GL_DEBUG_OUTPUT);
     glGetError();
     glGenBuffers(1,&vbo);
     glGenVertexArrays(1,&vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4, NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4, NULL, GL_DYNAMIC_DRAW);
     glBindVertexArray(vao);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
     glEnableVertexAttribArray(0);
@@ -249,7 +328,7 @@ void ui_init() {
     select_tex = make_texture(ww,wh);
 
     glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, select_tex, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, select_tex, 0);
 
     // Init pattern textures
     pattern_textures.resize(config.ui.n_patterns);
@@ -268,22 +347,22 @@ void ui_init() {
 
     // Init crossfader texture
     crossfader_texture = make_texture( config.ui.crossfader_width, config.ui.crossfader_height);
-    
+
     glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, crossfader_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, crossfader_texture, 0);
 
     // Init pattern entry texture
     pat_entry_texture = make_texture( config.ui.pat_entry_width, config.ui.pat_entry_height);
 
     glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pat_entry_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pat_entry_texture, 0);
 
     // Spectrum data texture
     tex_spectrum_data = make_texture(config.audio.spectrum_bins);
     spectrum_texture = make_texture( config.ui.spectrum_width, config.ui.spectrum_height);
     // Spectrum UI element
     glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, spectrum_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, spectrum_texture, 0);
 
     // Waveform data texture
     tex_waveform_data = make_texture( config.audio.waveform_length);
@@ -291,12 +370,12 @@ void ui_init() {
     // Waveform UI element
     waveform_texture = make_texture( config.ui.waveform_width, config.ui.waveform_height);
     glBindFramebuffer(GL_FRAMEBUFFER, waveform_fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, waveform_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, waveform_texture, 0);
 
     // Strip indicators
     strip_texture = make_texture ( config.pattern.master_width, config.pattern.master_height);
     glBindFramebuffer(GL_FRAMEBUFFER, strip_fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, strip_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, strip_texture, 0);
 
     // Done allocating textures & FBOs, unbind and check for errors
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -341,7 +420,7 @@ SDL_GLContext ui_make_secondary_context()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_RELEASE_BEHAVIOR,SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
-    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_TRUE);
+    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_FALSE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,SDL_GL_CONTEXT_DEBUG_FLAG|
                                              SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
     auto extra_context = SDL_GL_CreateContext(window);
@@ -694,7 +773,7 @@ static void ui_render(bool select) {
                 glUniform1i(pattern_index, i);
                 glUniform1f(pattern_intensity, p->intensity);
                 glUniform2f(name_resolution, pattern_name_sizes[i].first, pattern_name_sizes[i].second);
-                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pattern_textures[i], 0);
+                glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pattern_textures[i], 0);
                 glClear(GL_COLOR_BUFFER_BIT);
                 if(first) {
                     fill(pw, ph);
@@ -944,7 +1023,7 @@ void ui_run() {
         while(!quit) {
 
             while(SDL_PollEvent(&e) != 0) {
-                if (midi_command_event != (Uint32) -1 && 
+                if (midi_command_event != (Uint32) -1 &&
                     e.type == midi_command_event) {
                     midi_event * me = static_cast<midi_event*>(e.user.data1);
                     switch (me->type) {
