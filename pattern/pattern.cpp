@@ -145,6 +145,7 @@ void pattern::render(GLuint input_tex) {
     GL_CHECK_ERROR();
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
     GL_CHECK_ERROR();
+
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
     GL_CHECK_ERROR();
 

@@ -3,13 +3,13 @@
 #include "util/err.h"
 #include "util/config.h"
 
-#define BYTES_PER_PIXEL 4 // RGBA
+#define BYTES_PER_PIXEL 16 // RGBA
 
 void render_init(struct render * render, GLint texture) {
     GLenum e;
 
     memset(render, 0, sizeof *render);
-    render->pixels = static_cast<uint8_t*>(::calloc(config.pattern.master_width * config.pattern.master_height * BYTES_PER_PIXEL, sizeof(uint8_t)));
+    render->pixels = static_cast<GLfloat*>(::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
     if(render->pixels == NULL) MEMFAIL();
 
     glGenFramebuffers(1, &render->fb);
@@ -37,7 +37,7 @@ void render_readback(struct render * render) {
     if(SDL_TryLockMutex(render->mutex) == 0) {
         glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
-        glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)render->pixels);
+        glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_FLOAT, (GLvoid*)render->pixels);
 //        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
         SDL_UnlockMutex(render->mutex);
@@ -63,9 +63,9 @@ SDL_Color render_sample(struct render * render, float x, float y) {
 
     // Use NEAREST interpolation for now
     SDL_Color c;
-    c.r = render->pixels[index];
-    c.g = render->pixels[index + 1];
-    c.b = render->pixels[index + 2];
-    c.a = render->pixels[index + 3];
+    c.r = render->pixels[index]*255;
+    c.g = render->pixels[index + 1]*255;
+    c.b = render->pixels[index + 2]*255;
+    c.a = render->pixels[index + 3]*255;
     return c;
 }

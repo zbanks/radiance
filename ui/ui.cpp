@@ -276,7 +276,7 @@ void ui_init() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_RELEASE_BEHAVIOR,SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
     SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_TRUE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,SDL_GL_CONTEXT_DEBUG_FLAG|
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,//SDL_GL_CONTEXT_DEBUG_FLAG|
                                              SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
     ww = config.ui.window_width;
     wh = config.ui.window_height;
@@ -968,8 +968,10 @@ static void handle_mouse_move() {
     }
 }
 
+auto mouse_down = false;
 static void handle_mouse_up() {
     ma = MOUSE_NONE;
+    mouse_down = false;
 }
 
 static void handle_text(const char * text) {
@@ -982,7 +984,6 @@ static void handle_text(const char * text) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
-
 static void handle_mouse_down() {
     struct rgba hit;
     hit = test_hit(mx, wh - my);
@@ -1015,11 +1016,19 @@ static void handle_mouse_down() {
             break;
     }
 }
-
+static double seconds(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_nsec * 1e-9 + ts.tv_sec;
+}
 void ui_run() {
         SDL_Event e;
 
         quit = false;
+        double fps_sample = seconds();
+        int    fps_frames = 0;
+
         while(!quit) {
 
             while(SDL_PollEvent(&e) != 0) {
@@ -1062,7 +1071,11 @@ void ui_run() {
                         my = e.button.y;
                         switch(e.button.button) {
                             case SDL_BUTTON_LEFT:
-                                handle_mouse_down();
+                                if(!mouse_down) {
+                                    ui_render(true);
+                                    handle_mouse_down();
+                                    mouse_down = true;
+                                }
                                 break;
                         }
                         break;
@@ -1080,14 +1093,25 @@ void ui_run() {
                         break;
                 }
             }
+            if(mouse_down) {
+                handle_mouse_down();
+                mouse_down = false;
+            }
             for(auto & d : deck)
                 d.render();
             crossfader_render(&crossfader, deck[left_deck_selector].tex_output, deck[right_deck_selector].tex_output);
             render_readback(&render);
-            ui_render(true);
             ui_render(false);
 
             SDL_GL_SwapWindow(window);
+            fps_frames++;
+            double new_sample = seconds();
+            if(new_sample - fps_sample > 0.25) {
+                double fps = fps_frames / (new_sample - fps_sample);
+                fps_sample = new_sample;
+                fps_frames = 0;
+                INFO("Display frame rate is %F.2 FPS\n",fps);
+            }
 
             double cur_t = SDL_GetTicks();
             double dt = cur_t - l_t;

@@ -7,7 +7,7 @@ extern "C" {
 
 struct render {
     GLuint fb;
-    uint8_t * pixels;
+    GLfloat * pixels;
     SDL_mutex * mutex;
 };
 

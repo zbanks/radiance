@@ -1,6 +1,7 @@
 #include "util/common.h"
 
 #include "pattern/deck.h"
+#include "util/glsl.h"
 #include "util/err.h"
 #include "util/config.h"
 #include "util/string.h"
@@ -13,25 +14,17 @@ void deck::init()
     GLenum e;
     patterns.resize(config.deck.n_patterns);
 
-    glGenTextures(1, &tex_input);
+    tex_input = make_texture( config.pattern.master_width, config.pattern.master_height);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+
     glGenFramebuffers(1, &fb_input);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
-    glBindTexture(GL_TEXTURE_2D, tex_input);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.pattern.master_width, config.pattern.master_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb_input);
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 
-    glBindFramebuffer(GL_FRAMEBUFFER, fb_input);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                              tex_input, 0);
+    glNamedFramebufferTexture(fb_input, GL_COLOR_ATTACHMENT0, tex_input, 0);
+    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
     glClear(GL_COLOR_BUFFER_BIT);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
 }
@@ -101,7 +94,7 @@ static int deck_ini_handler(void * user, const char * section, const char * name
 
     char * val = strdup(value);
     if (val == NULL) MEMFAIL();
-    
+
     int slot = 0;
     while (slot < config.deck.n_patterns) {
         char * prefix = strsep(&val, " ");
