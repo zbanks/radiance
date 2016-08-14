@@ -6,6 +6,10 @@ extern "C" {
 #endif
 
 struct render {
+    size_t pixel_count;
+    GLuint vbo;
+    GLuint ssbo;
+    GLuint prog;
     GLuint fb;
     GLfloat * pixels;
     SDL_mutex * mutex;

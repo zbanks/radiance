@@ -11,22 +11,14 @@ deck::deck() = default;
 
 void deck::init()
 {
-    GLenum e;
     patterns.resize(config.deck.n_patterns);
 
     tex_input = make_texture( config.pattern.master_width, config.pattern.master_height);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
     glGenFramebuffers(1, &fb_input);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fb_input);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-
+    glBindFramebuffer(GL_FRAMEBUFFER,fb_input);
     glNamedFramebufferTexture(fb_input, GL_COLOR_ATTACHMENT0, tex_input, 0);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    glClearTexImage(tex_input, 0, GL_RGBA,GL_FLOAT,nullptr);
+    CHECK_GL();
 }
 
 void deck::term()
@@ -70,7 +62,6 @@ int deck::load_pattern(int slot, const char * prefix)
     }
     return 0;
 }
-
 void deck::unload_pattern(int slot)
 {
     assert(slot >= 0 && slot < config.deck.n_patterns);
@@ -91,27 +82,25 @@ static int deck_ini_handler(void * user, const char * section, const char * name
     if (strcmp(section, "decks") != 0) return 1;
     if (strcmp(name, data->name) != 0) return 1;
     data->found = true;
-
-    char * val = strdup(value);
-    if (val == NULL) MEMFAIL();
-
-    int slot = 0;
+    auto val = std::string{value};
+    auto slot = 0;
     while (slot < config.deck.n_patterns) {
-        char * prefix = strsep(&val, " ");
-        if (prefix == NULL || prefix[0] == '\0') break;
-        auto rc = data->deck->load_pattern(slot++, prefix);
-        if (rc < 0) return 0;
+        auto seppos = val.find(' ');
+        if(val.empty() || seppos == 0)
+            break;
+        auto prefix = val.substr(0,seppos);
+        val = val.substr(seppos+1);
+        if(data->deck->load_pattern(slot++, prefix.c_str()) < 0)
+            return 0;
     }
-    free(val);
     return 1;
 }
-
 int deck::load_set(const char * name)
 {
-    for (int slot = 0; slot < config.deck.n_patterns; slot++)
+    for (auto slot = 0; slot < config.deck.n_patterns; slot++)
         unload_pattern(slot);
 
-    struct deck_ini_data data = {
+    deck_ini_data data = {
         .deck = this, .name = name, .found = false
     };
     auto rc = ini_parse(config.paths.decks_config, deck_ini_handler, &data);

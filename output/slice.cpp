@@ -23,6 +23,7 @@ struct output_vertex * output_vertex_list_parse(const char * _str) {
             .next = vertex_head,
             .x = x, .y = y,
             .scale = scale,
+            .pixels= 0,
         };
         vertex_head = new_vertex;
     }
@@ -53,7 +54,7 @@ const char * output_vertex_list_serialize(struct output_vertex * head) {
     for (struct output_vertex * v = head; v; v = v->next)
         len += sprintf(buf + len, format, v->x, v->y, v->scale);
     if (len >= buflen) FAIL("Vertex list grew as writing (%lu > %lu)", len, buflen);
-    
+
 
     buf[len-1] = '\0'; // Overwrite last ','
     return buf;
@@ -74,8 +75,10 @@ unsigned int output_render_count = 0;
 
 int output_device_arrange(struct output_device * dev) {
     size_t length = dev->pixels.length;
-    if (length <= 0) return -1;
-    if (dev->vertex_head == NULL) return -1;
+    if (length <= 0)
+        return -1;
+    if (dev->vertex_head == NULL)
+        return -1;
 
     // Realloc pixel arrays
     dev->pixels.xs = static_cast<decltype(dev->pixels.xs)>(realloc(dev->pixels.xs, length * sizeof *dev->pixels.xs));
@@ -97,17 +100,20 @@ int output_device_arrange(struct output_device * dev) {
 
     // Sum up scales of all the verticies except the last
     double scale_sum = 0.;
-    for (const struct output_vertex * vert = dev->vertex_head; vert->next; vert = vert->next)
+    for (auto vert = dev->vertex_head; vert->next; vert = vert->next)
         scale_sum += vert->scale * hypot(vert->x - vert->next->x, vert->y - vert->next->y);
 
     // Interpolate pixel values
     double scale_per_pixel = scale_sum / (double) length;
     double cumulative_scale = 0.;
     size_t pixel_idx = 0;
-    for (const struct output_vertex * vert = dev->vertex_head; vert->next; vert = vert->next) {
-        double vert_scale = vert->scale * hypot(vert->x - vert->next->x, vert->y - vert->next->y);
+    for (auto vert = dev->vertex_head; vert->next; vert = vert->next) {
+        auto vert_scale = vert->scale * hypot(vert->x - vert->next->x, vert->y - vert->next->y);
+        vert->pixels = 0;
         while (pixel_idx * scale_per_pixel <= cumulative_scale + vert_scale) {
-            if (pixel_idx >= length) break;
+            if (pixel_idx >= length)
+                break;
+            vert->pixels++;
             double alpha = (pixel_idx * scale_per_pixel - cumulative_scale) / vert_scale;
             dev->pixels.xs[pixel_idx] = INTERP(alpha, vert->next->x, vert->x);
             dev->pixels.ys[pixel_idx] = INTERP(alpha, vert->next->y, vert->y);
@@ -115,13 +121,13 @@ int output_device_arrange(struct output_device * dev) {
         }
         cumulative_scale += vert_scale;
     }
-
     return 0;
 }
 
-int output_render(struct render * render) {
+int output_render(struct render * render)
+{
     render_freeze(render);
-    for (struct output_device * dev = output_device_head; dev; dev = dev->next) {
+    for (auto dev = output_device_head; dev; dev = dev->next) {
         if (!dev->active) continue;
         for (size_t i = 0; i < dev->pixels.length; i++)
             dev->pixels.colors[i] = render_sample(render, dev->pixels.xs[i], dev->pixels.ys[i]);

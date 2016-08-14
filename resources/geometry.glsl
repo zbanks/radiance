@@ -14,7 +14,7 @@ void main()
 {
     vec2 size   = vg_size[0]  * 2/ u_global_size;
     vec2 corner = vg_corner[0] * 2 / u_global_size - vec2(1);
-    
+
     {
         v_corner = vg_corner[0];
         v_size   = vg_size[0];

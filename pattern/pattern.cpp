@@ -83,6 +83,8 @@ pattern::pattern(const char * prefix)
             success = false;
         } else {
             glProgramUniform2f(h, 0,  config.pattern.master_width, config.pattern.master_height);
+            GLint tex_assignments[3] = { 1, 2, 3};
+            glProgramUniform1iv(h, 7, 3, tex_assignments);
             shader.push_back(h);
             DEBUG("Loaded shader #%d", i);
         }
@@ -98,7 +100,7 @@ pattern::pattern(const char * prefix)
     GL_CHECK_ERROR();
     glGenTextures(tex.size(), &tex[0]);
     GL_CHECK_ERROR();
-    
+
     for(auto & t : tex) {
         glBindTexture(GL_TEXTURE_2D, t);
         GL_CHECK_ERROR();
@@ -150,22 +152,30 @@ void pattern::render(GLuint input_tex) {
     GL_CHECK_ERROR();
 
     intensity_integral = fmod(intensity_integral + intensity / config.ui.fps, MAX_INTEGRAL);
-
+    glBindTextures(1,tex.size() - 1, tex.data());
+    glDisable(GL_BLEND);
+    glActiveTexture(GL_TEXTURE0);
+    GL_CHECK_ERROR();
+    glBindTexture(GL_TEXTURE_2D, input_tex);
+    GL_CHECK_ERROR();
     for (auto i = int(shader.size()) - 1; i >= 0; --i){
         glUseProgram(shader[i]);
         GL_CHECK_ERROR();
 
-        auto tex_bindings = std::vector<GLuint>{};
+//        auto tex_bindings = std::vector<GLuint>{};
         // Don't worry about this part.
-        for(int j = 0; j < int(tex.size()) - 1; j++) {
-            tex_bindings.push_back(tex[(flip + j + (i < j)) % (tex.size())]);
-        }
-        glBindTextures(1, tex_bindings.size(), &tex_bindings[0]);
+//        for(int j = 0; j < int(tex.size()) - 1; j++) {
+//            tex_bindings.push_back(tex[(flip + j + (i < j)) % (tex.size())]);
+//        }
+//        glBindTextures(1, tex_bindings.size(), &tex_bindings[0]);
+        glActiveTexture(GL_TEXTURE1 + i);
+        glBindTexture(GL_TEXTURE_2D, tex[i]);
         GL_CHECK_ERROR();
         glFramebufferTexture(
             GL_FRAMEBUFFER
           , GL_COLOR_ATTACHMENT0
-          , tex[(flip + i + 1) % (tex.size())]
+          , tex.back()
+//          , tex[(flip + i + 1) % (tex.size())]
           , 0);
 
         GL_CHECK_ERROR();
@@ -174,21 +184,18 @@ void pattern::render(GLuint input_tex) {
         glUniform1f(3, intensity);
         glUniform1f(4, intensity_integral);
         glUniform1f(5, config.ui.fps);
-        glUniform1i(6, 0);
-        glUniform1iv(7, uni_tex.size(), &uni_tex[0]);
 
-        glActiveTexture(GL_TEXTURE0);
-        GL_CHECK_ERROR();
-        glBindTexture(GL_TEXTURE_2D, input_tex);
-        GL_CHECK_ERROR();
 
-        glClear(GL_COLOR_BUFFER_BIT);
+//        glClear(GL_COLOR_BUFFER_BIT);
         glDrawArrays(GL_POINTS, 0, 1);
 
         GL_CHECK_ERROR();
+
+        std::swap(tex.back(), tex[i]);
+
     }
-    flip = (flip + 1) % (tex.size());
+//    flip = (flip + 1) % (tex.size());
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     GL_CHECK_ERROR();
-    tex_output = tex[flip];
+    tex_output = tex.back();//tex[flip];
 }

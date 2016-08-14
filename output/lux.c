@@ -162,12 +162,12 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
 
     uint8_t * frame_ptr = device->frame_buffer;
     SDL_Color * pixel_ptr = device->base.pixels.colors + device->base.pixels.length - 1;
-#define PXL(x) apply_gamma((x) / (255. * device->oversample), device->gamma)
+#define PXL(x) apply_gamma((x) / (255.f * device->oversample), device->gamma)
 
     if (device->strip_quantize > 0) {
         int l = 0; 
         for (int i = 0; i < device->strip_quantize; i++) {
-            unsigned int r = 0, g = 0, b = 0; 
+            float r = 0, g = 0, b = 0; 
             for (int k = 0; k < device->oversample; k++) {
                 r += pixel_ptr->r * pixel_ptr->a;
                 g += pixel_ptr->g * pixel_ptr->a;

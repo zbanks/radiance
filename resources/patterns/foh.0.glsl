@@ -12,6 +12,6 @@ void main(void) {
         f_color0 = next;
         */
 
-    f_color0 = mix(next, prev, pow(iIntensity, 0.4));
+    f_color0 = mix(next, prev, (iIntensity >= 0.05 ? pow(iIntensity, 0.25) : 0.));
     f_color0 = clamp(f_color0, 0, 1);
 }

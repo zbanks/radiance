@@ -1,6 +1,8 @@
 #include "ui/render.h"
 
+#include "output/slice.h"
 #include "util/err.h"
+#include "util/glsl.h"
 #include "util/config.h"
 
 #define BYTES_PER_PIXEL 16 // RGBA
@@ -8,8 +10,8 @@
 void render_init(struct render * render, GLint texture) {
     GLenum e;
 
-    memset(render, 0, sizeof *render);
-    render->pixels = static_cast<GLfloat*>(::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
+//    render->prog = load_compute("#render.c.glsl");
+    render->pixels = static_cast<GLfloat*>(::calloc(config.pattern.master_width*config.pattern.master_height, 4 * sizeof(GLfloat)));//::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
     if(render->pixels == NULL) MEMFAIL();
 
     glGenFramebuffers(1, &render->fb);
@@ -33,7 +35,6 @@ void render_term(struct render * render) {
 
 void render_readback(struct render * render) {
     GLenum e;
-
     if(SDL_TryLockMutex(render->mutex) == 0) {
         glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
         glReadBuffer(GL_COLOR_ATTACHMENT0);

@@ -18,6 +18,7 @@ struct output_vertex {
     float x;
     float y;
     float scale;
+    int   pixels;
 };
 
 struct output_vertex * output_vertex_list_parse(const char * str);
@@ -32,7 +33,7 @@ struct output_device {
     struct output_pixels pixels;
     struct output_vertex * vertex_head;
     bool active;
-
+    int tex_row;
     SDL_Color ui_color;
     char * ui_name;
 };

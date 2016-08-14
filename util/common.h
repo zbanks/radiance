@@ -1,14 +1,13 @@
 _Pragma("once")
 
 #ifdef __cplusplus
-#define NOT_CXX \
-extern "C" {
-#define CXX_OK \
-}
+#define NOT_CXX extern "C" {
+#define CXX_OK }
 #else
 #define NOT_CXX
 #define CXX_OK
 #endif
+
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -71,4 +70,3 @@ extern "C" {
 #endif
 
 #include "util/err.h"
-

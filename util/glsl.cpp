@@ -18,6 +18,10 @@ std::string get_load_shader_error(void)
 
 GLuint make_texture(int w, int h)
 {
+    return make_texture(GL_RGBA32F,w,h);
+}
+GLuint make_texture(GLenum format, int w, int h)
+{
     auto tex = GLuint{};
     glGenTextures(1, &tex);
     if(!tex)
@@ -27,7 +31,7 @@ GLuint make_texture(int w, int h)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, w, h);
+    glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
     if(auto e = glGetError())
         FAIL("GL Error: %s\n",gluErrorString(e));
     return tex;
@@ -170,6 +174,28 @@ GLuint load_shader(const char * filename)
 
     return program;
 }
+GLuint load_compute(const char *comp)
+{
+
+    // Load file
+    auto shader = compile_shader(GL_COMPUTE_SHADER, std::string{comp});
+    if(!shader)
+        return 0;
+    // Link
+    auto program = glCreateProgram();
+    //glAttachShader(programObj, vertexShaderObj);
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+
+    if(!getProgramStatus(program)) {
+        load_shader_error = getProgramInfoLog(program);
+        glDeleteProgram(program);
+        glDetachShader(program, shader);
+        program = 0;
+    }
+    glDeleteShader(shader);
+    return program;
+}
 GLuint load_shader(const char *vert,const char * frag)
 {
 
@@ -189,7 +215,36 @@ GLuint load_shader(const char *vert,const char * frag)
     glAttachShader(program, vshader);
     glAttachShader(program, fshader);
     glLinkProgram(program);
-    
+
+    if(!getProgramStatus(program)) {
+        load_shader_error = getProgramInfoLog(program);
+        glDeleteProgram(program);
+        glDetachShader(program, vshader);
+        glDetachShader(program, fshader);
+
+        program = 0;
+    }
+    glDeleteShader(fshader);
+    glDeleteShader(vshader);
+    return program;
+}
+GLuint load_shader_noheader(const char *vert,const char * frag)
+{
+
+    // Load file
+    auto vshader = compile_shader(GL_VERTEX_SHADER, std::string{vert});
+    auto fshader = compile_shader(GL_FRAGMENT_SHADER,std::string(frag));
+    if(!fshader) {
+        glDeleteShader(vshader);
+        return 0;
+    }
+    // Link
+    auto program = glCreateProgram();
+    //glAttachShader(programObj, vertexShaderObj);
+    glAttachShader(program, vshader);
+    glAttachShader(program, fshader);
+    glLinkProgram(program);
+
     if(!getProgramStatus(program)) {
         load_shader_error = getProgramInfoLog(program);
         glDeleteProgram(program);

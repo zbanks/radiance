@@ -6,12 +6,6 @@ void main(void) {
     vec4 next = texture2D(iFrame, v_uv);
 
     float t = pow(2, round(6 * iIntensity - 4));
-    float a = 1;
-
-    if (iIntensity < 0.09)
-        a = 0;
-    else if (mod(iTime, t) < 0.1)
-        a = 0;
-
+    float a = float((iIntensity >= 0.09) && (mod(iTime,t) >= 0.1));
     f_color0 = mix(next, prev, a);
 }
