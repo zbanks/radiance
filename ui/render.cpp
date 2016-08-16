@@ -8,22 +8,21 @@
 #define BYTES_PER_PIXEL 16 // RGBA
 
 void render_init(struct render * render, GLint texture) {
-    GLenum e;
-
 //    render->prog = load_compute("#render.c.glsl");
     render->pixels = static_cast<GLfloat*>(::calloc(config.pattern.master_width*config.pattern.master_height, 4 * sizeof(GLfloat)));//::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
     if(render->pixels == NULL) MEMFAIL();
 
     glGenFramebuffers(1, &render->fb);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    CHECK_GL();
 
     glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+    CHECK_GL();
 
     render->mutex = SDL_CreateMutex();
-    if(render->mutex == NULL) FAIL("Could not create mutex: %s\n", SDL_GetError());
+    if(render->mutex == NULL)
+        FAIL("Could not create mutex: %s\n", SDL_GetError());
 }
 
 void render_term(struct render * render) {
@@ -34,13 +33,12 @@ void render_term(struct render * render) {
 }
 
 void render_readback(struct render * render) {
-    GLenum e;
     if(SDL_TryLockMutex(render->mutex) == 0) {
         glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_FLOAT, (GLvoid*)render->pixels);
 //        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        if((e = glGetError()) != GL_NO_ERROR) FAIL("OpenGL error: %s\n", gluErrorString(e));
+        CHECK_GL();
         SDL_UnlockMutex(render->mutex);
     }
 }

@@ -32,15 +32,15 @@
  * policies, either expressed or implied, of Nicolas P. Rougier.
  * ========================================================================= */
 uniform layout(location=0) vec2 u_global_size;
-in vec2 a_position;
-in vec2 a_uv;
-in vec4 a_color;
+in layout(location=0) vec2 a_position;
+in layout(location=1) vec2 a_uv;
+in layout(location=2) vec4 a_color;
 
 out vec2 v_uv;
 out vec4 v_color;
 void main(void)
 {
-    v_uv    = a_tex_coord;
-    v_color = color * u_color;
+    v_uv    = a_uv;
+    v_color = a_color;
     gl_Position = vec4(((a_position / u_global_size) * 2 - 1),0,1);
 }

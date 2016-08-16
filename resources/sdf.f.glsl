@@ -1,3 +1,4 @@
+#version 430 core
 /* =========================================================================
  * Freetype GL - A C OpenGL Freetype engine
  * Platform:    Any
@@ -30,7 +31,7 @@
  * those of the authors and should not be interpreted as representing official
  * policies, either expressed or implied, of Nicolas P. Rougier.
  * ========================================================================= */
-uniform sampler2D u_texture;
+uniform layout(location=1) sampler2D u_texture;
 in vec2 v_uv;
 in vec4 v_color;
 out vec4 f_color;
@@ -40,7 +41,5 @@ void main(void)
     float width = fwidth(dist);
     float alpha = smoothstep(0.5-width, 0.5+width, dist);
     f_color = vec4(v_color.rgb, alpha * v_color.a);
-    if(f_color.a==0) discard;
+//    f_color = vec4(1.);
 }
-
-

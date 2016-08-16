@@ -3,6 +3,7 @@
 
 #include "pattern/pattern.h"
 #include "util/config.h"
+#include "util/ftgl.hpp"
 #include "util/err.h"
 #include "util/glsl.h"
 #include "util/math.h"
@@ -12,12 +13,6 @@
 #include "ui/render.h"
 #include "output/slice.h"
 #include "main.h"
-
-#define GL_CHECK_ERROR() \
-do { \
-if(auto e = glGetError()) \
-    FAIL("OpenGL error: %s\n", gluErrorString(e)); \
-}while(false);
 
 static SDL_Window * window;
 static SDL_GLContext context;
@@ -116,6 +111,8 @@ static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8, 16, 16, 16,
 
 // Font
 TTF_Font * font;
+ftgl_renderer gl_font{};
+ftgl_renderer textbox_font{};
 static const SDL_Color font_color = {255, 255, 255, 255};
 
 // Pat entry
@@ -148,7 +145,7 @@ static void fill(float w, float h) {
     glDrawArrays(GL_POINTS, 0, 1);
 }
 
-static SDL_Texture * render_text(char * text, int * w, int * h) {
+/*static SDL_Texture * render_text(char * text, int * w, int * h) {
     // We need to first render to a surface as that's what TTF_RenderText
     // returns, then load that surface into a texture
     SDL_Surface * surf;
@@ -164,10 +161,15 @@ static SDL_Texture * render_text(char * text, int * w, int * h) {
     if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
     SDL_FreeSurface(surf);
     return texture;
-}
+}*/
 
-static void render_textbox(char * text, int width, int height) {
-    GLint location;
+static void render_textbox(char * text, int width, int height)
+{
+    textbox_font.clear();
+    textbox_font.print(0,height/2, text);
+    textbox_font.prepare();
+    textbox_font.render(width,height);
+/*    GLint location;
 
     glUseProgram(text_shader);
     glUniform2f(0, width, height);
@@ -187,7 +189,7 @@ static void render_textbox(char * text, int width, int height) {
     glViewport(0, 0, width, height);
     glClear(GL_COLOR_BUFFER_BIT);
     fill(width, height);
-    SDL_DestroyTexture(tex);
+    SDL_DestroyTexture(tex);*/
 }
 
 constexpr const char *uiDebugType(GLenum type)
@@ -295,8 +297,8 @@ void ui_init() {
         FAIL("Could not initialize gl3w and load OpenGL functions.");
     }
     glDebugMessageCallback(debug_callback,nullptr);
+    CHECK_GL();
     glEnable(GL_DEBUG_OUTPUT);
-    glGetError();
     glGenBuffers(1,&vbo);
     glGenVertexArrays(1,&vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -312,7 +314,7 @@ void ui_init() {
     // Init OpenGL
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0, 0, 0, 0);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     // Make framebuffers
     glGenFramebuffers(1, &select_fb);
@@ -322,7 +324,7 @@ void ui_init() {
     glGenFramebuffers(1, &spectrum_fb);
     glGenFramebuffers(1, &waveform_fb);
     glGenFramebuffers(1, &strip_fb);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     // Init select texture
     select_tex = make_texture(ww,wh);
@@ -340,7 +342,7 @@ void ui_init() {
 //    pattern_name_width = (int*)calloc(config.ui.n_patterns, sizeof(int));
 //    pattern_name_height = (int*)calloc(config.ui.n_patterns, sizeof(int));
 //    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
-    GL_CHECK_ERROR();
+    CHECK_GL();
     for(int i = 0; i < config.ui.n_patterns; i++) {
         pattern_textures[i] = make_texture( config.ui.pattern_width, config.ui.pattern_height);
     }
@@ -393,6 +395,9 @@ void ui_init() {
     // Stop text input
     SDL_StopTextInput();
 
+    gl_font = ftgl_renderer(512,512,config.ui.fontsize,config.ui.font);
+    gl_font.set_color(1.,1.,1.,1.);
+    textbox_font = gl_font;
     // Open the font
     font = TTF_OpenFont(config.ui.font, config.ui.fontsize);
     if(font == NULL) FAIL("Could not open font %s: %s\n", config.ui.font, SDL_GetError());
@@ -407,7 +412,7 @@ void ui_init() {
     if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
     SDL_FreeSurface(surf);
     SDL_DestroyTexture(texture);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 }
 void ui_make_context_current(SDL_GLContext ctx)
 {
@@ -431,7 +436,8 @@ SDL_GLContext ui_make_secondary_context()
 void ui_term() {
     TTF_CloseFont(font);
     for(int i=0; i<config.ui.n_patterns; i++) {
-        if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
+        if(pattern_name_textures[i] != NULL)
+            SDL_DestroyTexture(pattern_name_textures[i]);
     }
     // TODO glDeleteTextures...
     glDeleteProgram(blit_shader);
@@ -485,15 +491,17 @@ static void handle_key(SDL_KeyboardEvent * e) {
             case SDLK_RETURN:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
+                        gl_font.clear();
+                        gl_font.m_vbo_dirty = true;
                         if(pat_entry_text[0] == ':') {
                             if (deck[map_deck[i]].load_set(pat_entry_text+1) == 0) {
                                 // TODO: Load in the correct pattern names
                             }
                         } else if(deck[map_deck[i]].load_pattern( map_pattern[i], pat_entry_text) == 0) {
                             if(pat_entry_text[0] != '\0') {
-                                if(pattern_name_textures[i] )
+/*                                if(pattern_name_textures[i] )
                                     SDL_DestroyTexture(pattern_name_textures[i]);
-                                pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_sizes[i].first, &pattern_name_sizes[i].second);
+                                pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_sizes[i].first, &pattern_name_sizes[i].second);*/
                             }
                         }
                         break;
@@ -597,7 +605,6 @@ static void handle_key(SDL_KeyboardEvent * e) {
                         SDL_StartTextInput();
                         glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
                         render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
-                        glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     }
                 }
                 break;
@@ -769,10 +776,11 @@ static void ui_render(bool select) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, p->tex_output);
                 glActiveTexture(GL_TEXTURE1);
-                SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
+                glBindTexture(GL_TEXTURE_2D, 0);
+//                SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
                 glUniform1i(pattern_index, i);
                 glUniform1f(pattern_intensity, p->intensity);
-                glUniform2f(name_resolution, pattern_name_sizes[i].first, pattern_name_sizes[i].second);
+                glUniform2f(name_resolution, 1,1);//pattern_name_sizes[i].first, pattern_name_sizes[i].second);
                 glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pattern_textures[i], 0);
                 glClear(GL_COLOR_BUFFER_BIT);
                 if(first) {
@@ -868,7 +876,7 @@ static void ui_render(bool select) {
 
     glViewport(0, 0, ww, wh);
 
-    GL_CHECK_ERROR();
+    CHECK_GL();
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(main_shader);
@@ -883,10 +891,10 @@ static void ui_render(bool select) {
     glUniform1i(location, left_deck_selector);
     location = glGetUniformLocation(main_shader, "iRightDeckSelector");
     glUniform1i(location, right_deck_selector);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     fill(ww, wh);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     // Blit UI elements on top
     glUseProgram(blit_shader);
@@ -894,42 +902,50 @@ static void ui_render(bool select) {
     glActiveTexture(GL_TEXTURE0);
     location = glGetUniformLocation(blit_shader, "iTexture");
     glUniform1i(location, 0);
-
     glEnable(GL_BLEND);
     for(int i = 0; i < config.ui.n_patterns; i++) {
-        if(deck[map_deck[i]].patterns[map_pattern[i]]) {
+        if(auto &pat = deck[map_deck[i]].patterns[map_pattern[i]]) {
+            if(pat->name.size() && gl_font.m_vbo_dirty) {
+                gl_font.print(map_x[i], map_y[i] + config.ui.pattern_height - (*gl_font.m_font)->height * gl_font.m_scale, pat->name);
+            }
             glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
             blit(map_x[i],map_y[i], pw,ph);
-            GL_CHECK_ERROR();
+            CHECK_GL();
         }
     }
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     if(!select) {
         glBindTexture(GL_TEXTURE_2D, spectrum_texture);
         blit(config.ui.spectrum_x, config.ui.spectrum_y, sw, sh);
-        GL_CHECK_ERROR();
+        CHECK_GL();
 
         glBindTexture(GL_TEXTURE_2D, waveform_texture);
         blit(config.ui.waveform_x, config.ui.waveform_y, vw, vh);
-        GL_CHECK_ERROR();
+        CHECK_GL();
 
         if(pat_entry) {
             for(int i = 0; i < config.ui.n_patterns; i++) {
                 if(map_selection[i] == selected) {
+                    if(gl_font.m_vbo_dirty) {
+                        gl_font.m_scale *= 2;
+                        gl_font.print(map_x[i], map_y[i] + config.ui.pattern_height - (*gl_font.m_font)->height * gl_font.m_scale , pat_entry_text);
+                        gl_font.m_scale /= 2;
+                    }
                     glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
                     blit(map_pe_x[i], map_pe_y[i], config.ui.pat_entry_width, config.ui.pat_entry_height);
-                    GL_CHECK_ERROR();
+                    CHECK_GL();
                     break;
                 }
             }
         }
+        gl_font.render(ww, wh);
     }
     glDisable(GL_BLEND);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 }
 
 struct rgba {
@@ -979,6 +995,8 @@ static void handle_text(const char * text) {
         if(strlen(pat_entry_text) + strlen(text) < sizeof(pat_entry_text)) {
             strcat(pat_entry_text, text);
         }
+        gl_font.clear();
+        gl_font.m_vbo_dirty=true;
         glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
         render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

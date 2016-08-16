@@ -34,11 +34,11 @@ void main(void) {
         f_color0 = composite(f_color0, p);
 
         vec2 tex_coord = v_uv/v_size * iNameResolution;
-        vec4 n = texture2D(iName, tex_coord);
+//        vec4 n = texture2D(iName, tex_coord);
         vec2 in_box = step(vec2(0.), tex_coord) - step(vec2(1.), tex_coord);
-        n.a *= in_box.x * in_box.y;
-        f_color0 = composite(f_color0, n);
-        if(f_color0.a < 0.5)
+//        n.a *= in_box.x * in_box.y;
+//        f_color0 = composite(f_color0, n);
+        if((0.==in_box.x * in_box.y) && f_color0.a < 0.5)
             discard;
 
     }

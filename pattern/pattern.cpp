@@ -12,11 +12,6 @@
 #include <exception>
 #include <system_error>
 
-#define GL_CHECK_ERROR() \
-do { \
-if(auto e = glGetError()) \
-    FAIL("OpenGL error: %s\n", gluErrorString(e)); \
-}while(false);
 
 static GLuint vao = 0;
 static GLuint vbo = 0;
@@ -93,30 +88,30 @@ pattern::pattern(const char * prefix)
         ERROR("Failed to load some shaders.");
         throw std::system_error(EINVAL,std::system_category(),"failed to load shader.");
     }
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     // Render targets
     glGenFramebuffers(1, &fb);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     glGenTextures(tex.size(), &tex[0]);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     for(auto & t : tex) {
         glBindTexture(GL_TEXTURE_2D, t);
-        GL_CHECK_ERROR();
+        CHECK_GL();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        GL_CHECK_ERROR();
+        CHECK_GL();
         glTexStorage2D(GL_TEXTURE_2D, 1,GL_RGBA32F, config.pattern.master_width, config.pattern.master_height);
-        GL_CHECK_ERROR();
+        CHECK_GL();
         glClearTexImage(t, 0, GL_RGBA, GL_FLOAT, nullptr);
     }
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     uni_tex.resize(shader.size());
     std::iota(uni_tex.begin(),uni_tex.end(),1);
@@ -132,35 +127,35 @@ pattern::~pattern()
     shader.clear();
 
     glDeleteTextures(tex.size(), &tex[0]);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     tex.clear();
     glDeleteFramebuffers(1, &fb);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     fb = 0;
-    GL_CHECK_ERROR();
+    CHECK_GL();
 }
 
 void pattern::render(GLuint input_tex) {
 
     glBindBuffer(GL_ARRAY_BUFFER,vbo);
     glBindVertexArray(vao);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
-    GL_CHECK_ERROR();
+    CHECK_GL();
 
     intensity_integral = fmod(intensity_integral + intensity / config.ui.fps, MAX_INTEGRAL);
     glBindTextures(1,tex.size() - 1, tex.data());
     glDisable(GL_BLEND);
     glActiveTexture(GL_TEXTURE0);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     glBindTexture(GL_TEXTURE_2D, input_tex);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     for (auto i = int(shader.size()) - 1; i >= 0; --i){
         glUseProgram(shader[i]);
-        GL_CHECK_ERROR();
+        CHECK_GL();
 
 //        auto tex_bindings = std::vector<GLuint>{};
         // Don't worry about this part.
@@ -170,7 +165,7 @@ void pattern::render(GLuint input_tex) {
 //        glBindTextures(1, tex_bindings.size(), &tex_bindings[0]);
         glActiveTexture(GL_TEXTURE1 + i);
         glBindTexture(GL_TEXTURE_2D, tex[i]);
-        GL_CHECK_ERROR();
+        CHECK_GL();
         glFramebufferTexture(
             GL_FRAMEBUFFER
           , GL_COLOR_ATTACHMENT0
@@ -178,7 +173,7 @@ void pattern::render(GLuint input_tex) {
 //          , tex[(flip + i + 1) % (tex.size())]
           , 0);
 
-        GL_CHECK_ERROR();
+        CHECK_GL();
         glUniform1f(1, time_master.beat_frac + time_master.beat_index);
         glUniform4f(2, audio_low, audio_mid, audio_hi, audio_level);
         glUniform1f(3, intensity);
@@ -189,13 +184,13 @@ void pattern::render(GLuint input_tex) {
 //        glClear(GL_COLOR_BUFFER_BIT);
         glDrawArrays(GL_POINTS, 0, 1);
 
-        GL_CHECK_ERROR();
+        CHECK_GL();
 
         std::swap(tex.back(), tex[i]);
 
     }
 //    flip = (flip + 1) % (tex.size());
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    GL_CHECK_ERROR();
+    CHECK_GL();
     tex_output = tex.back();//tex[flip];
 }
