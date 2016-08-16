@@ -66,6 +66,8 @@ void tex_font::create(std::shared_ptr<tex_atlas> atlas, int pt_size, const std::
     if(!m_d) {
         return;
     }
+    m_d->rendermode = RENDER_SIGNED_DISTANCE_FIELD;
+
     for(auto i = char{32}; i < char{127}; ++i){
         const char _str[] = { i, 0 };
         auto glyph = get_glyph(_str);
@@ -89,7 +91,11 @@ texture_glyph_t *tex_font::get_glyph(char32_t ucodepoint)
     if(it == m_glyphs.end()) {
         auto codepoints = utf32_to_utf8(ucodepoint);
         auto new_glyph = texture_font_get_glyph(m_d, codepoints.c_str());
-        std::tie(it,std::ignore) = m_glyphs.insert(std::make_pair(ucodepoint,glyph_info{new_glyph}));
+        if(new_glyph) {
+            std::tie(it,std::ignore) = m_glyphs.insert(std::make_pair(ucodepoint,glyph_info{new_glyph}));
+        }else{
+            return nullptr;
+        }
     }
     return it->second.m_glyph;
 }
@@ -105,7 +111,11 @@ float tex_font::get_kerning(char32_t uprev, char32_t ucurr)
     if(it == m_glyphs.end()) {
         auto codepoint = utf32_to_utf8(ucurr);
         auto new_glyph = texture_font_get_glyph(m_d, codepoint.c_str());
-        std::tie(it,std::ignore) = m_glyphs.insert(std::make_pair(uprev,glyph_info{new_glyph}));
+        if(new_glyph) {
+            std::tie(it,std::ignore) = m_glyphs.insert(std::make_pair(uprev,glyph_info{new_glyph}));
+        }else{
+            return 0.f;
+        }
     }
     auto kit = it->second.m_kern.find(uprev);
     if(kit == it->second.m_kern.end()) {

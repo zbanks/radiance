@@ -10,12 +10,12 @@ void main(void) {
     vec2 preview_origin = vec2(35., 100.);
     vec2 preview_size = vec2(280., 280.);
 
+    f_color0 = vec4(0.);
     if(iSelection) {
         f_color0.a = 1.;
         f_color0.rgb = dataColor(ivec3(3, 0, 0));
         f_color0.rgb = mix(f_color0.rgb, dataColor(ivec3(4, 0, 0)), inBox(frag.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
-        f_color0 = vec4(0.);
         float df = max(rounded_rect_df(vec2(175., 250.), vec2(130., 200.), 25.), 0.);
         f_color0 = composite(f_color0, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
         f_color0 = composite(f_color0, vec4(0., 0.3, 0., smoothBox(frag.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));

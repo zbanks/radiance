@@ -9,9 +9,5 @@ void main(void) {
     left.a *= left_alpha;
     right.a *= right_alpha;
 
-    if(iLeftOnTop) {
-        f_color0 = composite(right, left);
-    } else {
-        f_color0 = composite(left, right);
-    }
+    f_color0 = iLeftOnTop ? composite(right, left) : composite(left,right);
 }

@@ -20,6 +20,8 @@ CFGSECTION(ui,
     CFG(font, STRING, "FreeSans.ttf")
     CFG(alt_font, STRING, "ProggyTinySZ.ttf")
     CFG(fontsize, INT, 24)
+    CFG(font_atlas_width, INT, 512)
+    CFG(font_atlas_height, INT, 512)
     CFG(pat_entry_width, INT, 200)
     CFG(pat_entry_height, INT, 50)
     CFG(spectrum_x, INT, 200)

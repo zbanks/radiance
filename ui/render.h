@@ -8,9 +8,11 @@ extern "C" {
 struct render {
     size_t pixel_count;
     GLuint vbo;
+    GLuint pbo;
     GLuint ssbo;
     GLuint prog;
     GLuint fb;
+    GLsync fence;
     GLfloat * pixels;
     SDL_mutex * mutex;
 };

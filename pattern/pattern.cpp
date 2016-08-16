@@ -22,25 +22,28 @@ pattern::pattern(const char * prefix)
         glGenVertexArrays(1,&vao);
         new_buffers = true;
     }
-    if(!vbo)  {
-        glGenBuffers(1,&vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        new_buffers = true;
         float w = config.pattern.master_width,h =  config.pattern.master_height;
         float x = 0.f, y = 0.f;
+
+    if(!vbo)  {
+//        glGenBuffers(1,&vbo);
+/*        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        new_buffers = true;
         GLfloat vertices[] = {
             x, y, w, h
         };
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);*/
 
     }
     if(new_buffers){
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(vao);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
-        glEnableVertexAttribArray(1);
+//        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
+//        glEnableVertexAttribArray(0);
+        glVertexAttrib2f(0, x, y);
+//        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+//        glEnableVertexAttribArray(1);
+        glVertexAttrib2f(1,w, h);
     }
 
     intensity = 0;
@@ -97,16 +100,9 @@ pattern::pattern(const char * prefix)
     CHECK_GL();
 
     for(auto & t : tex) {
-        glBindTexture(GL_TEXTURE_2D, t);
-        CHECK_GL();
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        CHECK_GL();
-        glTexStorage2D(GL_TEXTURE_2D, 1,GL_RGBA32F, config.pattern.master_width, config.pattern.master_height);
-        CHECK_GL();
+        t = make_texture( config.pattern.master_width, config.pattern.master_height);
         glClearTexImage(t, 0, GL_RGBA, GL_FLOAT, nullptr);
+        CHECK_GL();
     }
     CHECK_GL();
 
@@ -125,44 +121,31 @@ pattern::~pattern()
         shader = 0;
     }
     shader.clear();
-
     glDeleteTextures(tex.size(), &tex[0]);
-    CHECK_GL();
     tex.clear();
     glDeleteFramebuffers(1, &fb);
     CHECK_GL();
     fb = 0;
-    CHECK_GL();
 }
 
 void pattern::render(GLuint input_tex) {
 
-    glBindBuffer(GL_ARRAY_BUFFER,vbo);
+//    glBindBuffer(GL_ARRAY_BUFFER,vbo);
     glBindVertexArray(vao);
-    CHECK_GL();
     glViewport(0, 0, config.pattern.master_width, config.pattern.master_height);
-    CHECK_GL();
 
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
     CHECK_GL();
 
-    intensity_integral = fmod(intensity_integral + intensity / config.ui.fps, MAX_INTEGRAL);
+    intensity_integral = std::fmod(intensity_integral + intensity / config.ui.fps, MAX_INTEGRAL);
     glBindTextures(1,tex.size() - 1, tex.data());
     glDisable(GL_BLEND);
     glActiveTexture(GL_TEXTURE0);
-    CHECK_GL();
     glBindTexture(GL_TEXTURE_2D, input_tex);
     CHECK_GL();
-    for (auto i = int(shader.size()) - 1; i >= 0; --i){
+    for (auto i = int(shader.size()) - 1; i >= 0; --i) {
         glUseProgram(shader[i]);
-        CHECK_GL();
 
-//        auto tex_bindings = std::vector<GLuint>{};
-        // Don't worry about this part.
-//        for(int j = 0; j < int(tex.size()) - 1; j++) {
-//            tex_bindings.push_back(tex[(flip + j + (i < j)) % (tex.size())]);
-//        }
-//        glBindTextures(1, tex_bindings.size(), &tex_bindings[0]);
         glActiveTexture(GL_TEXTURE1 + i);
         glBindTexture(GL_TEXTURE_2D, tex[i]);
         CHECK_GL();
@@ -170,7 +153,6 @@ void pattern::render(GLuint input_tex) {
             GL_FRAMEBUFFER
           , GL_COLOR_ATTACHMENT0
           , tex.back()
-//          , tex[(flip + i + 1) % (tex.size())]
           , 0);
 
         CHECK_GL();
@@ -181,16 +163,10 @@ void pattern::render(GLuint input_tex) {
         glUniform1f(5, config.ui.fps);
 
 
-//        glClear(GL_COLOR_BUFFER_BIT);
         glDrawArrays(GL_POINTS, 0, 1);
-
         CHECK_GL();
-
         std::swap(tex.back(), tex[i]);
-
     }
-//    flip = (flip + 1) % (tex.size());
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     CHECK_GL();
-    tex_output = tex.back();//tex[flip];
+    tex_output = tex.back();
 }

@@ -7,17 +7,38 @@
 
 #define BYTES_PER_PIXEL 16 // RGBA
 
-void render_init(struct render * render, GLint texture) {
+void render_init(struct render * render, GLint texture)
+{
+    auto texel_count = config.pattern.master_width*config.pattern.master_height;
 //    render->prog = load_compute("#render.c.glsl");
-    render->pixels = static_cast<GLfloat*>(::calloc(config.pattern.master_width*config.pattern.master_height, 4 * sizeof(GLfloat)));//::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
-    if(render->pixels == NULL) MEMFAIL();
+//    render->pixels = static_cast<GLfloat*>(::calloc(texel_count, BYTES_PER_PIXEL));//::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
+//    if(render->pixels == NULL)
+//        MEMFAIL();
 
+    glGenBuffers(1, &render->pbo);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, render->pbo);
+    glBufferStorage(
+        GL_PIXEL_PACK_BUFFER
+      , texel_count * BYTES_PER_PIXEL
+      , nullptr,
+        GL_MAP_READ_BIT
+       |GL_MAP_PERSISTENT_BIT
+       |GL_MAP_COHERENT_BIT
+       );
+    render->pixels = static_cast<GLfloat*>(
+        glMapBufferRange(
+            GL_PIXEL_PACK_BUFFER
+          , 0
+          , texel_count * BYTES_PER_PIXEL
+          , GL_MAP_READ_BIT
+           |GL_MAP_PERSISTENT_BIT
+           |GL_MAP_COHERENT_BIT
+           )
+        );
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     glGenFramebuffers(1, &render->fb);
-    CHECK_GL();
-
     glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glNamedFramebufferTexture(render->fb, GL_COLOR_ATTACHMENT0, texture, 0);
     CHECK_GL();
 
     render->mutex = SDL_CreateMutex();
@@ -26,18 +47,27 @@ void render_init(struct render * render, GLint texture) {
 }
 
 void render_term(struct render * render) {
-    free(render->pixels);
+//    free(render->pixels);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER,render->pbo);
+    glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+    glDeleteBuffers(1,&render->pbo);
     glDeleteFramebuffers(1, &render->fb);
     SDL_DestroyMutex(render->mutex);
     memset(render, 0, sizeof *render);
 }
 
-void render_readback(struct render * render) {
+void render_readback(struct render * render)
+{
     if(SDL_TryLockMutex(render->mutex) == 0) {
         glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, render->pbo);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
-        glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_FLOAT, (GLvoid*)render->pixels);
-//        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glMemoryBarrier(
+            GL_PIXEL_BUFFER_BARRIER_BIT
+           |GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT
+           );
+        glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_FLOAT, NULL);//(GLvoid*)render->pixels);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
         CHECK_GL();
         SDL_UnlockMutex(render->mutex);
     }

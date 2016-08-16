@@ -2,9 +2,15 @@
 #include "util/glsl.h"
 #include "util/err.h"
 
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "util/string.h"
 #include <cerrno>
 #include <cstdio>
+#include <ctime>
+#include <time.h>
+#include <sys/time.h>
 #include <cstring>
 #include <cstdlib>
 
@@ -119,14 +125,38 @@ bool configure_vertex_area(float ww, float wh)
     glUniform2f(0, ww, wh);
     return true;
 }
+static std::map<std::string, std::pair<GLuint, timespec> > s_shader_cache{};
 GLuint compile_shader(GLenum type, const std::string &filename)
 {
+    auto fn = filename;
+    if(fn.size() && fn[0] == '#') {
+        fn = "resources/" + fn.substr(1);
+    }
+    {
+        auto it = s_shader_cache.find(fn);
+        if(it != s_shader_cache.end()) {
+            struct stat _stat{};
+            ::stat(fn.c_str(), &_stat);
+            if(it->second.second.tv_sec < _stat.st_mtim.tv_sec) {
+                glDeleteShader(it->second.first);
+                s_shader_cache.erase(it);
+            }else{
+                return it->second.first;
+            }
+        }
+    }
     auto src = read_file(filename);
     if(src.empty()) {
         WARN("file unreadable or empty when compiling file %s\n", filename.c_str());
         return 0;
     }
-    return compile_shader_src(type, src);
+    auto res = compile_shader_src(type, src);
+    if(res) {
+        struct stat _stat{};
+        ::stat(fn.c_str(), &_stat);
+        s_shader_cache.insert(std::make_pair(fn, std::make_pair(res, _stat.st_mtim)));
+    }
+    return res;
 }
 GLuint compile_shader_src(GLenum type, const std::string &src)
 {
@@ -155,7 +185,7 @@ GLuint load_shader(const char * filename)
 
     auto fshader = compile_shader_src(GL_FRAGMENT_SHADER, head_buffer + "\n" + prog_buffer);
     if(!fshader) {
-        glDeleteShader(vshader);
+//        glDeleteShader(vshader);
         return 0;
     }
     // Link
@@ -175,8 +205,8 @@ GLuint load_shader(const char * filename)
         glDeleteProgram(program);
         program = 0;
     }
-    glDeleteShader(vshader);
-    glDeleteShader(gshader);
+//    glDeleteShader(vshader);
+//    glDeleteShader(gshader);
     glDeleteShader(fshader);
 
     return program;
@@ -226,13 +256,13 @@ GLuint load_shader(const char *vert,const char * frag)
     if(!getProgramStatus(program)) {
         load_shader_error = getProgramInfoLog(program);
         glDeleteProgram(program);
-        glDetachShader(program, vshader);
+//        glDetachShader(program, vshader);
         glDetachShader(program, fshader);
 
         program = 0;
     }
     glDeleteShader(fshader);
-    glDeleteShader(vshader);
+//    glDeleteShader(vshader);
     return program;
 }
 GLuint load_shader_noheader(const char *vert,const char * frag)
@@ -260,7 +290,7 @@ GLuint load_shader_noheader(const char *vert,const char * frag)
 
         program = 0;
     }
-    glDeleteShader(fshader);
-    glDeleteShader(vshader);
+//    glDeleteShader(fshader);
+//    glDeleteShader(vshader);
     return program;
 }

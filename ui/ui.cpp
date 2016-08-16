@@ -10,6 +10,7 @@ static bool quit;
 static GLuint main_shader;
 static GLuint pat_shader;
 static GLuint blit_shader;
+static GLuint mblit_shader;
 static GLuint crossfader_shader;
 static GLuint text_shader;
 static GLuint spectrum_shader;
@@ -25,10 +26,8 @@ static GLuint waveform_fb;
 static GLuint strip_fb;
 static GLuint select_tex;
 static GLuint pattern_array;
-std::vector<GLuint> pattern_textures;
 std::vector<SDL_Texture*> pattern_name_textures;
 std::vector<std::pair<int,int> > pattern_name_sizes;
-//static GLuint * pattern_textures;
 //static SDL_Texture ** pattern_name_textures;
 //static int * pattern_name_width;
 //static int * pattern_name_height;
@@ -45,6 +44,8 @@ static GLuint strip_vbo      = 0;
 static int    strip_vbo_size = 0;
 static GLuint vao;
 static GLuint vbo;
+static GLuint pat_vbo;
+static GLuint pat_vao;
 // Window
 static int ww; // Window width
 static int wh; // Window height
@@ -290,6 +291,26 @@ void ui_init() {
     CHECK_GL();
     glEnable(GL_DEBUG_OUTPUT);
     glGenBuffers(1,&vbo);
+    glGenBuffers(1,&pat_vbo);
+    GLfloat pat_vbo_data[16 * 5];
+    for(auto i = 0; i < 16; ++i) {
+        pat_vbo_data[5*i+0] = map_x[i];
+        pat_vbo_data[5*i+1] = map_y[i];
+        pat_vbo_data[5*i+2] = config.ui.pattern_width;
+        pat_vbo_data[5*i+3] = config.ui.pattern_height;
+        pat_vbo_data[5*i+4] = i;
+    }
+    glBindBuffer(GL_ARRAY_BUFFER,pat_vbo);
+    glBufferData(GL_ARRAY_BUFFER,sizeof(pat_vbo_data), pat_vbo_data,GL_STATIC_DRAW);
+    glGenVertexArrays(1,&pat_vao);
+    glBindVertexArray(pat_vao);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(4*sizeof(GLfloat)));
+    glEnableVertexAttribArray(2);
+
     glGenVertexArrays(1,&vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glNamedBufferData(vbo, sizeof(GLfloat) * 4, NULL, GL_DYNAMIC_DRAW);
@@ -325,19 +346,13 @@ void ui_init() {
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, select_tex, 0);
 
     // Init pattern textures
-    pattern_textures.resize(config.ui.n_patterns);
-//    pattern_textures = (GLuint*)calloc(config.ui.n_patterns, sizeof(GLuint));
-//    if(pattern_textures == NULL) MEMFAIL();
     pattern_name_textures.resize(config.ui.n_patterns);
     pattern_name_sizes.resize(config.ui.n_patterns);
 //    pattern_name_textures = (SDL_Texture**)calloc(config.ui.n_patterns, sizeof(SDL_Texture *));
 //    pattern_name_width = (int*)calloc(config.ui.n_patterns, sizeof(int));
 //    pattern_name_height = (int*)calloc(config.ui.n_patterns, sizeof(int));
 //    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
-    CHECK_GL();
-    for(int i = 0; i < config.ui.n_patterns; i++) {
-        pattern_textures[i] = make_texture( config.ui.pattern_width, config.ui.pattern_height);
-    }
+
 
     // Init crossfader texture
     crossfader_texture = make_texture( config.ui.crossfader_width, config.ui.crossfader_height);
@@ -383,11 +398,12 @@ void ui_init() {
     if((waveform_shader = load_shader("#ui_waveform.glsl")) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
     if((strip_shader = load_shader("#strip.v.glsl","#strip.f.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
     if((blit_shader = load_shader("#blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
+    if((mblit_shader = load_shader("#multiblit.glsl")) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_shader_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
 
-    gl_font = ftgl_renderer(256,256,config.ui.fontsize,config.ui.font);
+    gl_font = ftgl_renderer(config.ui.font_atlas_width,config.ui.font_atlas_height,config.ui.fontsize,config.ui.font);
     gl_font.open_font(config.ui.alt_font);
     gl_font.set_color(1.,1.,1.,1.);
     textbox_font = gl_font;
@@ -770,12 +786,10 @@ static void ui_render(bool select) {
                 glBindTexture(GL_TEXTURE_2D, p->tex_output);
                 glActiveTexture(GL_TEXTURE1);
                 glBindTexture(GL_TEXTURE_2D, 0);
-//                SDL_GL_BindTexture(pattern_name_textures[i], NULL, NULL);
                 glUniform1i(pattern_index, i);
                 glUniform1f(pattern_intensity, p->intensity);
                 glUniform2f(name_resolution, 1,1);//pattern_name_sizes[i].first, pattern_name_sizes[i].second);
-                glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pattern_textures[i], 0);
-//                glNamedFramebufferTextureLayer(pat_fb, GL_COLOR_ATTACHMENT0, pattern_array, 0, i);
+                glNamedFramebufferTextureLayer(pat_fb, GL_COLOR_ATTACHMENT0, pattern_array, 0, i);
                 glClear(GL_COLOR_BUFFER_BIT);
                 if(first) {
                     fill(pw, ph);
@@ -891,10 +905,11 @@ static void ui_render(bool select) {
     CHECK_GL();
 
     // Blit UI elements on top
-    glUseProgram(blit_shader);
-    glProgramUniform2f(blit_shader, 0, ww, wh);
+    glUseProgram(mblit_shader);
+    glProgramUniform2f(mblit_shader, 0, ww, wh);
     glActiveTexture(GL_TEXTURE0);
-    location = glGetUniformLocation(blit_shader, "iTexture");
+    glBindTexture(GL_TEXTURE_2D_ARRAY, pattern_array);
+    location = glGetUniformLocation(mblit_shader, "iAllPatterns");
     glUniform1i(location, 0);
     glEnable(GL_BLEND);
     for(int i = 0; i < config.ui.n_patterns; i++) {
@@ -902,11 +917,17 @@ static void ui_render(bool select) {
             if(pat->name.size() && gl_font.m_vbo_dirty) {
                 gl_font.print(map_x[i] + config.ui.pattern_name_x, map_y[i] + config.ui.pattern_height -config.ui.pattern_name_y, pat->name);
             }
-            glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
-            blit(map_x[i],map_y[i], pw,ph);
-            CHECK_GL();
+//            glUniform1i(11, i);
+//            blit(map_x[i],map_y[i], pw,ph);
+//            CHECK_GL();
         }
     }
+    glBindVertexArray(pat_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, pat_vbo);
+    glDrawArrays(GL_POINTS, 0, 16);
+    glUseProgram(blit_shader);
+    glProgramUniform2f(blit_shader, 0, ww, wh);
+
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
     CHECK_GL();
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);

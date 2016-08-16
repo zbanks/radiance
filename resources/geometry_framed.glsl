@@ -3,9 +3,10 @@
 layout(points) in;
 layout(triangle_strip, max_vertices=4) out;
 uniform layout(location = 0) vec2 u_global_size;
-in vec2 vg_corner[];
-in vec2 vg_size  [];
-
+in flat vec2 vg_corner[];
+in flat vec2 vg_size  [];
+in flat float vg_layer [];
+out flat float v_layer;
 out flat vec2 v_corner;
 out flat vec2 v_size;
 out vec2      v_uv;
@@ -16,6 +17,7 @@ void main()
     vec2 corner = vg_corner[0] * 2 / u_global_size - vec2(1);
 
     {
+        v_layer  = vg_layer[0];
         v_corner = vg_corner[0];
         v_size   = vg_size[0];
         v_uv     = vec2(0,0);
@@ -24,6 +26,8 @@ void main()
         EmitVertex();
     }
     {
+        v_layer  = vg_layer[0];
+        v_layer  = vg_layer[0];
         v_corner = vg_corner[0];
         v_size   = vg_size[0];
         v_uv     = vec2(0,1);
@@ -40,6 +44,7 @@ void main()
         EmitVertex();
     }
     {
+        v_layer  = vg_layer[0];
         v_corner = vg_corner[0];
         v_size   = vg_size[0];
         v_uv     = vec2(1,1);

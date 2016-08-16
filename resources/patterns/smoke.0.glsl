@@ -2,7 +2,7 @@
 
 void main(void) {
 
-    vec3 noise_input = vec3((v_uv ) * iIntensity * 4, iIntensity + iIntensityIntegral * 0.1);
+    vec3 noise_input = vec3((v_uv + (noise(iIntensity * iTime * 0.01))) * iIntensity * 4, iIntensity + iIntensityIntegral * 0.1 );
     float n = noise(noise_input) - 0.1;
     n += (noise(2. * noise_input) - 0.5) * 0.5;
     n += (noise(4. * noise_input) - 0.5) * 0.25;

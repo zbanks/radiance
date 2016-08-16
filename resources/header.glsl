@@ -3,8 +3,8 @@
 in flat vec2 v_corner;
 in flat vec2 v_size;
 in      vec2 v_uv;
+in flat float v_layer;
 out layout(location = 0) vec4 f_color0;
-out layout(location = 1) int  f_color1;
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform layout(location = 1) float iTime;
@@ -32,7 +32,8 @@ uniform layout(location = 6) sampler2D iFrame;
 // Previous outputs of the other channels (e.g. foo.1.glsl) 
 uniform layout(location = 7) sampler2D iChannel[3];
 
-uniform layout(location = 10) sampler2DArray allFrames;
+uniform layout(location = 10) sampler2DArray iAllPatterns;
+uniform layout(location = 11) int  iPatternIndex;
 #define M_PI 3.1415926535897932384626433832795
 
 //
@@ -46,7 +47,6 @@ uniform bool iSelection;
 uniform int  iBins;
 uniform int  iLeftDeckSelector;
 uniform int  iLength;
-uniform int  iPatternIndex;
 uniform int  iRightDeckSelector;
 uniform int  iSelected;
 uniform int  iIndicator;

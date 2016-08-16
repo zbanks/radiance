@@ -10,13 +10,12 @@ void main(void) {
     vec2 preview_origin = vec2(25., 75.);
     vec2 preview_size = vec2(100., 100.);
     vec2 name_origin = vec2(25., 210.);
-
+    f_color0 = vec4(0.);
     if(iSelection) {
         f_color0.a = 1.;
         f_color0.rgb = dataColor(ivec3(1, iPatternIndex, 0));
         f_color0.rgb = mix(f_color0.rgb, dataColor(ivec3(2, iPatternIndex, 0)), inBox(frag.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
-        f_color0 = vec4(0.);
 
         float df = max(rounded_rect_df(vec2(75., 125.), vec2(45., 75.), 25.), 0.);
 
