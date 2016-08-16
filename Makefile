@@ -33,7 +33,7 @@ OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o) $(CXX_SRC:%.cpp=$(OBJDIR)/%.o)
 # Compiler flags
 INC = -I. -I./submodules -I./submodules/gl3w/include -I./submodules/freetype-gl
 
-LIBRARIES = -lrt -Lsubmodules/freetype-gl/build -lfreetype-gl -lfreetype -lSDL2 -lSDL2_ttf -lGL -lGLU -lrt -ldl -lm -lportaudio -lportmidi -lfftw3 -lsamplerate $(shell pkg-config --libs sdl2 gl glu fftw3)
+LIBRARIES = -lrt -Lsubmodules/freetype-gl/build -lfreetype-gl -lfreetype -lSDL2 -lGL -lGLU -lrt -ldl -lm -lportaudio -lportmidi -lfftw3 -lsamplerate $(shell pkg-config --libs sdl2 gl glu fftw3)
 
 CFLAGS = -std=gnu11 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl glu fftw3)
 CXXFLAGS = -std=gnu++14 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl glu fftw3)

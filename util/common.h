@@ -10,7 +10,6 @@ _Pragma("once")
 
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_opengl.h>
 #include <SDL2/SDL_opengl_glext.h>
 #include <GL/glut.h>

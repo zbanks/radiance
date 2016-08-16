@@ -12,7 +12,6 @@ static GLuint pat_shader;
 static GLuint blit_shader;
 static GLuint mblit_shader;
 static GLuint crossfader_shader;
-static GLuint text_shader;
 static GLuint spectrum_shader;
 static GLuint waveform_shader;
 static GLuint strip_shader;
@@ -101,7 +100,6 @@ static const int map_home[19] =  {1,  1,  1,  1,  1,  1,  1,  1,  1,  9,  9,  9,
 static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8, 16, 16, 16, 16, 16, 16, 16, 16,  8, 16};
 
 // Font
-TTF_Font * font;
 ftgl_renderer gl_font{};
 ftgl_renderer textbox_font{};
 static const SDL_Color font_color = {255, 255, 255, 255};
@@ -136,51 +134,12 @@ static void fill(float w, float h) {
     glDrawArrays(GL_POINTS, 0, 1);
 }
 
-/*static SDL_Texture * render_text(char * text, int * w, int * h) {
-    // We need to first render to a surface as that's what TTF_RenderText
-    // returns, then load that surface into a texture
-    SDL_Surface * surf;
-    if(strlen(text) > 0) {
-        surf = TTF_RenderText_Blended(font, text, font_color);
-    } else {
-        surf = TTF_RenderText_Blended(font, " ", font_color);
-    }
-    if(surf == NULL) FAIL("Could not create surface: %s\n", SDL_GetError());
-    if(w != NULL) *w = surf->w;
-    if(h != NULL) *h = surf->h;
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
-    if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
-    SDL_FreeSurface(surf);
-    return texture;
-}*/
-
 static void render_textbox(char * text, int width, int height)
 {
     textbox_font.clear();
     textbox_font.print(0,height/2, text);
     textbox_font.prepare();
     textbox_font.render(width,height);
-/*    GLint location;
-
-    glUseProgram(text_shader);
-    glUniform2f(0, width, height);
-
-    int text_w;
-    int text_h;
-
-    SDL_Texture * tex = render_text(text, &text_w, &text_h);
-
-    location = glGetUniformLocation(text_shader, "iTextResolution");
-    glUniform2f(location, text_w, text_h);
-    location = glGetUniformLocation(text_shader, "iText");
-    glUniform1i(location, 0);
-    glActiveTexture(GL_TEXTURE0);
-    SDL_GL_BindTexture(tex, NULL, NULL);
-
-    glViewport(0, 0, width, height);
-    glClear(GL_COLOR_BUFFER_BIT);
-    fill(width, height);
-    SDL_DestroyTexture(tex);*/
 }
 
 constexpr const char *uiDebugType(GLenum type)
@@ -279,9 +238,6 @@ void ui_init() {
     context = SDL_GL_CreateContext(window);
     if(context == NULL) FAIL("OpenGL context could not be created: %s\n", SDL_GetError());
     if(SDL_GL_SetSwapInterval(0) < 0) fprintf(stderr, "Warning: Unable to set VSync: %s\n", SDL_GetError());
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-    if(renderer == NULL) FAIL("Could not create renderer: %s\n", SDL_GetError());
-    if(TTF_Init() < 0) FAIL("Could not initialize font library: %s\n", TTF_GetError());
 
     SDL_GL_MakeCurrent(window,context);
     if(gl3wInit()) {
@@ -393,7 +349,6 @@ void ui_init() {
     if((main_shader = load_shader("#ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", get_load_shader_error().c_str());
     if((pat_shader = load_shader("#ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_shader_error().c_str());
     if((crossfader_shader = load_shader("#ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_shader_error().c_str());
-    if((text_shader = load_shader("#ui_text.glsl")) == 0) FAIL("Could not load UI text shader!\n%s", get_load_shader_error().c_str());
     if((spectrum_shader = load_shader("#ui_spectrum.glsl")) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_shader_error().c_str());
     if((waveform_shader = load_shader("#ui_waveform.glsl")) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
     if((strip_shader = load_shader("#strip.v.glsl","#strip.f.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
@@ -408,19 +363,8 @@ void ui_init() {
     gl_font.set_color(1.,1.,1.,1.);
     textbox_font = gl_font;
     // Open the font
-    font = TTF_OpenFont(config.ui.font, config.ui.fontsize);
-    if(font == NULL) FAIL("Could not open font %s: %s\n", config.ui.font, SDL_GetError());
-
     // Init statics
     pat_entry = false;
-
-    SDL_Surface * surf;
-    surf = TTF_RenderText_Blended(font, "wtf, why is this necessary", font_color);
-    if(surf == NULL) FAIL("Could not create surface: %s\n", SDL_GetError());
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surf);
-    if(texture == NULL) FAIL("Could not create texture: %s\n", SDL_GetError());
-    SDL_FreeSurface(surf);
-    SDL_DestroyTexture(texture);
     CHECK_GL();
 }
 void ui_make_context_current(SDL_GLContext ctx)
@@ -443,17 +387,11 @@ SDL_GLContext ui_make_secondary_context()
 
 }
 void ui_term() {
-    TTF_CloseFont(font);
-    for(int i=0; i<config.ui.n_patterns; i++) {
-        if(pattern_name_textures[i] != NULL)
-            SDL_DestroyTexture(pattern_name_textures[i]);
-    }
-    // TODO glDeleteTextures...
+        // TODO glDeleteTextures...
     glDeleteProgram(blit_shader);
     glDeleteProgram(main_shader);
     glDeleteProgram(pat_shader);
     glDeleteProgram(crossfader_shader);
-    glDeleteProgram(text_shader);
     glDeleteProgram(spectrum_shader);
     glDeleteProgram(waveform_shader);
     SDL_DestroyRenderer(renderer);
@@ -773,7 +711,6 @@ static void ui_render(bool select) {
     glUniform1i(location, 1);
     GLint pattern_index = glGetUniformLocation(pat_shader, "iPatternIndex");
     GLint pattern_intensity = glGetUniformLocation(pat_shader, "iIntensity");
-    GLint name_resolution = glGetUniformLocation(pat_shader, "iNameResolution");
     glProgramUniform2f(pat_shader, 0, pw, ph);
 
     glViewport(0, 0, pw, ph);
@@ -788,7 +725,6 @@ static void ui_render(bool select) {
                 glBindTexture(GL_TEXTURE_2D, 0);
                 glUniform1i(pattern_index, i);
                 glUniform1f(pattern_intensity, p->intensity);
-                glUniform2f(name_resolution, 1,1);//pattern_name_sizes[i].first, pattern_name_sizes[i].second);
                 glNamedFramebufferTextureLayer(pat_fb, GL_COLOR_ATTACHMENT0, pattern_array, 0, i);
                 glClear(GL_COLOR_BUFFER_BIT);
                 if(first) {
@@ -874,6 +810,7 @@ static void ui_render(bool select) {
         glClear(GL_COLOR_BUFFER_BIT);
         fill(vw, vh);
     }
+    glEnable(GL_BLEND);
 
     // Render to screen (or select fb)
     if(select) {
@@ -929,7 +866,6 @@ static void ui_render(bool select) {
     glProgramUniform2f(blit_shader, 0, ww, wh);
 
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
-    CHECK_GL();
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
     CHECK_GL();
 
