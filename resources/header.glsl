@@ -39,9 +39,6 @@ uniform layout(location = 11) int  iPatternIndex;
 //
 // The following is only used for UI; not for patterns
 //
-uniform vec2 iTextResolution;
-uniform vec2 iNameResolution;
-
 uniform bool iLeftOnTop;
 uniform bool iSelection;
 uniform int  iBins;

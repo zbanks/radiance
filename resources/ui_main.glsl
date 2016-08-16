@@ -61,7 +61,7 @@ void main(void) {
             f_color0 = composite(f_color0, fancy_rect(p, PAT_SIZE, iSelected == i + 9));
         }
         f_color0 = composite(f_color0, fancy_rect(vec2(962.5, 300.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
-        f_color0 = composite(f_color0, fancy_rect(vec2(356., 650.), vec2(226., 70.), false));
-        f_color0 = composite(f_color0, fancy_rect(vec2(918., 650.), vec2(225., 70.), false));
+//        f_color0 = composite(f_color0, fancy_rect(vec2(356., 650.), vec2(226., 70.), false));
+//        f_color0 = composite(f_color0, fancy_rect(vec2(918., 650.), vec2(225., 70.), false));
     }
 }
