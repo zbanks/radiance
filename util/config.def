@@ -18,6 +18,7 @@ CFGSECTION(ui,
     CFG(crossfader_gain_x, FLOAT, 0.01)
     CFG(crossfader_gain_y, FLOAT, 0.01)
     CFG(font, STRING, "FreeSans.ttf")
+    CFG(alt_font, STRING, "ProggyTinySZ.ttf")
     CFG(fontsize, INT, 24)
     CFG(pat_entry_width, INT, 200)
     CFG(pat_entry_height, INT, 50)

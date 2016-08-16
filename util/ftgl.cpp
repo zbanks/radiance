@@ -42,9 +42,9 @@ std::vector<uint32_t> utf8_to_utf32_vec(const std::string &str)
     return codepoints;
 }
 }
-tex_font::tex_font(std::shared_ptr<tex_atlas> atlas, int pt_size, const char *font)
+tex_font::tex_font(std::shared_ptr<tex_atlas> atlas, int pt_size, const std::string &fontname)
 {
-    create(atlas,pt_size,font);
+    create(atlas,pt_size,fontname);
 }
 tex_font::~tex_font()
 {
@@ -58,11 +58,14 @@ void tex_font::destroy()
     }
     m_atlas.reset();
 }
-void tex_font::create(std::shared_ptr<tex_atlas> atlas, int pt_size, const char *font)
+void tex_font::create(std::shared_ptr<tex_atlas> atlas, int pt_size, const std::string &fontname)
 {
     destroy();
     m_atlas = atlas;
-    m_d = texture_font_new_from_file(*m_atlas, pt_size, font);
+    m_d = texture_font_new_from_file(*m_atlas, pt_size, fontname.c_str());
+    if(!m_d) {
+        return;
+    }
     for(auto i = char{32}; i < char{127}; ++i){
         const char _str[] = { i, 0 };
         auto glyph = get_glyph(_str);
@@ -118,6 +121,7 @@ void ftgl_renderer::swap(ftgl_renderer &o) noexcept
     using std::swap;
     swap(m_atlas,o.m_atlas);
     swap(m_font,o.m_font);
+    swap(m_fonts,o.m_fonts);
     swap(m_vao,o.m_vao);
     swap(m_vbo,o.m_vbo);
     swap(m_vbo_size,o.m_vbo_size);
@@ -126,13 +130,16 @@ void ftgl_renderer::swap(ftgl_renderer &o) noexcept
     swap(m_pen,o.m_pen);
     swap(m_color,o.m_color);
     swap(m_scale,o.m_scale);
+    swap(m_pt_size,o.m_pt_size);
 }
 ftgl_renderer&ftgl_renderer::operator=(const ftgl_renderer &o)
 {
     m_atlas = o.m_atlas;
     m_font  = o.m_font;
+    m_fonts = o.m_fonts;
     m_scale = o.m_scale;
     m_color = o.m_color;
+    m_pt_size = o.m_pt_size;
     getShader();
     getBuffer();
     return *this;
@@ -140,15 +147,19 @@ ftgl_renderer&ftgl_renderer::operator=(const ftgl_renderer &o)
 ftgl_renderer::ftgl_renderer(const ftgl_renderer &o)
 : m_atlas(o.m_atlas)
 , m_font(o.m_font)
+, m_fonts(o.m_fonts)
 , m_color(o.m_color)
 , m_scale(o.m_scale)
+, m_pt_size(o.m_pt_size)
 {
     getShader();
     getBuffer();
 }
-ftgl_renderer::ftgl_renderer(int w, int h, int pt_size, const char *filename)
+ftgl_renderer::ftgl_renderer(int w, int h, int pt_size, const std::string &fontname)
 : m_atlas(std::make_shared<tex_atlas>(w, h, 1))
-, m_font (std::make_shared<tex_font>(m_atlas, pt_size, filename))
+, m_font{std::make_shared<tex_font>(m_atlas, pt_size, fontname)}
+, m_fonts{std::make_pair(fontname,m_font)}
+, m_pt_size(pt_size)
 {
     getShader();
     getBuffer();
@@ -247,6 +258,24 @@ void ftgl_renderer::clear()
     if(m_vbo_data.size()) {
         m_vbo_data.clear();
         m_vbo_dirty = true;
+    }
+}
+void ftgl_renderer::open_font(const std::string &fontname)
+{
+    if(m_fonts.find(fontname) != m_fonts.end())
+        return;
+    if(!m_atlas)
+        return;
+    m_fonts.insert(std::make_pair(fontname, std::make_shared<tex_font>(m_atlas,m_pt_size,fontname)));
+}
+bool ftgl_renderer::active_font(const std::string &fontname)
+{
+    auto it = m_fonts.find(fontname);
+    if(it != m_fonts.end()) {
+        m_font = it->second;
+        return true;
+    }else{
+        return false;
     }
 }
 void ftgl_renderer::render(int global_w, int global_h)

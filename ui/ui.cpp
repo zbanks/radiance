@@ -387,7 +387,8 @@ void ui_init() {
     // Stop text input
     SDL_StopTextInput();
 
-    gl_font = ftgl_renderer(512,512,config.ui.fontsize,config.ui.font);
+    gl_font = ftgl_renderer(256,256,config.ui.fontsize,config.ui.font);
+    gl_font.open_font(config.ui.alt_font);
     gl_font.set_color(1.,1.,1.,1.);
     textbox_font = gl_font;
     // Open the font
@@ -925,7 +926,9 @@ static void ui_render(bool select) {
                 if(map_selection[i] == selected) {
                     if(gl_font.m_vbo_dirty) {
                         gl_font.m_scale *= 2;
+                        gl_font.active_font(config.ui.alt_font);
                         gl_font.print(map_x[i], map_y[i] + config.ui.pattern_height - gl_font.height(), pat_entry_text);
+                        gl_font.active_font(config.ui.font);
                         gl_font.m_scale /= 2;
                     }
                     glBindTexture(GL_TEXTURE_2D, pat_entry_texture);

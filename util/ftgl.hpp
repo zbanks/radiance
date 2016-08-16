@@ -51,10 +51,10 @@ struct tex_font {
     tex_font() = default;
     tex_font(tex_font &&) noexcept = default;
     tex_font&operator=(tex_font &&) noexcept = default;
-    tex_font(std::shared_ptr<tex_atlas> atlas, int pt_size, const char *font);
+    tex_font(std::shared_ptr<tex_atlas> atlas, int pt_size, const std::string &fontname);
    ~tex_font();
     void destroy();
-    void create(std::shared_ptr<tex_atlas> atlas, int pt_size, const char *font);
+    void create(std::shared_ptr<tex_atlas> atlas, int pt_size, const std::string &fontname);
     operator texture_font_t *() const { return m_d;}
     texture_font_t *operator ->() const { return m_d;}
     texture_font_t &operator *() const { return *m_d;}
@@ -87,6 +87,9 @@ struct ftgl_renderer {
     };
     std::shared_ptr<tex_atlas>  m_atlas {};
     std::shared_ptr<tex_font>   m_font  {};
+    std::map< std::string
+      , std::shared_ptr<tex_font>
+        > m_fonts{};
     GLuint                      m_shader{0};
     GLuint                      m_vao   {0};
     GLuint                      m_vbo   {0};
@@ -96,6 +99,7 @@ struct ftgl_renderer {
     vec2                        m_pen   {};
     vec4                        m_color {{1.f,1.f,1.f,1.f}};
     float                       m_scale {1.f};
+    int                         m_pt_size{32};
 
     ftgl_renderer() = default;
     ftgl_renderer(ftgl_renderer &&o) noexcept : ftgl_renderer() { swap(o); }
@@ -104,7 +108,9 @@ struct ftgl_renderer {
     friend void swap(ftgl_renderer &lhs, ftgl_renderer &rhs) noexcept { lhs.swap(rhs); }
     ftgl_renderer&operator=(const ftgl_renderer &o);
     ftgl_renderer(const ftgl_renderer &o);
-    ftgl_renderer(int w, int h, int pt_size, const char *filename);
+    ftgl_renderer(int w, int h, int pt_size, const std::string &filename);
+    void open_font(const std::string &filename);
+    bool active_font(const std::string &filename);
     void getShader();
     void getBuffer();
    ~ftgl_renderer();
