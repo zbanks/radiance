@@ -32,6 +32,7 @@ uniform layout(location = 6) sampler2D iFrame;
 // Previous outputs of the other channels (e.g. foo.1.glsl) 
 uniform layout(location = 7) sampler2D iChannel[3];
 
+uniform layout(location = 10) sampler2DArray allFrames;
 #define M_PI 3.1415926535897932384626433832795
 
 //

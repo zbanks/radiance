@@ -41,5 +41,4 @@ void main(void)
     float width = fwidth(dist);
     float alpha = smoothstep(0.5-width, 0.5+width, dist);
     f_color = vec4(v_color.rgb, alpha * v_color.a);
-//    f_color = vec4(1.);
 }

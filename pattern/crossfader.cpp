@@ -23,8 +23,8 @@ void crossfader_init(struct crossfader * crossfader) {
         GLfloat vertices[] = {
             x, y, w, h
         };
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER,vbo);
+        glNamedBufferData(vbo, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     }
     if(new_buffers){

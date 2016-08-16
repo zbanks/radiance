@@ -27,15 +27,32 @@ GLuint make_texture(GLenum format, int w, int h)
     if(!tex)
         return 0;
     glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexStorage2D(GL_TEXTURE_2D, 1, format, w, h);
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameterf(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameterf(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTextureStorage2D(tex, 1, format, w, h);
     if(auto e = glGetError())
         FAIL("GL Error: %s\n",gluErrorString(e));
     return tex;
 }
+GLuint make_texture(GLenum format, int w, int h, int layers)
+{
+    auto tex = GLuint{};
+    glGenTextures(1, &tex);
+    if(!tex)
+        return 0;
+    glBindTexture(GL_TEXTURE_2D_ARRAY, tex);
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameterf(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameterf(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTextureStorage3D(tex, 1, format, w, h, layers);
+    if(auto e = glGetError())
+        FAIL("GL Error: %s\n",gluErrorString(e));
+    return tex;
+}
+
 GLuint make_texture(int length)
 {
     auto tex = GLuint{};
@@ -43,24 +60,14 @@ GLuint make_texture(int length)
     if(!tex)
         return 0;
     glBindTexture(GL_TEXTURE_1D, tex);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexStorage1D(GL_TEXTURE_1D, 1, GL_RGBA32F, length);
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameterf(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureStorage1D(tex, 1, GL_RGBA32F, length);
     if(auto e = glGetError())
         FAIL("GL Error: %s\n",gluErrorString(e));
     return tex;
 }
-
-
-/*
-const char default_vertex_shader[] = "                          \n\
-#version 130                                                    \n\
-void main(void) {                                               \n\
-    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;     \n\
-}                                                               \n\
-";
-*/
 static std::string read_file(const char * filename) {
     auto fn = std::string{filename};
     if(fn.size() && fn[0] == '#') {
@@ -158,7 +165,7 @@ GLuint load_shader(const char * filename)
     glAttachShader(program, gshader);
     glAttachShader(program, fshader);
     glLinkProgram(program);
-   
+
     if(!getProgramStatus(program)) {
         load_shader_error = getProgramInfoLog(program);
         glDetachShader(program, vshader);

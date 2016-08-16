@@ -71,6 +71,7 @@ GLuint load_shader_noheader(const char *vert, const char * frag);
 GLuint load_compute(const char *filename);
 
 GLuint make_texture(int w, int h);
+GLuint make_texture(GLenum format, int w, int h, int layers);
 GLuint make_texture(GLenum format, int w, int h);
 GLuint make_texture(int length);
 #endif

@@ -1,17 +1,6 @@
 #include "util/common.h"
 #include "ui/ui.h"
 
-#include "pattern/pattern.h"
-#include "util/config.h"
-#include "util/ftgl.hpp"
-#include "util/err.h"
-#include "util/glsl.h"
-#include "util/math.h"
-#include "midi/midi.h"
-#include "output/output.h"
-#include "audio/analyze.h"
-#include "ui/render.h"
-#include "output/slice.h"
 #include "main.h"
 
 static SDL_Window * window;
@@ -35,6 +24,7 @@ static GLuint spectrum_fb;
 static GLuint waveform_fb;
 static GLuint strip_fb;
 static GLuint select_tex;
+static GLuint pattern_array;
 std::vector<GLuint> pattern_textures;
 std::vector<SDL_Texture*> pattern_name_textures;
 std::vector<std::pair<int,int> > pattern_name_sizes;
@@ -302,7 +292,7 @@ void ui_init() {
     glGenBuffers(1,&vbo);
     glGenVertexArrays(1,&vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4, NULL, GL_DYNAMIC_DRAW);
+    glNamedBufferData(vbo, sizeof(GLfloat) * 4, NULL, GL_DYNAMIC_DRAW);
     glBindVertexArray(vao);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
     glEnableVertexAttribArray(0);
@@ -328,6 +318,8 @@ void ui_init() {
 
     // Init select texture
     select_tex = make_texture(ww,wh);
+
+    pattern_array = make_texture(GL_RGBA32F, config.ui.pattern_width, config.ui.pattern_height, config.ui.n_patterns * 6);
 
     glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, select_tex, 0);
@@ -733,7 +725,7 @@ static void ui_render(bool select) {
                         y = v->y;
                     }
                 }
-                glBufferData(GL_ARRAY_BUFFER, vvec.size() * sizeof(vvec[0]), &vvec[0], GL_STATIC_DRAW);
+                glNamedBufferData(strip_vbo, vvec.size() * sizeof(vvec[0]), &vvec[0], GL_STATIC_DRAW);
                 strip_vbo_size = vvec.size();
                 glGenVertexArrays(1,&strip_vao);
                 glBindVertexArray(strip_vao);
@@ -782,6 +774,7 @@ static void ui_render(bool select) {
                 glUniform1f(pattern_intensity, p->intensity);
                 glUniform2f(name_resolution, 1,1);//pattern_name_sizes[i].first, pattern_name_sizes[i].second);
                 glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pattern_textures[i], 0);
+//                glNamedFramebufferTextureLayer(pat_fb, GL_COLOR_ATTACHMENT0, pattern_array, 0, i);
                 glClear(GL_COLOR_BUFFER_BIT);
                 if(first) {
                     fill(pw, ph);
@@ -906,7 +899,7 @@ static void ui_render(bool select) {
     for(int i = 0; i < config.ui.n_patterns; i++) {
         if(auto &pat = deck[map_deck[i]].patterns[map_pattern[i]]) {
             if(pat->name.size() && gl_font.m_vbo_dirty) {
-                gl_font.print(map_x[i], map_y[i] + config.ui.pattern_height - (*gl_font.m_font)->height * gl_font.m_scale, pat->name);
+                gl_font.print(map_x[i] + config.ui.pattern_name_x, map_y[i] + config.ui.pattern_height -config.ui.pattern_name_y, pat->name);
             }
             glBindTexture(GL_TEXTURE_2D, pattern_textures[i]);
             blit(map_x[i],map_y[i], pw,ph);
@@ -932,7 +925,7 @@ static void ui_render(bool select) {
                 if(map_selection[i] == selected) {
                     if(gl_font.m_vbo_dirty) {
                         gl_font.m_scale *= 2;
-                        gl_font.print(map_x[i], map_y[i] + config.ui.pattern_height - (*gl_font.m_font)->height * gl_font.m_scale , pat_entry_text);
+                        gl_font.print(map_x[i], map_y[i] + config.ui.pattern_height - gl_font.height(), pat_entry_text);
                         gl_font.m_scale /= 2;
                     }
                     glBindTexture(GL_TEXTURE_2D, pat_entry_texture);

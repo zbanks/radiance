@@ -4,7 +4,7 @@ void main(void) {
 
     f_color0 = vec4(0.);
 
-    float df = max(rounded_rect_df(vec2(200., 100.), vec2(165., 65.), 25.), 0.);
+    float df = max(rounded_rect_df(vec2(256., 100.), vec2(226., 70.), 25.), 0.);
 
     float shrink_freq = 190. / 200.;
     float shrink_mag = 90. / 100.;

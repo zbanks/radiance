@@ -7,6 +7,8 @@ CFGSECTION(ui,
     CFG(n_patterns, INT, 8)
     CFG(pattern_width, INT, 150)
     CFG(pattern_height, INT, 300)
+    CFG(pattern_name_x, INT, 25)
+    CFG(pattern_name_y, INT, 75)
     CFG(intensity_gain_x, FLOAT, 0.01)
     CFG(intensity_gain_y, FLOAT, 0.01)
     CFG(crossfader_x, INT, 900)

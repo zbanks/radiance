@@ -41,8 +41,8 @@ loglevel set_loglevel(loglevel level);
 
 #define PFAIL(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
 #define PERROR(msg, ...) _ERR_MSG(ERROR,"[%s] " msg, strerror(errno), ## __VA_ARGS__)
-//#define CHECK_GL() do{}while(0)
-#define CHECK_GL() do {if(auto e = glGetError()) FAIL("OpenGL Error: %d, \"%s\"\n", int(e), gluErrorString(e));}while(false)
+#define CHECK_GL() do{}while(0)
+//#define CHECK_GL() do {if(auto e = glGetError()) FAIL("OpenGL Error: %d, \"%s\"\n", int(e), gluErrorString(e));}while(false)
 
 /*
 #include <execinfo.h>

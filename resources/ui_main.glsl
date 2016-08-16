@@ -14,7 +14,7 @@ vec4 fancy_rect(vec2 center, vec2 size, bool selected) {
     }
 
     float df = rounded_rect_df(center, size, RADIUS);
-    c = vec4(vec3(0.1) * (center.y + size.y + RADIUS - gl_FragCoord.y) / (2. * (size.y + RADIUS)), clamp(1. - df, 0., 1.));
+    c = vec4(vec3(0.1) * (center.y + size.y + RADIUS - (v_size * v_uv).y) / (2. * (size.y + RADIUS)), clamp(1. - df, 0., 1.));
     color = composite(color, c);
     return color;
 }
@@ -29,7 +29,7 @@ float sdCapsule( vec2 p, vec2 a, vec2 b, float r )
 void glow(vec2 p) {
     vec2 LEN = vec2(300., 0.);
     float FRINGE = 75.;
-    f_color0 = composite(f_color0, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule(gl_FragCoord.xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
+    f_color0 = composite(f_color0, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule((v_uv*v_size).xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
 }
 
 void main(void) {
@@ -61,7 +61,7 @@ void main(void) {
             f_color0 = composite(f_color0, fancy_rect(p, PAT_SIZE, iSelected == i + 9));
         }
         f_color0 = composite(f_color0, fancy_rect(vec2(962.5, 300.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
-        f_color0 = composite(f_color0, fancy_rect(vec2(300., 650.), vec2(165., 65.), false));
-        f_color0 = composite(f_color0, fancy_rect(vec2(700., 650.), vec2(165., 65.), false));
+        f_color0 = composite(f_color0, fancy_rect(vec2(356., 650.), vec2(226., 70.), false));
+        f_color0 = composite(f_color0, fancy_rect(vec2(918., 650.), vec2(225., 70.), false));
     }
 }
