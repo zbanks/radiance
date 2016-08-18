@@ -126,7 +126,9 @@ int output_device_arrange(struct output_device * dev) {
 
 int output_render(struct render * render)
 {
-    render_freeze(render);
+    if(!render_freeze(render)) {
+        return -1;
+    }
     for (auto dev = output_device_head; dev; dev = dev->next) {
         if (!dev->active) continue;
         for (size_t i = 0; i < dev->pixels.length; i++)

@@ -305,7 +305,7 @@ void ftgl_renderer::render(int global_w, int global_h)
         CHECK_GL();
     }
 }
-void ftgl_renderer::print(GLfloat x, GLfloat y, const std::string &str)
+void ftgl_renderer::print(float x, float y, const std::string &str)
 {
     auto u32str = utf8_to_utf32_vec(str);
     m_pen.x = x;

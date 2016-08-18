@@ -79,8 +79,8 @@ int output_run(void * args) {
         int delta = MAX(tick - last_tick, 1);
         stat_ops = INTERP(0.99, stat_ops, 1000. / delta);
 
-        if ((delta < 10) && (delta > 0)) {
-            SDL_Delay(10 - delta);
+        if ((delta < 10) && (delta > 2)) {
+            SDL_Delay(8 - delta);
             //LOGLIMIT(DEBUG, "Sleeping for %d ms", 10 - delta);
         }
         last_tick = tick;

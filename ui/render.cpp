@@ -59,29 +59,70 @@ void render_term(struct render * render) {
 void render_readback(struct render * render)
 {
     if(SDL_TryLockMutex(render->mutex) == 0) {
+        if(render->fence) {
+            glDeleteSync(render->fence);
+            render->fence = nullptr;
+        }
         glBindFramebuffer(GL_FRAMEBUFFER, render->fb);
         glBindBuffer(GL_PIXEL_PACK_BUFFER, render->pbo);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         glMemoryBarrier(
             GL_PIXEL_BUFFER_BARRIER_BIT
-           |GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT
-           );
+            |GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT
+        );
         glReadPixels(0, 0, config.pattern.master_width, config.pattern.master_height, GL_RGBA, GL_FLOAT, NULL);//(GLvoid*)render->pixels);
+        render->fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
         CHECK_GL();
         SDL_UnlockMutex(render->mutex);
+    }else{
+        WARN("failed to initiate render readback: output thread is lagging.");
     }
+
 }
 
-void render_freeze(struct render * render) {
+bool render_freeze(struct render * render) {
     SDL_LockMutex(render->mutex);
+    auto fence = render->fence;
+    SDL_UnlockMutex(render->mutex);
+    if(fence) {
+        auto signaled = false;
+        auto success  = true;
+        while(!signaled) {
+            switch(glClientWaitSync(fence, 0, 1000000)) {
+                case GL_TIMEOUT_EXPIRED:
+                    continue;
+                case GL_WAIT_FAILED:{
+                    ERROR("Failed to wait on GLsync object.\n");
+                    success = false;
+                }
+                case GL_ALREADY_SIGNALED:
+                case GL_CONDITION_SATISFIED:
+                    DEBUG("Exiting sync loop.");
+                    signaled = true;;
+            }
+        }
+        return success;
+    }else{
+        WARN("No sync available.");
+    }
+    return false;
 }
 
-void render_thaw(struct render * render) {
+void render_thaw(struct render * render)
+{
+    SDL_LockMutex(render->mutex);
+    if(render->fence) {
+        glDeleteSync(render->fence);
+        render->fence = nullptr;
+    }else{
+        WARN("Thae with no prior fence!.");
+    }
     SDL_UnlockMutex(render->mutex);
 }
 
-SDL_Color render_sample(struct render * render, float x, float y) {
+SDL_Color render_sample(struct render * render, float x, float y)
+{
     int col = 0.5 * (x + 1) * config.pattern.master_width;
     int row = 0.5 * (-y + 1) * config.pattern.master_height;
     if(col < 0) col = 0;

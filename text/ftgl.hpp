@@ -132,5 +132,6 @@ struct ftgl_renderer {
     float linegap() const { return (*m_font)->linegap * get_scale();}
     float ascender() const { return (*m_font)->ascender * get_scale();}
     float descender() const { return (*m_font)->descender * get_scale();}
-
 };
+
+typedef ftgl_renderer embedded_renderer;

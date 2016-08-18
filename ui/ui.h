@@ -4,7 +4,13 @@
 
 #include "pattern/pattern.h"
 #include "util/config.h"
+#if defined(USE_FREETYPE_GL) && USE_FREETYPE_GL
+#include "text/ftgl.hpp"
+#warning "Using full ftgl"
+#else
 #include "text/embedded.hpp"
+#warning "Using embedded ftgl"
+#endif
 #include "util/err.h"
 #include "util/glsl.h"
 #include "util/math.h"
