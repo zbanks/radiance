@@ -56,8 +56,6 @@ uniform sampler2D iFrameRight;
 uniform sampler2D iPreview;
 uniform sampler2D iStrips;
 uniform sampler2D iTexture;
-uniform sampler2D iText;
-uniform sampler2D iName;
 
 // Utilities to convert from an RGB vec3 to an HSV vec3
 vec3 rgb2hsv(vec3 c);
@@ -128,5 +126,3 @@ void glow(vec2 p, inout vec4 color) {
     float FRINGE = 75.;
     color = composite(color, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule((v_uv*v_size).xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
 }
-
-

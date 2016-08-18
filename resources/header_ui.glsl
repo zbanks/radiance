@@ -57,7 +57,6 @@ uniform sampler2D iPreview;
 uniform sampler2D iStrips;
 uniform sampler2D iTexture;
 uniform sampler2D iText;
-uniform sampler2D iName;
 
 // Utilities to convert from an RGB vec3 to an HSV vec3
 vec3 rgb2hsv(vec3 c);

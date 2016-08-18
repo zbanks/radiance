@@ -13,7 +13,11 @@ void main(void) {
     f_color0 = vec4(0.);
     if(iSelection) {
         f_color0.a = 1.;
-        f_color0.rgb = dataColor(ivec3(1, iPatternIndex, 0));
+//        float df = max(rounded_rect_df(frag,vec2(75., 125.), vec2(45., 75.), 25.), 0.);
+        float df = max(rounded_rect_df(frag,vec2(75., 125.), vec2(45., 75.), 25.), 0.);
+        if(df > RADIUS )
+            discard;
+        f_color0.rgb = dataColor(ivec3(1, iPatternIndex,0));
         f_color0.rgb = mix(f_color0.rgb, dataColor(ivec3(2, iPatternIndex, 0)), inBox(frag.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
 
@@ -34,10 +38,5 @@ void main(void) {
         vec4 p = texture(iPreview, v_uv);
         p.a *= inBox(frag, preview_origin, preview_origin + preview_size);
         f_color0 = composite(f_color0, p);
-
-//        if(f_color0.a == 0.0)
-//            discard;
-
     }
-
 }

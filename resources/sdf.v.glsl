@@ -37,7 +37,7 @@ in layout(location=1) vec2 a_uv;
 in layout(location=2) vec4 a_color;
 
 out vec2 v_uv;
-out vec4 v_color;
+out flat vec4 v_color;
 void main(void)
 {
     v_uv    = a_uv;

@@ -12,11 +12,14 @@ void main(void) {
 
     f_color0 = vec4(0.);
     if(iSelection) {
-        f_color0.a = 1.;
-        f_color0.rgb = dataColor(ivec3(3, 0, 0));
+        float df = max(rounded_rect_df(frag,vec2(175., 250.), vec2(130., 200.), RADIUS), 0.);
+        if(df >= 1.0)
+            discard;
+        f_color0 = composite(f_color0, vec4(dataColor(ivec3(3, 0, 0)), rounded_rect_df(frag,vec2(176., 250.), vec2(130.,200.), RADIUS) <= 1.));
         f_color0.rgb = mix(f_color0.rgb, dataColor(ivec3(4, 0, 0)), inBox(frag.xy, slider_pos - slider_size, slider_pos + slider_size));
     } else {
-        float df = max(rounded_rect_df(frag,vec2(175., 250.), vec2(130., 200.), 25.), 0.);
+        f_color0 = composite(f_color0, fancy_rect(frag,vec2(175, 250.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
+        float df = max(rounded_rect_df(frag,vec2(175., 250.), vec2(130., 200.), RADIUS), 0.);
         f_color0 = composite(f_color0, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
         f_color0 = composite(f_color0, vec4(0., 0.3, 0., smoothBox(frag.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         f_color0 = composite(f_color0, vec4(0., 0.8, 0., smoothBox(frag.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
@@ -36,12 +39,6 @@ void main(void) {
 
         if(iIndicator != 2) f_color0 = composite(f_color0, p);
         if(iIndicator != 0) f_color0 = composite(f_color0, p2);
-        if(in_pattern == 0 && f_color0.a <= 0.5)
-            discard;
-        else {
-            f_color0 *= f_color0.a;
-            f_color0.a = 1;
-        }
     }
 
 }

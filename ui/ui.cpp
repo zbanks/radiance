@@ -15,20 +15,10 @@ static GLuint mblit_shader;
 static GLuint crossfader_shader;
 static GLuint strip_shader;
 
-static GLuint pat_fb;
 static GLuint select_fb;
-static GLuint crossfader_fb;
-static GLuint pat_entry_fb;
 static GLuint strip_fb;
 static GLuint select_tex;
 static GLuint pattern_array;
-std::vector<SDL_Texture*> pattern_name_textures;
-std::vector<std::pair<int,int> > pattern_name_sizes;
-//static SDL_Texture ** pattern_name_textures;
-//static int * pattern_name_width;
-//static int * pattern_name_height;
-static GLuint crossfader_texture;
-static GLuint pat_entry_texture;
 static GLuint tex_spectrum_data;
 static GLuint spectrum_shader;
 static GLuint tex_waveform_data;
@@ -131,14 +121,6 @@ static void fill(float w, float h) {
     glDrawArrays(GL_POINTS, 0, 1);
 }
 
-static void render_textbox(char * text, int width, int height)
-{
-    textbox_font.clear();
-    textbox_font.print(0,height/2, text);
-    textbox_font.prepare();
-    textbox_font.render(width,height);
-}
-
 static void debug_callback(GLenum source, GLenum type, GLuint id,
     GLenum severity, GLsizei length, const char *message, const void *opaque)
 {
@@ -228,9 +210,6 @@ void ui_init() {
 
     // Make framebuffers
     glGenFramebuffers(1, &select_fb);
-    glGenFramebuffers(1, &pat_fb);
-    glGenFramebuffers(1, &crossfader_fb);
-    glGenFramebuffers(1, &pat_entry_fb);
     glGenFramebuffers(1, &strip_fb);
     CHECK_GL();
 
@@ -243,25 +222,7 @@ void ui_init() {
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, select_tex, 0);
 
     // Init pattern textures
-    pattern_name_textures.resize(config.ui.n_patterns);
-    pattern_name_sizes.resize(config.ui.n_patterns);
-//    pattern_name_textures = (SDL_Texture**)calloc(config.ui.n_patterns, sizeof(SDL_Texture *));
-//    pattern_name_width = (int*)calloc(config.ui.n_patterns, sizeof(int));
-//    pattern_name_height = (int*)calloc(config.ui.n_patterns, sizeof(int));
-//    if(pattern_name_textures == NULL || pattern_name_width == NULL || pattern_name_height == NULL) MEMFAIL();
 
-
-    // Init crossfader texture
-    crossfader_texture = make_texture( config.ui.crossfader_width, config.ui.crossfader_height);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, crossfader_texture, 0);
-
-    // Init pattern entry texture
-    pat_entry_texture = make_texture( config.ui.pat_entry_width, config.ui.pat_entry_height);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, pat_entry_texture, 0);
 
     // Spectrum data texture
     tex_spectrum_data = make_texture(config.audio.spectrum_bins);
@@ -287,7 +248,6 @@ void ui_init() {
     if((waveform_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#ui_waveform.glsl"})) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_program_error().c_str());
     if((strip_shader = load_program({"#strip.v.glsl"},{},{"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#strip.f.glsl"})) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_program_error().c_str());
     if((blit_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#blit.glsl"})) == 0) FAIL("Could not load blit shader!\n%s", get_load_program_error().c_str());
-    if((mblit_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#multiblit.glsl"})) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_program_error().c_str());
     glProgramUniform2f(waveform_shader,12,1.2f,1.2f);
     glProgramUniform2f(spectrum_shader,12,1.2f,1.2f);
     glProgramUniform2f(pat_shader,12,1.2f,1.2f);
@@ -396,9 +356,6 @@ static void handle_key(SDL_KeyboardEvent * e) {
                             }
                         } else if(deck[map_deck[i]].load_pattern( map_pattern[i], pat_entry_text) == 0) {
                             if(pat_entry_text[0] != '\0') {
-/*                                if(pattern_name_textures[i] )
-                                    SDL_DestroyTexture(pattern_name_textures[i]);
-                                pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_sizes[i].first, &pattern_name_sizes[i].second);*/
                             }
                         }
                         break;
@@ -500,8 +457,6 @@ static void handle_key(SDL_KeyboardEvent * e) {
                         pat_entry = true;
                         pat_entry_text[0] = '\0';
                         SDL_StartTextInput();
-                        glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
-                        render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
                     }
                 }
                 break;
@@ -584,6 +539,8 @@ static void blit(float x, float y, float w, float h) {
 static void ui_render(bool select) {
     GLint location;
     // Render strip indicators
+    if(!select) {
+    glDisable(GL_BLEND);
     switch(strip_indicator) {
         case STRIPS_SOLID:
         case STRIPS_COLORED:
@@ -646,42 +603,13 @@ static void ui_render(bool select) {
         case STRIPS_NONE:
             break;
     }
+    }
 
 //    // Render the patterns
-//    glBindFramebuffer(GL_FRAMEBUFFER, pat_fb);
 
     // Render the crossfader
-    glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
 
-    auto cw = config.ui.crossfader_width;
-    auto ch = config.ui.crossfader_height;
-    glUseProgram(crossfader_shader);
-    location = glGetUniformLocation(crossfader_shader, "iSelection");
-    glUniform1i(location, select);
-    location = glGetUniformLocation(crossfader_shader, "iSelected");
-    glUniform1i(location, selected);
 
-    location = glGetUniformLocation(crossfader_shader, "iPreview");
-    glUniform1i(location, 0);
-    location = glGetUniformLocation(crossfader_shader, "iStrips");
-    glUniform1i(location, 1);
-    location = glGetUniformLocation(crossfader_shader, "iIntensity");
-    glUniform1f(location, crossfader.position);
-    location = glGetUniformLocation(crossfader_shader, "iIndicator");
-    glUniform1i(location, strip_indicator);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, strip_texture);
-
-    glProgramUniform2f(crossfader_shader, 0, cw, ch);
-    glViewport(0, 0, cw, ch);
-    glClear(GL_COLOR_BUFFER_BIT);
-    fill(cw, ch);
-
-    glDisable(GL_BLEND);
     auto sw = 0;
     auto sh = 0;
     auto vw = 0;
@@ -752,6 +680,32 @@ static void ui_render(bool select) {
 
         blit(config.ui.waveform_x, config.ui.waveform_y, vw, vh);
     }
+    auto cw = config.ui.crossfader_width;
+    auto ch = config.ui.crossfader_height;
+    glUseProgram(crossfader_shader);
+    location = glGetUniformLocation(crossfader_shader, "iSelection");
+    glUniform1i(location, select);
+    location = glGetUniformLocation(crossfader_shader, "iSelected");
+    glUniform1i(location, selected);
+    location = glGetUniformLocation(crossfader_shader, "iPreview");
+    glUniform1i(location, 0);
+    location = glGetUniformLocation(crossfader_shader, "iStrips");
+    glUniform1i(location, 1);
+    location = glGetUniformLocation(crossfader_shader, "iIntensity");
+    glUniform1f(location, crossfader.position);
+    location = glGetUniformLocation(crossfader_shader, "iIndicator");
+    glUniform1i(location, strip_indicator);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, crossfader.tex_output);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, strip_texture);
+
+    glProgramUniform2f(crossfader_shader, 0, ww, wh);
+    glProgramUniform2f(crossfader_shader, 12, 1.2,1.2);
+    blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
+
     int pw = config.ui.pattern_width;
     int ph = config.ui.pattern_height;
     glUseProgram(pat_shader);
@@ -789,13 +743,6 @@ static void ui_render(bool select) {
             }
         }
     }
-    glUseProgram(blit_shader);
-    glProgramUniform2f(blit_shader, 0, ww, wh);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, crossfader_texture);
-    blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
-    CHECK_GL();
-
     if(!select) {
         if(pat_entry) {
             for(int i = 0; i < config.ui.n_patterns; i++) {
@@ -807,8 +754,6 @@ static void ui_render(bool select) {
                         gl_font.active_font(config.ui.font);
                         gl_font.m_scale /= 2;
                     }
-                    glBindTexture(GL_TEXTURE_2D, pat_entry_texture);
-                    blit(map_pe_x[i], map_pe_y[i], config.ui.pat_entry_width, config.ui.pat_entry_height);
                     CHECK_GL();
                     break;
                 }
@@ -816,7 +761,6 @@ static void ui_render(bool select) {
         }
         gl_font.render(ww, wh);
     }
-    glDisable(GL_BLEND);
     CHECK_GL();
 }
 
@@ -869,9 +813,6 @@ static void handle_text(const char * text) {
         }
         gl_font.clear();
         gl_font.m_vbo_dirty=true;
-        glBindFramebuffer(GL_FRAMEBUFFER, pat_entry_fb);
-        render_textbox(pat_entry_text, config.ui.pat_entry_width, config.ui.pat_entry_height);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 static void handle_mouse_down() {
