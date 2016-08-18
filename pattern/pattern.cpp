@@ -25,24 +25,11 @@ pattern::pattern(const char * prefix)
         float w = config.pattern.master_width,h =  config.pattern.master_height;
         float x = 0.f, y = 0.f;
 
-    if(!vbo)  {
-//        glGenBuffers(1,&vbo);
-/*        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        new_buffers = true;
-        GLfloat vertices[] = {
-            x, y, w, h
-        };
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);*/
-
-    }
+    if(!vbo)  {}
     if(new_buffers){
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(vao);
-//        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
-//        glEnableVertexAttribArray(0);
         glVertexAttrib2f(0, x, y);
-//        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
-//        glEnableVertexAttribArray(1);
         glVertexAttrib2f(1,w, h);
     }
 
