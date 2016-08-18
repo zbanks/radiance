@@ -1,5 +1,3 @@
-const vec2 PAT_SIZE = vec2(45., 75.);
-
 void main(void) {
     float g = v_uv.y * 0.5 + 0.1;
     float w = 4.;

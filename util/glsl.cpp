@@ -66,35 +66,34 @@ GLuint make_texture(int length)
     if(!tex)
         return 0;
     glBindTexture(GL_TEXTURE_1D, tex);
+    glTextureStorage1D(tex, 1, GL_RGBA32F, length);
     glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTextureParameterf(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTextureStorage1D(tex, 1, GL_RGBA32F, length);
     if(auto e = glGetError())
         FAIL("GL Error: %s\n",gluErrorString(e));
     return tex;
 }
-static std::string read_file(const char * filename) {
+std::string read_file(const char * filename) {
     auto fn = std::string{filename};
     if(fn.size() && fn[0] == '#') {
         fn = config.paths.resource_path +std::string{"/"} +  fn.substr(1);
-        INFO("Loading adjusted filename \"%s\"\n", fn.c_str());
     }
     std::ifstream ifs(fn);
     return std::string(std::istreambuf_iterator<char>(ifs),
                        std::istreambuf_iterator<char>());
 }
-static std::string read_file(const std::string &filename) {
+std::string read_file(const std::string &filename) {
     return read_file(filename.c_str());
 }
 
-static bool getShaderStatus(GLuint id)
+bool radGetShaderStatus(GLuint id)
 {
     auto status = GLint{};
     glGetShaderiv(id, GL_COMPILE_STATUS, &status);
     return status;
 }
-static std::string getShaderInfoLog(GLuint id)
+std::string radGetShaderInfoLog(GLuint id)
 {
     auto length = GLint{};
     glGetShaderiv(id, GL_INFO_LOG_LENGTH,&length);
@@ -104,13 +103,13 @@ static std::string getShaderInfoLog(GLuint id)
     return result;
 
 }
-static bool getProgramStatus(GLuint id)
+bool radGetProgramStatus(GLuint id)
 {
     auto status = GLint{};
     glGetProgramiv(id, GL_LINK_STATUS, &status);
     return status;
 }
-static std::string getProgramInfoLog(GLuint id)
+std::string radGetProgramInfoLog(GLuint id)
 {
     auto length = GLint{};
     glGetProgramiv(id, GL_INFO_LOG_LENGTH,&length);
@@ -120,12 +119,7 @@ static std::string getProgramInfoLog(GLuint id)
     return result;
 
 }
-bool configure_vertex_area(float ww, float wh)
-{
-    glUniform2f(0, ww, wh);
-    return true;
-}
-static std::map<std::string, std::pair<GLuint, timespec> > s_shader_cache{};
+std::map<std::string, std::pair<GLuint, timespec> > s_shader_cache{};
 GLuint compile_shader(GLenum type, const std::string &filename)
 {
     auto fn = filename;
@@ -141,6 +135,7 @@ GLuint compile_shader(GLenum type, const std::string &filename)
                 glDeleteShader(it->second.first);
                 s_shader_cache.erase(it);
             }else{
+                DEBUG("Using cached copy of shader \"%s\", %d\n", fn.c_str(),it->second.first);
                 return it->second.first;
             }
         }
@@ -168,25 +163,36 @@ GLuint compile_shader_src(GLenum type, const std::string &src)
     const GLint   lenp[] = { GLint(src.size())};
     glShaderSource(shader, GLsizei{1}, srcp, lenp);
     glCompileShader(shader);
-    if(!getShaderStatus(shader)) {
-        load_program_error = getShaderInfoLog(shader);
+    if(!radGetShaderStatus(shader)) {
+        load_program_error = radGetShaderInfoLog(shader);
         WARN("Failed to compile shader \"%s\"\n %s\n", src.c_str(), load_program_error.c_str());
         glDeleteShader(shader);
         shader = 0;
     }
     return shader;
 }
-GLuint load_program(std::initializer_list<const char *> filenames_noheader,
-                    const char *header,
-                    std::initializer_list<const char *> filenames_withheader)
+GLuint load_program(
+    std::initializer_list<const char *> filenames_vertex,
+    std::initializer_list<const char *> filenames_geometry,
+    std::initializer_list<const char *> filenames_noheader,
+    const char *header,
+    std::initializer_list<const char *> filenames_withheader)
 {
     auto program = glCreateProgram();
-    auto vshader = compile_shader(GL_VERTEX_SHADER, "#vertex_framed.glsl");
-    glAttachShader(program,vshader);
-    auto gshader = compile_shader(GL_GEOMETRY_SHADER, "#geometry_framed.glsl");
-    glAttachShader(program,gshader);
-    auto names_noheader = std::vector<GLuint>{vshader,gshader};
+    auto names_noheader = std::vector<GLuint>{};
     auto names_withheader = std::vector<GLuint>{};
+    for(auto && name : filenames_vertex) {
+
+        auto vshader = compile_shader(GL_VERTEX_SHADER, name);
+        names_noheader.push_back(vshader);
+        glAttachShader(program,vshader);
+    }
+    for(auto && name : filenames_geometry) {
+
+        auto vshader = compile_shader(GL_GEOMETRY_SHADER, name);
+        names_noheader.push_back(vshader);
+        glAttachShader(program,vshader);
+    }
     for(auto name : filenames_noheader) {
         auto tshader = compile_shader(GL_FRAGMENT_SHADER, name);
         if(!tshader){
@@ -217,54 +223,15 @@ GLuint load_program(std::initializer_list<const char *> filenames_noheader,
         glDetachShader(program,name);
         glDeleteShader(name);
     }
-    if(!getProgramStatus(program)) {
-        load_program_error = getProgramInfoLog(program);
+    if(!radGetProgramStatus(program)) {
+        load_program_error = radGetProgramInfoLog(program);
         glDeleteProgram(program);
         program = 0;
     }
     return program;
 }
 
-GLuint load_program(const char * filename)
-{
-    auto vshader = compile_shader(GL_VERTEX_SHADER, "#vertex_framed.glsl");
-    auto gshader = compile_shader(GL_GEOMETRY_SHADER, "#geometry_framed.glsl");
-    auto lshader = compile_shader(GL_FRAGMENT_SHADER, "#lib.glsl");
-    auto head_buffer = read_file("#header.glsl");
-    auto prog_buffer = read_file(filename);
 
-    auto fshader = compile_shader_src(GL_FRAGMENT_SHADER, head_buffer + "\n" + prog_buffer);
-    if(fshader) {
-        auto program = glCreateProgram();
-    //        glDeleteShader(vshader);
-        // Link
-        //glAttachShader(programObj, vertexShaderObj);
-        glAttachShader(program, vshader);
-        glAttachShader(program, gshader);
-        glAttachShader(program, lshader);
-        glAttachShader(program, fshader);
-        glLinkProgram(program);
-
-        if(!getProgramStatus(program)) {
-            load_program_error = getProgramInfoLog(program);
-
-
-            glDeleteProgram(program);
-            program = 0;
-        }
-        glDetachShader(program, vshader);
-        glDetachShader(program, lshader);
-        glDetachShader(program, gshader);
-        glDetachShader(program, fshader);
-        return program;
-    }else{
-        return 0;
-    }
-//    glDeleteShader(vshader);
-//    glDeleteShader(gshader);
-    glDeleteShader(fshader);
-
-}
 GLuint load_compute(const char *comp)
 {
 
@@ -278,8 +245,8 @@ GLuint load_compute(const char *comp)
     glAttachShader(program, shader);
     glLinkProgram(program);
 
-    if(!getProgramStatus(program)) {
-        load_program_error = getProgramInfoLog(program);
+    if(!radGetProgramStatus(program)) {
+        load_program_error = radGetProgramInfoLog(program);
         glDeleteProgram(program);
         glDetachShader(program, shader);
         program = 0;
@@ -287,67 +254,17 @@ GLuint load_compute(const char *comp)
     glDeleteShader(shader);
     return program;
 }
+GLuint load_program(std::initializer_list<const char *> filenames_noheader,
+                    const char *header,
+                    std::initializer_list<const char *> filenames_withheader)
+{
+    return load_program({"#vertex_framed.glsl"},{"#geometry_framed.glsl"},filenames_noheader,header,filenames_withheader);
+}
 GLuint load_program(const char *vert,const char * frag)
 {
-
-    // Load file
-    auto vshader = compile_shader(GL_VERTEX_SHADER, std::string{vert});
-    auto lshader = compile_shader(GL_FRAGMENT_SHADER, "#lib.glsl");
-    auto head_buffer = read_file("#header.glsl");
-    auto prog_buffer = read_file(frag);
-
-    auto fshader = compile_shader_src(GL_FRAGMENT_SHADER, head_buffer + "\n" + prog_buffer);
-    if(!fshader) {
-        return 0;
-    }
-    // Link
-    auto program = glCreateProgram();
-    //glAttachShader(programObj, vertexShaderObj);
-    glAttachShader(program, vshader);
-    glAttachShader(program, lshader);
-    glAttachShader(program, fshader);
-    glLinkProgram(program);
-    glDetachShader(program, vshader);
-    glDetachShader(program, lshader);
-    glDetachShader(program, fshader);
-
-    if(!getProgramStatus(program)) {
-        load_program_error = getProgramInfoLog(program);
-        glDeleteProgram(program);
-//        glDetachShader(program, vshader);
-
-        program = 0;
-    }
-    glDeleteShader(fshader);
-//    glDeleteShader(vshader);
-    return program;
+    return load_program({vert},{},{"#lib.glsl"},"#header.glsl",{frag});
 }
 GLuint load_program_noheader(const char *vert,const char * frag)
 {
-
-    // Load file
-    auto vshader = compile_shader(GL_VERTEX_SHADER, std::string{vert});
-    auto fshader = compile_shader(GL_FRAGMENT_SHADER,std::string(frag));
-    if(!fshader) {
-        glDeleteShader(vshader);
-        return 0;
-    }
-    // Link
-    auto program = glCreateProgram();
-    //glAttachShader(programObj, vertexShaderObj);
-    glAttachShader(program, vshader);
-    glAttachShader(program, fshader);
-    glLinkProgram(program);
-
-    if(!getProgramStatus(program)) {
-        load_program_error = getProgramInfoLog(program);
-        glDeleteProgram(program);
-        glDetachShader(program, vshader);
-        glDetachShader(program, fshader);
-
-        program = 0;
-    }
-//    glDeleteShader(fshader);
-//    glDeleteShader(vshader);
-    return program;
+    return load_program({vert},{},{frag},nullptr,{});
 }

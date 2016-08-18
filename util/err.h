@@ -42,6 +42,29 @@ loglevel set_loglevel(loglevel level);
 #define PFAIL(...) ({ERROR(__VA_ARGS__); exit(EXIT_FAILURE);})
 #define PERROR(msg, ...) _ERR_MSG(ERROR,"[%s] " msg, strerror(errno), ## __VA_ARGS__)
 #define CHECK_GL() do{}while(0)
+
+#ifdef __cplusplus
+#include <iostream>
+#include <cstdio>
+#include <sstream>
+#include <string>
+#include <fstream>
+inline std::string to_string(loglevel lvl)
+{
+    switch(lvl) {
+        case LOGLEVEL_ALL: return "ALL";
+        case LOGLEVEL_DEBUG: return "DEBUG";
+        case LOGLEVEL_INFO: return "INFO";
+        case LOGLEVEL_WARN: return "WARN";
+        case LOGLEVEL_ERROR: return "ERROR";
+        default: return "INVALID LOGLEVEL";
+    };
+}
+inline std::ostream &operator <<(std::ostream &ost, loglevel lvl)
+{
+    return ost << to_string(lvl);
+}
+#endif
 //#define CHECK_GL() do {if(auto e = glGetError()) FAIL("OpenGL Error: %d, \"%s\"\n", int(e), gluErrorString(e));}while(false)
 
 /*

@@ -40,7 +40,7 @@ void crossfader_init(struct crossfader * crossfader) {
 
     crossfader->position = 0.5;
 
-    crossfader->shader = load_program("#crossfader.glsl");
+    crossfader->shader = load_program({"#lib.glsl"},"#header_ui.glsl",{"#crossfader.glsl"});
     if(crossfader->shader == 0) FAIL("Unable to load crossfader shader:\n%s", get_load_program_error().c_str());
     auto h = crossfader->shader;
     glUseProgram(crossfader->shader);

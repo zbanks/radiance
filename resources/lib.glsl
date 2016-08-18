@@ -89,38 +89,3 @@ float noise(vec3 p) {
     return mix(y1, y2, xyz.z);
 }
 
-float rounded_rect_df(vec2 coord,vec2 center, vec2 size, float radius) {
-    return length(max(abs(coord- center) - size, 0.0)) - radius;
-}
-vec4 fancy_rect(vec2 coord, vec2 center, vec2 size, bool selected) {
-    vec4 c;
-    vec4 color;
-
-    if(selected) {
-        float highlight_df = rounded_rect_df(coord,center, size, RADIUS - 10.);
-        color = vec4(1., 1., 0., 0.5 * (1. - smoothstep(0., 50., max(highlight_df, 0.))));
-    } else {
-        float shadow_df = rounded_rect_df(coord,center + vec2(10., -10.), size, RADIUS - 10.);
-        color = vec4(0., 0., 0., 0.5 * (1. - smoothstep(0., 20., max(shadow_df, 0.))));
-    }
-
-    float df = rounded_rect_df(coord,center, size, RADIUS);
-    c = vec4(vec3(0.1) * (center.y + size.y + RADIUS - (coord).y) / (2. * (size.y + RADIUS)), clamp(1. - df, 0., 1.));
-    color = composite(color, c);
-    return color;
-}
-
-
-vec3 dataColor(ivec3 data) {
-    return vec3(data) / vec3(255.);
-}
-
-float inBox(vec2 coord, vec2 bottomLeft, vec2 topRight) {
-    vec2 a = step(bottomLeft, coord) - step(topRight, coord);
-    return a.x * a.y;
-}
-
-float smoothBox(vec2 coord, vec2 bottomLeft, vec2 topRight, float width) {
-    vec2 a = smoothstep(bottomLeft, bottomLeft + vec2(width), coord) - smoothstep(topRight - vec2(width), topRight, coord);
-    return min(a.x, a.y);
-}

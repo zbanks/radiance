@@ -19,10 +19,12 @@ void main(void) {
 
         float df = max(rounded_rect_df(frag,vec2(75., 125.), vec2(45., 75.), 25.), 0.);
 
-        f_color0 = composite(f_color0, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
+        f_color0 =  vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df));
 
-        f_color0 = composite(f_color0, vec4(0., 0., 0.3, smoothBox(v_uv * v_size, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
-        f_color0 = composite(f_color0, vec4(0., 0., 0.8, smoothBox(v_uv * v_size, slider_pos - slider_size, slider_pos + slider_size, w)));
+        f_color0 = composite(f_color0, vec4(0., 0., 0.3,
+            smoothBox(v_uv * v_size, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
+        f_color0 = composite(f_color0, vec4(0., 0., 0.8,
+            smoothBox(v_uv * v_size, slider_pos - slider_size, slider_pos + slider_size, w)));
 
         ivec2 grid_cell = ivec2(5. * (frag.xy - preview_origin) / preview_size);
         vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);

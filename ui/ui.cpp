@@ -1,4 +1,5 @@
 #include "util/common.h"
+#include "util/opengl_debug.hpp"
 #include "ui/ui.h"
 
 #include "main.h"
@@ -142,80 +143,12 @@ static void render_textbox(char * text, int width, int height)
     textbox_font.render(width,height);
 }
 
-constexpr const char *uiDebugType(GLenum type)
-{
-    switch(type) {
-#define CASE(x) case GL_DEBUG_TYPE_ ## x: return #x
-        CASE(ERROR);
-        CASE(DEPRECATED_BEHAVIOR);
-        CASE(UNDEFINED_BEHAVIOR);
-        CASE(PORTABILITY);
-        CASE(PERFORMANCE);
-        CASE(MARKER);
-        CASE(PUSH_GROUP);
-        CASE(POP_GROUP);
-        default: return "UNKNOWN";
-#undef CASE
-    }
-}
-constexpr const char *uiDebugSource(GLenum type)
-{
-#define CASE(x) case GL_DEBUG_SOURCE_ ## x: return #x
-    switch(type) {
-        CASE(API);
-        CASE(WINDOW_SYSTEM);
-        CASE(SHADER_COMPILER);
-        CASE(THIRD_PARTY);
-        CASE(APPLICATION);
-        CASE(OTHER);
-        default:
-            return "unknown";
-    }
-#undef CASE
-}
-constexpr const char * uiDebugSeverity(GLenum sev)
-{
-
-#define CASE(x) case GL_DEBUG_SEVERITY_ ## x: return #x
-    switch(sev){
-        CASE(HIGH);
-        CASE(MEDIUM);
-        CASE(LOW);
-        CASE(NOTIFICATION);
-        default: return "unknown severity";
-    }
-#undef CASE
-}
-constexpr loglevel to_loglevel(GLenum severity)
-{
-#define CASE(x,y) case GL_DEBUG_SEVERITY_ ## x: return LOGLEVEL_ ## y
-    switch(severity){
-        CASE(HIGH,ERROR);
-        CASE(MEDIUM,INFO);
-        CASE(LOW,DEBUG);
-        CASE(NOTIFICATION,ALL);
-        default: return LOGLEVEL_ALL;
-    }
-#undef CASE
-}
-constexpr const char *ERR_STRINGIFY(loglevel l)
-{
-    switch(l){
-        case LOGLEVEL_ALL: return "ALL";
-        case LOGLEVEL_DEBUG: return "DEBUG";
-        case LOGLEVEL_INFO: return "INFO";
-        case LOGLEVEL_WARN: return "WARN";
-        case LOGLEVEL_ERROR: return "ERROR";
-        default: return "INVALID";
-    }
-}
-
 static void debug_callback(GLenum source, GLenum type, GLuint id,
     GLenum severity, GLsizei length, const char *message, const void *opaque)
 {
-
+    using std::to_string;
     if (get_loglevel() <= to_loglevel(severity)) {
-        ::fprintf(stderr, "[%-5s] [gl debug: %s, %s] ( id = %u ) %s\n", ERR_STRINGIFY(to_loglevel(severity)),uiDebugSource(source),uiDebugType(type),id,message );
+        ::fprintf(stderr, "[%-24s] [GL DEBUG source=\"%s\",type=\"%s\"] ( id = %u ) \"%s\"\n", to_string(to_loglevel(severity)).c_str(),uiDebugSource(source),uiDebugType(type),id,message );
         fflush(stderr);
     }
 }
@@ -223,13 +156,27 @@ void ui_init() {
     // Init SDL
 
     if(SDL_Init(SDL_INIT_VIDEO) < 0) FAIL("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_RELEASE_BEHAVIOR,SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
-    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_TRUE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,//SDL_GL_CONTEXT_DEBUG_FLAG|
-                                             SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_PROFILE_MASK
+      , SDL_GL_CONTEXT_PROFILE_CORE
+        );
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_RELEASE_BEHAVIOR
+      , SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH
+        );
+    SDL_GL_SetAttribute(
+        SDL_GL_SHARE_WITH_CURRENT_CONTEXT
+      , GL_FALSE
+        );
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_FLAGS
+      ,(int(get_loglevel()) <= int(LOGLEVEL_DEBUG)
+            ? SDL_GL_CONTEXT_DEBUG_FLAG
+            : 0)
+       |SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG
+        );
     ww = config.ui.window_width;
     wh = config.ui.window_height;
 
@@ -296,7 +243,7 @@ void ui_init() {
     // Init select texture
     select_tex = make_texture(ww,wh);
 
-    pattern_array = make_texture(GL_RGBA32F, config.ui.pattern_width, config.ui.pattern_height, config.ui.n_patterns * 6);
+    pattern_array = make_texture(GL_RGBA32F, config.ui.pattern_width, config.ui.pattern_height, config.ui.n_patterns);
 
     glBindFramebuffer(GL_FRAMEBUFFER, select_fb);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, select_tex, 0);
@@ -346,14 +293,14 @@ void ui_init() {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    if((main_shader = load_program({"#lib.glsl"}, "#header.glsl",{"#ui_main.glsl"})) == 0) FAIL("Could not load UI main shader!\n%s", get_load_program_error().c_str());
-    if((pat_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_pat.glsl"})) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_program_error().c_str());
-    if((crossfader_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_crossfader.glsl"})) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_program_error().c_str());
-    if((spectrum_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_spectrum.glsl"})) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_program_error().c_str());
-    if((waveform_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_waveform.glsl"})) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_program_error().c_str());
-    if((strip_shader = load_program("#strip.v.glsl","#strip.f.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_program_error().c_str());
-    if((blit_shader = load_program({"#lib.glsl"},"#header.glsl",{"#blit.glsl"})) == 0) FAIL("Could not load blit shader!\n%s", get_load_program_error().c_str());
-    if((mblit_shader = load_program({"#lib.glsl"},"#header.glsl",{"#multiblit.glsl"})) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_program_error().c_str());
+    if((main_shader = load_program({"#lib.glsl","#lib_ui.glsl"}, "#header_ui.glsl",{"#ui_main.glsl"})) == 0) FAIL("Could not load UI main shader!\n%s", get_load_program_error().c_str());
+    if((pat_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#ui_pat.glsl"})) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_program_error().c_str());
+    if((crossfader_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#ui_crossfader.glsl"})) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_program_error().c_str());
+    if((spectrum_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#ui_spectrum.glsl"})) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_program_error().c_str());
+    if((waveform_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#ui_waveform.glsl"})) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_program_error().c_str());
+    if((strip_shader = load_program({"#strip.v.glsl"},{},{"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#strip.f.glsl"})) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_program_error().c_str());
+    if((blit_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#blit.glsl"})) == 0) FAIL("Could not load blit shader!\n%s", get_load_program_error().c_str());
+    if((mblit_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#multiblit.glsl"})) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_program_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
@@ -374,13 +321,27 @@ void ui_make_context_current(SDL_GLContext ctx)
 SDL_GLContext ui_make_secondary_context()
 {
     SDL_GL_MakeCurrent(window,context);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_RELEASE_BEHAVIOR,SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH);
-    SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, GL_FALSE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,SDL_GL_CONTEXT_DEBUG_FLAG|
-                                             SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_PROFILE_MASK
+      , SDL_GL_CONTEXT_PROFILE_CORE
+        );
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_RELEASE_BEHAVIOR
+      , SDL_GL_CONTEXT_RELEASE_BEHAVIOR_FLUSH
+        );
+    SDL_GL_SetAttribute(
+        SDL_GL_SHARE_WITH_CURRENT_CONTEXT
+      , GL_FALSE
+        );
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_FLAGS
+      ,(int(get_loglevel()) <= int(LOGLEVEL_DEBUG)
+            ? SDL_GL_CONTEXT_DEBUG_FLAG
+            : 0)
+       |SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG
+        );
     auto extra_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window,context);
     return extra_context;

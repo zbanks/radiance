@@ -27,8 +27,8 @@ void main(void) {
         //vec3 grid = vec3(0., 0., 0.); // solid black
         //f_color0 = composite(f_color0, vec4(grid, inBox(frag.xy, preview_origin, preview_origin + preview_size)));
         vec2 p_uv = (v_uv * v_size - preview_origin) / preview_size;
-        vec4 p = texture2D(iPreview, p_uv);
-        vec4 p2 = texture2D(iStrips, p_uv);
+        vec4 p  = texture(iPreview, p_uv);
+        vec4 p2 = texture(iStrips, p_uv);
         float in_pattern = float(inBox(frag.xy, preview_origin, preview_origin + preview_size));
 
         p.a  *= in_pattern;

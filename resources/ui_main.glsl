@@ -1,18 +1,3 @@
-const vec2 PAT_SIZE = vec2(45., 75.);
-
-float sdCapsule( vec2 p, vec2 a, vec2 b, float r )
-{
-    vec2 pa = p - a, ba = b - a;
-    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
-    return length( pa - ba*h ) - r;
-}
-
-void glow(vec2 p, inout vec4 color) {
-    vec2 LEN = vec2(300., 0.);
-    float FRINGE = 75.;
-    color = composite(color, vec4(0., 0.5, 1., 0.5 * max(0., 1. - sdCapsule((v_uv*v_size).xy, p - LEN, p + LEN, FRINGE) / FRINGE)));
-}
-
 void main(void) {
     f_color0 = vec4(0.);
     vec2 frag = v_uv * v_size;

@@ -15,7 +15,7 @@ constexpr const char *uiDebugType(GLenum type)
         CASE(MARKER);
         CASE(PUSH_GROUP);
         CASE(POP_GROUP);
-        default: return "UNKNOWN";
+        default: return "UNKNOWN TYPE";
 #undef CASE
     }
 }
@@ -29,8 +29,7 @@ constexpr const char *uiDebugSource(GLenum type)
         CASE(THIRD_PARTY);
         CASE(APPLICATION);
         CASE(OTHER);
-        default:
-            return "unknown";
+        default: return "UNKNOWN SOURCE";
     }
 #undef CASE
 }
@@ -43,7 +42,7 @@ constexpr const char * uiDebugSeverity(GLenum sev)
         CASE(MEDIUM);
         CASE(LOW);
         CASE(NOTIFICATION);
-        default: return "unknown severity";
+        default: return "UNKNOWN SEVERITY";
     }
 #undef CASE
 }
@@ -59,16 +58,3 @@ constexpr loglevel to_loglevel(GLenum severity)
     }
 #undef CASE
 }
-constexpr const char *ERR_STRINGIFY(loglevel l)
-{
-    switch(l){
-        case LOGLEVEL_ALL: return "ALL";
-        case LOGLEVEL_DEBUG: return "DEBUG";
-        case LOGLEVEL_INFO: return "INFO";
-        case LOGLEVEL_WARN: return "WARN";
-        case LOGLEVEL_ERROR: return "ERROR";
-        default: return "INVALID";
-    }
-}
-
-
