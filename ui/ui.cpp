@@ -100,8 +100,8 @@ static const int map_home[19] =  {1,  1,  1,  1,  1,  1,  1,  1,  1,  9,  9,  9,
 static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8, 16, 16, 16, 16, 16, 16, 16, 16,  8, 16};
 
 // Font
-ftgl_renderer gl_font{};
-ftgl_renderer textbox_font{};
+embedded_renderer gl_font{};
+embedded_renderer textbox_font{};
 static const SDL_Color font_color = {255, 255, 255, 255};
 
 // Pat entry
@@ -346,19 +346,19 @@ void ui_init() {
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    if((main_shader = load_shader("#ui_main.glsl")) == 0) FAIL("Could not load UI main shader!\n%s", get_load_shader_error().c_str());
-    if((pat_shader = load_shader("#ui_pat.glsl")) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_shader_error().c_str());
-    if((crossfader_shader = load_shader("#ui_crossfader.glsl")) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_shader_error().c_str());
-    if((spectrum_shader = load_shader("#ui_spectrum.glsl")) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_shader_error().c_str());
-    if((waveform_shader = load_shader("#ui_waveform.glsl")) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_shader_error().c_str());
-    if((strip_shader = load_shader("#strip.v.glsl","#strip.f.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_shader_error().c_str());
-    if((blit_shader = load_shader("#blit.glsl")) == 0) FAIL("Could not load blit shader!\n%s", get_load_shader_error().c_str());
-    if((mblit_shader = load_shader("#multiblit.glsl")) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_shader_error().c_str());
+    if((main_shader = load_program({"#lib.glsl"}, "#header.glsl",{"#ui_main.glsl"})) == 0) FAIL("Could not load UI main shader!\n%s", get_load_program_error().c_str());
+    if((pat_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_pat.glsl"})) == 0) FAIL("Could not load UI pattern shader!\n%s", get_load_program_error().c_str());
+    if((crossfader_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_crossfader.glsl"})) == 0) FAIL("Could not load UI crossfader shader!\n%s", get_load_program_error().c_str());
+    if((spectrum_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_spectrum.glsl"})) == 0) FAIL("Could not load UI spectrum shader!\n%s", get_load_program_error().c_str());
+    if((waveform_shader = load_program({"#lib.glsl"},"#header.glsl",{"#ui_waveform.glsl"})) == 0) FAIL("Could not load UI waveform shader!\n%s", get_load_program_error().c_str());
+    if((strip_shader = load_program("#strip.v.glsl","#strip.f.glsl")) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_program_error().c_str());
+    if((blit_shader = load_program({"#lib.glsl"},"#header.glsl",{"#blit.glsl"})) == 0) FAIL("Could not load blit shader!\n%s", get_load_program_error().c_str());
+    if((mblit_shader = load_program({"#lib.glsl"},"#header.glsl",{"#multiblit.glsl"})) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_program_error().c_str());
 
     // Stop text input
     SDL_StopTextInput();
 
-    gl_font = ftgl_renderer(config.ui.font_atlas_width,config.ui.font_atlas_height,config.ui.fontsize,config.ui.font);
+    gl_font = embedded_renderer(config.ui.font_atlas_width,config.ui.font_atlas_height,config.ui.fontsize,config.ui.font);
     gl_font.open_font(config.ui.alt_font);
     gl_font.set_color(1.,1.,1.,1.);
     textbox_font = gl_font;

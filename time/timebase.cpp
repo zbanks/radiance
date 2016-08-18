@@ -27,7 +27,7 @@ struct tsc_initializer {
     std::atomic<double>  m_tsc_rate_inv{ 0.};
     int64_t m_tsc_offset = 0;
     std::mutex m_mtx;
-    tsc_initializer(int64_t initialize_for_ns = 10000000 )
+    tsc_initializer(int64_t initialize_for_ns = 1000000 )
     {
         auto ts = timespec{ 0, initialize_for_ns };
         auto ret = 0;
@@ -186,9 +186,9 @@ int time_init()
     INFO("Current timestamp counter rate is %E\n",time_cpu_frequency());
     INFO("Current timestamp offset is %E\n s", time_cpu_time());
     auto _min = 0., _mean = 0., _max = 0., _std = 0.;
-    std::tie(_min,_mean,_max,_std) = tsc_initializer::instance().self_test(10000000, 8, 128);
-    INFO("TSC SELF TEST: min = %E, mean = %E, max = %E, std = %E ( relative std = %E ( GHz )\n",
-        _min * 1e-9,_mean * 1e-9,_max * 1e-9,_std * 1e-9, _std / _mean
+    std::tie(_min,_mean,_max,_std) = tsc_initializer::instance().self_test(1000000, 8, 128);
+    INFO("TSC SELF TEST: min = %E, mean = %E, max = %E, std = %E (GHz) ( relative std = %E %%\n",
+        _min * 1e-9,_mean * 1e-9,_max * 1e-9,_std * 1e-9, _std / _mean * 1e2
         );
     auto percentage_error = [](auto x, auto y){return (x - y) / ( 2 * (x + y));};
     auto average_in = [](auto &x, auto y){return (x + y) / 2;};

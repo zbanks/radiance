@@ -59,7 +59,7 @@ struct font_renderer {
         glEnableVertexAttribArray(1);
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        prog = load_shader_noheader("#text.v.glsl", "#text.f.glsl");
+        prog = load_program_noheader("#text.v.glsl", "#text.f.glsl");
         glUseProgram(prog);
         glUniform1i(1,0);
         CHECK_GL();

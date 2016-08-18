@@ -1,14 +1,12 @@
 // Slide the screen left-to-right
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / v_size;
-
     float deviation = iIntensityIntegral;
-    vec2 uv2 = uv;
-    uv2.x = abs(mod(uv.x + deviation, 2.) - 1.);
+    vec2 uv2 = v_uv;
+    uv2.x = abs(mod(v_uv.x + deviation, 2.) - 1.);
 
-    vec4 oc = texture2D(iFrame, uv);
-    vec4 c = texture2D(iFrame, uv2);
+    vec4 oc = texture(iFrame, v_uv);
+    vec4 c = texture(iFrame, uv2);
 
     oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
     c.a *= smoothstep(0, 0.1, iIntensity);

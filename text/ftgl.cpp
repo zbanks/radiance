@@ -1,4 +1,4 @@
-#include "util/ftgl.hpp"
+#include "text/ftgl.hpp"
 
 tex_atlas::tex_atlas(int w, int h, int d)
 : m_d(texture_atlas_new(w,h,d)) {
@@ -177,7 +177,7 @@ ftgl_renderer::ftgl_renderer(int w, int h, int pt_size, const std::string &fontn
 void ftgl_renderer::getShader()
 {
     if(!m_shader) {
-        m_shader = load_shader_noheader("#sdf.v.glsl","#sdf.f.glsl");
+        m_shader = load_program_noheader("#sdf.v.glsl","#sdf.f.glsl");
         glProgramUniform1i(m_shader, 1, 0);
     }
 }

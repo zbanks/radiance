@@ -11,6 +11,7 @@ C_SRC += $(wildcard pattern/*.c)
 C_SRC += $(wildcard time/*.c)
 C_SRC += $(wildcard ui/*.c)
 C_SRC += $(wildcard util/*.c)
+C_SRC += $(wildcard text/*.c)
 
 C_SRC += liblux/lux.c liblux/crc.c
 C_SRC += $(wildcard BTrack/src/*.c)
@@ -23,6 +24,7 @@ CXX_SRC += $(wildcard output/*.cpp)
 CXX_SRC += $(wildcard audio/*.cpp)
 CXX_SRC += $(wildcard midi/*.cpp)
 CXX_SRC += $(wildcard time/*.cpp)
+CXX_SRC += $(wildcard text/*.cpp)
 
 C_SRC += submodules/gl3w/src/gl3w.c
 
@@ -39,7 +41,7 @@ CFLAGS = -std=gnu11 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl glu ff
 CXXFLAGS = -std=gnu++14 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl glu fftw3)
 
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
-CXXFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
+CXXFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter -Wno-narrowing -Wno-missing-field-initializers
 CFLAGS += -D_DEFAULT_SOURCE
 CXXFLAGS += -D_DEFAULT_SOURCE
 LFLAGS = $(CFLAGS)

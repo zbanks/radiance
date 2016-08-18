@@ -1,10 +1,10 @@
 // Per-pixel twinkle effect
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / v_size;
-
-    f_color0 = texture2D(iChannel[0], uv);
+    f_color0 = texture(iChannel[0], v_uv);
     f_color0.a *= exp(-iIntensity / 20.);
-    if (rand(vec3(uv, iTime)) < exp(-iIntensity * 4.))
-        f_color0 = texture2D(iFrame, uv);
+    vec4 in_color = texture(iFrame, v_uv);
+
+    if (rand(vec3(v_uv, iTime)) < exp(-iIntensity * 4.))
+        f_color0 = in_color;
 }

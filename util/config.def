@@ -64,6 +64,7 @@ CFGSECTION(audio,
 )
 
 CFGSECTION(paths,
+    CFG(resource_path, STRING, "resources")
     CFG(output_config, STRING, "resources/output.ini")
     CFG(midi_config, STRING, "resources/midi.ini")
     CFG(decks_config, STRING, "resources/decks.ini")

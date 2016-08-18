@@ -4,7 +4,7 @@
 
 #include "pattern/pattern.h"
 #include "util/config.h"
-#include "util/ftgl.hpp"
+#include "text/embedded.hpp"
 #include "util/err.h"
 #include "util/glsl.h"
 #include "util/math.h"

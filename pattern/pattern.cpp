@@ -71,12 +71,12 @@ pattern::pattern(const char * prefix)
     auto success = true;
     for(auto i = 0; i < n; i++) {
         auto filename = std::string{config.pattern.dir} + std::string{prefix} + "." + std::to_string(i) + ".glsl";
-        auto h = load_shader(filename.c_str());
+        auto h = load_program({"#lib.glsl"},"#header.glsl",{filename.c_str()});
         if(!h) {
             success = false;
         }
         if (h == 0) {
-            fprintf(stderr, "%s", get_load_shader_error().c_str());
+            fprintf(stderr, "%s", get_load_program_error().c_str());
             WARN("Unable to load shader %s", filename.c_str());
             success = false;
         } else {
