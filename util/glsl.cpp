@@ -140,6 +140,7 @@ GLuint compile_shader(GLenum type, const std::string &filename)
             }
         }
     }
+    DEBUG("Loading new copy of shader \"%s\"\n", fn.c_str());
     auto src = read_file(filename);
     if(src.empty()) {
         WARN("file unreadable or empty when compiling file %s\n", filename.c_str());

@@ -83,41 +83,11 @@ void render_readback(struct render * render)
 
 bool render_freeze(struct render * render) {
     SDL_LockMutex(render->mutex);
-    auto fence = render->fence;
-    SDL_UnlockMutex(render->mutex);
-    if(fence) {
-        auto signaled = false;
-        auto success  = true;
-        while(!signaled) {
-            switch(glClientWaitSync(fence, 0, 1000000)) {
-                case GL_TIMEOUT_EXPIRED:
-                    continue;
-                case GL_WAIT_FAILED:{
-                    ERROR("Failed to wait on GLsync object.\n");
-                    success = false;
-                }
-                case GL_ALREADY_SIGNALED:
-                case GL_CONDITION_SATISFIED:
-                    DEBUG("Exiting sync loop.");
-                    signaled = true;;
-            }
-        }
-        return success;
-    }else{
-        WARN("No sync available.");
-    }
-    return false;
+    return true;
 }
 
 void render_thaw(struct render * render)
 {
-    SDL_LockMutex(render->mutex);
-    if(render->fence) {
-        glDeleteSync(render->fence);
-        render->fence = nullptr;
-    }else{
-        WARN("Thae with no prior fence!.");
-    }
     SDL_UnlockMutex(render->mutex);
 }
 
