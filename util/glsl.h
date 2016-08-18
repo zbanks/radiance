@@ -92,6 +92,8 @@ GLuint make_texture(int w, int h);
 GLuint make_texture(GLenum format, int w, int h, int layers);
 GLuint make_texture(GLenum format, int w, int h);
 GLuint make_texture(int length);
+GLuint make_view(GLenum tgt, GLuint src, GLenum intformat, GLuint minlayer, GLuint numlayers);
+
 
 std::string read_file(const char *filename);
 std::string read_file(const std::string &filename);

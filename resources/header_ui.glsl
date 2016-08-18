@@ -47,6 +47,7 @@ uniform int  iLength;
 uniform int  iRightDeckSelector;
 uniform int  iSelected;
 uniform int  iIndicator;
+uniform float iLayer;
 
 uniform sampler1D iSpectrum;
 uniform sampler1D iWaveform;

@@ -24,6 +24,7 @@
 void ui_init();
 void ui_run();
 void ui_term();
+GLuint ui_tex_array(void);
 SDL_GLContext ui_create_context();
 void          ui_make_context_current(SDL_GLContext);
 

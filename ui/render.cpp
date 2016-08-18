@@ -10,11 +10,7 @@
 void render_init(struct render * render, GLint texture)
 {
     auto texel_count = config.pattern.master_width*config.pattern.master_height;
-//    render->prog = load_compute("#render.c.glsl");
-//    render->pixels = static_cast<GLfloat*>(::calloc(texel_count, BYTES_PER_PIXEL));//::calloc(config.pattern.master_width * config.pattern.master_height, BYTES_PER_PIXEL));
-//    if(render->pixels == NULL)
-//        MEMFAIL();
-
+    render->prog = load_compute("#render.c.glsl");
     glGenBuffers(1, &render->pbo);
     glBindBuffer(GL_PIXEL_PACK_BUFFER, render->pbo);
     glBufferStorage(

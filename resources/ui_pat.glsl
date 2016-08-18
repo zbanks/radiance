@@ -35,7 +35,8 @@ void main(void) {
         vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
         f_color0 = composite(f_color0, vec4(grid, inBox(frag.xy, preview_origin, preview_origin + preview_size)));
         vec2 p_uv = (frag - preview_origin) / preview_size;
-        vec4 p = texture(iPreview, v_uv);
+//        vec4 p = texture(iPreview, p_uv);
+        vec4 p = texture(iAllPatterns, vec3(p_uv, iLayer));
         p.a *= inBox(frag, preview_origin, preview_origin + preview_size);
         f_color0 = composite(f_color0, p);
     }

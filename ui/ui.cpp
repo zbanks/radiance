@@ -11,7 +11,6 @@ static bool quit;
 static GLuint main_shader;
 static GLuint pat_shader;
 static GLuint blit_shader;
-static GLuint mblit_shader;
 static GLuint crossfader_shader;
 static GLuint strip_shader;
 

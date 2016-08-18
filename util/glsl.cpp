@@ -22,6 +22,15 @@ std::string get_load_program_error(void)
     return std::exchange(load_program_error,std::string{});
 }
 
+GLuint make_view(GLenum tgt, GLuint src, GLenum intfmt, GLuint minlayer, GLuint numlayers)
+{
+    auto tex = GLuint{};
+    glGenTextures(1, &tex);
+    if(!tex) return 0;
+    glTextureView(tex, tgt, src, intfmt, 0, 1, minlayer, numlayers);
+    CHECK_GL();
+    return tex;
+}
 GLuint make_texture(int w, int h)
 {
     return make_texture(GL_RGBA32F,w,h);
@@ -235,24 +244,27 @@ GLuint load_program(
 
 GLuint load_compute(const char *comp)
 {
-
+    auto fn = std::string{comp};
     // Load file
-    auto shader = compile_shader(GL_COMPUTE_SHADER, std::string{comp});
-    if(!shader)
+    auto shader = compile_shader(GL_COMPUTE_SHADER, fn);
+    if(!shader) {
+        WARN("Failed to compile shader \"%s\"\n %s\n", fn.c_str(), load_program_error.c_str());
         return 0;
+    }else{
+        INFO("Compiled compute shader \"%s\"\n %s\n", fn.c_str(), load_program_error.c_str());
+
+    }
     // Link
     auto program = glCreateProgram();
     //glAttachShader(programObj, vertexShaderObj);
     glAttachShader(program, shader);
     glLinkProgram(program);
-
+    glDetachShader(program, shader);
     if(!radGetProgramStatus(program)) {
         load_program_error = radGetProgramInfoLog(program);
         glDeleteProgram(program);
-        glDetachShader(program, shader);
         program = 0;
     }
-    glDeleteShader(shader);
     return program;
 }
 GLuint load_program(std::initializer_list<const char *> filenames_noheader,
