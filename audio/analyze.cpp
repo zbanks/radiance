@@ -5,7 +5,7 @@
 #include "util/math.h"
 #include "time/timebase.h"
 #include "main.h"
-#include "BTrack/src/BTrack.h"
+#include <BTrack/src/BTrack.h>
 #include <fftw3.h>
 
 std::unique_ptr<float[]> samp_queue;

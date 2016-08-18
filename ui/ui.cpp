@@ -13,16 +13,12 @@ static GLuint pat_shader;
 static GLuint blit_shader;
 static GLuint mblit_shader;
 static GLuint crossfader_shader;
-static GLuint spectrum_shader;
-static GLuint waveform_shader;
 static GLuint strip_shader;
 
 static GLuint pat_fb;
 static GLuint select_fb;
 static GLuint crossfader_fb;
 static GLuint pat_entry_fb;
-static GLuint spectrum_fb;
-static GLuint waveform_fb;
 static GLuint strip_fb;
 static GLuint select_tex;
 static GLuint pattern_array;
@@ -34,10 +30,10 @@ std::vector<std::pair<int,int> > pattern_name_sizes;
 static GLuint crossfader_texture;
 static GLuint pat_entry_texture;
 static GLuint tex_spectrum_data;
-static GLuint spectrum_texture;
+static GLuint spectrum_shader;
 static GLuint tex_waveform_data;
 static GLuint tex_waveform_beats_data;
-static GLuint waveform_texture;
+static GLuint waveform_shader;
 static GLuint strip_texture;
 static GLuint strip_vao      = 0;
 static GLuint strip_vbo      = 0;
@@ -184,7 +180,7 @@ void ui_init() {
     if(window == NULL) FAIL("Window could not be created: %s\n", SDL_GetError());
     context = SDL_GL_CreateContext(window);
     if(context == NULL) FAIL("OpenGL context could not be created: %s\n", SDL_GetError());
-    if(SDL_GL_SetSwapInterval(0) < 0) fprintf(stderr, "Warning: Unable to set VSync: %s\n", SDL_GetError());
+    if(SDL_GL_SetSwapInterval(1) < 0) fprintf(stderr, "Warning: Unable to set VSync: %s\n", SDL_GetError());
 
     SDL_GL_MakeCurrent(window,context);
     if(gl3wInit()) {
@@ -235,8 +231,6 @@ void ui_init() {
     glGenFramebuffers(1, &pat_fb);
     glGenFramebuffers(1, &crossfader_fb);
     glGenFramebuffers(1, &pat_entry_fb);
-    glGenFramebuffers(1, &spectrum_fb);
-    glGenFramebuffers(1, &waveform_fb);
     glGenFramebuffers(1, &strip_fb);
     CHECK_GL();
 
@@ -271,18 +265,11 @@ void ui_init() {
 
     // Spectrum data texture
     tex_spectrum_data = make_texture(config.audio.spectrum_bins);
-    spectrum_texture = make_texture( config.ui.spectrum_width, config.ui.spectrum_height);
-    // Spectrum UI element
-    glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, spectrum_texture, 0);
 
     // Waveform data texture
     tex_waveform_data = make_texture( config.audio.waveform_length);
     tex_waveform_beats_data = make_texture( config.audio.waveform_length);
     // Waveform UI element
-    waveform_texture = make_texture( config.ui.waveform_width, config.ui.waveform_height);
-    glBindFramebuffer(GL_FRAMEBUFFER, waveform_fb);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, waveform_texture, 0);
 
     // Strip indicators
     strip_texture = make_texture ( config.pattern.master_width, config.pattern.master_height);
@@ -301,7 +288,9 @@ void ui_init() {
     if((strip_shader = load_program({"#strip.v.glsl"},{},{"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#strip.f.glsl"})) == 0) FAIL("Could not load strip indicator shader!\n%s", get_load_program_error().c_str());
     if((blit_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#blit.glsl"})) == 0) FAIL("Could not load blit shader!\n%s", get_load_program_error().c_str());
     if((mblit_shader = load_program({"#lib.glsl","#lib_ui.glsl"},"#header_ui.glsl",{"#multiblit.glsl"})) == 0) FAIL("Could not load multiblit shader!\n%s", get_load_program_error().c_str());
-
+    glProgramUniform2f(waveform_shader,12,1.2f,1.2f);
+    glProgramUniform2f(spectrum_shader,12,1.2f,1.2f);
+    glProgramUniform2f(pat_shader,12,1.2f,1.2f);
     // Stop text input
     SDL_StopTextInput();
 
@@ -658,45 +647,9 @@ static void ui_render(bool select) {
             break;
     }
 
-    // Render the patterns
-    glBindFramebuffer(GL_FRAMEBUFFER, pat_fb);
+//    // Render the patterns
+//    glBindFramebuffer(GL_FRAMEBUFFER, pat_fb);
 
-    int pw = config.ui.pattern_width;
-    int ph = config.ui.pattern_height;
-    glUseProgram(pat_shader);
-    location = glGetUniformLocation(pat_shader, "iSelection");
-    glUniform1i(location, select);
-    location = glGetUniformLocation(pat_shader, "iPreview");
-    glUniform1i(location, 0);
-    location = glGetUniformLocation(pat_shader, "iName");
-    glUniform1i(location, 1);
-    GLint pattern_index = glGetUniformLocation(pat_shader, "iPatternIndex");
-    GLint pattern_intensity = glGetUniformLocation(pat_shader, "iIntensity");
-    glProgramUniform2f(pat_shader, 0, pw, ph);
-
-    glViewport(0, 0, pw, ph);
-    {
-        bool first = true;
-        for(int i = 0; i < config.ui.n_patterns; i++) {
-            auto &p = deck[map_deck[i]].patterns[map_pattern[i]];
-            if(p != NULL) {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, p->tex_output);
-                glActiveTexture(GL_TEXTURE1);
-                glBindTexture(GL_TEXTURE_2D, 0);
-                glUniform1i(pattern_index, i);
-                glUniform1f(pattern_intensity, p->intensity);
-                glNamedFramebufferTextureLayer(pat_fb, GL_COLOR_ATTACHMENT0, pattern_array, 0, i);
-                glClear(GL_COLOR_BUFFER_BIT);
-                if(first) {
-                    fill(pw, ph);
-                    first = false;
-                }else{
-                    glDrawArrays(GL_POINTS,0,1);
-                }
-            }
-        }
-    }
     // Render the crossfader
     glBindFramebuffer(GL_FRAMEBUFFER, crossfader_fb);
 
@@ -705,6 +658,9 @@ static void ui_render(bool select) {
     glUseProgram(crossfader_shader);
     location = glGetUniformLocation(crossfader_shader, "iSelection");
     glUniform1i(location, select);
+    location = glGetUniformLocation(crossfader_shader, "iSelected");
+    glUniform1i(location, selected);
+
     location = glGetUniformLocation(crossfader_shader, "iPreview");
     glUniform1i(location, 0);
     location = glGetUniformLocation(crossfader_shader, "iStrips");
@@ -730,47 +686,7 @@ static void ui_render(bool select) {
     auto sh = 0;
     auto vw = 0;
     auto vh = 0;
-    if(!select) {
-        analyze_render(tex_spectrum_data, tex_waveform_data, tex_waveform_beats_data);
-        // Render the spectrum
-        glBindFramebuffer(GL_FRAMEBUFFER, spectrum_fb);
-        sw = config.ui.spectrum_width;
-        sh = config.ui.spectrum_height;
-        glUseProgram(spectrum_shader);
-        location = glGetUniformLocation(spectrum_shader, "iBins");
-        glUniform1i(location, config.audio.spectrum_bins);
-        location = glGetUniformLocation(spectrum_shader, "iSpectrum");
-        glUniform1i(location, 0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_1D, tex_spectrum_data);
 
-        glProgramUniform2f(spectrum_shader, 0, sw, sh);
-        glViewport(0, 0, sw, sh);
-        glClear(GL_COLOR_BUFFER_BIT);
-        fill(sw, sh);
-
-        // Render the waveform
-        glBindFramebuffer(GL_FRAMEBUFFER, waveform_fb);
-
-        vw = config.ui.waveform_width;
-        vh = config.ui.waveform_height;
-        glUseProgram(waveform_shader);
-        glProgramUniform2f(waveform_shader, 0, vw, vh);
-        location = glGetUniformLocation(waveform_shader, "iLength");
-        glUniform1i(location, config.audio.waveform_length);
-        location = glGetUniformLocation(waveform_shader, "iWaveform");
-        glUniform1i(location, 0);
-        location = glGetUniformLocation(waveform_shader, "iBeats");
-        glUniform1i(location, 1);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_1D, tex_waveform_data);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_1D, tex_waveform_beats_data);
-
-        glViewport(0, 0, vw, vh);
-        glClear(GL_COLOR_BUFFER_BIT);
-        fill(vw, vh);
-    }
     glEnable(GL_BLEND);
 
     // Render to screen (or select fb)
@@ -801,44 +717,86 @@ static void ui_render(bool select) {
 
     fill(ww, wh);
     CHECK_GL();
+    if(!select) {
+        analyze_render(tex_spectrum_data, tex_waveform_data, tex_waveform_beats_data);
+        // Render the spectrum
+        sw = config.ui.spectrum_width;
+        sh = config.ui.spectrum_height;
+        glUseProgram(spectrum_shader);
+        location = glGetUniformLocation(spectrum_shader, "iBins");
+        glUniform1i(location, config.audio.spectrum_bins);
+        location = glGetUniformLocation(spectrum_shader, "iSpectrum");
+        glUniform1i(location, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_1D, tex_spectrum_data);
 
-    // Blit UI elements on top
-    glUseProgram(mblit_shader);
-    glProgramUniform2f(mblit_shader, 0, ww, wh);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, pattern_array);
-    location = glGetUniformLocation(mblit_shader, "iAllPatterns");
+        glProgramUniform2f(spectrum_shader, 0, ww, wh);
+        blit(config.ui.spectrum_x, config.ui.spectrum_y, sw, sh);
+
+        // Render the waveform
+
+        vw = config.ui.waveform_width;
+        vh = config.ui.waveform_height;
+        glUseProgram(waveform_shader);
+        glProgramUniform2f(waveform_shader, 0, ww, wh);
+        location = glGetUniformLocation(waveform_shader, "iLength");
+        glUniform1i(location, config.audio.waveform_length);
+        location = glGetUniformLocation(waveform_shader, "iWaveform");
+        glUniform1i(location, 0);
+        location = glGetUniformLocation(waveform_shader, "iBeats");
+        glUniform1i(location, 1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_1D, tex_waveform_data);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_1D, tex_waveform_beats_data);
+
+        blit(config.ui.waveform_x, config.ui.waveform_y, vw, vh);
+    }
+    int pw = config.ui.pattern_width;
+    int ph = config.ui.pattern_height;
+    glUseProgram(pat_shader);
+    location = glGetUniformLocation(pat_shader, "iSelected");
+    glUniform1i(location, selected);
+    location = glGetUniformLocation(pat_shader, "iSelection");
+    glUniform1i(location, select);
+
+    location = glGetUniformLocation(pat_shader, "iPreview");
     glUniform1i(location, 0);
-    glEnable(GL_BLEND);
+    location = glGetUniformLocation(pat_shader, "iName");
+    glUniform1i(location, 1);
+    GLint pattern_index = glGetUniformLocation(pat_shader, "iPatternIndex");
+    GLint pattern_intensity = glGetUniformLocation(pat_shader, "iIntensity");
+    glProgramUniform2f(pat_shader, 0, ww, wh);
+    {
+        for(int i = 0; i < config.ui.n_patterns; i++) {
+            auto &p = deck[map_deck[i]].patterns[map_pattern[i]];
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, p ? p->tex_output : 0);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glUniform1i(pattern_index, i);
+            glUniform1f(pattern_intensity, p ? p->intensity : 0);
+            glUniform1i(location, select);
+
+            blit(map_x[i],map_y[i],pw, ph);
+        }
+    }
+
     for(int i = 0; i < config.ui.n_patterns; i++) {
         if(auto &pat = deck[map_deck[i]].patterns[map_pattern[i]]) {
             if(pat->name.size() && gl_font.m_vbo_dirty) {
                 gl_font.print(map_x[i] + config.ui.pattern_name_x, map_y[i] + config.ui.pattern_height -config.ui.pattern_name_y, pat->name);
             }
-//            glUniform1i(11, i);
-//            blit(map_x[i],map_y[i], pw,ph);
-//            CHECK_GL();
         }
     }
-    glBindVertexArray(pat_vao);
-    glBindBuffer(GL_ARRAY_BUFFER, pat_vbo);
-    glDrawArrays(GL_POINTS, 0, 16);
     glUseProgram(blit_shader);
     glProgramUniform2f(blit_shader, 0, ww, wh);
-
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, crossfader_texture);
     blit(config.ui.crossfader_x, config.ui.crossfader_y, cw, ch);
     CHECK_GL();
 
     if(!select) {
-        glBindTexture(GL_TEXTURE_2D, spectrum_texture);
-        blit(config.ui.spectrum_x, config.ui.spectrum_y, sw, sh);
-        CHECK_GL();
-
-        glBindTexture(GL_TEXTURE_2D, waveform_texture);
-        blit(config.ui.waveform_x, config.ui.waveform_y, vw, vh);
-        CHECK_GL();
-
         if(pat_entry) {
             for(int i = 0; i < config.ui.n_patterns; i++) {
                 if(map_selection[i] == selected) {
@@ -1038,7 +996,7 @@ void ui_run() {
             SDL_GL_SwapWindow(window);
             fps_frames++;
             double new_sample = seconds();
-            if(new_sample - fps_sample > 0.25) {
+            if(new_sample - fps_sample > 1.0) {
                 double fps = fps_frames / (new_sample - fps_sample);
                 fps_sample = new_sample;
                 fps_frames = 0;

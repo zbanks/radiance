@@ -16,6 +16,6 @@ void main(void) {
     float gb = 0.5 * clamp(0., 1., d / 30.);
     f_color0 = composite(f_color0, vec4(1., gb, gb, a));
     f_color0 = composite(f_color0, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
-    if(f_color0.a < 0.5)
-        discard;
+//    if(f_color0.a < 0.5)
+//        discard;
 }

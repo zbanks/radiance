@@ -20,13 +20,13 @@ void main(void) {
         glow(vec2(475., iLeftDeckSelector == 0 ? 420. : 180.),f_color0);
         glow(vec2(1475., iRightDeckSelector == 1 ? 420. : 180.),f_color0);
 
-        for(int i=0; i < 8; i++) {
+/*        for(int i=0; i < 8; i++) {
             vec2 p;
             p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 420.);
             f_color0 = composite(f_color0, fancy_rect(frag,p, PAT_SIZE, iSelected == i + 1));
             p = vec2(175. + (i + 2 * int(i >= 4)) * 175., 180.);
             f_color0 = composite(f_color0, fancy_rect(frag,p, PAT_SIZE, iSelected == i + 9));
-        }
+        }*/
         f_color0 = composite(f_color0, fancy_rect(frag,vec2(962.5, 300.), vec2(130., 200.), iSelected == 17 || iSelected == 18));
     }
 }

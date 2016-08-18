@@ -26,6 +26,6 @@ void main(void) {
     f_color0 = composite(f_color0, vec4(0.7, 0.7, 1.0, wf.r));
     f_color0 = composite(f_color0, vec4(0.7, 0.7, 0.7, level * 0.5));
     f_color0 = composite(f_color0, vec4(0.3, 0.3, 0.3, smoothstep(0., 1., df) - smoothstep(2., 5., df)));
-    if(f_color0.a < 0.5)
-        discard;
+//    if(f_color0.a < 0.5)
+//        discard;
 }

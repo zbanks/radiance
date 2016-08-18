@@ -13,7 +13,7 @@ C_SRC += $(wildcard util/*.c)
 C_SRC += $(wildcard text/*.c)
 
 C_SRC += liblux/lux.c liblux/crc.c
-C_SRC += $(wildcard BTrack/src/*.c)
+C_SRC += $(wildcard submodules/BTrack/src/*.c)
 
 CXX_SRC = $(wildcard *.cpp)
 CXX_SRC += $(wildcard util/*.cpp)
@@ -37,9 +37,9 @@ $(shell mkdir -p $(OBJDIR) >/dev/null)
 OBJECTS = $(C_SRC:%.c=$(OBJDIR)/%.o) $(CXX_SRC:%.cpp=$(OBJDIR)/%.o)
 
 # Compiler flags
-INC = -I. -I./submodules -I./submodules/gl3w/include -I./submodules/freetype-gl
+INC = -I. -I./submodules -I./submodules/gl3w/include -I./submodules/freetype-gl -I./submodules/BTrack
 
-LIBRARIES = -lrt -lfreetype -lSDL2 -lGL -lGLU -lrt -ldl -lm -lportaudio -lportmidi -lfftw3 -lsamplerate $(shell pkg-config --libs sdl2 gl glu fftw3)
+LIBRARIES = -lrt -lfreetype -lSDL2 -lGL -lGLU -lrt -ldl -lm -lportaudio -lportmidi -lsamplerate $(shell pkg-config --libs sdl2 gl glu fftw3 fftw3f)
 
 CFLAGS = -std=gnu11 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl glu fftw3)
 CXXFLAGS = -std=gnu++14 -ggdb3 -O3 $(INC) $(shell pkg-config --cflags sdl2 gl glu fftw3)

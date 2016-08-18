@@ -1,5 +1,5 @@
 [submodule "BTrack"]
-	path = BTrack
+	path = submodules/BTrack
 	url = https://github.com/zbanks/BTrack
 [submodule "stb"]
 	path = submodules/stb

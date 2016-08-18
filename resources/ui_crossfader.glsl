@@ -21,7 +21,7 @@ void main(void) {
         f_color0 = composite(f_color0, vec4(0., 0.3, 0., smoothBox(frag.xy, slider_origin - vec2(w), slider_origin + slider_gain + vec2(w), w)));
         f_color0 = composite(f_color0, vec4(0., 0.8, 0., smoothBox(frag.xy, slider_pos - slider_size, slider_pos + slider_size, w)));
 
-        ivec2 grid_cell = ivec2(5. * v_uv);
+//        ivec2 grid_cell = ivec2(5. * v_uv);
         //vec3 grid = vec3(0.2) + vec3(0.1) * ((grid_cell.x + grid_cell.y) % 2);
 
         //vec3 grid = vec3(0., 0., 0.); // solid black
