@@ -103,9 +103,9 @@ pattern::pattern(const char * prefix)
 
 pattern::~pattern()
 {
-    for(auto & shader : shader) {
-        glDeleteProgram(shader);
-        shader = 0;
+    for(GLuint sh : shader) {
+        glDeleteProgram(sh);
+        sh = 0;
     }
     shader.clear();
     glDeleteTextures(tex.size(), &tex[0]);
