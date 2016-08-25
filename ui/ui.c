@@ -428,6 +428,15 @@ static void increment_slider(int s, float v) {
     set_slider_to(s, v + get_slider(s), 0);
 }
 
+static void redraw_pattern_ui(int s) {
+    snap_states[s] = 0;
+    const struct pattern * p = deck[map_deck[s]].pattern[map_pattern[s]];
+    if (p == NULL) return;
+    
+    if(pattern_name_textures[s] != NULL) SDL_DestroyTexture(pattern_name_textures[s]);
+    pattern_name_textures[s] = render_text(p->name, &pattern_name_width[s], &pattern_name_height[s]);
+}
+
 static void handle_key(SDL_KeyboardEvent * e) {
     bool shift = e->keysym.mod & KMOD_SHIFT;
     bool ctrl = e->keysym.mod & KMOD_CTRL;
@@ -440,18 +449,12 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
                         if (deck_load_set(&deck[map_deck[i]], pat_entry_text) == 0) {
-                            // TODO: Load in the correct pattern names
                             for (int j = 0; j < config.ui.n_patterns; j++) {
-                                if (map_deck[j] == map_deck[selected]) {
-                                    snap_states[j] = 0;
-                                }
+                                if (map_deck[j] == map_deck[selected])
+                                    redraw_pattern_ui(j);
                             }
                         } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text, -1) == 0) {
-                            if(pat_entry_text[0] != '\0') {
-                                if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
-                                pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_width[i], &pattern_name_height[i]);
-                            }
-                            snap_states[selected] = 0;
+                            redraw_pattern_ui(i);
                         }
                         break;
                     }
