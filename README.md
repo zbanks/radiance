@@ -169,7 +169,8 @@ Keyboard Shortcuts
 
 ### Other
 - `q` - Cycle through strip indicator: None, Solid, or Colored.
-- `R` - Reload the MIDI & output configuration
+- `r` - Reload just parameters (`params.ini`)
+- `R` - Reload parameters, MIDI & output configuration
 
 ### Loading Patterns
 Hitting colon (`:`) when a pattern is selected brings up a textbox to enter a pattern name. 
