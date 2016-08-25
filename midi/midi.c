@@ -70,8 +70,8 @@ static int midi_refresh_devices(){
         }
     }
     // Read configuration from file
-    if(midi_config_load(&midi_config, config.paths.midi_config)){
-        ERROR("Unable to read MIDI configuration file %s", config.paths.midi_config);
+    if(midi_config_load(&midi_config, params.paths.midi_config)){
+        ERROR("Unable to read MIDI configuration file %s", params.paths.midi_config);
         goto refresh_fail;
     }
 
@@ -186,6 +186,7 @@ static int midi_run(void* args) {
                     event_data->type = MIDI_EVENT_SLIDER;
                     event_data->slider.index = slot;
                     event_data->slider.value = (float) data2 / 127.0;
+                    event_data->snap = controller->config->snap;
 
                     sdl_event.type = midi_command_event;
                     sdl_event.user.code = 0;
@@ -203,6 +204,7 @@ static int midi_run(void* args) {
                     if (event_data == NULL) MEMFAIL();
                     event_data->type = MIDI_EVENT_KEY;
                     event_data->key.keycode = keysym;
+                    event_data->snap = controller->config->snap;
 
                     sdl_event.type = midi_command_event;
                     sdl_event.user.code = 0;

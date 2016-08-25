@@ -1,0 +1,26 @@
+CFGSECTION(audio,
+    CFG(spectrum_up_alpha, FLOAT, 0.5)
+    CFG(spectrum_down_alpha, FLOAT, 0.2)
+    CFG(spectrum_gain, FLOAT, 0.1)
+    CFG(spectrum_offset, FLOAT, 0.1)
+    CFG(low_cutoff, FLOAT, 0.3)
+    CFG(hi_cutoff, FLOAT, 0.7)
+    CFG(waveform_gain, FLOAT, 0.1)
+    CFG(level_up_alpha, FLOAT, 0.9)
+    CFG(level_down_alpha, FLOAT, 0.01)
+)
+
+CFGSECTION(paths,
+    CFG(output_config, STRING, "resources/output.ini")
+    CFG(midi_config, STRING, "resources/midi.ini")
+    CFG(decks_config, STRING, "resources/decks.ini")
+)
+
+CFGSECTION(debug,
+    CFG(loglevel, INT, 2)
+)
+
+#undef CFGSECTION
+#undef CFGSECTION_LIST
+#undef CFG
+#undef CFG_LIST

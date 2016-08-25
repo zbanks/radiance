@@ -45,13 +45,25 @@ Configuration
 
 Resources accessed at run-time are stored in the `resources/` folder relative to the current directory. 
 
-### Main Config: `resources/config.ini`
+### Main Config: `resources/config.ini
 
 Primary configuration file. Never reloaded while Radiance is running.
 
 #### `[ui]`
 
 Many of these constants are also duplicated in the UI GLSL code, so changing them here might not do what you want.
+
+#### `[audio]`
+
+Defines the constants/sizes used for processing audio. (FFT size, window lengths, etc.)
+
+#### `[paths]`
+
+Defines file path where to find the `params.ini` file (see below).
+
+### Parameters: `resourses/params.ini`
+
+Parameters that are OK to reload in without restarting radiance.
 
 #### `[audio]`
 
@@ -64,6 +76,12 @@ Defines file paths for where to find other configuration files.
 - `output_config` - Setup of output devices, e.g. LED strips
 - `midi_config` - MIDI controller mappings. 
 - `decks_config` - List of pre-defined pattern decks
+
+#### `[debug]`
+
+Debug parameters. Right now has `loglevel`, which sets the lowest loglevel. 
+
+Example: set `loglevel=2` to suppress `DEBUG` messages. `loglevel=4` only shows `ERROR`/`FATAL` messages. `loglevel=0` shows all.
 
 ### Output Config: `resources/output.ini`
 
@@ -102,7 +120,11 @@ A *lux channel* refers to a lux hub that's connecteded over USB. `uri` specifies
 
 These are premade sets of decks to make it easier to load things in bulk. They are loaded by typing colon twice, folowed by the name of the deck.
 
-Each line in the file defines a new deck. The left hand side defines the name, and the right is a space-separated list of patterns.
+Each line in the file defines a new deck. The left hand side defines the name, and the right is a space-separated list of patterns. Example:
+
+    cingy=fire:1.0 rainbow:0.1 zoh:0.6 foh:0.5
+
+The format is `name:intensity`, where intensity is a float between `0` and `1`. Use `\_` to skip a slot.
 
 ### MIDI Controllers; `resources/midi.ini`
 
@@ -115,6 +137,7 @@ The *maximum* number of entries of each type has to specified in this section.
 #### `[controller_##]`
 
 - `name` - The exact name of the controller as it is detected by PortMIDI. This is used to detect which configuration to use.
+- `snap` - Set to a unique non-zero integer (e.g. `1`) to enable "soft-snap" to sync the physical and virtual sliders.
 - `cc_##` - This maps MIDI Control Change events to sliders on the UI. 1-16 are pattern intensity sliders, 18 is the crossfader, and 20 is the global volume (if that ever gets implemented...)
 - `note_##` - This maps MIDI Note On/Off events to keys. When the MIDI button is pressed, the corresponding keystroke is sent to the UI. (Note: this code is terrible, and doesn't support modifier keys. `J` wil not do anything.)
 

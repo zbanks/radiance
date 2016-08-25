@@ -3,6 +3,7 @@
 #include "util/config.h"
 #include "util/string.h"
 #include "util/ini.h"
+#include "util/math.h"
 #include <stdlib.h>
 #include <string.h>
 #define GL_GLEXT_PROTOTYPES
@@ -53,12 +54,16 @@ void deck_term(struct deck * deck) {
     memset(deck, 0, sizeof *deck);
 }
 
-int deck_load_pattern(struct deck * deck, int slot, const char * prefix) {
+int deck_load_pattern(struct deck * deck, int slot, const char * prefix, float intensity) {
     assert(slot >= 0 && slot < config.deck.n_patterns);
     struct pattern * p = calloc(1, sizeof *p);
-    float intensity = 0;
 
-    if(deck->pattern[slot]) intensity = deck->pattern[slot]->intensity;
+    if(intensity < 0) {
+        if (deck->pattern[slot])
+            intensity = deck->pattern[slot]->intensity;
+        else
+            intensity = 0.;
+    }
 
     if(prefix[0] == '\0') {
         if(deck->pattern[slot]) {
@@ -98,7 +103,6 @@ struct deck_ini_data {
 static int deck_ini_handler(void * user, const char * section, const char * name, const char * value) {
     struct deck_ini_data * data = user;
 
-    INFO("%s %s %s", section, name, value);
     if (data->found) return 1;
     if (strcmp(section, "decks") != 0) return 1;
     if (strcmp(name, data->name) != 0) return 1;
@@ -107,27 +111,42 @@ static int deck_ini_handler(void * user, const char * section, const char * name
     char * val = strdup(value);
     if (val == NULL) MEMFAIL();
     
+    int rc = 1;
     int slot = 0;
     while (slot < config.deck.n_patterns) {
-        char * prefix = strsep(&val, " ");
-        if (prefix == NULL || prefix[0] == '\0') break;
-        int rc = deck_load_pattern(data->deck, slot++, prefix);
-        if (rc < 0) return 0;
+        char * entry = strsep(&val, " ");
+        if (entry == NULL || entry[0] == '\0') break;
+        if (entry[0] == '_' && entry[1] == '\0') {
+            slot++;
+            continue;
+        }
+
+        char * name = strsep(&entry, ":");
+        float intensity = CLAMP(atof(entry), 0.0, 1.0);
+
+        rc = deck_load_pattern(data->deck, slot++, name, intensity);
+        if (rc < 0) break;
     }
+    while (slot < config.deck.n_patterns)
+        deck_unload_pattern(data->deck, slot++);
+
     free(val);
-    return 1;
+    return rc;
 }
 
 int deck_load_set(struct deck * deck, const char * name) {
-    for (int slot = 0; slot < config.deck.n_patterns; slot++)
-        deck_unload_pattern(deck, slot);
-
     struct deck_ini_data data = {
         .deck = deck, .name = name, .found = false
     };
-    int rc = ini_parse(config.paths.decks_config, deck_ini_handler, &data);
-    if (!data.found) ERROR("No deck set named '%s'", name);
-    return rc;
+    if (data.name[0] == ':') data.name++;
+
+    int rc = ini_parse(params.paths.decks_config, deck_ini_handler, &data);
+    if (rc) return rc;
+    if (!data.found) {
+        DEBUG("No deck set named '%s'", name);
+        return -1;
+    }
+    return 0;
 }
 
 void deck_render(struct deck * deck) {

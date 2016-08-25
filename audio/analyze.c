@@ -125,7 +125,7 @@ void analyze_chunk(chunk_pt chunk) {
         if(spectrum_n[i] == 0) {
             spectrum[i] = spectrum[i - 1];
         } else {
-            spectrum[i] = config.audio.spectrum_gain * (log1p(spectrum[i]) - config.audio.spectrum_offset);
+            spectrum[i] = params.audio.spectrum_gain * (log1p(spectrum[i]) - params.audio.spectrum_offset);
             if(spectrum[i] < 0) spectrum[i] = 0;
             if(spectrum[i] > 1) spectrum[i] = 1;
         }
@@ -139,14 +139,14 @@ void analyze_chunk(chunk_pt chunk) {
 
     for(int i=0; i<config.audio.spectrum_bins; i++) {
         if(spectrum[i] > spectrum_gl[i]) {
-            spectrum_lpf[i] = spectrum[i] * config.audio.spectrum_up_alpha + spectrum_lpf[i] * (1 - config.audio.spectrum_up_alpha);
+            spectrum_lpf[i] = spectrum[i] * params.audio.spectrum_up_alpha + spectrum_lpf[i] * (1 - params.audio.spectrum_up_alpha);
         } else {
-            spectrum_lpf[i] = spectrum[i] * config.audio.spectrum_down_alpha + spectrum_lpf[i] * (1 - config.audio.spectrum_down_alpha);
+            spectrum_lpf[i] = spectrum[i] * params.audio.spectrum_down_alpha + spectrum_lpf[i] * (1 - params.audio.spectrum_down_alpha);
         }
         double freq_frac = (double)i / config.audio.spectrum_bins;
-        if(freq_frac < config.audio.low_cutoff) {
+        if(freq_frac < params.audio.low_cutoff) {
             low += spectrum_lpf[i];
-        } else if(freq_frac > config.audio.hi_cutoff) {
+        } else if(freq_frac > params.audio.hi_cutoff) {
             hi += spectrum_lpf[i];
         } else {
             mid += spectrum_lpf[i];
@@ -163,7 +163,7 @@ void analyze_chunk(chunk_pt chunk) {
 
     static double beat_lpf = 0.0;
     if (btrack_beat_due_in_current_frame(&btrack)) {
-        INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
+        //INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
         if (time_master.beat_index % 4 == 0)
             beat_lpf = 1.0;
         else
@@ -175,18 +175,18 @@ void analyze_chunk(chunk_pt chunk) {
     // Convert to OpenGL floats
     if (SDL_LockMutex(mutex) != 0) FAIL("Could not lock mutex!");
 
-    audio_thread_hi = hi / (1. - config.audio.hi_cutoff) * config.audio.waveform_gain;
-    audio_thread_mid = mid / (config.audio.hi_cutoff - config.audio.low_cutoff) * config.audio.waveform_gain;
-    audio_thread_low = low / config.audio.low_cutoff * config.audio.waveform_gain;
+    audio_thread_hi = hi / (1. - params.audio.hi_cutoff) * params.audio.waveform_gain;
+    audio_thread_mid = mid / (params.audio.hi_cutoff - params.audio.low_cutoff) * params.audio.waveform_gain;
+    audio_thread_low = low / params.audio.low_cutoff * params.audio.waveform_gain;
 
     level = audio_thread_hi;
     if(audio_thread_mid > level) level = audio_thread_mid;
     if(audio_thread_low > level) level = audio_thread_low;
 
     if(level > audio_thread_level) {
-        level = level * config.audio.level_up_alpha + audio_thread_level * (1 - config.audio.level_up_alpha);
+        level = level * params.audio.level_up_alpha + audio_thread_level * (1 - params.audio.level_up_alpha);
     } else {
-        level = level * config.audio.level_down_alpha + audio_thread_level * (1 - config.audio.level_down_alpha);
+        level = level * params.audio.level_down_alpha + audio_thread_level * (1 - params.audio.level_down_alpha);
     }
 
     audio_thread_level = level;

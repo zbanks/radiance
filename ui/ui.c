@@ -105,7 +105,7 @@ static const int map_space[19] = {17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18
 static const int map_tab[19] =   {1,  2,  3,  4,  17, 17, 5,  6,  7,  10, 11, 12, 18, 18, 13, 14, 15, 17, 18};
 static const int map_stab[19] =  {15, 1,  1,  2,  3,  6,  7,  8,  8,  9,  9,  10, 11, 14, 15, 16, 16, 17, 18};
 static const int map_home[19] =  {1,  1,  1,  1,  1,  1,  1,  1,  1,  9,  9,  9,  9,  9,  9,  9,  9,  1,  9};
-static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8, 16, 16, 16, 16, 16, 16, 16, 16,  8, 16};
+static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8,  16, 16, 16, 16, 16, 16, 16, 16, 8,  16};
 
 // Font
 TTF_Font * font;
@@ -394,7 +394,7 @@ static struct pattern * selected_pattern(int s) {
     return NULL;
 }
 
-static void set_slider_to(int s, float v) {
+static void set_slider_to(int s, float v, int snap) {
     if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = v;
     } else {
@@ -404,7 +404,7 @@ static void set_slider_to(int s, float v) {
     }
 }
 
-static void increment_slider(int s, float v) {
+static void increment_slider(int s, float v, int snap) {
     if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = CLAMP(crossfader.position + v, 0., 1.);
     } else {
@@ -425,11 +425,9 @@ static void handle_key(SDL_KeyboardEvent * e) {
             case SDLK_RETURN:
                 for(int i=0; i<config.ui.n_patterns; i++) {
                     if(map_selection[i] == selected) {
-                        if(pat_entry_text[0] == ':') {
-                            if (deck_load_set(&deck[map_deck[i]], pat_entry_text+1) == 0) {
-                                // TODO: Load in the correct pattern names
-                            }
-                        } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text) == 0) {
+                        if (deck_load_set(&deck[map_deck[i]], pat_entry_text) == 0) {
+                            // TODO: Load in the correct pattern names
+                        } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text, -1) == 0) {
                             if(pat_entry_text[0] != '\0') {
                                 if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
                                 pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_width[i], &pattern_name_height[i]);
@@ -467,12 +465,12 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 break;
             case SDLK_UP:
             case SDLK_k:
-                if (shift) increment_slider(selected, +0.1);
+                if (shift) increment_slider(selected, +0.1, 0);
                 else selected = map_up[selected];
                 break;
             case SDLK_DOWN:
             case SDLK_j:
-                if (shift) increment_slider(selected, -0.1);
+                if (shift) increment_slider(selected, -0.1, 0);
                 else selected = map_down[selected];
                 break;
             case SDLK_ESCAPE:
@@ -488,45 +486,45 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 }
                 break;
             case SDLK_BACKQUOTE:
-                set_slider_to(selected, 0);
+                set_slider_to(selected, 0, 0);
                 break;
             case SDLK_1:
-                set_slider_to(selected, 0.1);
+                set_slider_to(selected, 0.1, 0);
                 break;
             case SDLK_2:
-                set_slider_to(selected, 0.2);
+                set_slider_to(selected, 0.2, 0);
                 break;
             case SDLK_3:
-                set_slider_to(selected, 0.3);
+                set_slider_to(selected, 0.3, 0);
                 break;
             case SDLK_4:
                 if(shift) {
                     selected = map_end[selected];
                 } else {
-                    set_slider_to(selected, 0.4);
+                    set_slider_to(selected, 0.4, 0);
                 }
                 break;
             case SDLK_5:
-                set_slider_to(selected, 0.5);
+                set_slider_to(selected, 0.5, 0);
                 break;
             case SDLK_6:
                 if(shift) {
                     selected = map_home[selected];
                 } else {
-                    set_slider_to(selected, 0.6);
+                    set_slider_to(selected, 0.6, 0);
                 }
                 break;
             case SDLK_7:
-                set_slider_to(selected, 0.7);
+                set_slider_to(selected, 0.7, 0);
                 break;
             case SDLK_8:
-                set_slider_to(selected, 0.8);
+                set_slider_to(selected, 0.8, 0);
                 break;
             case SDLK_9:
-                set_slider_to(selected, 0.9);
+                set_slider_to(selected, 0.9, 0);
                 break;
             case SDLK_0:
-                set_slider_to(selected, 1);
+                set_slider_to(selected, 1, 0);
                 break;
             case SDLK_SEMICOLON: if(!shift) break;
                 for(int i=0; i<config.ui.n_patterns; i++) {
@@ -586,6 +584,7 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 selected = map_end[selected];
                 break;
             case SDLK_r:
+                params_refresh();
                 if (shift) {
                     midi_refresh();
                     output_refresh();
@@ -972,7 +971,7 @@ void ui_run() {
                     struct midi_event * me = e.user.data1;
                     switch (me->type) {
                     case MIDI_EVENT_SLIDER:
-                        set_slider_to(me->slider.index, me->slider.value);
+                        set_slider_to(me->slider.index, me->slider.value, me->snap);
                         break;
                     case MIDI_EVENT_KEY:;
                         SDL_KeyboardEvent fakekeyev;

@@ -24,7 +24,7 @@ static int output_reload_devices() {
 
     // Reload configuration
     output_on_lux = false;
-    int rc = output_config_load(&output_config, config.paths.output_config);
+    int rc = output_config_load(&output_config, params.paths.output_config);
     if (rc < 0) {
         ERROR("Unable to load output configuration");
         return -1;

@@ -27,6 +27,7 @@ struct midi_event {
         MIDI_EVENT_SLIDER,
         MIDI_EVENT_KEY,
     } type;
+    int snap;
     union {
         struct {
             int index;
