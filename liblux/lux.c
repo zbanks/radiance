@@ -8,7 +8,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
-#include <poll.h>
+#include <sys/epoll.h>
 
 #include "liblux/crc.h"
 #include "liblux/lux.h"
@@ -231,28 +231,52 @@ static int lowlevel_read(int fd, uint8_t data[static 2048]) {
     uint8_t * rx_ptr = data;
     int n = 0;
     uint8_t * null;
+    int rc = 0;
+    int epollfd = epoll_create(1);
+    if (epollfd < 0) {
+        LUX_DEBUG("Error creating epollfd: %s", strerror(errno));
+        return -1;
+    }
+
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = fd;
+    rc = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev);
+    if (rc < 0) {
+        LUX_DEBUG("Error adding fd to epollfd: %s", strerror(errno));
+        goto fail;
+    }
 
     do {
-        struct pollfd pfd = {.fd = fd, .events = POLLIN};
-        int rc = poll(&pfd, 1, lux_timeout_ms);
-        if(rc < 0) return rc;
+        struct epoll_event event;
+        rc = epoll_wait(epollfd, &event, 1, lux_timeout_ms);
+        if(rc < 0) {
+            LUX_DEBUG("Error in epoll_wait: %s", strerror(errno));
+            goto fail;
+        }
         if(rc == 0) { // Read timeout
             LUX_DEBUG("Read timeout");
             errno = ETIMEDOUT;
-            return n;
+            rc = n;
+            goto fail;
         }
 
         rc = read(fd, rx_ptr, 2048 - n);
-        if(rc < 0) return -1;
+        if(rc < 0) goto fail;
 
         n += rc;
         rx_ptr += rc;
 
-        if (n >= 2048) return n;
+        if (n >= 2048) {
+            rc = n;
+            goto fail;
+        }
     } while((null = memchr(data, 0, n)) == NULL);
 
-    // TODO: Should buffer unused data
-    return null - data;
+    rc = null - data;
+fail:
+    close(epollfd);
+    return rc;
 }
 
 static int lowlevel_write(int fd, uint8_t* data, int len) {
@@ -346,6 +370,7 @@ int lux_command(int fd, struct lux_packet * packet, struct lux_packet * response
 }
 
 int lux_sync(int fd, int tries) {
+#if 0 // Didn't actually help
     while (tries--) {
         // Send a 0-byte packet to make sure the bridge is up
         char buf[1];
@@ -371,4 +396,6 @@ int lux_sync(int fd, int tries) {
     }
     errno = ETIMEDOUT;
     return -1;
+#endif
+    return 0;
 }
