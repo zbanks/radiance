@@ -10,6 +10,7 @@
     - You can set an intensity value in the `decks.ini` file
     - You can leave holes in the deck with `_`
     - Pattern names now display properly
+    - Append a deck to the ini file with `W` (you have to go rename it afterwards, though...)
 - "Soft snap" for MIDI controllers
     - If you modify a slider with mouse/keyboard, you need to move the MIDI knob near it before it can be controlled again.
     - (Just try it.)

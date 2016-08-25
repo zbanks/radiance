@@ -160,3 +160,34 @@ void deck_render(struct deck * deck) {
         }
     }
 }
+
+int deck_save(const struct deck * deck, const char * name) {
+    FILE * f = fopen(params.paths.decks_config, "a");
+    if (f == NULL) {
+        ERROR("Unable to open '%s' for appending", params.paths.decks_config);
+        return -1;
+    }
+
+    int rc = fprintf(f, "%s=", name);
+    if (rc < 0) goto fail;
+
+    for (int i = 0; i < config.deck.n_patterns; i++) {
+        if (deck->pattern[i] == NULL)
+            rc = fprintf(f, " _");
+        else
+            rc = fprintf(f, " %s:%0.2f", deck->pattern[i]->name, deck->pattern[i]->intensity);
+        if (rc < 0) goto fail;
+    }
+
+    rc = fprintf(f, "\n");
+    if (rc < 0) goto fail;
+
+    INFO("Saved deck '%s' to '%s'", name, params.paths.decks_config);
+
+fail:
+    if (rc < 0)
+        ERROR("Unable to write deck '%s' to '%s'", name, params.paths.decks_config);
+
+    fclose(f);
+    return rc;
+}

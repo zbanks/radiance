@@ -613,6 +613,14 @@ static void handle_key(SDL_KeyboardEvent * e) {
                     output_refresh();
                 }
                 break;
+            case SDLK_w:
+                if (shift) {
+                    for(int i=0; i<config.ui.n_patterns; i++) {
+                        if(map_selection[i] == selected)
+                            deck_save(&deck[map_deck[i]], "NAME");
+                    }
+                }
+                break;
             case SDLK_q:
                 switch(strip_indicator) {
                     case STRIPS_NONE:

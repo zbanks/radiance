@@ -177,6 +177,7 @@ Keyboard Shortcuts
 - `q` - Cycle through strip indicator: None, Solid, or Colored.
 - `r` - Reload just parameters (`params.ini`)
 - `R` - Reload parameters, MIDI & output configuration
+- `W` - Append current deck state to the `decks.ini` file
 
 ### Loading Patterns
 Hitting colon (`:`) when a pattern is selected brings up a textbox to enter a pattern name. 
