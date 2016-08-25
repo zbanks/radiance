@@ -1,3 +1,7 @@
+CFGSECTION(ui,
+    CFG(snap_threshold, FLOAT, 0.05)
+)
+
 CFGSECTION(audio,
     CFG(spectrum_up_alpha, FLOAT, 0.5)
     CFG(spectrum_down_alpha, FLOAT, 0.2)

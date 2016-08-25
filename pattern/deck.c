@@ -111,7 +111,6 @@ static int deck_ini_handler(void * user, const char * section, const char * name
     char * val = strdup(value);
     if (val == NULL) MEMFAIL();
     
-    int rc = 1;
     int slot = 0;
     while (slot < config.deck.n_patterns) {
         char * entry = strsep(&val, " ");
@@ -124,14 +123,17 @@ static int deck_ini_handler(void * user, const char * section, const char * name
         char * name = strsep(&entry, ":");
         float intensity = CLAMP(atof(entry), 0.0, 1.0);
 
-        rc = deck_load_pattern(data->deck, slot++, name, intensity);
-        if (rc < 0) break;
+        int rc =  deck_load_pattern(data->deck, slot++, name, intensity);
+        if (rc < 0) {
+            WARN("Error loading pattern '%s'", name);
+            break;
+        }
     }
     while (slot < config.deck.n_patterns)
         deck_unload_pattern(data->deck, slot++);
 
     free(val);
-    return rc;
+    return 1;
 }
 
 int deck_load_set(struct deck * deck, const char * name) {
@@ -141,12 +143,11 @@ int deck_load_set(struct deck * deck, const char * name) {
     if (data.name[0] == ':') data.name++;
 
     int rc = ini_parse(params.paths.decks_config, deck_ini_handler, &data);
-    if (rc) return rc;
     if (!data.found) {
         DEBUG("No deck set named '%s'", name);
         return -1;
     }
-    return 0;
+    return rc;
 }
 
 void deck_render(struct deck * deck) {

@@ -107,6 +107,8 @@ static const int map_stab[19] =  {15, 1,  1,  2,  3,  6,  7,  8,  8,  9,  9,  10
 static const int map_home[19] =  {1,  1,  1,  1,  1,  1,  1,  1,  1,  9,  9,  9,  9,  9,  9,  9,  9,  1,  9};
 static const int map_end[19] =   {8,  8,  8,  8,  8,  8,  8,  8,  8,  16, 16, 16, 16, 16, 16, 16, 16, 8,  16};
 
+static int snap_states[19];
+
 // Font
 TTF_Font * font;
 static const SDL_Color font_color = {255, 255, 255, 255};
@@ -394,7 +396,23 @@ static struct pattern * selected_pattern(int s) {
     return NULL;
 }
 
+static float get_slider(int s) {
+    if(s == crossfader_selection_top || s == crossfader_selection_bot)
+        return crossfader.position;
+
+    struct pattern * p = selected_pattern(s);
+    if(p != NULL)
+        return p->intensity;
+
+    return 0.;
+}
+
 static void set_slider_to(int s, float v, int snap) {
+    if (snap && snap_states[s] != snap) {
+        if (ABS(get_slider(s) - v) > params.ui.snap_threshold)
+            return;
+    }
+
     if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = v;
     } else {
@@ -402,16 +420,12 @@ static void set_slider_to(int s, float v, int snap) {
         if(p != NULL)
             p->intensity = v;
     }
+
+    snap_states[s] = snap;
 }
 
-static void increment_slider(int s, float v, int snap) {
-    if(s == crossfader_selection_top || s == crossfader_selection_bot) {
-        crossfader.position = CLAMP(crossfader.position + v, 0., 1.);
-    } else {
-        struct pattern * p = selected_pattern(s);
-        if(p != NULL)
-            p->intensity = CLAMP(p->intensity + v, 0., 1.);
-    }
+static void increment_slider(int s, float v) {
+    set_slider_to(s, v + get_slider(s), 0);
 }
 
 static void handle_key(SDL_KeyboardEvent * e) {
@@ -427,11 +441,17 @@ static void handle_key(SDL_KeyboardEvent * e) {
                     if(map_selection[i] == selected) {
                         if (deck_load_set(&deck[map_deck[i]], pat_entry_text) == 0) {
                             // TODO: Load in the correct pattern names
+                            for (int j = 0; j < config.ui.n_patterns; j++) {
+                                if (map_deck[j] == map_deck[selected]) {
+                                    snap_states[j] = 0;
+                                }
+                            }
                         } else if(deck_load_pattern(&deck[map_deck[i]], map_pattern[i], pat_entry_text, -1) == 0) {
                             if(pat_entry_text[0] != '\0') {
                                 if(pattern_name_textures[i] != NULL) SDL_DestroyTexture(pattern_name_textures[i]);
                                 pattern_name_textures[i] = render_text(pat_entry_text, &pattern_name_width[i], &pattern_name_height[i]);
                             }
+                            snap_states[selected] = 0;
                         }
                         break;
                     }
@@ -465,12 +485,12 @@ static void handle_key(SDL_KeyboardEvent * e) {
                 break;
             case SDLK_UP:
             case SDLK_k:
-                if (shift) increment_slider(selected, +0.1, 0);
+                if (shift) increment_slider(selected, +0.1);
                 else selected = map_up[selected];
                 break;
             case SDLK_DOWN:
             case SDLK_j:
-                if (shift) increment_slider(selected, -0.1, 0);
+                if (shift) increment_slider(selected, -0.1);
                 else selected = map_down[selected];
                 break;
             case SDLK_ESCAPE:

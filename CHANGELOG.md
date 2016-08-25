@@ -9,6 +9,6 @@
         - Don't name decks after patterns :(
     - You can set an intensity value in the `decks.ini` file
     - You can leave holes in the deck with `_`
-- Stubbing out "soft snap" for MIDI controllers
-    - How to resolve position of virtual slider vs. physical slider
-    - Not done... yet
+- "Soft snap" for MIDI controllers
+    - If you modify a slider with mouse/keyboard, you need to move the MIDI knob near it before it can be controlled again.
+    - (Just try it.)

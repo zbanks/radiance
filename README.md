@@ -65,6 +65,12 @@ Defines file path where to find the `params.ini` file (see below).
 
 Parameters that are OK to reload in without restarting radiance.
 
+#### `[ui]`
+
+Tweakable things about the UI.
+
+`snap_threshold` -- float (e.g. perecentage) to snap to nearby values.
+
 #### `[audio]`
 
 Defines the filters that are applied to extract the highs, mids, lows, levels and draw the spectrum.
