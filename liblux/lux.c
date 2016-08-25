@@ -194,7 +194,6 @@ static int unframe(uint8_t * raw_data, int raw_len, struct lux_packet * packet) 
     if(len < 0) return len;
 
     if(len < 8) {
-        LUX_DEBUG("");
         errno = EINVAL;
         return -1;
     }
