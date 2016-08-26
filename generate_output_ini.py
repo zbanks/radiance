@@ -3,8 +3,7 @@ n_serial_channels = 10
 n_udp_channels = 0
 
 def address(i):
-    #return hex(i)
-    return "0x12"
+    return hex(i+1)
 
 def vertexlist(i):
     x = i * 2.0 / (n_strips - 1) - 1.0
