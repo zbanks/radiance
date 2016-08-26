@@ -1,9 +1,10 @@
 n_strips = 40
 n_serial_channels = 10
-n_udp_channels = 1
+n_udp_channels = 0
 
 def address(i):
-    return hex(i)
+    #return hex(i)
+    return "0x12"
 
 def vertexlist(i):
     x = i * 2.0 / (n_strips - 1) - 1.0
@@ -11,6 +12,12 @@ def vertexlist(i):
 
 def color(i):
     return "#66CC66"
+
+def channel(i):
+    return int(i / 6)
+
+def length(i):
+    return 150
 
 def generate():
     output = open("resources/output_py.ini", "w")
@@ -45,17 +52,21 @@ sync=0
         a = address(i)
         vl = vertexlist(i)
         c = color(i)
+        l = length(i)
+        ch = channel(i)
         output.write("""
 [lux_strip_{}]
 address={}
 ui_name=Strip{}
 ui_color={}
+channel={}
+length={}
 max_energy=0.7
 oversample=1
 quantize=-1
 gamma=1.5
 vertexlist={}
-""".format(i, a, i, c, vl))
+""".format(i, a, i, c, ch, l, vl))
     
     output.close() 
 

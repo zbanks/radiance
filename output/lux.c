@@ -22,6 +22,7 @@ struct lux_device;
 struct lux_channel {
     int fd;
     bool sync;
+    int id;
     struct lux_channel * next;
     struct lux_device * device_head;
 };
@@ -130,6 +131,7 @@ static struct lux_channel * lux_channel_create (const char * uri) {
         free(channel);
         return NULL;
     }
+    channel->id = -1;
     // Success!
     INFO("Initialized lux output channel '%s'", uri);
     channel->next = channel_head;
@@ -254,6 +256,7 @@ int output_lux_init() {
         struct lux_channel * channel = lux_channel_create(output_config.lux_channels[i].uri);
         if (channel == NULL) continue;
         channel->sync = output_config.lux_channels[i].sync;
+        channel->id = i;
     }
 
     // Initialize the devices, unconnected
@@ -290,22 +293,35 @@ int output_lux_init() {
         device->oversample = MAX(1, output_config.lux_strips[i].oversample);
         device->gamma = output_config.lux_strips[i].gamma;
         device->strip_quantize = output_config.lux_strips[i].quantize;
-        device->strip_length = -1;
 
-        for (int i = 0; i < 2; i++) { // Try twice to find the strips
+        if (output_config.lux_strips[i].channel >= 0 && output_config.lux_strips[i].length >= 0) {
+            device->strip_length = output_config.lux_strips[i].length;
             for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
-                int length = lux_strip_get_length(channel->fd, device->address, 0);
-                if (length < 0)
-                    continue;
-
-                device->strip_length = length;
-                device->channel = channel;
-                device->base.active = true;
-                found_count++;
-                goto found;
+                if (channel->id == output_config.lux_strips[i].channel) {
+                    device->channel = channel;
+                    device->base.active = true;
+                    found_count++;
+                    DEBUG("Using hardcoded channel for strip %zu", i);
+                    break;
+                }
             }
+        } else {
+            device->strip_length = -1;
+            for (int i = 0; i < 2; i++) { // Try twice to find the strips
+                for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+                    int length = lux_strip_get_length(channel->fd, device->address, 0);
+                    if (length < 0)
+                        continue;
+
+                    device->strip_length = length;
+                    device->channel = channel;
+                    device->base.active = true;
+                    found_count++;
+                    goto found;
+                }
+            }
+            found:;
         }
-        found:
 
         if (device->base.active) {
             device->frame_buffer_size = device->strip_length * 3;

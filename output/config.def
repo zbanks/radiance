@@ -12,6 +12,8 @@ CFGSECTION_LIST(lux_strip,
     CFG(address, LUXADDR, 0x00000001)
     CFG(ui_name, STRING, "strip")
     CFG(ui_color, COLOR, "#FFFF00")
+    CFG(channel, INT, -1)
+    CFG(length, INT, -1)
     CFG(max_energy, FLOAT, -1)
     CFG(oversample, INT, -1)
     CFG(quantize, INT, -1)
