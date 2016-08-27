@@ -1,4 +1,4 @@
-#version 130
+#version 120
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform float iTime;
