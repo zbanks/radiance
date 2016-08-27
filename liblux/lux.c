@@ -46,9 +46,8 @@ static int serial_set_attribs(int fd) {
     memset (&tty, 0, sizeof tty);
     
     tcgetattr(fd, &tty);
-    cfsetispeed(&tty, 0010015);
-    cfsetospeed(&tty, 0010015);
 
+    /*
     tty.c_cflag &= ~CSIZE;     // 8-bit chars
     tty.c_cflag |= CS8;     // 8-bit chars
     tty.c_cflag |= (CLOCAL | CREAD);
@@ -57,6 +56,16 @@ static int serial_set_attribs(int fd) {
     tty.c_iflag &= ~(INPCK|ISTRIP);
     tty.c_iflag &= ~(IXON | IXOFF);
     tty.c_iflag |= IXANY;
+    */
+    tty.c_iflag = IXANY;
+    tty.c_oflag = ONOCR | ONLRET;
+    tty.c_cflag = CS8 | CREAD | CLOCAL;
+    tty.c_lflag = 0;
+    // TODO: Maybe we can use the cc's to be clever?
+
+    //cfmakeraw(&tty);
+    cfsetispeed(&tty, 0010015);
+    cfsetospeed(&tty, 0010015);
 
     if (tcsetattr(fd, TCSANOW, &tty) != 0) return -1;
 
