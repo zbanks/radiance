@@ -24,7 +24,7 @@ INC = -I.
 
 LIBRARIES = -lSDL2 -lSDL2_ttf -lGL -lGLU -lm -lportaudio -lportmidi -lfftw3 -lsamplerate
 
-CFLAGS = -std=c99 -ggdb3 -O3 $(INC)
+CFLAGS = -std=c99 -ggdb3 -O0 $(INC)
 CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
 CFLAGS += -D_POSIX_C_SOURCE=20160524
 LFLAGS = $(CFLAGS)
