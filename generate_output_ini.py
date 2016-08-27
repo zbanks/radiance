@@ -1,7 +1,12 @@
 n_strips = 30
 n_serial_channels = 1
 n_udp_channels = 0
-serial_channels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'Z', '0']
+#serial_channels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'Z', '0']
+serial_channels = ['H', 'B', 'J', 'C', 'D', 'E']
+
+# P| H  B  J
+# W|
+# R| E  D  C
 
 def address(i):
     return hex(i+1)
@@ -14,7 +19,8 @@ def color(i):
     return "#66CC66"
 
 def channel(i):
-    return int(i / 6)
+    return -1
+    #return int(i / 6)
 
 def length(i):
     return 150
@@ -30,7 +36,7 @@ n_lux_strips={}
 n_lux_spots=0
 
 [lux]
-timeout_ms=30
+timeout_ms=5
 
 """.format(n_channels, n_strips))
 
