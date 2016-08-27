@@ -3,7 +3,7 @@ PROJECT = radiance
 #CC = clang
 
 # Source files
-C_SRC  = $(wildcard *.c)
+C_SRC  = main.c
 C_SRC += $(wildcard audio/*.c)
 C_SRC += $(wildcard midi/*.c)
 C_SRC += $(wildcard output/*.c)
@@ -46,12 +46,16 @@ $(OBJDIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(APP_INC) -c -o $@ $<
 
+# luxctl utility
+luxctl: $(OBJDIR)/luxctl.o $(OBJDIR)/liblux/lux.o $(OBJDIR)/liblux/crc.o
+	$(CC) $(LFLAGS) -o $@ $^ 
+
 .PHONY: all
-all: $(PROJECT)
+all: $(PROJECT) luxctl
 
 .PHONY: clean
 clean:
-	-rm -f $(PROJECT) tags
+	-rm -f $(PROJECT) tags luxctl
 	-rm -rf $(OBJDIR) $(DEPDIR)
 
 tags: $(C_SRC)

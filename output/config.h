@@ -27,7 +27,7 @@ static inline SDL_Color _parse_color(const char * cstr){
 
 // Lux address type: int in '0xdeadbeef' form
 #define LUXADDR uint32_t
-#define LUXADDR_PARSE(x) strtol(x, NULL, 16)
+#define LUXADDR_PARSE(x) strtol(x, NULL, 0)
 #define LUXADDR_FORMAT(x) "%#08x", x
 #define LUXADDR_FREE(x) (void)(x)
 #define LUXADDR_PREP(x) x
