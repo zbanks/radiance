@@ -2,6 +2,8 @@
 *.so
 *.d
 radiance
+luxctl
+*.pyc
 *.swp
 *.swm
 *.swn
@@ -10,3 +12,8 @@ radiance
 *.vim
 *.deps
 *.dirstamp
+tags
+*/tags
+perf.data
+perf.data.old
+resources/output_py.ini

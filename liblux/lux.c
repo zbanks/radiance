@@ -191,8 +191,9 @@ static int frame(struct lux_packet * packet, uint8_t buffer[static 2048])
     n = cobs_encode(tmp, ptr - tmp, buffer);
     if(n < 0) return n;
 
-    buffer[n] = 0;
-    return n + 1; // success
+    //buffer[n++] = 0; // Double null bytes
+    buffer[n++] = 0;
+    return n; // success
 }
 
 static int unframe(uint8_t * raw_data, int raw_len, struct lux_packet * packet) {
