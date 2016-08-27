@@ -1,6 +1,7 @@
-n_strips = 40
-n_serial_channels = 10
+n_strips = 30
+n_serial_channels = 1
 n_udp_channels = 0
+serial_channels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'Z', '0']
 
 def address(i):
     return hex(i+1)
@@ -21,7 +22,7 @@ def length(i):
 def generate():
     output = open("resources/output_py.ini", "w")
 
-    n_channels = n_serial_channels + n_udp_channels
+    n_channels = n_serial_channels + n_udp_channels + len(serial_channels)
     output.write("""
 [section_sizes]
 n_lux_channels={}
@@ -33,19 +34,30 @@ timeout_ms=30
 
 """.format(n_channels, n_strips))
 
+    n = 0
+    for x in serial_channels:
+        output.write("""
+[lux_channel_{}]
+uri=serial:///dev/lux{}
+sync=0
+""".format(n, x))
+        n += 1
+
     for i in range(n_serial_channels):
         output.write("""
 [lux_channel_{}]
 uri=serial:///dev/ttyACM{}
 sync=0
-""".format(i, i))
+""".format(n, i))
+        n += 1
 
     for i in range(n_udp_channels):
         output.write("""
 [lux_channel_{}]
 uri=udp://127.0.0.1:{}
 sync=0
-""".format(i + n_serial_channels, i + 1365))
+""".format(n, i + 1365))
+        n += 1
 
     for i in range(n_strips):
         a = address(i)
