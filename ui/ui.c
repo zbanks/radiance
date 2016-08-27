@@ -440,13 +440,12 @@ static void redraw_pattern_ui(int s) {
 static void handle_key(SDL_KeyboardEvent * e) {
     // See SDLKey man page
     bool shift = e->keysym.mod & KMOD_SHIFT;
-    bool ctrl = e->keysym.mod & KMOD_CTRL;
-    bool alt = e->keysym.mod & KMOD_ALT;
-    bool meta = e->keysym.mod & (KMOD_LMETA | KMOD_RMETA);
+    //bool ctrl = e->keysym.mod & KMOD_CTRL;
+    //bool alt = e->keysym.mod & KMOD_ALT;
 
     // Currently none of these modifiers are used
     // If they're held down then the key probably isn't for us
-    if (ctrl || alt || meta)
+    if (e->keysym.mod & ~(KMOD_SHIFT))
         return;
 
     if(pat_entry) {
