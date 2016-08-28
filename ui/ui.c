@@ -412,6 +412,7 @@ static void set_slider_to(int s, float v, int snap) {
         if (ABS(get_slider(s) - v) > params.ui.snap_threshold)
             return;
     }
+    v = CLAMP(v, 0., 1.);
 
     if(s == crossfader_selection_top || s == crossfader_selection_bot) {
         crossfader.position = v;

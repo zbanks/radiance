@@ -8,10 +8,55 @@ serial_channels = ['H', 'B', 'J', 'C', 'D', 'E']
 # W|
 # R| E  D  C
 
-def address(i):
-    return hex(i+1)
+lightboxes = [
+        "0.333 1.0,-0.333 -1.0,-0.666 -0.2",
+        "-1.0 1.0,-0.333 -1.0,0.0 -0.2",
+        "-0.333 1.0,0.333 -1.0,0.666 -0.2",
+        "1.0 1.0,0.333 -1.0,0.0 -0.2",
+        ]
 
-def vertexlist(i):
+lbas = {
+    0x1e: 0, 0x1a: 0, 0x16: 0, 0x12: 0,
+    0x1d: 1, 0x19: 1, 0x15: 1, 0x11: 1,
+    0x1c: 2, 0x18: 2, 0x14: 2, 0x10: 2,
+    0x1b: 3, 0x17: 3, 0x13: 3, 0x0f: 3,
+}
+
+basket_left = "0.0 Y,-1.0 Y"
+basket_right = "0.0 Y,1.0 Y"
+basket_left_as = {
+    0x01: 0,
+    0x03: 1,
+    0x05: 2,
+    0x07: 3,
+    0x09: 4,
+    0x0B: 5,
+    0x0D: 6,
+}
+basket_right_as = {
+    0x02: 0,
+    0x04: 1,
+    0x06: 2,
+    0x08: 3,
+    0x0a: 4,
+    0x0C: 5,
+    0x0E: 6,
+}
+
+def address(i):
+    return i + 1
+
+def revvl(vl):
+    return ",".join(vl.split(",")[::-1])
+
+def vertexlist(i, a):
+    if a in lbas:
+        return revvl(lightboxes[lbas[a]])
+    if a in basket_left_as:
+        return basket_left.replace("Y", "%0.3f" % (1.0 - basket_left_as[a] * 2.0 / 6.))
+    if a in basket_right_as:
+        return basket_right.replace("Y", "%0.3f" % (1.0 - basket_right_as[a] * 2.0 / 6.))
+
     x = i * 2.0 / (n_strips - 1) - 1.0
     return "{} -1.0,{} 1.0".format(x, x)
 
@@ -67,7 +112,7 @@ sync=0
 
     for i in range(n_strips):
         a = address(i)
-        vl = vertexlist(i)
+        vl = vertexlist(i, a)
         c = color(i)
         l = length(i)
         ch = channel(i)
@@ -83,7 +128,7 @@ oversample=1
 quantize=-1
 gamma=1.5
 vertexlist={}
-""".format(i, a, i, c, ch, l, vl))
+""".format(i, hex(a), i, c, ch, l, vl))
     
     output.close() 
 
