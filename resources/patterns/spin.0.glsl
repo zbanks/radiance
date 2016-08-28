@@ -6,14 +6,14 @@ void main(void) {
     float r;
     float freq;
     if(iIntensity < 0.05) freq = 0.;
-    else if(iIntensity < 0.15) freq = 16.;
-    else if(iIntensity < 0.25) freq = 8.;
-    else if(iIntensity < 0.35) freq = 4.;
-    else if(iIntensity < 0.45) freq = 2;
-    else if(iIntensity < 0.55) freq = 1;
-    else if(iIntensity < 0.65) freq = 0.5;
-    else if(iIntensity < 0.75) freq = 0.25;
-    else freq = 0.125;
+    else if(iIntensity < 0.15) freq = 32.;
+    else if(iIntensity < 0.25) freq = 16.;
+    else if(iIntensity < 0.35) freq = 8.;
+    else if(iIntensity < 0.45) freq = 4.;
+    else if(iIntensity < 0.55) freq = 2.;
+    else if(iIntensity < 0.65) freq = 1.;
+    else if(iIntensity < 0.75) freq = 0.5;
+    else freq = 0.25;
 
     if(freq > 0) {
         r = mod(iTime, freq) / freq;
