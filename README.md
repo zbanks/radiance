@@ -226,6 +226,8 @@ Patterns
 - `rjump` - Shift the hue on the beat 
 - `rotate` - Rotate the screen 
 - `slide` - Slide the screen left-to-right 
+- `spin` - Spins the pattern round not to the beat
+- `spinb` - Spins the pattern round to the beat
 - `smoke` - Perlin noise green smoke 
 - `speckle` - Per-pixel twinkle effect 
 - `starfield` - Pixels radiating from the center 
