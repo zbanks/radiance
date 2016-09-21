@@ -1,4 +1,4 @@
-#define _BSD_SOURCE // for usleep
+#define _DEFAULT_SOURCE // for usleep
 
 #include <stdlib.h>
 #include <fcntl.h>
