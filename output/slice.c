@@ -119,6 +119,44 @@ int output_device_arrange(struct output_device * dev) {
     return 0;
 }
 
+int output_device_arrange_grid(struct output_device * dev, int width, int height) {
+    size_t length = dev->pixels.length;
+    if (length <= 0) return -1;
+    if (width <= 0) return -1;
+    if (height <= 0) return -1;
+    if ((size_t) width * height != length) return -1;
+    // Check that there are exactly 2 verticies
+    if (dev->vertex_head == NULL) return -1;
+    if (dev->vertex_head->next == NULL) return -1;
+    if (dev->vertex_head->next->next != NULL) return -1;
+
+    // Realloc pixel arrays
+    dev->pixels.xs = realloc(dev->pixels.xs, length * sizeof *dev->pixels.xs);
+    dev->pixels.ys = realloc(dev->pixels.ys, length * sizeof *dev->pixels.ys);
+    dev->pixels.colors = realloc(dev->pixels.colors, length * sizeof *dev->pixels.colors);
+    if (dev->pixels.xs == NULL || dev->pixels.ys == NULL || dev->pixels.colors == NULL) MEMFAIL();
+    memset(dev->pixels.xs, 0, length * sizeof *dev->pixels.xs);
+    memset(dev->pixels.ys, 0, length * sizeof *dev->pixels.ys);
+    memset(dev->pixels.colors, 0, length * sizeof *dev->pixels.colors);
+
+    // Calculate pixel coordinates
+    double x1 = dev->vertex_head->x;
+    double y1 = dev->vertex_head->y;
+    double x2 = dev->vertex_head->next->x;
+    double y2 = dev->vertex_head->next->y;
+
+    size_t pixel_idx = 0;
+    for (int w = 0; w < width; w++) {
+        for (int h = 0; h < height; h++) {
+            dev->pixels.xs[pixel_idx] = (w + 0.5) * (x2 - x1) / width + x1;
+            dev->pixels.ys[pixel_idx] = (h + 0.5) * (y2 - y1) / height + y1;
+            pixel_idx++;
+        }
+    }
+
+    return 0;
+}
+
 int output_render(struct render * render) {
     render_freeze(render);
     for (struct output_device * dev = output_device_head; dev; dev = dev->next) {

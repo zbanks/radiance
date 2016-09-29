@@ -688,26 +688,41 @@ static void ui_render(bool select) {
             glClear(GL_COLOR_BUFFER_BIT);
             glBegin(GL_QUADS);
             for(struct output_device * d = output_device_head; d != NULL; d = d->next) {
+#ifdef SOLID_LINE_INDICATOR
                 bool first = true;
                 double x;
                 double y;
                 for(struct output_vertex * v = d->vertex_head; v != NULL; v = v->next) {
                     if(!first) {
                         double dx = v->x - x;
-                        double dy = v->y - y;
+                        double dy = -v->y - y;
                         double dl = hypot(dx, dy);
                         dx = config.ui.strip_thickness * dx / dl;
                         dy = config.ui.strip_thickness * dy / dl;
                         glVertex2d(x + dy, y - dx);
-                        glVertex2d(v->x + dy, v->y - dx);
-                        glVertex2d(v->x - dy, v->y + dx);
+                        glVertex2d(v->x + dy, -v->y - dx);
+                        glVertex2d(v->x - dy, -v->y + dx);
                         glVertex2d(x - dy, y + dx);
                     } else {
                         first = false;
                     }
                     x = v->x;
-                    y = v->y;
+                    y = -v->y;
                 }
+#else // PIXEL INDICATOR
+                // Maybe this is horrendously slow because it has to draw a quad for every output pixel? 
+                // It looks cool though
+                for (size_t i = 0; i < d->pixels.length; i++) {
+                    double x = d->pixels.xs[i];
+                    double y = d->pixels.ys[i];
+                    double dx = config.ui.point_thickness;
+                    double dy = config.ui.point_thickness;
+                    glVertex2d(x + dx, y);
+                    glVertex2d(x, y + dy);
+                    glVertex2d(x - dx, y);
+                    glVertex2d(x, y - dy);
+                }
+#endif
             }
             glEnd();
             break;

@@ -29,6 +29,7 @@ CFGSECTION(ui,
     CFG(waveform_height, INT, 200)
     CFG(fps, FLOAT, 75)
     CFG(strip_thickness, FLOAT, 0.05)
+    CFG(point_thickness, FLOAT, 0.01)
 )
  
 CFGSECTION(deck,

@@ -41,6 +41,7 @@ extern unsigned int output_render_count;
 
 // Calculate pixel coordinates from vertex coordinates
 int output_device_arrange(struct output_device * dev);
+int output_device_arrange_grid(struct output_device * dev, int width, int height);
 
 // Render all of the output device pixel buffers
 int output_render(struct render * render);

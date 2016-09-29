@@ -29,6 +29,18 @@ CFGSECTION_LIST(lux_spot,
     CFG(oversample, INT, 1)
     CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
 )
+ 
+CFGSECTION_LIST(lux_grid,
+    CFG(address, LUXADDR, 0x00000001)
+    CFG(ui_name, STRING, "spot")
+    CFG(ui_color, COLOR, "#FFFF00")
+    CFG(channel, INT, -1)
+    CFG(width, INT, -1)
+    CFG(height, INT, -1)
+    CFG(max_energy, FLOAT, 1)
+    CFG(gamma, FLOAT, 1.0)
+    CFG(vertexlist, VERTEXLIST, "-1 -1, 1 1")
+)
 
 #undef CFGSECTION
 #undef CFGSECTION_LIST

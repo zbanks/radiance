@@ -14,6 +14,7 @@
 enum lux_device_type {
     LUX_DEVICE_TYPE_STRIP,
     LUX_DEVICE_TYPE_SPOT,
+    LUX_DEVICE_TYPE_GRID,
 };
 
 struct lux_channel;
@@ -34,6 +35,7 @@ struct lux_device {
     enum lux_device_type type;
     uint32_t address;
     char * descriptor;
+    int length;
     size_t frame_buffer_size;
     uint8_t * frame_buffer;
 
@@ -42,10 +44,13 @@ struct lux_device {
     double gamma;
 
     // Strip-only
-    int strip_length;
     int strip_quantize;
 
     // Spot-only
+
+    // Grid-only
+    int grid_width;
+    int grid_height;
 };
 
 static struct lux_channel * channel_head = NULL;
@@ -53,6 +58,8 @@ static struct lux_device * strip_devices = NULL;
 static size_t n_strip_devices = 0;
 static struct lux_device * spot_devices = NULL;
 static size_t n_spot_devices = 0;
+static struct lux_device * grid_devices = NULL;
+static size_t n_grid_devices = 0;
 
 //
 
@@ -66,7 +73,7 @@ static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
     };
     struct lux_packet response;
     int rc = lux_command(fd, &packet, &response, flags);
-    if (rc < 0 || response.payload_length != 2) {
+    if (rc < 0 || response.payload_length < 2) {
         ERROR("No/invalid response to length query on %#08x", lux_id);
         return -1;
     }
@@ -104,6 +111,43 @@ static int lux_spot_frame (int fd, uint32_t lux_id, unsigned char * data, size_t
     return lux_write(fd, &packet, 0);
 }
 */
+
+static int lux_grid_get_size (int fd, uint32_t lux_id, int flags, int * out_width, int * out_height) {
+    // TODO: replace with get_descriptor
+    struct lux_packet packet = {
+        .destination = lux_id,
+        .command = LUX_CMD_GET_LENGTH,
+        .index = 0,
+        .payload_length = 0,
+    };
+    struct lux_packet response;
+    int rc = lux_command(fd, &packet, &response, flags);
+    if (rc < 0 || response.payload_length < 6) {
+        ERROR("No/invalid response to length query on %#08x", lux_id);
+        return -1;
+    }
+
+    uint16_t total_length;
+    uint16_t width;
+    uint16_t height;
+    memcpy(&total_length, &response.payload[0], 2);
+    memcpy(&width, &response.payload[2], 2);
+    memcpy(&height, &response.payload[4], 2);
+
+    INFO("Found grid on %#08x with length %d and size %dx%d",
+            lux_id, total_length, width, height);
+
+    if (width * height != total_length)
+        WARN("Width * Height != Length for grid: %d * %d != %d",
+                width, height, total_length);
+
+    *out_width = width;
+    *out_height = height;
+    return total_length;
+}
+
+static int (*lux_grid_frame) (int fd, uint32_t lux_id, unsigned char * data, size_t data_size)
+    = lux_strip_frame;
 
 static int lux_frame_sync (int fd, uint32_t lux_id) {
     return lux_sync(fd, 10);
@@ -175,7 +219,7 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
                 b += pixel_ptr->b * pixel_ptr->a;
                 pixel_ptr--;
             }
-            while (l * device->strip_quantize < (i+1) * device->strip_length) {
+            while (l * device->strip_quantize < (i+1) * device->length) {
                 *frame_ptr++ = PXL(r);
                 *frame_ptr++ = PXL(g);
                 *frame_ptr++ = PXL(b);
@@ -183,7 +227,7 @@ static int lux_strip_prepare_frame(struct lux_device * device) {
             }
         }
     } else {
-        for (int l = 0; l < device->strip_length; l++) {
+        for (int l = 0; l < device->length; l++) {
             unsigned int r = 0, g = 0, b = 0; 
             for (int k = 0; k < device->oversample; k++) {
                 r += pixel_ptr->r * pixel_ptr->a;
@@ -219,6 +263,8 @@ static int lux_spot_prepare_frame(struct lux_device * device) {
 }
 */
 
+static int (*lux_grid_prepare_frame)(struct lux_device * device) = lux_strip_prepare_frame;
+
 static void lux_device_term(struct lux_device * device) {
     //free(device->base.pixels.xs);
     //free(device->base.pixels.ys);
@@ -242,6 +288,8 @@ void output_lux_term() {
         lux_device_term(&strip_devices[i]);
     for (size_t i = 0; i < n_spot_devices; i++)
         lux_device_term(&spot_devices[i]);
+    for (size_t i = 0; i < n_grid_devices; i++)
+        lux_device_term(&grid_devices[i]);
     INFO("Lux terminated");
 }
 
@@ -267,6 +315,10 @@ int output_lux_init() {
     n_spot_devices = output_config.n_lux_spots;
     spot_devices = calloc(sizeof *spot_devices, n_spot_devices);
     if (spot_devices == NULL) MEMFAIL();
+
+    n_grid_devices = output_config.n_lux_grids;
+    grid_devices = calloc(sizeof *grid_devices, n_grid_devices);
+    if (grid_devices == NULL) MEMFAIL();
 
     // Search the open lux channels for the configured devices
     DEBUG("Starting lux device enumeration");
@@ -295,7 +347,7 @@ int output_lux_init() {
         device->strip_quantize = output_config.lux_strips[i].quantize;
 
         if (output_config.lux_strips[i].channel >= 0 && output_config.lux_strips[i].length >= 0) {
-            device->strip_length = output_config.lux_strips[i].length;
+            device->length = output_config.lux_strips[i].length;
             for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
                 if (channel->id == output_config.lux_strips[i].channel) {
                     device->channel = channel;
@@ -306,29 +358,29 @@ int output_lux_init() {
                 }
             }
         } else {
-            device->strip_length = -1;
+            device->length = -1;
             for (int i = 0; i < 2; i++) { // Try twice to find the strips
                 for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
                     int length = lux_strip_get_length(channel->fd, device->address, 0);
                     if (length < 0)
                         continue;
 
-                    device->strip_length = length;
+                    device->length = length;
                     device->channel = channel;
                     device->base.active = true;
                     found_count++;
-                    goto found;
+                    goto found_strip;
                 }
             }
-            found:;
+            found_strip:;
         }
 
         if (device->base.active) {
-            device->frame_buffer_size = device->strip_length * 3;
+            device->frame_buffer_size = device->length * 3;
             if (device->strip_quantize > 0) {
                 device->base.pixels.length = device->oversample * device->strip_quantize;
             } else {
-                device->base.pixels.length = device->oversample * device->strip_length;
+                device->base.pixels.length = device->oversample * device->length;
             }
 
             device->frame_buffer = calloc(1, device->frame_buffer_size);
@@ -370,6 +422,77 @@ int output_lux_init() {
         output_device_arrange(&device->base);
     }
     */
+    for (size_t i = 0; i < n_grid_devices; i++) {
+        struct lux_device * device = &grid_devices[i];
+        memset(device, 0, sizeof *device);
+        if (!output_config.lux_grids[i].configured)
+            continue;
+        if (output_device_head != NULL)
+            output_device_head->prev = &device->base;
+        device->base.next = output_device_head;
+        output_device_head = &device->base;
+
+        device->base.prev = NULL;
+
+        device->base.vertex_head = output_config.lux_grids[i].vertexlist;
+        device->base.active = false;
+        device->base.ui_color = output_config.lux_grids[i].ui_color;
+        device->base.ui_name = output_config.lux_grids[i].ui_name;
+
+        device->address  = output_config.lux_grids[i].address;
+        device->max_energy = CLAMP(output_config.lux_grids[i].max_energy, 0, 1);
+        device->oversample = 1; //MAX(1, output_config.lux_grids[i].oversample);
+        device->gamma = output_config.lux_grids[i].gamma;
+
+        if (output_config.lux_grids[i].channel >= 0
+         && output_config.lux_grids[i].width >= 0
+         && output_config.lux_grids[i].height >= 0) {
+            device->grid_width = output_config.lux_grids[i].width;
+            device->grid_height = output_config.lux_grids[i].height;
+            device->length = device->grid_width * device->grid_height;
+            for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+                if (channel->id == output_config.lux_grids[i].channel) {
+                    device->channel = channel;
+                    device->base.active = true;
+                    found_count++;
+                    DEBUG("Using hardcoded channel for grid %zu", i);
+                    break;
+                }
+            }
+        } else {
+            device->grid_width = -1;
+            device->grid_height = -1;
+            for (int i = 0; i < 2; i++) { // Try twice to find the strips
+                for (struct lux_channel * channel = channel_head; channel; channel = channel->next) {
+                    int length = lux_grid_get_size(
+                            channel->fd, device->address, 0,
+                            &device->grid_width, &device->grid_height);
+                    if (length < 0)
+                        continue;
+
+                    device->length = length;
+                    device->channel = channel;
+                    device->base.active = true;
+                    found_count++;
+                    goto found_grid;
+                }
+            }
+            found_grid:;
+        }
+
+        if (device->base.active) {
+            device->frame_buffer_size = device->length * 3;
+            // TODO: Implement oversample; quantize
+            device->base.pixels.length = device->length;
+
+            device->frame_buffer = calloc(1, device->frame_buffer_size);
+            if (device->frame_buffer == NULL) MEMFAIL();
+
+            int rc = output_device_arrange_grid(&device->base, device->grid_width, device->grid_height);
+            if (rc < 0)
+                ERROR("Unable to arrange pixels for grid %zu", i);
+        }
+    }
 
     INFO("Finished lux enumeration and found %d/%lu devices",
          found_count, n_strip_devices + n_spot_devices);
@@ -405,6 +528,18 @@ int output_lux_prepare_frame() {
         if (rc < 0) LOGLIMIT(WARN("Unable to send frame to %#08x", device->address));
     }
     */
+    for (size_t i = 0; i < n_grid_devices; i++) {
+        struct lux_device * device = &grid_devices[i];
+        if (device->channel == NULL) continue;
+        rc = lux_grid_prepare_frame(device);
+        if (rc < 0) continue;
+        rc = lux_grid_frame(
+                device->channel->fd,
+                device->address,
+                device->frame_buffer,
+                device->frame_buffer_size);
+        if (rc < 0) LOGLIMIT(WARN, "Unable to send frame to %#08x", device->address);
+    }
     return 0;
 }
 
