@@ -297,3 +297,6 @@ These patterns reduce visual complexity, or at least provide smoothing.
 - `starfield` - Pixels radiating from the center 
 - `stripey` - Vertical stripes with a twinkle effect 
 - `zoh` - Zero order hold to the beat
+
+
+Released under the MIT/X11 License. Copyright 2016 Zach Banks and Eric Van Albert.
