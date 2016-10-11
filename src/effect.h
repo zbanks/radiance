@@ -1,31 +1,24 @@
 #ifndef __EFFECT_H
 #define __EFFECT_H
 
-#include <QtQuick/QQuickItem>
-#include <QtGui/QOpenGLShaderProgram>
+#include <QtQuick/QQuickFramebufferObject>
+#include <QtQuick/QQuickWindow>
+#include <QOpenGLShaderProgram>
 #include <QtGui/QOpenGLFunctions>
 
-class EffectRenderer : public QObject, protected QOpenGLFunctions {
-    Q_OBJECT
-
+class EffectRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
 public:
     EffectRenderer();
     ~EffectRenderer();
 
-    void setViewportSize(const QSize &size) { m_viewportSize = size; }
-    void setWindow(QQuickWindow *window) { m_window = window; }
-
-public slots:
-    void paint();
+    void render();
+    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size);
 
 private:
-    QSize m_viewportSize;
     QOpenGLShaderProgram *m_program;
-    QQuickWindow *m_window;
 };
 
-class Effect : public QQuickItem
-{
+class Effect : public QQuickFramebufferObject {
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged)
@@ -36,13 +29,7 @@ public:
     QString source();
     void setIntensity(qreal value);
     void setSource(QString source);
-
-public slots:
-    void sync();
-    void cleanup();
-
-private slots:
-    void onWindowChanged(QQuickWindow *win);
+    Renderer *createRenderer() const;
 
 signals:
     void intensityChanged(qreal value);
@@ -51,7 +38,6 @@ signals:
 private:
     qreal m_intensity;
     QString m_source;
-    EffectRenderer *m_renderer;
 };
 
 #endif

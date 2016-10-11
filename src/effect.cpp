@@ -1,13 +1,16 @@
 #include "effect.h"
 
-#include <QtQuick/qquickwindow.h>
+#include <QtQuick/QQuickFramebufferObject>
 #include <QtGui/QOpenGLShaderProgram>
 #include <QtGui/QOpenGLContext>
+#include <QtGui/QOpenGLFramebufferObject>
+
+//#include <QtQuick/QQuickWindow>
+//#include <qsgsimpletexturenode.h>
 
 // Effect
 
-Effect::Effect() : m_renderer(0), m_intensity(0) {
-    connect(this, &QQuickItem::windowChanged, this, &Effect::onWindowChanged);
+Effect::Effect() : m_intensity(0) {
 }
 
 qreal Effect::intensity() {
@@ -30,66 +33,45 @@ void Effect::setSource(QString value) {
     emit sourceChanged(value);
 }
 
-void Effect::onWindowChanged(QQuickWindow *win) {
-    if (win) {
-        connect(win, &QQuickWindow::beforeSynchronizing, this, &Effect::sync, Qt::DirectConnection);
-        connect(win, &QQuickWindow::sceneGraphInvalidated, this, &Effect::cleanup, Qt::DirectConnection);
-        win->setClearBeforeRendering(false);
-    }
-}
-
-void Effect::sync() {
-    if(!m_renderer) {
-        m_renderer = new EffectRenderer();
-        connect(window(), &QQuickWindow::beforeRendering, m_renderer, &EffectRenderer::paint, Qt::DirectConnection);
-    }
-    m_renderer->setViewportSize(window()->size() * window()->devicePixelRatio());
-    m_renderer->setWindow(window());
-}
-
-void Effect::cleanup() {
-    if(m_renderer) {
-        delete m_renderer;
-        m_renderer = 0;
-    }
+QQuickFramebufferObject::Renderer *Effect::createRenderer() const {
+    return new EffectRenderer();
 }
 
 // EffectRenderer
 
 EffectRenderer::EffectRenderer() : m_program(0) {
+    initializeOpenGLFunctions();
+
+    m_program = new QOpenGLShaderProgram();
+    m_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                       "attribute highp vec4 vertices;"
+                                       "varying highp vec2 coords;"
+                                       "void main() {"
+                                       "    gl_Position = vertices;"
+                                       "    coords = vertices.xy;"
+                                       "}");
+    m_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                       "uniform lowp float t;"
+                                       "varying highp vec2 coords;"
+                                       "void main() {"
+                                       "    lowp float i = 1. - (pow(abs(coords.x), 4.) + pow(abs(coords.y), 4.));"
+                                       "    i = smoothstep(t - 0.8, t + 0.8, i);"
+                                       "    i = floor(i * 20.) / 20.;"
+                                       "    gl_FragColor = vec4(coords * .5 + .5, i, i);"
+                                       "}");
+
+    m_program->bindAttributeLocation("vertices", 0);
+    m_program->link();
 }
 
 EffectRenderer::~EffectRenderer() {
-    delete m_program;
+    if(m_program) {
+        delete m_program;
+        m_program = 0;
+    }
 }
 
-void EffectRenderer::paint() {
-    if(!m_program) {
-        initializeOpenGLFunctions();
-
-        m_program = new QOpenGLShaderProgram();
-        m_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                           "attribute highp vec4 vertices;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    gl_Position = vertices;"
-                                           "    coords = vertices.xy;"
-                                           "}");
-        m_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                           "uniform lowp float t;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    lowp float i = 1. - (pow(abs(coords.x), 4.) + pow(abs(coords.y), 4.));"
-                                           "    i = smoothstep(t - 0.8, t + 0.8, i);"
-                                           "    i = floor(i * 20.) / 20.;"
-                                           "    gl_FragColor = vec4(coords * .5 + .5, i, i);"
-                                           "}");
-
-        m_program->bindAttributeLocation("vertices", 0);
-        m_program->link();
-
-    }
-
+void EffectRenderer::render() {
     m_program->bind();
 
     m_program->enableAttributeArray(0);
@@ -103,7 +85,7 @@ void EffectRenderer::paint() {
     m_program->setAttributeArray(0, GL_FLOAT, values, 2);
     m_program->setUniformValue("t", (float) 0.5);
 
-    glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
+    //glViewport(0, 0, m_viewportSize.width(), m_viewportSize.height());
 
     glDisable(GL_DEPTH_TEST);
 
@@ -118,7 +100,15 @@ void EffectRenderer::paint() {
     m_program->disableAttributeArray(0);
     m_program->release();
 
-    // Not strictly needed for this example, but generally useful for when
-    // mixing with raw OpenGL.
-    m_window->resetOpenGLState();
+    //m_window->resetOpenGLState();
+
+    update();
 }
+
+QOpenGLFramebufferObject *EffectRenderer::createFramebufferObject(const QSize &size) {
+    QOpenGLFramebufferObjectFormat format;
+    format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+    format.setSamples(4);
+    return new QOpenGLFramebufferObject(size, format);
+}
+

@@ -8,9 +8,10 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt5Widgets)
 find_package(Qt5Quick)
+find_package(Qt5Gui)
 
 qt5_add_resources(resources/resources.qrc)
 
 add_executable(radiance WIN32 src/main.cpp src/effect.cpp resources/resources.qrc)
 
-target_link_libraries(radiance Qt5::Widgets Qt5::Quick)
+target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui)
