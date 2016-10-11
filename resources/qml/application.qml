@@ -15,10 +15,9 @@ ColumnLayout {
     }
 
     Item {
-        width: 100;
-        height: 100;
-
         Effect {
+            width: 300;
+            height: 200;
             intensity: slider.value;
         }
 
