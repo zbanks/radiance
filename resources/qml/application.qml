@@ -15,9 +15,11 @@ ColumnLayout {
     }
 
     Item {
+        width: 300;
+        height: 200;
+
         Effect {
-            width: 300;
-            height: 200;
+            anchors.fill: parent;
             intensity: slider.value;
         }
 
