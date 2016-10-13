@@ -1,5 +1,5 @@
 import QtQuick 2.3
-import QtQuick.Layouts 1.3
+import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import radiance 1.0
 
