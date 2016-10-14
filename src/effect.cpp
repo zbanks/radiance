@@ -7,17 +7,19 @@
 #include <QtGui/QOpenGLFramebufferObject>
 #include <QtGui/QOffscreenSurface>
 #include <QtQuick/QSGSimpleTextureNode>
+#include <QGuiApplication>
 
-class EffectRenderer : public QObject {
+class EffectRenderer : public QObject, protected QOpenGLFunctions {
     Q_OBJECT
 
 public:
-    EffectRenderer(const QSize &size)
-        : surface(0),
+    EffectRenderer(Effect *e)
+        : e(e),
+        surface(0),
         context(0),
         m_renderFbo(0),
         m_displayFbo(0),
-        m_size(size), 
+        m_size(300, 300), 
         m_program(0) {
     }
 
@@ -34,16 +36,68 @@ public slots:
             format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
             m_renderFbo = new QOpenGLFramebufferObject(m_size, format);
             m_displayFbo = new QOpenGLFramebufferObject(m_size, format);
-            qDebug() << "Initialized renderer";
-            // INITIALIZE HERE
+        }
+
+        if (!m_program) {
+            initializeOpenGLFunctions();
+
+            m_program = new QOpenGLShaderProgram();
+            m_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                               "attribute highp vec4 vertices;"
+                                               "varying highp vec2 coords;"
+                                               "void main() {"
+                                               "    gl_Position = vertices;"
+                                               "    coords = vertices.xy;"
+                                               "}");
+            m_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                               "uniform lowp float t;"
+                                               "varying highp vec2 coords;"
+                                               "void main() {"
+                                               "    lowp float i = 1. - (pow(abs(coords.x), 4.) + pow(abs(coords.y), 4.));"
+                                               "    i = smoothstep(t - 0.8, t + 0.8, i);"
+                                               "    i = floor(i * 20.) / 20.;"
+                                               "    gl_FragColor = vec4(coords * .5 + .5, i, i);"
+                                               "}");
+
+            m_program->bindAttributeLocation("vertices", 0);
+            m_program->link();
+
         }
 
         m_renderFbo->bind();
         context->functions()->glViewport(0, 0, m_size.width(), m_size.height());
 
-        //m_logoRenderer->render();
-        // RENDER HERE
         qDebug() << "Render";
+        // RENDER HERE
+        m_program->bind();
+
+        m_program->enableAttributeArray(0);
+
+        float values[] = {
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1
+        };
+        m_program->setAttributeArray(0, GL_FLOAT, values, 2);
+        m_program->setUniformValue("t", (float)e->intensity());
+
+        glViewport(0, 0, m_size.width(), m_size.height());
+
+        glDisable(GL_DEPTH_TEST);
+
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+        m_program->disableAttributeArray(0);
+        m_program->release();
+
+        // RENDER HERE
 
         // We need to flush the contents to the FBO before posting
         // the texture to the other thread, otherwise, we might
@@ -68,8 +122,7 @@ public slots:
         surface->deleteLater();
 
         // Stop event processing, move the thread to GUI and make sure it is deleted.
-        //exit();
-        //moveToThread(QGuiApplication::instance()->thread());
+        moveToThread(QGuiApplication::instance()->thread());
     }
 
 signals:
@@ -79,8 +132,8 @@ private:
     QOpenGLFramebufferObject *m_renderFbo;
     QOpenGLFramebufferObject *m_displayFbo;
     QOpenGLShaderProgram *m_program;
-
     QSize m_size;
+    Effect *e;
 };
 
 class TextureNode : public QObject, public QSGSimpleTextureNode {
@@ -158,9 +211,11 @@ private:
 
 // Effect
 
+QThread *Effect::renderThread = 0;
+
 Effect::Effect() : m_intensity(0), m_renderer(0) {
     setFlag(ItemHasContents, true);
-    m_renderer = new EffectRenderer(QSize(512, 512));
+    m_renderer = new EffectRenderer(this);
 }
 
 void Effect::ready() {
@@ -168,11 +223,10 @@ void Effect::ready() {
     m_renderer->surface->setFormat(m_renderer->context->format());
     m_renderer->surface->create();
 
-    //m_renderThread->moveToThread(m_renderThread);
+    m_renderer->moveToThread(renderThread);
 
     connect(window(), &QQuickWindow::sceneGraphInvalidated, m_renderer, &EffectRenderer::shutDown, Qt::QueuedConnection);
 
-    //m_renderThread->start();
     update();
 }
 
@@ -190,7 +244,7 @@ QSGNode *Effect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         m_renderer->context->setFormat(current->format());
         m_renderer->context->setShareContext(current);
         m_renderer->context->create();
-        //m_renderer->context->moveToThread(m_renderThread);
+        m_renderer->context->moveToThread(renderThread);
 
         current->makeCurrent(window());
 
@@ -207,8 +261,10 @@ QSGNode *Effect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
         connect(m_renderer, &EffectRenderer::textureReady, node, &TextureNode::newTexture, Qt::DirectConnection);
         connect(node, &TextureNode::pendingNewTexture, window(), &QQuickWindow::update, Qt::QueuedConnection);
-        //connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode::prepareNode, Qt::DirectConnection);
-        //connect(node, &TextureNode::textureInUse, m_renderThread, &RenderThread::renderNext, Qt::QueuedConnection);
+        connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode::prepareNode, Qt::DirectConnection);
+
+        // TEMPORARY
+        connect(node, &TextureNode::textureInUse, m_renderer, &EffectRenderer::renderNext, Qt::QueuedConnection);
 
         // Get the production of FBO textures started.
         // TEMPORARY

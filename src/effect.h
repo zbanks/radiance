@@ -22,6 +22,7 @@ public:
     QString source();
     void setIntensity(qreal value);
     void setSource(QString source);
+    static QThread *renderThread;
 
 public Q_SLOTS:
     void ready();
