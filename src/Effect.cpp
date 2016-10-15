@@ -293,6 +293,10 @@ QString Effect::source() {
     return m_source;
 }
 
+Effect *Effect::previous() {
+    return m_previous;
+}
+
 void Effect::setIntensity(qreal value) {
     if(value > 1) value = 1;
     if(value < 0) value = 0;
@@ -305,9 +309,10 @@ void Effect::setSource(QString value) {
     emit sourceChanged(value);
 }
 
-void Effect::setPrevious(Effect *previous) {
-    m_previous = previous;
-    qDebug() << "Set previous" << previous;
+void Effect::setPrevious(Effect *value) {
+    m_previous = value;
+    emit previousChanged(value);
+    qDebug() << "Set previous" << value;
 }
 
 #include "Effect.moc"

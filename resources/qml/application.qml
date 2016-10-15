@@ -25,7 +25,7 @@ RowLayout {
                 Layout.fillWidth: true;
                 intensity: slider.value;
                 source: "../resources/effects/test.glsl";
-                Component.onCompleted: {setPrevious(this);}
+                previous: this;
             }
             
             ComboBox {
