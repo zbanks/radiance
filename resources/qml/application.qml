@@ -3,33 +3,36 @@ import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import radiance 1.0
 
-ColumnLayout {
+RowLayout {
     Component.onCompleted: UISettings.previewSize = "300x300";
+    width: 300;
+    height: 300;
 
-    Rectangle {
-        width: 100;
-        height: 100;
-        color: "red";
-    }
-
-    Button {
-        text: "Disappointment";
-    }
-
-    Item {
-        width: 300;
-        height: 200;
-
-        Effect {
+    GroupBox {
+        anchors.fill: parent;
+        ColumnLayout {
             anchors.fill: parent;
-            intensity: slider.value;
-            source: "../resources/effects/test.glsl";
-        }
 
-        Slider {
-            id: slider;
-            minimumValue: 0;
-            maximumValue: 1;
+            Slider {
+                id: slider;
+                Layout.fillWidth: true;
+                minimumValue: 0;
+                maximumValue: 1;
+            }
+
+            Effect {
+                Layout.fillHeight: true;
+                Layout.fillWidth: true;
+                intensity: slider.value;
+                source: "../resources/effects/test.glsl";
+            }
+            
+            ComboBox {
+                id: effectName;
+                Layout.fillWidth: true;
+                editable: true;
+                model: ["test", "rjump", "purple"];
+            }
         }
     }
 }
