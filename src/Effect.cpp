@@ -38,7 +38,8 @@ public slots:
             format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
             m_renderFbo = new QOpenGLFramebufferObject(size, format);
             m_displayFbo = new QOpenGLFramebufferObject(size, format);
-        } else if (m_renderFbo->size() != settings->value("effect/previewSize", QSize(300, 300)).value<QSize>()) {
+            initializeOpenGLFunctions();
+        } else if (m_renderFbo->size() != uiSettings->previewSize()) {
             size = uiSettings->previewSize();
             delete m_renderFbo;
             QOpenGLFramebufferObjectFormat format;
@@ -46,62 +47,43 @@ public slots:
             m_renderFbo = new QOpenGLFramebufferObject(size, format);
         }
 
-        if (!m_program) {
-            initializeOpenGLFunctions();
-
-            m_program = new QOpenGLShaderProgram();
-            m_program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                               "attribute highp vec4 vertices;"
-                                               "varying highp vec2 coords;"
-                                               "void main() {"
-                                               "    gl_Position = vertices;"
-                                               "    coords = vertices.xy;"
-                                               "}");
-            m_program->addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                               "uniform lowp float t;"
-                                               "varying highp vec2 coords;"
-                                               "void main() {"
-                                               "    lowp float i = 1. - (pow(abs(coords.x), 4.) + pow(abs(coords.y), 4.));"
-                                               "    i = smoothstep(t - 0.8, t + 0.8, i);"
-                                               "    i = floor(i * 20.) / 20.;"
-                                               "    gl_FragColor = vec4(coords * .5 + .5, i, i);"
-                                               "}");
-
-            m_program->bindAttributeLocation("vertices", 0);
-            m_program->link();
-
-        }
-
         m_renderFbo->bind();
 
         // RENDER HERE
-        m_program->bind();
+        if (m_source != e->source()) {
+            m_source = e->source();
+            loadProgram(m_source);
+        }
 
-        m_program->enableAttributeArray(0);
+        if (m_program != 0) {
+            m_program->bind();
 
-        float values[] = {
-            -1, -1,
-            1, -1,
-            -1, 1,
-            1, 1
-        };
-        m_program->setAttributeArray(0, GL_FLOAT, values, 2);
-        m_program->setUniformValue("t", (float)e->intensity());
+            m_program->enableAttributeArray(0);
 
-        glViewport(0, 0, size.width(), size.height());
+            float values[] = {
+                -1, -1,
+                1, -1,
+                -1, 1,
+                1, 1
+            };
+            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
+            m_program->setUniformValue("t", (float)e->intensity());
 
-        glDisable(GL_DEPTH_TEST);
+            glViewport(0, 0, size.width(), size.height());
 
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
+            glDisable(GL_DEPTH_TEST);
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
-        m_program->disableAttributeArray(0);
-        m_program->release();
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+            m_program->disableAttributeArray(0);
+            m_program->release();
+        }
 
         // RENDER HERE
 
@@ -139,6 +121,30 @@ private:
     QOpenGLFramebufferObject *m_displayFbo;
     QOpenGLShaderProgram *m_program;
     Effect *e;
+    QString m_source;
+
+    void loadProgram(QString filename) {
+        QFile file(filename);
+        file.open(QIODevice::ReadOnly);
+
+        QTextStream s1(&file);
+        QString s = s1.readAll();
+
+        QOpenGLShaderProgram *program = new QOpenGLShaderProgram();
+        program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                           "attribute highp vec4 vertices;"
+                                           "varying highp vec2 coords;"
+                                           "void main() {"
+                                           "    gl_Position = vertices;"
+                                           "    coords = vertices.xy;"
+                                           "}");
+        program->addShaderFromSourceCode(QOpenGLShader::Fragment, s);
+        program->bindAttributeLocation("vertices", 0);
+        program->link();
+
+        delete m_program;
+        m_program = program;
+    }
 };
 
 class TextureNode : public QObject, public QSGSimpleTextureNode {

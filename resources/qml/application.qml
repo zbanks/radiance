@@ -23,6 +23,7 @@ ColumnLayout {
         Effect {
             anchors.fill: parent;
             intensity: slider.value;
+            source: "../resources/effects/test.glsl";
         }
 
         Slider {
