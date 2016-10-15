@@ -1,11 +1,11 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
-#include <QThread>
 #include <QSettings>
 #include "UISettings.h"
+#include "RenderThread.h"
 
-extern QThread *renderThread;
+extern RenderThread *renderThread;
 extern QSettings *settings;
 extern UISettings *uiSettings;
 

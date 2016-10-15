@@ -2,9 +2,10 @@
 #include <QCoreApplication>
 #include <QQuickView>
 #include "Effect.h"
+#include "RenderThread.h"
 #include "main.h"
 
-QThread *renderThread = 0;
+RenderThread *renderThread = 0;
 QSettings *settings = 0;
 UISettings *uiSettings = 0;
 
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
 
     settings = new QSettings();
     uiSettings = new UISettings();
-    renderThread = new QThread();
+    renderThread = new RenderThread();
     renderThread->start();
 
     qmlRegisterType<Effect>("radiance", 1, 0, "Effect");

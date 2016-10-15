@@ -16,40 +16,31 @@ class EffectRenderer : public QObject, protected QOpenGLFunctions {
 public:
     EffectRenderer(Effect *e)
         : e(e),
-        surface(0),
-        context(0),
         m_renderFbo(0),
         m_displayFbo(0),
         m_program(0) {
+        moveToThread(renderThread);
     }
-
-    QOffscreenSurface *surface;
-    QOpenGLContext *context;
 
 public slots:
     void renderNext() {
-        context->makeCurrent(surface);
+        renderThread->makeCurrent();
         QSize size;
 
         if (!m_renderFbo) {
             // Initialize the buffers and renderer
+            initializeOpenGLFunctions(); // Placement of this function is black magic to me
             size = uiSettings->previewSize();
-            QOpenGLFramebufferObjectFormat format;
-            format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-            m_renderFbo = new QOpenGLFramebufferObject(size, format);
-            m_displayFbo = new QOpenGLFramebufferObject(size, format);
-            initializeOpenGLFunctions();
+            m_renderFbo = new QOpenGLFramebufferObject(size);
+            m_displayFbo = new QOpenGLFramebufferObject(size);
         } else if (m_renderFbo->size() != uiSettings->previewSize()) {
             size = uiSettings->previewSize();
             delete m_renderFbo;
-            QOpenGLFramebufferObjectFormat format;
-            format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-            m_renderFbo = new QOpenGLFramebufferObject(size, format);
+            m_renderFbo = new QOpenGLFramebufferObject(size);
         }
 
         m_renderFbo->bind();
 
-        // RENDER HERE
         if (m_source != e->source()) {
             m_source = e->source();
             loadProgram(m_source);
@@ -60,6 +51,7 @@ public slots:
 
             m_program->enableAttributeArray(0);
 
+            // TODO preserve aspect ratio for non-square targets
             float values[] = {
                 -1, -1,
                 1, -1,
@@ -85,12 +77,10 @@ public slots:
             m_program->release();
         }
 
-        // RENDER HERE
-
         // We need to flush the contents to the FBO before posting
         // the texture to the other thread, otherwise, we might
         // get unexpected results.
-        context->functions()->glFlush();
+        renderThread->flush();
 
         m_renderFbo->bindDefault();
         qSwap(m_renderFbo, m_displayFbo);
@@ -100,15 +90,9 @@ public slots:
 
     void shutDown()
     {
-        context->makeCurrent(surface);
+        renderThread->makeCurrent();
         delete m_renderFbo;
         delete m_displayFbo;
-        context->doneCurrent();
-        delete context;
-
-        // schedule this to be deleted only after we're done cleaning up
-        surface->deleteLater();
-
         // Stop event processing, move the thread to GUI and make sure it is deleted.
         moveToThread(QGuiApplication::instance()->thread());
     }
@@ -228,12 +212,6 @@ Effect::Effect() : m_intensity(0), m_renderer(0), m_previous(0) {
 }
 
 void Effect::ready() {
-    m_renderer->surface = new QOffscreenSurface();
-    m_renderer->surface->setFormat(m_renderer->context->format());
-    m_renderer->surface->create();
-
-    m_renderer->moveToThread(renderThread);
-
     connect(window(), &QQuickWindow::sceneGraphInvalidated, m_renderer, &EffectRenderer::shutDown, Qt::QueuedConnection);
 
     update();
@@ -242,19 +220,13 @@ void Effect::ready() {
 QSGNode *Effect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     TextureNode *node = static_cast<TextureNode *>(oldNode);
 
-    if (!m_renderer->context) {
+    if (!renderThread->context) {
         QOpenGLContext *current = window()->openglContext();
         // Some GL implementations requres that the currently bound context is
         // made non-current before we set up sharing, so we doneCurrent here
         // and makeCurrent down below while setting up our own context.
         current->doneCurrent();
-
-        m_renderer->context = new QOpenGLContext();
-        m_renderer->context->setFormat(current->format());
-        m_renderer->context->setShareContext(current);
-        m_renderer->context->create();
-        m_renderer->context->moveToThread(renderThread);
-
+        renderThread->makeContext(current);
         current->makeCurrent(window());
 
         QMetaObject::invokeMethod(this, "ready");
