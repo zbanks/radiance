@@ -1,4 +1,5 @@
-#include "effect.h"
+#include "Effect.h"
+#include "main.h"
 
 #include <QtCore/QMutex>
 #include <QtQuick/QQuickFramebufferObject>
@@ -19,7 +20,6 @@ public:
         context(0),
         m_renderFbo(0),
         m_displayFbo(0),
-        m_size(300, 300), 
         m_program(0) {
     }
 
@@ -29,13 +29,21 @@ public:
 public slots:
     void renderNext() {
         context->makeCurrent(surface);
+        QSize size;
 
         if (!m_renderFbo) {
             // Initialize the buffers and renderer
+            size = uiSettings->previewSize();
             QOpenGLFramebufferObjectFormat format;
             format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-            m_renderFbo = new QOpenGLFramebufferObject(m_size, format);
-            m_displayFbo = new QOpenGLFramebufferObject(m_size, format);
+            m_renderFbo = new QOpenGLFramebufferObject(size, format);
+            m_displayFbo = new QOpenGLFramebufferObject(size, format);
+        } else if (m_renderFbo->size() != settings->value("effect/previewSize", QSize(300, 300)).value<QSize>()) {
+            size = uiSettings->previewSize();
+            delete m_renderFbo;
+            QOpenGLFramebufferObjectFormat format;
+            format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+            m_renderFbo = new QOpenGLFramebufferObject(size, format);
         }
 
         if (!m_program) {
@@ -65,9 +73,7 @@ public slots:
         }
 
         m_renderFbo->bind();
-        context->functions()->glViewport(0, 0, m_size.width(), m_size.height());
 
-        qDebug() << "Render";
         // RENDER HERE
         m_program->bind();
 
@@ -82,7 +88,7 @@ public slots:
         m_program->setAttributeArray(0, GL_FLOAT, values, 2);
         m_program->setUniformValue("t", (float)e->intensity());
 
-        glViewport(0, 0, m_size.width(), m_size.height());
+        glViewport(0, 0, size.width(), size.height());
 
         glDisable(GL_DEPTH_TEST);
 
@@ -107,7 +113,7 @@ public slots:
         m_renderFbo->bindDefault();
         qSwap(m_renderFbo, m_displayFbo);
 
-        emit textureReady(m_displayFbo->texture(), m_size);
+        emit textureReady(m_displayFbo->texture(), size);
     }
 
     void shutDown()
@@ -132,7 +138,6 @@ private:
     QOpenGLFramebufferObject *m_renderFbo;
     QOpenGLFramebufferObject *m_displayFbo;
     QOpenGLShaderProgram *m_program;
-    QSize m_size;
     Effect *e;
 };
 
@@ -210,8 +215,6 @@ private:
 };
 
 // Effect
-
-QThread *Effect::renderThread = 0;
 
 Effect::Effect() : m_intensity(0), m_renderer(0) {
     setFlag(ItemHasContents, true);
@@ -371,4 +374,4 @@ void Effect::setSource(QString value) {
 //    return new QOpenGLFramebufferObject(size, format);
 //}
 
-#include "effect.moc"
+#include "Effect.moc"

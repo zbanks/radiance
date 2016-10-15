@@ -4,6 +4,8 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 ColumnLayout {
+    Component.onCompleted: UISettings.previewSize = "300x300";
+
     Rectangle {
         width: 100;
         height: 100;
