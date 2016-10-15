@@ -2,4 +2,7 @@
 <qresource>
     <file>qml/application.qml</file>
 </qresource>
+<qresource>
+    <file>qml/UIEffectSet.qml</file>
+</qresource>
 </RCC>
