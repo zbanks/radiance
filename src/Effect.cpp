@@ -16,65 +16,72 @@ class EffectRenderer : public QObject, protected QOpenGLFunctions {
 public:
     EffectRenderer(Effect *e)
         : e(e),
-        m_renderFbo(0),
-        m_displayFbo(0),
-        m_program(0) {
+        m_displayPreviewFbo(0),
+        m_renderPreviewFbo(0),
+        m_fboIndex(0) {
         moveToThread(renderThread);
     }
 
 public slots:
     void renderNext() {
         renderThread->makeCurrent();
-        QSize size;
+        QSize size = uiSettings->previewSize();
 
-        if (!m_renderFbo) {
+        if (!m_renderPreviewFbo) {
             // Initialize the buffers and renderer
             initializeOpenGLFunctions(); // Placement of this function is black magic to me
-            size = uiSettings->previewSize();
-            m_renderFbo = new QOpenGLFramebufferObject(size);
-            m_displayFbo = new QOpenGLFramebufferObject(size);
-        } else if (m_renderFbo->size() != uiSettings->previewSize()) {
-            size = uiSettings->previewSize();
-            delete m_renderFbo;
-            m_renderFbo = new QOpenGLFramebufferObject(size);
-        }
 
-        m_renderFbo->bind();
+            m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
+            m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
+        }
 
         if (m_source != e->source()) {
             m_source = e->source();
             loadProgram(m_source);
         }
 
-        if (m_program != 0) {
-            m_program->bind();
+        glClearColor(0, 0, 0, 0);
+        glViewport(0, 0, size.width(), size.height());
+        glDisable(GL_DEPTH_TEST);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_BLEND);
 
-            m_program->enableAttributeArray(0);
-
-            // TODO preserve aspect ratio for non-square targets
+        if(m_programs.count() > 0) {
             float values[] = {
                 -1, -1,
                 1, -1,
                 -1, 1,
                 1, 1
             };
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
-            m_program->setUniformValue("t", (float)e->intensity());
 
-            glViewport(0, 0, size.width(), size.height());
+            for(int i = m_programs.count() - 1; i >= 0; i--) {
+                resizeFbo(&m_previewFbos[(m_fboIndex + 1) % m_previewFbos.count()], size);
+                QOpenGLFramebufferObject *target = m_previewFbos.at((m_fboIndex + 1) % m_previewFbos.count());
+                QOpenGLShaderProgram * p = m_programs.at(i);
 
-            glDisable(GL_DEPTH_TEST);
+                p->bind();
+                target->bind();
 
-            glClearColor(0, 0, 0, 1);
+                p->setAttributeArray(0, GL_FLOAT, values, 2);
+                p->setUniformValue("t", (float)e->intensity());
+                p->enableAttributeArray(0);
+
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                p->disableAttributeArray(0);
+                p->release();
+            }
+
+            m_fboIndex = (m_fboIndex + 1) % m_previewFbos.count();
+            QOpenGLFramebufferObject::bindDefault();
+
+            resizeFbo(&m_renderPreviewFbo, size);
+            QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbos.at(m_fboIndex));
+        } else {
+            resizeFbo(&m_renderPreviewFbo, size);
+            m_renderPreviewFbo->bind();
             glClear(GL_COLOR_BUFFER_BIT);
-
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-            m_program->disableAttributeArray(0);
-            m_program->release();
+            QOpenGLFramebufferObject::bindDefault();
         }
 
         // We need to flush the contents to the FBO before posting
@@ -82,17 +89,22 @@ public slots:
         // get unexpected results.
         renderThread->flush();
 
-        m_renderFbo->bindDefault();
-        qSwap(m_renderFbo, m_displayFbo);
+        qSwap(m_renderPreviewFbo, m_displayPreviewFbo);
 
-        emit textureReady(m_displayFbo->texture(), size);
+        emit textureReady(m_displayPreviewFbo->texture(), size);
     }
 
     void shutDown()
     {
         renderThread->makeCurrent();
-        delete m_renderFbo;
-        delete m_displayFbo;
+        delete m_renderPreviewFbo;
+        delete m_displayPreviewFbo;
+        foreach(QOpenGLShaderProgram *p, m_programs) delete p;
+        foreach(QOpenGLFramebufferObject *fbo, m_previewFbos) delete fbo;
+        m_renderPreviewFbo = 0;
+        m_displayPreviewFbo = 0;
+        m_programs.clear();
+        m_previewFbos.clear();
         // Stop event processing, move the thread to GUI and make sure it is deleted.
         moveToThread(QGuiApplication::instance()->thread());
     }
@@ -101,11 +113,13 @@ signals:
     void textureReady(int id, const QSize &size);
 
 private:
-    QOpenGLFramebufferObject *m_renderFbo;
-    QOpenGLFramebufferObject *m_displayFbo;
-    QOpenGLShaderProgram *m_program;
+    QVector<QOpenGLFramebufferObject *> m_previewFbos;
+    QVector<QOpenGLShaderProgram *> m_programs;
+    QOpenGLFramebufferObject * m_displayPreviewFbo;
+    QOpenGLFramebufferObject * m_renderPreviewFbo;
     Effect *e;
     QString m_source;
+    int m_fboIndex;
 
     void loadProgram(QString filename) {
         QFile file(filename);
@@ -126,8 +140,23 @@ private:
         program->bindAttributeLocation("vertices", 0);
         program->link();
 
-        delete m_program;
-        m_program = program;
+        foreach(QOpenGLShaderProgram *p, m_programs) delete p;
+        m_programs.clear();
+        m_programs.append(program);
+
+        QSize size = uiSettings->previewSize();
+        for(int i = 0; i < m_programs.count() + 1; i++) {
+            m_previewFbos.append(new QOpenGLFramebufferObject(size));
+            m_fboIndex = 0;
+        }
+        m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
+    }
+
+    void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
+        if((*fbo)->size() != size) {
+            delete *fbo;
+            *fbo = new QOpenGLFramebufferObject(size);
+        }
     }
 };
 
