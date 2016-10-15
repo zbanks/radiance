@@ -222,7 +222,7 @@ private:
 
 // Effect
 
-Effect::Effect() : m_intensity(0), m_renderer(0) {
+Effect::Effect() : m_intensity(0), m_renderer(0), m_previous(0) {
     setFlag(ItemHasContents, true);
     m_renderer = new EffectRenderer(this);
 }
@@ -303,6 +303,11 @@ void Effect::setIntensity(qreal value) {
 void Effect::setSource(QString value) {
     m_source = value;
     emit sourceChanged(value);
+}
+
+void Effect::setPrevious(Effect *previous) {
+    m_previous = previous;
+    qDebug() << "Set previous" << previous;
 }
 
 #include "Effect.moc"

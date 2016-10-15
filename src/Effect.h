@@ -22,6 +22,7 @@ public:
     QString source();
     void setIntensity(qreal value);
     void setSource(QString source);
+    Q_INVOKABLE void setPrevious(Effect *effect);
 
 public Q_SLOTS:
     void ready();
@@ -34,6 +35,7 @@ private:
     qreal m_intensity;
     QString m_source;
     EffectRenderer *m_renderer;
+    Effect *m_previous;
 };
 
 #endif
