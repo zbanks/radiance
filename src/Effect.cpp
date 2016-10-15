@@ -62,8 +62,12 @@ public slots:
                 p->bind();
                 target->bind();
 
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, m_previewFbos.at(m_fboIndex)->texture());
+
                 p->setAttributeArray(0, GL_FLOAT, values, 2);
-                p->setUniformValue("t", (float)e->intensity());
+                p->setUniformValue("iIntensity", (float)e->intensity());
+                p->setUniformValue("iChannelP", 1);
                 p->enableAttributeArray(0);
 
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -209,9 +213,7 @@ public slots:
         m_mutex.unlock();
         if (newId) {
             delete m_texture;
-            // note: include QQuickWindow::TextureHasAlphaChannel if the rendered content
-            // has alpha.
-            m_texture = m_window->createTextureFromId(newId, size);
+            m_texture = m_window->createTextureFromId(newId, size, QQuickWindow::TextureHasAlphaChannel);
             setTexture(m_texture);
 
             markDirty(DirtyMaterial);
@@ -313,7 +315,6 @@ void Effect::setSource(QString value) {
 void Effect::setPrevious(Effect *value) {
     m_previous = value;
     emit previousChanged(value);
-    qDebug() << "Set previous" << value;
 }
 
 #include "Effect.moc"
