@@ -37,6 +37,7 @@ RowLayout {
                     id: effect;
                     Layout.fillHeight: true;
                     Layout.fillWidth: true;
+                    height: width;
                     intensity: slider.value;
                     source: "../resources/effects/test.glsl";
                     previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
