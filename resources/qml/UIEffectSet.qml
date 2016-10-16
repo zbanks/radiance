@@ -4,12 +4,13 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 RowLayout {
+    property int count: 4;
     property int layout: Qt.LeftToRight;
     layoutDirection: layout;
 
     Repeater {
         id: repeater;
-        model: 4;
+        model: parent.count;
         GroupBox {
             property alias effect: effect;
             Layout.fillWidth: true;
