@@ -37,9 +37,9 @@ RowLayout {
                     Layout.preferredHeight: width;
                     Layout.fillWidth: true;
                     intensity: slider.value;
-                    //source: "../resources/effects/" + effectName.currentText + ".glsl";
+                    source: "../resources/effects/" + effectName.currentText + ".glsl";
                     previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
-                    source: index == repeater.model - 1 ? "../resources/effects/circle.glsl" : "../resources/effects/test.glsl";
+                    //source: index == repeater.model - 1 ? "../resources/effects/circle.glsl" : "../resources/effects/test.glsl";
                     Component.onCompleted: {
                         if(index == repeater.model - 1) {
                             effect.renderFinished.connect(effect.nextFrame);
@@ -51,7 +51,8 @@ RowLayout {
                     id: effectName;
                     Layout.fillWidth: true;
                     editable: true;
-                    model: ["test " + index, "rjump", "purple", index];
+                    currentIndex: index;
+                    model: ["purple", "test", "circle", "rainbow"];
                 }
             }
         }

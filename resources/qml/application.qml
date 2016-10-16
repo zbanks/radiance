@@ -10,7 +10,7 @@ GridLayout {
     anchors.fill: parent;
     columns: 3;
 
-    UIEffectSet { count: 2;}
+    UIEffectSet { count: 4;}
 
     GroupBox {
         width: 200;
@@ -41,7 +41,7 @@ GridLayout {
         }
     }
 
-    UIEffectSet { count: 2; layout: Qt.RightToLeft }
-    UIEffectSet { count: 2; }
-    UIEffectSet { count: 2; layout: Qt.RightToLeft }
+    UIEffectSet { count: 4; layout: Qt.RightToLeft }
+    UIEffectSet { count: 4; }
+    UIEffectSet { count: 4; layout: Qt.RightToLeft }
 }
