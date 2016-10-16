@@ -37,6 +37,28 @@ ApplicationWindow {
                 color: "grey";
                 Label { text: "TODO: Spectrum" }
             }
+            OutputManager {
+                id: outputManager
+                Component.onCompleted: { this.createBus("test://127.0.0.1:1365"); this.createBus("test://1243") }
+            }
+            ColumnLayout {
+                Layout.fillHeight: true;
+                Layout.fillWidth: true;
+                ListView {
+                    Layout.fillHeight: true;
+                    Layout.fillWidth: true;
+                    model: outputManager.buses
+                    delegate: RowLayout {
+                        property var bus : outputManager.buses[index];
+                        TextField {
+                            id: bus_textbox;
+                            text: bus.uri;
+                            onAccepted: { bus.uri = text }
+                        }
+                        Label { text: "Bus URI: " + bus.uri + "; State: " + bus.state}
+                    }
+                }
+            }
         }
 
         UIEffectPanel {}

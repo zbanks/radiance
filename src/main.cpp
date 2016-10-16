@@ -3,6 +3,8 @@
 #include <QQmlApplicationEngine>
 #include "Effect.h"
 #include "RenderThread.h"
+#include "Output.h"
+#include "Lux.h"
 #include "main.h"
 
 RenderThread *renderThread = 0;
@@ -27,6 +29,8 @@ int main(int argc, char *argv[]) {
     renderThread->start();
 
     qmlRegisterType<Effect>("radiance", 1, 0, "Effect");
+    qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
+    qmlRegisterType<OutputManager>("radiance", 1, 0, "OutputManager");
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
 

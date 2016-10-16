@@ -16,17 +16,20 @@ public:
 
 
 class LuxBus : public OutputBus {
+    Q_OBJECT
+
 public:
-    LuxBus(std::string uri);
-    LuxBus(const LuxBus &bus);
+    LuxBus();
+    LuxBus(QString uri);
     ~LuxBus();
 
-    int refreshDevices();
+    void setUri(QString uri);
+
+public Q_SLOTS:
+    void refresh();
     void sendFrames();
     void syncFrames();
 
 private:
-    std::vector<LuxDevice> devices;
-    std::string uri;
-    int fd;
+    int m_fd;
 };
