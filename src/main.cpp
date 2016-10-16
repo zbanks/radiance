@@ -34,7 +34,5 @@ int main(int argc, char *argv[]) {
     view.setSource(QUrl("qrc:///qml/application.qml"));
     view.show();
 
-    // TODO teardown renderThread
-
     return app.exec();
 }
