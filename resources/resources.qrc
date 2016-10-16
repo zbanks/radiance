@@ -5,4 +5,7 @@
 <qresource>
     <file>qml/UIEffectSet.qml</file>
 </qresource>
+<qresource>
+    <file>qml/UIEffectPanel.qml</file>
+</qresource>
 </RCC>
