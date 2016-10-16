@@ -25,19 +25,22 @@ public:
     void setIntensity(qreal value);
     void setSource(QString source);
     void setPrevious(Effect *source);
+    QOpenGLFramebufferObject *previewFbo;
+    EffectRenderer *m_renderer;
 
 public Q_SLOTS:
     void ready();
+    void nextFrame();
 
 signals:
     void intensityChanged(qreal value);
     void sourceChanged(QString value);
     void previousChanged(Effect * value);
+    void renderFinished();
 
 private:
     qreal m_intensity;
     QString m_source;
-    EffectRenderer *m_renderer;
     Effect *m_previous;
 };
 

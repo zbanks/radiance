@@ -18,26 +18,21 @@ public:
         : e(e),
         m_displayPreviewFbo(0),
         m_renderPreviewFbo(0),
+        m_blankPreviewFbo(0),
         m_fboIndex(0) {
         moveToThread(renderThread);
     }
 
 public slots:
-    void renderNext() {
+    void render() {
         renderThread->makeCurrent();
         QSize size = uiSettings->previewSize();
 
         if (!m_renderPreviewFbo) {
-            // Initialize the buffers and renderer
             initializeOpenGLFunctions(); // Placement of this function is black magic to me
-
             m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
             m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
-        }
-
-        if (m_source != e->source()) {
-            m_source = e->source();
-            loadProgram(m_source);
+            m_blankPreviewFbo = new QOpenGLFramebufferObject(size);
         }
 
         glClearColor(0, 0, 0, 0);
@@ -45,6 +40,24 @@ public slots:
         glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_BLEND);
+
+        if (m_source != e->source()) {
+            m_source = e->source();
+            loadProgram(m_source);
+        }
+
+        QOpenGLFramebufferObject *previousPreviewFbo;
+        // TODO locking???
+        Effect * previous = e->previous();
+        if(previous == 0) {
+            resizeFbo(&m_blankPreviewFbo, size);
+            m_blankPreviewFbo->bind();
+            glClear(GL_COLOR_BUFFER_BIT);
+            previousPreviewFbo = m_blankPreviewFbo;
+        } else {
+            previous->m_renderer->render();
+            previousPreviewFbo = previous->previewFbo;
+        }
 
         if(m_programs.count() > 0) {
             float values[] = {
@@ -62,11 +75,14 @@ public slots:
                 p->bind();
                 target->bind();
 
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, previousPreviewFbo->texture());
                 glActiveTexture(GL_TEXTURE1);
                 glBindTexture(GL_TEXTURE_2D, m_previewFbos.at(m_fboIndex)->texture());
 
                 p->setAttributeArray(0, GL_FLOAT, values, 2);
                 p->setUniformValue("iIntensity", (float)e->intensity());
+                p->setUniformValue("iFrame", 0);
                 p->setUniformValue("iChannelP", 1);
                 p->enableAttributeArray(0);
 
@@ -81,13 +97,12 @@ public slots:
 
             resizeFbo(&m_renderPreviewFbo, size);
             QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbos.at(m_fboIndex));
+            e->previewFbo = m_previewFbos.at(m_fboIndex);
         } else {
-            resizeFbo(&m_renderPreviewFbo, size);
-            m_renderPreviewFbo->bind();
-            glClear(GL_COLOR_BUFFER_BIT);
-            QOpenGLFramebufferObject::bindDefault();
+            QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, previousPreviewFbo);
+            e->previewFbo = previousPreviewFbo;
         }
-
+ 
         // We need to flush the contents to the FBO before posting
         // the texture to the other thread, otherwise, we might
         // get unexpected results.
@@ -121,6 +136,7 @@ private:
     QVector<QOpenGLShaderProgram *> m_programs;
     QOpenGLFramebufferObject * m_displayPreviewFbo;
     QOpenGLFramebufferObject * m_renderPreviewFbo;
+    QOpenGLFramebufferObject * m_blankPreviewFbo;
     Effect *e;
     QString m_source;
     int m_fboIndex;
@@ -237,7 +253,7 @@ private:
 
 // Effect
 
-Effect::Effect() : m_intensity(0), m_renderer(0), m_previous(0) {
+Effect::Effect() : m_intensity(0), m_renderer(0), m_previous(0), previewFbo(0) {
     setFlag(ItemHasContents, true);
     m_renderer = new EffectRenderer(this);
 }
@@ -274,13 +290,11 @@ QSGNode *Effect::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
         connect(m_renderer, &EffectRenderer::textureReady, node, &TextureNode::newTexture, Qt::DirectConnection);
         connect(node, &TextureNode::pendingNewTexture, window(), &QQuickWindow::update, Qt::QueuedConnection);
         connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode::prepareNode, Qt::DirectConnection);
-
-        // TEMPORARY
-        connect(node, &TextureNode::textureInUse, m_renderer, &EffectRenderer::renderNext, Qt::QueuedConnection);
+        connect(node, &TextureNode::textureInUse, this, &Effect::renderFinished, Qt::DirectConnection);
 
         // Get the production of FBO textures started.
         // TEMPORARY
-        QMetaObject::invokeMethod(m_renderer, "renderNext", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(m_renderer, "render", Qt::QueuedConnection);
     }
 
     node->setRect(boundingRect());
@@ -315,6 +329,11 @@ void Effect::setSource(QString value) {
 void Effect::setPrevious(Effect *value) {
     m_previous = value;
     emit previousChanged(value);
+}
+
+void Effect::nextFrame() {
+    // TODO: if still rendering previous frame, skip
+    QMetaObject::invokeMethod(m_renderer, "render", Qt::QueuedConnection);
 }
 
 #include "Effect.moc"

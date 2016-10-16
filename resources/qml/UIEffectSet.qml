@@ -37,8 +37,13 @@ RowLayout {
                     Layout.fillWidth: true;
                     intensity: slider.value;
                     //source: "../resources/effects/" + effectName.currentText + ".glsl";
-                    source: "../resources/effects/test.glsl";
                     previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
+                    source: index == repeater.model - 1 ? "../resources/effects/circle.glsl" : "../resources/effects/test.glsl";
+                    Component.onCompleted: {
+                        if(index == repeater.model - 1) {
+                            effect.renderFinished.connect(effect.nextFrame);
+                        }
+                    }
                 }
                 
                 ComboBox {

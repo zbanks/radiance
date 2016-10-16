@@ -1,6 +1,7 @@
 uniform lowp float iIntensity;
 varying highp vec2 coords;
 uniform sampler2D iChannelP;
+uniform sampler2D iFrame;
 
 // Alpha-compsite two colors, putting one on top of the other
 vec4 composite(vec4 under, vec4 over) {
@@ -11,6 +12,6 @@ vec4 composite(vec4 under, vec4 over) {
 void main() {
     gl_FragColor = vec4(1., 0., 0., 1. - smoothstep(iIntensity, iIntensity + .1, length(coords)));
 
-    vec4 c = texture2D(iChannelP, 0.6 * (coords + 1.));
-    gl_FragColor = composite(gl_FragColor, c);
+    vec4 c = texture2D(iFrame, 0.5 * (coords + 1.));
+    gl_FragColor = composite(c, gl_FragColor);
 }
