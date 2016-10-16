@@ -1,6 +1,6 @@
 #include <QGuiApplication>
 #include <QCoreApplication>
-#include <QQuickView>
+#include <QQmlApplicationEngine>
 #include "Effect.h"
 #include "RenderThread.h"
 #include "main.h"
@@ -30,9 +30,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
 
-    QQuickView view;
-    view.setSource(QUrl("qrc:///qml/application.qml"));
-    view.show();
+    QQmlApplicationEngine engine(QUrl("qrc:///qml/application.qml"));
 
     return app.exec();
 }
