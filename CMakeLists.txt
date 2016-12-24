@@ -1,14 +1,16 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-project(testproject)
+project(radiance)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 find_package(Qt5Widgets)
 find_package(Qt5Quick)
 find_package(Qt5Gui)
+find_package(PortAudio)
 
 qt5_add_resources(resources/resources.qrc)
 
@@ -18,8 +20,9 @@ add_executable(radiance WIN32 src/main.cpp
     src/RenderThread.cpp
     src/Output.cpp
     src/Lux.cpp
+    src/Audio.cpp
     src/liblux/lux.c
     src/liblux/crc.c
     resources/resources.qrc)
 
-target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui)
+target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${PORTAUDIO_LIBRARIES})

@@ -2,6 +2,7 @@
 #include <QOpenGLFunctions>
 
 RenderThread::RenderThread() : context(0), surface(0) {
+    start();
 }
 
 void RenderThread::makeContext(QOpenGLContext *current) {
