@@ -33,6 +33,8 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationDomain("radiance.lighting");
     QCoreApplication::setApplicationName("Radiance");
 
+    qRegisterMetaType<Effect*>("Effect*");
+
     settings = new QSettings();
     uiSettings = new UISettings();
     audio = new Audio();

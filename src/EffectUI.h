@@ -21,7 +21,6 @@ public:
     void setIntensity(qreal value);
     void setSource(QString source);
     void setPrevious(EffectUI *source);
-    QOpenGLFramebufferObject *previewFbo;
     Effect *m_renderer;
 
 public Q_SLOTS:
@@ -35,7 +34,5 @@ signals:
     void renderFinished();
 
 private:
-    qreal m_intensity;
-    QString m_source;
     EffectUI *m_previous;
 };

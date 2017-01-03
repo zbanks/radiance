@@ -2,12 +2,15 @@
 #include "EffectUI.h"
 #include "main.h"
 
-Effect::Effect(EffectUI *e)
-    : e(e),
-    m_displayPreviewFbo(0),
+#include <QThread>
+
+Effect::Effect()
+    : m_displayPreviewFbo(0),
     m_renderPreviewFbo(0),
     m_blankPreviewFbo(0),
-    m_fboIndex(0) {
+    m_fboIndex(0),
+    m_intensity(0),
+    m_previous(0) {
     moveToThread(renderContext->thread());
 }
 
@@ -28,22 +31,22 @@ void Effect::render() {
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_BLEND);
 
-    if (m_source != e->source()) {
-        m_source = e->source();
-        loadProgram(m_source);
+    QString s = source();
+    if (m_prevSource != s) {
+        m_prevSource = s;
+        loadProgram(s);
     }
 
     QOpenGLFramebufferObject *previousPreviewFbo;
-    // TODO locking???
-    EffectUI * previous = e->previous();
-    if(previous == 0) {
+    Effect * prev = previous();
+    if(prev == 0) {
         resizeFbo(&m_blankPreviewFbo, size);
         m_blankPreviewFbo->bind();
         glClear(GL_COLOR_BUFFER_BIT);
         previousPreviewFbo = m_blankPreviewFbo;
     } else {
-        previous->m_renderer->render();
-        previousPreviewFbo = previous->previewFbo;
+        prev->render();
+        previousPreviewFbo = prev->previewFbo;
     }
 
     if(m_programs.count() > 0) {
@@ -68,7 +71,7 @@ void Effect::render() {
             glBindTexture(GL_TEXTURE_2D, m_previewFbos.at(m_fboIndex)->texture());
 
             p->setAttributeArray(0, GL_FLOAT, values, 2);
-            p->setUniformValue("iIntensity", (float)e->intensity());
+            p->setUniformValue("iIntensity", (float)intensity());
             p->setUniformValue("iFrame", 0);
             p->setUniformValue("iChannelP", 1);
             p->enableAttributeArray(0);
@@ -84,10 +87,10 @@ void Effect::render() {
 
         resizeFbo(&m_renderPreviewFbo, size);
         QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbos.at(m_fboIndex));
-        e->previewFbo = m_previewFbos.at(m_fboIndex);
+        previewFbo = m_previewFbos.at(m_fboIndex);
     } else {
         QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, previousPreviewFbo);
-        e->previewFbo = previousPreviewFbo;
+        previewFbo = previousPreviewFbo;
     }
  
     // We need to flush the contents to the FBO before posting
@@ -150,4 +153,51 @@ void Effect::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
         delete *fbo;
         *fbo = new QOpenGLFramebufferObject(size);
     }
+}
+
+qreal Effect::intensity() {
+    qreal result;
+    m_intensityLock.lock();
+    result = m_intensity;
+    m_intensityLock.unlock();
+    return result;
+}
+
+QString Effect::source() {
+    QString result;
+    m_sourceLock.lock();
+    result = m_source;
+    m_sourceLock.unlock();
+    return result;
+}
+
+Effect *Effect::previous() {
+    Effect *result;
+    m_previousLock.lock();
+    result = m_previous;
+    m_previousLock.unlock();
+    return result;
+}
+
+void Effect::setIntensity(qreal value) {
+    m_intensityLock.lock();
+    if(value > 1) value = 1;
+    if(value < 0) value = 0;
+    m_intensity = value;
+    m_intensityLock.unlock();
+    emit intensityChanged(value);
+}
+
+void Effect::setSource(QString value) {
+    m_sourceLock.lock();
+    m_source = value;
+    m_sourceLock.unlock();
+    emit sourceChanged(value);
+}
+
+void Effect::setPrevious(Effect *value) {
+    m_previousLock.lock();
+    m_previous = value;
+    m_previousLock.unlock();
+    emit previousChanged(value);
 }

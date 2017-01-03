@@ -1,5 +1,4 @@
 #include "EffectUI.h"
-#include "Effect.h"
 #include "main.h"
 
 #include <QtCore/QMutex>
@@ -80,9 +79,41 @@ private:
 
 // EffectUI
 
-EffectUI::EffectUI() : m_intensity(0), m_renderer(0), m_previous(0), previewFbo(0) {
+EffectUI::EffectUI() : m_renderer(0), m_previous(0) {
     setFlag(ItemHasContents, true);
-    m_renderer = new Effect(this);
+    m_renderer = new Effect();
+    connect(m_renderer, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
+    connect(m_renderer, &Effect::sourceChanged, this, &EffectUI::sourceChanged);
+}
+
+qreal EffectUI::intensity() {
+    return m_renderer->intensity();
+}
+
+QString EffectUI::source() {
+    return m_renderer->source();
+}
+
+EffectUI *EffectUI::previous() {
+    return m_previous;
+}
+
+void EffectUI::setIntensity(qreal value) {
+    m_renderer->setIntensity(value);
+}
+
+void EffectUI::setSource(QString value) {
+    m_renderer->setSource(value);
+}
+
+void EffectUI::setPrevious(EffectUI *value) {
+    m_previous = value;
+    if(m_previous == NULL) {
+        m_renderer->setPrevious(NULL);
+    } else {
+        m_renderer->setPrevious(value->m_renderer);
+    }
+    emit previousChanged(value);
 }
 
 void EffectUI::ready() {
@@ -127,35 +158,6 @@ QSGNode *EffectUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     node->setRect(boundingRect());
 
     return node;
-}
-
-qreal EffectUI::intensity() {
-    return m_intensity;
-}
-
-QString EffectUI::source() {
-    return m_source;
-}
-
-EffectUI *EffectUI::previous() {
-    return m_previous;
-}
-
-void EffectUI::setIntensity(qreal value) {
-    if(value > 1) value = 1;
-    if(value < 0) value = 0;
-    m_intensity = value;
-    emit intensityChanged(value);
-}
-
-void EffectUI::setSource(QString value) {
-    m_source = value;
-    emit sourceChanged(value);
-}
-
-void EffectUI::setPrevious(EffectUI *value) {
-    m_previous = value;
-    emit previousChanged(value);
 }
 
 void EffectUI::nextFrame() {
