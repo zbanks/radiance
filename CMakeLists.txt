@@ -16,8 +16,9 @@ qt5_add_resources(resources/resources.qrc)
 
 add_executable(radiance WIN32 src/main.cpp
     src/Effect.cpp
+    src/EffectUI.cpp
     src/UISettings.cpp
-    src/RenderThread.cpp
+    src/RenderContext.cpp
     src/Output.cpp
     src/Lux.cpp
     src/Audio.cpp

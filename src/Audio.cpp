@@ -7,6 +7,7 @@ const int FrameRate = 44100;
 const int ChunkSize = 128;
 
 Audio::Audio() : m_chunk(ChunkSize) {
+    setObjectName("AudioThread");
     m_run = true;
     start();
 }

@@ -3,9 +3,9 @@
 
 #include <QSettings>
 #include "UISettings.h"
-#include "RenderThread.h"
+#include "RenderContext.h"
 
-extern RenderThread *renderThread;
+extern RenderContext *renderContext;
 extern QSettings *settings;
 extern UISettings *uiSettings;
 
