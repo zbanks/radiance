@@ -19,6 +19,5 @@ public:
 public slots:
     void start();
     void finish();
-private slots:
-    void tick();
+    void render();
 };

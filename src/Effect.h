@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderContext.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFramebufferObject>
@@ -9,7 +10,7 @@ class Effect : public QObject, protected QOpenGLFunctions {
     Q_OBJECT
 
 public:
-    Effect();
+    Effect(RenderContext *context);
 
 public slots:
     void render();
@@ -33,6 +34,8 @@ protected:
     QOpenGLFramebufferObject *previewFbo;
 
 private:
+    RenderContext *m_context;
+
     QVector<QOpenGLFramebufferObject *> m_previewFbos;
     QVector<QOpenGLShaderProgram *> m_programs;
     QOpenGLFramebufferObject *m_displayPreviewFbo;

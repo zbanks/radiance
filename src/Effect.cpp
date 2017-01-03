@@ -2,20 +2,19 @@
 #include "EffectUI.h"
 #include "main.h"
 
-#include <QThread>
-
-Effect::Effect()
-    : m_displayPreviewFbo(0),
+Effect::Effect(RenderContext *context)
+    : m_context(context),
+    m_displayPreviewFbo(0),
     m_renderPreviewFbo(0),
     m_blankPreviewFbo(0),
     m_fboIndex(0),
     m_intensity(0),
     m_previous(0) {
-    moveToThread(renderContext->thread());
+    moveToThread(context->thread());
 }
 
 void Effect::render() {
-    renderContext->makeCurrent();
+    m_context->makeCurrent();
     QSize size = uiSettings->previewSize();
 
     if (!m_renderPreviewFbo) {
@@ -96,7 +95,7 @@ void Effect::render() {
     // We need to flush the contents to the FBO before posting
     // the texture to the other thread, otherwise, we might
     // get unexpected results.
-    renderContext->flush();
+    m_context->flush();
 
     qSwap(m_renderPreviewFbo, m_displayPreviewFbo);
 
@@ -104,7 +103,7 @@ void Effect::render() {
 }
 
 void Effect::shutDown() {
-    renderContext->makeCurrent();
+    m_context->makeCurrent();
     delete m_renderPreviewFbo;
     delete m_displayPreviewFbo;
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;

@@ -16,7 +16,7 @@ void RenderContext::start() {
 
     timer = new QTimer();
     timer->setInterval(1000);
-    connect(timer, &QTimer::timeout, this, &RenderContext::tick);
+    connect(timer, &QTimer::timeout, this, &RenderContext::render);
     timer->start();
 }
 
@@ -42,9 +42,9 @@ void RenderContext::share(QOpenGLContext *current) {
     surface->create();
 }
 
-void RenderContext::tick() {
+void RenderContext::render() {
     qDebug() << "TICK";
-    qDebug() << QThread::currentThread();
+    // TODO Figure out which children are leafs and tell them to render
 }
 
 void RenderContext::makeCurrent() {

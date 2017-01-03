@@ -81,7 +81,7 @@ private:
 
 EffectUI::EffectUI() : m_renderer(0), m_previous(0) {
     setFlag(ItemHasContents, true);
-    m_renderer = new Effect();
+    m_renderer = new Effect(renderContext);
     connect(m_renderer, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
     connect(m_renderer, &Effect::sourceChanged, this, &EffectUI::sourceChanged);
 }
