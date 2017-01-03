@@ -3,13 +3,9 @@
 #include "main.h"
 
 #include <QtCore/QMutex>
-#include <QtQuick/QQuickFramebufferObject>
-#include <QtGui/QOpenGLShaderProgram>
 #include <QtGui/QOpenGLContext>
-#include <QtGui/QOpenGLFramebufferObject>
-#include <QtGui/QOffscreenSurface>
 #include <QtQuick/QSGSimpleTextureNode>
-#include <QGuiApplication>
+#include <QtQuick/QQuickWindow>
 
 class TextureNode : public QObject, public QSGSimpleTextureNode {
     Q_OBJECT

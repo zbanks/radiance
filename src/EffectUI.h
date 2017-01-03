@@ -1,10 +1,8 @@
 #pragma once
 
 #include "Effect.h"
-#include <QtQuick/QQuickFramebufferObject>
-#include <QtQuick/QQuickWindow>
-#include <QOpenGLShaderProgram>
-#include <QtGui/QOpenGLFunctions>
+#include <QtQuick/QQuickItem>
+#include <QtGui/QOpenGLFramebufferObject>
 
 class EffectUI : public QQuickItem {
     Q_OBJECT
