@@ -75,7 +75,7 @@ qreal EffectUI::intensity() {
 }
 
 QString EffectUI::source() {
-    return m_renderer->source();
+    return m_source;
 }
 
 EffectUI *EffectUI::previous() {
@@ -87,7 +87,12 @@ void EffectUI::setIntensity(qreal value) {
 }
 
 void EffectUI::setSource(QString value) {
-    m_renderer->setSource(value);
+    m_source = value;
+    QOpenGLContext *current = window()->openglContext();
+    if(current) {
+        current->makeCurrent(window());
+        m_renderer->loadProgram(value);
+    }
 }
 
 void EffectUI::setPrevious(EffectUI *value) {
@@ -126,6 +131,7 @@ QSGNode *EffectUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
     if (!node) {
         node = new TextureNode(window(), m_renderer);
+        if(!m_source.isEmpty()) m_renderer->loadProgram(m_source);
 
         // When a new texture is ready on the rendering thread, we use a direct connection to
         // the texture node to let it know a new texture can be used. The node will then

@@ -48,12 +48,6 @@ void Effect::render() {
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_BLEND);
 
-    QString s = source();
-    if (m_prevSource != s) {
-        m_prevSource = s;
-        loadProgram(s);
-    }
-
     QOpenGLFramebufferObject *previousPreviewFbo;
     Effect * prev = previous();
     if(prev == 0) {
@@ -67,6 +61,7 @@ void Effect::render() {
         previousPreviewFbo = prev->previewFbo;
     }
 
+    m_programLock.lock();
     if(m_programs.count() > 0) {
         float values[] = {
             -1, -1,
@@ -108,6 +103,7 @@ void Effect::render() {
     } else {
         previewFbo = previousPreviewFbo;
     }
+    m_programLock.unlock();
 
     // We need to flush the contents to the FBO before posting
     // the texture to the other thread, otherwise, we might
@@ -155,11 +151,16 @@ Effect::~Effect() {
     //moveToThread(QGuiApplication::instance()->thread());
 }
 
-void Effect::loadProgram(QString filename) {
+// Call this to load shader code into this Effect.
+// This function is thread-safe, avoid calling this in the render thread.
+// A current OpenGL context is required.
+// Returns true if the program was loaded successfully
+bool Effect::loadProgram(QString name) {
+    QString filename = QString("../resources/effects/%1.glsl").arg(name);
     QFile file(filename);
     if(!file.open(QIODevice::ReadOnly)) {
         qDebug() << QString("Could not open \"%1\"").arg(filename);
-        return;
+        return false;
     }
 
     QTextStream s1(&file);
@@ -177,9 +178,11 @@ void Effect::loadProgram(QString filename) {
     program->bindAttributeLocation("vertices", 0);
     program->link();
 
+    m_programLock.lock();
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;
     m_programs.clear();
     m_programs.append(program);
+    m_programLock.unlock();
 
     QSize size = uiSettings->previewSize();
     for(int i = 0; i < m_programs.count() + 1; i++) {
@@ -187,6 +190,7 @@ void Effect::loadProgram(QString filename) {
         m_fboIndex = 0;
     }
     m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
+    return true;
 }
 
 void Effect::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
@@ -201,14 +205,6 @@ qreal Effect::intensity() {
     m_intensityLock.lock();
     result = m_intensity;
     m_intensityLock.unlock();
-    return result;
-}
-
-QString Effect::source() {
-    QString result;
-    m_sourceLock.lock();
-    result = m_source;
-    m_sourceLock.unlock();
     return result;
 }
 
@@ -227,13 +223,6 @@ void Effect::setIntensity(qreal value) {
     m_intensity = value;
     m_intensityLock.unlock();
     emit intensityChanged(value);
-}
-
-void Effect::setSource(QString value) {
-    m_sourceLock.lock();
-    m_source = value;
-    m_sourceLock.unlock();
-    emit sourceChanged(value);
 }
 
 void Effect::setPrevious(Effect *value) {

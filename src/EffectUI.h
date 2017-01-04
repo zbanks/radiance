@@ -34,4 +34,5 @@ signals:
 
 private:
     EffectUI *m_previous;
+    QString m_source;
 };

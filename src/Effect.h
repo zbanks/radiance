@@ -15,17 +15,16 @@ public:
     Effect(RenderContext *context);
     ~Effect();
     QOpenGLFramebufferObject *m_displayPreviewFbo;
+    bool loadProgram(QString name);
  
 public slots:
     void render();
 
     qreal intensity();
-    QString source();
     Effect *previous();
     bool isMaster();
 
     void setIntensity(qreal value);
-    void setSource(QString value);
     void setPrevious(Effect *value);
     void setMaster(bool set);
 
@@ -51,7 +50,6 @@ private:
     int m_fboIndex;
 
     void initialize();
-    void loadProgram(QString filename);
     void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size);
 
     qreal m_intensity;
@@ -60,7 +58,7 @@ private:
     Effect *m_previous;
 
     QMutex m_intensityLock;
-    QMutex m_sourceLock;
+    QMutex m_programLock;
     QMutex m_previousLock;
     QMutex m_masterLock;
     QMutex m_previewLock;
