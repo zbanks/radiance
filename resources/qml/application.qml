@@ -7,7 +7,9 @@ ApplicationWindow {
     id: window;
     visible: true;
 
-    Component.onCompleted: UISettings.previewSize = "100x100";
+    Component.onCompleted: {
+        UISettings.previewSize = "100x100";
+    }
 
     menuBar: MenuBar {
         Menu {

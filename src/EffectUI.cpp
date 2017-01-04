@@ -133,7 +133,6 @@ QSGNode *EffectUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
         connect(m_renderer, &Effect::textureReady, window(), &QQuickWindow::update, Qt::QueuedConnection);
         connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode::prepareNode, Qt::DirectConnection);
-        connect(window(), &QQuickWindow::frameSwapped, m_renderer, &Effect::nextFrame, Qt::QueuedConnection);
     }
 
     node->setRect(boundingRect());

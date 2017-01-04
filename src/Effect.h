@@ -36,7 +36,6 @@ signals:
     void intensityChanged(qreal value);
     void sourceChanged(QString value);
     void previousChanged(Effect *value);
-    void nextFrame();
 
 protected:
     QOpenGLFramebufferObject *previewFbo;

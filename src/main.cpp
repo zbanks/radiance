@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QCoreApplication>
 #include <QQmlApplicationEngine>
+#include <QQuickWindow>
 #include <QThread>
 #include "EffectUI.h"
 #include "RenderContext.h"
@@ -32,7 +33,7 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationDomain("radiance.lighting");
     QCoreApplication::setApplicationName("Radiance");
 
-    qRegisterMetaType<Effect*>("Effect*");
+    //qRegisterMetaType<Effect*>("Effect*");
 
     settings = new QSettings();
     uiSettings = new UISettings();
@@ -55,6 +56,9 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
 
     QQmlApplicationEngine engine(QUrl("qrc:///qml/application.qml"));
+
+    QObject *window = engine.rootObjects().first();
+    QObject::connect(window, SIGNAL(frameSwapped()), renderContext, SLOT(render()));
 
     return app.exec();
 }

@@ -64,11 +64,7 @@ void RenderContext::share(QOpenGLContext *current) {
 
 void RenderContext::setMaster(Effect *e) {
     m_masterLock.lock();
-    disconnect(m_master, &Effect::nextFrame, this, &RenderContext::render);
     m_master = e;
-    if(e != NULL) {
-        connect(m_master, &Effect::nextFrame, this, &RenderContext::render);
-    }
     m_masterLock.unlock();
 }
 
