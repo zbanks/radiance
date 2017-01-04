@@ -90,7 +90,6 @@ void Effect::render() {
 
             p->setAttributeArray(0, GL_FLOAT, values, 2);
             float intense = intensity();
-            qDebug() << intense;
             p->setUniformValue("iIntensity", intense);
             p->setUniformValue("iFrame", 0);
             p->setUniformValue("iChannelP", 1);
@@ -122,7 +121,6 @@ void Effect::render() {
     // the lock makes this one go very fast
     m_context->flush();
     m_previewUpdated = true;
-    qDebug() << "finished rendering into" << m_renderPreviewFbo->texture();
     m_previewLock.unlock();
 
     emit textureReady();
@@ -134,8 +132,11 @@ void Effect::render() {
 bool Effect::swapPreview() {
     m_previewLock.lock();
     bool previewUpdated = m_previewUpdated;
-    if(previewUpdated) qSwap(m_renderPreviewFbo, m_displayPreviewFbo);
-    m_previewUpdated = false;
+    if(previewUpdated) {
+        resizeFbo(&m_displayPreviewFbo, m_renderPreviewFbo->size());
+        QOpenGLFramebufferObject::blitFramebuffer(m_displayPreviewFbo, m_renderPreviewFbo);
+        m_previewUpdated = false;
+    }
     m_previewLock.unlock();
     return previewUpdated;
 }

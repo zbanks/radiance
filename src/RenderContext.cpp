@@ -2,17 +2,17 @@
 #include <QOpenGLFunctions>
 #include <QDebug>
 
-RenderContext::RenderContext() : context(0), surface(0), m_master(0) {
+RenderContext::RenderContext()
+    : context(0)
+    , surface(0)
+    , m_master(0)
+    , timer(0) {
     context = new QOpenGLContext();
     context->create();
 
     surface = new QOffscreenSurface();
     surface->setFormat(context->format());
     surface->create();
-
-    timer = new QTimer(this);
-    timer->setInterval(100);
-    connect(timer, &QTimer::timeout, this, &RenderContext::render);
 }
 
 void RenderContext::moveToThread(QThread *t) {
@@ -28,7 +28,7 @@ RenderContext::~RenderContext() {
 }
 
 void RenderContext::start() {
-    timer->start();
+    elapsed_timer.start();
 }
 
 // Radiance creates its own OpenGL context for rendering,
@@ -44,7 +44,6 @@ void RenderContext::share(QOpenGLContext *current) {
     // since the last render.
 
     m_contextLock.lock();
-    qDebug() << "sharing is caring";
     context->doneCurrent();
     QOpenGLContext *newContext = new QOpenGLContext();
     delete context;
@@ -60,13 +59,16 @@ void RenderContext::share(QOpenGLContext *current) {
     surface = newSurface;
     surface->setFormat(context->format());
     surface->create();
-    qDebug() << "done caring";
     m_contextLock.unlock();
 }
 
 void RenderContext::setMaster(Effect *e) {
     m_masterLock.lock();
+    disconnect(m_master, &Effect::nextFrame, this, &RenderContext::render);
     m_master = e;
+    if(e != NULL) {
+        connect(m_master, &Effect::nextFrame, this, &RenderContext::render);
+    }
     m_masterLock.unlock();
 }
 
@@ -79,12 +81,17 @@ Effect *RenderContext::master() {
 }
 
 void RenderContext::render() {
-    qDebug() << "TICK" << QThread::currentThread();
+    qint64 framePeriod = elapsed_timer.nsecsElapsed();
+    elapsed_timer.restart();
+
     if(m_master != NULL) {
         m_contextLock.lock();
         m_master->render();
         m_contextLock.unlock();
     }
+    emit renderingFinished();
+    qint64 renderingPeriod = elapsed_timer.nsecsElapsed();
+    //qDebug() << framePeriod << renderingPeriod;
 }
 
 void RenderContext::makeCurrent() {

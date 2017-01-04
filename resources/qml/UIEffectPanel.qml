@@ -4,7 +4,6 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 GridLayout {
-    Component.onCompleted: UISettings.previewSize = "100x100";
     columns: 3;
 
     UIEffectSet { count: 4;}

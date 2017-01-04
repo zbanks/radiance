@@ -7,6 +7,8 @@ ApplicationWindow {
     id: window;
     visible: true;
 
+    Component.onCompleted: UISettings.previewSize = "100x100";
+
     menuBar: MenuBar {
         Menu {
             title: "File";
@@ -74,7 +76,8 @@ ApplicationWindow {
                 }
             }
 
-            UIEffectPanel {}
+            //UIEffectPanel {}
+            UIEffectSet { count: 4;}
         }
     }
 }

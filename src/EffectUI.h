@@ -30,6 +30,7 @@ signals:
     void intensityChanged(qreal value);
     void sourceChanged(QString value);
     void previousChanged(EffectUI * value);
+    void nextFrame();
 
 private:
     EffectUI *m_previous;

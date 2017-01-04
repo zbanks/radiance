@@ -26,7 +26,6 @@ QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     return audio;
 }
 
-
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     QCoreApplication::setOrganizationName("Radiance");

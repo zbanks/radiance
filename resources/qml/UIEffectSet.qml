@@ -43,7 +43,7 @@ RowLayout {
                     master: index == 3;
                     //Component.onCompleted: {
                     //    if(index == repeater.model - 1) {
-                    //        effect.renderFinished.connect(effect.nextFrame);
+                            //RenderContext.master = this;
                     //    }
                     //}
                 }

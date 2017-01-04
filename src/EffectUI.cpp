@@ -30,7 +30,6 @@ public:
 
 signals:
     void pendingNewTexture();
-    void textureInUse();
 
 public slots:
 
@@ -39,17 +38,14 @@ public slots:
         if(m_effect->swapPreview()) {
             int newId = m_effect->m_displayPreviewFbo->texture();
             QSize size = m_effect->m_displayPreviewFbo->size();
-
-            qDebug() << "DISPLAY" << newId;
-            delete m_texture;
-            m_texture = m_window->createTextureFromId(newId, size, QQuickWindow::TextureHasAlphaChannel);
-            setTexture(m_texture);
-
+            if(m_id != newId || m_size != size) {
+                delete m_texture;
+                m_texture = m_window->createTextureFromId(newId, size, QQuickWindow::TextureHasAlphaChannel);
+                setTexture(m_texture);
+                m_id = newId;
+                m_size = size;
+            }
             markDirty(DirtyMaterial);
-
-            // This will notify the rendering thread that the texture is now being rendered
-            // and it can start rendering to the other one.
-            emit textureInUse();
         }
     }
 
@@ -137,7 +133,7 @@ QSGNode *EffectUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
 
         connect(m_renderer, &Effect::textureReady, window(), &QQuickWindow::update, Qt::QueuedConnection);
         connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode::prepareNode, Qt::DirectConnection);
-        //connect(node, &TextureNode::textureInUse, m_renderer, &Effect::previewTextureInUse, Qt::QueuedConnection);
+        connect(window(), &QQuickWindow::frameSwapped, m_renderer, &Effect::nextFrame, Qt::QueuedConnection);
     }
 
     node->setRect(boundingRect());
