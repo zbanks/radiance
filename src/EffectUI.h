@@ -9,6 +9,7 @@ class EffectUI : public QQuickItem {
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(EffectUI *previous READ previous WRITE setPrevious NOTIFY previousChanged)
+    Q_PROPERTY(bool master READ isMaster WRITE setMaster)
 
 protected:
     QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *);
@@ -22,16 +23,13 @@ public:
     void setSource(QString source);
     void setPrevious(EffectUI *source);
     Effect *m_renderer;
-
-public Q_SLOTS:
-    void ready();
-    void nextFrame();
+    bool isMaster();
+    void setMaster(bool master);
 
 signals:
     void intensityChanged(qreal value);
     void sourceChanged(QString value);
     void previousChanged(EffectUI * value);
-    void renderFinished();
 
 private:
     EffectUI *m_previous;

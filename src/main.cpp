@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     renderContext = new RenderContext();
     renderContext->moveToThread(&renderThread);
     QObject::connect(&renderThread, &QThread::started, renderContext, &RenderContext::start);
-    QObject::connect(&renderThread, &QThread::finished, renderContext, &RenderContext::finish);
+    //QObject::connect(&renderThread, &QThread::finished, renderContext, &RenderContext::finish);
     renderThread.start();
 
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");

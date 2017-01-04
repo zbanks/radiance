@@ -9,20 +9,38 @@ Effect::Effect(RenderContext *context)
     m_blankPreviewFbo(0),
     m_fboIndex(0),
     m_intensity(0),
-    m_previous(0) {
+    m_previous(0),
+    m_prevContext(0),
+    m_previewUpdated(false) {
     moveToThread(context->thread());
+}
+
+void Effect::initialize() {
+    QSize size = uiSettings->previewSize();
+
+    initializeOpenGLFunctions(); // Placement of this function is black magic to me
+
+    if (m_displayPreviewFbo != NULL) delete m_displayPreviewFbo;
+    m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
+
+    if (m_renderPreviewFbo != NULL) delete m_renderPreviewFbo;
+    m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
+
+    if (m_blankPreviewFbo != NULL) delete m_blankPreviewFbo;
+    m_blankPreviewFbo = new QOpenGLFramebufferObject(size);
+
+    m_prevSource = "";
+    m_previewUpdated = false;
 }
 
 void Effect::render() {
     m_context->makeCurrent();
-    QSize size = uiSettings->previewSize();
-
-    if (!m_renderPreviewFbo) {
-        initializeOpenGLFunctions(); // Placement of this function is black magic to me
-        m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
-        m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
-        m_blankPreviewFbo = new QOpenGLFramebufferObject(size);
+    if(m_prevContext != m_context->context) {
+        initialize();
+        m_prevContext = m_context->context;
     }
+
+    QSize size = uiSettings->previewSize();
 
     glClearColor(0, 0, 0, 0);
     glViewport(0, 0, size.width(), size.height());
@@ -45,6 +63,7 @@ void Effect::render() {
         previousPreviewFbo = m_blankPreviewFbo;
     } else {
         prev->render();
+        m_context->makeCurrent();
         previousPreviewFbo = prev->previewFbo;
     }
 
@@ -70,7 +89,9 @@ void Effect::render() {
             glBindTexture(GL_TEXTURE_2D, m_previewFbos.at(m_fboIndex)->texture());
 
             p->setAttributeArray(0, GL_FLOAT, values, 2);
-            p->setUniformValue("iIntensity", (float)intensity());
+            float intense = intensity();
+            qDebug() << intense;
+            p->setUniformValue("iIntensity", intense);
             p->setUniformValue("iFrame", 0);
             p->setUniformValue("iChannelP", 1);
             p->enableAttributeArray(0);
@@ -84,25 +105,42 @@ void Effect::render() {
         m_fboIndex = (m_fboIndex + 1) % m_previewFbos.count();
         QOpenGLFramebufferObject::bindDefault();
 
-        resizeFbo(&m_renderPreviewFbo, size);
-        QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbos.at(m_fboIndex));
         previewFbo = m_previewFbos.at(m_fboIndex);
     } else {
-        QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, previousPreviewFbo);
         previewFbo = previousPreviewFbo;
     }
- 
+
     // We need to flush the contents to the FBO before posting
     // the texture to the other thread, otherwise, we might
     // get unexpected results.
     m_context->flush();
 
-    qSwap(m_renderPreviewFbo, m_displayPreviewFbo);
+    m_previewLock.lock();
+    resizeFbo(&m_renderPreviewFbo, size);
+    QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, previewFbo);
+    // Flush again, hopefully calling this before taking
+    // the lock makes this one go very fast
+    m_context->flush();
+    m_previewUpdated = true;
+    qDebug() << "finished rendering into" << m_renderPreviewFbo->texture();
+    m_previewLock.unlock();
 
-    emit textureReady(m_displayPreviewFbo->texture(), size);
+    emit textureReady();
 }
 
-void Effect::shutDown() {
+// This function is called from the rendering thread
+// to get the latest preview frame in m_displayPreviewFbo.
+// It returns true if there is a new frame
+bool Effect::swapPreview() {
+    m_previewLock.lock();
+    bool previewUpdated = m_previewUpdated;
+    if(previewUpdated) qSwap(m_renderPreviewFbo, m_displayPreviewFbo);
+    m_previewUpdated = false;
+    m_previewLock.unlock();
+    return previewUpdated;
+}
+
+Effect::~Effect() {
     m_context->makeCurrent();
     delete m_renderPreviewFbo;
     delete m_displayPreviewFbo;
@@ -118,7 +156,10 @@ void Effect::shutDown() {
 
 void Effect::loadProgram(QString filename) {
     QFile file(filename);
-    file.open(QIODevice::ReadOnly);
+    if(!file.open(QIODevice::ReadOnly)) {
+        qDebug() << QString("Could not open \"%1\"").arg(filename);
+        return;
+    }
 
     QTextStream s1(&file);
     QString s = s1.readAll();
@@ -199,4 +240,21 @@ void Effect::setPrevious(Effect *value) {
     m_previous = value;
     m_previousLock.unlock();
     emit previousChanged(value);
+}
+
+bool Effect::isMaster() {
+    m_masterLock.lock();
+    return m_context->master() == this;
+    m_masterLock.unlock();
+}
+
+void Effect::setMaster(bool set) {
+    m_masterLock.lock();
+    Effect *master = m_context->master();
+    if(!set && master == this) {
+        m_context->setMaster(NULL);
+    } else if(set && master != this) {
+        m_context->setMaster(this);
+    }
+    m_masterLock.unlock();
 }
