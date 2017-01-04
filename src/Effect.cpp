@@ -70,6 +70,16 @@ void Effect::render() {
             1, 1
         };
 
+        if(m_regeneratePreviewFbos) {
+            foreach(QOpenGLFramebufferObject *f, m_previewFbos) delete f;
+            m_previewFbos.clear();
+            for(int i = 0; i < m_programs.count() + 1; i++) {
+                m_previewFbos.append(new QOpenGLFramebufferObject(size));
+                m_fboIndex = 0;
+            }
+            m_regeneratePreviewFbos = false;
+        }
+
         for(int i = m_programs.count() - 1; i >= 0; i--) {
             resizeFbo(&m_previewFbos[(m_fboIndex + 1) % m_previewFbos.count()], size);
             QOpenGLFramebufferObject *target = m_previewFbos.at((m_fboIndex + 1) % m_previewFbos.count());
@@ -103,12 +113,12 @@ void Effect::render() {
     } else {
         previewFbo = previousPreviewFbo;
     }
-    m_programLock.unlock();
 
     // We need to flush the contents to the FBO before posting
     // the texture to the other thread, otherwise, we might
     // get unexpected results.
     m_context->flush();
+    m_programLock.unlock();
 
     m_previewLock.lock();
     resizeFbo(&m_renderPreviewFbo, size);
@@ -182,14 +192,9 @@ bool Effect::loadProgram(QString name) {
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;
     m_programs.clear();
     m_programs.append(program);
+    m_regeneratePreviewFbos = true;
     m_programLock.unlock();
 
-    QSize size = uiSettings->previewSize();
-    for(int i = 0; i < m_programs.count() + 1; i++) {
-        m_previewFbos.append(new QOpenGLFramebufferObject(size));
-        m_fboIndex = 0;
-    }
-    m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
     return true;
 }
 

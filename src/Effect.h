@@ -64,4 +64,5 @@ private:
     QMutex m_previewLock;
 
     bool m_previewUpdated;
+    bool m_regeneratePreviewFbos;
 };
