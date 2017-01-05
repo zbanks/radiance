@@ -8,7 +8,6 @@ CrossFader::CrossFader(RenderContext *context)
     m_left(0),
     m_right(0),
     m_blankPreviewFbo(0),
-    m_previewFbo(0),
     m_program(0) {
 }
 
@@ -49,7 +48,7 @@ void CrossFader::paint() {
         glClear(GL_COLOR_BUFFER_BIT);
         leftPreviewFbo = m_blankPreviewFbo;
     } else {
-        leftPreviewFbo = node_left->m_renderPreviewFbo;
+        leftPreviewFbo = node_left->m_previewFbo;
     }
 
     if(node_right == 0) {
@@ -58,7 +57,7 @@ void CrossFader::paint() {
         glClear(GL_COLOR_BUFFER_BIT);
         rightPreviewFbo = m_blankPreviewFbo;
     } else {
-        rightPreviewFbo = node_right->m_renderPreviewFbo;
+        rightPreviewFbo = node_right->m_previewFbo;
     }
 
     float values[] = {
@@ -98,13 +97,12 @@ void CrossFader::paint() {
 
     QOpenGLFramebufferObject::bindDefault();
 
-    blitToPreviewFbo(m_previewFbo);
+    blitToRenderFbo();
 }
 
 CrossFader::~CrossFader() {
     m_context->makeCurrent();
     delete m_program;
-    delete m_previewFbo;
 }
 
 // Call this function once at the beginning from the render thread.

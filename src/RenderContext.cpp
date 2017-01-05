@@ -5,7 +5,9 @@
 RenderContext::RenderContext()
     : context(0)
     , surface(0)
-    , timer(0) {
+    , timer(0)
+    , m_premultiply(0)
+    , m_prevContext(0) {
     context = new QOpenGLContext();
     context->create();
 
@@ -24,6 +26,8 @@ RenderContext::~RenderContext() {
     surface = 0;
     delete context;
     context = 0;
+    delete m_premultiply;
+    m_premultiply = 0;
 }
 
 void RenderContext::start() {
@@ -47,9 +51,6 @@ void RenderContext::share(QOpenGLContext *current) {
     QOpenGLContext *newContext = new QOpenGLContext();
     delete context;
     context = newContext;
-    QSurfaceFormat f = current->format();
-    //f.setSwapBehavior(QSurfaceFormat::SingleBuffer);
-    context->setFormat(f);
     context->setShareContext(current);
     context->create();
     context->moveToThread(thread());
@@ -61,11 +62,40 @@ void RenderContext::share(QOpenGLContext *current) {
     m_contextLock.unlock();
 }
 
+void RenderContext::load() {
+    QOpenGLShaderProgram *program = new QOpenGLShaderProgram();
+    program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                       "attribute highp vec4 vertices;"
+                                       "varying highp vec2 coords;"
+                                       "void main() {"
+                                       "    gl_Position = vertices;"
+                                       "    coords = vertices.xy;"
+                                       "}");
+    program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                       "varying highp vec2 coords;"
+                                       "uniform sampler2D iFrame;"
+                                       "void main() {"
+                                       "    vec4 l = texture2D(iFrame, 0.5 * (coords + 1.));"
+                                       "    gl_FragColor = vec4(l.rgb * l.a, l.a);"
+                                       "}");
+    program->bindAttributeLocation("vertices", 0);
+    program->link();
+    delete m_premultiply;
+    m_premultiply = program;
+}
+
 void RenderContext::render() {
     qint64 framePeriod = elapsed_timer.nsecsElapsed();
     elapsed_timer.restart();
 
     m_contextLock.lock();
+    makeCurrent();
+
+    if(m_prevContext != context) {
+        load();
+        m_prevContext = context;
+    }
+
     QList<VideoNode*> sortedNodes = topoSort();
     foreach(VideoNode* n, sortedNodes) {
         n->render();
@@ -82,9 +112,7 @@ void RenderContext::makeCurrent() {
 }
 
 void RenderContext::flush() {
-    //context->functions()->glFlush();
     context->functions()->glFinish();
-    //context->swapBuffers(surface);
 }
 
 void RenderContext::addVideoNode(VideoNode* n) {

@@ -14,6 +14,7 @@ class VideoNode : public QObject, protected QOpenGLFunctions {
 public:
     VideoNode(RenderContext *context);
     virtual ~VideoNode();
+    QOpenGLFramebufferObject *m_previewFbo;
     QOpenGLFramebufferObject *m_displayPreviewFbo;
     QOpenGLFramebufferObject *m_renderPreviewFbo;
     virtual QSet<VideoNode*> dependencies();
@@ -29,14 +30,12 @@ protected:
     QOpenGLFramebufferObject *previewFbo;
     virtual void initialize() = 0;
     virtual void paint() = 0;
-    void blitToPreviewFbo(QOpenGLFramebufferObject *fbo);
+    void blitToRenderFbo();
     RenderContext *m_context;
     static void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size);
 
 private:
     QOpenGLContext *m_prevContext;
-
     QMutex m_previewLock;
-
     bool m_previewUpdated;
 };

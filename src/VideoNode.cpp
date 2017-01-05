@@ -4,6 +4,7 @@
 
 VideoNode::VideoNode(RenderContext *context)
     : m_context(context),
+    m_previewFbo(0),
     m_displayPreviewFbo(0),
     m_renderPreviewFbo(0),
     m_prevContext(0),
@@ -13,7 +14,6 @@ VideoNode::VideoNode(RenderContext *context)
 }
 
 void VideoNode::render() {
-    m_context->makeCurrent();
     if(m_prevContext != m_context->context) {
         initializeOpenGLFunctions(); // Placement of this function is black magic to me
         initialize();
@@ -28,11 +28,32 @@ void VideoNode::render() {
 
 // This function is called from paint()
 // to draw to the preview back-buffer.
-void VideoNode::blitToPreviewFbo(QOpenGLFramebufferObject *fbo) {
+void VideoNode::blitToRenderFbo() {
     m_context->flush(); // Flush before taking the lock to speed things up a bit
     m_previewLock.lock();
-    resizeFbo(&m_renderPreviewFbo, fbo->size());
-    QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, fbo);
+    resizeFbo(&m_renderPreviewFbo, m_previewFbo->size());
+
+    float values[] = {
+        -1, -1,
+        1, -1,
+        -1, 1,
+        1, 1
+    };
+
+    m_renderPreviewFbo->bind();
+    m_context->m_premultiply->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_previewFbo->texture());
+    m_context->m_premultiply->setAttributeArray(0, GL_FLOAT, values, 2);
+    m_context->m_premultiply->setUniformValue("iFrame", 0);
+    m_context->m_premultiply->enableAttributeArray(0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    m_context->m_premultiply->disableAttributeArray(0);
+    m_context->m_premultiply->release();
+    QOpenGLFramebufferObject::bindDefault();
+
+    //QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbo);
+
     m_context->flush();
     m_previewUpdated = true;
     m_previewLock.unlock();
@@ -55,7 +76,8 @@ bool VideoNode::swapPreview() {
 
 VideoNode::~VideoNode() {
     m_context->removeVideoNode(this);
-    m_context->makeCurrent();
+    delete m_previewFbo;
+    m_renderPreviewFbo = 0;
     delete m_renderPreviewFbo;
     m_renderPreviewFbo = 0;
     delete m_displayPreviewFbo;

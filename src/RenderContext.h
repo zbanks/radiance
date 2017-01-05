@@ -7,6 +7,7 @@
 #include <QMutex>
 #include <QEvent>
 #include <QSet>
+#include <QOpenGLShaderProgram>
 #include "VideoNode.h"
 
 class RenderContext : public QObject {
@@ -27,6 +28,8 @@ public:
     void share(QOpenGLContext *current);
     void addVideoNode(VideoNode* n);
     void removeVideoNode(VideoNode* n);
+
+    QOpenGLShaderProgram *m_premultiply;
  
 public slots:
     void start();
@@ -35,6 +38,8 @@ public slots:
 private:
     QSet<VideoNode*> m_videoNodes;
     QList<VideoNode*> topoSort();
+    void load();
+    QOpenGLContext *m_prevContext;
 
 signals:
     void renderingFinished();

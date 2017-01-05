@@ -40,7 +40,7 @@ void Effect::paint() {
         glClear(GL_COLOR_BUFFER_BIT);
         previousPreviewFbo = m_blankPreviewFbo;
     } else {
-        previousPreviewFbo = prev->m_renderPreviewFbo;
+        previousPreviewFbo = prev->m_previewFbo;
     }
 
     m_programLock.lock();
@@ -91,13 +91,13 @@ void Effect::paint() {
         m_fboIndex = (m_fboIndex + 1) % m_previewFbos.count();
         QOpenGLFramebufferObject::bindDefault();
 
-        previewFbo = m_previewFbos.at(m_fboIndex);
+        m_previewFbo = m_previewFbos.at(m_fboIndex);
     } else {
-        previewFbo = previousPreviewFbo;
+        m_previewFbo = previousPreviewFbo;
     }
     m_programLock.unlock();
 
-    blitToPreviewFbo(previewFbo);
+    blitToRenderFbo();
 }
 
 Effect::~Effect() {
@@ -106,6 +106,7 @@ Effect::~Effect() {
     foreach(QOpenGLFramebufferObject *fbo, m_previewFbos) delete fbo;
     m_programs.clear();
     m_previewFbos.clear();
+    m_previewFbo = 0; // This points to one of m_previewFbos
 }
 
 QSet<VideoNode*> Effect::dependencies() {

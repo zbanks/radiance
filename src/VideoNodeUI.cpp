@@ -20,6 +20,9 @@ public:
         // Our texture node must have a texture, so use the default 0 texture.
         m_texture = m_window->createTextureFromId(0, QSize(1, 1));
         setTexture(m_texture);
+        //QSGMaterial *m = material();
+        //m->setFlag(QSGMaterial::Blending);
+        //setMaterial(m);
         setFiltering(QSGTexture::Linear);
     }
 

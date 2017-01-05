@@ -30,8 +30,6 @@ signals:
     void rightChanged(VideoNode *value);
 
 private:
-    QOpenGLFramebufferObject *m_previewFbo;
-
     QOpenGLShaderProgram *m_program;
     QOpenGLFramebufferObject *m_blankPreviewFbo;
 

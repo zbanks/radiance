@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
 
-    QQmlApplicationEngine engine(QUrl("qrc:///qml/application.qml"));
+    QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
 
     QObject *window = engine.rootObjects().first();
     QObject::connect(window, SIGNAL(frameSwapped()), renderContext, SLOT(render()));

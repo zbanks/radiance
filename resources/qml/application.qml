@@ -99,11 +99,8 @@ ApplicationWindow {
                     count: 4;
                     property int layout: Qt.RightToLeft;
                 }
-                Effect {
-                    source: "circle";
-                    intensity: 0.5;
-                    width: 100;
-                    Layout.preferredHeight: width;
+                UIEffect {
+                    effect.source: "circle";
                 }
             }
         }
