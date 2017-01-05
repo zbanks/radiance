@@ -3,43 +3,27 @@
 #include "main.h"
 
 Effect::Effect(RenderContext *context)
-    : m_context(context),
-    m_displayPreviewFbo(0),
-    m_renderPreviewFbo(0),
-    m_blankPreviewFbo(0),
+    : VideoNode(context),
     m_fboIndex(0),
     m_intensity(0),
     m_previous(0),
-    m_prevContext(0),
-    m_previewUpdated(false) {
-    moveToThread(context->thread());
+    m_blankPreviewFbo(0) {
 }
 
 void Effect::initialize() {
     QSize size = uiSettings->previewSize();
 
-    initializeOpenGLFunctions(); // Placement of this function is black magic to me
-
-    if (m_displayPreviewFbo != NULL) delete m_displayPreviewFbo;
+    delete m_displayPreviewFbo;
     m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
 
-    if (m_renderPreviewFbo != NULL) delete m_renderPreviewFbo;
+    delete m_renderPreviewFbo;
     m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
 
-    if (m_blankPreviewFbo != NULL) delete m_blankPreviewFbo;
+    delete m_blankPreviewFbo;
     m_blankPreviewFbo = new QOpenGLFramebufferObject(size);
-
-    m_prevSource = "";
-    m_previewUpdated = false;
 }
 
-void Effect::render() {
-    m_context->makeCurrent();
-    if(m_prevContext != m_context->context) {
-        initialize();
-        m_prevContext = m_context->context;
-    }
-
+void Effect::paint() {
     QSize size = uiSettings->previewSize();
 
     glClearColor(0, 0, 0, 0);
@@ -49,7 +33,7 @@ void Effect::render() {
     glDisable(GL_BLEND);
 
     QOpenGLFramebufferObject *previousPreviewFbo;
-    Effect * prev = previous();
+    VideoNode *prev = previous();
     if(prev == 0) {
         resizeFbo(&m_blankPreviewFbo, size);
         m_blankPreviewFbo->bind();
@@ -58,7 +42,7 @@ void Effect::render() {
     } else {
         prev->render();
         m_context->makeCurrent();
-        previousPreviewFbo = prev->previewFbo;
+        previousPreviewFbo = prev->m_renderPreviewFbo;
     }
 
     m_programLock.lock();
@@ -113,52 +97,17 @@ void Effect::render() {
     } else {
         previewFbo = previousPreviewFbo;
     }
-
-    // We need to flush the contents to the FBO before posting
-    // the texture to the other thread, otherwise, we might
-    // get unexpected results.
-    m_context->flush();
     m_programLock.unlock();
 
-    m_previewLock.lock();
-    resizeFbo(&m_renderPreviewFbo, size);
-    QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, previewFbo);
-    // Flush again, hopefully calling this before taking
-    // the lock makes this one go very fast
-    m_context->flush();
-    m_previewUpdated = true;
-    m_previewLock.unlock();
-
-    emit textureReady();
-}
-
-// This function is called from the rendering thread
-// to get the latest preview frame in m_displayPreviewFbo.
-// It returns true if there is a new frame
-bool Effect::swapPreview() {
-    m_previewLock.lock();
-    bool previewUpdated = m_previewUpdated;
-    if(previewUpdated) {
-        resizeFbo(&m_displayPreviewFbo, m_renderPreviewFbo->size());
-        QOpenGLFramebufferObject::blitFramebuffer(m_displayPreviewFbo, m_renderPreviewFbo);
-        m_previewUpdated = false;
-    }
-    m_previewLock.unlock();
-    return previewUpdated;
+    blitToPreviewFbo(previewFbo);
 }
 
 Effect::~Effect() {
     m_context->makeCurrent();
-    delete m_renderPreviewFbo;
-    delete m_displayPreviewFbo;
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;
     foreach(QOpenGLFramebufferObject *fbo, m_previewFbos) delete fbo;
-    m_renderPreviewFbo = 0;
-    m_displayPreviewFbo = 0;
     m_programs.clear();
     m_previewFbos.clear();
-    // Stop event processing, move the thread to GUI and make sure it is deleted.
-    //moveToThread(QGuiApplication::instance()->thread());
 }
 
 // Call this to load shader code into this Effect.
@@ -198,13 +147,6 @@ bool Effect::loadProgram(QString name) {
     return true;
 }
 
-void Effect::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
-    if((*fbo)->size() != size) {
-        delete *fbo;
-        *fbo = new QOpenGLFramebufferObject(size);
-    }
-}
-
 qreal Effect::intensity() {
     qreal result;
     m_intensityLock.lock();
@@ -213,8 +155,8 @@ qreal Effect::intensity() {
     return result;
 }
 
-Effect *Effect::previous() {
-    Effect *result;
+VideoNode *Effect::previous() {
+    VideoNode *result;
     m_previousLock.lock();
     result = m_previous;
     m_previousLock.unlock();
@@ -235,21 +177,4 @@ void Effect::setPrevious(Effect *value) {
     m_previous = value;
     m_previousLock.unlock();
     emit previousChanged(value);
-}
-
-bool Effect::isMaster() {
-    m_masterLock.lock();
-    return m_context->master() == this;
-    m_masterLock.unlock();
-}
-
-void Effect::setMaster(bool set) {
-    m_masterLock.lock();
-    Effect *master = m_context->master();
-    if(!set && master == this) {
-        m_context->setMaster(NULL);
-    } else if(set && master != this) {
-        m_context->setMaster(this);
-    }
-    m_masterLock.unlock();
 }

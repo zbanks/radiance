@@ -16,6 +16,7 @@ find_package(PortAudio)
 qt5_add_resources(resources/resources.qrc)
 
 add_executable(radiance WIN32 src/main.cpp
+    src/VideoNode.cpp
     src/Effect.cpp
     src/EffectUI.cpp
     src/UISettings.cpp

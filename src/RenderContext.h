@@ -7,7 +7,7 @@
 #include <QMutex>
 #include <QEvent>
 #include <QThread>
-#include "Effect.h"
+#include "VideoNode.h"
 
 class RenderContext : public QObject {
     Q_OBJECT
@@ -25,16 +25,16 @@ public:
 
     void makeCurrent();
     void flush();
-    void setMaster(Effect *e);
+    void setMaster(VideoNode *e);
     void share(QOpenGLContext *current);
-    Effect *master();
+    VideoNode *master();
 
 public slots:
     void start();
     void render();
 
 private:
-    Effect *m_master;
+    VideoNode *m_master;
 
 signals:
     void renderingFinished();

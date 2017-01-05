@@ -62,14 +62,14 @@ void RenderContext::share(QOpenGLContext *current) {
     m_contextLock.unlock();
 }
 
-void RenderContext::setMaster(Effect *e) {
+void RenderContext::setMaster(VideoNode *e) {
     m_masterLock.lock();
     m_master = e;
     m_masterLock.unlock();
 }
 
-Effect *RenderContext::master() {
-    Effect *e;
+VideoNode *RenderContext::master() {
+    VideoNode *e;
     m_masterLock.lock();
     e = m_master;
     m_masterLock.unlock();
