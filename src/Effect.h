@@ -19,11 +19,11 @@ public slots:
     VideoNode *previous();
 
     void setIntensity(qreal value);
-    void setPrevious(Effect *value);
+    void setPrevious(VideoNode *value);
 
 signals:
     void intensityChanged(qreal value);
-    void previousChanged(Effect *value);
+    void previousChanged(VideoNode *value);
 
 private:
     QOpenGLFramebufferObject *previewFbo;
@@ -37,7 +37,7 @@ private:
     void paint();
 
     qreal m_intensity;
-    Effect *m_previous;
+    VideoNode *m_previous;
 
     QMutex m_intensityLock;
     QMutex m_programLock;

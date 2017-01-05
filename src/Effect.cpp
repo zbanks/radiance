@@ -172,7 +172,7 @@ void Effect::setIntensity(qreal value) {
     emit intensityChanged(value);
 }
 
-void Effect::setPrevious(Effect *value) {
+void Effect::setPrevious(VideoNode *value) {
     m_previousLock.lock();
     m_previous = value;
     m_previousLock.unlock();

@@ -6,83 +6,26 @@
 #include <QtQuick/QSGSimpleTextureNode>
 #include <QtQuick/QQuickWindow>
 
-class TextureNode : public QObject, public QSGSimpleTextureNode {
-    Q_OBJECT
-
-public:
-    TextureNode(QQuickWindow *window, Effect *effect)
-        : m_id(0)
-        , m_size(0, 0)
-        , m_texture(0)
-        , m_window(window)
-        , m_effect(effect)
-    {
-        // Our texture node must have a texture, so use the default 0 texture.
-        m_texture = m_window->createTextureFromId(0, QSize(1, 1));
-        setTexture(m_texture);
-        setFiltering(QSGTexture::Linear);
-    }
-
-    ~TextureNode()
-    {
-        delete m_texture;
-    }
-
-signals:
-    void pendingNewTexture();
-
-public slots:
-
-    // Before the scene graph starts to render, we update to the pending texture
-    void prepareNode() {
-        if(m_effect->swapPreview()) {
-            int newId = m_effect->m_displayPreviewFbo->texture();
-            QSize size = m_effect->m_displayPreviewFbo->size();
-            if(m_id != newId || m_size != size) {
-                delete m_texture;
-                m_texture = m_window->createTextureFromId(newId, size, QQuickWindow::TextureHasAlphaChannel);
-                setTexture(m_texture);
-                m_id = newId;
-                m_size = size;
-            }
-            markDirty(DirtyMaterial);
-        }
-    }
-
-private:
-
-    int m_id;
-    QSize m_size;
-
-    QMutex m_mutex;
-
-    QSGTexture *m_texture;
-    QQuickWindow *m_window;
-    Effect *m_effect;
-};
-
-// EffectUI
-
-EffectUI::EffectUI() : m_renderer(0), m_previous(0) {
-    setFlag(ItemHasContents, true);
-    m_renderer = new Effect(renderContext);
-    connect(m_renderer, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
+EffectUI::EffectUI() {
+    Effect *e = new Effect(renderContext);
+    connect(e, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
+    m_videoNode = e;
 }
 
 qreal EffectUI::intensity() {
-    return m_renderer->intensity();
+    return static_cast<Effect*>(m_videoNode)->intensity();
 }
 
 QString EffectUI::source() {
     return m_source;
 }
 
-EffectUI *EffectUI::previous() {
+VideoNodeUI *EffectUI::previous() {
     return m_previous;
 }
 
 void EffectUI::setIntensity(qreal value) {
-    m_renderer->setIntensity(value);
+    static_cast<Effect*>(m_videoNode)->setIntensity(value);
 }
 
 void EffectUI::setSource(QString value) {
@@ -90,60 +33,22 @@ void EffectUI::setSource(QString value) {
     QOpenGLContext *current = window()->openglContext();
     if(current) {
         current->makeCurrent(window());
-        m_renderer->loadProgram(value);
+        static_cast<Effect*>(m_videoNode)->loadProgram(value);
     }
     emit sourceChanged(value);
 }
 
-void EffectUI::setPrevious(EffectUI *value) {
+void EffectUI::setPrevious(VideoNodeUI *value) {
     m_previous = value;
+    Effect *e = static_cast<Effect*>(m_videoNode);
     if(m_previous == NULL) {
-        m_renderer->setPrevious(NULL);
+        e->setPrevious(NULL);
     } else {
-        m_renderer->setPrevious(value->m_renderer);
+        e->setPrevious(value->m_videoNode);
     }
     emit previousChanged(value);
 }
 
-bool EffectUI::isMaster() {
-    return m_renderer->isMaster();
+void EffectUI::initialize() {
+    if(!m_source.isEmpty()) static_cast<Effect*>(m_videoNode)->loadProgram(m_source);
 }
-
-void EffectUI::setMaster(bool set) {
-    m_renderer->setMaster(set);
-}
-
-QSGNode *EffectUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
-    TextureNode *node = static_cast<TextureNode *>(oldNode);
-
-    if (!renderContext->context->shareContext()) {
-        QOpenGLContext *current = window()->openglContext();
-        // Some GL implementations requres that the currently bound context is
-        // made non-current before we set up sharing, so we doneCurrent here
-        // and makeCurrent down below while setting up our own context.
-        
-        renderContext->share(current);
-        current->makeCurrent(window());
-
-        //QMetaObject::invokeMethod(this, "ready");
-        //return 0;
-    }
-
-    if (!node) {
-        node = new TextureNode(window(), m_renderer);
-        if(!m_source.isEmpty()) m_renderer->loadProgram(m_source);
-
-        // When a new texture is ready on the rendering thread, we use a direct connection to
-        // the texture node to let it know a new texture can be used. The node will then
-        // emit pendingNewTexture which we bind to QQuickWindow::update to schedule a redraw.
-
-        connect(m_renderer, &Effect::textureReady, window(), &QQuickWindow::update, Qt::QueuedConnection);
-        connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode::prepareNode, Qt::DirectConnection);
-    }
-
-    node->setRect(boundingRect());
-
-    return node;
-}
-
-#include "EffectUI.moc"
