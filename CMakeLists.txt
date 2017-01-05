@@ -20,6 +20,8 @@ add_executable(radiance WIN32 src/main.cpp
     src/VideoNodeUI.cpp
     src/Effect.cpp
     src/EffectUI.cpp
+    src/CrossFader.cpp
+    src/CrossFaderUI.cpp
     src/UISettings.cpp
     src/RenderContext.cpp
     src/Output.cpp

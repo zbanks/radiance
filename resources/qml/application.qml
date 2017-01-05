@@ -79,7 +79,29 @@ ApplicationWindow {
             }
 
             //UIEffectPanel {}
-            UIEffectSet { count: 4;}
+
+            RowLayout {
+                UIEffectSet {
+                    id: leftSet;
+                    count: 4;
+                }
+
+                CrossFader {
+                    width: 100;
+                    Layout.preferredHeight: width;
+                    Layout.fillWidth: true;
+                    left: leftSet.output();
+                    right: rightSet.output();
+                    master: true;
+                    parameter: 0.5;
+                }
+
+                UIEffectSet {
+                    id: rightSet;
+                    count: 4;
+                    property int layout: Qt.RightToLeft;
+                }
+            }
         }
     }
 }

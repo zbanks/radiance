@@ -1,6 +1,6 @@
 #include "Effect.h"
-#include "EffectUI.h"
 #include "main.h"
+#include <QFile>
 
 Effect::Effect(RenderContext *context)
     : VideoNode(context),
@@ -41,7 +41,6 @@ void Effect::paint() {
         previousPreviewFbo = m_blankPreviewFbo;
     } else {
         prev->render();
-        m_context->makeCurrent();
         previousPreviewFbo = prev->m_renderPreviewFbo;
     }
 

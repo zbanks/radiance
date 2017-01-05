@@ -4,6 +4,7 @@
 #include <QQuickWindow>
 #include <QThread>
 #include "EffectUI.h"
+#include "CrossFaderUI.h"
 #include "RenderContext.h"
 #include "Output.h"
 #include "Lux.h"
@@ -49,6 +50,7 @@ int main(int argc, char *argv[]) {
     renderThread.start();
 
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
+    qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<OutputManager>("radiance", 1, 0, "OutputManager");
 

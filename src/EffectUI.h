@@ -24,7 +24,6 @@ signals:
     void intensityChanged(qreal value);
     void sourceChanged(QString value);
     void previousChanged(VideoNodeUI *value);
-    void nextFrame();
 
 private:
     void initialize();

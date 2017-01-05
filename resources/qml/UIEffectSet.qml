@@ -8,6 +8,10 @@ RowLayout {
     property int layout: Qt.LeftToRight;
     layoutDirection: layout;
 
+    function output() {
+        return repeater.itemAt(repeater.count - 1).effect;
+    }
+
     Repeater {
         id: repeater;
         model: parent.count;
@@ -40,7 +44,7 @@ RowLayout {
                     source: effectName.currentText;
                     previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
                     //source: index == repeater.model - 1 ? "../resources/effects/circle.glsl" : "../resources/effects/test.glsl";
-                    master: index == 3;
+                    //master: index == 3;
                     //Component.onCompleted: {
                     //    if(index == repeater.model - 1) {
                             //RenderContext.master = this;
