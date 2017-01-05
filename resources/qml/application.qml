@@ -89,7 +89,6 @@ ApplicationWindow {
                 CrossFader {
                     width: 100;
                     Layout.preferredHeight: width;
-                    Layout.fillWidth: true;
                     left: leftSet.output();
                     right: rightSet.output();
                     parameter: 0.5;
@@ -99,6 +98,12 @@ ApplicationWindow {
                     id: rightSet;
                     count: 4;
                     property int layout: Qt.RightToLeft;
+                }
+                Effect {
+                    source: "circle";
+                    intensity: 0.5;
+                    width: 100;
+                    Layout.preferredHeight: width;
                 }
             }
         }

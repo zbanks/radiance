@@ -30,10 +30,13 @@ void EffectUI::setIntensity(qreal value) {
 
 void EffectUI::setSource(QString value) {
     m_source = value;
-    QOpenGLContext *current = window()->openglContext();
-    if(current) {
-        current->makeCurrent(window());
-        static_cast<Effect*>(m_videoNode)->loadProgram(value);
+    QQuickWindow *w = window();
+    if(w) {
+        QOpenGLContext *current = w->openglContext();
+        if(current) {
+            current->makeCurrent(w);
+            static_cast<Effect*>(m_videoNode)->loadProgram(value);
+        }
     }
     emit sourceChanged(value);
 }
