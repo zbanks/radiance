@@ -18,48 +18,54 @@ Item {
 
     Rectangle {
         anchors.fill: parent;
-        color: "blue";
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#222" }
+            GradientStop { position: 1.0; color: "#111" }
+        }
+        radius: 10;
+        border.width: 3;
+        border.color: "#666";
     }
 
     ColumnLayout {
         anchors.fill: parent;
+        anchors.margins: 15;
 
         Label {
             text: effect.source;
+            color: "#ddd";
         }
 
-/*
-        ShaderEffect {
-            Layout.fillWidth: true;
+        Item {
             Layout.preferredHeight: width;
-            vertexShader: "
-                uniform highp mat4 qt_Matrix;
-                attribute highp vec4 qt_Vertex;
-                attribute highp vec2 qt_MultiTexCoord0;
-                varying highp vec2 coord;
-                void main() {
-                    coord = qt_MultiTexCoord0;
-                    gl_Position = qt_Matrix * qt_Vertex;
-                }"
-            fragmentShader: "
-                varying highp vec2 coord;
-                uniform sampler2D src;
-                uniform lowp float qt_Opacity;
-                void main() {
-                    lowp vec4 tex = texture2D(src, coord);
-                    gl_FragColor = vec4(vec3(dot(tex.rgb,
-                                        vec3(0.344, 0.5, 0.156))),
-                                             tex.a) * qt_Opacity;
-                }"
-            property variant src: effect;
-        }
-*/
+            Layout.fillWidth: true;
 
-        Effect {
-            id: effect;
-            Layout.preferredHeight: width;
-            Layout.fillWidth: true;
-            intensity: slider.value;
+            ShaderEffect {
+                anchors.fill: parent;
+                vertexShader: "
+                    uniform highp mat4 qt_Matrix;
+                    attribute highp vec4 qt_Vertex;
+                    attribute highp vec2 qt_MultiTexCoord0;
+                    varying highp vec2 coord;
+                    void main() {
+                        coord = qt_MultiTexCoord0;
+                        gl_Position = qt_Matrix * qt_Vertex;
+                    }"
+                fragmentShader: "
+                    varying highp vec2 coord;
+                    uniform lowp float qt_Opacity;
+                    void main() {
+                        vec2 qc = floor(coord.xy * 4.);
+                        vec3 c = vec3(0.2) + vec3(0.1) * mod(qc.x + qc.y, 2.);
+                        gl_FragColor = vec4(c, 1) * qt_Opacity;
+                    }"
+            }
+
+            Effect {
+                id: effect;
+                anchors.fill: parent;
+                intensity: slider.value;
+            }
         }
 
         Slider {
