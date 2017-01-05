@@ -67,14 +67,6 @@ VideoNodeUI::VideoNodeUI() : m_videoNode(0) {
     setFlag(ItemHasContents, true);
 }
 
-bool VideoNodeUI::isMaster() {
-    return m_videoNode->isMaster();
-}
-
-void VideoNodeUI::setMaster(bool set) {
-    m_videoNode->setMaster(set);
-}
-
 QSGNode *VideoNodeUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     TextureNode *node = static_cast<TextureNode *>(oldNode);
 

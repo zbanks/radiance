@@ -9,6 +9,7 @@ VideoNode::VideoNode(RenderContext *context)
     m_prevContext(0),
     m_previewUpdated(false) {
     moveToThread(context->thread());
+    m_context->addVideoNode(this);
 }
 
 void VideoNode::render() {
@@ -53,6 +54,7 @@ bool VideoNode::swapPreview() {
 }
 
 VideoNode::~VideoNode() {
+    m_context->removeVideoNode(this);
     m_context->makeCurrent();
     delete m_renderPreviewFbo;
     m_renderPreviewFbo = 0;
@@ -69,19 +71,6 @@ void VideoNode::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
     }
 }
 
-bool VideoNode::isMaster() {
-    m_masterLock.lock();
-    return m_context->master() == this;
-    m_masterLock.unlock();
-}
-
-void VideoNode::setMaster(bool set) {
-    m_masterLock.lock();
-    VideoNode *master = m_context->master();
-    if(!set && master == this) {
-        m_context->setMaster(NULL);
-    } else if(set && master != this) {
-        m_context->setMaster(this);
-    }
-    m_masterLock.unlock();
+QSet<VideoNode*> VideoNode::dependencies() {
+    return QSet<VideoNode*>();
 }

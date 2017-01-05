@@ -6,7 +6,6 @@
 
 class VideoNodeUI : public QQuickItem {
     Q_OBJECT
-    Q_PROPERTY(bool master READ isMaster WRITE setMaster)
 
 protected:
     QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *);
@@ -15,7 +14,5 @@ protected:
 public:
     VideoNodeUI();
     VideoNode *m_videoNode;
-    bool isMaster();
-    void setMaster(bool master);
     virtual ~VideoNodeUI();
 };

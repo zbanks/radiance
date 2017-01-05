@@ -43,13 +43,6 @@ RowLayout {
                     intensity: slider.value;
                     source: effectName.currentText;
                     previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
-                    //source: index == repeater.model - 1 ? "../resources/effects/circle.glsl" : "../resources/effects/test.glsl";
-                    //master: index == 3;
-                    //Component.onCompleted: {
-                    //    if(index == repeater.model - 1) {
-                            //RenderContext.master = this;
-                    //    }
-                    //}
                 }
                 
                 ComboBox {

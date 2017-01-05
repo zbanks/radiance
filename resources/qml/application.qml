@@ -92,7 +92,6 @@ ApplicationWindow {
                     Layout.fillWidth: true;
                     left: leftSet.output();
                     right: rightSet.output();
-                    master: true;
                     parameter: 0.5;
                 }
 

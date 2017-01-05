@@ -13,6 +13,7 @@ public:
     Effect(RenderContext *context);
     ~Effect();
     bool loadProgram(QString name);
+    QSet<VideoNode*> dependencies();
  
 public slots:
     qreal intensity();

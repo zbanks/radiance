@@ -5,7 +5,6 @@
 RenderContext::RenderContext()
     : context(0)
     , surface(0)
-    , m_master(0)
     , timer(0) {
     context = new QOpenGLContext();
     context->create();
@@ -62,29 +61,15 @@ void RenderContext::share(QOpenGLContext *current) {
     m_contextLock.unlock();
 }
 
-void RenderContext::setMaster(VideoNode *e) {
-    m_masterLock.lock();
-    m_master = e;
-    m_masterLock.unlock();
-}
-
-VideoNode *RenderContext::master() {
-    VideoNode *e;
-    m_masterLock.lock();
-    e = m_master;
-    m_masterLock.unlock();
-    return e;
-}
-
 void RenderContext::render() {
     qint64 framePeriod = elapsed_timer.nsecsElapsed();
     elapsed_timer.restart();
 
-    if(m_master != NULL) {
-        m_contextLock.lock();
-        m_master->render();
-        m_contextLock.unlock();
-    }
+    m_contextLock.lock();
+    //m_master->render();
+    // TOPO SORT AND RENDER
+    m_contextLock.unlock();
+
     emit renderingFinished();
     qint64 renderingPeriod = elapsed_timer.nsecsElapsed();
     //qDebug() << framePeriod << renderingPeriod;
@@ -98,4 +83,12 @@ void RenderContext::flush() {
     //context->functions()->glFlush();
     context->functions()->glFinish();
     //context->swapBuffers(surface);
+}
+
+void RenderContext::addVideoNode(VideoNode* n) {
+    m_videoNodes.insert(n);
+}
+
+void RenderContext::removeVideoNode(VideoNode* n) {
+    m_videoNodes.remove(n);
 }

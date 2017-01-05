@@ -6,7 +6,7 @@
 #include <QElapsedTimer>
 #include <QMutex>
 #include <QEvent>
-#include <QThread>
+#include <QSet>
 #include "VideoNode.h"
 
 class RenderContext : public QObject {
@@ -19,22 +19,21 @@ public:
     QOpenGLContext *context;
     QTimer *timer;
     QElapsedTimer elapsed_timer;
-    QMutex m_masterLock;
     QMutex m_contextLock;
     void moveToThread(QThread *t);
 
     void makeCurrent();
     void flush();
-    void setMaster(VideoNode *e);
     void share(QOpenGLContext *current);
-    VideoNode *master();
-
+    void addVideoNode(VideoNode* n);
+    void removeVideoNode(VideoNode* n);
+ 
 public slots:
     void start();
     void render();
 
 private:
-    VideoNode *m_master;
+    QSet<VideoNode*> m_videoNodes;
 
 signals:
     void renderingFinished();

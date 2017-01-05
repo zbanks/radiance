@@ -49,7 +49,6 @@ void CrossFader::paint() {
         glClear(GL_COLOR_BUFFER_BIT);
         leftPreviewFbo = m_blankPreviewFbo;
     } else {
-        node_left->render();
         leftPreviewFbo = node_left->m_renderPreviewFbo;
     }
 
@@ -59,7 +58,6 @@ void CrossFader::paint() {
         glClear(GL_COLOR_BUFFER_BIT);
         rightPreviewFbo = m_blankPreviewFbo;
     } else {
-        node_right->render();
         rightPreviewFbo = node_right->m_renderPreviewFbo;
     }
 
@@ -177,16 +175,28 @@ void CrossFader::setParameter(qreal value) {
 }
 
 void CrossFader::setLeft(VideoNode *value) {
+    m_context->m_contextLock.lock(); // Don't allow changes to topology while rendering
     m_leftLock.lock();
     m_left = value;
     m_leftLock.unlock();
+    m_context->m_contextLock.unlock();
     emit leftChanged(value);
 }
 
 void CrossFader::setRight(VideoNode *value) {
+    m_context->m_contextLock.lock(); // Don't allow changes to topology while rendering
     m_rightLock.lock();
     m_right = value;
     m_rightLock.unlock();
+    m_context->m_contextLock.unlock();
     emit rightChanged(value);
 }
 
+QSet<VideoNode*> CrossFader::dependencies() {
+    QSet<VideoNode*> d;
+    VideoNode* l = left();
+    VideoNode* r = right();
+    if(l) d.insert(l);
+    if(r) d.insert(r);
+    return d;
+}

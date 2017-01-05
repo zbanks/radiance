@@ -13,6 +13,7 @@ public:
     CrossFader(RenderContext *context);
     ~CrossFader();
     bool load();
+    QSet<VideoNode*> dependencies();
  
 public slots:
     qreal parameter();

@@ -4,6 +4,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
 #include <QMutex>
+#include <QSet>
 
 class RenderContext;
 
@@ -15,13 +16,10 @@ public:
     virtual ~VideoNode();
     QOpenGLFramebufferObject *m_displayPreviewFbo;
     QOpenGLFramebufferObject *m_renderPreviewFbo;
+    virtual QSet<VideoNode*> dependencies();
  
 public slots:
     void render();
-
-    bool isMaster();
-    void setMaster(bool set);
-
     bool swapPreview();
 
 signals:
@@ -38,7 +36,6 @@ protected:
 private:
     QOpenGLContext *m_prevContext;
 
-    QMutex m_masterLock;
     QMutex m_previewLock;
 
     bool m_previewUpdated;

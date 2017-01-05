@@ -40,7 +40,6 @@ void Effect::paint() {
         glClear(GL_COLOR_BUFFER_BIT);
         previousPreviewFbo = m_blankPreviewFbo;
     } else {
-        prev->render();
         previousPreviewFbo = prev->m_renderPreviewFbo;
     }
 
@@ -109,6 +108,13 @@ Effect::~Effect() {
     m_previewFbos.clear();
 }
 
+QSet<VideoNode*> Effect::dependencies() {
+    QSet<VideoNode*> d;
+    VideoNode* p = previous();
+    if(p) d.insert(p);
+    return d;
+}
+
 // Call this to load shader code into this Effect.
 // This function is thread-safe, avoid calling this in the render thread.
 // A current OpenGL context is required.
@@ -172,8 +178,10 @@ void Effect::setIntensity(qreal value) {
 }
 
 void Effect::setPrevious(VideoNode *value) {
+    m_context->m_contextLock.lock(); // Don't allow changes to topology while rendering
     m_previousLock.lock();
     m_previous = value;
     m_previousLock.unlock();
+    m_context->m_contextLock.unlock();
     emit previousChanged(value);
 }
