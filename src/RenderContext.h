@@ -34,6 +34,7 @@ public slots:
 
 private:
     QSet<VideoNode*> m_videoNodes;
+    QList<VideoNode*> topoSort();
 
 signals:
     void renderingFinished();

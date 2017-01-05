@@ -175,20 +175,18 @@ void CrossFader::setParameter(qreal value) {
 }
 
 void CrossFader::setLeft(VideoNode *value) {
-    m_context->m_contextLock.lock(); // Don't allow changes to topology while rendering
+    // TODO take context lock??
     m_leftLock.lock();
     m_left = value;
     m_leftLock.unlock();
-    m_context->m_contextLock.unlock();
     emit leftChanged(value);
 }
 
 void CrossFader::setRight(VideoNode *value) {
-    m_context->m_contextLock.lock(); // Don't allow changes to topology while rendering
+    // TODO take context lock??
     m_rightLock.lock();
     m_right = value;
     m_rightLock.unlock();
-    m_context->m_contextLock.unlock();
     emit rightChanged(value);
 }
 

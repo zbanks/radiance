@@ -66,8 +66,10 @@ void RenderContext::render() {
     elapsed_timer.restart();
 
     m_contextLock.lock();
-    //m_master->render();
-    // TOPO SORT AND RENDER
+    QList<VideoNode*> sortedNodes = topoSort();
+    foreach(VideoNode* n, sortedNodes) {
+        n->render();
+    }
     m_contextLock.unlock();
 
     emit renderingFinished();
@@ -91,4 +93,43 @@ void RenderContext::addVideoNode(VideoNode* n) {
 
 void RenderContext::removeVideoNode(VideoNode* n) {
     m_videoNodes.remove(n);
+}
+
+QList<VideoNode*> RenderContext::topoSort() {
+    // Fuck this
+
+    QList<VideoNode*> sortedNodes;
+    QMap<VideoNode*, QSet<VideoNode*>> fwdEdges;
+    QMap<VideoNode*, QSet<VideoNode*>> revEdges;
+
+    foreach(VideoNode* n, m_videoNodes) {
+        QSet<VideoNode*> children = n->dependencies();
+        revEdges.insert(n, children);
+        foreach(VideoNode* c, children) {
+            fwdEdges[c].insert(n);
+        }
+    }
+
+    QList<VideoNode*> startNodes;
+ 
+    foreach(VideoNode* n, m_videoNodes) {
+        if(revEdges.value(n).isEmpty()) startNodes.append(n);
+    }
+
+    while(!startNodes.isEmpty()) {
+        VideoNode* n = startNodes.takeLast();
+        sortedNodes.append(n);
+        foreach(VideoNode* c, fwdEdges.value(n)) {
+            revEdges[c].remove(n);
+            if(revEdges.value(c).isEmpty()) startNodes.append(c);
+        }
+        fwdEdges.remove(n);
+    }
+
+    if(!fwdEdges.isEmpty()) {
+        qDebug() << "Cycle detected!";
+        return QList<VideoNode*>();
+    }
+
+    return sortedNodes;
 }

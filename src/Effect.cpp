@@ -178,10 +178,9 @@ void Effect::setIntensity(qreal value) {
 }
 
 void Effect::setPrevious(VideoNode *value) {
-    m_context->m_contextLock.lock(); // Don't allow changes to topology while rendering
+    // TODO take context lock??
     m_previousLock.lock();
     m_previous = value;
     m_previousLock.unlock();
     m_context->m_contextLock.unlock();
-    emit previousChanged(value);
 }
