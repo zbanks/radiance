@@ -12,7 +12,7 @@ class EffectUI : public VideoNodeUI {
     Q_PROPERTY(VideoNodeUI *previous READ previous WRITE setPrevious NOTIFY previousChanged)
 
 public:
-    EffectUI();
+    EffectUI(QString source = QString());
     qreal intensity();
     QString source();
     VideoNodeUI *previous();

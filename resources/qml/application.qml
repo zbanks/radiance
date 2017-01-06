@@ -130,19 +130,9 @@ ApplicationWindow {
                     }
 
                     Component.onCompleted: {
-                        itemAt(2).uiEffect = testEffect;
-                        itemAt(1).uiEffect = circleEffect;
+                        itemAt(2).load("test");
+                        itemAt(1).load("circle");
                     }
-                }
-
-                UIEffect {
-                    id: testEffect;
-                    effect.source: "test";
-                }
-
-                UIEffect {
-                    id: circleEffect;
-                    effect.source: "circle";
                 }
             }
         }
