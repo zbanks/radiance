@@ -49,8 +49,10 @@ int main(int argc, char *argv[]) {
     //QObject::connect(&renderThread, &QThread::finished, renderContext, &RenderContext::finish);
     renderThread.start();
 
+    qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
+
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<OutputManager>("radiance", 1, 0, "OutputManager");
 

@@ -94,9 +94,11 @@ ApplicationWindow {
                 Deck {
                     id: deck1;
                     count: 4;
-                    onOutput: {
-                        if(cross.crossfader.left != prev) cross.crossfader.left = prev;
-                    }
+                }
+
+                Deck {
+                    id: deck2;
+                    count: 4;
                 }
 
                 Repeater {
@@ -112,15 +114,8 @@ ApplicationWindow {
 
                 UICrossFader {
                     id: cross;
-                }
-
-                Deck {
-                    id: deck2;
-                    count: 4;
-
-                    onOutput: {
-                        if(cross.crossfader.right != prev) cross.crossfader.right = prev;
-                    }
+                    crossfader.left: deck1.output;
+                    crossfader.right: deck2.output;
                 }
 
                 Repeater {

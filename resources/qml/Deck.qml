@@ -4,15 +4,12 @@ import radiance 1.0
 
 QtObject {
     property int count;
-    property var previous;
+    property var previous: null;
+    property var output: null;
 
     property var effects;
 
-    signal output(var prev);
-
-    function set(index, e) {
-        //console.log("Setting", index, "to", e);
-        effects[index] = e;
+    function recalculate() {
         var i;
         var prev = previous;
         for(i=0; i<effects.length; i++) {
@@ -25,7 +22,17 @@ QtObject {
                 prev = effects[i];
             }
         }
-        output(prev);
+        output = prev;
+    }
+
+    onPreviousChanged: {
+        recalculate();
+    }
+
+    function set(index, e) {
+        //console.log("Setting", index, "to", e);
+        effects[index] = e;
+        recalculate();
     }
 
     onCountChanged: {
@@ -34,5 +41,6 @@ QtObject {
         for(i=0; i<effects.length; i++) {
             effects[i] = null;
         }
+        recalculate();
     }
 } 
