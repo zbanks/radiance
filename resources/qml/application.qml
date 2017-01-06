@@ -90,44 +90,64 @@ ApplicationWindow {
             //UIEffectPanel {}
 
             RowLayout {
-                UIEffectSet {
-                    id: leftSet;
+
+                Deck {
+                    id: deck1;
                     count: 4;
+                    onOutput: {
+                        if(cross.crossfader.left != prev) cross.crossfader.left = prev;
+                    }
+                }
+
+                Repeater {
+                    id: deck1repeater;
+                    model: deck1.count;
+
+                    EffectSlot {
+                        onUiEffectChanged: {
+                            deck1.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                        }
+                    }
                 }
 
                 UICrossFader {
-                    crossfader.left: leftSet.last();
-                    crossfader.right: rightSet.last();
+                    id: cross;
                 }
 
-                UIEffectSet {
-                    id: rightSet;
+                Deck {
+                    id: deck2;
                     count: 4;
-                    property int layout: Qt.RightToLeft;
+
+                    onOutput: {
+                        if(cross.crossfader.right != prev) cross.crossfader.right = prev;
+                    }
+                }
+
+                Repeater {
+                    id: deck2repeater;
+                    model: deck2.count;
+
+                    EffectSlot {
+                        onUiEffectChanged: {
+                            //console.log("EFFECT", uiEffect, uiEffect.effect, effect);
+                            deck2.set(deck2repeater.count - index - 1, (uiEffect == null) ? null : uiEffect.effect);
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        itemAt(2).uiEffect = testEffect;
+                        itemAt(1).uiEffect = circleEffect;
+                    }
                 }
 
                 UIEffect {
                     id: testEffect;
                     effect.source: "test";
                 }
+
                 UIEffect {
                     id: circleEffect;
                     effect.source: "circle";
-                }
-
-                Deck {
-                    id: deck1;
-                    count: 2;
-                }
-
-                EffectSlot {
-                    uiEffect: testEffect;
-                    onUiEffectChanged: deck1.set(0, effect);
-                }
-
-                EffectSlot {
-                    uiEffect: circleEffect;
-                    onUiEffectChanged: deck1.set(1, effect);
                 }
             }
         }
