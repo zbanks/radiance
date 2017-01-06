@@ -6,7 +6,9 @@
 #include <QtQuick/QSGSimpleTextureNode>
 #include <QtQuick/QQuickWindow>
 
-CrossFaderUI::CrossFaderUI() {
+CrossFaderUI::CrossFaderUI()
+    : m_left(0)
+    , m_right(0) {
     CrossFader *c = new CrossFader(renderContext);
     connect(c, &CrossFader::parameterChanged, this, &CrossFaderUI::parameterChanged);
     m_videoNode = c;

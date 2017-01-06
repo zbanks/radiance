@@ -6,7 +6,8 @@
 #include <QtQuick/QSGSimpleTextureNode>
 #include <QtQuick/QQuickWindow>
 
-EffectUI::EffectUI() {
+EffectUI::EffectUI() 
+    : m_previous(0) {
     Effect *e = new Effect(renderContext);
     connect(e, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
     m_videoNode = e;

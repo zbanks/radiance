@@ -1,6 +1,7 @@
 import QtQuick 2.3
 import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
+import QtGraphicalEffects 1.0
 import radiance 1.0
 
 ApplicationWindow {
@@ -21,6 +22,14 @@ ApplicationWindow {
         RowLayout {
             anchors.fill: parent;
             Label { text: "Live" }
+        }
+    }
+
+    LinearGradient {
+        anchors.fill: parent
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#333" }
+            GradientStop { position: 1.0; color: "#444" }
         }
     }
 
@@ -95,6 +104,30 @@ ApplicationWindow {
                     id: rightSet;
                     count: 4;
                     property int layout: Qt.RightToLeft;
+                }
+
+                UIEffect {
+                    id: testEffect;
+                    effect.source: "test";
+                }
+                UIEffect {
+                    id: circleEffect;
+                    effect.source: "circle";
+                }
+
+                Deck {
+                    id: deck1;
+                    count: 2;
+                }
+
+                EffectSlot {
+                    uiEffect: testEffect;
+                    onUiEffectChanged: deck1.set(0, effect);
+                }
+
+                EffectSlot {
+                    uiEffect: circleEffect;
+                    onUiEffectChanged: deck1.set(1, effect);
                 }
             }
         }

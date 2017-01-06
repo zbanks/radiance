@@ -22,6 +22,7 @@ RadianceTile {
         Item {
             Layout.preferredHeight: width;
             Layout.fillWidth: true;
+            layer.enabled: true;
 
             CheckerboardBackground {
                 anchors.fill: parent;
