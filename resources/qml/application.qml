@@ -124,7 +124,6 @@ ApplicationWindow {
 
                     EffectSlot {
                         onUiEffectChanged: {
-                            //console.log("EFFECT", uiEffect, uiEffect.effect, effect);
                             deck2.set(deck2repeater.count - index - 1, (uiEffect == null) ? null : uiEffect.effect);
                         }
                     }

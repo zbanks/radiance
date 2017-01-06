@@ -5,8 +5,8 @@ import QtGraphicalEffects 1.0
 import radiance 1.0
 
 Item {
-    property color startColor: "#111";
-    property color endColor: "#181818";
+    property color startColor: activeFocus ? "#113" : "#111";
+    property color endColor: activeFocus ? "#181838" : "#181818";
     property real borderWidth: 3;
     property color borderColor: "#666";
 

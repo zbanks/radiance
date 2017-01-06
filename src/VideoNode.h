@@ -33,6 +33,7 @@ protected:
     void blitToRenderFbo();
     RenderContext *m_context;
     static void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size);
+    void beforeDestruction();
 
 private:
     QOpenGLContext *m_prevContext;

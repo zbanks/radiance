@@ -101,7 +101,7 @@ void Effect::paint() {
 }
 
 Effect::~Effect() {
-    m_context->makeCurrent();
+    beforeDestruction();
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;
     foreach(QOpenGLFramebufferObject *fbo, m_previewFbos) delete fbo;
     m_programs.clear();

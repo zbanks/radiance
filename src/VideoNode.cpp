@@ -74,8 +74,14 @@ bool VideoNode::swapPreview() {
     return previewUpdated;
 }
 
-VideoNode::~VideoNode() {
+// Before deleting any FBOs and whatnot, we need to
+// 1. Make sure we aren't currently rendering
+// 2. Remove ourselves from the context graph
+void VideoNode::beforeDestruction() {
     m_context->removeVideoNode(this);
+}
+
+VideoNode::~VideoNode() {
     delete m_previewFbo;
     m_renderPreviewFbo = 0;
     delete m_renderPreviewFbo;

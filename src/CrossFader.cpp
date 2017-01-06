@@ -101,7 +101,7 @@ void CrossFader::paint() {
 }
 
 CrossFader::~CrossFader() {
-    m_context->makeCurrent();
+    beforeDestruction();
     delete m_program;
 }
 
