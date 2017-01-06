@@ -1,6 +1,7 @@
 #include "RenderContext.h"
 #include <QOpenGLFunctions>
 #include <QDebug>
+#include <QThread>
 
 RenderContext::RenderContext()
     : context(0)
@@ -97,6 +98,7 @@ void RenderContext::render() {
     }
 
     QList<VideoNode*> sortedNodes = topoSort();
+
     foreach(VideoNode* n, sortedNodes) {
         n->render();
     }
@@ -116,11 +118,19 @@ void RenderContext::flush() {
 }
 
 void RenderContext::addVideoNode(VideoNode* n) {
+    // It is less clear to me if taking the context lock
+    // is necessary here
+    m_contextLock.lock();
     m_videoNodes.insert(n);
+    m_contextLock.unlock();
 }
 
 void RenderContext::removeVideoNode(VideoNode* n) {
+    // Take the context lock to avoid deleting anything
+    // required for the current render
+    m_contextLock.lock();
     m_videoNodes.remove(n);
+    m_contextLock.unlock();
 }
 
 QList<VideoNode*> RenderContext::topoSort() {

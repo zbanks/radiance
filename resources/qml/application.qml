@@ -86,21 +86,15 @@ ApplicationWindow {
                     count: 4;
                 }
 
-                CrossFader {
-                    width: 100;
-                    Layout.preferredHeight: width;
-                    left: leftSet.output();
-                    right: rightSet.output();
-                    parameter: 0.5;
+                UICrossFader {
+                    crossfader.left: leftSet.last();
+                    crossfader.right: rightSet.last();
                 }
 
                 UIEffectSet {
                     id: rightSet;
                     count: 4;
                     property int layout: Qt.RightToLeft;
-                }
-                UIEffect {
-                    effect.source: "circle";
                 }
             }
         }

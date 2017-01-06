@@ -4,9 +4,9 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 RadianceTile {
-    property alias effect: effect;
-    implicitWidth: 200;
-    implicitHeight: 300;
+    property alias crossfader: crossfader;
+    implicitWidth: 400;
+    implicitHeight: 600;
 
     Keys.onPressed: {
         if (event.key == Qt.Key_J)
@@ -19,11 +19,6 @@ RadianceTile {
         anchors.fill: parent;
         anchors.margins: 15;
 
-        Label {
-            text: effect.source;
-            color: "#ddd";
-        }
-
         Item {
             Layout.preferredHeight: width;
             Layout.fillWidth: true;
@@ -32,10 +27,10 @@ RadianceTile {
                 anchors.fill: parent;
             }
 
-            Effect {
-                id: effect;
+            CrossFader {
+                id: crossfader;
                 anchors.fill: parent;
-                intensity: slider.value;
+                parameter: slider.value;
             }
         }
 

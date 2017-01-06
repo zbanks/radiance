@@ -8,50 +8,33 @@ RowLayout {
     property int layout: Qt.LeftToRight;
     layoutDirection: layout;
 
-    function output() {
+    function first() {
+        return repeater.itemAt(0).effect;
+    }
+
+    function last() {
         return repeater.itemAt(repeater.count - 1).effect;
     }
 
     Repeater {
         id: repeater;
         model: parent.count;
-        GroupBox {
-            property alias effect: effect;
-            Layout.fillWidth: true;
 
-            Keys.onPressed: {
-                if (event.key == Qt.Key_J)
-                    slider.value -= 0.1;
-                else if (event.key == Qt.Key_K)
-                    slider.value += 0.1;
+        ColumnLayout {
+            property alias effect: uiEffect.effect;
+
+            UIEffect {
+                id: uiEffect;
+                effect.previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
+                effect.source: effectName.currentText;
             }
-
-            ColumnLayout {
-                anchors.fill: parent;
-
-                Slider {
-                    id: slider;
-                    Layout.fillWidth: true;
-                    minimumValue: 0;
-                    maximumValue: 1;
-                }
-
-                Effect {
-                    id: effect;
-                    Layout.preferredHeight: width;
-                    Layout.fillWidth: true;
-                    intensity: slider.value;
-                    source: effectName.currentText;
-                    previous: index == 0 ? null : repeater.itemAt(index - 1).effect;
-                }
-                
-                ComboBox {
-                    id: effectName;
-                    Layout.fillWidth: true;
-                    editable: true;
-                    currentIndex: index;
-                    model: ["purple", "test", "circle", "rainbow"];
-                }
+               
+            ComboBox {
+                id: effectName;
+                Layout.fillWidth: true;
+                editable: true;
+                currentIndex: index;
+                model: ["purple", "test", "circle", "rainbow"];
             }
         }
     }
