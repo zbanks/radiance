@@ -39,7 +39,7 @@ public slots:
     // Before the scene graph starts to render, we update to the pending texture
     void prepareNode() {
         if(m_videoNode->swapPreview()) {
-            int newId = m_videoNode->m_displayPreviewFbo->texture();
+            auto newId = m_videoNode->m_displayPreviewFbo->texture();
             QSize size = m_videoNode->m_displayPreviewFbo->size();
             if(m_id != newId || m_size != size) {
                 delete m_texture;
@@ -72,19 +72,6 @@ VideoNodeUI::VideoNodeUI() : m_videoNode(0) {
 
 QSGNode *VideoNodeUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     TextureNode *node = static_cast<TextureNode *>(oldNode);
-
-    if (!renderContext->context->shareContext()) {
-        QOpenGLContext *current = window()->openglContext();
-        // Some GL implementations requres that the currently bound context is
-        // made non-current before we set up sharing, so we doneCurrent here
-        // and makeCurrent down below while setting up our own context.
-        
-        renderContext->share(current);
-        current->makeCurrent(window());
-
-        //QMetaObject::invokeMethod(this, "ready");
-        //return 0;
-    }
 
     if (!node) {
         node = new TextureNode(window(), m_videoNode);

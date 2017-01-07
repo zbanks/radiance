@@ -9,8 +9,8 @@ class Audio : public QThread {
     Q_OBJECT
 
 public:
-    Audio();
-
+    Audio(QObject *p = nullptr);
+   ~Audio() override;
 protected:
     void run();
 

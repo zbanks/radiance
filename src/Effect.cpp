@@ -53,7 +53,8 @@ void Effect::paint() {
         };
 
         if(m_regeneratePreviewFbos) {
-            foreach(QOpenGLFramebufferObject *f, m_previewFbos) delete f;
+            foreach(QOpenGLFramebufferObject *f, m_previewFbos)
+            delete f;
             m_previewFbos.clear();
             for(int i = 0; i < m_programs.count() + 1; i++) {
                 m_previewFbos.append(new QOpenGLFramebufferObject(size));
@@ -64,8 +65,8 @@ void Effect::paint() {
 
         for(int i = m_programs.count() - 1; i >= 0; i--) {
             resizeFbo(&m_previewFbos[(m_fboIndex + 1) % m_previewFbos.count()], size);
-            QOpenGLFramebufferObject *target = m_previewFbos.at((m_fboIndex + 1) % m_previewFbos.count());
-            QOpenGLShaderProgram * p = m_programs.at(i);
+            auto target = m_previewFbos.at((m_fboIndex + 1) % m_previewFbos.count());
+            auto  p = m_programs.at(i);
 
             p->bind();
             target->bind();
@@ -109,10 +110,11 @@ Effect::~Effect() {
     m_previewFbo = 0; // This points to one of m_previewFbos
 }
 
-QSet<VideoNode*> Effect::dependencies() {
+QSet<VideoNode*> Effect::dependencies()
+{
     QSet<VideoNode*> d;
-    VideoNode* p = previous();
-    if(p) d.insert(p);
+    if(auto p = previous())
+        d.insert(p);
     return d;
 }
 
@@ -131,7 +133,7 @@ bool Effect::loadProgram(QString name) {
     QTextStream s1(&file);
     QString s = s1.readAll();
 
-    QOpenGLShaderProgram *program = new QOpenGLShaderProgram();
+    auto program = new QOpenGLShaderProgram();
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                        "attribute highp vec4 vertices;"
                                        "varying highp vec2 coords;"
@@ -154,34 +156,33 @@ bool Effect::loadProgram(QString name) {
 }
 
 qreal Effect::intensity() {
-    qreal result;
-    m_intensityLock.lock();
-    result = m_intensity;
-    m_intensityLock.unlock();
-    return result;
+    QMutexLocker locker(&m_intensityLock);
+    return m_intensity;
 }
 
 VideoNode *Effect::previous() {
-    VideoNode *result;
-    m_previousLock.lock();
-    result = m_previous;
-    m_previousLock.unlock();
-    return result;
+    QMutexLocker locker(&m_previousLock);
+    return m_previous;
 }
 
 void Effect::setIntensity(qreal value) {
-    m_intensityLock.lock();
-    if(value > 1) value = 1;
-    if(value < 0) value = 0;
-    m_intensity = value;
-    m_intensityLock.unlock();
+    {
+        if(value > 1) value = 1;
+        if(value < 0) value = 0;
+        QMutexLocker locker(&m_intensityLock);
+        if(m_intensity == value)
+            return;
+        m_intensity = value;
+    }
     emit intensityChanged(value);
 }
 
 void Effect::setPrevious(VideoNode *value) {
-    m_context->m_contextLock.lock();
-    m_previousLock.lock();
-    m_previous = value;
-    m_previousLock.unlock();
-    m_context->m_contextLock.unlock();
+
+    // TODO take context lock??
+    {
+        QMutexLocker locker(&m_context->m_contextLock);
+        QMutexLocker locker(&m_previousLock);
+        m_previous = value;
+    }
 }

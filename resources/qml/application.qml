@@ -11,10 +11,18 @@ ApplicationWindow {
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
     }
-
+    Action {
+        id: quitAction
+        text: "&Quit"
+        onTriggered: Qt.quit()
+    }
     menuBar: MenuBar {
         Menu {
-            title: "File";
+            title: "&File";
+            MenuItem { action: quitAction }
+        }
+        Menu {
+            title: "&Edit"
         }
     }
 

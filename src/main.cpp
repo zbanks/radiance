@@ -6,6 +6,7 @@
 #include "EffectUI.h"
 #include "CrossFaderUI.h"
 #include "RenderContext.h"
+#include "RenderThread.h"
 #include "Output.h"
 #include "Lux.h"
 #include "Audio.h"
@@ -29,25 +30,16 @@ QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
 }
 
 int main(int argc, char *argv[]) {
-    QGuiApplication app(argc, argv);
     QCoreApplication::setOrganizationName("Radiance");
     QCoreApplication::setOrganizationDomain("radiance.lighting");
     QCoreApplication::setApplicationName("Radiance");
-
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    QGuiApplication app(argc, argv);
     //qRegisterMetaType<Effect*>("Effect*");
 
     settings = new QSettings();
     uiSettings = new UISettings();
     audio = new Audio();
-
-    // Render thread
-    QThread renderThread;
-    renderThread.setObjectName("RenderThread");
-    renderContext = new RenderContext();
-    renderContext->moveToThread(&renderThread);
-    QObject::connect(&renderThread, &QThread::started, renderContext, &RenderContext::start);
-    //QObject::connect(&renderThread, &QThread::finished, renderContext, &RenderContext::finish);
-    renderThread.start();
 
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
@@ -59,10 +51,15 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
 
+    // Render thread
+    RenderThread renderThread{};
+    renderThread.start();
+
+
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
 
     QObject *window = engine.rootObjects().first();
-    QObject::connect(window, SIGNAL(frameSwapped()), renderContext, SLOT(render()));
+    QObject::connect(window, SIGNAL(frameSwapped()), &renderThread , SIGNAL(render()));
 
     return app.exec();
 }

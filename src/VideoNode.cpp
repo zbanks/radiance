@@ -1,28 +1,29 @@
 #include "VideoNode.h"
 #include "RenderContext.h"
 #include <QDebug>
+#include <QThread>
 
 VideoNode::VideoNode(RenderContext *context)
     : m_context(context),
     m_previewFbo(0),
     m_displayPreviewFbo(0),
     m_renderPreviewFbo(0),
-    m_prevContext(0),
-    m_previewUpdated(false) {
+    m_previewUpdated(false),
+    m_initialized(false)
+{
     moveToThread(context->thread());
-    m_context->addVideoNode(this);
+    emit m_context->addVideoNodeRequested(this);
+//    m_context->addVideoNode(this);
 }
 
 void VideoNode::render() {
-    if(m_prevContext != m_context->context) {
+    if(!m_initialized) {
         initializeOpenGLFunctions(); // Placement of this function is black magic to me
         initialize();
         m_previewUpdated = false;
-        m_prevContext = m_context->context;
+        m_initialized = true;
     }
-
     paint();
-
     emit textureReady();
 }
 
@@ -30,7 +31,7 @@ void VideoNode::render() {
 // to draw to the preview back-buffer.
 void VideoNode::blitToRenderFbo() {
     m_context->flush(); // Flush before taking the lock to speed things up a bit
-    m_previewLock.lock();
+    QMutexLocker locker(&m_previewLock);
     resizeFbo(&m_renderPreviewFbo, m_previewFbo->size());
 
     float values[] = {
@@ -56,28 +57,27 @@ void VideoNode::blitToRenderFbo() {
 
     m_context->flush();
     m_previewUpdated = true;
-    m_previewLock.unlock();
 }
 
 // This function is called from the rendering thread
 // to get the latest preview frame from m_displayPreviewFbo.
 // It returns true if there is a new frame
 bool VideoNode::swapPreview() {
-    m_previewLock.lock();
-    bool previewUpdated = m_previewUpdated;
-    if(previewUpdated) {
+    QMutexLocker locker(&m_previewLock);
+    if(auto previewUpdated = m_previewUpdated) {
         resizeFbo(&m_displayPreviewFbo, m_renderPreviewFbo->size());
         QOpenGLFramebufferObject::blitFramebuffer(m_displayPreviewFbo, m_renderPreviewFbo);
         m_previewUpdated = false;
+        return true;
     }
-    m_previewLock.unlock();
-    return previewUpdated;
+    return false;
 }
 
 // Before deleting any FBOs and whatnot, we need to
 // 1. Make sure we aren't currently rendering
 // 2. Remove ourselves from the context graph
-void VideoNode::beforeDestruction() {
+void VideoNode::beforeDestruction()
+{
     m_context->removeVideoNode(this);
 }
 
@@ -99,6 +99,7 @@ void VideoNode::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
     }
 }
 
-QSet<VideoNode*> VideoNode::dependencies() {
+QSet<VideoNode*> VideoNode::dependencies()
+{
     return QSet<VideoNode*>();
 }

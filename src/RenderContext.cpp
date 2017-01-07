@@ -4,22 +4,25 @@
 #include <QThread>
 
 RenderContext::RenderContext()
-    : context(0)
-    , surface(0)
-    , timer(0)
-    , m_premultiply(0)
-    , m_prevContext(0) {
-    context = new QOpenGLContext();
+    : context(nullptr)
+    , surface(nullptr)
+    , timer(nullptr)
+    , m_premultiply(nullptr)
+{
+    context = new QOpenGLContext(this);
+    auto scontext = QOpenGLContext::globalShareContext();
+    if(scontext) {
+        context->setFormat(scontext->format());
+        context->setShareContext(scontext);
+    }
+
     context->create();
 
     surface = new QOffscreenSurface();
     surface->setFormat(context->format());
     surface->create();
-}
-
-void RenderContext::moveToThread(QThread *t) {
-    QObject::moveToThread(t);
-    context->moveToThread(thread());
+    connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
+    connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
 }
 
 RenderContext::~RenderContext() {
@@ -39,32 +42,14 @@ void RenderContext::start() {
 // in case it is running with no UI. If there is a Qt UI,
 // you will need to call this function with the UI context
 // to properly set up context sharing.
-void RenderContext::share(QOpenGLContext *current) {
-    // We re-create and then delete the old Context & Surface
-    // so that the newly created once will have different
-    // pointers. This way, anything using this context
-    // can watch the context pointer for changes
-    // to see if a context has been re-created
-    // since the last render.
-
-    m_contextLock.lock();
-    context->doneCurrent();
-    QOpenGLContext *newContext = new QOpenGLContext();
-    delete context;
-    context = newContext;
-    context->setShareContext(current);
-    context->create();
-    context->moveToThread(thread());
-    QOffscreenSurface *newSurface = new QOffscreenSurface();
-    delete surface;
-    surface = newSurface;
-    surface->setFormat(context->format());
-    surface->create();
-    m_contextLock.unlock();
-}
 
 void RenderContext::load() {
-    QOpenGLShaderProgram *program = new QOpenGLShaderProgram();
+    auto program = m_premultiply;
+    m_premultiply = nullptr;
+    if(!program)
+        program = new QOpenGLShaderProgram(this);
+    else
+        program->removeAllShaders();
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                        "attribute highp vec4 vertices;"
                                        "varying highp vec2 coords;"
@@ -81,30 +66,23 @@ void RenderContext::load() {
                                        "}");
     program->bindAttributeLocation("vertices", 0);
     program->link();
-    delete m_premultiply;
     m_premultiply = program;
 }
 
 void RenderContext::render() {
     qint64 framePeriod = elapsed_timer.nsecsElapsed();
     elapsed_timer.restart();
+    {
+        QMutexLocker locker(&m_contextLock);
+        makeCurrent();
 
-    m_contextLock.lock();
+        if(!m_premultiply)
+            load();
 
-    makeCurrent();
-
-    if(m_prevContext != context) {
-        load();
-        m_prevContext = context;
+        for(auto n : topoSort()) {
+            n->render();
+        }
     }
-
-    QList<VideoNode*> sortedNodes = topoSort();
-
-    foreach(VideoNode* n, sortedNodes) {
-        n->render();
-    }
-    m_contextLock.unlock();
-
     emit renderingFinished();
     qint64 renderingPeriod = elapsed_timer.nsecsElapsed();
     //qDebug() << framePeriod << renderingPeriod;
@@ -121,20 +99,19 @@ void RenderContext::flush() {
 void RenderContext::addVideoNode(VideoNode* n) {
     // It is less clear to me if taking the context lock
     // is necessary here
-    m_contextLock.lock();
+    QMutexLocker locker(&m_contextLock);
     m_videoNodes.insert(n);
-    m_contextLock.unlock();
 }
 
 void RenderContext::removeVideoNode(VideoNode* n) {
     // Take the context lock to avoid deleting anything
     // required for the current render
-    m_contextLock.lock();
+    QMutexLocker locker(&m_contextLock);
     m_videoNodes.remove(n);
-    m_contextLock.unlock();
 }
 
-QList<VideoNode*> RenderContext::topoSort() {
+QList<VideoNode*> RenderContext::topoSort()
+{
     // Fuck this
 
     QList<VideoNode*> sortedNodes;
@@ -142,7 +119,7 @@ QList<VideoNode*> RenderContext::topoSort() {
     QMap<VideoNode*, QSet<VideoNode*> > revEdges;
 
     foreach(VideoNode* n, m_videoNodes) {
-        QSet<VideoNode*> children = n->dependencies();
+        auto children = n->dependencies();
         revEdges.insert(n, children);
         foreach(VideoNode* c, children) {
             fwdEdges[c].insert(n);
@@ -150,7 +127,7 @@ QList<VideoNode*> RenderContext::topoSort() {
     }
 
     QList<VideoNode*> startNodes;
- 
+
     foreach(VideoNode* n, m_videoNodes) {
         if(revEdges.value(n).isEmpty()) startNodes.append(n);
     }
@@ -158,9 +135,10 @@ QList<VideoNode*> RenderContext::topoSort() {
     while(!startNodes.isEmpty()) {
         VideoNode* n = startNodes.takeLast();
         sortedNodes.append(n);
-        foreach(VideoNode* c, fwdEdges.value(n)) {
+        for(auto c: fwdEdges.value(n)) {
             revEdges[c].remove(n);
-            if(revEdges.value(c).isEmpty()) startNodes.append(c);
+            if(revEdges.value(c).isEmpty())
+                startNodes.append(c);
         }
         fwdEdges.remove(n);
     }

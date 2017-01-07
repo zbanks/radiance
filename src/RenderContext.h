@@ -15,33 +15,32 @@ class RenderContext : public QObject {
 
 public:
     RenderContext();
-    ~RenderContext();
+   ~RenderContext() override;
     QOffscreenSurface *surface;
     QOpenGLContext *context;
     QTimer *timer;
     QElapsedTimer elapsed_timer;
     QMutex m_contextLock;
-    void moveToThread(QThread *t);
 
     void makeCurrent();
     void flush();
-    void share(QOpenGLContext *current);
-    void addVideoNode(VideoNode* n);
-    void removeVideoNode(VideoNode* n);
 
     QOpenGLShaderProgram *m_premultiply;
- 
+
     QSet<VideoNode*> m_videoNodes; // temp
 
 public slots:
     void start();
     void render();
+    void addVideoNode(VideoNode* n);
+    void removeVideoNode(VideoNode* n);
 
 private:
     QList<VideoNode*> topoSort();
     void load();
-    QOpenGLContext *m_prevContext;
 
 signals:
     void renderingFinished();
+    void addVideoNodeRequested(VideoNode *n);
+    void removeVideoNodeRequested(VideoNode *n);
 };

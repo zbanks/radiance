@@ -13,12 +13,12 @@ class VideoNode : public QObject, protected QOpenGLFunctions {
 
 public:
     VideoNode(RenderContext *context);
-    virtual ~VideoNode();
+   ~VideoNode() override;
     QOpenGLFramebufferObject *m_previewFbo;
     QOpenGLFramebufferObject *m_displayPreviewFbo;
     QOpenGLFramebufferObject *m_renderPreviewFbo;
     virtual QSet<VideoNode*> dependencies();
- 
+
 public slots:
     void render();
     bool swapPreview();
@@ -36,7 +36,7 @@ protected:
     void beforeDestruction();
 
 private:
-    QOpenGLContext *m_prevContext;
     QMutex m_previewLock;
     bool m_previewUpdated;
+    bool m_initialized;
 };

@@ -6,13 +6,18 @@
 const int FrameRate = 44100;
 const int ChunkSize = 128;
 
-Audio::Audio() : m_chunk(ChunkSize) {
+Audio::Audio(QObject *p) : QThread(p), m_chunk(ChunkSize), m_run(true)
+{
     setObjectName("AudioThread");
-    m_run = true;
     start();
 }
-
-void Audio::quit() {
+Audio::~Audio()
+{
+    quit();
+    wait();
+}
+void Audio::quit()
+{
     m_run = false;
 }
 
