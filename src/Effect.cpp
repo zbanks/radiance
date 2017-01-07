@@ -181,8 +181,8 @@ void Effect::setPrevious(VideoNode *value) {
 
     // TODO take context lock??
     {
-        QMutexLocker locker(&m_context->m_contextLock);
-        QMutexLocker locker(&m_previousLock);
+        QMutexLocker clocker(&m_context->m_contextLock);
+        QMutexLocker plocker(&m_previousLock);
         m_previous = value;
     }
 }
