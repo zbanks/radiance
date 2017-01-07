@@ -1,5 +1,6 @@
 import QtQuick 2.3
 import radiance 1.0
+import QtQuick.Controls 1.4
 
 RadianceTile {
     id: tile;
@@ -19,6 +20,12 @@ RadianceTile {
         }
     }
 
+    Keys.onPressed: {
+        if (event.key == Qt.Key_Colon) {
+            loadfield.popup();
+        }
+    }
+
     function load(name) {
         var component = Qt.createComponent("UIEffect.qml")
         var e = component.createObject(this);
@@ -29,6 +36,7 @@ RadianceTile {
         uiEffect = e;
         if(prev != null) e.destroy();
         place();
+        loadfield.visible = false;
     }
 
     function unload() {
@@ -39,5 +47,35 @@ RadianceTile {
         }
     }
 
+    onActiveFocusChanged: {
+        if(!activeFocus) {
+            //loadfield.visible = false;
+        }
+    }
+
     MouseArea { anchors.fill: parent; onClicked: { tile.focus = true } }
+
+    TextField {
+        id: loadfield;
+        x: 50;
+        y: 50;
+        visible: false;
+
+        Keys.onPressed: {
+            if (event.key == Qt.Key_Escape) {
+                visible = false;
+            }
+        }
+
+        function popup() {
+            visible = true;
+            text = "";
+            focus = true;
+        }
+
+        onAccepted: {
+            tile.load(text);
+            visible = false;
+        }
+    }
 }
