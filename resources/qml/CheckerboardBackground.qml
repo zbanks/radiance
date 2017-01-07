@@ -16,8 +16,8 @@ ShaderEffect {
         varying highp vec2 coord;
         uniform lowp float qt_Opacity;
         void main() {
-            vec2 qc = floor(coord.xy * 4.);
-            vec3 c = vec3(0.2) + vec3(0.1) * mod(qc.x + qc.y, 2.);
+            vec2 qc = floor(coord.xy * 12.);
+            vec3 c = vec3(0.2) + vec3(0.15) * mod(qc.x + qc.y, 2.);
             gl_FragColor = vec4(c, 1) * qt_Opacity;
         }"
 }

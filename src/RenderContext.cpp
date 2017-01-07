@@ -137,8 +137,8 @@ QList<VideoNode*> RenderContext::topoSort() {
     // Fuck this
 
     QList<VideoNode*> sortedNodes;
-    QMap<VideoNode*, QSet<VideoNode*>> fwdEdges;
-    QMap<VideoNode*, QSet<VideoNode*>> revEdges;
+    QMap<VideoNode*, QSet<VideoNode*> > fwdEdges;
+    QMap<VideoNode*, QSet<VideoNode*> > revEdges;
 
     foreach(VideoNode* n, m_videoNodes) {
         QSet<VideoNode*> children = n->dependencies();
