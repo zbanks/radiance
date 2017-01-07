@@ -31,12 +31,13 @@ public:
 
     QOpenGLShaderProgram *m_premultiply;
  
+    QSet<VideoNode*> m_videoNodes; // temp
+
 public slots:
     void start();
     void render();
 
 private:
-    QSet<VideoNode*> m_videoNodes;
     QList<VideoNode*> topoSort();
     void load();
     QOpenGLContext *m_prevContext;

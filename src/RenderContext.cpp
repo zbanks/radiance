@@ -90,6 +90,7 @@ void RenderContext::render() {
     elapsed_timer.restart();
 
     m_contextLock.lock();
+
     makeCurrent();
 
     if(m_prevContext != context) {

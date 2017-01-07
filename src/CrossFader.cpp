@@ -173,19 +173,21 @@ void CrossFader::setParameter(qreal value) {
 }
 
 void CrossFader::setLeft(VideoNode *value) {
-    // TODO take context lock??
+    m_context->m_contextLock.lock();
     m_leftLock.lock();
     m_left = value;
     m_leftLock.unlock();
     emit leftChanged(value);
+    m_context->m_contextLock.unlock();
 }
 
 void CrossFader::setRight(VideoNode *value) {
-    // TODO take context lock??
+    m_context->m_contextLock.lock();
     m_rightLock.lock();
     m_right = value;
     m_rightLock.unlock();
     emit rightChanged(value);
+    m_context->m_contextLock.unlock();
 }
 
 QSet<VideoNode*> CrossFader::dependencies() {

@@ -179,7 +179,7 @@ void Effect::setIntensity(qreal value) {
 }
 
 void Effect::setPrevious(VideoNode *value) {
-    // TODO take context lock??
+    m_context->m_contextLock.lock();
     m_previousLock.lock();
     m_previous = value;
     m_previousLock.unlock();
