@@ -70,7 +70,6 @@ ApplicationWindow {
                         Component.onCompleted: { this.createBus("udp://127.0.0.1:1365"); }
                     }
                     ColumnLayout {
-                        anchors.fill: parent;
                         ScrollView {
                             Layout.fillHeight: true;
                             Layout.fillWidth: true;
