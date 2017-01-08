@@ -53,7 +53,12 @@ RadianceTile {
         }
     }
 
-    MouseArea { anchors.fill: parent; onClicked: { tile.focus = true } }
+    MouseArea {
+        anchors.fill: parent;
+        onClicked: {
+            tile.forceActiveFocus();
+        }
+    }
 
     TextField {
         id: loadfield;

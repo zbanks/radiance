@@ -23,7 +23,7 @@ RadianceTile {
         anchors.fill: parent;
         onClicked: {
             // TODO reparent to draw on top of everything
-            tile.focus = true;
+            tile.forceActiveFocus();
         }
         onReleased: {
             // TODO reparent if dropped somewhere relevant
