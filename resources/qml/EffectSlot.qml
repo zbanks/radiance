@@ -36,7 +36,7 @@ RadianceTile {
         uiEffect = e;
         if(prev != null) e.destroy();
         place();
-        loadfield.visible = false;
+        loadfield.popdown();
     }
 
     function unload() {
@@ -49,7 +49,7 @@ RadianceTile {
 
     onActiveFocusChanged: {
         if(!activeFocus) {
-            //loadfield.visible = false;
+            loadfield.popdown();
         }
     }
 
@@ -63,7 +63,7 @@ RadianceTile {
 
         Keys.onPressed: {
             if (event.key == Qt.Key_Escape) {
-                visible = false;
+                popdown();
             }
         }
 
@@ -73,9 +73,14 @@ RadianceTile {
             focus = true;
         }
 
+        function popdown() {
+            visible = false;
+            focus = false;
+        }
+
         onAccepted: {
             tile.load(text);
-            visible = false;
+            popdown();
         }
     }
 }
