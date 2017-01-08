@@ -22,13 +22,11 @@ RadianceTile {
         id: dragArea;
         anchors.fill: parent;
         onClicked: {
-            // TODO reparent to draw on top of everything
             tile.forceActiveFocus();
         }
         onReleased: {
-            // TODO reparent if dropped somewhere relevant
-            tile.x = 0;
-            tile.y = 0;
+            //tile.x = 0;
+            //tile.y = 0;
         }
         drag.target: parent;
     }

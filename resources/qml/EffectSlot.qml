@@ -5,13 +5,16 @@ import QtQuick.Controls 1.4
 RadianceTile {
     id: tile;
     property UIEffect uiEffect;
+    property EffectSpace effectSpace;
     implicitWidth: 200;
     implicitHeight: 300;
     borderWidth: 0;
 
     function place() {
-        uiEffect.x = 0;
-        uiEffect.y = 0;
+        uiEffect.x = tile.x;
+        uiEffect.y = tile.y;
+        uiEffect.width = tile.width;
+        uiEffect.height = tile.height;
     }
 
     function onChildKey(event) {
@@ -28,13 +31,13 @@ RadianceTile {
 
     function load(name) {
         var component = Qt.createComponent("UIEffect.qml")
-        var e = component.createObject(this);
+        var e = component.createObject(effectSpace);
         e.effect.source = name;
         e.Keys.onPressed.connect(onChildKey);
 
         var prev = uiEffect;
         uiEffect = e;
-        if(prev != null) e.destroy();
+        if(prev != null) prev.destroy();
         place();
         loadfield.popdown();
     }
@@ -64,6 +67,7 @@ RadianceTile {
         id: loadfield;
         x: 50;
         y: 50;
+        z: 20;
         visible: false;
 
         Keys.onPressed: {
