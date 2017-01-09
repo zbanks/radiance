@@ -3,11 +3,16 @@ import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import radiance 1.0
 
-RadianceTile {
+FocusScope {
     id: tile;
     property alias effect: effect;
     implicitWidth: 200;
     implicitHeight: 300;
+
+    RadianceTile {
+        anchors.fill: parent;
+        focus: parent.activeFocus;
+    }
 
     Keys.onPressed: {
         if (event.key == Qt.Key_J)

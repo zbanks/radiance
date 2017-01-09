@@ -3,10 +3,14 @@ import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import radiance 1.0
 
-RadianceTile {
+FocusScope {
     property alias crossfader: crossfader;
     implicitWidth: 400;
     implicitHeight: 600;
+
+    RadianceTile {
+        anchors.fill: parent;
+    }
 
     Keys.onPressed: {
         if (event.key == Qt.Key_J)

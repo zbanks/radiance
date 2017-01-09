@@ -5,16 +5,13 @@ import QtQuick.Controls 1.4
 RadianceTile {
     id: tile;
     property UIEffect uiEffect;
-    property EffectSpace effectSpace;
+    property EffectSelector effectSelector;
+
     implicitWidth: 200;
     implicitHeight: 300;
     borderWidth: 0;
 
     function place() {
-        uiEffect.x = tile.x;
-        uiEffect.y = tile.y;
-        uiEffect.width = tile.width;
-        uiEffect.height = tile.height;
     }
 
     function onChildKey(event) {
@@ -25,13 +22,16 @@ RadianceTile {
 
     Keys.onPressed: {
         if (event.key == Qt.Key_Colon) {
-            loadfield.popup();
+            effectSelector.x = x + 50;
+            effectSelector.y = y + 50;
+            effectSelector.selected.connect(load);
+            effectSelector.popup();
         }
     }
 
     function load(name) {
         var component = Qt.createComponent("UIEffect.qml")
-        var e = component.createObject(effectSpace);
+        var e = component.createObject(this);
         e.effect.source = name;
         e.Keys.onPressed.connect(onChildKey);
 
@@ -39,7 +39,7 @@ RadianceTile {
         uiEffect = e;
         if(prev != null) prev.destroy();
         place();
-        loadfield.popdown();
+        effectSelector.popdown();
     }
 
     function unload() {
@@ -52,7 +52,7 @@ RadianceTile {
 
     onActiveFocusChanged: {
         if(!activeFocus) {
-            loadfield.popdown();
+            //effectSelector.popdown();
         }
     }
 
@@ -60,36 +60,6 @@ RadianceTile {
         anchors.fill: parent;
         onClicked: {
             tile.forceActiveFocus();
-        }
-    }
-
-    TextField {
-        id: loadfield;
-        x: 50;
-        y: 50;
-        z: 20;
-        visible: false;
-
-        Keys.onPressed: {
-            if (event.key == Qt.Key_Escape) {
-                popdown();
-            }
-        }
-
-        function popup() {
-            visible = true;
-            text = "";
-            focus = true;
-        }
-
-        function popdown() {
-            visible = false;
-            focus = false;
-        }
-
-        onAccepted: {
-            tile.load(text);
-            popdown();
         }
     }
 }

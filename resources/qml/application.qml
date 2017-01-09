@@ -93,7 +93,6 @@ ApplicationWindow {
                 }
             }
         }
-
         EffectSpace {
             Layout.fillWidth: true;
             Layout.fillHeight: true;
@@ -109,13 +108,12 @@ ApplicationWindow {
                     id: deck2;
                     count: 4;
                 }
-
                 Repeater {
                     id: deck1repeater;
                     model: deck1.count;
 
                     EffectSlot {
-                        effectSpace: space;
+                        effectSelector: selector;
                         onUiEffectChanged: {
                             deck1.set(index, (uiEffect == null) ? null : uiEffect.effect);
                         }
@@ -133,12 +131,15 @@ ApplicationWindow {
                     model: deck2.count;
 
                     EffectSlot {
-                        effectSpace: space;
+                        effectSelector: selector;
                         onUiEffectChanged: {
                             deck2.set(deck2repeater.count - index - 1, (uiEffect == null) ? null : uiEffect.effect);
                         }
                     }
                 }
+            }
+            EffectSelector {
+                id: selector;
             }
         }
     }

@@ -57,6 +57,10 @@ int main(int argc, char *argv[]) {
 
 
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
+    if(engine.rootObjects().isEmpty()) {
+        qFatal("Failed to load main QML application");
+        return 1;
+    }
 
     QObject *window = engine.rootObjects().first();
     QObject::connect(window, SIGNAL(frameSwapped()), &renderThread , SIGNAL(render()));
