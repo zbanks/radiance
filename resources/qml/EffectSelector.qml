@@ -6,9 +6,16 @@ TextField {
     id: loadfield;
     visible: false;
     signal selected(string name);
+    signal closed();
 
     Keys.onPressed: {
         if (event.key == Qt.Key_Escape) {
+            popdown();
+        }
+    }
+
+    onActiveFocusChanged: {
+        if(!activeFocus) {
             popdown();
         }
     }
@@ -20,9 +27,11 @@ TextField {
     }
 
     function popdown() {
-        console.log("popdown");
-        visible = false;
-        focus = false;
+        if(visible) {
+            visible = false;
+            focus = false;
+            closed();
+        }
     }
 
     onAccepted: {
