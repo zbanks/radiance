@@ -4,15 +4,12 @@ import QtQuick.Controls 1.4
 
 RadianceTile {
     id: tile;
-    property UIEffect uiEffect;
+    property DraggableEffect uiEffect;
     property EffectSelector effectSelector;
 
     implicitWidth: 200;
     implicitHeight: 300;
     borderWidth: 0;
-
-    function place() {
-    }
 
     function onChildKey(event) {
         if (event.key == Qt.Key_Delete) {
@@ -41,16 +38,21 @@ RadianceTile {
     }
 
     function load(name) {
-        var component = Qt.createComponent("UIEffect.qml")
+        var component = Qt.createComponent("DraggableEffect.qml")
         var e = component.createObject(tile);
         e.effect.source = name;
-        e.Keys.onPressed.connect(onChildKey);
 
+        replace(e);
+        effectSelector.popdown();
+    }
+
+    function replace(e) {
+        if(e == uiEffect) return;
         var prev = uiEffect;
         uiEffect = e;
-        if(prev != null) prev.destroy();
-        place();
-        effectSelector.popdown();
+        if(prev) prev.destroy();
+        if(e.slot) e.slot.uiEffect = null;
+        e.slot = tile;
     }
 
     function unload() {
@@ -66,5 +68,10 @@ RadianceTile {
         onClicked: {
             tile.forceActiveFocus();
         }
+    }
+
+    DropArea {
+        keys: ["effect"]
+        anchors.fill: parent;
     }
 }

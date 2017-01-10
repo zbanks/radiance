@@ -93,7 +93,8 @@ ApplicationWindow {
                 }
             }
         }
-        EffectSpace {
+
+        Item {
             Layout.fillWidth: true;
             Layout.fillHeight: true;
             id: space;
@@ -138,6 +139,7 @@ ApplicationWindow {
                     }
                 }
             }
+
             EffectSelector {
                 id: selector;
             }

@@ -11,7 +11,7 @@ FocusScope {
 
     RadianceTile {
         anchors.fill: parent;
-        focus: parent.activeFocus;
+        focus: true;
     }
 
     Keys.onPressed: {
@@ -19,21 +19,6 @@ FocusScope {
             slider.value -= 0.1;
         else if (event.key == Qt.Key_K)
             slider.value += 0.1;
-    }
-
-    Drag.active: dragArea.drag.active;
-
-    MouseArea {
-        id: dragArea;
-        anchors.fill: parent;
-        onClicked: {
-            tile.forceActiveFocus();
-        }
-        onReleased: {
-            //tile.x = 0;
-            //tile.y = 0;
-        }
-        drag.target: parent;
     }
 
     ColumnLayout {
