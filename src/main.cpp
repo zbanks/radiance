@@ -14,8 +14,10 @@
 
 RenderContext *renderContext = 0;
 QSettings *settings = 0;
+QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
 Audio *audio = 0;
+OutputManager *outputManager = 0;
 
 QObject *uiSettingsProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
@@ -29,6 +31,12 @@ QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     return audio;
 }
 
+QObject *outputManagerProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
+    Q_UNUSED(engine)
+    Q_UNUSED(scriptEngine)
+    return outputManager;
+}
+
 int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
     QCoreApplication::setOrganizationDomain("radiance.lighting");
@@ -38,18 +46,26 @@ int main(int argc, char *argv[]) {
     //qRegisterMetaType<Effect*>("Effect*");
 
     settings = new QSettings();
+    outputSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output");
     uiSettings = new UISettings();
     audio = new Audio();
+    outputManager = new OutputManager(outputSettings);
 
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
 
-    qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
-    qmlRegisterType<OutputManager>("radiance", 1, 0, "OutputManager");
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
+
+    qmlRegisterUncreatableType<OutputDevice>("radiance", 1, 0, "OutputDevice", "OutputDevice is abstract and cannot be instantiated");
+    qmlRegisterUncreatableType<LuxDevice>("radiance", 1, 0, "LuxDevice", "LuxDevice is abstract and cannot be instantiated");
+    qmlRegisterUncreatableType<OutputBus>("radiance", 1, 0, "OutputBus", "OutputBus is abstract and cannot be instantiated");
+    qmlRegisterSingletonType<OutputManager>("radiance", 1, 0, "OutputManager", outputManagerProvider);
+
+    qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
+    //qmlRegisterType<LuxStripDevice>("radiance", 1, 0, "LuxStripDevice");
 
     // Render thread
     RenderThread renderThread{};

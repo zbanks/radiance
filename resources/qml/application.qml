@@ -67,16 +67,12 @@ ApplicationWindow {
                 implicitHeight: 300;
                 Layout.fillWidth: true;
 
-                OutputManager {
-                    id: outputManager
-                    Component.onCompleted: { this.createBus("udp://127.0.0.1:1365"); }
-                }
                 ColumnLayout {
                     ScrollView {
                         ListView {
-                            model: outputManager.buses
+                            model: OutputManager.buses
                             delegate: RowLayout {
-                                property var bus : outputManager.buses[index];
+                                property var bus : OutputManager.buses[index];
                                 TextField {
                                     id: bus_textbox;
                                     text: bus.uri;
@@ -88,7 +84,9 @@ ApplicationWindow {
                     }
                     Button {
                         text: "Add Output";
-                        onClicked: { outputManager.createBus(""); }
+                        onClicked: {
+                            OutputManager.createBus(OutputBus.LuxBus, "udp://127.0.0.1365");
+                        }
                     }
                 }
             }
