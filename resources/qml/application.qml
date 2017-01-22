@@ -62,8 +62,8 @@ ApplicationWindow {
                 Label { text: "TODO: Spectrum" }
             }
             GroupBox {
-                title: "Outputs";
-                implicitWidth: 300;
+                title: "Output Lux Buses";
+                implicitWidth: 200;
                 implicitHeight: 300;
                 Layout.fillWidth: true;
 
@@ -85,7 +85,7 @@ ApplicationWindow {
                                 TextField {
                                     id: bus_textbox;
                                     text: bus.uri;
-                                    implicitWidth: 300;
+                                    implicitWidth: 200;
                                     Layout.margins: 3;
                                     onAccepted: { bus.uri = text }
                                 }
@@ -95,14 +95,90 @@ ApplicationWindow {
                     }
                     RowLayout {
                         Button {
-                            text: "Add Output";
+                            text: "Add Bus";
                             onClicked: {
                                 var luxbus = OutputManager.createLuxBus();
                                 luxbus.uri = "udp://127.0.0.1:1365";
                             }
                         }
                         Button {
-                            text: "Save Output Configuration";
+                            text: "Refresh";
+                            onClicked: {
+                                OutputManager.refresh();
+                            }
+                        }
+                        Button {
+                            text: "Save";
+                            onClicked: {
+                                OutputManager.saveSettings();
+                            }
+                        }
+                    }
+                }
+            }
+            GroupBox {
+                title: "Output Lux Devices";
+                implicitWidth: 200;
+                implicitHeight: 300;
+                Layout.fillWidth: true;
+
+                ColumnLayout {
+                    anchors.fill: parent;
+                    ScrollView {
+                        Layout.fillWidth: true;
+                        ListView {
+                            model: OutputManager.devices
+                            delegate: RowLayout {
+                                property var dev : OutputManager.devices[index];
+                                Rectangle {
+                                    width: 15;
+                                    height: 15;
+                                    color: dev.state == LuxDevice.Disconnected ? "grey" : (
+                                           dev.state == LuxDevice.Error ? "red" : (
+                                           dev.state == LuxDevice.Blind ? "yellow" : (
+                                           dev.state == LuxDevice.Connected ? "green" : "blue")));
+                                }
+                                Rectangle {
+                                    width: 15;
+                                    height: 15;
+                                    radius: 8;
+                                    color: dev.color;
+                                }
+                                TextField {
+                                    id: dev_name;
+                                    text: dev.name;
+                                    implicitWidth: 100;
+                                    Layout.margins: 3;
+                                    onAccepted: { dev.name = text }
+                                }
+                                TextField {
+                                    id: dev_id;
+                                    text: "0x" + dev.luxId.toString(16);
+                                    implicitWidth: 100;
+                                    Layout.margins: 3;
+                                    onAccepted: { dev.luxId = parseInt(text) }
+                                }
+                                Label {
+                                    text: "Length: " + dev.length;
+                                }
+                            }
+                        }
+                    }
+                    RowLayout {
+                        Button {
+                            text: "Add Device";
+                            onClicked: {
+                                var luxdev = OutputManager.createLuxDevice();
+                            }
+                        }
+                        Button {
+                            text: "Refresh";
+                            onClicked: {
+                                OutputManager.refresh();
+                            }
+                        }
+                        Button {
+                            text: "Save";
                             onClicked: {
                                 OutputManager.saveSettings();
                             }

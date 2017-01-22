@@ -41,6 +41,8 @@ public:
     void setLength(int length);
 
     void frame();
+
+public slots:
     void refresh();
 
 signals:

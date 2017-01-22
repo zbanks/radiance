@@ -60,7 +60,12 @@ QQmlListProperty<LuxDevice> OutputManager::devices() {
 }
 
 void OutputManager::refresh() {
-
+    for (auto bus : m_buses) {
+        bus->refresh();
+    }
+    for (auto dev : m_devices) {
+        dev->refresh();
+    }
 }
 
 LuxBus * OutputManager::createLuxBus(QString uri) {

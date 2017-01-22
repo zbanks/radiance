@@ -4,7 +4,11 @@
 
 LuxDevice::LuxDevice(QQuickItem * parent) :
     QQuickItem(parent),
-    m_state(State::Disconnected) {
+    m_state(State::Disconnected),
+    m_length(0),
+    m_polygon(QVector<QPointF>{QPointF(0.,0.), QPointF(1.,1.)}), // kill once we actually have polys
+    m_color(QColor(255, 255, 0)),
+    m_id(0) {
 }
 LuxDevice::State LuxDevice::state() {
     return m_state;
@@ -59,6 +63,8 @@ void LuxDevice::saveSettings(QSettings * settings) {
     settings->setValue("name", m_name);
     settings->setValue("color", m_color);
     settings->setValue("polygon", m_polygon);
+    settings->setValue("length", m_length);
+    settings->setValue("luxId", m_id);
 }
 
 void LuxDevice::frame() {
@@ -116,7 +122,7 @@ void LuxBus::saveSettings(QSettings * settings) {
 }
 
 void LuxBus::refresh() {
-
+    qInfo() << "refreshing: " << m_uri;
 }
 
 void LuxBus::beginFrame() {
