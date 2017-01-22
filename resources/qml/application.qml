@@ -68,24 +68,44 @@ ApplicationWindow {
                 Layout.fillWidth: true;
 
                 ColumnLayout {
+                    anchors.fill: parent;
                     ScrollView {
+                        Layout.fillWidth: true;
                         ListView {
                             model: OutputManager.buses
                             delegate: RowLayout {
                                 property var bus : OutputManager.buses[index];
+                                Rectangle {
+                                    width: 15;
+                                    height: 15;
+                                    color: bus.state == LuxBus.Disconnected ? "grey" : (
+                                           bus.state == LuxBus.Error ? "red" : (
+                                           bus.state == LuxBus.Connected ? "green" : "blue"));
+                                }
                                 TextField {
                                     id: bus_textbox;
                                     text: bus.uri;
+                                    implicitWidth: 300;
+                                    Layout.margins: 3;
                                     onAccepted: { bus.uri = text }
                                 }
-                                Label { text: "Bus URI: " + bus.uri + "; State: " + bus.state}
+                                //Label { text: "Bus URI: " + bus.uri + "; State: " + bus.state }
                             }
                         }
                     }
-                    Button {
-                        text: "Add Output";
-                        onClicked: {
-                            OutputManager.createBus(OutputBus.LuxBus, "udp://127.0.0.1365");
+                    RowLayout {
+                        Button {
+                            text: "Add Output";
+                            onClicked: {
+                                var luxbus = OutputManager.createLuxBus();
+                                luxbus.uri = "udp://127.0.0.1:1365";
+                            }
+                        }
+                        Button {
+                            text: "Save Output Configuration";
+                            onClicked: {
+                                OutputManager.saveSettings();
+                            }
                         }
                     }
                 }

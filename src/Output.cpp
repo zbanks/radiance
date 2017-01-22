@@ -3,135 +3,77 @@
 
 // OutputManager
 
-OutputManager::OutputManager(QSettings * settings) : m_settings(settings) {
+OutputManager::OutputManager(QSettings * settings, QQuickItem * parent) :
+    QQuickItem(parent),
+    m_settings(settings) {
     loadSettings(settings);
 }
-OutputManager::OutputManager(QObject * p) {
-    throw;
-}
-
 void OutputManager::loadSettings(QSettings * settings) {
-    if (settings == nullptr)
-        settings = m_settings;
-
     int size = settings->beginReadArray("buses");
     for (int i = 0; i < size; i++) {
         settings->setArrayIndex(i);
-        // How to properly QVariant -> Enum?
-        switch (settings->value("type").toInt()) {
-        case OutputBus::Type::LuxBus:
-            m_buses.append(new LuxBus(settings));
-            break;
-        default:
-            throw;
-        }
+        LuxBus * luxbus = new LuxBus(this);
+        luxbus->loadSettings(settings);
+        m_buses.append(luxbus);
     }
     settings->endArray();
 
     size = settings->beginReadArray("devices");
     for (int i = 0; i < size; i++) {
         settings->setArrayIndex(i);
-        // How to properly QVariant -> Enum?
-        switch ((enum OutputBus::Type) settings->value("type").toInt()) {
-        case OutputDevice::Type::LuxStripDevice:
-            m_devices.append(new LuxStripDevice(settings));
-            break;
-        default:
-            throw;
-        }
+        LuxDevice * luxdev = new LuxDevice(this);
+        luxdev->loadSettings(settings);
+        m_devices.append(luxdev);
     }
     settings->endArray();
 }
 
 void OutputManager::saveSettings(QSettings * settings) {
-    if (settings == nullptr)
-        settings = m_settings;
-}
+    if (settings != nullptr)
+        m_settings = settings;
 
-OutputManager::~OutputManager() {
-    for (QList<QObject *>::iterator it = m_buses.begin(); it != m_buses.end(); it++) {
-        delete *it;
+    m_settings->beginWriteArray("buses", m_buses.size());
+    int i = 0;
+    for (auto bus : m_buses) {
+        m_settings->setArrayIndex(i++);
+        bus->saveSettings(m_settings);
     }
-    for (QList<QObject *>::iterator it = m_devices.begin(); it != m_devices.end(); it++) {
-        delete *it;
+    m_settings->endArray();
+
+    m_settings->beginWriteArray("devices", m_devices.size());
+    i = 0;
+    for (auto device : m_devices) {
+        m_settings->setArrayIndex(i++);
+        device->saveSettings(m_settings);
     }
+    m_settings->endArray();
 }
 
-QList<QObject *> OutputManager::buses() {
-    return m_buses;
+QQmlListProperty<LuxBus> OutputManager::buses() {
+    // XXX not production; should replace with count/at fns
+    return QQmlListProperty<LuxBus>(this, m_buses);
 }
 
-QList<QObject *> OutputManager::devices() {
-    return m_devices;
+QQmlListProperty<LuxDevice> OutputManager::devices() {
+    // XXX not production; should replace with count/at fns
+    return QQmlListProperty<LuxDevice>(this, m_devices);
 }
 
 void OutputManager::refresh() {
 
 }
 
-void OutputManager::createBus(OutputBus::Type type, QString uri) {
-    switch (type) {
-    case OutputBus::Type::LuxBus:
-        LuxBus * luxbus = new LuxBus();
-        luxbus->setUri(uri);
-        m_buses.append(luxbus);
-        emit busesChanged(m_buses);
-        break;
-    }
-}
-/*
-
-void OutputManager::createDevice(OutputDevice::Type type, QString uri) {
-    switch (type) {
-    case LuxStrip:
-        LuxStripDevice * luxstrip = new LuxStripDevice(this, uri);
-        m_devices.append(luxstrip);
-        emit devicesChanged(m_devices);
-        break;
-    }
-}
-*/
-
-// OutputDevice
-OutputDevice::State OutputDevice::state() {
-    return m_state;
-}
-QString OutputDevice::name() {
-    return m_name;
-}
-void OutputDevice::setName(QString name) {
-    m_name = name;
-    emit nameChanged(m_name);
-}
-QColor OutputDevice::color() {
-    return m_color;
-}
-void OutputDevice::setColor(QColor color) {
-    m_color = color;
-    emit colorChanged(m_color);
-}
-QPolygonF OutputDevice::polygon() {
-    return m_polygon;
-}
-void OutputDevice::setPolygon(QPolygonF polygon) {
-    m_polygon = polygon;
-    emit polygonChanged(m_polygon);
-}
-void OutputDevice::loadSettings(QSettings * settings) {
-    setName(settings->value("name").toString());
-    setColor(settings->value("color").value<QColor>());
-    setPolygon(settings->value("polygon").value<QPolygonF>());
-}
-void OutputDevice::saveSettings(QSettings * settings) {
-    settings->setValue("name", m_name);
-    settings->setValue("color", m_color);
-    settings->setValue("polygon", m_polygon);
+LuxBus * OutputManager::createLuxBus(QString uri) {
+    LuxBus * luxbus = new LuxBus(this);
+    luxbus->setUri(uri);
+    m_buses.append(luxbus);
+    emit busesChanged(m_buses);
+    return luxbus;
 }
 
-// OutputBus
-QString OutputBus::uri() {
-    return m_uri;
-}
-OutputBus::State OutputBus::state() {
-    return m_state;
+LuxDevice * OutputManager::createLuxDevice() {
+    LuxDevice * luxdev = new LuxDevice(this);
+    m_devices.append(luxdev);
+    emit devicesChanged(m_devices);
+    return luxdev;
 }

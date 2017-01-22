@@ -59,13 +59,9 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
 
-    qmlRegisterUncreatableType<OutputDevice>("radiance", 1, 0, "OutputDevice", "OutputDevice is abstract and cannot be instantiated");
-    qmlRegisterUncreatableType<LuxDevice>("radiance", 1, 0, "LuxDevice", "LuxDevice is abstract and cannot be instantiated");
-    qmlRegisterUncreatableType<OutputBus>("radiance", 1, 0, "OutputBus", "OutputBus is abstract and cannot be instantiated");
-    qmlRegisterSingletonType<OutputManager>("radiance", 1, 0, "OutputManager", outputManagerProvider);
-
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
-    //qmlRegisterType<LuxStripDevice>("radiance", 1, 0, "LuxStripDevice");
+    qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
+    qmlRegisterSingletonType<OutputManager>("radiance", 1, 0, "OutputManager", outputManagerProvider);
 
     // Render thread
     RenderThread renderThread{};
