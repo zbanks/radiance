@@ -3,6 +3,8 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
+#include <QImage>
+#include <QColor>
 #include <QMutex>
 #include <QSet>
 
@@ -18,6 +20,7 @@ public:
     QOpenGLFramebufferObject *m_displayPreviewFbo;
     QOpenGLFramebufferObject *m_renderPreviewFbo;
     virtual QSet<VideoNode*> dependencies();
+    QVector<QColor> pixels(QVector<QPointF>);
 
 public slots:
     void render();
@@ -39,4 +42,8 @@ private:
     QMutex m_previewLock;
     bool m_previewUpdated;
     bool m_initialized;
+
+    QMutex m_previewImageLock;
+    QImage m_previewImage;
+    bool m_previewImageValid;
 };

@@ -62,6 +62,7 @@ QQmlListProperty<LuxDevice> OutputManager::devices() {
 void OutputManager::refresh() {
     for (auto bus : m_buses) {
         bus->refresh();
+        bus->detectDevices(m_devices);
     }
     for (auto dev : m_devices) {
         dev->refresh();

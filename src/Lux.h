@@ -7,13 +7,16 @@
 #include <QList>
 #include <string>
 #include <vector>
+#include "VideoNode.h"
 
 class LuxBus;
 
 class LuxDevice : public QQuickItem {
     Q_OBJECT
     Q_ENUMS(State);
+    Q_ENUMS(Type);
     Q_PROPERTY(State state READ state NOTIFY stateChanged)
+    Q_PROPERTY(Type type READ type WRITE setType NOTIFY typeChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
     Q_PROPERTY(QPolygonF polygon READ polygon WRITE setPolygon NOTIFY polygonChanged)
@@ -21,6 +24,7 @@ class LuxDevice : public QQuickItem {
     Q_PROPERTY(int length READ length WRITE setLength NOTIFY lengthChanged)
 public:
     enum class State { Disconnected, Connected, Blind, Error };
+    enum class Type { Spot, Strip, Grid };
 
     LuxDevice(QQuickItem * parent = nullptr);
     ~LuxDevice() = default;
@@ -29,6 +33,8 @@ public:
     void saveSettings(QSettings * settings);
 
     State state();
+    Type type();
+    void setType(Type type);
     QString name();
     void setName(QString name);
     QColor color();
@@ -40,28 +46,35 @@ public:
     int length();
     void setLength(int length);
 
-    void frame();
+    VideoNode * m_videoNode;
+    QVector<QColor> frame();
 
 public slots:
     void refresh();
+    void setBus(LuxBus * bus, bool blind = false);
 
 signals:
     void stateChanged(State state);
+    void typeChanged(Type type);
     void nameChanged(QString name);
     void colorChanged(QColor color);
     void polygonChanged(QPolygonF polygon);
     void luxIdChanged(quint32 luxId);
     void lengthChanged(int length);
 
-protected:
-    int m_length;
+private:
+    void arrangePixels();
 
     State m_state;
+    Type m_type;
     QString m_name;
     QColor m_color;
     QPolygonF m_polygon;
-    LuxBus * m_bus;
     quint32 m_id;
+    int m_length;
+
+    LuxBus * m_bus;
+    QVector<QPointF> m_pixels;
 };
 
 
@@ -84,8 +97,7 @@ public:
     void setUri(QString uri);
     State state();
 
-    void beginFrame();
-    void endFrame();
+    void frame();
     void detectDevices(QList<LuxDevice *> device_hints);
 
 public Q_SLOTS:
@@ -95,7 +107,7 @@ signals:
     void stateChanged(State state);
     void uriChanged(QString uri);
 
-protected:
+private:
     State m_state;
     QString m_uri;
     QList<LuxDevice *> m_devices;

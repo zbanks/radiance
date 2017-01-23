@@ -57,6 +57,27 @@ void VideoNode::blitToRenderFbo() {
 
     m_context->flush();
     m_previewUpdated = true;
+
+    QMutexLocker imageLocker(&m_previewImageLock);
+    m_previewImageValid = false;
+}
+
+// This function gets the pixel values at the given points
+QVector<QColor> VideoNode::pixels(QVector<QPointF> points) {
+    QMutexLocker imageLocker(&m_previewImageLock);
+    if (!m_previewImageValid) {
+        QMutexLocker locker(&m_previewLock);
+        m_previewImage = m_previewFbo->toImage();
+        m_previewImageValid = true;
+    }
+    QVector<QColor> output;
+    for (QPointF point : points) {
+        QPointF scaled_point = point;
+        scaled_point.rx() *= m_previewImage.width();
+        scaled_point.ry() *= m_previewImage.height();
+        output.append(m_previewImage.pixel(scaled_point.toPoint()));
+    }
+    return output;
 }
 
 // This function is called from the rendering thread
