@@ -1,4 +1,5 @@
 #include "RenderContext.h"
+#include "main.h"
 #include <QOpenGLFunctions>
 #include <QDebug>
 #include <QThread>
@@ -159,4 +160,14 @@ int RenderContext::outputCount() {
 
 int RenderContext::previewFboIndex() {
     return 0;
+}
+
+int RenderContext::outputFboIndex() {
+    return 1;
+}
+
+QSize RenderContext::fboSize(int i) {
+    if(i == previewFboIndex()) return uiSettings->previewSize();
+    if(i == outputFboIndex()) return uiSettings->outputSize();
+    return QSize(0, 0);
 }

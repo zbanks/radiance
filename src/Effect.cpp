@@ -1,5 +1,5 @@
 #include "Effect.h"
-#include "main.h"
+#include "RenderContext.h"
 #include <QFile>
 
 Effect::Effect(RenderContext *context)
@@ -13,7 +13,7 @@ Effect::Effect(RenderContext *context)
 
 void Effect::initialize() {
     for(int i=0; i<m_context->outputCount(); i++) {
-        QSize size = uiSettings->previewSize(); // TODO
+        QSize size = m_context->fboSize(i);
 
         delete m_displayFbos.at(i);
         m_displayFbos[i] = new QOpenGLFramebufferObject(size);
@@ -27,16 +27,16 @@ void Effect::initialize() {
 }
 
 void Effect::paint() {
+    glClearColor(0, 0, 0, 0);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
     {
         QMutexLocker locker(&m_programLock);
         for(int i=0; i<m_context->outputCount(); i++) {
-            QSize size = uiSettings->previewSize(); // TODO
+            QSize size = m_context->fboSize(i);
 
-            glClearColor(0, 0, 0, 0);
             glViewport(0, 0, size.width(), size.height());
-            glDisable(GL_DEPTH_TEST);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glDisable(GL_BLEND);
 
             QOpenGLFramebufferObject *previousFbo;
             VideoNode *prev = previous();
@@ -49,6 +49,15 @@ void Effect::paint() {
                 previousFbo = prev->m_fbos[i];
             }
 
+            if(m_regenerateFbos) {
+                foreach(QOpenGLFramebufferObject *f, m_intermediateFbos.at(i)) delete f;
+                m_intermediateFbos[i].clear();
+                for(int j = 0; j < m_programs.count() + 1; j++) {
+                    m_intermediateFbos[i].append(new QOpenGLFramebufferObject(size));
+                }
+                m_fboIndex = 0;
+            }
+
             if(m_programs.count() > 0) {
                 float values[] = {
                     -1, -1,
@@ -57,18 +66,10 @@ void Effect::paint() {
                     1, 1
                 };
 
-                if(m_regenerateFbos) {
-                    foreach(QOpenGLFramebufferObject *f, m_intermediateFbos.at(i)) delete f;
-                    m_intermediateFbos[i].clear();
-                    for(int j = 0; j < m_programs.count() + 1; j++) {
-                        m_intermediateFbos[i].append(new QOpenGLFramebufferObject(size));
-                        m_fboIndex = 0;
-                    }
-                }
-
+                int fboIndex = m_fboIndex;
                 for(int j = m_programs.count() - 1; j >= 0; j--) {
-                    resizeFbo(&m_intermediateFbos[i][(m_fboIndex + 1) % (m_programs.count() + 1)], size);
-                    auto target = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.count() + 1));
+                    resizeFbo(&m_intermediateFbos[i][(fboIndex + 1) % (m_programs.count() + 1)], size);
+                    auto target = m_intermediateFbos.at(i).at((fboIndex + 1) % (m_programs.count() + 1));
                     auto p = m_programs.at(j);
 
                     p->bind();
@@ -77,7 +78,7 @@ void Effect::paint() {
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, previousFbo->texture());
                     glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at(m_fboIndex)->texture());
+                    glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at(fboIndex)->texture());
 
                     p->setAttributeArray(0, GL_FLOAT, values, 2);
                     float intense = intensity();
@@ -90,16 +91,17 @@ void Effect::paint() {
 
                     p->disableAttributeArray(0);
                     p->release();
-                }
 
-                m_fboIndex = (m_fboIndex + 1) % m_intermediateFbos.at(i).count();
+                    fboIndex = (fboIndex + 1) % (m_programs.count() + 1);
+                }
                 QOpenGLFramebufferObject::bindDefault();
 
-                m_fbos[i] = m_intermediateFbos.at(i).at(m_fboIndex);
+                m_fbos[i] = m_intermediateFbos.at(i).at(fboIndex);
             } else {
                 m_fbos[i] = previousFbo;
             }
         }
+        m_fboIndex = (m_fboIndex + m_programs.count()) % (m_programs.count() + 1);
         m_regenerateFbos = false;
     }
     blitToRenderFbo();

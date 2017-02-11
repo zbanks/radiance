@@ -33,9 +33,17 @@ void VideoNode::render() {
 // to draw onto the back-buffer.
 void VideoNode::blitToRenderFbo() {
     m_context->flush(); // Flush before taking the lock to speed things up a bit
+
+    glClearColor(0, 0, 0, 0);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
     for(int i=0; i<m_context->outputCount(); i++) {
         QMutexLocker locker(m_textureLocks[i]);
-        resizeFbo(&m_renderFbos[i], m_fbos.at(i)->size());
+        auto size = m_fbos.at(i)->size();
+        resizeFbo(&m_renderFbos[i], size);
+
+        glViewport(0, 0, size.width(), size.height());
 
         float values[] = {
             -1, -1,

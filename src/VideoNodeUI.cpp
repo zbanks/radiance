@@ -38,7 +38,7 @@ public slots:
 
     // Before the scene graph starts to render, we update to the pending texture
     void prepareNode() {
-        if(m_videoNode->swap(0)) {
+        if(m_videoNode->swap(m_videoNode->context()->previewFboIndex())) {
             auto newId = m_videoNode->m_displayFbos.at(m_videoNode->context()->previewFboIndex())->texture();
             auto size = m_videoNode->m_displayFbos.at(m_videoNode->context()->previewFboIndex())->size();
             if(m_id != newId || m_size != size) {

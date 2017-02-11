@@ -30,6 +30,8 @@ public:
     QSet<VideoNode*> m_videoNodes; // temp
     int outputCount();
     int previewFboIndex();
+    int outputFboIndex();
+    QSize fboSize(int i);
 
 public slots:
     void start();

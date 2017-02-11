@@ -1,5 +1,5 @@
 #include "CrossFader.h"
-#include "main.h"
+#include "RenderContext.h"
 #include <QFile>
 
 CrossFader::CrossFader(RenderContext *context)
@@ -13,7 +13,7 @@ CrossFader::CrossFader(RenderContext *context)
 
 void CrossFader::initialize() {
     for(int i=0; i<m_context->outputCount(); i++) {
-        QSize size = uiSettings->previewSize(); // TODO
+        QSize size = m_context->fboSize(i);
 
         delete m_displayFbos.at(i);
         m_displayFbos[i] = new QOpenGLFramebufferObject(size);
@@ -31,7 +31,7 @@ void CrossFader::initialize() {
 
 void CrossFader::paint() {
     for(int i=0; i<m_context->outputCount(); i++) {
-        QSize size = uiSettings->previewSize(); // TODO
+        QSize size = m_context->fboSize(i);
 
         glClearColor(0, 0, 0, 0);
         glViewport(0, 0, size.width(), size.height());
