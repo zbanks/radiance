@@ -14,23 +14,22 @@ class VideoNode : public QObject, protected QOpenGLFunctions {
     Q_OBJECT
 
 public:
-    VideoNode(RenderContext *context);
+    VideoNode(RenderContext *context, int n_outputs);
    ~VideoNode() override;
-    QOpenGLFramebufferObject *m_previewFbo;
-    QOpenGLFramebufferObject *m_displayPreviewFbo;
-    QOpenGLFramebufferObject *m_renderPreviewFbo;
+    QVector<QOpenGLFramebufferObject *> m_fbos;
+    QVector<QOpenGLFramebufferObject *> m_displayFbos;
+    QVector<QOpenGLFramebufferObject *> m_renderFbos;
     virtual QSet<VideoNode*> dependencies();
     QVector<QColor> pixels(QVector<QPointF>);
 
 public slots:
     void render();
-    bool swapPreview();
+    bool swap(int i);
 
 signals:
     void textureReady();
 
 protected:
-    QOpenGLFramebufferObject *previewFbo;
     virtual void initialize() = 0;
     virtual void paint() = 0;
     void blitToRenderFbo();
@@ -39,8 +38,8 @@ protected:
     void beforeDestruction();
 
 private:
-    QMutex m_previewLock;
-    bool m_previewUpdated;
+    QVector<QMutex *> m_textureLocks;
+    QVector<bool> m_updated;
     bool m_initialized;
 
     QMutex m_previewImageLock;

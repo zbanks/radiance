@@ -2,101 +2,104 @@
 #include "main.h"
 #include <QFile>
 
-CrossFader::CrossFader(RenderContext *context)
-    : VideoNode(context),
+CrossFader::CrossFader(RenderContext *context, int n_outputs)
+    : VideoNode(context, n_outputs), // TODO
     m_parameter(0),
     m_left(0),
     m_right(0),
-    m_blankPreviewFbo(0),
+    m_blankFbos(n_outputs),
     m_program(0) {
 }
 
 void CrossFader::initialize() {
-    QSize size = uiSettings->previewSize();
+    for(int i=0; i<m_fbos.size(); i++) {
+        QSize size = uiSettings->previewSize(); // TODO
 
-    delete m_displayPreviewFbo;
-    m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
+        delete m_displayFbos.at(i);
+        m_displayFbos[i] = new QOpenGLFramebufferObject(size);
 
-    delete m_renderPreviewFbo;
-    m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
+        delete m_renderFbos.at(i);
+        m_renderFbos[i] = new QOpenGLFramebufferObject(size);
 
-    delete m_blankPreviewFbo;
-    m_blankPreviewFbo = new QOpenGLFramebufferObject(size);
+        delete m_blankFbos.at(i);
+        m_blankFbos[i] = new QOpenGLFramebufferObject(size);
 
-    delete m_previewFbo;
-    m_previewFbo = new QOpenGLFramebufferObject(size);
+        delete m_fbos.at(i);
+        m_fbos[i] = new QOpenGLFramebufferObject(size);
+    }
 }
 
 void CrossFader::paint() {
-    QSize size = uiSettings->previewSize();
+    for(int i=0; i<m_fbos.size(); i++) {
+        QSize size = uiSettings->previewSize(); // TODO
 
-    glClearColor(0, 0, 0, 0);
-    glViewport(0, 0, size.width(), size.height());
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDisable(GL_BLEND);
-
-    QOpenGLFramebufferObject *leftPreviewFbo;
-    QOpenGLFramebufferObject *rightPreviewFbo;
-
-    VideoNode *node_left = left();
-    VideoNode *node_right = right();
-
-    if(node_left == 0) {
-        resizeFbo(&m_blankPreviewFbo, size);
-        m_blankPreviewFbo->bind();
+        glClearColor(0, 0, 0, 0);
+        glViewport(0, 0, size.width(), size.height());
+        glDisable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
-        leftPreviewFbo = m_blankPreviewFbo;
-    } else {
-        leftPreviewFbo = node_left->m_previewFbo;
+        glDisable(GL_BLEND);
+
+        QOpenGLFramebufferObject *leftPreviewFbo;
+        QOpenGLFramebufferObject *rightPreviewFbo;
+
+        VideoNode *node_left = left();
+        VideoNode *node_right = right();
+
+        if(node_left == 0) {
+            resizeFbo(&m_blankFbos[i], size);
+            m_blankFbos.at(i)->bind();
+            glClear(GL_COLOR_BUFFER_BIT);
+            leftPreviewFbo = m_blankFbos.at(i);
+        } else {
+            leftPreviewFbo = node_left->m_fbos.at(i);
+        }
+
+        if(node_right == 0) {
+            resizeFbo(&m_blankFbos[i], size);
+            m_blankFbos.at(i)->bind();
+            glClear(GL_COLOR_BUFFER_BIT);
+            rightPreviewFbo = m_blankFbos.at(i);
+        } else {
+            rightPreviewFbo = node_right->m_fbos.at(i);
+        }
+
+        float values[] = {
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1
+        };
+
+        resizeFbo(&m_fbos[i], size);
+
+        m_fbos.at(i)->bind();
+        m_programLock.lock();
+        if(m_program) {
+            m_program->bind();
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, leftPreviewFbo->texture());
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, rightPreviewFbo->texture());
+
+            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
+            float param = parameter();
+            m_program->setUniformValue("iParameter", param);
+            m_program->setUniformValue("iLeft", 0);
+            m_program->setUniformValue("iRight", 1);
+            m_program->enableAttributeArray(0);
+
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+            m_program->disableAttributeArray(0);
+            m_program->release();
+        } else {
+            glClear(GL_COLOR_BUFFER_BIT);
+        }
+        m_programLock.unlock();
+
+        QOpenGLFramebufferObject::bindDefault();
     }
-
-    if(node_right == 0) {
-        resizeFbo(&m_blankPreviewFbo, size);
-        m_blankPreviewFbo->bind();
-        glClear(GL_COLOR_BUFFER_BIT);
-        rightPreviewFbo = m_blankPreviewFbo;
-    } else {
-        rightPreviewFbo = node_right->m_previewFbo;
-    }
-
-    float values[] = {
-        -1, -1,
-        1, -1,
-        -1, 1,
-        1, 1
-    };
-
-    resizeFbo(&m_previewFbo, size);
-
-    m_previewFbo->bind();
-    m_programLock.lock();
-    if(m_program) {
-        m_program->bind();
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, leftPreviewFbo->texture());
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, rightPreviewFbo->texture());
-
-        m_program->setAttributeArray(0, GL_FLOAT, values, 2);
-        float param = parameter();
-        m_program->setUniformValue("iParameter", param);
-        m_program->setUniformValue("iLeft", 0);
-        m_program->setUniformValue("iRight", 1);
-        m_program->enableAttributeArray(0);
-
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-        m_program->disableAttributeArray(0);
-        m_program->release();
-    } else {
-        glClear(GL_COLOR_BUFFER_BIT);
-    }
-    m_programLock.unlock();
-
-    QOpenGLFramebufferObject::bindDefault();
-
     blitToRenderFbo();
 }
 

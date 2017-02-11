@@ -3,16 +3,18 @@
 #include <QDebug>
 #include <QThread>
 
-VideoNode::VideoNode(RenderContext *context)
+VideoNode::VideoNode(RenderContext *context, int n_outputs)
     : m_context(context),
-    m_previewFbo(0),
-    m_displayPreviewFbo(0),
-    m_renderPreviewFbo(0),
-    m_previewUpdated(false),
+    m_fbos(n_outputs),
+    m_displayFbos(n_outputs),
+    m_renderFbos(n_outputs),
+    m_updated(n_outputs),
+    m_textureLocks(n_outputs),
     m_initialized(false)
 {
     moveToThread(context->thread());
     emit m_context->addVideoNodeRequested(this);
+    for(int i=0; i<m_fbos.size(); i++) m_textureLocks[i] = new QMutex();
 //    m_context->addVideoNode(this);
 }
 
@@ -20,7 +22,7 @@ void VideoNode::render() {
     if(!m_initialized) {
         initializeOpenGLFunctions(); // Placement of this function is black magic to me
         initialize();
-        m_previewUpdated = false;
+        for(int i=0; i<m_fbos.size(); i++) m_updated[i] = false;
         m_initialized = true;
     }
     paint();
@@ -28,41 +30,45 @@ void VideoNode::render() {
 }
 
 // This function is called from paint()
-// to draw to the preview back-buffer.
+// to draw onto the back-buffer.
 void VideoNode::blitToRenderFbo() {
     m_context->flush(); // Flush before taking the lock to speed things up a bit
-    QMutexLocker locker(&m_previewLock);
-    resizeFbo(&m_renderPreviewFbo, m_previewFbo->size());
+    for(int i=0; i<m_fbos.size(); i++) {
+        QMutexLocker locker(m_textureLocks[i]);
+        resizeFbo(&m_renderFbos[i], m_fbos.at(i)->size());
 
-    float values[] = {
-        -1, -1,
-        1, -1,
-        -1, 1,
-        1, 1
-    };
+        float values[] = {
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1
+        };
 
-    m_renderPreviewFbo->bind();
-    m_context->m_premultiply->bind();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_previewFbo->texture());
-    m_context->m_premultiply->setAttributeArray(0, GL_FLOAT, values, 2);
-    m_context->m_premultiply->setUniformValue("iFrame", 0);
-    m_context->m_premultiply->enableAttributeArray(0);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    m_context->m_premultiply->disableAttributeArray(0);
-    m_context->m_premultiply->release();
+        m_renderFbos.at(i)->bind();
+        m_context->m_premultiply->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_fbos.at(i)->texture());
+        m_context->m_premultiply->setAttributeArray(0, GL_FLOAT, values, 2);
+        m_context->m_premultiply->setUniformValue("iFrame", 0);
+        m_context->m_premultiply->enableAttributeArray(0);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        m_context->m_premultiply->disableAttributeArray(0);
+        m_context->m_premultiply->release();
+
+        m_context->flush();
+        m_updated[i] = true;
+    }
     QOpenGLFramebufferObject::bindDefault();
 
     //QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbo);
 
-    m_context->flush();
-    m_previewUpdated = true;
-
-    QMutexLocker imageLocker(&m_previewImageLock);
-    m_previewImageValid = false;
+    //QMutexLocker imageLocker(&m_previewImageLock);
+    //m_previewImageValid = false;
 }
 
 // This function gets the pixel values at the given points
+// TODO
+/*
 QVector<QColor> VideoNode::pixels(QVector<QPointF> points) {
     QMutexLocker imageLocker(&m_previewImageLock);
     if (!m_previewImageValid) {
@@ -79,16 +85,17 @@ QVector<QColor> VideoNode::pixels(QVector<QPointF> points) {
     }
     return output;
 }
+*/
 
 // This function is called from the rendering thread
-// to get the latest preview frame from m_displayPreviewFbo.
+// to get the latest frame in m_displayFbo[i].
 // It returns true if there is a new frame
-bool VideoNode::swapPreview() {
-    QMutexLocker locker(&m_previewLock);
-    if(auto previewUpdated = m_previewUpdated) {
-        resizeFbo(&m_displayPreviewFbo, m_renderPreviewFbo->size());
-        QOpenGLFramebufferObject::blitFramebuffer(m_displayPreviewFbo, m_renderPreviewFbo);
-        m_previewUpdated = false;
+bool VideoNode::swap(int i) {
+    QMutexLocker locker(m_textureLocks[i]);
+    if(m_updated.at(i)) {
+        resizeFbo(&m_displayFbos[i], m_renderFbos.at(i)->size());
+        QOpenGLFramebufferObject::blitFramebuffer(m_displayFbos.at(i), m_renderFbos.at(i));
+        m_updated[i] = false;
         return true;
     }
     return false;
@@ -97,18 +104,21 @@ bool VideoNode::swapPreview() {
 // Before deleting any FBOs and whatnot, we need to
 // 1. Make sure we aren't currently rendering
 // 2. Remove ourselves from the context graph
-void VideoNode::beforeDestruction()
-{
+void VideoNode::beforeDestruction() {
     m_context->removeVideoNode(this);
 }
 
 VideoNode::~VideoNode() {
-    delete m_previewFbo;
-    m_renderPreviewFbo = 0;
-    delete m_renderPreviewFbo;
-    m_renderPreviewFbo = 0;
-    delete m_displayPreviewFbo;
-    m_displayPreviewFbo = 0;
+    for(int i=0; i<m_fbos.size(); i++) {
+        delete m_fbos.at(i);
+        m_fbos[i] = 0;
+        delete m_renderFbos.at(i);
+        m_renderFbos[i] = 0;
+        delete m_displayFbos.at(i);
+        m_displayFbos[i] = 0;
+        delete m_textureLocks.at(i);
+        m_textureLocks[i] = 0;
+    }
     // Stop event processing, move the thread to GUI and make sure it is deleted.
     //moveToThread(QGuiApplication::instance()->thread());
 }
@@ -120,7 +130,6 @@ void VideoNode::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
     }
 }
 
-QSet<VideoNode*> VideoNode::dependencies()
-{
+QSet<VideoNode*> VideoNode::dependencies() {
     return QSet<VideoNode*>();
 }

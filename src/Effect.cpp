@@ -2,119 +2,123 @@
 #include "main.h"
 #include <QFile>
 
-Effect::Effect(RenderContext *context)
-    : VideoNode(context),
+Effect::Effect(RenderContext *context, int n_outputs)
+    : VideoNode(context, n_outputs),
     m_fboIndex(0),
     m_intensity(0),
     m_previous(0),
-    m_blankPreviewFbo(0) {
+    m_intermediateFbos(n_outputs),
+    m_blankFbos(n_outputs) {
 }
 
 void Effect::initialize() {
-    QSize size = uiSettings->previewSize();
+    for(int i=0; i<m_fbos.size(); i++) {
+        QSize size = uiSettings->previewSize(); // TODO
 
-    delete m_displayPreviewFbo;
-    m_displayPreviewFbo = new QOpenGLFramebufferObject(size);
+        delete m_displayFbos.at(i);
+        m_displayFbos[i] = new QOpenGLFramebufferObject(size);
 
-    delete m_renderPreviewFbo;
-    m_renderPreviewFbo = new QOpenGLFramebufferObject(size);
+        delete m_renderFbos.at(i);
+        m_renderFbos[i] = new QOpenGLFramebufferObject(size);
 
-    delete m_blankPreviewFbo;
-    m_blankPreviewFbo = new QOpenGLFramebufferObject(size);
+        delete m_blankFbos.at(i);
+        m_blankFbos[i] = new QOpenGLFramebufferObject(size);
+    }
 }
 
 void Effect::paint() {
-    QSize size = uiSettings->previewSize();
+    {
+        QMutexLocker locker(&m_programLock);
+        for(int i=0; i<m_fbos.size(); i++) {
+            QSize size = uiSettings->previewSize(); // TODO
 
-    glClearColor(0, 0, 0, 0);
-    glViewport(0, 0, size.width(), size.height());
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDisable(GL_BLEND);
+            glClearColor(0, 0, 0, 0);
+            glViewport(0, 0, size.width(), size.height());
+            glDisable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glDisable(GL_BLEND);
 
-    QOpenGLFramebufferObject *previousPreviewFbo;
-    VideoNode *prev = previous();
-    if(prev == 0) {
-        resizeFbo(&m_blankPreviewFbo, size);
-        m_blankPreviewFbo->bind();
-        glClear(GL_COLOR_BUFFER_BIT);
-        previousPreviewFbo = m_blankPreviewFbo;
-    } else {
-        previousPreviewFbo = prev->m_previewFbo;
-    }
-
-    m_programLock.lock();
-    if(m_programs.count() > 0) {
-        float values[] = {
-            -1, -1,
-            1, -1,
-            -1, 1,
-            1, 1
-        };
-
-        if(m_regeneratePreviewFbos) {
-            foreach(QOpenGLFramebufferObject *f, m_previewFbos)
-            delete f;
-            m_previewFbos.clear();
-            for(int i = 0; i < m_programs.count() + 1; i++) {
-                m_previewFbos.append(new QOpenGLFramebufferObject(size));
-                m_fboIndex = 0;
+            QOpenGLFramebufferObject *previousFbo;
+            VideoNode *prev = previous();
+            if(prev == 0) {
+                resizeFbo(&m_blankFbos[i], size);
+                m_blankFbos.at(i)->bind();
+                glClear(GL_COLOR_BUFFER_BIT);
+                previousFbo = m_blankFbos.at(i);
+            } else {
+                previousFbo = prev->m_fbos[i];
             }
-            m_regeneratePreviewFbos = false;
+
+            if(m_programs.count() > 0) {
+                float values[] = {
+                    -1, -1,
+                    1, -1,
+                    -1, 1,
+                    1, 1
+                };
+
+                if(m_regenerateFbos) {
+                    foreach(QOpenGLFramebufferObject *f, m_intermediateFbos.at(i)) delete f;
+                    m_intermediateFbos[i].clear();
+                    for(int j = 0; j < m_programs.count() + 1; j++) {
+                        m_intermediateFbos[i].append(new QOpenGLFramebufferObject(size));
+                        m_fboIndex = 0;
+                    }
+                }
+
+                for(int j = m_programs.count() - 1; j >= 0; j--) {
+                    resizeFbo(&m_intermediateFbos[i][(m_fboIndex + 1) % (m_programs.count() + 1)], size);
+                    auto target = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.count() + 1));
+                    auto p = m_programs.at(j);
+
+                    p->bind();
+                    target->bind();
+
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, previousFbo->texture());
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at(m_fboIndex)->texture());
+
+                    p->setAttributeArray(0, GL_FLOAT, values, 2);
+                    float intense = intensity();
+                    p->setUniformValue("iIntensity", intense);
+                    p->setUniformValue("iFrame", 0);
+                    p->setUniformValue("iChannelP", 1);
+                    p->enableAttributeArray(0);
+
+                    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                    p->disableAttributeArray(0);
+                    p->release();
+                }
+
+                m_fboIndex = (m_fboIndex + 1) % m_intermediateFbos.at(i).count();
+                QOpenGLFramebufferObject::bindDefault();
+
+                m_fbos[i] = m_intermediateFbos.at(i).at(m_fboIndex);
+            } else {
+                m_fbos[i] = previousFbo;
+            }
         }
-
-        for(int i = m_programs.count() - 1; i >= 0; i--) {
-            resizeFbo(&m_previewFbos[(m_fboIndex + 1) % m_previewFbos.count()], size);
-            auto target = m_previewFbos.at((m_fboIndex + 1) % m_previewFbos.count());
-            auto  p = m_programs.at(i);
-
-            p->bind();
-            target->bind();
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, previousPreviewFbo->texture());
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, m_previewFbos.at(m_fboIndex)->texture());
-
-            p->setAttributeArray(0, GL_FLOAT, values, 2);
-            float intense = intensity();
-            p->setUniformValue("iIntensity", intense);
-            p->setUniformValue("iFrame", 0);
-            p->setUniformValue("iChannelP", 1);
-            p->enableAttributeArray(0);
-
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-            p->disableAttributeArray(0);
-            p->release();
-        }
-
-        m_fboIndex = (m_fboIndex + 1) % m_previewFbos.count();
-        QOpenGLFramebufferObject::bindDefault();
-
-        m_previewFbo = m_previewFbos.at(m_fboIndex);
-    } else {
-        m_previewFbo = previousPreviewFbo;
+        m_regenerateFbos = false;
     }
-    m_programLock.unlock();
-
     blitToRenderFbo();
 }
 
 Effect::~Effect() {
     beforeDestruction();
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;
-    foreach(QOpenGLFramebufferObject *fbo, m_previewFbos) delete fbo;
+    for(int i=0; i<m_fbos.size(); i++) {
+        foreach(QOpenGLFramebufferObject *fbo, m_intermediateFbos.at(i)) delete fbo;
+        m_intermediateFbos[i].clear();
+        m_fbos[i] = 0; // This points to one of m_intermediateFbos
+    }
     m_programs.clear();
-    m_previewFbos.clear();
-    m_previewFbo = 0; // This points to one of m_previewFbos
 }
 
-QSet<VideoNode*> Effect::dependencies()
-{
+QSet<VideoNode*> Effect::dependencies() {
     QSet<VideoNode*> d;
-    if(auto p = previous())
-        d.insert(p);
+    if(auto p = previous()) d.insert(p);
     return d;
 }
 
@@ -145,12 +149,13 @@ bool Effect::loadProgram(QString name) {
     program->bindAttributeLocation("vertices", 0);
     program->link();
 
-    m_programLock.lock();
-    foreach(QOpenGLShaderProgram *p, m_programs) delete p;
-    m_programs.clear();
-    m_programs.append(program);
-    m_regeneratePreviewFbos = true;
-    m_programLock.unlock();
+    {
+        QMutexLocker locker(&m_programLock);
+        foreach(QOpenGLShaderProgram *p, m_programs) delete p;
+        m_programs.clear();
+        m_programs.append(program);
+        m_regenerateFbos = true;
+    }
 
     return true;
 }
@@ -178,11 +183,7 @@ void Effect::setIntensity(qreal value) {
 }
 
 void Effect::setPrevious(VideoNode *value) {
-
-    // TODO take context lock??
-    {
-        QMutexLocker clocker(&m_context->m_contextLock);
-        QMutexLocker plocker(&m_previousLock);
-        m_previous = value;
-    }
+    QMutexLocker clocker(&m_context->m_contextLock);
+    QMutexLocker plocker(&m_previousLock);
+    m_previous = value;
 }

@@ -10,7 +10,7 @@ class Effect : public VideoNode {
     Q_OBJECT
 
 public:
-    Effect(RenderContext *context);
+    Effect(RenderContext *context, int n_outputs);
     ~Effect();
     bool loadProgram(QString name);
     QSet<VideoNode*> dependencies();
@@ -27,11 +27,11 @@ signals:
     void previousChanged(VideoNode *value);
 
 private:
-    QOpenGLFramebufferObject *previewFbo;
+    QVector<QOpenGLFramebufferObject *> fbos;
 
-    QVector<QOpenGLFramebufferObject *> m_previewFbos;
+    QVector<QVector<QOpenGLFramebufferObject *>> m_intermediateFbos;
     QVector<QOpenGLShaderProgram *> m_programs;
-    QOpenGLFramebufferObject *m_blankPreviewFbo;
+    QVector<QOpenGLFramebufferObject *> m_blankFbos;
     int m_fboIndex;
 
     void initialize();
@@ -44,5 +44,5 @@ private:
     QMutex m_programLock;
     QMutex m_previousLock;
 
-    bool m_regeneratePreviewFbos;
+    bool m_regenerateFbos;
 };

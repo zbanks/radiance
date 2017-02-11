@@ -10,7 +10,7 @@ class CrossFader : public VideoNode {
     Q_OBJECT
 
 public:
-    CrossFader(RenderContext *context);
+    CrossFader(RenderContext *context, int n_outputs);
     ~CrossFader();
     bool load();
     QSet<VideoNode*> dependencies();
@@ -31,7 +31,7 @@ signals:
 
 private:
     QOpenGLShaderProgram *m_program;
-    QOpenGLFramebufferObject *m_blankPreviewFbo;
+    QVector<QOpenGLFramebufferObject *> m_blankFbos;
 
     void initialize();
     void paint();

@@ -38,9 +38,9 @@ public slots:
 
     // Before the scene graph starts to render, we update to the pending texture
     void prepareNode() {
-        if(m_videoNode->swapPreview()) {
-            auto newId = m_videoNode->m_displayPreviewFbo->texture();
-            QSize size = m_videoNode->m_displayPreviewFbo->size();
+        if(m_videoNode->swap(0)) {
+            auto newId = m_videoNode->m_displayFbos.at(0)->texture(); // TODO
+            auto size = m_videoNode->m_displayFbos.at(0)->size(); // TODO
             if(m_id != newId || m_size != size) {
                 delete m_texture;
                 m_texture = m_window->createTextureFromId(newId, size, QQuickWindow::TextureHasAlphaChannel);
