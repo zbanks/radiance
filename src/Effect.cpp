@@ -2,17 +2,17 @@
 #include "main.h"
 #include <QFile>
 
-Effect::Effect(RenderContext *context, int n_outputs)
-    : VideoNode(context, n_outputs),
+Effect::Effect(RenderContext *context)
+    : VideoNode(context),
     m_fboIndex(0),
     m_intensity(0),
     m_previous(0),
-    m_intermediateFbos(n_outputs),
-    m_blankFbos(n_outputs) {
+    m_intermediateFbos(context->outputCount()),
+    m_blankFbos(context->outputCount()) {
 }
 
 void Effect::initialize() {
-    for(int i=0; i<m_fbos.size(); i++) {
+    for(int i=0; i<m_context->outputCount(); i++) {
         QSize size = uiSettings->previewSize(); // TODO
 
         delete m_displayFbos.at(i);
@@ -29,7 +29,7 @@ void Effect::initialize() {
 void Effect::paint() {
     {
         QMutexLocker locker(&m_programLock);
-        for(int i=0; i<m_fbos.size(); i++) {
+        for(int i=0; i<m_context->outputCount(); i++) {
             QSize size = uiSettings->previewSize(); // TODO
 
             glClearColor(0, 0, 0, 0);
@@ -108,7 +108,7 @@ void Effect::paint() {
 Effect::~Effect() {
     beforeDestruction();
     foreach(QOpenGLShaderProgram *p, m_programs) delete p;
-    for(int i=0; i<m_fbos.size(); i++) {
+    for(int i=0; i<m_context->outputCount(); i++) {
         foreach(QOpenGLFramebufferObject *fbo, m_intermediateFbos.at(i)) delete fbo;
         m_intermediateFbos[i].clear();
         m_fbos[i] = 0; // This points to one of m_intermediateFbos

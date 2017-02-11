@@ -8,6 +8,7 @@ RenderContext::RenderContext()
     , surface(nullptr)
     , timer(nullptr)
     , m_premultiply(nullptr)
+    , m_outputCount(2)
 {
     context = new QOpenGLContext(this);
     auto scontext = QOpenGLContext::globalShareContext();
@@ -149,4 +150,13 @@ QList<VideoNode*> RenderContext::topoSort()
     }
 
     return sortedNodes;
+}
+
+int RenderContext::outputCount() {
+    return m_outputCount;
+}
+
+
+int RenderContext::previewFboIndex() {
+    return 0;
 }

@@ -2,17 +2,17 @@
 #include "main.h"
 #include <QFile>
 
-CrossFader::CrossFader(RenderContext *context, int n_outputs)
-    : VideoNode(context, n_outputs), // TODO
-    m_parameter(0),
-    m_left(0),
-    m_right(0),
-    m_blankFbos(n_outputs),
-    m_program(0) {
+CrossFader::CrossFader(RenderContext *context)
+    : VideoNode(context)
+    , m_parameter(0)
+    , m_left(0)
+    , m_right(0)
+    , m_blankFbos(context->outputCount())
+    , m_program(0) {
 }
 
 void CrossFader::initialize() {
-    for(int i=0; i<m_fbos.size(); i++) {
+    for(int i=0; i<m_context->outputCount(); i++) {
         QSize size = uiSettings->previewSize(); // TODO
 
         delete m_displayFbos.at(i);
@@ -30,7 +30,7 @@ void CrossFader::initialize() {
 }
 
 void CrossFader::paint() {
-    for(int i=0; i<m_fbos.size(); i++) {
+    for(int i=0; i<m_context->outputCount(); i++) {
         QSize size = uiSettings->previewSize(); // TODO
 
         glClearColor(0, 0, 0, 0);

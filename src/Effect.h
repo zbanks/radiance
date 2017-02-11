@@ -10,7 +10,7 @@ class Effect : public VideoNode {
     Q_OBJECT
 
 public:
-    Effect(RenderContext *context, int n_outputs);
+    Effect(RenderContext *context);
     ~Effect();
     bool loadProgram(QString name);
     QSet<VideoNode*> dependencies();

@@ -14,13 +14,14 @@ class VideoNode : public QObject, protected QOpenGLFunctions {
     Q_OBJECT
 
 public:
-    VideoNode(RenderContext *context, int n_outputs);
+    VideoNode(RenderContext *context);
    ~VideoNode() override;
     QVector<QOpenGLFramebufferObject *> m_fbos;
     QVector<QOpenGLFramebufferObject *> m_displayFbos;
     QVector<QOpenGLFramebufferObject *> m_renderFbos;
     virtual QSet<VideoNode*> dependencies();
     QVector<QColor> pixels(QVector<QPointF>);
+    RenderContext *context();
 
 public slots:
     void render();

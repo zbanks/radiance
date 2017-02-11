@@ -28,6 +28,8 @@ public:
     QOpenGLShaderProgram *m_premultiply;
 
     QSet<VideoNode*> m_videoNodes; // temp
+    int outputCount();
+    int previewFboIndex();
 
 public slots:
     void start();
@@ -38,6 +40,7 @@ public slots:
 private:
     QList<VideoNode*> topoSort();
     void load();
+    int m_outputCount;
 
 signals:
     void renderingFinished();

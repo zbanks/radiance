@@ -9,7 +9,7 @@
 EffectUI::EffectUI(QString source)
     : m_previous(0)
     , m_source(source) {
-    Effect *e = new Effect(renderContext, 1); // TODO
+    Effect *e = new Effect(renderContext);
     connect(e, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
     m_videoNode = e;
 }

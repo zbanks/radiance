@@ -3,18 +3,18 @@
 #include <QDebug>
 #include <QThread>
 
-VideoNode::VideoNode(RenderContext *context, int n_outputs)
+VideoNode::VideoNode(RenderContext *context)
     : m_context(context),
-    m_fbos(n_outputs),
-    m_displayFbos(n_outputs),
-    m_renderFbos(n_outputs),
-    m_updated(n_outputs),
-    m_textureLocks(n_outputs),
+    m_fbos(context->outputCount()),
+    m_displayFbos(context->outputCount()),
+    m_renderFbos(context->outputCount()),
+    m_updated(context->outputCount()),
+    m_textureLocks(context->outputCount()),
     m_initialized(false)
 {
     moveToThread(context->thread());
     emit m_context->addVideoNodeRequested(this);
-    for(int i=0; i<m_fbos.size(); i++) m_textureLocks[i] = new QMutex();
+    for(int i=0; i<m_context->outputCount(); i++) m_textureLocks[i] = new QMutex();
 //    m_context->addVideoNode(this);
 }
 
@@ -22,7 +22,7 @@ void VideoNode::render() {
     if(!m_initialized) {
         initializeOpenGLFunctions(); // Placement of this function is black magic to me
         initialize();
-        for(int i=0; i<m_fbos.size(); i++) m_updated[i] = false;
+        for(int i=0; i<m_context->outputCount(); i++) m_updated[i] = false;
         m_initialized = true;
     }
     paint();
@@ -33,7 +33,7 @@ void VideoNode::render() {
 // to draw onto the back-buffer.
 void VideoNode::blitToRenderFbo() {
     m_context->flush(); // Flush before taking the lock to speed things up a bit
-    for(int i=0; i<m_fbos.size(); i++) {
+    for(int i=0; i<m_context->outputCount(); i++) {
         QMutexLocker locker(m_textureLocks[i]);
         resizeFbo(&m_renderFbos[i], m_fbos.at(i)->size());
 
@@ -109,7 +109,7 @@ void VideoNode::beforeDestruction() {
 }
 
 VideoNode::~VideoNode() {
-    for(int i=0; i<m_fbos.size(); i++) {
+    for(int i=0; i<m_context->outputCount(); i++) {
         delete m_fbos.at(i);
         m_fbos[i] = 0;
         delete m_renderFbos.at(i);
@@ -132,4 +132,9 @@ void VideoNode::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
 
 QSet<VideoNode*> VideoNode::dependencies() {
     return QSet<VideoNode*>();
+}
+
+
+RenderContext *VideoNode::context() {
+    return m_context;
 }
