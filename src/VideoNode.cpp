@@ -75,13 +75,11 @@ void VideoNode::blitToRenderFbo() {
 }
 
 // This function gets the pixel values at the given points
-// TODO
-/*
-QVector<QColor> VideoNode::pixels(QVector<QPointF> points) {
+QVector<QColor> VideoNode::pixels(int i, QVector<QPointF> points) {
     QMutexLocker imageLocker(&m_previewImageLock);
     if (!m_previewImageValid) {
-        QMutexLocker locker(&m_previewLock);
-        m_previewImage = m_previewFbo->toImage();
+        QMutexLocker locker(m_textureLocks.at(i));
+        m_previewImage = m_fbos.at(i)->toImage();
         m_previewImageValid = true;
     }
     QVector<QColor> output;
@@ -93,7 +91,6 @@ QVector<QColor> VideoNode::pixels(QVector<QPointF> points) {
     }
     return output;
 }
-*/
 
 // This function is called from the rendering thread
 // to get the latest frame in m_displayFbo[i].

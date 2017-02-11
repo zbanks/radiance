@@ -20,7 +20,7 @@ public:
     QVector<QOpenGLFramebufferObject *> m_displayFbos;
     QVector<QOpenGLFramebufferObject *> m_renderFbos;
     virtual QSet<VideoNode*> dependencies();
-    QVector<QColor> pixels(QVector<QPointF>);
+    QVector<QColor> pixels(int i, QVector<QPointF>);
     RenderContext *context();
 
 public slots:
