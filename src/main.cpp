@@ -5,6 +5,7 @@
 #include <QThread>
 #include "EffectUI.h"
 #include "CrossFaderUI.h"
+#include "OutputUI.h"
 #include "RenderContext.h"
 #include "RenderThread.h"
 #include "Output.h"
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
-
+    qmlRegisterType<OutputUI>("radiance", 1, 0, "Output");
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);

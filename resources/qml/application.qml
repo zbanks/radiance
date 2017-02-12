@@ -10,6 +10,11 @@ ApplicationWindow {
 
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
+        UISettings.outputSize = "640x480";
+        var component = Qt.createComponent("OutputWindow.qml")
+        var window = component.createObject(window)
+        window.source = cross.crossfader;
+        window.show()
     }
     Action {
         id: quitAction

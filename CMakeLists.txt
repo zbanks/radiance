@@ -27,6 +27,7 @@ add_executable(radiance WIN32 src/main.cpp
     src/RenderContext.cpp
     src/RenderThread.cpp
     src/Output.cpp
+    src/OutputUI.cpp
     src/Lux.cpp
     src/Audio.cpp
     src/liblux/lux.c
