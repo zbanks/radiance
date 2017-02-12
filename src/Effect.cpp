@@ -1,6 +1,7 @@
 #include "Effect.h"
 #include "RenderContext.h"
 #include <QFile>
+#include "main.h"
 
 Effect::Effect(RenderContext *context)
     : VideoNode(context),
@@ -33,6 +34,7 @@ void Effect::paint() {
 
     {
         QMutexLocker locker(&m_programLock);
+        double time = audio->time();
         for(int i=0; i<m_context->outputCount(); i++) {
             QSize size = m_context->fboSize(i);
 
@@ -83,6 +85,7 @@ void Effect::paint() {
                     p->setAttributeArray(0, GL_FLOAT, values, 2);
                     float intense = intensity();
                     p->setUniformValue("iIntensity", intense);
+                    p->setUniformValue("iTime", (GLfloat)time);
                     p->setUniformValue("iFrame", 0);
                     p->setUniformValue("iChannelP", 1);
                     p->enableAttributeArray(0);

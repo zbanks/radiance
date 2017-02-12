@@ -2,11 +2,16 @@
 
 #include <QDebug>
 #include <portaudio.h>
+#include <cmath>
 
 const int FrameRate = 44100;
 const int ChunkSize = 128;
 
-Audio::Audio(QObject *p) : QThread(p), m_chunk(ChunkSize), m_run(true)
+Audio::Audio(QObject *p)
+    : QThread(p)
+    , m_chunk(ChunkSize)
+    , m_run(true)
+    , m_time(0)
 {
     setObjectName("AudioThread");
     start();
@@ -62,10 +67,19 @@ void Audio::run() {
             qDebug() << "Could not read audio chunk";
             goto err;
         }
+        {
+            QMutexLocker locker(&m_audioLock);
+            m_time = fmod((m_time + 0.003), 128.);
+        }
         //qDebug() << "read chunk" << m_chunk;
     }
 
 err:
     err = Pa_Terminate();
     if(err != paNoError) qDebug() << "Could not cleanly terminate PortAudio";
+}
+
+double Audio::time() {
+    QMutexLocker locker(&m_audioLock);
+    return m_time;
 }
