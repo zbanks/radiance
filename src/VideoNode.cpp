@@ -98,8 +98,10 @@ QVector<QColor> VideoNode::pixels(int i, QVector<QPointF> points) {
 bool VideoNode::swap(int i) {
     QMutexLocker locker(m_textureLocks[i]);
     if(m_updated.at(i)) {
-        resizeFbo(&m_displayFbos[i], m_renderFbos.at(i)->size());
-        QOpenGLFramebufferObject::blitFramebuffer(m_displayFbos.at(i), m_renderFbos.at(i));
+        m_context->flush();
+        qSwap(m_displayFbos[i], m_renderFbos[i]);
+        //resizeFbo(&m_displayFbos[i], m_renderFbos.at(i)->size());
+        //QOpenGLFramebufferObject::blitFramebuffer(m_displayFbos.at(i), m_renderFbos.at(i));
         m_updated[i] = false;
         return true;
     }
