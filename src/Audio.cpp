@@ -9,12 +9,21 @@ const int ChunkSize = 512;
 const int FFTLength = 2048;
 const int SpectrumBins = 100;
 const int WaveformLength = 512;
+const float SpectrumUpAlpha = 0.5;
+const float SpectrumDownAlpha = 0.2;
+const float SpectrumGain = 0.1;
+const float SpectrumOffset = 0.1;
+const float LowCutoff = 0.3;
+const float HiCutoff = 0.7;
+const float WaveformGain = 0.1;
+const float LevelUpAlpha = 0.9;
+const float LevelDownAlpha = 0.01;
 
 Audio::Audio(QObject *p)
     : QThread(p)
-    , m_chunk(ChunkSize)
     , m_run(true)
     , m_time(0)
+    , chunk(0)
     , sampQueue(0)
     , fftIn(0)
     , fftOut(0)
@@ -31,8 +40,12 @@ Audio::Audio(QObject *p)
     , audioThreadMid(0)
     , audioThreadLow(0)
     , audioThreadLevel(0)
+    , beatLPF(0)
+    , btrack {}
 {
     setObjectName("AudioThread");
+
+    chunk = new float[ChunkSize]();
 
     // Audio processing
     sampQueue = new float[FFTLength]();
@@ -62,6 +75,8 @@ Audio::~Audio()
     wait();
     fftw_destroy_plan(plan);
     btrack_del(&btrack);
+    delete chunk;
+    chunk = 0;
     delete sampQueue;
     sampQueue = 0;
     delete fftIn;
@@ -123,11 +138,12 @@ void Audio::run() {
     }
 
     while(m_run) {
-        err = Pa_ReadStream(stream, m_chunk.data(), ChunkSize);
+        err = Pa_ReadStream(stream, chunk, ChunkSize);
         if(err != paNoError) {
             qDebug() << "Could not read audio chunk";
             goto err;
         }
+        analyzeChunk();
         {
             QMutexLocker locker(&m_audioLock);
             m_time = fmod((m_time + 0.003), 128.);
@@ -147,4 +163,135 @@ double Audio::time() {
 
 double Audio::hannWindow(int n) {
     return 0.5 * (1 - cos(2 * M_PI * n / (FFTLength - 1)));
+}
+
+void Audio::analyzeChunk() {
+    // Add chunk samples to queue
+    for(int i=0; i<ChunkSize; i++) {
+        sampQueue[sampQueuePtr] = chunk[i];
+        sampQueuePtr = (sampQueuePtr + 1) % FFTLength;
+    }
+
+    // Window the data in queue and prepare it for FFTW
+    for(int i=0; i<FFTLength; i++) {
+        fftIn[i] = sampQueue[(sampQueuePtr + i) % FFTLength] * window[i];
+    }
+
+    // Run the FFT
+    fftw_execute(plan);
+
+    // Convert to spectrum (log(freq))
+    memset(spectrum, 0, SpectrumBins * sizeof *spectrum);
+    memset(spectrumCount, 0, SpectrumBins * sizeof *spectrumCount);
+    double binFactor = SpectrumBins / log(FFTLength / 2);
+    for(int i=1; i<FFTLength / 2; i++) {
+        int bin = (int)(log(i) * binFactor);
+        spectrum[bin] += fftOut[i][0] * fftOut[i][0] + fftOut[i][1] * fftOut[i][1];
+        spectrumCount[bin]++;
+    }
+
+    // Convert to spectrum (log(power))
+    for(int i=0; i<SpectrumBins; i++) {
+        if(spectrumCount[i] == 0) {
+            spectrum[i] = spectrum[i - 1];
+        } else {
+            spectrum[i] = SpectrumGain * (log1p(spectrum[i]) - SpectrumOffset);
+            if(spectrum[i] < 0) spectrum[i] = 0;
+            if(spectrum[i] > 1) spectrum[i] = 1;
+        }
+    }
+
+    // Diode-LPF and tally up hi, mid, low
+    double hi = 0;
+    double mid = 0;
+    double low = 0;
+    double level = 0;
+
+    for(int i=0; i<SpectrumBins; i++) {
+        if(spectrum[i] > spectrumGL[i]) {
+            spectrumLPF[i] = spectrum[i] * SpectrumUpAlpha + spectrumLPF[i] * (1 - SpectrumUpAlpha);
+        } else {
+            spectrumLPF[i] = spectrum[i] * SpectrumDownAlpha + spectrumLPF[i] * (1 - SpectrumDownAlpha);
+        }
+        double freqFrac = (double)i / SpectrumBins;
+        if(freqFrac < LowCutoff) {
+            low += spectrumLPF[i];
+        } else if(freqFrac > HiCutoff) {
+            hi += spectrumLPF[i];
+        } else {
+            mid += spectrumLPF[i];
+        }
+    }
+
+    // Pass to BTrack. TODO: use already FFT'd values
+    btrack_process_audio_frame(&btrack, chunk);
+
+    double btrackBPM = btrack_get_bpm(&btrack);
+    //time_update(TIME_SOURCE_AUDIO, TIME_SOURCE_EVENT_BPM, btrack_bpm);
+    double msUntilBeat = btrack_get_time_until_beat(&btrack) * 1000.;
+    //time_update(TIME_SOURCE_AUDIO, TIME_SOURCE_EVENT_BEAT, ms_until_beat);
+
+    if (btrack_beat_due_in_current_frame(&btrack)) {
+        // TODO Bring this back
+        //INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
+        //if (time_master.beat_index % 4 == 0)
+            beatLPF = 1.0;
+        //else
+        //    beatLPF = 0.6;
+    } else {
+        beatLPF *= 0.88;
+    }
+
+    {
+        QMutexLocker locker(&m_audioLock);
+        audioThreadHi = hi / (1. - HiCutoff) * WaveformGain;
+        audioThreadMid = mid / (HiCutoff - LowCutoff) * WaveformGain;
+        audioThreadLow = low / LowCutoff * WaveformGain;
+
+        level = audioThreadHi;
+        if(audioThreadMid > level) level = audioThreadMid;
+        if(audioThreadLow > level) level = audioThreadLow;
+
+        if(level > audioThreadLevel) {
+            level = level * LevelUpAlpha + audioThreadLevel * (1 - LevelUpAlpha);
+        } else {
+            level = level * LevelDownAlpha + audioThreadLevel * (1 - LevelDownAlpha);
+        }
+
+        audioThreadLevel = level;
+
+        for(int i=0; i<SpectrumBins; i++) {
+            spectrumGL[i] = spectrumLPF[i];
+        }
+
+        waveformGL[waveformPtr * 4 + 0] = audioThreadHi;
+        waveformGL[waveformPtr * 4 + 1] = audioThreadMid;
+        waveformGL[waveformPtr * 4 + 2] = audioThreadLow;
+        waveformGL[waveformPtr * 4 + 3] = audioThreadLevel;
+        waveformBeatsGL[waveformPtr * 4] = beatLPF;
+
+        memcpy(&waveformGL[(WaveformLength + waveformPtr) * 4], &waveformGL[waveformPtr * 4], 4 * sizeof *waveformGL);
+        memcpy(&waveformBeatsGL[(WaveformLength + waveformPtr) * 4], &waveformBeatsGL[waveformPtr * 4], 4 * sizeof *waveformBeatsGL);
+
+        waveformPtr = (waveformPtr + 1) % WaveformLength;
+    }
+}
+
+// This is called from the OpenGL Thread
+void Audio::render(double *audioHi, double *audioMid, double *audioLow, double *audioLevel) {
+    QMutexLocker locker(&m_audioLock);
+    /*
+    glBindTexture(GL_TEXTURE_1D, tex_spectrum);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, config.audio.spectrum_bins, 0, GL_RED, GL_FLOAT, spectrum_gl);
+    glBindTexture(GL_TEXTURE_1D, tex_waveform);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_gl[waveform_ptr * 4]);
+    glBindTexture(GL_TEXTURE_1D, tex_waveform_beats);
+    glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA32F, config.audio.waveform_length, 0, GL_RGBA, GL_FLOAT, &waveform_beats_gl[waveform_ptr * 4]);
+    glBindTexture(GL_TEXTURE_1D, 0);
+    */
+
+    *audioHi = audioThreadHi;
+    *audioMid = audioThreadMid;
+    *audioLow = audioThreadLow;
+    *audioLevel = audioThreadLevel;
 }

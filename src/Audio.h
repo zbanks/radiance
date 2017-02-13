@@ -16,16 +16,17 @@ public:
     Audio(QObject *p = nullptr);
    ~Audio() override;
     double time();
+    void render(double *audioHi, double *audioMid, double *audioLow, double *audioLevel);
 
 protected:
     void run();
     QMutex m_audioLock;
 
 private:
-    QVector<float> m_chunk;
     QAtomicInt m_run;
     double m_time;
 
+    float *chunk;
     float *sampQueue;
     int sampQueuePtr;
     fftw_plan plan;
@@ -42,10 +43,12 @@ private:
     double audioThreadMid;
     double audioThreadLow;
     double audioThreadLevel;
+    double beatLPF;
     struct btrack btrack; 
     double *window;
 
     static double hannWindow(int n);
+    void analyzeChunk();
 
 public slots:
     void quit();
