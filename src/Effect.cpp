@@ -87,6 +87,7 @@ void Effect::paint() {
                     p->setUniformValue("iIntensity", intense);
                     p->setUniformValue("iTime", (GLfloat)time);
                     p->setUniformValue("iFrame", 0);
+                    p->setUniformValue("iResolution", (GLfloat) size.width(), (GLfloat) size.height());
                     p->setUniformValue("iChannelP", 1);
                     p->enableAttributeArray(0);
 
@@ -132,15 +133,22 @@ QSet<VideoNode*> Effect::dependencies() {
 // A current OpenGL context is required.
 // Returns true if the program was loaded successfully
 bool Effect::loadProgram(QString name) {
-    QString filename = QString("../resources/effects/%1.glsl").arg(name);
+    QFile header_file("../resources/glsl/effect_header.glsl");
+    if(!header_file.open(QIODevice::ReadOnly)) {
+        qDebug() << QString("Could not open \"../resources/effect_header.glsl\"");
+        return false;
+    }
+    QTextStream s1(&header_file);
+
+    QString filename = QString("../resources/effects/%1.0.glsl").arg(name);
     QFile file(filename);
     if(!file.open(QIODevice::ReadOnly)) {
         qDebug() << QString("Could not open \"%1\"").arg(filename);
         return false;
     }
 
-    QTextStream s1(&file);
-    QString s = s1.readAll();
+    QTextStream s2(&file);
+    QString s = s1.readAll() + s2.readAll();
 
     auto program = new QOpenGLShaderProgram();
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,

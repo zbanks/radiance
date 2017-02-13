@@ -37,7 +37,10 @@ void EffectUI::setSource(QString value) {
         QOpenGLContext *current = w->openglContext();
         if(current) {
             current->makeCurrent(w);
-            static_cast<Effect*>(m_videoNode)->loadProgram(value);
+            bool success = static_cast<Effect*>(m_videoNode)->loadProgram(value);
+            if (!success) {
+                m_source = value = nullptr;
+            }
         }
     }
     emit sourceChanged(value);
