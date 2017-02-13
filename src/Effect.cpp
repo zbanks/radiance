@@ -35,6 +35,11 @@ void Effect::paint() {
     {
         QMutexLocker locker(&m_programLock);
         double time = audio->time();
+        double audioHi = 0;
+        double audioMid = 0;
+        double audioLow = 0;
+        double audioLevel = 0;
+        audio->render(&audioHi, &audioMid, &audioLow, &audioLevel);
         for(int i=0; i<m_context->outputCount(); i++) {
             QSize size = m_context->fboSize(i);
 
@@ -86,6 +91,10 @@ void Effect::paint() {
                     float intense = intensity();
                     p->setUniformValue("iIntensity", intense);
                     p->setUniformValue("iTime", (GLfloat)time);
+                    p->setUniformValue("iAudioHi", (GLfloat)audioHi);
+                    p->setUniformValue("iAudioMid", (GLfloat)audioMid);
+                    p->setUniformValue("iAudioLow", (GLfloat)audioLow);
+                    p->setUniformValue("iAudioLevel", (GLfloat)audioLevel);
                     p->setUniformValue("iFrame", 0);
                     p->setUniformValue("iResolution", (GLfloat) size.width(), (GLfloat) size.height());
                     p->setUniformValue("iChannelP", 1);

@@ -6,6 +6,7 @@
 #include "EffectUI.h"
 #include "CrossFaderUI.h"
 #include "OutputUI.h"
+#include "WaveformUI.h"
 #include "RenderContext.h"
 #include "RenderThread.h"
 #include "Output.h"
@@ -56,6 +57,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
     qmlRegisterType<OutputUI>("radiance", 1, 0, "Output");
+    qmlRegisterType<WaveformUI>("radiance", 1, 0, "Waveform");
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);

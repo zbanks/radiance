@@ -7,6 +7,7 @@
 #include <QMutex>
 #include <fftw3.h>
 #include <QOpenGLFunctions>
+#include <QOpenGLTexture>
 #include "BTrack.h"
 
 class Audio : public QThread {
@@ -17,6 +18,8 @@ public:
    ~Audio() override;
     double time();
     void render(double *audioHi, double *audioMid, double *audioLow, double *audioLevel);
+    void renderWaveform();
+    QOpenGLTexture *m_waveformTexture;
 
 protected:
     void run();

@@ -243,11 +243,9 @@ ApplicationWindow {
                 id: selector;
             }
         }
-        /*
-        Output {
+        Waveform {
             width: 500;
-            height: 500;
-            source: cross.crossfader;
-        }*/
+            height: 200;
+        }
     }
 }

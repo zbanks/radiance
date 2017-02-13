@@ -15,7 +15,7 @@ const float SpectrumGain = 0.1;
 const float SpectrumOffset = 0.1;
 const float LowCutoff = 0.3;
 const float HiCutoff = 0.7;
-const float WaveformGain = 0.1;
+const float WaveformGain = 0.005;
 const float LevelUpAlpha = 0.9;
 const float LevelDownAlpha = 0.01;
 
@@ -42,6 +42,7 @@ Audio::Audio(QObject *p)
     , audioThreadLevel(0)
     , beatLPF(0)
     , btrack {}
+    , m_waveformTexture(0)
 {
     setObjectName("AudioThread");
 
@@ -95,6 +96,8 @@ Audio::~Audio()
     waveformBeatsGL = 0;
     delete window;
     window = 0;
+    delete m_waveformTexture;
+    m_waveformTexture = 0;
 }
 
 void Audio::quit()
@@ -294,4 +297,17 @@ void Audio::render(double *audioHi, double *audioMid, double *audioLow, double *
     *audioMid = audioThreadMid;
     *audioLow = audioThreadLow;
     *audioLevel = audioThreadLevel;
+    qDebug() << *audioLevel;
+}
+
+void Audio::renderWaveform() {
+    QMutexLocker locker(&m_audioLock);
+    if(m_waveformTexture == NULL || m_waveformTexture->width() != WaveformLength) {
+        delete m_waveformTexture;
+        m_waveformTexture = new QOpenGLTexture(QOpenGLTexture::Target1D);
+        m_waveformTexture->setSize(WaveformLength);
+        m_waveformTexture->setFormat(QOpenGLTexture::RGBA32F);
+        m_waveformTexture->allocateStorage();
+    }
+    m_waveformTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformGL[waveformPtr * 4]);
 }
