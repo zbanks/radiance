@@ -62,7 +62,7 @@ Audio::Audio(QObject *p)
 
     plan = fftw_plan_dft_r2c_1d(FFTLength, fftIn, fftOut, FFTW_ESTIMATE);
     //if (btrack_init(&btrack, chunk_size, FFTLength, sample_rate) != 0)
-    //if(btrack_init(&btrack, ChunkSize, 1024, FrameRate) != 0) throw std::runtime_error("Could not initialize BTrack");
+    if(btrack_init(&btrack, ChunkSize, 1024, FrameRate) != 0) throw std::runtime_error("Could not initialize BTrack");
     //if (time_master_register_source(&analyze_audio_time_source) != 0)
     //    PFAIL("Could not register btrack time source");
 
