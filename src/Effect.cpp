@@ -34,12 +34,12 @@ void Effect::paint() {
 
     {
         QMutexLocker locker(&m_programLock);
-        double time = audio->time();
+        double time = timebase->beat();
         double audioHi = 0;
         double audioMid = 0;
         double audioLow = 0;
         double audioLevel = 0;
-        audio->render(&audioHi, &audioMid, &audioLow, &audioLevel);
+        audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
         for(int i=0; i<m_context->outputCount(); i++) {
             QSize size = m_context->fboSize(i);
 

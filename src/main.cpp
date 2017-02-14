@@ -11,7 +11,6 @@
 #include "RenderThread.h"
 #include "Output.h"
 #include "Lux.h"
-#include "Audio.h"
 #include "main.h"
 
 RenderContext *renderContext = 0;
@@ -20,6 +19,7 @@ QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
 Audio *audio = 0;
 OutputManager *outputManager = 0;
+Timebase *timebase = 0;
 
 QObject *uiSettingsProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
     uiSettings = new UISettings();
     audio = new Audio();
     outputManager = new OutputManager(outputSettings);
+    timebase = new Timebase();
 
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");

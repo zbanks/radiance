@@ -17,9 +17,10 @@ public:
     Audio(QObject *p = nullptr);
    ~Audio() override;
     double time();
-    void render(double *audioHi, double *audioMid, double *audioLow, double *audioLevel);
+    void levels(double *audioHi, double *audioMid, double *audioLow, double *audioLevel);
     void renderGraphics();
     QOpenGLTexture *m_waveformTexture;
+    QOpenGLTexture *m_waveformBeatsTexture;
     QOpenGLTexture *m_spectrumTexture;
 
 protected:

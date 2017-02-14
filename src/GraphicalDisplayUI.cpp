@@ -71,11 +71,14 @@ err:
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
             glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_1D, audio->m_waveformBeatsTexture->textureId());
+            glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_1D, audio->m_spectrumTexture->textureId());
             m_program->setAttributeArray(0, GL_FLOAT, values, 2);
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iWaveform", 0);
-            m_program->setUniformValue("iSpectrum", 1);
+            m_program->setUniformValue("iBeats", 1);
+            m_program->setUniformValue("iSpectrum", 2);
             m_program->enableAttributeArray(0);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_program->disableAttributeArray(0);

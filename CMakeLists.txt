@@ -35,6 +35,7 @@ add_executable(radiance WIN32 src/main.cpp
     src/Lux.cpp
     src/Audio.cpp
     src/GraphicalDisplayUI.cpp
+    src/Timebase.cpp
     src/liblux/lux.c
     src/liblux/crc.c
     BTrack/src/BTrack.c
