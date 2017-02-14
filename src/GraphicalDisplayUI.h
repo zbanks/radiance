@@ -2,7 +2,7 @@
 #include <QtQuick/QQuickFramebufferObject>
 #include <QMutex>
 
-class WaveformUI : public QQuickFramebufferObject
+class GraphicalDisplayUI : public QQuickFramebufferObject
 {
     Q_OBJECT
     Q_PROPERTY(QString fragmentShader READ fragmentShader WRITE setFragmentShader NOTIFY fragmentShaderChanged)

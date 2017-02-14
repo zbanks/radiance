@@ -103,6 +103,11 @@ OutputUI::OutputUI() : m_source(0) {
     m_outputWindow = new OutputWindow(this);
 }
 
+OutputUI::~OutputUI() {
+    delete m_outputWindow;
+    m_outputWindow = 0;
+}
+
 void OutputUI::show() {
     m_outputWindow->show();
 }

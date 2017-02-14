@@ -18,8 +18,9 @@ public:
    ~Audio() override;
     double time();
     void render(double *audioHi, double *audioMid, double *audioLow, double *audioLevel);
-    void renderWaveform();
+    void renderGraphics();
     QOpenGLTexture *m_waveformTexture;
+    QOpenGLTexture *m_spectrumTexture;
 
 protected:
     void run();

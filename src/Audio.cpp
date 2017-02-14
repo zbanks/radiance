@@ -43,6 +43,7 @@ Audio::Audio(QObject *p)
     , beatLPF(0)
     , btrack {}
     , m_waveformTexture(0)
+    , m_spectrumTexture(0)
 {
     setObjectName("AudioThread");
 
@@ -211,7 +212,7 @@ void Audio::analyzeChunk() {
     double level = 0;
 
     for(int i=0; i<SpectrumBins; i++) {
-        if(spectrum[i] > spectrumGL[i]) {
+        if(spectrum[i] > spectrumLPF[i]) {
             spectrumLPF[i] = spectrum[i] * SpectrumUpAlpha + spectrumLPF[i] * (1 - SpectrumUpAlpha);
         } else {
             spectrumLPF[i] = spectrum[i] * SpectrumDownAlpha + spectrumLPF[i] * (1 - SpectrumDownAlpha);
@@ -299,7 +300,7 @@ void Audio::render(double *audioHi, double *audioMid, double *audioLow, double *
     *audioLevel = audioThreadLevel;
 }
 
-void Audio::renderWaveform() {
+void Audio::renderGraphics() {
     QMutexLocker locker(&m_audioLock);
     if(m_waveformTexture == NULL || m_waveformTexture->width() != WaveformLength) {
         delete m_waveformTexture;
@@ -308,5 +309,13 @@ void Audio::renderWaveform() {
         m_waveformTexture->setFormat(QOpenGLTexture::RGBA32F);
         m_waveformTexture->allocateStorage();
     }
+    if(m_spectrumTexture == NULL || m_spectrumTexture->width() != SpectrumBins) {
+        delete m_spectrumTexture;
+        m_spectrumTexture = new QOpenGLTexture(QOpenGLTexture::Target1D);
+        m_spectrumTexture->setSize(SpectrumBins);
+        m_spectrumTexture->setFormat(QOpenGLTexture::R32F);
+        m_spectrumTexture->allocateStorage();
+    }
     m_waveformTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformGL[waveformPtr * 4]);
+    m_spectrumTexture->setData(QOpenGLTexture::Red, QOpenGLTexture::Float32, spectrumGL);
 }

@@ -1,20 +1,20 @@
-#include "WaveformUI.h"
+#include "GraphicalDisplayUI.h"
 #include "main.h"
 
 #include <QQuickFramebufferObject>
 #include <QOpenGLFunctions>
 
-class WaveformRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
+class GraphicalDisplayRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
     QOpenGLShaderProgram *m_program;
 
 public:
-    WaveformRenderer()
+    GraphicalDisplayRenderer()
         : m_program(0)
         , m_fragmentShader() {
         initializeOpenGLFunctions();
     }
 
-    ~WaveformRenderer() {
+    ~GraphicalDisplayRenderer() {
         delete m_program;
     }
 
@@ -47,14 +47,14 @@ err:
     }
 
     void synchronize(QQuickFramebufferObject *item) override {
-        auto waveformUI = static_cast<WaveformUI *>(item);
+        auto waveformUI = static_cast<GraphicalDisplayUI *>(item);
         auto fs = waveformUI->fragmentShader();
         if(fs != m_fragmentShader) changeProgram(fs);
     }
 
     void render() override {
         if(m_program != 0) {
-            audio->renderWaveform();
+            audio->renderGraphics();
 
             glClearColor(0, 0, 0, 0);
             glDisable(GL_DEPTH_TEST);
@@ -70,9 +70,12 @@ err:
             m_program->bind();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_1D, audio->m_spectrumTexture->textureId());
             m_program->setAttributeArray(0, GL_FLOAT, values, 2);
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iWaveform", 0);
+            m_program->setUniformValue("iSpectrum", 1);
             m_program->enableAttributeArray(0);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_program->disableAttributeArray(0);
@@ -84,12 +87,12 @@ err:
     QString m_fragmentShader;
 };
 
-QString WaveformUI::fragmentShader() {
+QString GraphicalDisplayUI::fragmentShader() {
     QMutexLocker locker(&m_fragmentShaderLock);
     return m_fragmentShader;
 }
 
-void WaveformUI::setFragmentShader(QString fragmentShader) {
+void GraphicalDisplayUI::setFragmentShader(QString fragmentShader) {
     {
         QMutexLocker locker(&m_fragmentShaderLock);
         m_fragmentShader = fragmentShader;
@@ -97,6 +100,6 @@ void WaveformUI::setFragmentShader(QString fragmentShader) {
     emit fragmentShaderChanged(fragmentShader);
 }
 
-QQuickFramebufferObject::Renderer *WaveformUI::createRenderer() const {
-    return new WaveformRenderer();
+QQuickFramebufferObject::Renderer *GraphicalDisplayUI::createRenderer() const {
+    return new GraphicalDisplayRenderer();
 }

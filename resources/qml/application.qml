@@ -65,19 +65,15 @@ ApplicationWindow {
         Layout.margins: 10;
 
         RowLayout {
-            Rectangle {
+            Waveform {
                 implicitWidth: 300;
                 implicitHeight: 300;
                 Layout.fillWidth: true;
-                color: "white";
-                Label { text: "TODO: Waveform" }
             }
-            Rectangle {
+            Spectrum {
                 implicitWidth: 300;
                 implicitHeight: 300;
                 Layout.fillWidth: true;
-                color: "grey";
-                Label { text: "TODO: Spectrum" }
             }
             GroupBox {
                 title: "Output Lux Buses";
@@ -255,10 +251,6 @@ ApplicationWindow {
             EffectSelector {
                 id: selector;
             }
-        }
-        Waveform {
-            width: 500;
-            height: 200;
         }
     }
 }

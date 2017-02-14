@@ -16,6 +16,7 @@ public:
     VideoNodeUI *source();
     void setSource(VideoNodeUI *);
     OutputUI();
+   ~OutputUI();
     VideoNodeUI *m_source;
     QMutex m_sourceLock;
 
