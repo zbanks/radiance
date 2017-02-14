@@ -8,19 +8,25 @@ ApplicationWindow {
     id: window;
     visible: true;
 
+
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "640x480";
-        var component = Qt.createComponent("OutputWindow.qml")
-        var window = component.createObject(window)
-        window.source = cross.crossfader;
-        window.show()
     }
+
+    Output {
+        source: cross.crossfader;
+        Component.onCompleted: {
+            show();
+        }
+    }
+
     Action {
         id: quitAction
         text: "&Quit"
         onTriggered: Qt.quit()
     }
+
     menuBar: MenuBar {
         Menu {
             title: "&File";

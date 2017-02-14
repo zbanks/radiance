@@ -2,14 +2,33 @@
 #include "main.h"
 
 #include <QtCore/QMutex>
+#include <QOpenGLWindow>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
 
-class OutputRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
+class OutputWindow : public QOpenGLWindow, protected QOpenGLFunctions {
+    Q_OBJECT
+
+// OpenGL Events
 public:
-    OutputRenderer(OutputUI *outputUI)
-        : m_outputUI(outputUI)
+    OutputWindow(OutputUI *outputUI)
+        : QOpenGLWindow(QOpenGLContext::globalShareContext())
+        , m_outputUI(outputUI)
         , m_program(0) {
+        showFullScreen();
+    }
 
+    ~OutputWindow() {
+        makeCurrent();
+        teardownGL();
+    }
+ 
+    void initializeGL() {
+        // Initialize OpenGL Backend
         initializeOpenGLFunctions();
+
+        // Set global information
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
         auto program = new QOpenGLShaderProgram();
         program->addShaderFromSourceCode(QOpenGLShader::Vertex,
@@ -32,12 +51,11 @@ public:
         m_program = program;
     }
 
-protected:
-    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) override {
-        return new QOpenGLFramebufferObject(size);
+    void resizeGL(int width, int height) {
     }
 
-    void render() override {
+    void paintGL() {
+        glClear(GL_COLOR_BUFFER_BIT);
         QMutexLocker locker(&m_outputUI->m_sourceLock);
 
         if(m_outputUI->m_source != NULL) {
@@ -60,16 +78,19 @@ protected:
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, m_videoNode->m_displayFbos[m_videoNode->context()->outputFboIndex()]->texture());
                 m_program->setAttributeArray(0, GL_FLOAT, values, 2);
-                m_program->setUniformValue("iResolution", framebufferObject()->size());
+                m_program->setUniformValue("iResolution", size());
                 m_program->setUniformValue("iFrame", 0);
                 m_program->enableAttributeArray(0);
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
                 m_program->disableAttributeArray(0);
                 m_program->release();
-                glFlush();
             }
         }
+        glFinish();
         update();
+    }
+
+    void teardownGL() {
     }
 
     OutputUI *m_outputUI;
@@ -79,6 +100,15 @@ protected:
 // OutputUI
 
 OutputUI::OutputUI() : m_source(0) {
+    m_outputWindow = new OutputWindow(this);
+}
+
+void OutputUI::show() {
+    m_outputWindow->show();
+}
+
+void OutputUI::hide() {
+    m_outputWindow->hide();
 }
 
 VideoNodeUI *OutputUI::source() {
@@ -95,6 +125,4 @@ void OutputUI::setSource(VideoNodeUI *value) {
     emit sourceChanged(value);
 }
 
-QQuickFramebufferObject::Renderer *OutputUI::createRenderer() const {
-    return new OutputRenderer((OutputUI*)this); // TODO is this cast OK??
-}
+#include "OutputUI.moc"
