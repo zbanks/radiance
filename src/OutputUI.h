@@ -1,12 +1,14 @@
 #pragma once
 
 #include "VideoNodeUI.h"
-#include <QtQuick/QQuickItem>
-#include <QtGui/QOpenGLFramebufferObject>
+#include <QQuickFramebufferObject>
 
-class OutputUI : public QQuickItem {
+class OutputUI : public QQuickFramebufferObject {
     Q_OBJECT
     Q_PROPERTY(VideoNodeUI *source READ source WRITE setSource NOTIFY sourceChanged)
+
+protected:
+    QQuickFramebufferObject::Renderer *createRenderer() const override;
 
 public:
     VideoNodeUI *source();
@@ -14,9 +16,6 @@ public:
     OutputUI();
     VideoNodeUI *m_source;
     QMutex m_sourceLock;
-
-protected:
-    QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *);
 
 signals:
     void sourceChanged(VideoNodeUI *value);

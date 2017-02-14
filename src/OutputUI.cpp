@@ -2,93 +2,83 @@
 #include "main.h"
 
 #include <QtCore/QMutex>
-#include <QtGui/QOpenGLContext>
-#include <QtQuick/QSGSimpleTextureNode>
-#include <QtQuick/QQuickWindow>
 
-class TextureNode2 : public QObject, public QSGSimpleTextureNode {
-    Q_OBJECT
-
+class OutputRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
 public:
-    TextureNode2(QQuickWindow *window, OutputUI *output)
-        : m_id(0)
-        , m_size(0, 0)
-        , m_texture(0)
-        , m_window(window)
-        , m_output(output)
-    {
-        // Our texture node must have a texture, so use the default 0 texture.
-        m_texture = m_window->createTextureFromId(0, QSize(1, 1));
-        setTexture(m_texture);
-        //QSGMaterial *m = material();
-        //m->setFlag(QSGMaterial::Blending);
-        //setMaterial(m);
-        setFiltering(QSGTexture::Linear);
+    OutputRenderer(OutputUI *outputUI)
+        : m_outputUI(outputUI)
+        , m_program(0) {
+
+        initializeOpenGLFunctions();
+
+        auto program = new QOpenGLShaderProgram();
+        program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                           "attribute highp vec4 vertices;"
+                                           "varying highp vec2 coords;"
+                                           "void main() {"
+                                           "    gl_Position = vertices;"
+                                           "    coords = vertices.xy;"
+                                           "}");
+        program->addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                        "uniform vec2 iResolution;"
+                                        "uniform sampler2D iFrame;"
+                                        "void main(void) {"
+                                        "    vec2 uv = gl_FragCoord.xy / iResolution;"
+                                        "    gl_FragColor = texture2D(iFrame, uv);"
+                                        "}");
+        program->bindAttributeLocation("vertices", 0);
+        program->link();
+
+        m_program = program;
     }
 
-    ~TextureNode2()
-    {
-        delete m_texture;
+protected:
+    QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) override {
+        return new QOpenGLFramebufferObject(size);
     }
 
-signals:
-    void pendingNewTexture();
+    void render() override {
+        QMutexLocker locker(&m_outputUI->m_sourceLock);
 
-public slots:
+        if(m_outputUI->m_source != NULL) {
+            auto m_videoNode = m_outputUI->m_source->m_videoNode;
+            m_videoNode->swap(m_videoNode->context()->outputFboIndex());
+            if(m_videoNode->m_displayFbos[m_videoNode->context()->outputFboIndex()] != NULL) {
 
-    // Before the scene graph starts to render, we update to the pending texture
-    void prepareNode() {
-        QMutexLocker locker(&m_output->m_sourceLock);
-        if(m_output->m_source == NULL) return;
-        auto videoNode = m_output->m_source->m_videoNode;
-        if(videoNode->swap(videoNode->context()->outputFboIndex())) {
-            auto newId = videoNode->m_displayFbos.at(videoNode->context()->outputFboIndex())->texture();
-            auto size = videoNode->m_displayFbos.at(videoNode->context()->outputFboIndex())->size();
-            if(m_id != newId || m_size != size) {
-                delete m_texture;
-                m_texture = m_window->createTextureFromId(newId, size, QQuickWindow::TextureHasAlphaChannel);
-                setTexture(m_texture);
-                m_id = newId;
-                m_size = size;
+                glClearColor(0, 0, 0, 0);
+                glDisable(GL_DEPTH_TEST);
+                glDisable(GL_BLEND);
+
+                float values[] = {
+                    -1, -1,
+                    1, -1,
+                    -1, 1,
+                    1, 1
+                };
+
+                m_program->bind();
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, m_videoNode->m_displayFbos[m_videoNode->context()->outputFboIndex()]->texture());
+                m_program->setAttributeArray(0, GL_FLOAT, values, 2);
+                m_program->setUniformValue("iResolution", framebufferObject()->size());
+                m_program->setUniformValue("iFrame", 0);
+                m_program->enableAttributeArray(0);
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                m_program->disableAttributeArray(0);
+                m_program->release();
+                glFlush();
             }
-            markDirty(DirtyMaterial);
         }
+        update();
     }
 
-private:
-
-    int m_id;
-    QSize m_size;
-
-    QMutex m_mutex;
-
-    QSGTexture *m_texture;
-    QQuickWindow *m_window;
-    OutputUI *m_output;
+    OutputUI *m_outputUI;
+    QOpenGLShaderProgram *m_program;
 };
 
 // OutputUI
 
 OutputUI::OutputUI() : m_source(0) {
-    setFlag(ItemHasContents, true);
-}
-
-QSGNode *OutputUI::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
-    TextureNode2 *node = static_cast<TextureNode2 *>(oldNode);
-
-    if (!node) {
-        node = new TextureNode2(window(), this);
-
-        // When a new texture is ready on the rendering thread, we use a direct connection to
-        // the texture node to let it know a new texture can be used. The node will then
-        // emit pendingNewTexture which we bind to QQuickWindow::update to schedule a redraw.
-
-        connect(window(), &QQuickWindow::beforeRendering, node, &TextureNode2::prepareNode, Qt::DirectConnection);
-    }
-
-    node->setRect(boundingRect());
-
-    return node;
 }
 
 VideoNodeUI *OutputUI::source() {
@@ -100,13 +90,11 @@ void OutputUI::setSource(VideoNodeUI *value) {
     {
         QMutexLocker locker(&m_sourceLock);
         if(m_source == value) return;
-        if(m_source != NULL) {
-        //    disconnect(m_source->m_videoNode, &VideoNode::textureReady, window(), &QQuickWindow::update);
-        }
         m_source = value;
-        //connect(m_source->m_videoNode, &VideoNode::textureReady, window(), &QQuickWindow::update, Qt::QueuedConnection);
     }
     emit sourceChanged(value);
 }
 
-#include "OutputUI.moc"
+QQuickFramebufferObject::Renderer *OutputUI::createRenderer() const {
+    return new OutputRenderer((OutputUI*)this); // TODO is this cast OK??
+}
