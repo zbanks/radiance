@@ -27,9 +27,6 @@ public slots:
     void render();
     bool swap(int i);
 
-signals:
-    void textureReady();
-
 protected:
     virtual void initialize() = 0;
     virtual void paint() = 0;
@@ -37,6 +34,9 @@ protected:
     RenderContext *m_context;
     static void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size);
     void beforeDestruction();
+
+signals:
+    void initialized();
 
 private:
     QVector<QMutex *> m_textureLocks;

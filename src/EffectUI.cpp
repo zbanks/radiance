@@ -12,6 +12,11 @@ EffectUI::EffectUI(QString source)
     Effect *e = new Effect(renderContext);
     connect(e, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
     m_videoNode = e;
+    connect(e, &VideoNode::initialized, this, &EffectUI::onInitialized, Qt::DirectConnection);
+}
+
+void EffectUI::onInitialized() {
+    if(!m_source.isEmpty()) static_cast<Effect*>(m_videoNode)->loadProgram(m_source);
 }
 
 qreal EffectUI::intensity() {
@@ -55,8 +60,4 @@ void EffectUI::setPrevious(VideoNodeUI *value) {
         e->setPrevious(value->m_videoNode);
     }
     emit previousChanged(value);
-}
-
-void EffectUI::initialize() {
-    if(!m_source.isEmpty()) static_cast<Effect*>(m_videoNode)->loadProgram(m_source);
 }

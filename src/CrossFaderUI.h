@@ -25,6 +25,9 @@ signals:
     void leftChanged(VideoNodeUI *value);
     void rightChanged(VideoNodeUI *value);
 
+private slots:
+    void onInitialized();
+
 private:
     void initialize();
     VideoNodeUI *m_left;

@@ -297,7 +297,6 @@ void Audio::render(double *audioHi, double *audioMid, double *audioLow, double *
     *audioMid = audioThreadMid;
     *audioLow = audioThreadLow;
     *audioLevel = audioThreadLevel;
-    qDebug() << *audioLevel;
 }
 
 void Audio::renderWaveform() {

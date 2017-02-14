@@ -24,9 +24,9 @@ void VideoNode::render() {
         initialize();
         for(int i=0; i<m_context->outputCount(); i++) m_updated[i] = false;
         m_initialized = true;
+        emit initialized();
     }
     paint();
-    emit textureReady();
 }
 
 // This function is called from paint()

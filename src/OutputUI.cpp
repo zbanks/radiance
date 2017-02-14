@@ -101,10 +101,10 @@ void OutputUI::setSource(VideoNodeUI *value) {
         QMutexLocker locker(&m_sourceLock);
         if(m_source == value) return;
         if(m_source != NULL) {
-            disconnect(m_source->m_videoNode, &VideoNode::textureReady, window(), &QQuickWindow::update);
+        //    disconnect(m_source->m_videoNode, &VideoNode::textureReady, window(), &QQuickWindow::update);
         }
         m_source = value;
-        connect(m_source->m_videoNode, &VideoNode::textureReady, window(), &QQuickWindow::update, Qt::QueuedConnection);
+        //connect(m_source->m_videoNode, &VideoNode::textureReady, window(), &QQuickWindow::update, Qt::QueuedConnection);
     }
     emit sourceChanged(value);
 }

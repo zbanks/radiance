@@ -12,6 +12,12 @@ CrossFaderUI::CrossFaderUI()
     CrossFader *c = new CrossFader(renderContext);
     connect(c, &CrossFader::parameterChanged, this, &CrossFaderUI::parameterChanged);
     m_videoNode = c;
+
+    connect(c, &VideoNode::initialized, this, &CrossFaderUI::onInitialized, Qt::DirectConnection);
+}
+
+void CrossFaderUI::onInitialized() {
+    static_cast<CrossFader*>(m_videoNode)->load();
 }
 
 qreal CrossFaderUI::parameter() {
@@ -50,8 +56,4 @@ void CrossFaderUI::setRight(VideoNodeUI *value) {
         e->setRight(value->m_videoNode);
     }
     emit rightChanged(value);
-}
-
-void CrossFaderUI::initialize() {
-    static_cast<CrossFader*>(m_videoNode)->load();
 }

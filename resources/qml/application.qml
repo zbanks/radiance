@@ -38,12 +38,19 @@ ApplicationWindow {
         }
     }
 
+/*
     LinearGradient {
         anchors.fill: parent
         gradient: Gradient {
             GradientStop { position: 0.0; color: "#333" }
             GradientStop { position: 1.0; color: "#444" }
         }
+    }
+*/
+
+    Rectangle {
+        anchors.fill: parent;
+        color: "#333";
     }
 
     ColumnLayout {

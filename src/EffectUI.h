@@ -25,6 +25,9 @@ signals:
     void sourceChanged(QString value);
     void previousChanged(VideoNodeUI *value);
 
+private slots:
+    void onInitialized();
+
 private:
     void initialize();
     VideoNodeUI *m_previous;
