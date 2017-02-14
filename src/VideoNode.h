@@ -32,7 +32,7 @@ protected:
     virtual void paint() = 0;
     void blitToRenderFbo();
     RenderContext *m_context;
-    static void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size);
+    void resizeFbo(QOpenGLFramebufferObject **fbo, QSize size);
     void beforeDestruction();
 
 signals:

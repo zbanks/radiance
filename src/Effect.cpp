@@ -1,6 +1,7 @@
 #include "Effect.h"
 #include "RenderContext.h"
 #include <QFile>
+#include <QFileInfo>
 #include "main.h"
 
 Effect::Effect(RenderContext *context)
@@ -16,14 +17,9 @@ void Effect::initialize() {
     for(int i=0; i<m_context->outputCount(); i++) {
         QSize size = m_context->fboSize(i);
 
-        delete m_displayFbos.at(i);
-        m_displayFbos[i] = new QOpenGLFramebufferObject(size);
-
-        delete m_renderFbos.at(i);
-        m_renderFbos[i] = new QOpenGLFramebufferObject(size);
-
-        delete m_blankFbos.at(i);
-        m_blankFbos[i] = new QOpenGLFramebufferObject(size);
+        resizeFbo(&m_displayFbos[i], size);
+        resizeFbo(&m_renderFbos[i], size);
+        resizeFbo(&m_blankFbos[i], size);
     }
 }
 
@@ -34,6 +30,8 @@ void Effect::paint() {
 
     {
         QMutexLocker locker(&m_programLock);
+        GLuint *chanTex = new GLuint[m_programs.count()];
+        for(int i=0; i<m_programs.count(); i++) chanTex[i] = i + 1;
         double time = timebase->beat();
         double audioHi = 0;
         double audioMid = 0;
@@ -57,13 +55,17 @@ void Effect::paint() {
             }
 
             if(m_regenerateFbos) {
-                foreach(QOpenGLFramebufferObject *f, m_intermediateFbos.at(i)) delete f;
+                foreach(auto f, m_intermediateFbos.at(i)) delete f;
                 m_intermediateFbos[i].clear();
                 for(int j = 0; j < m_programs.count() + 1; j++) {
-                    m_intermediateFbos[i].append(new QOpenGLFramebufferObject(size));
+                    QOpenGLFramebufferObject *fbo = 0;
+                    resizeFbo(&fbo, size);
+                    m_intermediateFbos[i].append(fbo);
                 }
                 m_fboIndex = 0;
             }
+
+            for(int j=0; j < m_programs.count() + 1; j++) resizeFbo(&m_intermediateFbos[i][j], size);
 
             if(m_programs.count() > 0) {
                 float values[] = {
@@ -73,10 +75,9 @@ void Effect::paint() {
                     1, 1
                 };
 
-                int fboIndex = m_fboIndex;
                 for(int j = m_programs.count() - 1; j >= 0; j--) {
-                    resizeFbo(&m_intermediateFbos[i][(fboIndex + 1) % (m_programs.count() + 1)], size);
-                    auto target = m_intermediateFbos.at(i).at((fboIndex + 1) % (m_programs.count() + 1));
+                    //qDebug() << "Rendering shader" << j << "onto" << (m_fboIndex + j + 1) % (m_programs.count() + 1);
+                    auto target = m_intermediateFbos.at(i).at((m_fboIndex + j + 1) % (m_programs.count() + 1));
                     auto p = m_programs.at(j);
 
                     p->bind();
@@ -84,8 +85,11 @@ void Effect::paint() {
 
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, previousFbo->texture());
-                    glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at(fboIndex)->texture());
+                    for(int k=0; k<m_programs.count(); k++) {
+                        glActiveTexture(GL_TEXTURE1 + k);
+                        glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at((m_fboIndex + k + (j < k)) % (m_programs.count() + 1))->texture());
+                        //qDebug() << "Bind" << (m_fboIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
+                    }
 
                     p->setAttributeArray(0, GL_FLOAT, values, 2);
                     float intense = intensity();
@@ -97,24 +101,23 @@ void Effect::paint() {
                     p->setUniformValue("iAudioLevel", (GLfloat)audioLevel);
                     p->setUniformValue("iFrame", 0);
                     p->setUniformValue("iResolution", (GLfloat) size.width(), (GLfloat) size.height());
-                    p->setUniformValue("iChannelP", 1);
+                    p->setUniformValueArray("iChannel", chanTex, m_programs.count());
                     p->enableAttributeArray(0);
 
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
                     p->disableAttributeArray(0);
                     p->release();
-
-                    fboIndex = (fboIndex + 1) % (m_programs.count() + 1);
                 }
                 QOpenGLFramebufferObject::bindDefault();
 
-                m_fbos[i] = m_intermediateFbos.at(i).at(fboIndex);
+                m_fbos[i] = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.count() + 1));
+                //qDebug() << "Output is" << ((m_fboIndex + 1) % (m_programs.count() + 1));
             } else {
                 m_fbos[i] = previousFbo;
             }
         }
-        m_fboIndex = (m_fboIndex + m_programs.count()) % (m_programs.count() + 1);
+        m_fboIndex = (m_fboIndex + 1) % (m_programs.count() + 1);
         m_regenerateFbos = false;
     }
     blitToRenderFbo();
@@ -147,39 +150,57 @@ bool Effect::loadProgram(QString name) {
         qDebug() << QString("Could not open \"../resources/effect_header.glsl\"");
         return false;
     }
-    QTextStream s1(&header_file);
+    QTextStream headerStream(&header_file);
+    QString headerString = headerStream.readAll();
 
-    QString filename = QString("../resources/effects/%1.0.glsl").arg(name);
-    QFile file(filename);
-    if(!file.open(QIODevice::ReadOnly)) {
-        qDebug() << QString("Could not open \"%1\"").arg(filename);
+    QVector<QOpenGLShaderProgram *> programs;
+
+    for(int i=0;;i++) {
+        QString filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
+        QFile file(filename);
+
+        QFileInfo check_file(filename);
+        if(!(check_file.exists() && check_file.isFile())) break;
+
+        if(!file.open(QIODevice::ReadOnly)) {
+            qDebug() << QString("Could not open \"%1\"").arg(filename);
+            goto err;
+        }
+
+        QTextStream stream(&file);
+        QString s = headerString + stream.readAll();
+
+        auto program = new QOpenGLShaderProgram();
+        programs.append(program);
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                           "attribute highp vec4 vertices;"
+                                           "varying highp vec2 coords;"
+                                           "void main() {"
+                                           "    gl_Position = vertices;"
+                                           "    coords = vertices.xy;"
+                                           "}")) goto err;
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s)) goto err;
+        program->bindAttributeLocation("vertices", 0);
+        if(!program->link()) goto err;
+    }
+    if(programs.count() == 0) {
+        qDebug() << QString("No shaders found for \"%1\"").arg(name);
         return false;
     }
 
-    QTextStream s2(&file);
-    QString s = s1.readAll() + s2.readAll();
-
-    auto program = new QOpenGLShaderProgram();
-    program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                       "attribute highp vec4 vertices;"
-                                       "varying highp vec2 coords;"
-                                       "void main() {"
-                                       "    gl_Position = vertices;"
-                                       "    coords = vertices.xy;"
-                                       "}");
-    program->addShaderFromSourceCode(QOpenGLShader::Fragment, s);
-    program->bindAttributeLocation("vertices", 0);
-    program->link();
-
     {
         QMutexLocker locker(&m_programLock);
-        foreach(QOpenGLShaderProgram *p, m_programs) delete p;
+        foreach(auto p, m_programs) delete p;
         m_programs.clear();
-        m_programs.append(program);
+        foreach(auto p, programs) m_programs.append(p);
         m_regenerateFbos = true;
     }
 
     return true;
+err:
+    foreach(auto *p, programs) delete p;
+    programs.clear();
+    return false;
 }
 
 qreal Effect::intensity() {
