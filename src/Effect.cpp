@@ -92,8 +92,10 @@ void Effect::paint() {
                     }
 
                     p->setAttributeArray(0, GL_FLOAT, values, 2);
-                    float intense = intensity();
-                    p->setUniformValue("iIntensity", intense);
+                    qreal intense = intensity();
+                    m_intensityIntegral = fmod(m_intensityIntegral + intense / FPS, MAX_INTEGRAL);
+                    p->setUniformValue("iIntensity", (GLfloat)intense);
+                    p->setUniformValue("iIntensityIntegral", (GLfloat)m_intensityIntegral);
                     p->setUniformValue("iTime", (GLfloat)time);
                     p->setUniformValue("iAudioHi", (GLfloat)audioHi);
                     p->setUniformValue("iAudioMid", (GLfloat)audioMid);

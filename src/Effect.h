@@ -14,6 +14,9 @@ public:
     ~Effect();
     bool loadProgram(QString name);
     QSet<VideoNode*> dependencies();
+
+    const qreal MAX_INTEGRAL = 1024;
+    const qreal FPS = 60;
  
 public slots:
     qreal intensity();
@@ -38,6 +41,7 @@ private:
     void paint();
 
     qreal m_intensity;
+    qreal m_intensityIntegral;
     VideoNode *m_previous;
 
     QMutex m_intensityLock;
