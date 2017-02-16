@@ -20,9 +20,6 @@ RenderContext::RenderContext()
 
     context->create();
 
-    surface = new QOffscreenSurface();
-    surface->setFormat(context->format());
-    surface->create();
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
     connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
 }
@@ -40,10 +37,17 @@ void RenderContext::start() {
     elapsed_timer.start();
 }
 
-// Radiance creates its own OpenGL context for rendering,
-// in case it is running with no UI. If there is a Qt UI,
-// you will need to call this function with the UI context
-// to properly set up context sharing.
+// This function is called from the GUI thread
+// when running windowed, because only the GUI thread
+// can create QOffscreenSurfaces on some platforms
+// (e.g. wayland)
+void RenderContext::renderDirect() {
+    if(surface == 0) {
+        surface = new QOffscreenSurface();
+        surface->setFormat(context->format());
+        surface->create();
+    }
+}
 
 void RenderContext::load() {
     auto program = m_premultiply;
@@ -76,10 +80,9 @@ void RenderContext::render() {
     elapsed_timer.restart();
     {
         QMutexLocker locker(&m_contextLock);
-        makeCurrent();
 
-        if(!m_premultiply)
-            load();
+        makeCurrent();
+        if(!m_premultiply) load();
 
         for(auto n : topoSort()) {
             n->render();

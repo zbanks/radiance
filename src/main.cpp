@@ -71,7 +71,6 @@ int main(int argc, char *argv[]) {
     RenderThread renderThread{};
     renderThread.start();
 
-
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
     if(engine.rootObjects().isEmpty()) {
         qFatal("Failed to load main QML application");

@@ -5,6 +5,7 @@
 #include <QOpenGLWindow>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
+#include <QDesktopWidget>
 
 class OutputWindow : public QOpenGLWindow, protected QOpenGLFunctions {
     Q_OBJECT
@@ -15,7 +16,6 @@ public:
         : QOpenGLWindow(QOpenGLContext::globalShareContext())
         , m_outputUI(outputUI)
         , m_program(0) {
-        showFullScreen();
     }
 
     ~OutputWindow() {
@@ -44,6 +44,7 @@ public:
                                         "void main(void) {"
                                         "    vec2 uv = gl_FragCoord.xy / iResolution;"
                                         "    gl_FragColor = texture2D(iFrame, uv);"
+                                        "    gl_FragColor.a = 1.;"
                                         "}");
         program->bindAttributeLocation("vertices", 0);
         program->link();
@@ -109,6 +110,7 @@ OutputUI::~OutputUI() {
 }
 
 void OutputUI::show() {
+    m_outputWindow->showFullScreen();
     m_outputWindow->show();
 }
 

@@ -35,6 +35,7 @@ public:
 
 public slots:
     void start();
+    void renderDirect();
     void render();
     void addVideoNode(VideoNode* n);
     void removeVideoNode(VideoNode* n);

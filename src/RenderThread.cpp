@@ -15,6 +15,7 @@ RenderThread::~RenderThread()
 void RenderThread::run()
 {
     RenderContext rc{};
+    connect(this, &RenderThread::render, &rc,&RenderContext::renderDirect, Qt::DirectConnection);
     connect(this, &RenderThread::render, &rc,&RenderContext::render);
     connect(&rc,&RenderContext::renderingFinished, this,&RenderThread::renderingFinished);
     renderContext = &rc;
