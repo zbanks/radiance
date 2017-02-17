@@ -1,8 +1,6 @@
 // Desaturate (make white)
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
     float factor = pow(iIntensity, 3.);
 
     vec4 samp = texture2D(iFrame, uv);

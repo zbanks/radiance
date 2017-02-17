@@ -1,8 +1,8 @@
 // Black sine wave from left to right.
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    float x = (uv.x + uv.y) * 15 + iTime * 1;
+    vec2 normCoord = (uv - 0.5) * aspectCorrection;
+    float x = (normCoord.x + normCoord.y) * 15. + iTime;
     gl_FragColor = texture2D(iFrame, uv);
-    gl_FragColor.a *= 1.0 - iIntensity * (sin(x) / 2.0 + 0.5);
+    gl_FragColor.a *= 1.0 - iIntensity * (0.5 * sin(x) + 0.5);
 }

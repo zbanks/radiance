@@ -1,8 +1,6 @@
 // Desaturate to the beat
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
     float t = mod(iTime, 4.0) / 4.0;
     float factor = pow(iIntensity * t, 2.5);
 

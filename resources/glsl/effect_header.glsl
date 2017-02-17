@@ -118,4 +118,7 @@ float noise(vec3 p) {
     return mix(y1, y2, xyz.z);
 }
 
+vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
+vec2 uv = gl_FragCoord.xy / iResolution;
+
 #line 0

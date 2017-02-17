@@ -10,7 +10,7 @@ ApplicationWindow {
 
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
-        UISettings.outputSize = "1024x768";
+        UISettings.outputSize = "1024x200";
     }
 
     Output {
