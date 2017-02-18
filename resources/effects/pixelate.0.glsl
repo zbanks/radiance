@@ -1,13 +1,13 @@
 // Pixelate/quantize the output
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    uv -= 0.5;
+    vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
     float bins = 256. * pow(2, -9. * iIntensity);
 
-    uv = round(uv * bins) / bins;
-    uv += 0.5;
+    normCoord = round(normCoord * bins) / bins;
 
-    gl_FragColor = texture2D(iFrame, uv);
+    vec2 newUV = normCoord / aspectCorrection + 0.5;
+
+    gl_FragColor = texture2D(iFrame, newUV);
 }

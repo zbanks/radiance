@@ -1,8 +1,6 @@
 // Recolor output with noise rainbow
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
     float factor = pow(iIntensity, 0.6);
     vec3 noise_input = vec3(uv, iTime / 8.);
     float n = noise(noise_input) - 0.1;

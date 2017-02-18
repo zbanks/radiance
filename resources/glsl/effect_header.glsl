@@ -72,6 +72,10 @@ float rand(vec3 c){
     return fract(sin(dot(c, vec3(12.9898,78.233, 52.942))) * 43758.5453);
 }
 
+float rand(vec4 c){
+    return fract(sin(dot(c, vec4(12.9898, 78.233, 52.942, 35.291))) * 43758.5453);
+}
+
 float noise(float p) {
     float i = floor(p);
     float x = mod(p, 1.);
@@ -118,6 +122,46 @@ float noise(vec3 p) {
     return mix(y1, y2, xyz.z);
 }
 
+float noise(vec4 p) {
+    vec4 ijkl = floor(p);
+    vec4 xyzw = mod(p, 1.);
+    // xyz = .5*(1.-cos(M_PI*xyz));
+    xyzw = 3.*xyzw*xyzw-2.*xyzw*xyzw*xyzw;
+    float a = rand((ijkl+vec4(0.,0.,0.,0.)));
+    float b = rand((ijkl+vec4(1.,0.,0.,0.)));
+    float c = rand((ijkl+vec4(0.,1.,0.,0.)));
+    float d = rand((ijkl+vec4(1.,1.,0.,0.)));
+    float e = rand((ijkl+vec4(0.,0.,1.,0.)));
+    float f = rand((ijkl+vec4(1.,0.,1.,0.)));
+    float g = rand((ijkl+vec4(0.,1.,1.,0.)));
+    float h = rand((ijkl+vec4(1.,1.,1.,0.)));
+    float i = rand((ijkl+vec4(0.,0.,0.,1.)));
+    float j = rand((ijkl+vec4(1.,0.,0.,1.)));
+    float k = rand((ijkl+vec4(0.,1.,0.,1.)));
+    float l = rand((ijkl+vec4(1.,1.,0.,1.)));
+    float m = rand((ijkl+vec4(0.,0.,1.,1.)));
+    float n = rand((ijkl+vec4(1.,0.,1.,1.)));
+    float o = rand((ijkl+vec4(0.,1.,1.,1.)));
+    float q = rand((ijkl+vec4(1.,1.,1.,1.)));
+    float x1 = mix(a, b, xyzw.x);
+    float x2 = mix(c, d, xyzw.x);
+    float y1 = mix(x1, x2, xyzw.y);
+    float x3 = mix(e, f, xyzw.x);
+    float x4 = mix(g, h, xyzw.x);
+    float y2 = mix(x3, x4, xyzw.y);
+    float z1 = mix(y1, y2, xyzw.z);
+
+    float x5 = mix(i, j, xyzw.x);
+    float x6 = mix(k, l, xyzw.x);
+    float y3 = mix(x5, x6, xyzw.y);
+    float x7 = mix(m, n, xyzw.x);
+    float x8 = mix(o, q, xyzw.x);
+    float y4 = mix(x7, x8, xyzw.y);
+    float z2 = mix(y3, y4, xyzw.z);
+    return mix(z1, z2, xyzw.w);
+}
+
+float onePixel = 1. / min(iResolution.x, iResolution.y);
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
 vec2 uv = gl_FragCoord.xy / iResolution;
 

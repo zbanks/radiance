@@ -1,10 +1,10 @@
 // Convert vertical lines to rings
 
 void main(void) {
-    vec2 xy = gl_FragCoord.xy / iResolution;
-    vec2 xy_cent = 2. * xy - 1.;
+    vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;
 
-    vec2 uv = vec2(mix(xy.x, length(xy_cent) / sqrt(2.), iIntensity), mix(xy.y, abs(atan(xy_cent.x, -xy_cent.y) / M_PI), iIntensity));
+    vec2 newUV = vec2(length(normCoord) / sqrt(2.), abs(atan(normCoord.x, -normCoord.y) / M_PI)) - 0.5;
+    newUV = newUV / aspectCorrection + 0.5;
 
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iFrame, mix(uv, newUV, iIntensity));
 }

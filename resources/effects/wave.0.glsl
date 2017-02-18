@@ -1,12 +1,12 @@
 // Green and blue base pattern
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
+    vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec4 c = vec4(0., 0., 0., 1.);
     float ratio = 15;
     c.r = 0.0;
-    c.g = sin((uv.x + uv.y) * ratio) / 2 + 0.5;
-    c.b = sin((uv.x - uv.y) * ratio) / 2 + 0.5;
+    c.g = 0.5 * sin((normCoord.x + normCoord.y) * ratio) + 0.5;
+    c.b = 0.5 * sin((normCoord.x - normCoord.y) * ratio) + 0.5;
     c.a = iIntensity;
 
     gl_FragColor = composite(texture2D(iFrame, uv), c);
