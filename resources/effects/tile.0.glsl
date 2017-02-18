@@ -1,17 +1,18 @@
 // Repeating tiles
 
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
-    uv -= 0.5;
+    vec2 normCoord = (uv - 0.5) * aspectCorrection;
     float bins = pow(2, 4. * iIntensity);
-    uv *= bins;
-    uv += 0.5;
+    vec2 newUV = normCoord * bins;
+    newUV = mod(newUV + 1.5, 2.);
+    newUV = abs(newUV - 1.) - 0.5;
+    newUV = newUV / aspectCorrection + 0.5;
 
-    // uv = mod(uv, vec2(1., 1.));
+    vec4 oc = texture2D(iFrame, (uv - 0.5) * bins + 0.5);
+    vec4 nc = texture2D(iFrame, newUV);
 
-    uv = mod(uv, vec2(2., 2.));
-    uv = vec2(1., 1.) - abs(vec2(1., 1.) - uv);
+    oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
+    nc.a *= smoothstep(0, 0.1, iIntensity);
 
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = composite(oc, nc);
 }
