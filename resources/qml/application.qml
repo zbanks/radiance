@@ -9,14 +9,23 @@ ApplicationWindow {
     visible: true;
 
     Component.onCompleted: {
-        UISettings.previewSize = "100x100";
-        UISettings.outputSize = "1024x200";
+        UISettings.previewSize = "300x300";
+        UISettings.outputSize = "1024x768";
     }
 
     Output {
+        id: output;
         source: cross.crossfader;
+        visible: outputVisible.checked;
+        screen: screenSelector.currentText;
+
+        onScreenChanged: console.log("Screen: " + screen);
+        onVisibleChanged: {
+            outputVisible.checked = visible;
+            console.log("Visible: " + visible);
+        }
         Component.onCompleted: {
-            show();
+            console.log("Available Screens:" + availableScreens);
         }
     }
 
@@ -43,19 +52,13 @@ ApplicationWindow {
         }
     }
 
-/*
     LinearGradient {
+        layer.enabled: true;
         anchors.fill: parent
         gradient: Gradient {
             GradientStop { position: 0.0; color: "#333" }
             GradientStop { position: 1.0; color: "#444" }
         }
-    }
-*/
-
-    Rectangle {
-        anchors.fill: parent;
-        color: "#333";
     }
 
     ColumnLayout {
@@ -67,12 +70,18 @@ ApplicationWindow {
             Waveform {
                 implicitWidth: 300;
                 implicitHeight: 300;
-                Layout.fillWidth: true;
             }
             Spectrum {
                 implicitWidth: 300;
                 implicitHeight: 300;
-                Layout.fillWidth: true;
+            }
+            CheckBox {
+                id: outputVisible;
+                text: "Show output";
+            }
+            ComboBox {
+                id: screenSelector;
+                model: output.availableScreens;
             }
             GroupBox {
                 title: "Output Lux Buses";

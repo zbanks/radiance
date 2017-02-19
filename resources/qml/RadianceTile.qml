@@ -9,6 +9,7 @@ Rectangle {
     property color endColor: activeFocus ? "#181838" : "#181818";
     property real borderWidth: 3;
     property color borderColor: "#666";
+    layer.enabled: true;
 
     id: rect;
     gradient: Gradient {

@@ -3,7 +3,7 @@
 
 void main(void) {
     float spin = iTime * 0.2;
-    float separate = iIntensity * 0.3 * cos(iTime * M_PI * 0.25);
+    float separate = iIntensity * 0.1 * cos(iTime * M_PI * 0.25);
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec2 redOffset = normCoord - separate * vec2(cos(spin), sin(spin));
     vec2 greenOffset = normCoord - separate * vec2(cos(2. + spin), sin(2. + spin));

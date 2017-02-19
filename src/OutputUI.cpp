@@ -5,17 +5,26 @@
 #include <QOpenGLWindow>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
-#include <QDesktopWidget>
+#include <QScreen>
+#include <QGuiApplication>
 
 class OutputWindow : public QOpenGLWindow, protected QOpenGLFunctions {
     Q_OBJECT
 
-// OpenGL Events
+protected slots:
+    void putOnScreen() {
+        setGeometry(screen()->geometry());
+    }
+
 public:
     OutputWindow(OutputUI *outputUI)
         : QOpenGLWindow(QOpenGLContext::globalShareContext())
         , m_outputUI(outputUI)
         , m_program(0) {
+        setFlags(Qt::Dialog);
+        //setWindowState(Qt::WindowFullScreen);
+        putOnScreen();
+        connect(this, &QWindow::screenChanged, this, &OutputWindow::putOnScreen);
     }
 
     ~OutputWindow() {
@@ -92,6 +101,7 @@ public:
     }
 
     void teardownGL() {
+        delete m_program;
     }
 
     OutputUI *m_outputUI;
@@ -100,8 +110,13 @@ public:
 
 // OutputUI
 
-OutputUI::OutputUI() : m_source(0) {
+OutputUI::OutputUI()
+    : m_source(0)
+    , m_screen(0) {
     m_outputWindow = new OutputWindow(this);
+    m_screen = m_outputWindow->screen();
+    connect(m_outputWindow, &QWindow::screenChanged, this, &OutputUI::onScreenChanged);
+    connect(m_outputWindow, &QWindow::visibleChanged, this, &OutputUI::visibleChanged);
 }
 
 OutputUI::~OutputUI() {
@@ -109,13 +124,33 @@ OutputUI::~OutputUI() {
     m_outputWindow = 0;
 }
 
-void OutputUI::show() {
-    m_outputWindow->showFullScreen();
-    m_outputWindow->show();
+QString OutputUI::screen() {
+    return m_outputWindow->screen()->name();
 }
 
-void OutputUI::hide() {
-    m_outputWindow->hide();
+void OutputUI::onScreenChanged(QScreen *screen) {
+    if(screen != m_screen) {
+        m_outputWindow->setScreen(m_screen);
+    }
+}
+
+void OutputUI::setScreen(QString screenName) {
+    foreach(QScreen *screen, QGuiApplication::screens()) {
+        if(screen->name() == screenName) {
+            m_screen = screen;
+            m_outputWindow->setScreen(screen);
+            emit screenChanged(screen->name());
+            break;
+        }
+    }
+}
+
+void OutputUI::setVisible(bool visible) {
+    m_outputWindow->setVisible(visible);
+}
+
+bool OutputUI::visible() {
+    return m_outputWindow->isVisible();
 }
 
 VideoNodeUI *OutputUI::source() {
@@ -130,6 +165,14 @@ void OutputUI::setSource(VideoNodeUI *value) {
         m_source = value;
     }
     emit sourceChanged(value);
+}
+
+QStringList OutputUI::availableScreens() {
+    QStringList result;
+    foreach(QScreen *screen, QGuiApplication::screens()) {
+        result.append(screen->name());
+    }
+    return result;
 }
 
 #include "OutputUI.moc"

@@ -8,9 +8,16 @@ class OutputWindow;
 class OutputUI : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(VideoNodeUI *source READ source WRITE setSource NOTIFY sourceChanged)
+    Q_PROPERTY(bool visible READ visible WRITE setVisible NOTIFY visibleChanged)
+    Q_PROPERTY(QString screen READ screen WRITE setScreen NOTIFY screenChanged)
+    Q_PROPERTY(QStringList availableScreens READ availableScreens)
 
 protected:
     OutputWindow *m_outputWindow;
+    QScreen *m_screen;
+
+protected slots:
+    void onScreenChanged(QScreen* screen);
 
 public:
     VideoNodeUI *source();
@@ -21,9 +28,14 @@ public:
     QMutex m_sourceLock;
 
 public slots:
-    void show();
-    void hide();
+    void setVisible(bool visible);
+    bool visible();
+    void setScreen(QString screenName);
+    QString screen();
+    QStringList availableScreens();
 
 signals:
     void sourceChanged(VideoNodeUI *value);
+    void visibleChanged(bool value);
+    void screenChanged(QString screenName);
 };
