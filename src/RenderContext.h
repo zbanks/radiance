@@ -35,15 +35,18 @@ public:
 
 public slots:
     void start();
-    void renderDirect();
     void render();
     void addVideoNode(VideoNode* n);
     void removeVideoNode(VideoNode* n);
+    void addSyncSource(QObject *source);
+    void removeSyncSource(QObject *source);
 
 private:
     QList<VideoNode*> topoSort();
     void load();
     int m_outputCount;
+    QList<QObject *> m_syncSources;
+    QObject *m_currentSyncSource;
 
 signals:
     void renderingFinished();

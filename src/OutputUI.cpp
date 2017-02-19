@@ -22,7 +22,7 @@ public:
         , m_outputUI(outputUI)
         , m_program(0) {
         setFlags(Qt::Dialog);
-        //setWindowState(Qt::WindowFullScreen);
+        setWindowState(Qt::WindowFullScreen);
         putOnScreen();
         connect(this, &QWindow::screenChanged, this, &OutputWindow::putOnScreen);
     }
@@ -117,6 +117,7 @@ OutputUI::OutputUI()
     m_screen = m_outputWindow->screen();
     connect(m_outputWindow, &QWindow::screenChanged, this, &OutputUI::onScreenChanged);
     connect(m_outputWindow, &QWindow::visibleChanged, this, &OutputUI::visibleChanged);
+    connect(m_outputWindow, &QWindow::visibleChanged, this, &OutputUI::onVisibleChanged);
 }
 
 OutputUI::~OutputUI() {
@@ -173,6 +174,14 @@ QStringList OutputUI::availableScreens() {
         result.append(screen->name());
     }
     return result;
+}
+
+void OutputUI::onVisibleChanged(bool visible) {
+    if(visible) {
+        renderContext->addSyncSource(m_outputWindow);
+    } else {
+        renderContext->removeSyncSource(m_outputWindow);
+    }
 }
 
 #include "OutputUI.moc"

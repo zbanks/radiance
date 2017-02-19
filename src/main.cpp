@@ -8,7 +8,6 @@
 #include "OutputUI.h"
 #include "GraphicalDisplayUI.h"
 #include "RenderContext.h"
-#include "RenderThread.h"
 #include "Output.h"
 #include "Lux.h"
 #include "main.h"
@@ -67,8 +66,12 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
     qmlRegisterSingletonType<OutputManager>("radiance", 1, 0, "OutputManager", outputManagerProvider);
 
-    // Render thread
-    RenderThread renderThread{};
+    // Render context
+    QThread renderThread;
+    renderThread.setObjectName("RenderThread");
+    renderContext = new RenderContext();
+    renderContext->moveToThread(&renderThread);
+    QObject::connect(&renderThread, &QThread::started, renderContext, &RenderContext::start);
     renderThread.start();
 
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
@@ -78,7 +81,7 @@ int main(int argc, char *argv[]) {
     }
 
     QObject *window = engine.rootObjects().first();
-    QObject::connect(window, SIGNAL(frameSwapped()), &renderThread , SIGNAL(render()));
+    renderContext->addSyncSource(window);
 
     return app.exec();
 }

@@ -18,6 +18,7 @@ protected:
 
 protected slots:
     void onScreenChanged(QScreen* screen);
+    void onVisibleChanged(bool visible);
 
 public:
     VideoNodeUI *source();

@@ -29,7 +29,6 @@ add_executable(radiance WIN32 src/main.cpp
     src/CrossFaderUI.cpp
     src/UISettings.cpp
     src/RenderContext.cpp
-    src/RenderThread.cpp
     src/Output.cpp
     src/OutputUI.cpp
     src/Lux.cpp

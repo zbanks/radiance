@@ -10,16 +10,8 @@ RenderContext::RenderContext()
     , timer(nullptr)
     , m_premultiply(nullptr)
     , m_outputCount(2)
+    , m_currentSyncSource(NULL)
 {
-    context = new QOpenGLContext(this);
-    auto scontext = QOpenGLContext::globalShareContext();
-    if(scontext) {
-        context->setFormat(scontext->format());
-        context->setShareContext(scontext);
-    }
-
-    context->create();
-
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
     connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
 }
@@ -34,19 +26,24 @@ RenderContext::~RenderContext() {
 }
 
 void RenderContext::start() {
-    elapsed_timer.start();
-}
-
-// This function is called from the GUI thread
-// when running windowed, because only the GUI thread
-// can create QOffscreenSurfaces on some platforms
-// (e.g. wayland)
-void RenderContext::renderDirect() {
-    if(surface == 0) {
-        surface = new QOffscreenSurface();
-        surface->setFormat(context->format());
-        surface->create();
+    qDebug() << "Calling start from" << QThread::currentThread();
+    context = new QOpenGLContext(this);
+    auto scontext = QOpenGLContext::globalShareContext();
+    if(scontext) {
+        context->setFormat(scontext->format());
+        context->setShareContext(scontext);
     }
+
+    context->create();
+
+    // Creating a QOffscreenSurface with no window
+    // may fail on some platforms
+    // (e.g. wayland)
+    surface = new QOffscreenSurface();
+    surface->setFormat(context->format());
+    surface->create();
+
+    elapsed_timer.start();
 }
 
 void RenderContext::load() {
@@ -113,6 +110,29 @@ void RenderContext::removeVideoNode(VideoNode* n) {
     // required for the current render
     QMutexLocker locker(&m_contextLock);
     m_videoNodes.remove(n);
+}
+
+void RenderContext::addSyncSource(QObject *source) {
+    m_syncSources.append(source);
+    if(m_syncSources.last() != m_currentSyncSource) {
+        if(m_currentSyncSource != NULL) disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        m_currentSyncSource = m_syncSources.last();
+        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+    }
+}
+
+void RenderContext::removeSyncSource(QObject *source) {
+    m_syncSources.removeOne(source);
+    if(m_syncSources.isEmpty()) {
+        disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        m_currentSyncSource = NULL;
+        qDebug() << "Removed last sync source, video output will stop now";
+    }
+    else if(m_syncSources.last() != m_currentSyncSource) {
+        disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        m_currentSyncSource = m_syncSources.last();
+        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+    }
 }
 
 QList<VideoNode*> RenderContext::topoSort()

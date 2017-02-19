@@ -19,14 +19,7 @@ ApplicationWindow {
         visible: outputVisible.checked;
         screen: screenSelector.currentText;
 
-        onScreenChanged: console.log("Screen: " + screen);
-        onVisibleChanged: {
-            outputVisible.checked = visible;
-            console.log("Visible: " + visible);
-        }
-        Component.onCompleted: {
-            console.log("Available Screens:" + availableScreens);
-        }
+        onVisibleChanged: outputVisible.checked = visible;
     }
 
     Action {
