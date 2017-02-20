@@ -75,7 +75,7 @@ protected:
 
 VideoNodeUI::VideoNodeUI()
     : m_videoNode(0) {
-    setMirrorVertically(true);
+    //setMirrorVertically(true);
 }
 
 VideoNodeUI::~VideoNodeUI() {

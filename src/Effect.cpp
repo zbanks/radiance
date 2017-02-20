@@ -1,5 +1,6 @@
 #include "Effect.h"
 #include "RenderContext.h"
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include "main.h"
@@ -231,4 +232,15 @@ void Effect::setPrevious(VideoNode *value) {
     QMutexLocker clocker(&m_context->m_contextLock);
     QMutexLocker plocker(&m_previousLock);
     m_previous = value;
+}
+
+QStringList EffectList::effectNames() {
+    QStringList filters;
+    filters << "*.0.glsl";
+    QDir dir("../resources/effects/");
+    dir.setNameFilters(filters);
+    dir.setSorting(QDir::Name);
+
+    QStringList entries = dir.entryList();
+    return entries.replaceInStrings(".0.glsl", "");
 }

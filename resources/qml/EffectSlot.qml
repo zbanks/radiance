@@ -19,8 +19,8 @@ RadianceTile {
 
     Keys.onPressed: {
         if (event.key == Qt.Key_Colon) {
-            effectSelector.x = x + 50;
-            effectSelector.y = y + 50;
+            effectSelector.x = x;
+            effectSelector.y = y + 10;
             effectSelector.selected.connect(selectorSelected);
             effectSelector.closed.connect(selectorClosed);
             effectSelector.popup();

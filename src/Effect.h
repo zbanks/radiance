@@ -50,3 +50,10 @@ private:
 
     bool m_regenerateFbos;
 };
+
+class EffectList : public QObject {
+    Q_OBJECT
+public:
+    Q_INVOKABLE static QStringList effectNames();
+};
+

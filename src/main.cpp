@@ -18,6 +18,7 @@ QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
 Audio *audio = 0;
 OutputManager *outputManager = 0;
+EffectList *effectList = 0;
 Timebase *timebase = 0;
 
 QObject *uiSettingsProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
@@ -38,6 +39,12 @@ QObject *outputManagerProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     return outputManager;
 }
 
+QObject *effectListProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
+    Q_UNUSED(engine)
+    Q_UNUSED(scriptEngine)
+    return effectList;
+}
+
 int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
     QCoreApplication::setOrganizationDomain("radiance.lighting");
@@ -52,6 +59,7 @@ int main(int argc, char *argv[]) {
     audio = new Audio();
     outputManager = new OutputManager(outputSettings);
     timebase = new Timebase();
+    effectList = new EffectList();
 
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
@@ -61,6 +69,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
+    qmlRegisterSingletonType<EffectList>("radiance", 1, 0, "EffectList", effectListProvider);
 
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");

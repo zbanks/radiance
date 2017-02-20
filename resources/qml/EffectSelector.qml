@@ -2,15 +2,21 @@ import QtQuick 2.3
 import radiance 1.0
 import QtQuick.Controls 1.4
 
-TextField {
+ComboBox {
     id: loadfield;
     visible: false;
+    model: EffectList.effectNames();
+    editable: true;
+    implicitWidth: 200;
+
     signal selected(string name);
     signal closed();
 
     Keys.onPressed: {
         if (event.key == Qt.Key_Escape) {
             popdown();
+        } else if (event.key == Qt.Key_Enter) {
+            onAccepted();
         }
     }
 
@@ -22,8 +28,8 @@ TextField {
 
     function popup() {
         visible = true;
-        text = "";
         focus = true;
+        editText = "";
     }
 
     function popdown() {
@@ -35,7 +41,7 @@ TextField {
     }
 
     onAccepted: {
-        selected(text);
+        selected(currentText);
         popdown();
     }
 }

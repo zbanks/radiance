@@ -60,13 +60,17 @@ ApplicationWindow {
         Layout.margins: 10;
 
         RowLayout {
-            Waveform {
-                implicitWidth: 300;
+            ColumnLayout {
+                implicitWidth: 500;
                 implicitHeight: 300;
-            }
-            Spectrum {
-                implicitWidth: 300;
-                implicitHeight: 300;
+                Waveform {
+                    implicitWidth: 500;
+                    implicitHeight: 150;
+                }
+                Spectrum {
+                    implicitWidth: 500;
+                    implicitHeight: 150;
+                }
             }
             CheckBox {
                 id: outputVisible;
