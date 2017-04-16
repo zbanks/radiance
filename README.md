@@ -200,6 +200,7 @@ Patterns
 - `bwave` - Black sine wave from left to right. 
 - `circle` - Yellow blob that spins to the beat 
 - `cyan` - Cyan diagonal stripes 
+- `depolar` - Convert rings to vertical lines 
 - `desat` - Desaturate (make white) 
 - `desatb` - Desaturate to the beat 
 - `diodelpf` - Apply smoothing over time with new hits happening instantly 
@@ -210,6 +211,7 @@ Patterns
 - `fire` - Fire from the bottom 
 - `fireball` - Fileball in the center 
 - `flow` - Radiate color from the center based on audio 
+- `flower` - Convert vertical lines to radial flower pattern 
 - `foh` - First order (expontential) hold 
 - `heart` - Pink heart 
 - `hue` - Shift the color in HSV space 
@@ -217,6 +219,7 @@ Patterns
 - `pink` - Pink polka dots 
 - `pixelate` - Pixelate/quantize the output 
 - `polar` - Convert vertical lines to rings 
+- `polygon` - Convert vertical lines to polygon rings 
 - `posterize` - Reduce number of colors 
 - `purple` - Organic purple waves 
 - `qcircle` - Big purple soft circle  
@@ -226,15 +229,17 @@ Patterns
 - `rjump` - Shift the hue on the beat 
 - `rotate` - Rotate the screen 
 - `slide` - Slide the screen left-to-right 
-- `spin` - Spins the pattern round not to the beat
-- `spinb` - Spins the pattern round to the beat
 - `smoke` - Perlin noise green smoke 
 - `speckle` - Per-pixel twinkle effect 
+- `spin` - Spins the pattern round not to the beat 
+- `spinb` - Spins the pattern round to the beat 
+- `sscan` - White slit for testing 
 - `starfield` - Pixels radiating from the center 
 - `stripey` - Vertical stripes with a twinkle effect 
 - `strobe` - Strobe alpha to the beat 
-- `swipe` - Only update a vertical stripe that slides across
+- `swipe` - Only update a vertical slice that slides across 
 - `test` - A green & red circle in the center 
+- `tile` - Repeating tiles 
 - `vu` - Blue vertical VU meter 
 - `wave` - Green and blue base pattern 
 - `wstrobe` - White strobe to the beat 
