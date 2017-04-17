@@ -6,7 +6,7 @@ import radiance 1.0
 FocusScope {
     id: tile;
     property alias effect: effect;
-    implicitWidth: 200;
+    implicitWidth: 150;
     implicitHeight: 300;
 
     RadianceTile {

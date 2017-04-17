@@ -7,7 +7,7 @@ RadianceTile {
     property DraggableEffect uiEffect;
     property EffectSelector effectSelector;
 
-    implicitWidth: 200;
+    implicitWidth: 150;
     implicitHeight: 300;
     borderWidth: 0;
 

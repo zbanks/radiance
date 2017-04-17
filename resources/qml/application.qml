@@ -215,12 +215,12 @@ ApplicationWindow {
             RowLayout {
                 Deck {
                     id: deck1;
-                    count: 4;
+                    count: 8;
                 }
 
                 Deck {
                     id: deck2;
-                    count: 4;
+                    count: 1;
                 }
                 Repeater {
                     id: deck1repeater;

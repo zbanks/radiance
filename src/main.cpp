@@ -3,13 +3,14 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QThread>
-#include "EffectUI.h"
 #include "CrossFaderUI.h"
-#include "OutputUI.h"
+#include "EffectUI.h"
 #include "GraphicalDisplayUI.h"
-#include "RenderContext.h"
-#include "Output.h"
 #include "Lux.h"
+#include "Midi.h"
+#include "Output.h"
+#include "OutputUI.h"
+#include "RenderContext.h"
 #include "main.h"
 
 RenderContext *renderContext = 0;
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
     qmlRegisterType<OutputUI>("radiance", 1, 0, "Output");
     qmlRegisterType<GraphicalDisplayUI>("radiance", 1, 0, "GraphicalDisplay");
+    qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
