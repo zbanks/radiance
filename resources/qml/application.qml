@@ -28,6 +28,14 @@ ApplicationWindow {
         onTriggered: Qt.quit()
     }
 
+    MidiDevice {
+        id: midi;
+        deviceIndex: midiSelector.currentIndex;
+        onNoteOnEvent: console.log("note on: " + note + "=" + velocity);
+        onNoteOffEvent: console.log("note off: " + note + "=" + velocity);
+        onControlChangeEvent: console.log("cc: " + control + "=" + value);
+    }
+
     menuBar: MenuBar {
         Menu {
             title: "&File";
@@ -72,13 +80,37 @@ ApplicationWindow {
                     implicitHeight: 150;
                 }
             }
-            CheckBox {
-                id: outputVisible;
-                text: "Show output";
-            }
-            ComboBox {
-                id: screenSelector;
-                model: output.availableScreens;
+            ColumnLayout {
+                GroupBox {
+                    Layout.fillWidth: true;
+                    RowLayout {
+                        anchors.fill: parent;
+                        CheckBox {
+                            id: outputVisible;
+                            text: "Show output";
+                        }
+                        ComboBox {
+                            id: screenSelector;
+                            model: output.availableScreens;
+                        }
+                    }
+                }
+                GroupBox {
+                    Layout.fillWidth: true;
+                    ColumnLayout {
+                        anchors.fill: parent;
+                        ComboBox {
+                            Layout.fillWidth: true;
+                            id: midiSelector;
+                            model: midi.deviceList;
+                        }
+                        Button {
+                            text: "Reload MIDI";
+                            Layout.fillWidth: true;
+                            onClicked : midi.reload();
+                        }
+                    }
+                }
             }
             GroupBox {
                 title: "Output Lux Buses";

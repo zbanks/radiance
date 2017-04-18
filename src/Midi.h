@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QQuickItem>
+#include <QTimer>
 #include <rtmidi/RtMidi.h>
 
 class MidiDevice : public QQuickItem {
@@ -33,4 +34,5 @@ private:
     QStringList m_deviceList;
     int m_deviceIndex;
     RtMidiIn m_midiin;
+    QTimer m_timer;
 };
