@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
     renderContext = new RenderContext();
     renderContext->moveToThread(&renderThread);
     QObject::connect(&renderThread, &QThread::started, renderContext, &RenderContext::start);
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &renderThread, &QThread::quit);
     renderThread.start();
 
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));

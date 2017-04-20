@@ -25,6 +25,7 @@ public:
                                         "uniform sampler2D iFrame;"
                                         "void main(void) {"
                                         "    vec2 uv = gl_FragCoord.xy / iResolution;"
+                                        "    uv.y = 1. - uv.y;"
                                         "    gl_FragColor = texture2D(iFrame, uv);"
                                         "}");
         program->bindAttributeLocation("vertices", 0);
