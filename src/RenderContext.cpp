@@ -127,7 +127,7 @@ void RenderContext::addSyncSource(QObject *source) {
     if(m_syncSources.last() != m_currentSyncSource) {
         if(m_currentSyncSource != NULL) disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
         m_currentSyncSource = m_syncSources.last();
-        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
+        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()), Qt::DirectConnection);
     }
 }
 
@@ -141,7 +141,7 @@ void RenderContext::removeSyncSource(QObject *source) {
     else if(m_syncSources.last() != m_currentSyncSource) {
         disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
         m_currentSyncSource = m_syncSources.last();
-        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
+        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()), Qt::DirectConnection);
     }
 }
 

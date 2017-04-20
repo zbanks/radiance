@@ -11,7 +11,8 @@ Effect::Effect(RenderContext *context)
     m_intensity(0),
     m_previous(0),
     m_intermediateFbos(context->outputCount()),
-    m_blankFbos(context->outputCount()) {
+    m_blankFbos(context->outputCount()),
+    m_regenerateFbos(true) {
 }
 
 void Effect::initialize() {
@@ -39,6 +40,7 @@ void Effect::paint() {
         double audioLow = 0;
         double audioLevel = 0;
         audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
+
         for(int i=0; i<m_context->outputCount(); i++) {
             QSize size = m_context->fboSize(i);
 
