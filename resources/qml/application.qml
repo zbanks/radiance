@@ -10,7 +10,7 @@ ApplicationWindow {
 
     Component.onCompleted: {
         UISettings.previewSize = "300x300";
-        UISettings.outputSize = "1024x768";
+        UISettings.outputSize = "640x480";
     }
 
     Output {
@@ -252,7 +252,7 @@ ApplicationWindow {
 
                 Deck {
                     id: deck2;
-                    count: 1;
+                    count: 8;
                 }
                 Repeater {
                     id: deck1repeater;

@@ -8,6 +8,7 @@
 #include <QEvent>
 #include <QSet>
 #include <QOpenGLShaderProgram>
+#include <QSemaphore>
 #include "VideoNode.h"
 
 class RenderContext : public QObject {
@@ -35,11 +36,14 @@ public:
 
 public slots:
     void start();
-    void render();
+    void update();
     void addVideoNode(VideoNode* n);
     void removeVideoNode(VideoNode* n);
     void addSyncSource(QObject *source);
     void removeSyncSource(QObject *source);
+
+private slots:
+    void render();
 
 private:
     QList<VideoNode*> topoSort();
@@ -47,9 +51,11 @@ private:
     int m_outputCount;
     QList<QObject *> m_syncSources;
     QObject *m_currentSyncSource;
+    QSemaphore m_rendering;
 
 signals:
     void renderingFinished();
     void addVideoNodeRequested(VideoNode *n);
     void removeVideoNodeRequested(VideoNode *n);
+    void renderRequested();
 };

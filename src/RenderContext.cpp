@@ -11,9 +11,11 @@ RenderContext::RenderContext()
     , m_premultiply(nullptr)
     , m_outputCount(2)
     , m_currentSyncSource(NULL)
+    , m_rendering(2)
 {
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
     connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
+    connect(this, &RenderContext::renderRequested, this, &RenderContext::render, Qt::QueuedConnection);
 }
 
 RenderContext::~RenderContext() {
@@ -72,6 +74,13 @@ void RenderContext::load() {
     m_premultiply = program;
 }
 
+void RenderContext::update() {
+    if(m_rendering.tryAcquire())
+    {
+        emit renderRequested();
+    }
+}
+
 void RenderContext::render() {
     qint64 framePeriod = elapsed_timer.nsecsElapsed();
     elapsed_timer.restart();
@@ -87,7 +96,8 @@ void RenderContext::render() {
     }
     emit renderingFinished();
     qint64 renderingPeriod = elapsed_timer.nsecsElapsed();
-    //qDebug() << framePeriod << renderingPeriod;
+    //qDebug() << (1000000000/framePeriod) << renderingPeriod;
+    m_rendering.release();
 }
 
 void RenderContext::makeCurrent() {
@@ -115,23 +125,23 @@ void RenderContext::removeVideoNode(VideoNode* n) {
 void RenderContext::addSyncSource(QObject *source) {
     m_syncSources.append(source);
     if(m_syncSources.last() != m_currentSyncSource) {
-        if(m_currentSyncSource != NULL) disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        if(m_currentSyncSource != NULL) disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
         m_currentSyncSource = m_syncSources.last();
-        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
     }
 }
 
 void RenderContext::removeSyncSource(QObject *source) {
     m_syncSources.removeOne(source);
     if(m_syncSources.isEmpty()) {
-        disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
         m_currentSyncSource = NULL;
         qDebug() << "Removed last sync source, video output will stop now";
     }
     else if(m_syncSources.last() != m_currentSyncSource) {
-        disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        disconnect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
         m_currentSyncSource = m_syncSources.last();
-        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(render()));
+        connect(m_currentSyncSource, SIGNAL(frameSwapped()), this, SLOT(update()));
     }
 }
 
