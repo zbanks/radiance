@@ -1,19 +1,35 @@
-// Spatial edge detect filter (HPF)
+// From https://www.shadertoy.com/view/XssGD7
 
-void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-    float d = 0.05;
-    vec4 center = texture2D(iFrame, uv);
-    vec4 left = texture2D(iFrame, uv - vec2(d, 0) / aspectCorrection);
-    vec4 right = texture2D(iFrame, uv + vec2(d, 0) / aspectCorrection);
-    vec4 up = texture2D(iFrame, uv + vec2(0, d) / aspectCorrection);
-    vec4 down = texture2D(iFrame, uv - vec2(0, d) / aspectCorrection);
-    left.rgb *= left.a;
-    right.rgb *= right.a;
-    up.rgb *= up.a;
-    down.rgb *= down.a;
-    vec4 outc = abs(left - right) + abs(up - down);
-    gl_FragColor = clamp(outc * 1.5, 0, 1);
-    gl_FragColor.a = center.a;
-    gl_FragColor = mix(center, gl_FragColor, vec4(iIntensity));
+void main()
+{
+	//vec2 uv = fragCoord.xy / iResolution.xy;
+	
+	// Sobel operator
+	float offset = onePixel;
+	vec3 o = vec3(-offset, 0.0, offset);
+	vec4 gx = vec4(0.0);
+	vec4 gy = vec4(0.0);
+	vec4 t;
+	gx += texture2D(iFrame, uv + o.xz);
+	gy += gx;
+	gx += 2.0*texture2D(iFrame, uv + o.xy);
+	t = texture2D(iFrame, uv + o.xx);
+	gx += t;
+	gy -= t;
+	gy += 2.0*texture2D(iFrame, uv + o.yz);
+	gy -= 2.0*texture2D(iFrame, uv + o.yx);
+	t = texture2D(iFrame, uv + o.zz);
+	gx -= t;
+	gy += t;
+	gx -= 2.0*texture2D(iFrame, uv + o.zy);
+	t = texture2D(iFrame, uv + o.zx);
+	gx -= t;
+	gy -= t;
+	vec4 grad = sqrt(gx * gx + gy * gy);
+
+    vec4 original = texture2D(iFrame, uv);
+    grad.a *= smoothstep(0., 0.5, iIntensity);
+    original.a *= 1. - smoothstep(0.5, 1., iIntensity);
+
+    gl_FragColor = composite(original, grad);
 }

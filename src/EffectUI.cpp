@@ -36,14 +36,16 @@ void EffectUI::setIntensity(qreal value) {
 }
 
 void EffectUI::setSource(QString value) {
-    m_source = value;
     QQuickWindow *w = window();
     if(w != NULL) {
         // Apparently a window existing is good enough to ensure an OpenGL context
         bool success = static_cast<Effect*>(m_videoNode)->loadProgram(value);
-        if (!success) {
-            m_source = value = nullptr;
+        if(success) {
+            m_source = value;
         }
+        //else {
+        //    m_source = value = nullptr;
+        //}
     }
     emit sourceChanged(value);
 }
