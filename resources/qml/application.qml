@@ -13,24 +13,24 @@ ApplicationWindow {
         UISettings.outputSize = "1024x768";
     }
 
-    Output {
-        id: output;
-        source: cross.crossfader;
-        visible: outputVisible.checked;
-        screen: screenSelector.currentText;
-
-        onVisibleChanged: outputVisible.checked = visible;
-    }
-
     Action {
         id: quitAction
         text: "&Quit"
         onTriggered: Qt.quit()
     }
 
+    Output {
+        id: output;
+        source: cross.crossfader;
+        visible: controls.outputVisibleChecked;
+        screen: controls.screenSelected;
+
+        onVisibleChanged: controls.outputVisible.checked = visible;
+    }
+
     MidiDevice {
         id: midi;
-        deviceIndex: midiSelector.currentIndex;
+        deviceIndex: controls.midiDeviceSelected;
         onNoteOn: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
         onNoteOff: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
         onNoteAftertouch: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
@@ -68,176 +68,9 @@ ApplicationWindow {
         anchors.margins: 10;
         Layout.margins: 10;
 
-        RowLayout {
-            ColumnLayout {
-                implicitWidth: 500;
-                implicitHeight: 300;
-                Waveform {
-                    implicitWidth: 500;
-                    implicitHeight: 150;
-                }
-                Spectrum {
-                    implicitWidth: 500;
-                    implicitHeight: 150;
-                }
-            }
-            ColumnLayout {
-                GroupBox {
-                    Layout.fillWidth: true;
-                    RowLayout {
-                        anchors.fill: parent;
-                        CheckBox {
-                            id: outputVisible;
-                            text: "Show output";
-                        }
-                        ComboBox {
-                            id: screenSelector;
-                            model: output.availableScreens;
-                        }
-                    }
-                }
-                GroupBox {
-                    Layout.fillWidth: true;
-                    ColumnLayout {
-                        anchors.fill: parent;
-                        ComboBox {
-                            Layout.fillWidth: true;
-                            id: midiSelector;
-                            model: midi.deviceList;
-                        }
-                        Button {
-                            text: "Reload MIDI";
-                            Layout.fillWidth: true;
-                            onClicked : midi.reload();
-                        }
-                    }
-                }
-            }
-            GroupBox {
-                title: "Output Lux Buses";
-                implicitWidth: 200;
-                implicitHeight: 300;
-                Layout.fillWidth: true;
-
-                ColumnLayout {
-                    anchors.fill: parent;
-                    ScrollView {
-                        Layout.fillWidth: true;
-                        ListView {
-                            model: OutputManager.buses
-                            delegate: RowLayout {
-                                property var bus : OutputManager.buses[index];
-                                Rectangle {
-                                    width: 15;
-                                    height: 15;
-                                    color: bus.state == LuxBus.Disconnected ? "grey" : (
-                                           bus.state == LuxBus.Error ? "red" : (
-                                           bus.state == LuxBus.Connected ? "green" : "blue"));
-                                }
-                                TextField {
-                                    id: bus_textbox;
-                                    text: bus.uri;
-                                    implicitWidth: 200;
-                                    Layout.margins: 3;
-                                    onAccepted: { bus.uri = text }
-                                }
-                                //Label { text: "Bus URI: " + bus.uri + "; State: " + bus.state }
-                            }
-                        }
-                    }
-                    RowLayout {
-                        Button {
-                            text: "Add Bus";
-                            onClicked: {
-                                var luxbus = OutputManager.createLuxBus();
-                                luxbus.uri = "udp://127.0.0.1:1365";
-                            }
-                        }
-                        Button {
-                            text: "Refresh";
-                            onClicked: {
-                                OutputManager.refresh();
-                            }
-                        }
-                        Button {
-                            text: "Save";
-                            onClicked: {
-                                OutputManager.saveSettings();
-                            }
-                        }
-                    }
-                }
-            }
-            GroupBox {
-                title: "Output Lux Devices";
-                implicitWidth: 200;
-                implicitHeight: 300;
-                Layout.fillWidth: true;
-
-                ColumnLayout {
-                    anchors.fill: parent;
-                    ScrollView {
-                        Layout.fillWidth: true;
-                        ListView {
-                            model: OutputManager.devices
-                            delegate: RowLayout {
-                                property var dev : OutputManager.devices[index];
-                                Rectangle {
-                                    width: 15;
-                                    height: 15;
-                                    color: dev.state == LuxDevice.Disconnected ? "grey" : (
-                                           dev.state == LuxDevice.Error ? "red" : (
-                                           dev.state == LuxDevice.Blind ? "yellow" : (
-                                           dev.state == LuxDevice.Connected ? "green" : "blue")));
-                                }
-                                Rectangle {
-                                    width: 15;
-                                    height: 15;
-                                    radius: 8;
-                                    color: dev.color;
-                                }
-                                TextField {
-                                    id: dev_name;
-                                    text: dev.name;
-                                    implicitWidth: 100;
-                                    Layout.margins: 3;
-                                    onAccepted: { dev.name = text }
-                                }
-                                TextField {
-                                    id: dev_id;
-                                    text: "0x" + dev.luxId.toString(16);
-                                    implicitWidth: 100;
-                                    Layout.margins: 3;
-                                    onAccepted: { dev.luxId = parseInt(text) }
-                                }
-                                Label {
-                                    text: "Length: " + dev.length;
-                                }
-                            }
-                        }
-                    }
-                    RowLayout {
-                        Button {
-                            text: "Add Device";
-                            onClicked: {
-                                var luxdev = OutputManager.createLuxDevice();
-                            }
-                        }
-                        Button {
-                            text: "Refresh";
-                            onClicked: {
-                                OutputManager.refresh();
-                            }
-                        }
-                        Button {
-                            text: "Save";
-                            onClicked: {
-                                OutputManager.saveSettings();
-                            }
-                        }
-                    }
-                }
-            }
+        TopWidgets {
+            Layout.maximumHeight: 200;
+            id: controls;
         }
 
         Item {
@@ -245,42 +78,43 @@ ApplicationWindow {
             Layout.fillHeight: true;
             id: space;
 
+            // Cant use Repeater on Deck :(
+            Deck {
+                id: deck1;
+                count: 8;
+            }
+            Deck {
+                id: deck2;
+                count: 8;
+            }
+            Deck {
+                id: deck3;
+                count: 8;
+            }
+            Deck {
+                id: deck4;
+                count: 8;
+            }
+
             RowLayout {
-                Deck {
-                    id: deck1;
-                    count: 8;
-                }
-
-                Deck {
-                    id: deck2;
-                    count: 8;
-                }
-
                 ColumnLayout {
-                    RowLayout {
-                        Repeater {
-                            id: deck1repeater;
-                            model: deck1.count;
+                    Repeater {
+                        id: decks;
+                        model: [deck1, deck2, deck3, deck4];
 
-                            EffectSlot {
-                                effectSelector: selector;
-                                onUiEffectChanged: {
-                                    deck1.set(index, (uiEffect == null) ? null : uiEffect.effect);
-                                }
-                            }
-                        }
-                    }
+                        RowLayout {
+                            Repeater {
+                                id: effectSlots;
+                                model: modelData.count;
+                                property var deck: modelData;
 
-                    RowLayout {
-                        Repeater {
-                            id: deck2repeater;
-                            model: deck2.count;
-
-                            EffectSlot {
-                                effectSelector: selector;
-                                onUiEffectChanged: {
-                                    //deck2.set(deck2repeater.count - index - 1, (uiEffect == null) ? null : uiEffect.effect);
-                                    deck2.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                                EffectSlot {
+                                    Layout.preferredWidth: 100;
+                                    Layout.preferredHeight: 150;
+                                    effectSelector: selector;
+                                    onUiEffectChanged: {
+                                        effectSlots.deck.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                                    }
                                 }
                             }
                         }
@@ -293,7 +127,6 @@ ApplicationWindow {
                     crossfader.right: deck2.output;
                 }
             }
-
             EffectSelector {
                 id: selector;
             }

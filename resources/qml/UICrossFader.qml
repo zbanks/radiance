@@ -6,8 +6,8 @@ import radiance 1.0
 FocusScope {
     id: tile;
     property alias crossfader: crossfader;
-    implicitWidth: 400;
-    implicitHeight: 600;
+    width: 200;
+    height: 300;
 
     RadianceTile {
         anchors.fill: parent;

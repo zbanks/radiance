@@ -2,8 +2,9 @@ import QtQuick 2.3
 import radiance 1.0
 
 GraphicalDisplay {
-    width: 500;
-    height: 200;
+    implicitWidth: 300;
+    implicitHeight: 100;
+
     fragmentShader: "
         // Alpha-compsite two colors, putting one on top of the other
         vec4 composite(vec4 under, vec4 over) {

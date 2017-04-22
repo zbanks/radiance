@@ -6,8 +6,9 @@ import radiance 1.0
 FocusScope {
     id: tile;
     property alias effect: effect;
-    implicitWidth: 150;
-    implicitHeight: 300;
+
+    width: 100;
+    height: 150;
 
     RadianceTile {
         anchors.fill: parent;
@@ -20,6 +21,7 @@ FocusScope {
         anchors.margins: 15;
 
         Label {
+            Layout.fillWidth: true;
             text: effect.source;
             color: "#ddd";
         }
