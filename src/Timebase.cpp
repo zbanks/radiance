@@ -2,8 +2,6 @@
 #include <cmath>
 #include <stdexcept>
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
 // Utility functions
 static double error_wrap(double x_est, double x_obs) {
     // Error of `x_est` from `x_obs` in the space [-1, 1]
@@ -20,13 +18,13 @@ static void error_wrap_test() {
             while(e >= 1.0) e -= 1.0;
             while(e < 0) e += 1.0;
             double r = error_wrap(e, x);
-            if (fabs(r - d) > 1e6) throw std::runtime_error("Precision error"); //"x=%lf, d=%lf, e=%lf, r=%lf", x, d, e, r);
+            if (std::abs(r - d) > 1e6) throw std::runtime_error("Precision error"); //"x=%lf, d=%lf, e=%lf, r=%lf", x, d, e, r);
         }
     }
 }
 
 Timebase::Timebase()
-    : m_wall_ms(0)
+    : m_wall_ns(0)
     , m_beatFrac(0)
     , m_beatIndex(0)
     , m_bpm(140)
@@ -37,11 +35,12 @@ Timebase::Timebase()
 
 void Timebase::update(enum Timebase::TimeSource source, enum Timebase::TimeSourceEvent event, double eventArg) {
     // Convert to milliseconds
-    long time_ms = m_timer.elapsed();
+    auto time_ns = m_timer.nsecsElapsed();
 
     QMutexLocker locker(&m_timeLock);
-    long deltaTime_ms = time_ms - m_wall_ms;
-    if (m_wall_ms == 0) deltaTime_ms = 0;
+    auto deltaTime_ns = time_ns - m_wall_ns;
+    if (m_wall_ns == 0)
+        deltaTime_ns = 0;
 
     switch (event) {
     case TimeSourceEventBar:
@@ -51,17 +50,17 @@ void Timebase::update(enum Timebase::TimeSource source, enum Timebase::TimeSourc
         break;
     case TimeSourceEventBeat:
         {
-            double msUntilEvent = eventArg;
-            double masterBeatPerMs = m_bpm / MS_PER_MINUTE;
+            auto nsUntilEvent = eventArg * 1000 * 1000;
+            auto masterBeatPerNs = m_bpm / NS_PER_MINUTE;
             char status = '!';
             if(eventArg == 0) {
                 m_beatFrac = 0;
                 m_beatIndex = (m_beatIndex + 1) % 1024;
             } else if (eventArg < 0) { // How long ago was the last beat
-                m_beatFrac = -msUntilEvent * masterBeatPerMs;
+                m_beatFrac = -nsUntilEvent * masterBeatPerNs;
                 status = '<';
             } else {
-                m_beatFrac = MAX(m_beatFrac, 1.0 - msUntilEvent * masterBeatPerMs);
+                m_beatFrac = std::max<double>(m_beatFrac, 1.0 - nsUntilEvent * masterBeatPerNs);
                 status = '>';
             }
         }
@@ -71,15 +70,18 @@ void Timebase::update(enum Timebase::TimeSource source, enum Timebase::TimeSourc
         break;
     }
 
-    m_wall_ms = time_ms;
+    m_wall_ns = time_ns;
 }
-
-double Timebase::beat() {
+double Timebase::wallTime() const {
+    QMutexLocker locker(&m_timeLock);
+    return m_wall_ns * 1e-9;
+}
+double Timebase::beat() const {
     QMutexLocker locker(&m_timeLock);
     return m_beatFrac + m_beatIndex;
 }
 
-int Timebase::beatIndex() {
+int Timebase::beatIndex() const {
     QMutexLocker locker(&m_timeLock);
     return m_beatIndex;
 }

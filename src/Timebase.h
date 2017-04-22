@@ -2,10 +2,14 @@
 
 #include <QElapsedTimer>
 #include <QMutex>
+#include <QtGlobal>
 
 class Timebase {
 public:
-    const double MS_PER_MINUTE = 60 * 1000;
+    static constexpr double S_PER_MINUTE = 60;
+    static constexpr double MS_PER_MINUTE =  S_PER_MINUTE * 1000;
+    static constexpr double US_PER_MINUTE = MS_PER_MINUTE * 1000;
+    static constexpr double NS_PER_MINUTE = US_PER_MINUTE * 1000;
 
     enum TimeSource {
         TimeSourceAudio,
@@ -23,14 +27,15 @@ public:
 
     Timebase();
     void update(enum TimeSource source, enum TimeSourceEvent, double eventArg);
-    double beat();
-    int beatIndex();
+    double beat() const;
+    double wallTime() const;
+    int beatIndex() const;
 
 protected:
-    long m_wall_ms;
+    long m_wall_ns;
     double m_beatFrac;
     int m_beatIndex;
     double m_bpm;
     QElapsedTimer m_timer;
-    QMutex m_timeLock;
+    mutable QMutex m_timeLock;
 };
