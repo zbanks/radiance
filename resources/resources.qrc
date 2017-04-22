@@ -3,12 +3,6 @@
     <file>qml/application.qml</file>
 </qresource>
 <qresource>
-    <file>qml/UIEffectSet.qml</file>
-</qresource>
-<qresource>
-    <file>qml/UIEffectPanel.qml</file>
-</qresource>
-<qresource>
     <file>qml/UIEffect.qml</file>
 </qresource>
 </RCC>

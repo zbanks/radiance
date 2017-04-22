@@ -43,4 +43,4 @@ add_executable(radiance WIN32 src/main.cpp
     BTrack/src/OnsetDetectionFunction.c
     resources/resources.qrc)
 
-target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${PORTAUDIO_LIBRARIES} ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES})
+target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
