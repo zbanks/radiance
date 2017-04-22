@@ -22,7 +22,9 @@ void main()
 
     c.a *= smoothstep(0.1, 0.2, iIntensity);
 
-    vec4 c2 = texture2D(iFrame, (uv - 0.5 - offset) / (1. - smoothstep(0., 0.2, iIntensity)) + 0.5 + offset);
+    vec2 texcoords2 = (uv - 0.5 - offset) / (1. - smoothstep(0., 0.2, iIntensity)) + 0.5 + offset;
+    vec4 c2 = texture2D(iFrame, texcoords2);
+    c2.a *= box(texcoords2);
 
     gl_FragColor = composite(c2, c);
 }

@@ -12,6 +12,7 @@ void main(void) {
 
     vec4 oc = texture2D(iFrame, uv);
     vec4 nc = texture2D(iFrame, newUV);
+    nc.a *= box(newUV);
 
     oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
     nc.a *= smoothstep(0, 0.1, iIntensity);

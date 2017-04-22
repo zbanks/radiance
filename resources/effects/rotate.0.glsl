@@ -11,4 +11,5 @@ void main(void) {
     vec2 newUV = normCoord * rot / aspectCorrection + 0.5;
 
     gl_FragColor = texture2D(iFrame, newUV);
+    gl_FragColor.a *= box(newUV);
 }

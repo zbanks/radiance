@@ -74,6 +74,12 @@ float sawtooth(float x, float t_up) {
            (1. - x) / (1 - t_up) * (1. - step(x, t_up));
 }
 
+// Box from [0, 0] to (1, 1)
+float box(vec2 p) {
+    vec2 b = step(0., p) - step(1., p);
+    return b.x * b.y;
+}
+
 // Predictable randomness
 float rand(float c){
     return fract(sin(c * 12.9898) * 43758.5453);
