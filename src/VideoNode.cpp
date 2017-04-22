@@ -13,9 +13,8 @@ VideoNode::VideoNode(RenderContext *context)
     m_initialized(false)
 {
     moveToThread(context->thread());
-    emit m_context->addVideoNodeRequested(this);
     for(int i=0; i<m_context->outputCount(); i++) m_textureLocks[i] = new QMutex();
-//    m_context->addVideoNode(this);
+    emit m_context->addVideoNodeRequested(this);
 }
 
 void VideoNode::render() {

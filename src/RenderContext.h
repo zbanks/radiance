@@ -55,6 +55,8 @@ private:
     QObject *m_currentSyncSource;
     QSemaphore m_rendering;
     QVector<QOpenGLTexture *> m_noiseTextures;
+    void checkLoadShaders();
+    void checkCreateNoise();
 
 signals:
     void renderingFinished();

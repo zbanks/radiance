@@ -51,13 +51,11 @@ void RenderContext::start() {
     elapsed_timer.start();
 }
 
-void RenderContext::load() {
+void RenderContext::checkLoadShaders() {
+    if(m_premultiply != nullptr) return;
+
     auto program = m_premultiply;
-    m_premultiply = nullptr;
-    if(!program)
-        program = new QOpenGLShaderProgram(this);
-    else
-        program->removeAllShaders();
+    program = new QOpenGLShaderProgram(this);
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                        "attribute highp vec4 vertices;"
                                        "varying highp vec2 coords;"
@@ -75,9 +73,27 @@ void RenderContext::load() {
     program->bindAttributeLocation("vertices", 0);
     program->link();
     m_premultiply = program;
+}
 
+QOpenGLTexture *RenderContext::noiseTexture(int i) {
+    return m_noiseTextures.at(i);
+}
+
+void RenderContext::update() {
+    if(m_rendering.tryAcquire())
+    {
+        emit renderRequested();
+    }
+}
+
+void RenderContext::checkCreateNoise() {
     for(int i=0; i<m_outputCount; i++) {
         auto tex = m_noiseTextures.at(i);
+        if(tex != nullptr &&
+           tex->width() == fboSize(i).width() &&
+           tex->height() == fboSize(i).height()) {
+            continue;
+        }
         delete tex;
         tex = new QOpenGLTexture(QOpenGLTexture::Target2D);
         tex->setSize(fboSize(i).width(), fboSize(i).height());
@@ -97,17 +113,6 @@ void RenderContext::load() {
     }
 }
 
-QOpenGLTexture *RenderContext::noiseTexture(int i) {
-    return m_noiseTextures.at(i);
-}
-
-void RenderContext::update() {
-    if(m_rendering.tryAcquire())
-    {
-        emit renderRequested();
-    }
-}
-
 void RenderContext::render() {
     qint64 framePeriod = elapsed_timer.nsecsElapsed();
     elapsed_timer.restart();
@@ -115,7 +120,8 @@ void RenderContext::render() {
         QMutexLocker locker(&m_contextLock);
 
         makeCurrent();
-        if(!m_premultiply) load();
+        checkLoadShaders();
+        checkCreateNoise();
 
         for(auto n : topoSort()) {
             n->render();
