@@ -4,19 +4,22 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 FocusScope {
+    id: tile;
     property alias crossfader: crossfader;
-    implicitWidth: 100;
-    implicitHeight: 100;
+    implicitWidth: 400;
+    implicitHeight: 600;
 
     RadianceTile {
         anchors.fill: parent;
+        focus: true;
+        slider: slider;
     }
 
-    Keys.onPressed: {
-        if (event.key == Qt.Key_J)
-            slider.value -= 0.1;
-        else if (event.key == Qt.Key_K)
-            slider.value += 0.1;
+    MouseArea {
+        anchors.fill: parent;
+        onClicked: {
+            tile.forceActiveFocus();
+        }
     }
 
     ColumnLayout {

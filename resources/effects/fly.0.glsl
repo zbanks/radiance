@@ -9,8 +9,9 @@ void main()
     vec2 puv = vec2(p.x,1.0)/abs(p.y) + vec2(0., 4.) * iIntensityIntegral;
     puv = abs(mod(0.2 * puv, 2.) - 1.);
 
+    puv = mix(uv, puv, smoothstep(0.0, 0.2, iIntensity));
     vec4 c = texture2D(iFrame, puv);
     //c.a *= abs(uv.y * 0.8);
-    c.a *= min(abs(p.y)* 3.8, 1.);
+    c.a = mix(c.a, c.a * min(abs(p.y)* 3.8, 1.), smoothstep(0.0, 0.2, iIntensity));
 	gl_FragColor = c;
 }

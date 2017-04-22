@@ -255,14 +255,34 @@ ApplicationWindow {
                     id: deck2;
                     count: 8;
                 }
-                Repeater {
-                    id: deck1repeater;
-                    model: deck1.count;
 
-                    EffectSlot {
-                        effectSelector: selector;
-                        onUiEffectChanged: {
-                            deck1.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                ColumnLayout {
+                    RowLayout {
+                        Repeater {
+                            id: deck1repeater;
+                            model: deck1.count;
+
+                            EffectSlot {
+                                effectSelector: selector;
+                                onUiEffectChanged: {
+                                    deck1.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Repeater {
+                            id: deck2repeater;
+                            model: deck2.count;
+
+                            EffectSlot {
+                                effectSelector: selector;
+                                onUiEffectChanged: {
+                                    //deck2.set(deck2repeater.count - index - 1, (uiEffect == null) ? null : uiEffect.effect);
+                                    deck2.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                                }
+                            }
                         }
                     }
                 }
@@ -271,18 +291,6 @@ ApplicationWindow {
                     id: cross;
                     crossfader.left: deck1.output;
                     crossfader.right: deck2.output;
-                }
-
-                Repeater {
-                    id: deck2repeater;
-                    model: deck2.count;
-
-                    EffectSlot {
-                        effectSelector: selector;
-                        onUiEffectChanged: {
-                            deck2.set(deck2repeater.count - index - 1, (uiEffect == null) ? null : uiEffect.effect);
-                        }
-                    }
                 }
             }
 
