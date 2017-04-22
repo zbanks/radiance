@@ -15,9 +15,9 @@ public:
     bool loadProgram(QString name);
     QSet<VideoNode*> dependencies();
 
-    const qreal MAX_INTEGRAL = 1024;
-    const qreal FPS = 60;
- 
+    static constexpr qreal MAX_INTEGRAL = 1024;
+    static constexpr qreal FPS = 60;
+
 public slots:
     qreal intensity();
     VideoNode *previous();
@@ -42,6 +42,8 @@ private:
 
     qreal m_intensity;
     qreal m_intensityIntegral;
+    qreal m_realTime;
+    qreal m_realTimeLast;
     VideoNode *m_previous;
 
     QMutex m_intensityLock;

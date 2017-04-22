@@ -33,8 +33,11 @@ void Effect::paint() {
     {
         QMutexLocker locker(&m_programLock);
         GLuint *chanTex = new GLuint[m_programs.count()];
-        for(int i=0; i<m_programs.count(); i++) chanTex[i] = i + 1;
-        double time = timebase->beat();
+        std::iota(chanTex,chanTex + m_programs.count(), 1);
+        auto   time = timebase->beat();
+        m_realTimeLast = m_realTime;
+        m_realTime     = timebase->wallTime();
+        auto   step = m_realTime - m_realTimeLast;
         double audioHi = 0;
         double audioMid = 0;
         double audioLow = 0;
@@ -97,15 +100,18 @@ void Effect::paint() {
                     p->setAttributeArray(0, GL_FLOAT, values, 2);
                     qreal intense = intensity();
                     m_intensityIntegral = fmod(m_intensityIntegral + intense / FPS, MAX_INTEGRAL);
-                    p->setUniformValue("iIntensity", (GLfloat)intense);
-                    p->setUniformValue("iIntensityIntegral", (GLfloat)m_intensityIntegral);
-                    p->setUniformValue("iTime", (GLfloat)time);
-                    p->setUniformValue("iAudioHi", (GLfloat)audioHi);
+                    p->setUniformValue("iIntensity", GLfloat(intense));
+                    p->setUniformValue("iIntensityIntegral", GLfloat(m_intensityIntegral));
+                    p->setUniformValue("iStep", GLfloat(step));
+                    p->setUniformValue("iTime", GLfloat(time));
+                    p->setUniformValue("iFPS",  GLfloat(FPS));
+                    p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
+/*                    p->setUniformValue("iAudioHi", (GLfloat)audioHi);
                     p->setUniformValue("iAudioMid", (GLfloat)audioMid);
                     p->setUniformValue("iAudioLow", (GLfloat)audioLow);
-                    p->setUniformValue("iAudioLevel", (GLfloat)audioLevel);
+                    p->setUniformValue("iAudioLevel", (GLfloat)audioLevel);*/
                     p->setUniformValue("iFrame", 0);
-                    p->setUniformValue("iResolution", (GLfloat) size.width(), (GLfloat) size.height());
+                    p->setUniformValue("iResolution", GLfloat( size.width()), GLfloat( size.height()));
                     p->setUniformValueArray("iChannel", chanTex, m_programs.count());
                     p->enableAttributeArray(0);
 

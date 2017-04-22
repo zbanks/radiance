@@ -1,13 +1,19 @@
 #version 120
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
+uniform highp float iStep;
 uniform highp float iTime;
 
 // Audio levels, high/mid/low/level, [0.0, 1.0]
-uniform float iAudioHi;
-uniform float iAudioLow;
-uniform float iAudioMid;
-uniform float iAudioLevel;
+uniform vec4  iAudio;
+#define iAudioLow   iAudio.x
+#define iAudioMid   iAudio.y
+#define iAudioHi    iAudio.z
+#define iAudioLevel iAudio.w
+//uniform float iAudioHi;
+//uniform float iAudioLow;
+//uniform float iAudioMid;
+//uniform float iAudioLevel;
 
 // Resolution of the output pattern
 uniform vec2 iResolution;
@@ -24,11 +30,17 @@ uniform float iFPS;
 // Output of the previous pattern
 uniform sampler2D iFrame;
 
-// Previous outputs of the other channels (e.g. foo.1.glsl) 
+// Previous outputs of the other channels (e.g. foo.1.glsl)
 uniform sampler2D iChannel[3];
 
 #define M_PI 3.1415926535897932384626433832795
 
+float lin_step(float v) {
+    return v * iStep * iFPS;
+}
+float exp_step(float v) {
+    return pow(v, iStep * iFPS);
+}
 // Utilities to convert from an RGB vec3 to an HSV vec3
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
