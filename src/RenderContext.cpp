@@ -100,13 +100,13 @@ void RenderContext::checkCreateNoise() {
         tex->setFormat(QOpenGLTexture::RGBA8_UNorm);
         tex->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
         tex->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
-        tex->setWrapMode(QOpenGLTexture::ClampToEdge);
+        tex->setWrapMode(QOpenGLTexture::Repeat);
 
         size_t byteCount = fboSize(i).width() * fboSize(i).height() * 4;
         uint8_t *data = new uint8_t[byteCount];
         qsrand(1);
         for(size_t j=0; j<byteCount; j++) {
-            data[j] = qrand() % 256;
+            data[j] = (uint8_t)qrand();
         }
         tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
         m_noiseTextures[i] = tex;

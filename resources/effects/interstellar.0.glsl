@@ -19,7 +19,7 @@ vec3 ToGamma( in vec3 col )
 
 vec4 Noise( in ivec2 x )
 {
-	return 2.*texture2D(iNoise, mod((vec2(x)+0.5)/256.0, 1.), -100.);
+	return 2. * texture2D(iNoise, (vec2(x)+0.5)/256.0, -100.);
 }
 
 void main()
