@@ -31,9 +31,10 @@ ApplicationWindow {
     MidiDevice {
         id: midi;
         deviceIndex: midiSelector.currentIndex;
-        onNoteOnEvent: console.log("note on: " + note + "=" + velocity);
-        onNoteOffEvent: console.log("note off: " + note + "=" + velocity);
-        onControlChangeEvent: console.log("cc: " + control + "=" + value);
+        onNoteOn: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
+        onNoteOff: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
+        onNoteAftertouch: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
+        onControlChange: console.log("@" + ts + "channel: " + channel + "cc: " + control + "=" + value);
     }
 
     menuBar: MenuBar {
