@@ -33,7 +33,7 @@ void Effect::paint() {
     {
         QMutexLocker locker(&m_programLock);
         GLuint *chanTex = new GLuint[m_programs.count()];
-        std::iota(chanTex,chanTex + m_programs.count(), 1);
+        std::iota(chanTex, chanTex + m_programs.count(), 2);
         auto   time = timebase->beat();
         m_realTimeLast = m_realTime;
         m_realTime     = timebase->wallTime();
@@ -91,8 +91,10 @@ void Effect::paint() {
 
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, previousFbo->texture());
+                    glActiveTexture(GL_TEXTURE1);
+                    glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(i)->textureId());
                     for(int k=0; k<m_programs.count(); k++) {
-                        glActiveTexture(GL_TEXTURE1 + k);
+                        glActiveTexture(GL_TEXTURE2 + k);
                         glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at((m_fboIndex + k + (j < k)) % (m_programs.count() + 1))->texture());
                         //qDebug() << "Bind" << (m_fboIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
                     }
@@ -111,7 +113,8 @@ void Effect::paint() {
                     p->setUniformValue("iAudioLow", (GLfloat)audioLow);
                     p->setUniformValue("iAudioLevel", (GLfloat)audioLevel);*/
                     p->setUniformValue("iFrame", 0);
-                    p->setUniformValue("iResolution", GLfloat( size.width()), GLfloat( size.height()));
+                    p->setUniformValue("iNoise", 1);
+                    p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
                     p->setUniformValueArray("iChannel", chanTex, m_programs.count());
                     p->enableAttributeArray(0);
 

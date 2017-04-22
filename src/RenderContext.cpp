@@ -12,6 +12,7 @@ RenderContext::RenderContext()
     , m_outputCount(2)
     , m_currentSyncSource(NULL)
     , m_rendering(2)
+    , m_noiseTextures(m_outputCount)
 {
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
     connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
@@ -25,6 +26,8 @@ RenderContext::~RenderContext() {
     context = 0;
     delete m_premultiply;
     m_premultiply = 0;
+    foreach(auto t, m_noiseTextures) delete t;
+    m_noiseTextures.clear();
 }
 
 void RenderContext::start() {
@@ -72,6 +75,30 @@ void RenderContext::load() {
     program->bindAttributeLocation("vertices", 0);
     program->link();
     m_premultiply = program;
+
+    for(int i=0; i<m_outputCount; i++) {
+        auto tex = m_noiseTextures.at(i);
+        delete tex;
+        tex = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        tex->setSize(fboSize(i).width(), fboSize(i).height());
+        tex->setFormat(QOpenGLTexture::RGBA8_UNorm);
+        tex->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+        tex->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+        tex->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+        size_t byteCount = fboSize(i).width() * fboSize(i).height() * 4;
+        uint8_t *data = new uint8_t[byteCount];
+        qsrand(1);
+        for(size_t j=0; j<byteCount; j++) {
+            data[j] = qrand() % 256;
+        }
+        tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
+        m_noiseTextures[i] = tex;
+    }
+}
+
+QOpenGLTexture *RenderContext::noiseTexture(int i) {
+    return m_noiseTextures.at(i);
 }
 
 void RenderContext::update() {

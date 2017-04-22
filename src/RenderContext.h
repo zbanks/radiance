@@ -8,6 +8,7 @@
 #include <QEvent>
 #include <QSet>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLTexture>
 #include <QSemaphore>
 #include "VideoNode.h"
 
@@ -33,6 +34,7 @@ public:
     int previewFboIndex();
     int outputFboIndex();
     QSize fboSize(int i);
+    QOpenGLTexture *noiseTexture(int i);
 
 public slots:
     void start();
@@ -52,6 +54,7 @@ private:
     QList<QObject *> m_syncSources;
     QObject *m_currentSyncSource;
     QSemaphore m_rendering;
+    QVector<QOpenGLTexture *> m_noiseTextures;
 
 signals:
     void renderingFinished();

@@ -30,6 +30,9 @@ uniform float iFPS;
 // Output of the previous pattern
 uniform sampler2D iFrame;
 
+// Full frame RGBA noise
+uniform sampler2D iNoise;
+
 // Previous outputs of the other channels (e.g. foo.1.glsl)
 uniform sampler2D iChannel[3];
 
