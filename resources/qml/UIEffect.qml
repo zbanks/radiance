@@ -52,6 +52,15 @@ FocusScope {
             maximumValue: 1;
         }
 
+        /*
+        ProgressBar {
+            id: sliderGhost;
+            Layout.fillWidth: true;
+            minimumValue: 0;
+            maximumValue: 1;
+        }
+        */
+
         Slider {
             // TODO: How do we make this indicator-only?
             id: sliderGhost;

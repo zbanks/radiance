@@ -9,15 +9,12 @@ void main(void) {
     mat2 rot = mat2(c, -s, s, c);
 
     vec2 newUV = normCoord * rot / aspectCorrection;
-    newUV *= min(iResolution.x, iResolution.y) / max(iResolution.x, iResolution.y) * sqrt(0.5);
+    newUV *= min(iResolution.x, iResolution.y) / max(iResolution.x, iResolution.y);
     newUV += 0.5;
 
     vec4 oc = texture2D(iFrame, uv);
     vec4 nc = texture2D(iFrame, newUV);
     nc.a *= box(newUV);
 
-    oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
-    nc.a *= smoothstep(0, 0.1, iIntensity);
-
-    gl_FragColor = composite(oc, nc);
+    gl_FragColor = mix(oc, nc, smoothstep(0, 0.2, iIntensity));
 }

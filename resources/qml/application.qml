@@ -9,7 +9,7 @@ ApplicationWindow {
     visible: true;
 
     Component.onCompleted: {
-        UISettings.previewSize = "300x300";
+        UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
     }
 
@@ -25,7 +25,7 @@ ApplicationWindow {
         visible: controls.outputVisibleChecked;
         screen: controls.screenSelected;
 
-        onVisibleChanged: controls.outputVisible.checked = visible;
+        onVisibleChanged: controls.outputVisibleChecked = visible;
     }
 
     MidiDevice {
@@ -76,6 +76,11 @@ ApplicationWindow {
             ghostMap[[row, col]] = ghost;
 
             // Samson Graphite; Preset #4
+            // 1-8 are Channels 8-15
+            // Knob: CC 10
+            // Slider: CC 7
+            // Mute: CC 16
+            // Rec: CC 18
             var channel = null, control = null;
             if (row == 0) {
                 channel = 8+col;
@@ -125,6 +130,7 @@ ApplicationWindow {
 
         TopWidgets {
             Layout.maximumHeight: 200;
+            Layout.bottomMargin: 30;
             id: controls;
         }
 
@@ -181,6 +187,14 @@ ApplicationWindow {
                                         }
                                     }
                                 }
+                            }
+
+                            Slider {
+                                id: deckVolume;
+                                Layout.fillHeight: true;
+                                orientation: Qt.Vertical;
+                                minimumValue: 0;
+                                maximumValue: 1;
                             }
                         }
                     }
