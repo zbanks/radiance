@@ -31,10 +31,65 @@ ApplicationWindow {
     MidiDevice {
         id: midi;
         deviceIndex: controls.midiDeviceSelected;
-        onNoteOn: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
-        onNoteOff: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
-        onNoteAftertouch: console.log("@" + ts + "channel: " + channel + "note on: " + note + "=" + velocity);
-        onControlChange: console.log("@" + ts + "channel: " + channel + "cc: " + control + "=" + value);
+        property var sliderMap; // [row, col] -> QSlider
+        property var ghostMap;  // [row, col] -> QSlider
+        property var ccMap;     // [channel, control] -> [row, col]
+        property var ccState;   // [channel, control] -> value; value \in [0.0, 1.0]
+
+        Component.onCompleted: {
+            sliderMap = {};
+            ghostMap = {};
+            ccMap = {};
+            ccState = {};
+        }
+
+        onNoteOn: console.log("MIDI note: channel: " + channel + "; note on: " + note + "=" + velocity);
+        onNoteOff: console.log("MIDI note: channel: " + channel + "; note off: " + note + "=" + velocity);
+        onNoteAftertouch: console.log("MIDI note: channel: " + channel + "; note at: " + note + "=" + velocity);
+        onControlChange: {
+            console.log("MIDI CC: channel: " + channel + "; cc: " + control + "=" + value);
+            var v = value / 127.0;
+            var oldV = ccState[[channel, control]];
+            if (oldV === undefined) {
+                console.log("undef");
+                oldV = v;
+            }
+            ccState[[channel, control]] = v;
+
+            var rc = ccMap[[channel, control]];
+            if (!rc) return;
+
+            var ghost = ghostMap[rc];
+            if (ghost)
+                ghost.value = v;
+
+            var slider = sliderMap[rc];
+            if (slider) {
+                var TOLERANCE = 1.5 / 127.0;
+                if (slider.value >= Math.min(oldV, v) - TOLERANCE && slider.value <= Math.max(oldV, v) + TOLERANCE)
+                    slider.value = v;
+            }
+        }
+
+        function controlSlider(row, col, slider, ghost) {
+            sliderMap[[row, col]] = slider;
+            ghostMap[[row, col]] = ghost;
+
+            // Samson Graphite; Preset #4
+            var channel = null, control = null;
+            if (row == 0) {
+                channel = 8+col;
+                control = 10;
+            } else if (row == 1) {
+                channel = 8+col;
+                control = 7;
+            }
+            ccMap[[channel, control]] = [row, col];
+
+            var v = ccState[[channel, control]];
+            if (v)
+                ghost.value = v;
+        }
     }
 
     menuBar: MenuBar {
@@ -103,17 +158,27 @@ ApplicationWindow {
                         model: [deck1, deck2, deck3, deck4];
 
                         RowLayout {
+                            property int row: index;
+
                             Repeater {
                                 id: effectSlots;
                                 model: modelData.count;
                                 property var deck: modelData;
 
                                 EffectSlot {
+                                    property int col: index;
+
                                     Layout.preferredWidth: 100;
-                                    Layout.preferredHeight: 150;
+                                    Layout.preferredHeight: 170;
                                     effectSelector: selector;
                                     onUiEffectChanged: {
-                                        effectSlots.deck.set(index, (uiEffect == null) ? null : uiEffect.effect);
+                                        if (uiEffect == null) {
+                                            effectSlots.deck.set(index, null);
+                                            midi.controlSlider(row, col, null, null);
+                                        } else {
+                                            effectSlots.deck.set(index, uiEffect.effect);
+                                            midi.controlSlider(row, col, uiEffect.slider, uiEffect.sliderGhost);
+                                        }
                                     }
                                 }
                             }

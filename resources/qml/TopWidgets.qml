@@ -43,10 +43,12 @@ RowLayout {
                 ComboBox {
                     id: midiSelector;
                     model: midi.deviceList;
+                    Layout.fillWidth: true;
                 }
                 Button {
                     text: "Reload MIDI";
                     onClicked : midi.reload();
+                    Layout.fillWidth: true;
                 }
             }
         }

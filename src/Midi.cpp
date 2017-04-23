@@ -7,8 +7,6 @@ MidiDevice::MidiDevice(QQuickItem * parent) :
     m_deviceIndex(-1),
     m_midiin()
 {
-
-    // TODO: QTimer seems like a sketchy way to solve this problem
     reload();
     connect(this, &MidiDevice::normalEvent, this, &MidiDevice::onNormalEvent,Qt::QueuedConnection);
     connect(this, &MidiDevice::realtimeEvent, this, &MidiDevice::onRealtimeEvent,Qt::QueuedConnection);
@@ -86,7 +84,6 @@ void MidiDevice::setDeviceIndex(int idx)
 
 void MidiDevice::reload() {
     // TODO: Catch exceptions or something?
-//    poll();
     try {
         auto dl = QStringList{};
         unsigned int count = m_midiin.getPortCount();
@@ -142,22 +139,3 @@ void MidiDevice::callback(double ts, std::vector<uint8_t>&msg)
         }
     }
 }
-/*void MidiDevice::poll() {
-    if (m_deviceIndex < 0)
-        return;
-
-    std::vector<unsigned char> msg;
-    for (int i = 0; i < MAX_POLL_SIZE; i++) {
-        double timestamp = m_midiin.getMessage(&msg);
-        if (!msg.size())
-            break;
-        unsigned char msg_type = msg[0];
-        if (msg_type >= 0x80 && msg_type <= 0x8F && msg.size() >= 3) {
-            emit noteOffEvent(msg_type & 0xF, msg[1], msg[2]);
-        } else if (msg_type >= 0x90 && msg_type <= 0x9F && msg.size() >= 3) {
-            emit noteOnEvent(msg_type & 0xF, msg[1], msg[2]);
-        } else if (msg_type >= 0xB0 && msg_type <= 0xBF && msg.size() >= 3) {
-            emit controlChangeEvent(msg_type & 0xF, msg[1], msg[2]);
-        }
-    }
-}*/

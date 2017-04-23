@@ -26,7 +26,6 @@ public:
 
 public slots:
     void reload();
-//    void poll();
 
     void onRealtimeEvent(double ts, int status);
     void onNormalEvent  (double ts, int status, int val0, int val1);
@@ -47,9 +46,6 @@ signals:
     void channelAftertouch(double ts,int channel, int velocity);
     void pitchBend(double ts, int channel, int bend);
     void sysExEvent   (double ts, QByteArray data);
-/*    void controlChangeEvent(int channel, int control, int value);
-    void noteOnEvent(int channel, int note, int velocity);
-    void noteOffEvent(int channel, int note, int velocity);*/
     void deviceListChanged(QStringList deviceList);
     void deviceIndexChanged(int idx);
 protected:
