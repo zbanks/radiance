@@ -18,6 +18,7 @@ find_package(PortAudio)
 find_package(FFTW)
 find_package(SampleRate)
 find_package(RtMidi)
+find_package(OpenGL)
 
 qt5_add_resources(resources/resources.qrc)
 
@@ -43,4 +44,4 @@ add_executable(radiance WIN32 src/main.cpp
     BTrack/src/OnsetDetectionFunction.c
     resources/resources.qrc)
 
-target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
+target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})

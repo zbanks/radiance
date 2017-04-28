@@ -29,7 +29,7 @@ UIEffect {
 
         drag.onActiveChanged: {
             if(drag.active) {
-                tile.parent = tile.parent.parent.parent;
+                tile.parent = tile.parent.parent.parent.parent.parent;
             } else {
                 if(tile.Drag.target) {
                     tile.parent = tile.Drag.target.parent;

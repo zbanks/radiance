@@ -11,7 +11,6 @@ Effect::Effect(RenderContext *context)
     m_intensity(0),
     m_previous(0),
     m_intermediateFbos(context->outputCount()),
-    m_blankFbos(context->outputCount()),
     m_regenerateFbos(true) {
 }
 
@@ -21,7 +20,6 @@ void Effect::initialize() {
 
         resizeFbo(&m_displayFbos[i], size);
         resizeFbo(&m_renderFbos[i], size);
-        resizeFbo(&m_blankFbos[i], size);
     }
 }
 
@@ -52,10 +50,7 @@ void Effect::paint() {
             QOpenGLFramebufferObject *previousFbo;
             VideoNode *prev = previous();
             if(prev == 0) {
-                resizeFbo(&m_blankFbos[i], size);
-                m_blankFbos.at(i)->bind();
-                glClear(GL_COLOR_BUFFER_BIT);
-                previousFbo = m_blankFbos.at(i);
+                previousFbo = m_context->blankFbo();
             } else {
                 previousFbo = prev->m_fbos[i];
             }
@@ -108,10 +103,6 @@ void Effect::paint() {
                     p->setUniformValue("iTime", GLfloat(time));
                     p->setUniformValue("iFPS",  GLfloat(FPS));
                     p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
-/*                    p->setUniformValue("iAudioHi", (GLfloat)audioHi);
-                    p->setUniformValue("iAudioMid", (GLfloat)audioMid);
-                    p->setUniformValue("iAudioLow", (GLfloat)audioLow);
-                    p->setUniformValue("iAudioLevel", (GLfloat)audioLevel);*/
                     p->setUniformValue("iFrame", 0);
                     p->setUniformValue("iNoise", 1);
                     p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));

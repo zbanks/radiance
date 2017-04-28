@@ -13,6 +13,7 @@ RenderContext::RenderContext()
     , m_currentSyncSource(NULL)
     , m_rendering(2)
     , m_noiseTextures(m_outputCount)
+    , m_blankFbo(NULL)
 {
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
     connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
@@ -26,6 +27,8 @@ RenderContext::~RenderContext() {
     context = 0;
     delete m_premultiply;
     m_premultiply = 0;
+    delete m_blankFbo;
+    m_blankFbo = 0;
     foreach(auto t, m_noiseTextures) delete t;
     m_noiseTextures.clear();
 }
@@ -79,6 +82,10 @@ QOpenGLTexture *RenderContext::noiseTexture(int i) {
     return m_noiseTextures.at(i);
 }
 
+QOpenGLFramebufferObject *RenderContext::blankFbo() {
+    return m_blankFbo;
+}
+
 void RenderContext::update() {
     if(m_rendering.tryAcquire())
     {
@@ -113,6 +120,18 @@ void RenderContext::checkCreateNoise() {
     }
 }
 
+void RenderContext::checkCreateBlankFbo() {
+    if(m_blankFbo != nullptr) return;
+    m_blankFbo = new QOpenGLFramebufferObject(QSize(1,1));
+    glBindTexture(GL_TEXTURE_2D, m_blankFbo->texture());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 void RenderContext::render() {
     qint64 framePeriod = elapsed_timer.nsecsElapsed();
     elapsed_timer.restart();
@@ -122,6 +141,7 @@ void RenderContext::render() {
         makeCurrent();
         checkLoadShaders();
         checkCreateNoise();
+        checkCreateBlankFbo();
 
         for(auto n : topoSort()) {
             n->render();

@@ -35,6 +35,7 @@ public:
     int outputFboIndex();
     QSize fboSize(int i);
     QOpenGLTexture *noiseTexture(int i);
+    QOpenGLFramebufferObject *blankFbo();
 
 public slots:
     void start();
@@ -57,6 +58,8 @@ private:
     QVector<QOpenGLTexture *> m_noiseTextures;
     void checkLoadShaders();
     void checkCreateNoise();
+    void checkCreateBlankFbo();
+    QOpenGLFramebufferObject *m_blankFbo;
 
 signals:
     void renderingFinished();

@@ -34,7 +34,6 @@ private:
 
     QVector<QVector<QOpenGLFramebufferObject *>> m_intermediateFbos;
     QVector<QOpenGLShaderProgram *> m_programs;
-    QVector<QOpenGLFramebufferObject *> m_blankFbos;
     int m_fboIndex;
 
     void initialize();
