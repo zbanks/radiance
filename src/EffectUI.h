@@ -7,7 +7,7 @@
 
 class EffectUI : public VideoNodeUI {
     Q_OBJECT
-    Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
+    Q_PROPERTY(qreal intensity READ intensityInvoker WRITE setIntensityInvoker NOTIFY intensityChanged)
     Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(VideoNodeUI *previous READ previous WRITE setPrevious NOTIFY previousChanged)
 
@@ -24,9 +24,9 @@ signals:
     void intensityChanged(qreal value);
     void sourceChanged(QString value);
     void previousChanged(VideoNodeUI *value);
-
-private slots:
-    void onInitialized();
+    void setIntensityInvoker(qreal value);
+    void setPreviousInvoker(VideoNode *source);
+    qreal intensityInvoker();
 
 private:
     void initialize();

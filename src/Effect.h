@@ -45,9 +45,7 @@ private:
     qreal m_realTimeLast;
     VideoNode *m_previous;
 
-    QMutex m_intensityLock;
     QMutex m_programLock;
-    QMutex m_previousLock;
 
     bool m_regenerateFbos;
 };

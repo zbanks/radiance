@@ -11,16 +11,10 @@ EffectUI::EffectUI(QString source)
     , m_source(source) {
     Effect *e = new Effect(renderContext);
     connect(e, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
+    connect(this, &EffectUI::intensityInvoker,    e, &Effect::intensity);
+    connect(this, &EffectUI::setIntensityInvoker, e, &Effect::setIntensity);
+    connect(this, &EffectUI::setPreviousInvoker,  e, &Effect::setPrevious);
     m_videoNode = e;
-    connect(e, &VideoNode::initialized, this, &EffectUI::onInitialized, Qt::DirectConnection);
-}
-
-void EffectUI::onInitialized() {
-    if(!m_source.isEmpty()) static_cast<Effect*>(m_videoNode)->loadProgram(m_source);
-}
-
-qreal EffectUI::intensity() {
-    return static_cast<Effect*>(m_videoNode)->intensity();
 }
 
 QString EffectUI::source() {
@@ -31,10 +25,6 @@ VideoNodeUI *EffectUI::previous() {
     return m_previous;
 }
 
-void EffectUI::setIntensity(qreal value) {
-    static_cast<Effect*>(m_videoNode)->setIntensity(value);
-}
-
 void EffectUI::setSource(QString value) {
     QQuickWindow *w = window();
     if(w != NULL) {
@@ -43,20 +33,20 @@ void EffectUI::setSource(QString value) {
         if(success) {
             m_source = value;
         }
-        //else {
-        //    m_source = value = nullptr;
-        //}
+        emit sourceChanged(value);
+    } else {
+        qWarning() << "setSource must be called from a valid OpenGL context!";
     }
-    emit sourceChanged(value);
 }
 
 void EffectUI::setPrevious(VideoNodeUI *value) {
     m_previous = value;
     Effect *e = static_cast<Effect*>(m_videoNode);
     if(m_previous == NULL) {
+        emit setPreviousInvoker(NULL);
         e->setPrevious(NULL);
     } else {
-        e->setPrevious(value->m_videoNode);
+        emit setPreviousInvoker(value->m_videoNode);
     }
     emit previousChanged(value);
 }

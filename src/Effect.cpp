@@ -194,6 +194,7 @@ bool Effect::loadProgram(QString name) {
     }
 
     {
+        // Take the program lock so we don't render while swapping out programs
         QMutexLocker locker(&m_programLock);
         foreach(auto p, m_programs) delete p;
         m_programs.clear();
@@ -209,20 +210,20 @@ err:
 }
 
 qreal Effect::intensity() {
-    QMutexLocker locker(&m_intensityLock);
+    Q_ASSERT(QThread::currentThread() == thread());
     return m_intensity;
 }
 
 VideoNode *Effect::previous() {
-    QMutexLocker locker(&m_previousLock);
+    Q_ASSERT(QThread::currentThread() == thread());
     return m_previous;
 }
 
 void Effect::setIntensity(qreal value) {
+    Q_ASSERT(QThread::currentThread() == thread());
     {
         if(value > 1) value = 1;
         if(value < 0) value = 0;
-        QMutexLocker locker(&m_intensityLock);
         if(m_intensity == value)
             return;
         m_intensity = value;
@@ -231,8 +232,7 @@ void Effect::setIntensity(qreal value) {
 }
 
 void Effect::setPrevious(VideoNode *value) {
-    QMutexLocker clocker(&m_context->m_contextLock);
-    QMutexLocker plocker(&m_previousLock);
+    Q_ASSERT(QThread::currentThread() == thread());
     m_previous = value;
 }
 
