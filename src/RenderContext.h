@@ -44,11 +44,13 @@ public slots:
     void removeVideoNode(VideoNode* n);
     void addSyncSource(QObject *source);
     void removeSyncSource(QObject *source);
+    qreal fps();
 
 private slots:
     void render();
 
 private:
+    const qreal FPS_ALPHA = 0.03;
     QList<VideoNode*> topoSort();
     void load();
     int m_outputCount;
@@ -60,10 +62,12 @@ private:
     void checkCreateNoise();
     void checkCreateBlankFbo();
     QOpenGLFramebufferObject *m_blankFbo;
+    qreal m_framePeriodLPF;
 
 signals:
     void renderingFinished();
     void addVideoNodeRequested(VideoNode *n);
     void removeVideoNodeRequested(VideoNode *n);
     void renderRequested();
+    void fpsChanged(qreal value);
 };

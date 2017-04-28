@@ -146,7 +146,6 @@ QSet<VideoNode*> VideoNode::dependencies() {
     return QSet<VideoNode*>();
 }
 
-
 RenderContext *VideoNode::context() {
     return m_context;
 }

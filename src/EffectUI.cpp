@@ -14,6 +14,8 @@ EffectUI::EffectUI(QString source)
     connect(this, &EffectUI::intensityInvoker,    e, &Effect::intensity);
     connect(this, &EffectUI::setIntensityInvoker, e, &Effect::setIntensity);
     connect(this, &EffectUI::setPreviousInvoker,  e, &Effect::setPrevious);
+
+    connect(renderContext, &RenderContext::fpsChanged, this, &VideoNodeUI::setFps);
     m_videoNode = e;
 }
 

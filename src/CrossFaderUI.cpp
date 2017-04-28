@@ -13,6 +13,7 @@ CrossFaderUI::CrossFaderUI()
     connect(c, &CrossFader::parameterChanged, this, &CrossFaderUI::parameterChanged);
     m_videoNode = c;
 
+    connect(renderContext, &RenderContext::fpsChanged, this, &VideoNodeUI::setFps);
     connect(c, &VideoNode::initialized, this, &CrossFaderUI::onInitialized, Qt::DirectConnection);
 }
 

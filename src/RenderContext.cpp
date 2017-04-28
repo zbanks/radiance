@@ -14,6 +14,7 @@ RenderContext::RenderContext()
     , m_rendering(2)
     , m_noiseTextures(m_outputCount)
     , m_blankFbo(NULL)
+    , m_framePeriodLPF(0)
 {
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
     connect(this, &RenderContext::removeVideoNodeRequested, this, &RenderContext::removeVideoNode, Qt::QueuedConnection);
@@ -148,9 +149,14 @@ void RenderContext::render() {
         }
     }
     emit renderingFinished();
-    qint64 renderingPeriod = elapsed_timer.nsecsElapsed();
-    //qDebug() << (1000000000/framePeriod) << renderingPeriod;
+    //qint64 renderingPeriod = elapsed_timer.nsecsElapsed();
+    m_framePeriodLPF += FPS_ALPHA * (framePeriod - m_framePeriodLPF);
     m_rendering.release();
+    emit fpsChanged(fps());
+}
+
+qreal RenderContext::fps() {
+    return 1000000000/m_framePeriodLPF;
 }
 
 void RenderContext::makeCurrent() {

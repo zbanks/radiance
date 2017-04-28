@@ -32,6 +32,9 @@ RowLayout {
                     id: screenSelector;
                     model: output.availableScreens;
                 }
+                Label {
+                    text: "FPS: " + Math.round(cross.crossfader.fps);
+                }
             }
         }
         GroupBox {

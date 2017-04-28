@@ -87,3 +87,12 @@ VideoNodeUI::~VideoNodeUI() {
 QQuickFramebufferObject::Renderer *VideoNodeUI::createRenderer() const {
     return new VideoNodeRenderer(m_videoNode);
 }
+
+void VideoNodeUI::setFps(qreal value) {
+    m_fps = value;
+    emit fpsChanged(value);
+}
+
+qreal VideoNodeUI::fps() {
+    return m_fps;
+}
