@@ -46,7 +46,6 @@ void EffectUI::setPrevious(VideoNodeUI *value) {
     Effect *e = static_cast<Effect*>(m_videoNode);
     if(m_previous == NULL) {
         emit setPreviousInvoker(NULL);
-        e->setPrevious(NULL);
     } else {
         emit setPreviousInvoker(value->m_videoNode);
     }
