@@ -11,6 +11,7 @@
 #include <QOpenGLTexture>
 #include <QSemaphore>
 #include "VideoNode.h"
+#include "semaphore.hpp"
 
 class RenderContext : public QObject {
     Q_OBJECT
@@ -35,7 +36,7 @@ public:
     int outputFboIndex();
     QSize fboSize(int i);
     QOpenGLTexture *noiseTexture(int i);
-    QOpenGLFramebufferObject *blankFbo();
+    std::shared_ptr<QOpenGLFramebufferObject> &blankFbo();
 
 public slots:
     void start();
@@ -56,12 +57,12 @@ private:
     int m_outputCount;
     QList<QObject *> m_syncSources;
     QObject *m_currentSyncSource;
-    QSemaphore m_rendering;
+    radiance::RSemaphore m_rendering;
     QVector<QOpenGLTexture *> m_noiseTextures;
     void checkLoadShaders();
     void checkCreateNoise();
     void checkCreateBlankFbo();
-    QOpenGLFramebufferObject *m_blankFbo;
+    std::shared_ptr<QOpenGLFramebufferObject> m_blankFbo;
     qreal m_framePeriodLPF;
 
 signals:

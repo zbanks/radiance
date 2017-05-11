@@ -12,7 +12,6 @@ protected:
 
 public:
     VideoNodeUI();
-    VideoNode *m_videoNode;
     virtual ~VideoNodeUI();
 
 public slots:
@@ -24,4 +23,6 @@ signals:
 
 private:
     qreal m_fps;
+public:
+    VideoNode *m_videoNode;
 };

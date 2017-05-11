@@ -8,20 +8,56 @@ VideoNode::VideoNode(RenderContext *context)
     m_fbos(context->outputCount()),
     m_displayFbos(context->outputCount()),
     m_renderFbos(context->outputCount()),
-    m_updated(context->outputCount()),
+    m_updated(std::make_unique<std::atomic<bool>[] >(context->outputCount())),
     m_textureLocks(context->outputCount()),
     m_initialized(false)
 {
     moveToThread(context->thread());
-    for(int i=0; i<m_context->outputCount(); i++) m_textureLocks[i] = new QMutex();
+//    for(int i=0; i<m_context->outputCount(); i++)
+//        m_textureLocks[i] = new QMutex();
     emit m_context->addVideoNodeRequested(this);
 }
-
+/*QOpenGLFramebufferObject *VideoNode::outputFbo(int idx) const
+{
+    return m_fbos.at(idx).get();
+}
+QOpenGLFramebufferObject *VideoNode::displayFbo(int idx) const
+{
+    return m_displayFbos.at(idx).get();
+}
+QOpenGLFramebufferObject *VideoNode::renderFbo(int idx) const
+{
+    return m_renderFbos.at(idx).get();
+}*/
+std::shared_ptr<QOpenGLFramebufferObject> &VideoNode::outputFbo(int idx)
+{
+    return m_fbos[idx];
+}
+std::shared_ptr<QOpenGLFramebufferObject> &VideoNode::displayFbo(int idx)
+{
+    return m_displayFbos[idx];
+}
+std::shared_ptr<QOpenGLFramebufferObject> &VideoNode::renderFbo(int idx)
+{
+    return m_renderFbos[idx];
+}
+std::shared_ptr<QOpenGLFramebufferObject> VideoNode::outputFbo(int idx) const
+{
+    return m_fbos[idx];
+}
+std::shared_ptr<QOpenGLFramebufferObject> VideoNode::displayFbo(int idx) const
+{
+    return m_displayFbos[idx];
+}
+std::shared_ptr<QOpenGLFramebufferObject> VideoNode::renderFbo(int idx) const
+{
+    return m_renderFbos[idx];
+}
 void VideoNode::render() {
     if(!m_initialized) {
         initializeOpenGLFunctions(); // Placement of this function is black magic to me
         initialize();
-        for(int i=0; i<m_context->outputCount(); i++) m_updated[i] = false;
+        std::fill_n(&m_updated[0],m_context->outputCount(),false);
         m_initialized = true;
         emit initialized();
     }
@@ -38,9 +74,9 @@ void VideoNode::blitToRenderFbo() {
     glDisable(GL_BLEND);
 
     for(int i=0; i<m_context->outputCount(); i++) {
-        QMutexLocker locker(m_textureLocks[i]);
-        auto size = m_fbos.at(i)->size();
-        resizeFbo(&m_renderFbos[i], size);
+        QMutexLocker locker(&m_textureLocks[i]);
+        auto size = outputFbo(i)->size();
+        resizeFbo(renderFbo(i), size);
 
         glViewport(0, 0, size.width(), size.height());
 
@@ -51,10 +87,10 @@ void VideoNode::blitToRenderFbo() {
             1, 1
         };
 
-        m_renderFbos.at(i)->bind();
+        renderFbo(i)->bind();
         m_context->m_premultiply->bind();
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_fbos.at(i)->texture());
+        glBindTexture(GL_TEXTURE_2D, outputFbo(i)->texture());
         m_context->m_premultiply->setAttributeArray(0, GL_FLOAT, values, 2);
         m_context->m_premultiply->setUniformValue("iFrame", 0);
         m_context->m_premultiply->enableAttributeArray(0);
@@ -77,13 +113,13 @@ void VideoNode::blitToRenderFbo() {
 QVector<QColor> VideoNode::pixels(int i, QVector<QPointF> points) {
     QMutexLocker imageLocker(&m_previewImageLock);
     if (!m_previewImageValid) {
-        QMutexLocker locker(m_textureLocks.at(i));
+        QMutexLocker locker(&m_textureLocks.at(i));
         m_previewImage = m_fbos.at(i)->toImage();
         m_previewImageValid = true;
     }
     QVector<QColor> output;
-    for (QPointF point : points) {
-        QPointF scaled_point = point;
+    for (auto point : points) {
+        auto scaled_point = point;
         scaled_point.rx() *= m_previewImage.width();
         scaled_point.ry() *= m_previewImage.height();
         output.append(m_previewImage.pixel(scaled_point.toPoint()));
@@ -95,13 +131,12 @@ QVector<QColor> VideoNode::pixels(int i, QVector<QPointF> points) {
 // to get the latest frame in m_displayFbo[i].
 // It returns true if there is a new frame
 bool VideoNode::swap(int i) {
-    QMutexLocker locker(m_textureLocks[i]);
-    if(m_updated.at(i)) {
+    QMutexLocker locker(&m_textureLocks[i]);
+    if(m_updated[i].exchange(false)) {
         m_context->flush();
-        qSwap(m_displayFbos[i], m_renderFbos[i]);
+        std::swap(displayFbo(i),renderFbo(i));
         //resizeFbo(&m_displayFbos[i], m_renderFbos.at(i)->size());
         //QOpenGLFramebufferObject::blitFramebuffer(m_displayFbos.at(i), m_renderFbos.at(i));
-        m_updated[i] = false;
         return true;
     }
     return false;
@@ -115,30 +150,23 @@ void VideoNode::beforeDestruction() {
 }
 
 VideoNode::~VideoNode() {
-    for(int i=0; i<m_context->outputCount(); i++) {
-        delete m_fbos.at(i);
-        m_fbos[i] = 0;
-        delete m_renderFbos.at(i);
-        m_renderFbos[i] = 0;
-        delete m_displayFbos.at(i);
-        m_displayFbos[i] = 0;
-        delete m_textureLocks.at(i);
-        m_textureLocks[i] = 0;
-    }
     // Stop event processing, move the thread to GUI and make sure it is deleted.
     //moveToThread(QGuiApplication::instance()->thread());
 }
 
-void VideoNode::resizeFbo(QOpenGLFramebufferObject **fbo, QSize size) {
-    if((*fbo == NULL) || (*fbo)->size() != size) {
-        delete *fbo;
-        *fbo = new QOpenGLFramebufferObject(size);
-        glBindTexture(GL_TEXTURE_2D, (*fbo)->texture());
+void VideoNode::resizeFbo(QOpenGLFramebufferObject *&fbo, QSize size) {
+
+    if(!fbo || fbo->size() != size) {
+        auto rep = std::make_unique<QOpenGLFramebufferObject>(size);
+        auto tex = rep->texture();
+        glBindTexture(GL_TEXTURE_2D, tex);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_2D, 0);
+        delete fbo;
+        fbo = rep.release();
     }
 }
 

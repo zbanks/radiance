@@ -14,7 +14,7 @@ public:
     ~CrossFader();
     bool load();
     QSet<VideoNode*> dependencies();
- 
+
 public slots:
     qreal parameter();
     VideoNode *left();
@@ -24,14 +24,16 @@ public slots:
     void setLeft(VideoNode *value);
     void setRight(VideoNode *value);
 
+    std::shared_ptr<QOpenGLFramebufferObject> & blankFbo(int i);
+    std::shared_ptr<QOpenGLFramebufferObject> const & blankFbo(int i) const;
 signals:
     void parameterChanged(qreal value);
     void leftChanged(VideoNode *value);
     void rightChanged(VideoNode *value);
 
 private:
-    QOpenGLShaderProgram *m_program;
-    QVector<QOpenGLFramebufferObject *> m_blankFbos;
+    std::shared_ptr<QOpenGLShaderProgram> m_program;
+    std::vector<std::shared_ptr<QOpenGLFramebufferObject> > m_blankFbos;
 
     void initialize();
     void paint();

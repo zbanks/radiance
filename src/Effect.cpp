@@ -1,3 +1,8 @@
+#include <utility>
+#include <memory>
+#include <functional>
+#include <algorithm>
+
 #include "Effect.h"
 #include "RenderContext.h"
 #include <QDir>
@@ -16,10 +21,9 @@ Effect::Effect(RenderContext *context)
 
 void Effect::initialize() {
     for(int i=0; i<m_context->outputCount(); i++) {
-        QSize size = m_context->fboSize(i);
-
-        resizeFbo(&m_displayFbos[i], size);
-        resizeFbo(&m_renderFbos[i], size);
+        auto size = m_context->fboSize(i);
+        resizeFbo(displayFbo(i), size);
+        resizeFbo(renderFbo(i), size);
     }
 }
 
@@ -30,8 +34,8 @@ void Effect::paint() {
 
     {
         QMutexLocker locker(&m_programLock);
-        GLuint *chanTex = new GLuint[m_programs.count()];
-        std::iota(chanTex, chanTex + m_programs.count(), 2);
+        auto chanTex = std::make_unique<GLuint[]>(m_programs.size());
+        std::iota(&chanTex[0], &chanTex[0] + m_programs.size(), 2);
         auto   time = timebase->beat();
         m_realTimeLast = m_realTime;
         m_realTime     = timebase->wallTime();
@@ -46,29 +50,29 @@ void Effect::paint() {
             QSize size = m_context->fboSize(i);
 
             glViewport(0, 0, size.width(), size.height());
-
-            QOpenGLFramebufferObject *previousFbo;
-            VideoNode *prev = previous();
+            auto previousFbo = std::shared_ptr<QOpenGLFramebufferObject>{};
+//            QOpenGLFramebufferObject *previousFbo;
+            auto prev = previous();
             if(prev == 0) {
                 previousFbo = m_context->blankFbo();
             } else {
-                previousFbo = prev->m_fbos[i];
+                previousFbo = prev->outputFbo(i);
             }
 
             if(m_regenerateFbos) {
-                foreach(auto f, m_intermediateFbos.at(i)) delete f;
+//                foreach(auto f, m_intermediateFbos.at(i))
+//                    delete f;
                 m_intermediateFbos[i].clear();
-                for(int j = 0; j < m_programs.count() + 1; j++) {
-                    QOpenGLFramebufferObject *fbo = 0;
-                    resizeFbo(&fbo, size);
-                    m_intermediateFbos[i].append(fbo);
+                m_intermediateFbos[i].resize(m_programs.size() + 1);
+                for(auto & f : m_intermediateFbos[i]) {
+                    resizeFbo(f,size);
                 }
-                m_fboIndex = 0;
+               m_fboIndex = 0;
             }
 
-            for(int j=0; j < m_programs.count() + 1; j++) resizeFbo(&m_intermediateFbos[i][j], size);
+            for(int j=0; j < m_programs.size() + 1; j++) resizeFbo(m_intermediateFbos[i][j], size);
 
-            if(m_programs.count() > 0) {
+            if(m_programs.size() > 0) {
                 float values[] = {
                     -1, -1,
                     1, -1,
@@ -76,10 +80,10 @@ void Effect::paint() {
                     1, 1
                 };
 
-                for(int j = m_programs.count() - 1; j >= 0; j--) {
+                for(int j = m_programs.size() - 1; j >= 0; j--) {
                     //qDebug() << "Rendering shader" << j << "onto" << (m_fboIndex + j + 1) % (m_programs.count() + 1);
-                    auto target = m_intermediateFbos.at(i).at((m_fboIndex + j + 1) % (m_programs.count() + 1));
-                    auto p = m_programs.at(j);
+                    auto target = m_intermediateFbos.at(i).at((m_fboIndex + j + 1) % (m_programs.size() + 1));
+                    auto & p = m_programs.at(j);
 
                     p->bind();
                     target->bind();
@@ -88,9 +92,9 @@ void Effect::paint() {
                     glBindTexture(GL_TEXTURE_2D, previousFbo->texture());
                     glActiveTexture(GL_TEXTURE1);
                     glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(i)->textureId());
-                    for(int k=0; k<m_programs.count(); k++) {
+                    for(int k=0; k<m_programs.size(); k++) {
                         glActiveTexture(GL_TEXTURE2 + k);
-                        glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at((m_fboIndex + k + (j < k)) % (m_programs.count() + 1))->texture());
+                        glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at((m_fboIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
                         //qDebug() << "Bind" << (m_fboIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
                     }
 
@@ -106,7 +110,7 @@ void Effect::paint() {
                     p->setUniformValue("iFrame", 0);
                     p->setUniformValue("iNoise", 1);
                     p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
-                    p->setUniformValueArray("iChannel", chanTex, m_programs.count());
+                    p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
                     p->enableAttributeArray(0);
 
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -116,13 +120,13 @@ void Effect::paint() {
                 }
                 QOpenGLFramebufferObject::bindDefault();
 
-                m_fbos[i] = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.count() + 1));
+                m_fbos[i] = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.size() + 1));
                 //qDebug() << "Output is" << ((m_fboIndex + 1) % (m_programs.count() + 1));
             } else {
                 m_fbos[i] = previousFbo;
             }
         }
-        m_fboIndex = (m_fboIndex + 1) % (m_programs.count() + 1);
+        m_fboIndex = (m_fboIndex + 1) % (m_programs.size() + 1);
         m_regenerateFbos = false;
     }
     blitToRenderFbo();
@@ -130,18 +134,17 @@ void Effect::paint() {
 
 Effect::~Effect() {
     beforeDestruction();
-    foreach(QOpenGLShaderProgram *p, m_programs) delete p;
-    for(int i=0; i<m_context->outputCount(); i++) {
-        foreach(QOpenGLFramebufferObject *fbo, m_intermediateFbos.at(i)) delete fbo;
-        m_intermediateFbos[i].clear();
-        m_fbos[i] = 0; // This points to one of m_intermediateFbos
-    }
     m_programs.clear();
+//    foreach(QOpenGLShaderProgram *p, m_programs)
+//        delete p;
+    m_fbos.clear();
+    m_intermediateFbos.clear();
 }
 
 QSet<VideoNode*> Effect::dependencies() {
     QSet<VideoNode*> d;
-    if(auto p = previous()) d.insert(p);
+    if(auto p = previous())
+        d.insert(p);
     return d;
 }
 
@@ -156,16 +159,17 @@ bool Effect::loadProgram(QString name) {
         return false;
     }
     QTextStream headerStream(&header_file);
-    QString headerString = headerStream.readAll();
+    auto headerString = headerStream.readAll();
 
-    QVector<QOpenGLShaderProgram *> programs;
+    auto programs = std::vector<std::unique_ptr<QOpenGLShaderProgram> >{};
 
     for(int i=0;;i++) {
-        QString filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
+        auto filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
         QFile file(filename);
 
         QFileInfo check_file(filename);
-        if(!(check_file.exists() && check_file.isFile())) break;
+        if(!(check_file.exists() && check_file.isFile()))
+            break;
 
         if(!file.open(QIODevice::ReadOnly)) {
             qDebug() << QString("Could not open \"%1\"").arg(filename);
@@ -173,10 +177,9 @@ bool Effect::loadProgram(QString name) {
         }
 
         QTextStream stream(&file);
-        QString s = headerString + stream.readAll();
-
-        auto program = new QOpenGLShaderProgram();
-        programs.append(program);
+        auto s = headerString + stream.readAll();
+        programs.emplace_back(std::make_unique<QOpenGLShaderProgram>());
+        auto && program = programs.back();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                            "attribute highp vec4 vertices;"
                                            "varying highp vec2 coords;"
@@ -184,11 +187,13 @@ bool Effect::loadProgram(QString name) {
                                            "    gl_Position = vertices;"
                                            "    coords = vertices.xy;"
                                            "}")) goto err;
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s)) goto err;
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s))
+            goto err;
         program->bindAttributeLocation("vertices", 0);
-        if(!program->link()) goto err;
+        if(!program->link())
+            goto err;
     }
-    if(programs.count() == 0) {
+    if(programs.empty()) {
         qDebug() << QString("No shaders found for \"%1\"").arg(name);
         return false;
     }
@@ -196,16 +201,12 @@ bool Effect::loadProgram(QString name) {
     {
         // Take the program lock so we don't render while swapping out programs
         QMutexLocker locker(&m_programLock);
-        foreach(auto p, m_programs) delete p;
-        m_programs.clear();
-        foreach(auto p, programs) m_programs.append(p);
+        m_programs.swap(programs);
         m_regenerateFbos = true;
     }
 
     return true;
 err:
-    foreach(auto *p, programs) delete p;
-    programs.clear();
     return false;
 }
 
@@ -237,12 +238,9 @@ void Effect::setPrevious(VideoNode *value) {
 }
 
 QStringList EffectList::effectNames() {
-    QStringList filters;
-    filters << "*.0.glsl";
+    auto filters = QStringList{} << QString{"*.0.glsl"};
     QDir dir("../resources/effects/");
     dir.setNameFilters(filters);
     dir.setSorting(QDir::Name);
-
-    QStringList entries = dir.entryList();
-    return entries.replaceInStrings(".0.glsl", "");
+    return dir.entryList().replaceInStrings(".0.glsl","");
 }

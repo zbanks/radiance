@@ -13,7 +13,7 @@ RenderContext::RenderContext()
     , m_currentSyncSource(NULL)
     , m_rendering(2)
     , m_noiseTextures(m_outputCount)
-    , m_blankFbo(NULL)
+    , m_blankFbo()
     , m_framePeriodLPF(0)
 {
     connect(this, &RenderContext::addVideoNodeRequested, this, &RenderContext::addVideoNode, Qt::QueuedConnection);
@@ -28,8 +28,8 @@ RenderContext::~RenderContext() {
     context = 0;
     delete m_premultiply;
     m_premultiply = 0;
-    delete m_blankFbo;
-    m_blankFbo = 0;
+//    delete m_blankFbo;
+//    m_blankFbo = 0;
     foreach(auto t, m_noiseTextures) delete t;
     m_noiseTextures.clear();
 }
@@ -83,13 +83,12 @@ QOpenGLTexture *RenderContext::noiseTexture(int i) {
     return m_noiseTextures.at(i);
 }
 
-QOpenGLFramebufferObject *RenderContext::blankFbo() {
+std::shared_ptr<QOpenGLFramebufferObject> &RenderContext::blankFbo() {
     return m_blankFbo;
 }
 
 void RenderContext::update() {
-    if(m_rendering.tryAcquire())
-    {
+    if(m_rendering.tryAcquire()) {
         emit renderRequested();
     }
 }
@@ -97,7 +96,7 @@ void RenderContext::update() {
 void RenderContext::checkCreateNoise() {
     for(int i=0; i<m_outputCount; i++) {
         auto tex = m_noiseTextures.at(i);
-        if(tex != nullptr &&
+        if(tex &&
            tex->width() == fboSize(i).width() &&
            tex->height() == fboSize(i).height()) {
             continue;
@@ -110,27 +109,27 @@ void RenderContext::checkCreateNoise() {
         tex->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
         tex->setWrapMode(QOpenGLTexture::Repeat);
 
-        size_t byteCount = fboSize(i).width() * fboSize(i).height() * 4;
-        uint8_t *data = new uint8_t[byteCount];
+        auto byteCount = fboSize(i).width() * fboSize(i).height() * 4;
+        auto data = std::make_unique<uint8_t[]>(byteCount);
         qsrand(1);
-        for(size_t j=0; j<byteCount; j++) {
-            data[j] = (uint8_t)qrand();
-        }
-        tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
+        std::generate(&data[0],&data[0] + byteCount,qrand);
+        tex->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
         m_noiseTextures[i] = tex;
     }
 }
 
-void RenderContext::checkCreateBlankFbo() {
-    if(m_blankFbo != nullptr) return;
-    m_blankFbo = new QOpenGLFramebufferObject(QSize(1,1));
-    glBindTexture(GL_TEXTURE_2D, m_blankFbo->texture());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glBindTexture(GL_TEXTURE_2D, 0);
+void RenderContext::checkCreateBlankFbo()
+{
+    if(!m_blankFbo) {
+        m_blankFbo = std::make_shared<QOpenGLFramebufferObject>(QSize(1,1));
+        glBindTexture(GL_TEXTURE_2D, m_blankFbo->texture());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }
 
 void RenderContext::render() {
@@ -208,40 +207,39 @@ QList<VideoNode*> RenderContext::topoSort()
 {
     // Fuck this
 
-    QList<VideoNode*> sortedNodes;
-    QMap<VideoNode*, QSet<VideoNode*> > fwdEdges;
-    QMap<VideoNode*, QSet<VideoNode*> > revEdges;
+    auto sortedNodes = QList<VideoNode*>{};
+    auto fwdEdges = std::map<VideoNode*, QSet<VideoNode*> >{};
+    auto revEdges = std::map<VideoNode*, int>{};
 
-    foreach(VideoNode* n, m_videoNodes) {
-        auto children = n->dependencies();
-        revEdges.insert(n, children);
-        foreach(VideoNode* c, children) {
+    auto startNodes = std::deque<VideoNode*>{};
+    auto videoNodes = m_videoNodes;
+    for(auto && n: videoNodes) {
+        auto deps = n->dependencies();
+        revEdges.emplace(n, deps.size());
+        if(deps.empty())
+            startNodes.push_back(n);
+        else for(auto c : deps)
             fwdEdges[c].insert(n);
-        }
+
     }
-
-    QList<VideoNode*> startNodes;
-
-    foreach(VideoNode* n, m_videoNodes) {
-        if(revEdges.value(n).isEmpty()) startNodes.append(n);
-    }
-
-    while(!startNodes.isEmpty()) {
-        VideoNode* n = startNodes.takeLast();
+    while(!startNodes.empty()) {
+        auto n = startNodes.back();
+        startNodes.pop_back();
         sortedNodes.append(n);
-        for(auto c: fwdEdges.value(n)) {
-            revEdges[c].remove(n);
-            if(revEdges.value(c).isEmpty())
-                startNodes.append(c);
+        auto fwd_it = fwdEdges.find(n);
+        if(fwd_it != fwdEdges.end()) {
+            for(auto c: fwd_it->second) {
+                auto &refcnt = revEdges[c];
+                if(!--refcnt)
+                    startNodes.push_back(c);
+            }
+            fwdEdges.erase(fwd_it);
         }
-        fwdEdges.remove(n);
     }
-
-    if(!fwdEdges.isEmpty()) {
+    if(!fwdEdges.empty()) {
         qDebug() << "Cycle detected!";
-        return QList<VideoNode*>();
+        return {};
     }
-
     return sortedNodes;
 }
 
@@ -259,7 +257,9 @@ int RenderContext::outputFboIndex() {
 }
 
 QSize RenderContext::fboSize(int i) {
-    if(i == previewFboIndex()) return uiSettings->previewSize();
-    if(i == outputFboIndex()) return uiSettings->outputSize();
+    if(i == previewFboIndex())
+        return uiSettings->previewSize();
+    if(i == outputFboIndex())
+        return uiSettings->outputSize();
     return QSize(0, 0);
 }
