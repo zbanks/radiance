@@ -7,11 +7,19 @@
 {
     return QString(
     "#version 130\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+//    "#extension GL_ARB_shading_language_420pack : enable\n"
+//    "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
     "varying vec2 coords;\n"
-    "void main() {"
-    "    vec2 vertex = varray[gl_VertexID];\n"
+    "void main() {\n"
+    "    vec2 vertex;\n"
+    "    switch(gl_VertexID) {\n"
+    "    case 0: vertex = vec2(1.,1.);break;\n"
+    "    case 1: vertex = vec2(1.,-1.);break;\n"
+    "    case 2: vertex = vec2(-1.,1.);break;\n"
+    "    case 3: vertex = vec2(-1.,-1.);break;\n"
+    "    default:vertex = vec2(0.,0.);break;\n"
+    "    }\n"
+//    "    vec2 vertex = varray[gl_VertexID];\n"
     "    gl_Position = vec4(vertex,0.,1.);\n"
     "    coords = vertex;\n"
     "}");
