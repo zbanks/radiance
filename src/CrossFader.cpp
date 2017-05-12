@@ -30,14 +30,6 @@ const std::shared_ptr<QOpenGLFramebufferObject> & CrossFader::blankFbo(int i) co
     return m_blankFbos.at(i);
 }
 void CrossFader::paint() {
-
-
-    float values[] = {
-        -1, -1,
-        1, -1,
-        -1, 1,
-        1, 1
-    };
     auto program = decltype(m_program){};
     {
         QMutexLocker lock(&m_programLock);
@@ -45,13 +37,14 @@ void CrossFader::paint() {
     }
     if(program) {
         program->bind();
-        program->setAttributeArray(0, GL_FLOAT, values, 2);
         float param = parameter();
         program->setUniformValue("iParameter", param);
-        program->enableAttributeArray(0);
-
-        for(int i=0; i<m_context->outputCount(); i++) {
-            QSize size = m_context->fboSize(i);
+//        float param = parameter();
+//        m_program->setUniformValue("iParameter", param);
+        auto node_left = left();
+        auto node_right = right();
+        for(auto i=0; i<m_context->outputCount(); i++) {
+            auto size = m_context->fboSize(i);
 
             glClearColor(0, 0, 0, 0);
             glViewport(0, 0, size.width(), size.height());
@@ -62,10 +55,7 @@ void CrossFader::paint() {
             auto leftPreviewFbo = std::shared_ptr<QOpenGLFramebufferObject>{};
             auto rightPreviewFbo = std::shared_ptr<QOpenGLFramebufferObject>{};
 
-            auto node_left = left();
-            auto node_right = right();
-
-            if(node_left == 0) {
+            if(!node_left) {
                 resizeFbo(blankFbo(i), size);
                 blankFbo(i)->bind();
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -74,7 +64,7 @@ void CrossFader::paint() {
                 leftPreviewFbo = node_left->outputFbo(i);
             }
 
-            if(node_right == 0) {
+            if(!node_right) {
                 resizeFbo(blankFbo(i), size);
                 blankFbo(i)->bind();
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -82,10 +72,7 @@ void CrossFader::paint() {
             } else {
                 rightPreviewFbo = node_right->outputFbo(i);
             }
-
-
             resizeFbo(outputFbo(i), size);
-
             outputFbo(i)->bind();
 
             glActiveTexture(GL_TEXTURE0);
@@ -93,15 +80,9 @@ void CrossFader::paint() {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, rightPreviewFbo->texture());
 
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
-            float param = parameter();
-            m_program->setUniformValue("iParameter", param);
-            m_program->enableAttributeArray(0);
-
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             QOpenGLFramebufferObject::bindDefault();
         }
-        m_program->disableAttributeArray(0);
         m_program->release();
     } else {
         for(int i=0; i<m_context->outputCount(); i++) {
@@ -137,14 +118,8 @@ bool CrossFader::load() {
 
     auto program = std::make_shared<QOpenGLShaderProgram>();
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                       "attribute highp vec4 vertices;"
-                                       "varying highp vec2 coords;"
-                                       "void main() {"
-                                       "    gl_Position = vertices;"
-                                       "    coords = vertices.xy;"
-                                       "}");
+        RenderContext::defaultVertexShaderSource());
     program->addShaderFromSourceCode(QOpenGLShader::Fragment, s);
-    program->bindAttributeLocation("vertices", 0);
     program->link();
     program->bind();
     program->setUniformValue("iLeft", 0);

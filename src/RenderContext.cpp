@@ -3,7 +3,20 @@
 #include <QOpenGLFunctions>
 #include <QDebug>
 #include <QThread>
+/*static*/ QString RenderContext::defaultVertexShaderSource()
+{
+    return QString(
+    "#version 130\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+    "varying vec2 coords;\n"
+    "void main() {"
+    "    vec2 vertex = varray[gl_VertexID];\n"
+    "    gl_Position = vec4(vertex,0.,1.);\n"
+    "    coords = vertex;\n"
+    "}");
 
+}
 RenderContext::RenderContext()
     : context(nullptr)
     , surface(nullptr)
@@ -61,20 +74,14 @@ void RenderContext::checkLoadShaders() {
     auto program = m_premultiply;
     program = new QOpenGLShaderProgram(this);
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                       "attribute highp vec4 vertices;"
-                                       "varying highp vec2 coords;"
-                                       "void main() {"
-                                       "    gl_Position = vertices;"
-                                       "    coords = vertices.xy;"
-                                       "}");
+                                     defaultVertexShaderSource());
     program->addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                       "varying highp vec2 coords;"
+                                       "varying vec2 coords;"
                                        "uniform sampler2D iFrame;"
                                        "void main() {"
                                        "    vec4 l = texture2D(iFrame, 0.5 * (coords + 1.));"
                                        "    gl_FragColor = vec4(l.rgb * l.a, l.a);"
                                        "}");
-    program->bindAttributeLocation("vertices", 0);
     program->link();
     m_premultiply = program;
 }

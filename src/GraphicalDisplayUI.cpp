@@ -24,15 +24,12 @@ protected:
 
         auto program = new QOpenGLShaderProgram();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                           "attribute highp vec4 vertices;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    gl_Position = vertices;"
-                                           "    coords = vertices.xy;"
-                                           "}")) goto err;
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader)) goto err;
-        program->bindAttributeLocation("vertices", 0);
-        if(!program->link()) goto err;
+            RenderContext::defaultVertexShaderSource()))
+            goto err;
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader))
+            goto err;
+        if(!program->link())
+            goto err;
 
         delete m_program;
         m_program = program;
@@ -53,19 +50,12 @@ err:
     }
 
     void render() override {
-        if(m_program != 0) {
+        if(m_program) {
             audio->renderGraphics();
 
             glClearColor(0, 0, 0, 0);
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
-
-            float values[] = {
-                -1, -1,
-                1, -1,
-                -1, 1,
-                1, 1
-            };
 
             m_program->bind();
             glActiveTexture(GL_TEXTURE0);
@@ -74,14 +64,11 @@ err:
             glBindTexture(GL_TEXTURE_1D, audio->m_waveformBeatsTexture->textureId());
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_1D, audio->m_spectrumTexture->textureId());
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iWaveform", 0);
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
-            m_program->enableAttributeArray(0);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            m_program->disableAttributeArray(0);
             m_program->release();
         }
         update();

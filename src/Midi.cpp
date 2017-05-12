@@ -61,6 +61,7 @@ void MidiDevice::setDeviceIndex(int idx)
         try {
         // TODO: Catch exceptions or something?
             m_midiin.closePort();
+            m_midiin.cancelCallback();
         } catch(... ) {
         }
     }
@@ -72,7 +73,6 @@ void MidiDevice::setDeviceIndex(int idx)
                 if(opaque && msg)
                     static_cast<MidiDevice*>(opaque)->callback(ts, *msg);
             };
-            m_midiin.cancelCallback();
             m_midiin.setCallback(static_cast<RtMidiIn::RtMidiCallback>(trampoline), static_cast<void*>(this));
             m_midiin.openPort(idx, "Radiance Input");
         }

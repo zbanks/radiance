@@ -22,16 +22,18 @@ protected:
 
             auto program = std::make_unique<QOpenGLShaderProgram>();
             if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                            "attribute highp vec4 vertices;"
-                                            "varying highp vec2 coords;"
-                                            "void main() {"
-                                            "    gl_Position = vertices;"
-                                            "    coords = vertices.xy;"
-                                            "}"))
+                                       "#version 130\n"
+                                       "#extension GL_ARB_shading_language_420pack : enable\n"
+                                       "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+                                       "varying vec2 coords;\n"
+                                       "void main() {"
+                                       "    vec2 vertex = varray[gl_VertexID];\n"
+                                       "    gl_Position = vec4(vertex,0.,1.);\n"
+                                       "    coords = vertex;\n"
+                                       "}"))
                 throw std::runtime_error("bad vertex shader.");
             if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader))
                 throw std::runtime_eror("bad fragment shader.");
-            program->bindAttributeLocation("vertices", 0);
             if(!program->link())
                 throw std::runtime_error("linkage failure.");
             m_fragmentShader.swap(fragmentShader);
@@ -59,21 +61,11 @@ protected:
             glClearColor(0, 0, 0, 0);
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
-
-            float values[] = {
-                -1, -1,
-                1, -1,
-                -1, 1,
-                1, 1
-            };
             m_program->bind();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
-            m_program->enableAttributeArray(0);
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            m_program->disableAttributeArray(0);
             m_program->release();
         }
         update();

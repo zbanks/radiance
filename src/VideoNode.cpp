@@ -73,6 +73,8 @@ void VideoNode::blitToRenderFbo() {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
+    m_context->m_premultiply->bind();
+        m_context->m_premultiply->setUniformValue("iFrame", 0);
     for(int i=0; i<m_context->outputCount(); i++) {
         QMutexLocker locker(&m_textureLocks[i]);
         auto size = outputFbo(i)->size();
@@ -80,27 +82,15 @@ void VideoNode::blitToRenderFbo() {
 
         glViewport(0, 0, size.width(), size.height());
 
-        float values[] = {
-            -1, -1,
-            1, -1,
-            -1, 1,
-            1, 1
-        };
-
         renderFbo(i)->bind();
-        m_context->m_premultiply->bind();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, outputFbo(i)->texture());
-        m_context->m_premultiply->setAttributeArray(0, GL_FLOAT, values, 2);
-        m_context->m_premultiply->setUniformValue("iFrame", 0);
-        m_context->m_premultiply->enableAttributeArray(0);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        m_context->m_premultiply->disableAttributeArray(0);
-        m_context->m_premultiply->release();
 
         m_context->flush();
         m_updated[i] = true;
     }
+    m_context->m_premultiply->release();
     QOpenGLFramebufferObject::bindDefault();
 
     //QOpenGLFramebufferObject::blitFramebuffer(m_renderPreviewFbo, m_previewFbo);

@@ -70,16 +70,9 @@ void Effect::paint() {
                m_fboIndex = 0;
             }
 
-            for(int j=0; j < m_programs.size() + 1; j++) resizeFbo(m_intermediateFbos[i][j], size);
-
+            for(int j=0; j < m_programs.size() + 1; j++)
+                resizeFbo(m_intermediateFbos[i][j], size);
             if(m_programs.size() > 0) {
-                float values[] = {
-                    -1, -1,
-                    1, -1,
-                    -1, 1,
-                    1, 1
-                };
-
                 for(int j = m_programs.size() - 1; j >= 0; j--) {
                     //qDebug() << "Rendering shader" << j << "onto" << (m_fboIndex + j + 1) % (m_programs.count() + 1);
                     auto target = m_intermediateFbos.at(i).at((m_fboIndex + j + 1) % (m_programs.size() + 1));
@@ -98,8 +91,7 @@ void Effect::paint() {
                         //qDebug() << "Bind" << (m_fboIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
                     }
 
-                    p->setAttributeArray(0, GL_FLOAT, values, 2);
-                    qreal intense = intensity();
+                    auto intense = qreal(intensity());
                     m_intensityIntegral = fmod(m_intensityIntegral + intense / FPS, MAX_INTEGRAL);
                     p->setUniformValue("iIntensity", GLfloat(intense));
                     p->setUniformValue("iIntensityIntegral", GLfloat(m_intensityIntegral));
@@ -111,14 +103,9 @@ void Effect::paint() {
                     p->setUniformValue("iNoise", 1);
                     p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
                     p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
-                    p->enableAttributeArray(0);
-
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-                    p->disableAttributeArray(0);
                     p->release();
                 }
-                QOpenGLFramebufferObject::bindDefault();
 
                 m_fbos[i] = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.size() + 1));
                 //qDebug() << "Output is" << ((m_fboIndex + 1) % (m_programs.count() + 1));
@@ -175,21 +162,22 @@ bool Effect::loadProgram(QString name) {
             qDebug() << QString("Could not open \"%1\"").arg(filename);
             goto err;
         }
-
         QTextStream stream(&file);
         auto s = headerString + stream.readAll();
         programs.emplace_back(std::make_unique<QOpenGLShaderProgram>());
         auto && program = programs.back();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                           "attribute highp vec4 vertices;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    gl_Position = vertices;"
-                                           "    coords = vertices.xy;"
-                                           "}")) goto err;
+                                       "#version 130\n"
+                                       "#extension GL_ARB_shading_language_420pack : enable\n"
+                                       "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+                                       "varying vec2 coords;\n"
+                                       "void main() {"
+                                       "    vec2 vertex = varray[gl_VertexID];\n"
+                                       "    gl_Position = vec4(vertex,0.,1.);\n"
+                                       "    coords = vertex;\n"
+                                       "}")) goto err;
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s))
             goto err;
-        program->bindAttributeLocation("vertices", 0);
         if(!program->link())
             goto err;
     }

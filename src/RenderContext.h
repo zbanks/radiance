@@ -19,6 +19,7 @@ class RenderContext : public QObject {
 public:
     RenderContext();
    ~RenderContext() override;
+    static QString defaultVertexShaderSource();
     QOffscreenSurface *surface;
     QOpenGLContext *context;
     QTimer *timer;

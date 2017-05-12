@@ -14,12 +14,7 @@ public:
 
         auto program = new QOpenGLShaderProgram();
         program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                           "attribute highp vec4 vertices;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    gl_Position = vertices;"
-                                           "    coords = vertices.xy;"
-                                           "}");
+                                         RenderContext::defaultVertexShaderSource());
         program->addShaderFromSourceCode(QOpenGLShader::Fragment,
                                         "uniform vec2 iResolution;"
                                         "uniform sampler2D iFrame;"
@@ -47,22 +42,12 @@ protected:
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
 
-            float values[] = {
-                -1, -1,
-                1, -1,
-                -1, 1,
-                1, 1
-            };
-
             m_program->bind();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, m_videoNode->m_displayFbos[m_videoNode->context()->previewFboIndex()]->texture());
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iFrame", 0);
-            m_program->enableAttributeArray(0);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            m_program->disableAttributeArray(0);
             m_program->release();
         }
         update();
