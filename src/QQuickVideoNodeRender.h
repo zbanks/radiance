@@ -24,4 +24,7 @@ signals:
 private:
     VideoNode *m_videoNode;
     int m_chain;
+
+protected:
+    QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
 };
