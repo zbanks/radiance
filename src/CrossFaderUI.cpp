@@ -9,11 +9,11 @@
 CrossFaderUI::CrossFaderUI()
     : m_left(0)
     , m_right(0) {
-    CrossFader *c = new CrossFader(renderContext);
+    CrossFader *c = new CrossFader(renderContextOld);
     connect(c, &CrossFader::parameterChanged, this, &CrossFaderUI::parameterChanged);
     m_videoNode = c;
 
-    connect(renderContext, &RenderContext::fpsChanged, this, &VideoNodeUI::setFps);
+    connect(renderContextOld, &RenderContextOld::fpsChanged, this, &VideoNodeUI::setFps);
     connect(c, &VideoNodeOld::initialized, this, &CrossFaderUI::onInitialized, Qt::DirectConnection);
 }
 

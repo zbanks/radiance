@@ -33,11 +33,13 @@ add_executable(radiance WIN32 src/main.cpp
     src/Midi.cpp
     src/Output.cpp
     src/OutputUI.cpp
-    src/RenderContext.cpp
+    src/RenderContextOld.cpp
     src/Timebase.cpp
     src/UISettings.cpp
     src/VideoNodeOld.cpp
     src/VideoNodeUI.cpp
+
+    src/RenderContext.cpp
     src/VideoNode.cpp
     src/QQuickVideoNodeRender.cpp
     src/Model.cpp

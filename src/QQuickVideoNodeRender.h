@@ -1,28 +1,28 @@
 #pragma once
 
-#include "VideoNodeOld.h"
+#include "VideoNode.h"
 #include <QQuickItem>
 
 class QQuickVideoNodeRender : public QQuickItem {
     Q_OBJECT
-    Q_PROPERTY(VideoNodeOld *videoNode READ videoNode WRITE setVideoNodeOld NOTIFY videoNodeChanged)
+    Q_PROPERTY(VideoNode *videoNode READ videoNode WRITE setVideoNode NOTIFY videoNodeChanged)
     Q_PROPERTY(int chain READ chain WRITE setChain NOTIFY chainChanged)
 
 public:
     QQuickVideoNodeRender();
     virtual ~QQuickVideoNodeRender();
 
-    VideoNodeOld *videoNode();
+    VideoNode *videoNode();
     int chain();
-    void setVideoNodeOld(VideoNodeOld *videoNode);
+    void setVideoNode(VideoNode *videoNode);
     void setChain(int chain);
 
 signals:
-    void videoNodeChanged(VideoNodeOld *videoNode);
+    void videoNodeChanged(VideoNode *videoNode);
     void chainChanged(int chain);
 
 private:
-    VideoNodeOld *m_videoNode;
+    VideoNode *m_videoNode;
     int m_chain;
 
 protected:

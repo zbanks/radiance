@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QOpenGLTexture>
 
-#include "Model.h"
+class Model;
 
 class VideoNode : public QObject {
     Q_OBJECT

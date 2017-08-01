@@ -2,7 +2,7 @@
 #include "liblux/lux.h"
 #include <unistd.h>
 #include <math.h>
-#include "RenderContext.h"
+#include "RenderContextOld.h"
 
 // Lux helper functions
 static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {

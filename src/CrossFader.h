@@ -10,7 +10,7 @@ class CrossFader : public VideoNodeOld {
     Q_OBJECT
 
 public:
-    CrossFader(RenderContext *context);
+    CrossFader(RenderContextOld *context);
     ~CrossFader();
     bool load();
     QSet<VideoNodeOld*> dependencies();

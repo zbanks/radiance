@@ -14,7 +14,7 @@ public:
 
         auto program = new QOpenGLShaderProgram();
         program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                         RenderContext::defaultVertexShaderSource());
+                                         RenderContextOld::defaultVertexShaderSource());
         program->addShaderFromSourceCode(QOpenGLShader::Fragment,
                                         "uniform vec2 iResolution;"
                                         "uniform sampler2D iFrame;"

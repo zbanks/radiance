@@ -1,8 +1,8 @@
 #include "CrossFader.h"
-#include "RenderContext.h"
+#include "RenderContextOld.h"
 #include <QFile>
 
-CrossFader::CrossFader(RenderContext *context)
+CrossFader::CrossFader(RenderContextOld *context)
     : VideoNodeOld(context)
     , m_parameter(0)
     , m_left()
@@ -118,7 +118,7 @@ bool CrossFader::load() {
 
     auto program = std::make_shared<QOpenGLShaderProgram>();
     program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-        RenderContext::defaultVertexShaderSource());
+        RenderContextOld::defaultVertexShaderSource());
     program->addShaderFromSourceCode(QOpenGLShader::Fragment, s);
     program->link();
     program->bind();

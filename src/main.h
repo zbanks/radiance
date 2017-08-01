@@ -3,7 +3,7 @@
 
 #include <QSettings>
 #include "UISettings.h"
-#include "RenderContext.h"
+#include "RenderContextOld.h"
 #include "Audio.h"
 #include "Timebase.h"
 #include <utility>
@@ -11,8 +11,10 @@
 #include <algorithm>
 #include <type_traits>
 #include <numeric>
+#include "RenderContext.h"
 
 extern RenderContext *renderContext;
+extern RenderContextOld *renderContextOld;
 extern QSettings *settings;
 extern UISettings *uiSettings;
 extern Audio *audio;

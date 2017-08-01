@@ -11,11 +11,11 @@ QQuickVideoNodeRender::QQuickVideoNodeRender()
 QQuickVideoNodeRender::~QQuickVideoNodeRender() {
 }
 
-VideoNodeOld *QQuickVideoNodeRender::videoNode() {
+VideoNode *QQuickVideoNodeRender::videoNode() {
     return m_videoNode;
 }
 
-void QQuickVideoNodeRender::setVideoNodeOld(VideoNodeOld *videoNode) {
+void QQuickVideoNodeRender::setVideoNode(VideoNode *videoNode) {
     m_videoNode = videoNode;
     emit videoNodeChanged(videoNode);
 }

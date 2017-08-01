@@ -77,4 +77,7 @@ void Model::removeEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<Vide
             emit edgeRemoved(edgeCopy);
         }
     }
+
+RenderContext *Model::context() {
+    return m_context;
 }

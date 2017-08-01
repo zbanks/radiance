@@ -10,13 +10,13 @@
 #include "Midi.h"
 #include "Output.h"
 #include "OutputUI.h"
-#include "RenderContext.h"
+#include "RenderContextOld.h"
 #include "VideoNode.h"
 #include "QQuickVideoNodeRender.h"
 #include "Model.h"
 #include "main.h"
 
-RenderContext *renderContext = 0;
+RenderContextOld *renderContextOld = 0;
 QSettings *settings = 0;
 QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
@@ -88,9 +88,9 @@ int main(int argc, char *argv[]) {
     // Render context
     QThread renderThread;
     renderThread.setObjectName("RenderThread");
-    renderContext = new RenderContext();
-    renderContext->moveToThread(&renderThread);
-    QObject::connect(&renderThread, &QThread::started, renderContext, &RenderContext::start);
+    renderContextOld = new RenderContextOld();
+    renderContextOld->moveToThread(&renderThread);
+    QObject::connect(&renderThread, &QThread::started, renderContextOld, &RenderContextOld::start);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &renderThread, &QThread::quit);
     renderThread.start();
 
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     }
 
     QObject *window = engine.rootObjects().first();
-    renderContext->addSyncSource(window);
+    renderContextOld->addSyncSource(window);
 
     return app.exec();
 }

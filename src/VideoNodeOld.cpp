@@ -1,9 +1,9 @@
 #include "VideoNodeOld.h"
-#include "RenderContext.h"
+#include "RenderContextOld.h"
 #include <QDebug>
 #include <QThread>
 
-VideoNodeOld::VideoNodeOld(RenderContext *context)
+VideoNodeOld::VideoNodeOld(RenderContextOld *context)
     : m_context(context),
     m_fbos(context->outputCount()),
     m_displayFbos(context->outputCount()),
@@ -164,6 +164,6 @@ QSet<VideoNodeOld*> VideoNodeOld::dependencies() {
     return QSet<VideoNodeOld*>();
 }
 
-RenderContext *VideoNodeOld::context() {
+RenderContextOld *VideoNodeOld::context() {
     return m_context;
 }

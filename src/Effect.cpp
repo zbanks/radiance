@@ -4,13 +4,13 @@
 #include <algorithm>
 
 #include "Effect.h"
-#include "RenderContext.h"
+#include "RenderContextOld.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include "main.h"
 
-Effect::Effect(RenderContext *context)
+Effect::Effect(RenderContextOld *context)
     : VideoNodeOld(context),
     m_fboIndex(0),
     m_intensity(0),

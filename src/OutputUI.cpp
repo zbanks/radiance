@@ -41,7 +41,7 @@ public:
 
         auto program = new QOpenGLShaderProgram();
         program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-            RenderContext::defaultVertexShaderSource());
+            RenderContextOld::defaultVertexShaderSource());
         program->addShaderFromSourceCode(QOpenGLShader::Fragment,
                                         "uniform vec2 iResolution;"
                                         "uniform sampler2D iFrame;"
@@ -166,9 +166,9 @@ QStringList OutputUI::availableScreens() {
 
 void OutputUI::onVisibleChanged(bool visible) {
     if(visible) {
-        renderContext->addSyncSource(m_outputWindow);
+        renderContextOld->addSyncSource(m_outputWindow);
     } else {
-        renderContext->removeSyncSource(m_outputWindow);
+        renderContextOld->removeSyncSource(m_outputWindow);
     }
 }
 

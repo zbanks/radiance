@@ -24,7 +24,7 @@ protected:
 
         auto program = new QOpenGLShaderProgram();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-            RenderContext::defaultVertexShaderSource()))
+            RenderContextOld::defaultVertexShaderSource()))
             goto err;
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader))
             goto err;

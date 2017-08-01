@@ -17,20 +17,20 @@
 #include <QMutex>
 #include <QSet>
 
-class RenderContext;
+class RenderContextOld;
 
 class VideoNodeOld : public QObject, protected QOpenGLFunctions {
     Q_OBJECT
 
 public:
-    VideoNodeOld(RenderContext *context);
+    VideoNodeOld(RenderContextOld *context);
    ~VideoNodeOld() override;
     std::vector<std::shared_ptr<QOpenGLFramebufferObject> > m_fbos;
     std::vector<std::shared_ptr<QOpenGLFramebufferObject> > m_displayFbos;
     std::vector<std::shared_ptr<QOpenGLFramebufferObject> > m_renderFbos;
     virtual QSet<VideoNodeOld*> dependencies();
     QVector<QColor> pixels(int i, QVector<QPointF>);
-    RenderContext *context();
+    RenderContextOld *context();
 
 /*    virtual QOpenGLFramebufferObject *outputFbo (int idx) const;
     virtual QOpenGLFramebufferObject *displayFbo(int idx) const;
@@ -73,7 +73,7 @@ protected:
     virtual void initialize() = 0;
     virtual void paint() = 0;
     void blitToRenderFbo();
-    RenderContext *m_context;
+    RenderContextOld *m_context;
 
     void beforeDestruction();
 

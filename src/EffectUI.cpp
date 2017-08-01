@@ -9,13 +9,13 @@
 EffectUI::EffectUI(QString source)
     : m_previous(0)
     , m_source(source) {
-    Effect *e = new Effect(renderContext);
+    Effect *e = new Effect(renderContextOld);
     connect(e, &Effect::intensityChanged, this, &EffectUI::intensityChanged);
     connect(this, &EffectUI::intensityInvoker,    e, &Effect::intensity);
     connect(this, &EffectUI::setIntensityInvoker, e, &Effect::setIntensity);
     connect(this, &EffectUI::setPreviousInvoker,  e, &Effect::setPrevious);
 
-    connect(renderContext, &RenderContext::fpsChanged, this, &VideoNodeUI::setFps);
+    connect(renderContextOld, &RenderContextOld::fpsChanged, this, &VideoNodeUI::setFps);
     m_videoNode = e;
 }
 
