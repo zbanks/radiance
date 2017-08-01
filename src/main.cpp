@@ -11,6 +11,8 @@
 #include "Output.h"
 #include "OutputUI.h"
 #include "RenderContext.h"
+#include "QQuickVideoNodeRender.h"
+#include "Model.h"
 #include "main.h"
 
 RenderContext *renderContext = 0;
@@ -62,8 +64,12 @@ int main(int argc, char *argv[]) {
     timebase = new Timebase();
     effectList = new EffectList();
 
-    qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterType<Model>("radiance", 1, 0, "Model");
+
+    qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "OldVideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
+    qmlRegisterType<QQuickVideoNodeRender>("radiance", 1, 0, "VideoNodeRender");
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
     qmlRegisterType<OutputUI>("radiance", 1, 0, "Output");
     qmlRegisterType<GraphicalDisplayUI>("radiance", 1, 0, "GraphicalDisplay");
