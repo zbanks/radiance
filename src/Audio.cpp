@@ -121,6 +121,15 @@ void Audio::run() {
 
     PaStreamParameters inputParameters;
     inputParameters.device = Pa_GetDefaultInputDevice();
+    if (inputParameters.device < 0) {
+        qWarning() << "Could not find input device, running without";
+        while(m_run) {
+            // i'm so sorry
+            QMutexLocker locker(&m_audioLock);
+            m_time = fmod((m_time + 0.003), 128.);
+        }
+        goto err;
+    }
     inputParameters.channelCount = 1;
     inputParameters.sampleFormat = paFloat32;
     inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency ;
