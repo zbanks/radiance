@@ -3,7 +3,7 @@
 #include <QFile>
 
 CrossFader::CrossFader(RenderContext *context)
-    : VideoNode(context)
+    : VideoNodeOld(context)
     , m_parameter(0)
     , m_left()
     , m_right()
@@ -137,12 +137,12 @@ qreal CrossFader::parameter() {
     return m_parameter;
 }
 
-VideoNode *CrossFader::left() {
+VideoNodeOld *CrossFader::left() {
     QMutexLocker lock(&m_leftLock);
     return m_left;
 }
 
-VideoNode *CrossFader::right() {
+VideoNodeOld *CrossFader::right() {
     QMutexLocker lock(&m_rightLock);
     return m_right;
 }
@@ -159,7 +159,7 @@ void CrossFader::setParameter(qreal value) {
     emit parameterChanged(value);
 }
 
-void CrossFader::setLeft(VideoNode *value) {
+void CrossFader::setLeft(VideoNodeOld *value) {
     {
         QMutexLocker lock(&m_context->m_contextLock);
         {
@@ -172,7 +172,7 @@ void CrossFader::setLeft(VideoNode *value) {
     }
 }
 
-void CrossFader::setRight(VideoNode *value) {
+void CrossFader::setRight(VideoNodeOld *value) {
     {
         QMutexLocker lock(&m_context->m_contextLock);
         {
@@ -185,8 +185,8 @@ void CrossFader::setRight(VideoNode *value) {
     }
 }
 
-QSet<VideoNode*> CrossFader::dependencies() {
-    auto d = QSet<VideoNode*>{};
+QSet<VideoNodeOld*> CrossFader::dependencies() {
+    auto d = QSet<VideoNodeOld*>{};
     for(auto p : { left(),right()})
         if(p) d.insert(p);
     return d;

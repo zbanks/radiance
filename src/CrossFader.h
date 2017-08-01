@@ -1,35 +1,35 @@
 #pragma once
 
-#include "VideoNode.h"
+#include "VideoNodeOld.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFramebufferObject>
 #include <QMutex>
 
-class CrossFader : public VideoNode {
+class CrossFader : public VideoNodeOld {
     Q_OBJECT
 
 public:
     CrossFader(RenderContext *context);
     ~CrossFader();
     bool load();
-    QSet<VideoNode*> dependencies();
+    QSet<VideoNodeOld*> dependencies();
 
 public slots:
     qreal parameter();
-    VideoNode *left();
-    VideoNode *right();
+    VideoNodeOld *left();
+    VideoNodeOld *right();
 
     void setParameter(qreal value);
-    void setLeft(VideoNode *value);
-    void setRight(VideoNode *value);
+    void setLeft(VideoNodeOld *value);
+    void setRight(VideoNodeOld *value);
 
     std::shared_ptr<QOpenGLFramebufferObject> & blankFbo(int i);
     std::shared_ptr<QOpenGLFramebufferObject> const & blankFbo(int i) const;
 signals:
     void parameterChanged(qreal value);
-    void leftChanged(VideoNode *value);
-    void rightChanged(VideoNode *value);
+    void leftChanged(VideoNodeOld *value);
+    void rightChanged(VideoNodeOld *value);
 
 private:
     std::shared_ptr<QOpenGLShaderProgram> m_program;
@@ -39,8 +39,8 @@ private:
     void paint();
 
     qreal m_parameter;
-    VideoNode *m_left;
-    VideoNode *m_right;
+    VideoNodeOld *m_left;
+    VideoNodeOld *m_right;
 
     QMutex m_parameterLock;
     QMutex m_leftLock;

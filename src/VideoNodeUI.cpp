@@ -4,9 +4,9 @@
 #include <QtCore/QMutex>
 #include <QQuickFramebufferObject>
 
-class VideoNodeRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
+class VideoNodeOldRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
 public:
-    VideoNodeRenderer(VideoNode *videoNode)
+    VideoNodeOldRenderer(VideoNodeOld *videoNode)
         : m_videoNode(videoNode)
         , m_program(0) {
 
@@ -53,7 +53,7 @@ protected:
         update();
     }
 
-    VideoNode *m_videoNode;
+    VideoNodeOld *m_videoNode;
     QOpenGLShaderProgram *m_program;
 };
 
@@ -70,7 +70,7 @@ VideoNodeUI::~VideoNodeUI() {
 }
 
 QQuickFramebufferObject::Renderer *VideoNodeUI::createRenderer() const {
-    return new VideoNodeRenderer(m_videoNode);
+    return new VideoNodeOldRenderer(m_videoNode);
 }
 
 void VideoNodeUI::setFps(qreal value) {

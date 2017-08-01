@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VideoNode.h"
+#include "VideoNodeOld.h"
 #include <QObject>
 #include <QSharedPointer>
 
@@ -16,6 +16,7 @@ public:
 
     Model();
    ~Model() override;
+    RenderContext *renderContext();
 
 public slots:
     QSharedPointer<VideoNode> addVideoNode(QString type);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VideoNode.h"
+#include "VideoNodeOld.h"
 #include <QQuickFramebufferObject>
 
 class VideoNodeUI : public QQuickFramebufferObject {
@@ -24,5 +24,5 @@ signals:
 private:
     qreal m_fps;
 public:
-    VideoNode *m_videoNode;
+    VideoNodeOld *m_videoNode;
 };

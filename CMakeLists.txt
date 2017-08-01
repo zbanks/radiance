@@ -36,8 +36,9 @@ add_executable(radiance WIN32 src/main.cpp
     src/RenderContext.cpp
     src/Timebase.cpp
     src/UISettings.cpp
-    src/VideoNode.cpp
+    src/VideoNodeOld.cpp
     src/VideoNodeUI.cpp
+    src/VideoNode.cpp
     src/QQuickVideoNodeRender.cpp
     src/Model.cpp
     src/liblux/lux.c

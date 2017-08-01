@@ -11,7 +11,7 @@
 #include "main.h"
 
 Effect::Effect(RenderContext *context)
-    : VideoNode(context),
+    : VideoNodeOld(context),
     m_fboIndex(0),
     m_intensity(0),
     m_previous(0),
@@ -128,8 +128,8 @@ Effect::~Effect() {
     m_intermediateFbos.clear();
 }
 
-QSet<VideoNode*> Effect::dependencies() {
-    QSet<VideoNode*> d;
+QSet<VideoNodeOld*> Effect::dependencies() {
+    QSet<VideoNodeOld*> d;
     if(auto p = previous())
         d.insert(p);
     return d;
@@ -203,7 +203,7 @@ qreal Effect::intensity() {
     return m_intensity;
 }
 
-VideoNode *Effect::previous() {
+VideoNodeOld *Effect::previous() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_previous;
 }
@@ -220,7 +220,7 @@ void Effect::setIntensity(qreal value) {
     emit intensityChanged(value);
 }
 
-void Effect::setPrevious(VideoNode *value) {
+void Effect::setPrevious(VideoNodeOld *value) {
     Q_ASSERT(QThread::currentThread() == thread());
     m_previous = value;
 }

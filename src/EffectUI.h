@@ -25,7 +25,7 @@ signals:
     void sourceChanged(QString value);
     void previousChanged(VideoNodeUI *value);
     void setIntensityInvoker(qreal value);
-    void setPreviousInvoker(VideoNode *source);
+    void setPreviousInvoker(VideoNodeOld *source);
     qreal intensityInvoker();
     qreal fpsInvoker();
     void fpsChanged(qreal value);
