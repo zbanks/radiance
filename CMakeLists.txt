@@ -44,6 +44,7 @@ add_executable(radiance WIN32 src/main.cpp
     src/EffectNode.cpp
     src/QQuickVideoNodeRender.cpp
     src/Model.cpp
+    src/FramebufferObject.cpp
     src/liblux/lux.c
     src/liblux/crc.c
     BTrack/src/BTrack.c

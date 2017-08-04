@@ -14,22 +14,45 @@ EffectNode::~EffectNode() {
 }
 
 void EffectNode::initialize() {
+    m_initialized = false;
+    qDebug() << "Initializing";
     bool result = loadProgram(m_name); // TODO do this in another thread
-    if(!result) emit deleteMe();
+    if(!result) {
+        emit deleteMe();
+        return;
+    }
+
+    m_intermediate.clear();
+    for(int i=0; i<m_context->chainCount(); i++) {
+        m_intermediate.append(QVector<QSharedPointer<QOpenGLTexture>>());
+        for(int j=0; j<m_programs.count(); j++) {
+            auto tex = QSharedPointer<QOpenGLTexture>(new QOpenGLTexture(QOpenGLTexture::Target2D));
+            auto size = m_context->chainSize(i);
+            tex->setSize(size.width(), size.height());
+            tex->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+            m_intermediate[i].append(tex);
+        }
+    }
+
+    m_fbos.clear();
+    for(int i=0; i<m_context->chainCount(); i++) {
+        m_fbos.append(QSharedPointer<FramebufferObject>::create());
+    }
+
+    m_initialized = true;
 }
 
-void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>>) {
-    m_textures[chain] = nullptr; // Uninitialized
-}
+void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) {
+    if(!m_initialized) {
+        m_textures[chain] = nullptr; // Uninitialized
+        return;
+    }
 
-/*
-static QOpenGLTexture *Effect::paint2() {
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
     {
-        QMutexLocker locker(&m_programLock);
         auto chanTex = std::make_unique<GLuint[]>(m_programs.size());
         std::iota(&chanTex[0], &chanTex[0] + m_programs.size(), 2);
         auto   time = timebase->beat();
@@ -42,49 +65,29 @@ static QOpenGLTexture *Effect::paint2() {
         double audioLevel = 0;
         audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
 
-        for(int i=0; i<m_context->outputCount(); i++) {
-            QSize size = m_context->fboSize(i);
+        {
+            auto size = m_context->chainSize(chain);
 
             glViewport(0, 0, size.width(), size.height());
-            auto previousFbo = std::shared_ptr<QOpenGLFramebufferObject>{};
-//            QOpenGLFramebufferObject *previousFbo;
-            auto prev = previous();
-            if(prev == 0) {
-                previousFbo = m_context->blankFbo();
-            } else {
-                previousFbo = prev->outputFbo(i);
-            }
+            auto previousTex = inputTextures.at(0);
 
-            if(m_regenerateFbos) {
-//                foreach(auto f, m_intermediateFbos.at(i))
-//                    delete f;
-                m_intermediateFbos[i].clear();
-                m_intermediateFbos[i].resize(m_programs.size() + 1);
-                for(auto & f : m_intermediateFbos[i]) {
-                    resizeFbo(f,size);
-                }
-               m_fboIndex = 0;
-            }
-
-            for(int j=0; j < m_programs.size() + 1; j++)
-                resizeFbo(m_intermediateFbos[i][j], size);
-            if(m_programs.size() > 0) {
                 for(int j = m_programs.size() - 1; j >= 0; j--) {
-                    //qDebug() << "Rendering shader" << j << "onto" << (m_fboIndex + j + 1) % (m_programs.count() + 1);
-                    auto target = m_intermediateFbos.at(i).at((m_fboIndex + j + 1) % (m_programs.size() + 1));
+                    qDebug() << "Rendering shader" << j << "onto" << (m_textureIndex.at(chain) + j + 1) % (m_programs.count() + 1);
+                    auto target = m_intermediate.at(chain).at((m_textureIndex.at(chain) + j + 1) % (m_programs.size() + 1));
                     auto & p = m_programs.at(j);
 
                     p->bind();
-                    target->bind();
+                    m_fbos[chain]->bind();
+                    m_fbos[chain]->setTexture(target->textureId());
 
                     glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, previousFbo->texture());
+                    glBindTexture(GL_TEXTURE_2D, previousTex->textureId());
                     glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(i)->textureId());
+                    glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(chain)->textureId());
                     for(int k=0; k<m_programs.size(); k++) {
                         glActiveTexture(GL_TEXTURE2 + k);
-                        glBindTexture(GL_TEXTURE_2D, m_intermediateFbos.at(i).at((m_fboIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
-                        //qDebug() << "Bind" << (m_fboIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
+                        glBindTexture(GL_TEXTURE_2D, m_intermediate.at(chain).at((m_textureIndex.at(chain) + k + (j < k)) % (m_programs.size() + 1))->textureId());
+                        qDebug() << "Bind" << (m_textureIndex.at(chain) + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
                     }
 
                     auto intense = qreal(intensity());
@@ -103,21 +106,13 @@ static QOpenGLTexture *Effect::paint2() {
                     p->release();
                 }
 
-                m_fbos[i] = m_intermediateFbos.at(i).at((m_fboIndex + 1) % (m_programs.size() + 1));
-                //qDebug() << "Output is" << ((m_fboIndex + 1) % (m_programs.count() + 1));
-            } else {
-                m_fbos[i] = previousFbo;
-            }
+                m_textures[chain] = m_intermediate.at(chain).at((m_textureIndex.at(chain) + 1) % (m_programs.size() + 1));
+                qDebug() << "Output is" << ((m_textureIndex.at(chain) + 1) % (m_programs.count() + 1));
         }
-        m_fboIndex = (m_fboIndex + 1) % (m_programs.size() + 1);
-        m_regenerateFbos = false;
+        m_textureIndex[chain] = (m_textureIndex.at(chain) + 1) % (m_programs.size() + 1);
     }
-    blitToRenderFbo();
+    //blitToRenderFbo();
 }
-
-Effect::~Effect() {
-}
-*/
 
 // Call this to load shader code into this Effect.
 // This function is thread-safe, avoid calling this in the render thread.
