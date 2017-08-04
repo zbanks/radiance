@@ -2,13 +2,19 @@
 #include "RenderContext.h"
 #include "Model.h"
 
-VideoNode::VideoNode(Model *model)
-    : m_model(model) {
+VideoNode::VideoNode(RenderContext *context, int inputCount)
+    : m_context(context)
+    , m_inputCount(inputCount)
+    , m_textures(inputCount) {
 }
 
 VideoNode::~VideoNode() {
 }
 
-QOpenGLTexture *VideoNode::texture(int chain) {
-    return m_model->context()->texture(this, chain);
+int VideoNode::inputCount() {
+    return m_inputCount;
+}
+
+QSharedPointer<QOpenGLTexture> VideoNode::texture(int chain) {
+    return m_textures.at(chain);
 }

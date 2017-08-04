@@ -2,6 +2,8 @@
 
 #include "VideoNode.h"
 #include <QQuickItem>
+#include <QOpenGLTexture>
+#include <QSGTexture>
 
 class QQuickVideoNodeRender : public QQuickItem {
     Q_OBJECT
@@ -22,8 +24,10 @@ signals:
     void chainChanged(int chain);
 
 private:
-    VideoNode *m_videoNode;
     int m_chain;
+    QSharedPointer<VideoNode>m_videoNode;
+    QSharedPointer<QOpenGLTexture> oglTexture;
+    QSharedPointer<QSGTexture> sgTexture;
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;

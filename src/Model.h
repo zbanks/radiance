@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "RenderContext.h"
 #include <QObject>
 #include <QSharedPointer>
 
@@ -17,7 +16,6 @@ public:
 
     Model();
    ~Model() override;
-    RenderContext *context();
 
 public slots:
     QSharedPointer<VideoNode> addVideoNode(QString type);
@@ -36,7 +34,6 @@ protected:
     Edge *getOutputEdge(QSharedPointer<VideoNode> fromVertex);
 
 private:
-    RenderContext *m_context;
     QList<QSharedPointer<VideoNode> > m_vertices;
     QList<Edge> m_edges;
 };

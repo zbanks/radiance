@@ -17,6 +17,7 @@
 #include "main.h"
 
 RenderContextOld *renderContextOld = 0;
+RenderContext *renderContext;
 QSettings *settings = 0;
 QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
@@ -90,6 +91,7 @@ int main(int argc, char *argv[]) {
     renderThread.setObjectName("RenderThread");
     renderContextOld = new RenderContextOld();
     renderContextOld->moveToThread(&renderThread);
+    renderContext = new RenderContext();
     QObject::connect(&renderThread, &QThread::started, renderContextOld, &RenderContextOld::start);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &renderThread, &QThread::quit);
     renderThread.start();

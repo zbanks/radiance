@@ -1,7 +1,10 @@
 #pragma once
 
 #include <QOpenGLTexture>
-#include "VideoNode.h"
+
+class VideoNode;
+
+// The Everpresent God Object (EGO)
 
 class RenderContext : public QObject {
     Q_OBJECT

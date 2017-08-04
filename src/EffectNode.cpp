@@ -5,12 +5,26 @@
 #include <QFileInfo>
 #include "main.h"
 
-Effect::Effect(Model *model)
-    : VideoNode(model),
-    m_intensity(0) {
+EffectNode::EffectNode(RenderContext *context, QString name)
+    : VideoNode(context, 1)
+    , m_intensity(0)
+    , m_name(name) {
 }
 
-void Effect::paint(QOpenGLFramebufferObject *outputFbo) {
+EffectNode::~EffectNode() {
+}
+
+void EffectNode::initialize() {
+    bool result = loadProgram(m_name); // TODO do this in another thread
+    if(!result) emit deleteMe();
+}
+
+void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>>) {
+    m_textures[chain] = nullptr; // Uninitialized
+}
+
+/*
+static QOpenGLTexture *Effect::paint2() {
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -103,26 +117,14 @@ void Effect::paint(QOpenGLFramebufferObject *outputFbo) {
 }
 
 Effect::~Effect() {
-    beforeDestruction();
-    m_programs.clear();
-//    foreach(QOpenGLShaderProgram *p, m_programs)
-//        delete p;
-    m_fbos.clear();
-    m_intermediateFbos.clear();
 }
-
-QSet<VideoNodeOld*> Effect::dependencies() {
-    QSet<VideoNodeOld*> d;
-    if(auto p = previous())
-        d.insert(p);
-    return d;
-}
+*/
 
 // Call this to load shader code into this Effect.
 // This function is thread-safe, avoid calling this in the render thread.
 // A current OpenGL context is required.
 // Returns true if the program was loaded successfully
-bool Effect::loadProgram(QString name) {
+bool EffectNode::loadProgram(QString name) {
     QFile header_file("../resources/glsl/effect_header.glsl");
     if(!header_file.open(QIODevice::ReadOnly)) {
         qDebug() << QString("Could not open \"../resources/effect_header.glsl\"");
@@ -130,8 +132,6 @@ bool Effect::loadProgram(QString name) {
     }
     QTextStream headerStream(&header_file);
     auto headerString = headerStream.readAll();
-
-    auto programs = std::vector<std::unique_ptr<QOpenGLShaderProgram> >{};
 
     for(int i=0;;i++) {
         auto filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
@@ -147,8 +147,8 @@ bool Effect::loadProgram(QString name) {
         }
         QTextStream stream(&file);
         auto s = headerString + stream.readAll();
-        programs.emplace_back(std::make_unique<QOpenGLShaderProgram>());
-        auto && program = programs.back();
+        m_programs.append(QSharedPointer<QOpenGLShaderProgram>::create());
+        auto && program = m_programs.back();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                        "#version 130\n"
                                        "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -164,16 +164,9 @@ bool Effect::loadProgram(QString name) {
         if(!program->link())
             goto err;
     }
-    if(programs.empty()) {
+    if(m_programs.empty()) {
         qDebug() << QString("No shaders found for \"%1\"").arg(name);
         return false;
-    }
-
-    {
-        // Take the program lock so we don't render while swapping out programs
-        QMutexLocker locker(&m_programLock);
-        m_programs.swap(programs);
-        m_regenerateFbos = true;
     }
 
     return true;
@@ -181,17 +174,12 @@ err:
     return false;
 }
 
-qreal Effect::intensity() {
+qreal EffectNode::intensity() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_intensity;
 }
 
-VideoNodeOld *Effect::previous() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    return m_previous;
-}
-
-void Effect::setIntensity(qreal value) {
+void EffectNode::setIntensity(qreal value) {
     Q_ASSERT(QThread::currentThread() == thread());
     {
         if(value > 1) value = 1;
@@ -201,17 +189,4 @@ void Effect::setIntensity(qreal value) {
         m_intensity = value;
     }
     emit intensityChanged(value);
-}
-
-void Effect::setPrevious(VideoNodeOld *value) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    m_previous = value;
-}
-
-QStringList EffectList::effectNames() {
-    auto filters = QStringList{} << QString{"*.0.glsl"};
-    QDir dir("../resources/effects/");
-    dir.setNameFilters(filters);
-    dir.setSorting(QDir::Name);
-    return dir.entryList().replaceInStrings(".0.glsl","");
 }

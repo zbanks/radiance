@@ -1,9 +1,8 @@
 #include "Model.h"
-#include "Effect.h"
+#include "EffectNode.h"
 #include "main.h"
 
-Model::Model()
-    : m_context(renderContext) {
+Model::Model() {
 }
 
 Model::~Model() {
@@ -11,7 +10,7 @@ Model::~Model() {
 
 QSharedPointer<VideoNode> Model::addVideoNode(QString type) {
     // TODO
-    QSharedPointer<VideoNode> videoNode(new Effect(m_context));
+    QSharedPointer<VideoNode> videoNode(new EffectNode(renderContext, "test"));
 
     m_vertices.append(videoNode);
     emit videoNodeAdded(videoNode);
@@ -77,8 +76,4 @@ void Model::removeEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<Vide
             emit edgeRemoved(edgeCopy);
         }
     }
-}
-
-RenderContext *Model::context() {
-    return m_context;
 }

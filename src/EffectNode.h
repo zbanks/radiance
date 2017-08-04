@@ -1,58 +1,37 @@
 #pragma once
 
-#include "VideoNodeOld.h"
+#include "VideoNode.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
-#include <QOpenGLFramebufferObject>
+#include <QOpenGLTexture>
 #include <QMutex>
 
-class Effect : public VideoNodeOld {
+class EffectNode : public VideoNode {
     Q_OBJECT
 
 public:
-    Effect(RenderContextOld *context);
-    ~Effect();
-    bool loadProgram(QString name);
-    QSet<VideoNodeOld*> dependencies();
-
-    static constexpr qreal MAX_INTEGRAL = 1024;
-    static constexpr qreal FPS = 60;
+    EffectNode(RenderContext *context, QString name);
+    ~EffectNode();
 
 public slots:
+    void initialize() override;
     qreal intensity();
-    VideoNodeOld *previous();
-
     void setIntensity(qreal value);
-    void setPrevious(VideoNodeOld *value);
+    void paint(int chain, QVector<QSharedPointer<QOpenGLTexture>>) override;
 
 signals:
     void intensityChanged(qreal value);
-    void previousChanged(VideoNodeOld *value);
 
 private:
-    std::vector<std::shared_ptr<QOpenGLFramebufferObject> > fbos;
+    QVector<QVector<QSharedPointer<QOpenGLTexture> > > fbos;
+    QVector<int> m_fboIndex;
+    QVector<QSharedPointer<QOpenGLShaderProgram> > m_programs;
 
-    std::vector<std::vector<std::shared_ptr<QOpenGLFramebufferObject>>> m_intermediateFbos;
-    std::vector<std::unique_ptr<QOpenGLShaderProgram> > m_programs;
-    int m_fboIndex;
-
-    void initialize();
-    void paint();
+    bool loadProgram(QString name);
 
     qreal m_intensity;
     qreal m_intensityIntegral;
     qreal m_realTime;
     qreal m_realTimeLast;
-    VideoNodeOld *m_previous;
-
-    QMutex m_programLock;
-
-    bool m_regenerateFbos;
+    QString m_name;
 };
-
-class EffectList : public QObject {
-    Q_OBJECT
-public:
-    Q_INVOKABLE static QStringList effectNames();
-};
-

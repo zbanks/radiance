@@ -12,11 +12,12 @@ QQuickVideoNodeRender::~QQuickVideoNodeRender() {
 }
 
 VideoNode *QQuickVideoNodeRender::videoNode() {
-    return m_videoNode;
+    return m_videoNode.data(); // TODO instead of exposing this pointer,
+    // expose a hash which is looked up in the model.
 }
 
 void QQuickVideoNodeRender::setVideoNode(VideoNode *videoNode) {
-    m_videoNode = videoNode;
+    m_videoNode = QSharedPointer<VideoNode>(videoNode);
     emit videoNodeChanged(videoNode);
 }
 
@@ -30,15 +31,15 @@ void QQuickVideoNodeRender::setChain(int chain) {
 }
 
 QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
-    QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
+    QSGImageNode *node = static_cast<QSGImageNode *>(oldNode); // TODO non-smart pointer is leaky?
     if (!node) {
         node = window()->createImageNode();
     }
-    if (m_chain >= 0 && m_videoNode != nullptr) {
+    if (m_chain >= 0 && !m_videoNode.isNull()) {
         // TODO repeatedly creating the QSGTexture is probably not the most efficient
-        QOpenGLTexture *oglTexture = m_videoNode->texture(m_chain);
-        QSGTexture *sgTexture = window()->createTextureFromId(oglTexture->textureId(), QSize(oglTexture->width(), oglTexture->height()));
-        node->setTexture(sgTexture);
+        oglTexture = m_videoNode->texture(m_chain);
+        sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(oglTexture->textureId(), QSize(oglTexture->width(), oglTexture->height())));
+        node->setTexture(sgTexture.data());
     }
     node->setRect(boundingRect()); // TODO unnecessary?
     return node;
