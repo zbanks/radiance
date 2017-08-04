@@ -8,19 +8,24 @@
 
 class EffectNode : public VideoNode {
     Q_OBJECT
+    Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
 
 public:
-    EffectNode(RenderContext *context, QString name);
+    EffectNode();
     ~EffectNode();
 
 public slots:
     void initialize() override;
     qreal intensity();
+    QString name();
     void setIntensity(qreal value);
+    void setName(QString name);
     void paint(int chain, QVector<QSharedPointer<QOpenGLTexture>>) override;
 
 signals:
     void intensityChanged(qreal value);
+    void nameChanged(QString name);
 
 private:
     QVector<QVector<QSharedPointer<QOpenGLTexture> > > fbos;

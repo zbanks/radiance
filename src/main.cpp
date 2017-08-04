@@ -14,6 +14,7 @@
 #include "VideoNode.h"
 #include "QQuickVideoNodeRender.h"
 #include "Model.h"
+#include "EffectNode.h"
 #include "main.h"
 
 RenderContextOld *renderContextOld = 0;
@@ -68,6 +69,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
+    qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
 
     qmlRegisterUncreatableType<VideoNodeOld>("radiance", 1, 0, "VideoNodeOld", "VideoNodeOld is abstract and cannot be instantiated");
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNodeUI", "VideoNodeUI is abstract and cannot be instantiated");

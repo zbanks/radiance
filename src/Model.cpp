@@ -20,7 +20,7 @@ void Model::removeVideoNode(VideoNode *videoNode) {
         if (edge->fromVertex == videoNode || edge->toVertex == videoNode) {
             auto edgeCopy = *edge;
             m_edges.erase(edge);
-            emit edgeRemoved(edgeCopy);
+            emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
         }
     }
 
@@ -43,7 +43,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
                 return;
             Edge edgeCopy = *edge;
             m_edges.erase(edge);
-            emit edgeRemoved(edgeCopy);
+            emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
         }
     }
 
@@ -53,7 +53,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
         .toInput = toInput,
     };
     m_edges.append(newEdge);
-    emit edgeAdded(newEdge);
+    emit edgeAdded(newEdge.fromVertex, newEdge.toVertex, newEdge.toInput);
 }
 
 void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
@@ -70,7 +70,7 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
 
             auto edgeCopy = *edge;
             m_edges.erase(edge);
-            emit edgeRemoved(edgeCopy);
+            emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
         }
     }
 }

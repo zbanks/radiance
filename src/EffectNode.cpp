@@ -5,10 +5,9 @@
 #include <QFileInfo>
 #include "main.h"
 
-EffectNode::EffectNode(RenderContext *context, QString name)
-    : VideoNode(context, 1)
-    , m_intensity(0)
-    , m_name(name) {
+EffectNode::EffectNode()
+    : VideoNode(renderContext, 1)
+    , m_intensity(0) {
 }
 
 EffectNode::~EffectNode() {
@@ -189,4 +188,15 @@ void EffectNode::setIntensity(qreal value) {
         m_intensity = value;
     }
     emit intensityChanged(value);
+}
+
+QString EffectNode::name() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_name;
+}
+
+void EffectNode::setName(QString name) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    m_name = name;
+    emit nameChanged(name);
 }

@@ -8,12 +8,6 @@ class Model : public QObject {
     Q_OBJECT
 
 public:
-    struct Edge {
-        VideoNode *fromVertex;
-        VideoNode *toVertex;
-        int toInput;
-    };
-
     Model();
    ~Model() override;
 
@@ -26,14 +20,20 @@ public slots:
 signals:
     void videoNodeAdded(VideoNode *videoNode);
     void videoNodeRemoved(VideoNode *videoNode);
-    void edgeAdded(Edge edge);
-    void edgeRemoved(Edge edge);
+    void edgeAdded(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
+    void edgeRemoved(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
 
 protected:
-    Edge *getInputEdge(VideoNode *toVertex, int toInput);
-    Edge *getOutputEdge(VideoNode *fromVertex);
+//    Edge *getInputEdge(VideoNode *toVertex, int toInput);
+//    Edge *getOutputEdge(VideoNode *fromVertex);
 
 private:
+    struct Edge {
+        VideoNode *fromVertex;
+        VideoNode *toVertex;
+        int toInput;
+    };
+
     QList<VideoNode *> m_vertices;
     QList<Edge> m_edges;
 };
