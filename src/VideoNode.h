@@ -3,6 +3,7 @@
 #include "RenderContext.h"
 #include <QObject>
 #include <QOpenGLTexture>
+#include <QSharedPointer>
 
 class Model;
 

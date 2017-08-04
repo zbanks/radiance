@@ -2,15 +2,15 @@
 
 #include "VideoNode.h"
 #include <QObject>
-#include <QSharedPointer>
+#include <QList>
 
 class Model : public QObject {
     Q_OBJECT
 
 public:
     struct Edge {
-        QSharedPointer<VideoNode> fromVertex;
-        QSharedPointer<VideoNode> toVertex;
+        VideoNode *fromVertex;
+        VideoNode *toVertex;
         int toInput;
     };
 
@@ -18,22 +18,22 @@ public:
    ~Model() override;
 
 public slots:
-    QSharedPointer<VideoNode> addVideoNode(QString type);
-    void removeVideoNode(QSharedPointer<VideoNode> videoNode);
-    void addEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNode> toVertex, int toInput);
-    void removeEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNode> toVertex, int toInput);
+    void addVideoNode(VideoNode *videoNode);
+    void removeVideoNode(VideoNode *videoNode);
+    void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
+    void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
 
 signals:
-    void videoNodeAdded(QSharedPointer<VideoNode> videoNode);
-    void videoNodeRemoved(QSharedPointer<VideoNode> videoNode);
+    void videoNodeAdded(VideoNode *videoNode);
+    void videoNodeRemoved(VideoNode *videoNode);
     void edgeAdded(Edge edge);
     void edgeRemoved(Edge edge);
 
 protected:
-    Edge *getInputEdge(QSharedPointer<VideoNode> toVertex, int toInput);
-    Edge *getOutputEdge(QSharedPointer<VideoNode> fromVertex);
+    Edge *getInputEdge(VideoNode *toVertex, int toInput);
+    Edge *getOutputEdge(VideoNode *fromVertex);
 
 private:
-    QList<QSharedPointer<VideoNode> > m_vertices;
+    QList<VideoNode *> m_vertices;
     QList<Edge> m_edges;
 };
