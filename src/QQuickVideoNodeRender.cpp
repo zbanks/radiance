@@ -12,8 +12,7 @@ QQuickVideoNodeRender::~QQuickVideoNodeRender() {
 }
 
 VideoNode *QQuickVideoNodeRender::videoNode() {
-    return m_videoNode.data(); // TODO instead of exposing this pointer,
-    // expose a hash which is looked up in the model.
+    return m_videoNode.data();
 }
 
 void QQuickVideoNodeRender::setVideoNode(VideoNode *videoNode) {

@@ -72,3 +72,49 @@ QSharedPointer<QOpenGLTexture> RenderContext::noiseTexture(int chain) {
 QSharedPointer<QOpenGLTexture> RenderContext::blankTexture() {
     return m_blankTexture;
 }
+
+void RenderContext::render(Model *model, int chain) {
+    qDebug() << "RENDER!" << model << chain;
+}
+
+void RenderContext::addRenderTrigger(QQuickWindow *window, Model *model, int chain) {
+    RenderTrigger rt(this, model, chain, window);
+    if(m_renderTriggers.contains(rt)) return;
+    m_renderTriggers.append(rt);
+    connect(window, &QQuickWindow::beforeSynchronizing, &m_renderTriggers.back(), &RenderTrigger::render, Qt::DirectConnection);
+}
+
+void RenderContext::removeRenderTrigger(QQuickWindow *window, Model *model, int chain) {
+    RenderTrigger rt(this, model, chain, window);
+    m_renderTriggers.removeAll(rt);
+}
+
+// RenderTrigger methods
+
+RenderTrigger::RenderTrigger(RenderContext *context, Model *model, int chain, QObject *obj)
+        : m_context(context)
+        , m_model(model)
+        , m_chain(chain)
+        , m_obj(obj) {
+}
+
+RenderTrigger::~RenderTrigger() {
+}
+
+void RenderTrigger::render() {
+    m_context->render(m_model, m_chain);
+}
+
+bool RenderTrigger::operator==(const RenderTrigger &other) const {
+    return m_context == other.m_context
+        && m_model == other.m_model
+        && m_chain == other.m_chain
+        && m_obj == other.m_obj;
+}
+
+RenderTrigger::RenderTrigger(const RenderTrigger& other)
+    : m_context(other.m_context)
+    , m_model(other.m_model)
+    , m_chain(other.m_chain)
+    , m_obj(other.m_obj) {
+}

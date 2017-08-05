@@ -5,7 +5,7 @@
 VideoNode::VideoNode(RenderContext *context, int inputCount)
     : m_context(context)
     , m_inputCount(inputCount)
-    , m_textures(inputCount) {
+    , m_textures(context->chainCount()) {
 }
 
 VideoNode::~VideoNode() {

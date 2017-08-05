@@ -7,7 +7,7 @@
 #include <QOpenGLTexture>
 #include <QMutex>
 
-class EffectNode : public VideoNode {
+class EffectNode : public VideoNode, protected QOpenGLFunctions {
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
@@ -19,13 +19,15 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
+    void paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) override;
+
 public slots:
     void initialize() override;
     qreal intensity();
     QString name();
     void setIntensity(qreal value);
     void setName(QString name);
-    void paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) override;
+    void tempPaint();
 
 signals:
     void intensityChanged(qreal value);

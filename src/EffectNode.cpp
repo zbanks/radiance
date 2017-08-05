@@ -5,6 +5,9 @@
 #include <QFileInfo>
 #include "main.h"
 
+#include <QImage>
+#include <QOpenGLFramebufferObject>
+
 EffectNode::EffectNode()
     : VideoNode(renderContext, 1)
     , m_intensity(0) {
@@ -16,6 +19,7 @@ EffectNode::~EffectNode() {
 void EffectNode::initialize() {
     m_initialized = false;
     qDebug() << "Initializing";
+    initializeOpenGLFunctions();
     bool result = loadProgram(m_name); // TODO do this in another thread
     if(!result) {
         emit deleteMe();
@@ -36,10 +40,26 @@ void EffectNode::initialize() {
 
     m_fbos.clear();
     for(int i=0; i<m_context->chainCount(); i++) {
-        m_fbos.append(QSharedPointer<FramebufferObject>::create());
+        m_fbos.append(QSharedPointer<FramebufferObject>(new FramebufferObject()));
     }
 
     m_initialized = true;
+}
+
+void EffectNode::tempPaint() {
+    m_context->initialize();
+    initialize();
+    QVector<QSharedPointer<QOpenGLTexture>> inp;
+    inp.append(m_context->blankTexture());
+    qDebug() << "Input textures:" << inp;
+    paint(0, inp);
+    qDebug() << "Output textures:" << m_textures;
+	QOpenGLFramebufferObjectFormat fmt;
+    fmt.setTextureTarget(texture(0)->textureId());
+    QOpenGLFramebufferObject fbo(m_context->chainSize(0), fmt);
+    QImage img = fbo.toImage();
+    img.save("out.png");
+    qDebug() << "Saved to out.png";
 }
 
 void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) {

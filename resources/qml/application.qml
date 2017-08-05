@@ -25,15 +25,16 @@ ApplicationWindow {
     }
 
     EffectNode {
-        id: en;
-        name: "test";
+        id: en
+        name: "test"
     }
 
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
-        en.initialize();
         model.addVideoNode(en);
+        RenderContext.addRenderTrigger(window, model, 0);
+        //en.tempPaint();
     }
 
     Action {
@@ -41,5 +42,4 @@ ApplicationWindow {
         text: "&Quit"
         onTriggered: Qt.quit()
     }
-
 }

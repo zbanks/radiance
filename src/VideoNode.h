@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QOpenGLTexture>
 #include <QSharedPointer>
+#include <QOpenGLFunctions>
 
 class Model;
 
