@@ -1,0 +1,5 @@
+build
+.*.swp
+.*.swn
+.*.swo
+*.o
