@@ -38,7 +38,6 @@ public:
     RenderContext();
    ~RenderContext() override;
     void initialize();
-    QOpenGLTexture *texture(int chain, VideoNode *videoNode);
     int chainCount();
     QSize chainSize(int chain);
     QSharedPointer<QOpenGLTexture> noiseTexture(int chain);

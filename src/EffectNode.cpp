@@ -63,8 +63,10 @@ void EffectNode::tempPaint() {
 }
 
 void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) {
+    qDebug() << "calling paint" << chain << this;
     if(!m_initialized) {
         m_textures[chain] = nullptr; // Uninitialized
+        qDebug() << "but uninitialized :(";
         return;
     }
 

@@ -47,10 +47,6 @@ void RenderContext::initialize() {
     m_initialized = true;
 }
 
-QOpenGLTexture *RenderContext::texture(int chain, VideoNode *videoNode) {
-    return nullptr; // TODO
-}
-
 int RenderContext::chainCount() {
     return 2;
 }
@@ -76,7 +72,34 @@ QSharedPointer<QOpenGLTexture> RenderContext::blankTexture() {
 
 void RenderContext::render(Model *model, int chain) {
     qDebug() << "RENDER!" << model << chain;
-    qDebug() << model->graph().vertices();
+    ModelGraph graph = model->graph();
+
+    // inputs is parallel to vertices
+    // and contains the VideoNodes connected to the
+    // corresponding vertex's inputs
+    QVector<QVector<int> > inputs;
+    for (int i=0; i<graph.vertices().count(); i++) {
+        auto inputCount = graph.vertices().at(i)->inputCount();
+        inputs.append(QVector<int>(inputCount, -1));
+    }
+    for (auto edge = graph.edges().begin(); edge != graph.edges().end(); edge++) {
+        inputs[edge->toVertex][edge->toInput] = edge->fromVertex;
+    }
+
+    for (int i=0; i<graph.vertices().count(); i++) {
+        auto vertex = graph.vertices().at(i);
+        QVector<QSharedPointer<QOpenGLTexture> > inputTextures(vertex->inputCount(), blankTexture());
+        for (int j=0; j<vertex->inputCount(); j++) {
+            auto fromVertex = inputs.at(i).at(j);
+            if (fromVertex != -1) {
+                auto inpTexture = graph.vertices().at(fromVertex)->texture(chain);
+                if (!inpTexture.isNull()) {
+                    inputTextures[j] = inpTexture;
+                }
+            }
+        }
+        vertex->paint(chain, inputTextures);
+    }
 }
 
 void RenderContext::addRenderTrigger(QQuickWindow *window, Model *model, int chain) {
