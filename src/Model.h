@@ -20,6 +20,7 @@ struct ModelGraphEdge {
 };
 
 // This class is a snapshot of the model
+// The vertex list is always in topo-sorted order
 class ModelGraph : public QObject {
     Q_OBJECT
     Q_PROPERTY(QQmlListProperty<VideoNode> vertices READ qmlVertices)
@@ -27,7 +28,7 @@ class ModelGraph : public QObject {
 
 public:
     ModelGraph();
-    ModelGraph(QList<VideoNode *> vertices, QList<Edge> edges);
+    ModelGraph(QVector<VideoNode *> vertices, QList<Edge> edges);
     ModelGraph(const ModelGraph &other);
     int vertexCount() const;
     VideoNode *vertexAt(int index) const;
@@ -36,10 +37,10 @@ public:
     ModelGraph& operator=(const ModelGraph&);
 
 public slots:
-    QVector<VideoNode *> vertices();
-    QVector<ModelGraphEdge> edges();
+    QVector<VideoNode *> vertices() const;
+    QVector<ModelGraphEdge> edges() const;
     QQmlListProperty<VideoNode> qmlVertices();
-    QVariantList qmlEdges();
+    QVariantList qmlEdges() const;
 
 private:
     QVector<VideoNode *> m_vertices;
@@ -75,8 +76,9 @@ signals:
 protected:
 //    Edge *getInputEdge(VideoNode *toVertex, int toInput);
 //    Edge *getOutputEdge(VideoNode *fromVertex);
-    void regenerateGraph();
+    void regenerateGraph(QVector<VideoNode *> sortedVertices);
     void emitGraphChanged();
+    QVector<VideoNode *> topoSort();
 
 private:
     QList<VideoNode *> m_vertices;

@@ -59,7 +59,7 @@ private:
     void createNoiseTextures();
     void createBlankTexture();
     void createOpenGLContext();
-    QList<VideoNode*> topoSort(const ModelGraph &graph);
+    QList<int> topoSort(const ModelGraph &graph);
     bool m_initialized;
     QVector<QSharedPointer<QOpenGLTexture> > m_noiseTextures;
     QSharedPointer<QOpenGLTexture> m_blankTexture;

@@ -11,7 +11,7 @@ Model::~Model() {
 void Model::addVideoNode(VideoNode *videoNode) {
     if (!m_vertices.contains(videoNode)) {
         m_vertices.append(videoNode);
-        regenerateGraph();
+        regenerateGraph(topoSort());
         emit videoNodeAdded(videoNode);
         emitGraphChanged();
     }
@@ -30,7 +30,7 @@ void Model::removeVideoNode(VideoNode *videoNode) {
     int count = m_vertices.removeAll(videoNode);
 
     if (removed.count() > 0 || count > 0) {
-        regenerateGraph();
+        regenerateGraph(topoSort());
         for (auto edge = removed.begin(); edge != removed.end(); edge++) {
             emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
         }
@@ -51,6 +51,8 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
 
     QList<Edge> removed;
 
+    QList<Edge> edgesOld;
+
     for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
         if (edge->toVertex == toVertex && edge->toInput == toInput) {
             if (edge->fromVertex == fromVertex)
@@ -67,7 +69,13 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
         .toInput = toInput,
     };
     m_edges.append(newEdge);
-    regenerateGraph();
+    QVector<VideoNode *> sortedVertices = topoSort();
+    if(sortedVertices.count() < m_vertices.count()) {
+        // Roll back changes if a cycle was detected
+        m_edges = edgesOld;
+        return;
+    }
+    regenerateGraph(sortedVertices);
     for (auto edge = removed.begin(); edge != removed.end(); edge++) {
         emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
     }
@@ -89,7 +97,7 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
 
             auto edgeCopy = *edge;
             m_edges.erase(edge);
-            regenerateGraph();
+            regenerateGraph(topoSort());
             emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
             emitGraphChanged();
             return;
@@ -97,11 +105,8 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
     }
 }
 
-void Model::regenerateGraph() {
-    // TODO store this object and only return a new one
-    // if the graph has changed
-    // (making these is sort of expensive)
-    m_graph = ModelGraph(m_vertices, m_edges);
+void Model::regenerateGraph(QVector<VideoNode *> sortedVertices) {
+    m_graph = ModelGraph(sortedVertices, m_edges);
 }
 
 void Model::emitGraphChanged() {
@@ -119,13 +124,65 @@ ModelGraph *Model::qmlGraph() {
     return mg;
 }
 
+QVector<VideoNode *> Model::topoSort() {
+    // Kahn's algorithm from Wikipedia
+
+    QList<Edge> edges = m_edges;
+
+    QVector<VideoNode *> l;
+    QList<VideoNode *> s;
+    {
+        QSet<VideoNode *> sSet;
+        // Populate s, the start nodes
+        for (auto v = m_vertices.begin(); v != m_vertices.end(); v++) {
+            sSet.insert(*v);
+        }
+        for (auto e = edges.begin(); e != edges.end(); e++) {
+            sSet.remove(e->toVertex);
+        }
+        s = sSet.values();
+    }
+
+    while(!s.empty()) {
+        // Put a start node into the sorted list
+        auto n = s.takeFirst();
+        l.append(n);
+
+        QSet<VideoNode *> newStartNodes; // Potential new start nodes
+        for (auto e = edges.begin(); e != edges.end(); e++) {
+            // Remove edges originating from the node we just took
+            if (e->fromVertex == n) {
+                newStartNodes.insert(e->toVertex);
+                edges.erase(e);
+                // Any node pointed to by one of these deleted edges
+                // is a potential new start node
+            }
+        }
+        // Prune the potential new start nodes down to just the ones
+        // with no edges
+        for (auto e = edges.begin(); e != edges.end(); e++) {
+            newStartNodes.remove(e->toVertex);
+        }
+        // Add them to s
+        for (auto newStartNode = newStartNodes.begin(); newStartNode != newStartNodes.end(); newStartNode++) {
+            s.append(*newStartNode);
+        }
+    }
+
+    // If there are edges left, they are part of cycles
+    if(!edges.empty()) {
+        qDebug() << "Cycle detected!";
+    }
+    return l;
+}
+
 // ModelGraph methods
 
 ModelGraph::ModelGraph() {
 }
 
-ModelGraph::ModelGraph(QList<VideoNode *> vertices, QList<Edge> edges)
-    : m_vertices(QVector<VideoNode *>::fromList(vertices)) {
+ModelGraph::ModelGraph(QVector<VideoNode *> vertices, QList<Edge> edges)
+    : m_vertices(vertices) {
     QMap<VideoNode *, int> map;
     int i = 0;
     for (int i=0; i<m_vertices.count(); i++) {
@@ -146,11 +203,11 @@ ModelGraph::ModelGraph(const ModelGraph &other)
     , m_edges(other.m_edges) {
 }
 
-QVector<VideoNode *> ModelGraph::vertices() {
+QVector<VideoNode *> ModelGraph::vertices() const {
     return m_vertices;
 }
 
-QVector<ModelGraphEdge> ModelGraph::edges() {
+QVector<ModelGraphEdge> ModelGraph::edges() const {
     return m_edges;
 }
 
@@ -166,7 +223,7 @@ VideoNode *ModelGraph::vertexAt(int index) const {
     return m_vertices.at(index);
 }
 
-QVariantList ModelGraph::qmlEdges() {
+QVariantList ModelGraph::qmlEdges() const {
     QVariantList edges;
     for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
         QVariantMap vedge;
