@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterUncreatableType<VideoNodeOld>("radiance", 1, 0, "VideoNodeOld", "VideoNodeOld is abstract and cannot be instantiated");
     qmlRegisterUncreatableType<VideoNodeUI>("radiance", 1, 0, "VideoNodeUI", "VideoNodeUI is abstract and cannot be instantiated");
     qmlRegisterType<EffectUI>("radiance", 1, 0, "Effect");
-    qmlRegisterType<QQuickVideoNodeRender>("radiance", 1, 0, "VideoNodeOldRender");
+    qmlRegisterType<QQuickVideoNodeRender>("radiance", 1, 0, "VideoNodeRender");
     qmlRegisterType<CrossFaderUI>("radiance", 1, 0, "CrossFader");
     qmlRegisterType<OutputUI>("radiance", 1, 0, "Output");
     qmlRegisterType<GraphicalDisplayUI>("radiance", 1, 0, "GraphicalDisplay");

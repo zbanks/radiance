@@ -43,7 +43,7 @@ public:
 
     // Returns the output texture
     // for the given chain
-    // or nullptr if the node is not ready for any reason
+    // or 0 if the node is not ready for any reason
     QSharedPointer<QOpenGLTexture> texture(int chain);
 
 protected:

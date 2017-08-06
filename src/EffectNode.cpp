@@ -5,8 +5,7 @@
 #include <QFileInfo>
 #include "main.h"
 
-#include <QImage>
-#include <QOpenGLFramebufferObject>
+#include <iostream>
 
 EffectNode::EffectNode()
     : VideoNode(renderContext, 1)
@@ -36,7 +35,9 @@ void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
             auto tex = QSharedPointer<QOpenGLTexture>(new QOpenGLTexture(QOpenGLTexture::Target2D));
             auto size = m_context->chainSize(i);
             tex->setSize(size.width(), size.height());
-            tex->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+            //tex->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::NoPixelType);
+            tex->bind();
+	        glFuncs->glTexImage2D(tex->target(), 0, GL_RGBA, tex->width(), tex->height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
             m_intermediate[i].append(tex);
         }
     }
@@ -59,7 +60,7 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
         return;
     }
 
-    glClearColor(0, 0, 0, 0);
+    glClearColor(0, 0, 1., 1.);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
@@ -75,6 +76,8 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
         double audioLow = 0;
         double audioLevel = 0;
         audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
+
+        QOpenGLFramebufferObject fbo(300, 300);
 
         {
             auto size = m_context->chainSize(chain);
@@ -114,6 +117,11 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
                     p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
                     p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                    //fbo.toImage().save("out.png");
+                    //qDebug() << "saved out.png";
+
+                    m_fbos[chain]->release();
                     p->release();
                 }
 

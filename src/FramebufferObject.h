@@ -4,7 +4,7 @@
 
 // Very simple RAII FBO class
 
-class FramebufferObject : private QOpenGLFunctions {
+class FramebufferObject {
 public:
     FramebufferObject(QOpenGLFunctions *glFuncs);
    ~FramebufferObject();
@@ -12,6 +12,7 @@ public:
     void bind();
     void release();
     void setTexture(GLuint textureId);
+    GLuint fboId();
 
 private:
     QOpenGLFunctions *m_glFuncs;

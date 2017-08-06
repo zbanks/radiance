@@ -21,6 +21,7 @@ public:
     RenderTrigger(const RenderTrigger&);
    ~RenderTrigger();
     bool operator==(const RenderTrigger &other) const;
+    RenderTrigger& operator=(const RenderTrigger&);
 public slots:
     void render();
 private:

@@ -145,11 +145,18 @@ bool RenderTrigger::operator==(const RenderTrigger &other) const {
         && m_obj == other.m_obj;
 }
 
-RenderTrigger::RenderTrigger(const RenderTrigger& other)
+RenderTrigger::RenderTrigger(const RenderTrigger &other)
     : m_context(other.m_context)
     , m_model(other.m_model)
     , m_chain(other.m_chain)
     , m_obj(other.m_obj) {
+}
+
+RenderTrigger& RenderTrigger::operator=(const RenderTrigger &other) {
+    m_context = other.m_context;
+    m_model = other.m_model;
+    m_chain = other.m_chain;
+    m_obj = other.m_obj;
 }
 
 // RenderContextOpenGLWorker methods

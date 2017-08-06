@@ -2,10 +2,12 @@
 #include <QSGImageNode>
 #include <QQuickWindow>
 #include <QOpenGLTexture>
+#include <QOpenGLFramebufferObject>
 
 QQuickVideoNodeRender::QQuickVideoNodeRender()
     : m_videoNode(nullptr)
     , m_chain(-1) {
+    setFlags(QQuickItem::ItemHasContents);
 }
 
 QQuickVideoNodeRender::~QQuickVideoNodeRender() {
@@ -30,16 +32,25 @@ void QQuickVideoNodeRender::setChain(int chain) {
 }
 
 QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
+    qDebug() << "updatePaintNode";
     QSGImageNode *node = static_cast<QSGImageNode *>(oldNode); // TODO non-smart pointer is leaky?
-    if (!node) {
-        node = window()->createImageNode();
-    }
     if (m_chain >= 0 && !m_videoNode.isNull()) {
-        // TODO repeatedly creating the QSGTexture is probably not the most efficient
         oglTexture = m_videoNode->texture(m_chain);
-        sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(oglTexture->textureId(), QSize(oglTexture->width(), oglTexture->height())));
-        node->setTexture(sgTexture.data());
+        if (!oglTexture.isNull()) {
+            // TODO repeatedly creating the QSGTexture is probably not the most efficient
+            sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(oglTexture->textureId(),
+                                                                                 QSize(oglTexture->width(), oglTexture->height()),
+                                                                                 QQuickWindow::TextureHasAlphaChannel));
+            if (!node) {
+                node = window()->createImageNode();
+                node->setFiltering(QSGTexture::Linear);
+                node->setTextureCoordinatesTransform(QSGImageNode::MirrorVertically);
+            }
+
+            node->setTexture(sgTexture.data());
+            node->markDirty(QSGNode::DirtyForceUpdate);
+            if(node) node->setRect(boundingRect());
+        }
     }
-    node->setRect(boundingRect()); // TODO unnecessary?
     return node;
 }

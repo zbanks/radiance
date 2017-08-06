@@ -29,11 +29,30 @@ ApplicationWindow {
 
     EffectNode {
         id: en
-        name: "test"
+        name: "wwave"
+        intensity: 1
     }
     EffectNode {
         id: en2
-        name: "test"
+        name: "wwave"
+        intensity: 1
+    }
+    Rectangle {
+        color: "#FF0000"
+        width: 500
+        height: 500
+        VideoNodeRender {
+            id: vnr
+            anchors.fill: parent
+            chain: 0
+            videoNode: en
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                vnr.update()
+            }
+        }
     }
 
     Component.onCompleted: {
