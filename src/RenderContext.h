@@ -1,10 +1,9 @@
 #pragma once
 
+#include "OpenGLWorker.h"
 #include <QOpenGLTexture>
 #include <QSharedPointer>
 #include <QVector>
-#include <QOpenGLContext>
-#include <QOffscreenSurface>
 #include <QQuickWindow>
 
 // The Everpresent God Object (EGO)
@@ -31,18 +30,33 @@ private:
     QObject *m_obj; // Object is only needed for equality check in removeRenderTrigger
 };
 
+class RenderContextOpenGLWorker : public OpenGLWorker {
+    Q_OBJECT
+
+public:
+    RenderContextOpenGLWorker(RenderContext *p);
+public slots:
+    void initialize();
+signals:
+    void initialized();
+protected:
+    RenderContext *m_p;
+};
+
 class RenderContext : public QObject {
     Q_OBJECT
 
 public:
     RenderContext();
    ~RenderContext() override;
-    void initialize();
     int chainCount();
     QSize chainSize(int chain);
     QSharedPointer<QOpenGLTexture> noiseTexture(int chain);
     QSharedPointer<QOpenGLTexture> blankTexture();
     void makeCurrent();
+
+    // Called from the OpenGLWorkerContext,
+    void initialize();
 
 public slots:
     void render(Model *m, int chain);
@@ -56,6 +70,9 @@ public slots:
     // In the future we can override this function so that
     // more than just QQuickWindows can trigger renders
 
+protected slots:
+    void onInitialized();
+
 private:
     void createNoiseTextures();
     void createBlankTexture();
@@ -64,7 +81,6 @@ private:
     bool m_initialized;
     QVector<QSharedPointer<QOpenGLTexture> > m_noiseTextures;
     QSharedPointer<QOpenGLTexture> m_blankTexture;
-    QSharedPointer<QOpenGLContext> m_context;
-    QSharedPointer<QOffscreenSurface> m_surface;
     QList<RenderTrigger> m_renderTriggers;
+    RenderContextOpenGLWorker m_openGLWorker;
 };

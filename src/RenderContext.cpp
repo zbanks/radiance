@@ -1,6 +1,7 @@
+#include "main.h"
 #include "RenderContext.h"
-#include <memory>
 #include "Model.h"
+#include <memory>
 
 void RenderContext::createNoiseTextures() {
     m_noiseTextures.clear();
@@ -34,16 +35,22 @@ void RenderContext::createBlankTexture() {
     m_blankTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 }
 
-RenderContext::RenderContext() {
+RenderContext::RenderContext()
+    : m_openGLWorker(this)
+    , m_initialized(false) {
+    connect(&m_openGLWorker, &RenderContextOpenGLWorker::initialized, this, &RenderContext::onInitialized);
+    Q_ASSERT(QMetaObject::invokeMethod(&m_openGLWorker, "initialize"));
 }
 
 RenderContext::~RenderContext() {
 }
 
 void RenderContext::initialize() {
-    m_initialized = false;
     createBlankTexture();
     createNoiseTextures();
+}
+
+void RenderContext::onInitialized() {
     m_initialized = true;
 }
 
@@ -143,3 +150,17 @@ RenderTrigger::RenderTrigger(const RenderTrigger& other)
     , m_chain(other.m_chain)
     , m_obj(other.m_obj) {
 }
+
+// RenderContextOpenGLWorker methods
+
+RenderContextOpenGLWorker::RenderContextOpenGLWorker(RenderContext *p)
+    : OpenGLWorker(openGLWorkerContext)
+    , m_p(p) {
+}
+
+void RenderContextOpenGLWorker::initialize() {
+    makeCurrent();
+    m_p->initialize();
+    emit initialized();
+}
+
