@@ -31,4 +31,8 @@ private:
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
+    QQuickWindow *m_window;
+
+protected slots:
+    void onWindowChanged(QQuickWindow *window);
 };

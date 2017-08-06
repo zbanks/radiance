@@ -78,7 +78,7 @@ QSharedPointer<QOpenGLTexture> RenderContext::blankTexture() {
 }
 
 void RenderContext::render(Model *model, int chain) {
-    qDebug() << "RENDER!" << model << chain;
+    //qDebug() << "RENDER!" << model << chain;
     ModelGraph graph = model->graph();
 
     // inputs is parallel to vertices

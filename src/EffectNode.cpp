@@ -35,9 +35,10 @@ void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
             auto tex = QSharedPointer<QOpenGLTexture>(new QOpenGLTexture(QOpenGLTexture::Target2D));
             auto size = m_context->chainSize(i);
             tex->setSize(size.width(), size.height());
-            //tex->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::NoPixelType);
+            // This is a bit of hack, since tex->allocateStorage will create immutable storage
             tex->bind();
 	        glFuncs->glTexImage2D(tex->target(), 0, GL_RGBA, tex->width(), tex->height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+            // for now, don't expect the texture backing the QOpenGLTexture to match, except for size
             m_intermediate[i].append(tex);
         }
     }
