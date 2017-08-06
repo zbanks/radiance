@@ -6,7 +6,7 @@
 
 class FramebufferObject : private QOpenGLFunctions {
 public:
-    FramebufferObject();
+    FramebufferObject(QOpenGLFunctions *glFuncs);
    ~FramebufferObject();
 
     void bind();
@@ -14,6 +14,7 @@ public:
     void setTexture(GLuint textureId);
 
 private:
+    QOpenGLFunctions *m_glFuncs;
     GLuint m_fboId;
     int m_texture;
 };

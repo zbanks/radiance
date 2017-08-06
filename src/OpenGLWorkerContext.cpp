@@ -32,9 +32,19 @@ void OpenGLWorkerContext::initialize() {
         surface->create();
         m_surface = surface;
     }
-    qDebug() << "OpenGLWorkerContext initialized";
+    makeCurrent();
+    m_glFuncs = QSharedPointer<QOpenGLFunctions>(new QOpenGLFunctions(m_context.data()));
 }
 
 void OpenGLWorkerContext::makeCurrent() {
+    qDebug() << "Make context current" << this;
     m_context->makeCurrent(m_surface.data());
+}
+
+QOpenGLContext *OpenGLWorkerContext::context() {
+    return m_context.data();
+}
+
+QOpenGLFunctions *OpenGLWorkerContext::glFuncs() {
+    return m_glFuncs.data();
 }

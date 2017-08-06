@@ -10,26 +10,29 @@
 
 EffectNode::EffectNode()
     : VideoNode(renderContext, 1)
-    , m_intensity(0) {
+    , m_openGLWorker(this)
+    , m_intensity(0)
+    , m_initialized(false)
+    , m_textureIndex(m_inputCount) {
+    connect(&m_openGLWorker, &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
+    Q_ASSERT(QMetaObject::invokeMethod(&m_openGLWorker, "initialize"));
 }
 
 EffectNode::~EffectNode() {
 }
 
-void EffectNode::initialize() {
-    m_initialized = false;
-    qDebug() << "Initializing";
-    initializeOpenGLFunctions();
-    bool result = loadProgram(m_name); // TODO do this in another thread
+void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
+    //qDebug() << "Initializing EffectNode in thread" << QThread::currentThread();
+    bool result = loadProgram(m_name);
     if(!result) {
         emit deleteMe();
         return;
     }
 
     m_intermediate.clear();
-    for(int i=0; i<m_context->chainCount(); i++) {
+    for(int i = 0; i<m_context->chainCount(); i++) {
         m_intermediate.append(QVector<QSharedPointer<QOpenGLTexture>>());
-        for(int j=0; j<m_programs.count(); j++) {
+        for(int j = 0; j < m_programs.count() + 1; j++) {
             auto tex = QSharedPointer<QOpenGLTexture>(new QOpenGLTexture(QOpenGLTexture::Target2D));
             auto size = m_context->chainSize(i);
             tex->setSize(size.width(), size.height());
@@ -40,33 +43,19 @@ void EffectNode::initialize() {
 
     m_fbos.clear();
     for(int i=0; i<m_context->chainCount(); i++) {
-        m_fbos.append(QSharedPointer<FramebufferObject>(new FramebufferObject()));
+        m_fbos.append(QSharedPointer<FramebufferObject>(new FramebufferObject(glFuncs)));
     }
+}
 
+void EffectNode::onInitialized() {
     m_initialized = true;
 }
 
-void EffectNode::tempPaint() {
-    m_context->initialize();
-    initialize();
-    QVector<QSharedPointer<QOpenGLTexture>> inp;
-    inp.append(m_context->blankTexture());
-    qDebug() << "Input textures:" << inp;
-    paint(0, inp);
-    qDebug() << "Output textures:" << m_textures;
-	QOpenGLFramebufferObjectFormat fmt;
-    fmt.setTextureTarget(texture(0)->textureId());
-    QOpenGLFramebufferObject fbo(m_context->chainSize(0), fmt);
-    QImage img = fbo.toImage();
-    img.save("out.png");
-    qDebug() << "Saved to out.png";
-}
-
 void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) {
-    qDebug() << "calling paint" << chain << this;
+    //qDebug() << "calling paint" << chain << inputTextures.count();
     if(!m_initialized) {
         m_textures[chain] = nullptr; // Uninitialized
-        qDebug() << "but uninitialized :(";
+        //qDebug() << "but uninitialized :(";
         return;
     }
 
@@ -93,8 +82,8 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
             glViewport(0, 0, size.width(), size.height());
             auto previousTex = inputTextures.at(0);
 
-                for(int j = m_programs.size() - 1; j >= 0; j--) {
-                    qDebug() << "Rendering shader" << j << "onto" << (m_textureIndex.at(chain) + j + 1) % (m_programs.count() + 1);
+                for(int j = m_programs.count() - 1; j >= 0; j--) {
+                    //qDebug() << "Rendering shader" << j << "onto" << (m_textureIndex.at(chain) + j + 1) % (m_programs.count() + 1);
                     auto target = m_intermediate.at(chain).at((m_textureIndex.at(chain) + j + 1) % (m_programs.size() + 1));
                     auto & p = m_programs.at(j);
 
@@ -109,7 +98,7 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
                     for(int k=0; k<m_programs.size(); k++) {
                         glActiveTexture(GL_TEXTURE2 + k);
                         glBindTexture(GL_TEXTURE_2D, m_intermediate.at(chain).at((m_textureIndex.at(chain) + k + (j < k)) % (m_programs.size() + 1))->textureId());
-                        qDebug() << "Bind" << (m_textureIndex.at(chain) + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
+                        //qDebug() << "Bind" << (m_textureIndex.at(chain) + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
                     }
 
                     auto intense = qreal(intensity());
@@ -129,11 +118,10 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
                 }
 
                 m_textures[chain] = m_intermediate.at(chain).at((m_textureIndex.at(chain) + 1) % (m_programs.size() + 1));
-                qDebug() << "Output is" << ((m_textureIndex.at(chain) + 1) % (m_programs.count() + 1));
+                //qDebug() << "Output is" << ((m_textureIndex.at(chain) + 1) % (m_programs.count() + 1));
         }
         m_textureIndex[chain] = (m_textureIndex.at(chain) + 1) % (m_programs.size() + 1);
     }
-    //blitToRenderFbo();
 }
 
 // Call this to load shader code into this Effect.
@@ -191,7 +179,7 @@ err:
 }
 
 qreal EffectNode::intensity() {
-    Q_ASSERT(QThread::currentThread() == thread());
+    //Q_ASSERT(QThread::currentThread() == thread()); // XXX put this back
     return m_intensity;
 }
 
@@ -217,3 +205,17 @@ void EffectNode::setName(QString name) {
     m_name = name;
     emit nameChanged(name);
 }
+
+// EffectNodeOpenGLWorker methods
+
+EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
+    : OpenGLWorker(openGLWorkerContext)
+    , m_p(p) {
+}
+
+void EffectNodeOpenGLWorker::initialize() {
+    makeCurrent();
+    m_p->initialize(glFuncs());
+    emit initialized();
+}
+

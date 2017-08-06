@@ -2,12 +2,29 @@
 
 #include "VideoNode.h"
 #include "FramebufferObject.h"
+#include "OpenGLWorker.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QMutex>
 
-class EffectNode : public VideoNode, protected QOpenGLFunctions {
+class EffectNode;
+
+class EffectNodeOpenGLWorker : public OpenGLWorker {
+    Q_OBJECT
+
+public:
+    EffectNodeOpenGLWorker(EffectNode *p);
+public slots:
+    void initialize();
+signals:
+    void initialized();
+protected:
+    EffectNode *m_p;
+};
+
+class EffectNode
+    : public VideoNode {
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
@@ -21,13 +38,17 @@ public:
 
     void paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) override;
 
+    // Called from OpenGLWorker
+    void initialize(QOpenGLFunctions *glFuncs);
+
 public slots:
-    void initialize() override;
     qreal intensity();
     QString name();
     void setIntensity(qreal value);
     void setName(QString name);
-    void tempPaint();
+
+protected slots:
+    void onInitialized();
 
 signals:
     void intensityChanged(qreal value);
@@ -50,4 +71,5 @@ private:
     qreal m_realTimeLast;
     QString m_name;
     bool m_initialized;
+    EffectNodeOpenGLWorker m_openGLWorker;
 };

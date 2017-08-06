@@ -89,8 +89,9 @@ void RenderContext::render(Model *model, int chain) {
         auto inputCount = graph.vertices().at(i)->inputCount();
         inputs.append(QVector<int>(inputCount, -1));
     }
-    for (auto edge = graph.edges().begin(); edge != graph.edges().end(); edge++) {
-        inputs[edge->toVertex][edge->toInput] = edge->fromVertex;
+    for (int i = 0; i < graph.edges().count(); i++) {
+        auto edge = graph.edges().at(i);
+        inputs[edge.toVertex][edge.toInput] = edge.fromVertex;
     }
 
     for (int i=0; i<graph.vertices().count(); i++) {

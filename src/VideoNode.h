@@ -24,12 +24,6 @@ public:
 
    ~VideoNode() override;
 
-    // Initialize is called with a valid
-    // OpenGL context.
-    // Initialize may call deleteLater(this)
-    // if a fatal error occurred.
-    virtual void initialize() = 0;
-
     // Paint is run from a valid OpenGL context.
     // It should update all the framebuffers,
     // and set m_texture to the QOpenGLTexture

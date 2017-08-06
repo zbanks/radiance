@@ -66,6 +66,8 @@ int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     //qRegisterMetaType<Effect*>("Effect*");
 
+    QThread::currentThread()->setObjectName("mainThread");
+
     openGLWorkerContext = new OpenGLWorkerContext();
     openGLWorkerContext->setObjectName("openGLWorkerContext");
     openGLWorkerContext->start();

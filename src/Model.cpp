@@ -39,7 +39,6 @@ void Model::removeVideoNode(VideoNode *videoNode) {
         }
         emitGraphChanged();
     }
-
 }
 
 void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
