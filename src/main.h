@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <numeric>
 #include "RenderContext.h"
+#include "OpenGLWorkerContext.h"
 
 extern RenderContext *renderContext;
 extern RenderContextOld *renderContextOld;
@@ -19,5 +20,6 @@ extern QSettings *settings;
 extern UISettings *uiSettings;
 extern Audio *audio;
 extern Timebase *timebase;
+extern OpenGLWorkerContext *openGLWorkerContext;
 
 #endif

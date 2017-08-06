@@ -19,6 +19,7 @@
 
 RenderContextOld *renderContextOld = 0;
 RenderContext *renderContext = 0;
+OpenGLWorkerContext *openGLWorkerContext = 0;
 QSettings *settings = 0;
 QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
@@ -64,6 +65,10 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication app(argc, argv);
     //qRegisterMetaType<Effect*>("Effect*");
+
+    openGLWorkerContext = new OpenGLWorkerContext();
+    openGLWorkerContext->setObjectName("openGLWorkerContext");
+    openGLWorkerContext->start();
 
     settings = new QSettings();
     outputSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output");

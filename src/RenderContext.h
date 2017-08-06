@@ -53,6 +53,8 @@ public slots:
     // beforeSynchronizing to render
     void addRenderTrigger(QQuickWindow *window, Model *model, int chain);
     void removeRenderTrigger(QQuickWindow *window, Model *model, int chain);
+    // In the future we can override this function so that
+    // more than just QQuickWindows can trigger renders
 
 private:
     void createNoiseTextures();
