@@ -89,6 +89,48 @@ void RenderContext::removeRenderTrigger(QQuickWindow *window, Model *model, int 
     m_renderTriggers.removeAll(rt);
 }
 
+QList<VideoNode *> RenderContext::topoSort(const ModelGraph &graph) {
+/*
+    // Fuck this
+
+    auto sortedNodes = QList<VideoNodeOld*>{};
+    auto fwdEdges = std::map<VideoNodeOld*, QSet<VideoNodeOld*> >{};
+    auto revEdges = std::map<VideoNodeOld*, int>{};
+
+    auto startNodes = std::deque<VideoNodeOld*>{};
+    auto videoNodes = m_videoNodes;
+    for(auto && n: videoNodes) {
+        auto deps = n->dependencies();
+        revEdges.emplace(n, deps.size());
+        if(deps.empty())
+            startNodes.push_back(n);
+        else for(auto c : deps)
+            fwdEdges[c].insert(n);
+
+    }
+    while(!startNodes.empty()) {
+        auto n = startNodes.back();
+        startNodes.pop_back();
+        sortedNodes.append(n);
+        auto fwd_it = fwdEdges.find(n);
+        if(fwd_it != fwdEdges.end()) {
+            for(auto c: fwd_it->second) {
+                auto &refcnt = revEdges[c];
+                if(!--refcnt)
+                    startNodes.push_back(c);
+            }
+            fwdEdges.erase(fwd_it);
+        }
+    }
+    if(!fwdEdges.empty()) {
+        qDebug() << "Cycle detected!";
+        return {};
+    }
+    return sortedNodes;
+*/
+    return QList<VideoNode *>{};
+}
+
 // RenderTrigger methods
 
 RenderTrigger::RenderTrigger(RenderContext *context, Model *model, int chain, QObject *obj)

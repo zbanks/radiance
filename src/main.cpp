@@ -18,7 +18,7 @@
 #include "main.h"
 
 RenderContextOld *renderContextOld = 0;
-RenderContext *renderContext;
+RenderContext *renderContext = 0;
 QSettings *settings = 0;
 QSettings *outputSettings = 0;
 UISettings *uiSettings = 0;
@@ -51,6 +51,12 @@ QObject *effectListProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     return effectList;
 }
 
+QObject *renderContextProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
+    Q_UNUSED(engine)
+    Q_UNUSED(scriptEngine)
+    return renderContext;
+}
+
 int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
     QCoreApplication::setOrganizationDomain("radiance.lighting");
@@ -66,9 +72,11 @@ int main(int argc, char *argv[]) {
     outputManager = new OutputManager(outputSettings);
     timebase = new Timebase();
     effectList = new EffectList();
+    renderContext = new RenderContext();
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
+    qmlRegisterUncreatableType<ModelGraph>("radiance", 1, 0, "ModelGraph", "ModelGraph must be retrieved using Model.graph");
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
 
     qmlRegisterUncreatableType<VideoNodeOld>("radiance", 1, 0, "VideoNodeOld", "VideoNodeOld is abstract and cannot be instantiated");
@@ -83,6 +91,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
     qmlRegisterSingletonType<EffectList>("radiance", 1, 0, "EffectList", effectListProvider);
+    qmlRegisterSingletonType<RenderContext>("radiance", 1, 0, "RenderContext", renderContextProvider);
 
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
@@ -93,7 +102,6 @@ int main(int argc, char *argv[]) {
     renderThread.setObjectName("RenderThread");
     renderContextOld = new RenderContextOld();
     renderContextOld->moveToThread(&renderThread);
-    renderContext = new RenderContext();
     QObject::connect(&renderThread, &QThread::started, renderContextOld, &RenderContextOld::start);
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &renderThread, &QThread::quit);
     renderThread.start();

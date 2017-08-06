@@ -12,6 +12,7 @@
 class VideoNode;
 class Model;
 class RenderContext;
+class ModelGraph;
 
 class RenderTrigger : public QObject {
     Q_OBJECT
@@ -58,6 +59,7 @@ private:
     void createNoiseTextures();
     void createBlankTexture();
     void createOpenGLContext();
+    QList<VideoNode*> topoSort(const ModelGraph &graph);
     bool m_initialized;
     QVector<QSharedPointer<QOpenGLTexture> > m_noiseTextures;
     QSharedPointer<QOpenGLTexture> m_blankTexture;
