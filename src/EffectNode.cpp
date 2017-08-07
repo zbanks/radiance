@@ -178,13 +178,13 @@ err:
 }
 
 qreal EffectNode::intensity() {
-    //Q_ASSERT(QThread::currentThread() == thread()); // XXX put this back
+    QMutexLocker locker(&m_intensityLock);
     return m_intensity;
 }
 
 void EffectNode::setIntensity(qreal value) {
-    Q_ASSERT(QThread::currentThread() == thread());
     {
+        QMutexLocker locker(&m_intensityLock);
         if(value > 1) value = 1;
         if(value < 0) value = 0;
         if(m_intensity == value)

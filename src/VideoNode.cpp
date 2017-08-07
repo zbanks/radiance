@@ -9,6 +9,7 @@ VideoNode::VideoNode(RenderContext *context, int inputCount)
 }
 
 VideoNode::~VideoNode() {
+    Q_ASSERT(m_refCount == 0);
 }
 
 int VideoNode::inputCount() {
@@ -25,4 +26,16 @@ QSize VideoNode::size(int chain) {
 
 RenderContext *VideoNode::context() {
     return m_context;
+}
+
+void VideoNode::ref() {
+    m_refCount++;
+}
+
+void VideoNode::deRef() {
+    Q_ASSERT(m_refCount > 0);
+    m_refCount--;
+    if (m_refCount == 0) {
+        emit noMoreRef(this);
+    }
 }

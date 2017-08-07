@@ -70,4 +70,5 @@ private:
     QString m_name;
     bool m_initialized;
     EffectNodeOpenGLWorker m_openGLWorker;
+    QMutex m_intensityLock;
 };

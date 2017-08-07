@@ -78,7 +78,7 @@ GLuint RenderContext::blankTexture() {
 
 void RenderContext::render(Model *model, int chain) {
     //qDebug() << "RENDER!" << model << chain;
-    ModelGraph graph = model->graph();
+    ModelGraph graph = model->graphRef();
 
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
@@ -108,6 +108,8 @@ void RenderContext::render(Model *model, int chain) {
         vertex->paint(chain, inputTextures);
         //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
+
+    graph.deref();
 }
 
 void RenderContext::addRenderTrigger(QQuickWindow *window, Model *model, int chain) {

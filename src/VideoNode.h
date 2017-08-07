@@ -5,6 +5,7 @@
 #include <QOpenGLTexture>
 #include <QSharedPointer>
 #include <QOpenGLFunctions>
+#include <QMutex>
 
 class Model;
 
@@ -52,10 +53,23 @@ public:
     // Returns the render context
     RenderContext *context();
 
+    // VideoNodes are created and managed from Javascript
+    // but they are used in C++
+    // These methods act as a reference counter for C++ references
+    // so that we don't accidentally tell Javascript
+    // that a VideoNode can be deleted
+    // if it is still in use.
+    void ref();
+    void deRef();
+
+signals:
+    void noMoreRef(VideoNode *videoNode);
+
 protected:
     RenderContext *m_context;
     int m_inputCount;
     QVector<GLuint> m_textures;
+    QAtomicInt m_refCount;
 
 signals:
     void deleteMe();

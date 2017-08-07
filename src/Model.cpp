@@ -19,10 +19,12 @@ void Model::addVideoNode(VideoNode *videoNode) {
 
 void Model::removeVideoNode(VideoNode *videoNode) {
     QList<Edge> removed;
-    for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
-        if (edge->fromVertex == videoNode || edge->toVertex == videoNode) {
-            auto edgeCopy = *edge;
-            m_edges.erase(edge);
+
+    QMutableListIterator<Edge> i(m_edges);
+    while (i.hasNext()) {
+        auto edgeCopy = i.next();
+        if (edgeCopy.fromVertex == videoNode || edgeCopy.toVertex == videoNode) {
+            i.remove();
             removed.append(edgeCopy);
         }
     }
@@ -30,12 +32,14 @@ void Model::removeVideoNode(VideoNode *videoNode) {
     int count = m_vertices.removeAll(videoNode);
 
     if (removed.count() > 0 || count > 0) {
+        if (count > 0) {
+            // Wait until there are truly no more refs
+            // before emitting deleted
+            connect(videoNode, &VideoNode::noMoreRef, this, &Model::videoNodeRemoved, Qt::QueuedConnection);
+        }
         regenerateGraph(topoSort());
         for (auto edge = removed.begin(); edge != removed.end(); edge++) {
             emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
-        }
-        if (count > 0) {
-            emit videoNodeRemoved(videoNode);
         }
         emitGraphChanged();
     }
@@ -105,7 +109,13 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
 }
 
 void Model::regenerateGraph(QVector<VideoNode *> sortedVertices) {
-    m_graph = ModelGraph(sortedVertices, m_edges);
+    auto tmpGraph = ModelGraph(sortedVertices, m_edges);
+    {
+        QMutexLocker locker(&m_graphLock);
+        tmpGraph.ref();
+        m_graph.deref();
+        m_graph = tmpGraph;
+    }
 }
 
 void Model::emitGraphChanged() {
@@ -114,10 +124,18 @@ void Model::emitGraphChanged() {
 }
 
 ModelGraph Model::graph() {
+    QMutexLocker locker(&m_graphLock);
+    return m_graph;
+}
+
+ModelGraph Model::graphRef() {
+    QMutexLocker locker(&m_graphLock);
+    m_graph.ref();
     return m_graph;
 }
 
 ModelGraph *Model::qmlGraph() {
+    QMutexLocker locker(&m_graphLock);
     ModelGraph *mg = new ModelGraph(m_graph);
     QQmlEngine::setObjectOwnership(mg, QQmlEngine::JavaScriptOwnership);
     return mg;
@@ -200,6 +218,25 @@ ModelGraph::ModelGraph(QVector<VideoNode *> vertices, QList<Edge> edges)
 ModelGraph::ModelGraph(const ModelGraph &other)
     : m_vertices(other.m_vertices)
     , m_edges(other.m_edges) {
+}
+
+ModelGraph::~ModelGraph() {
+}
+
+// This reference counting bullshit
+// is sort of bullshit. It would be
+// much better if it could live in a
+// constructor / destructor.
+void ModelGraph::ref() {
+    for (int i=0; i<m_vertices.count(); i++) {
+        m_vertices[i]->ref();
+    }
+}
+
+void ModelGraph::deref() {
+    for (int i=0; i<m_vertices.count(); i++) {
+        m_vertices[i]->deRef();
+    }
 }
 
 QVector<VideoNode *> ModelGraph::vertices() const {

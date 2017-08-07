@@ -5,6 +5,7 @@
 #include <QSharedPointer>
 #include <QVector>
 #include <QQuickWindow>
+#include <QMutex>
 
 // The Everpresent God Object (EGO)
 

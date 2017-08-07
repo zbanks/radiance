@@ -28,10 +28,13 @@ class ModelGraph : public QObject {
 
 public:
     ModelGraph();
+   ~ModelGraph() override;
     ModelGraph(QVector<VideoNode *> vertices, QList<Edge> edges);
     ModelGraph(const ModelGraph &other);
     int vertexCount() const;
     VideoNode *vertexAt(int index) const;
+    void ref();
+    void deref();
 
     // Careful with this one
     ModelGraph& operator=(const ModelGraph&);
@@ -64,6 +67,7 @@ public slots:
     void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     ModelGraph graph();
+    ModelGraph graphRef();
 
 signals:
     void videoNodeAdded(VideoNode *videoNode);
@@ -84,4 +88,5 @@ private:
     QList<VideoNode *> m_vertices;
     QList<Edge> m_edges;
     ModelGraph m_graph;
+    QMutex m_graphLock;
 };

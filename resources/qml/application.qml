@@ -61,6 +61,7 @@ ApplicationWindow {
             anchors.fill: parent
             onClicked: {
                 vnr.update()
+                model.removeVideoNode(en4);
             }
         }
     }
