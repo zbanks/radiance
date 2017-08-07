@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &renderThread, &QThread::quit);
     renderThread.start();
 
-    QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
+    QQmlApplicationEngine engine(QUrl("../resources/qml/application_old.qml"));
     if(engine.rootObjects().isEmpty()) {
         qFatal("Failed to load main QML application");
         return 1;

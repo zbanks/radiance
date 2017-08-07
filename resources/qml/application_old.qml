@@ -11,6 +11,26 @@ ApplicationWindow {
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
+        RenderContext.addRenderTrigger(window, radmodel, 0);
+    }
+
+    Model {
+        id: radmodel;
+        onVideoNodeAdded: {
+            console.log("Added video node", videoNode);
+        }
+        onVideoNodeRemoved: {
+            console.log("Removed video node", videoNode);
+        }
+        onEdgeAdded: {
+            console.log("Added edge");
+        }
+        onEdgeRemoved: {
+            console.log("Removed edge");
+        }
+        onGraphChanged: {
+            console.log("Graph Changed");
+        }
     }
 
     Action {
@@ -200,11 +220,11 @@ ApplicationWindow {
                     }
                 }
 
-                UICrossFader {
-                    id: cross;
-                    crossfader.left: deck1.output;
-                    crossfader.right: deck2.output;
-                }
+                //UICrossFader {
+                //    id: cross;
+                //    crossfader.left: deck1.output;
+                //    crossfader.right: deck2.output;
+                //}
             }
             EffectSelector {
                 id: selector;

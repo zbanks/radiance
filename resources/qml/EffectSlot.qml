@@ -38,7 +38,8 @@ RadianceTile {
     function load(name) {
         var component = Qt.createComponent("DraggableEffect.qml")
         var e = component.createObject(tile);
-        e.effect.source = name;
+        e.effect.name = name;
+        radmodel.addVideoNode(e.effect);
 
         replace(e);
         effectSelector.popdown();

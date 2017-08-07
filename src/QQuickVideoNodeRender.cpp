@@ -56,6 +56,8 @@ QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNod
         // this function will never get called again
     }
 
+    //qDebug() << "render with chain" << m_chain << m_videoNode;
+
     if (m_chain >= 0 && m_videoNode != nullptr) {
         auto textureId = m_videoNode->texture(m_chain);
         auto size = m_videoNode->size(m_chain);

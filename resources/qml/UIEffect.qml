@@ -25,7 +25,7 @@ FocusScope {
 
         Label {
             Layout.fillWidth: true;
-            text: effect.source;
+            text: effect.name;
             color: "#ddd";
         }
 
@@ -34,14 +34,19 @@ FocusScope {
             Layout.fillWidth: true;
             layer.enabled: true;
 
+            EffectNode {
+                id: effect;
+                intensity: slider.value;
+            }
+
             CheckerboardBackground {
                 anchors.fill: parent;
             }
 
-            Effect {
-                id: effect;
+            VideoNodeRender {
+                chain: 0;
+                videoNode: effect;
                 anchors.fill: parent;
-                intensity: slider.value;
             }
         }
 

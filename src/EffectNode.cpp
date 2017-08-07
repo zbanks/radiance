@@ -20,6 +20,8 @@ EffectNode::EffectNode()
 EffectNode::~EffectNode() {
 }
 
+// TODO initialization sometimes runs on top of render()
+// need to fix this!!!
 void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
     bool result = loadProgram(m_name);
     if(!result) {
@@ -35,10 +37,12 @@ void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
 
 void EffectNode::onInitialized() {
     m_initialized = true;
+    qDebug() << "its initialized!";
 }
 
 void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
-    //qDebug() << "calling paint" << chain << inputTextures.count();
+    QMutexLocker locker(&m_renderLocks[chain]);
+    //qDebug() << "calling paint" << this << chain << inputTextures.count();
     if(!m_initialized) {
         m_textures[chain] = 0; // Uninitialized
         //qDebug() << "but uninitialized :(";
@@ -202,6 +206,8 @@ QString EffectNode::name() {
 void EffectNode::setName(QString name) {
     Q_ASSERT(QThread::currentThread() == thread());
     m_name = name;
+    m_initialized = false; // TODO weird concurrency issues here
+    Q_ASSERT(QMetaObject::invokeMethod(&m_openGLWorker, "initialize"));
     emit nameChanged(name);
 }
 
