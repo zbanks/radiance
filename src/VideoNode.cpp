@@ -22,3 +22,7 @@ GLuint VideoNode::texture(int chain) {
 QSize VideoNode::size(int chain) {
     return m_context->chainSize(chain);
 }
+
+RenderContext *VideoNode::context() {
+    return m_context;
+}

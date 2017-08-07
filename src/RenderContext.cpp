@@ -106,7 +106,7 @@ void RenderContext::render(Model *model, int chain) {
             }
         }
         vertex->paint(chain, inputTextures);
-        qDebug() << vertex << "wrote texture" << vertex->texture(chain);
+        //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
 }
 

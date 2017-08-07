@@ -51,13 +51,11 @@ ApplicationWindow {
         color: "#FF0000"
         width: 500
         height: 500
-        x: 300
-        y: 300
         VideoNodeRender {
             id: vnr
             anchors.fill: parent
             chain: 0
-            videoNode: en
+            videoNode: en4
         }
         MouseArea {
             anchors.fill: parent
@@ -76,13 +74,13 @@ ApplicationWindow {
         model.addVideoNode(en4);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
+        model.addEdge(en3, en4, 0);
         RenderContext.addRenderTrigger(window, model, 0);
         console.log(model.graph.vertices[0]), 
         console.log(model.graph.vertices[1]), 
         console.log(model.graph.edges[0].fromVertex, 
                     model.graph.edges[0].toVertex, 
                     model.graph.edges[0].toInput);
-        //en.tempPaint();
     }
 
     Action {

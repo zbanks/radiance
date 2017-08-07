@@ -40,7 +40,9 @@ void QQuickVideoNodeRender::setChain(int chain) {
 }
 
 QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
+    window()->resetOpenGLState();
     QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
+
     if (!node) {
         node = window()->createImageNode();
         node->setFiltering(QSGTexture::Linear);
@@ -54,11 +56,11 @@ QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNod
         // so that we can mark it dirty. If we don't mark it dirty on the first call,
         // this function will never get called again
     }
+
     if (m_chain >= 0 && m_videoNode != nullptr) {
         auto textureId = m_videoNode->texture(m_chain);
         auto size = m_videoNode->size(m_chain);
         if (textureId != 0) {
-            qDebug() << "drawing texture" << textureId;
             // TODO repeatedly creating the QSGTexture is probably not the most efficient
             sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(textureId, size, QQuickWindow::TextureHasAlphaChannel));
             node->setTexture(sgTexture.data());

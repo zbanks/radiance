@@ -111,12 +111,12 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_intermediate.at(chain).at(fboIndex)->release();
-            m_intermediate.at(chain).at(fboIndex)->toImage().save(QString("out_%1.png").arg(m_intermediate.at(chain).at(fboIndex)->texture()));
+            //m_intermediate.at(chain).at(fboIndex)->toImage().save(QString("out_%1.png").arg(m_intermediate.at(chain).at(fboIndex)->texture()));
             p->release();
         }
 
         m_textures[chain] = m_intermediate.at(chain).at((m_textureIndex.at(chain) + 1) % (m_programs.size() + 1))->texture();
-        qDebug() << "Output texture ID is" << m_textures[chain];
+        //qDebug() << "Output texture ID is" << m_textures[chain];
         //qDebug() << "Output is" << ((m_textureIndex.at(chain) + 1) % (m_programs.count() + 1));
         m_textureIndex[chain] = (m_textureIndex.at(chain) + 1) % (m_programs.size() + 1);
     }

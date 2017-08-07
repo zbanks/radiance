@@ -49,6 +49,9 @@ public:
     // Returns the framebuffer size of the given chain
     QSize size(int chain);
 
+    // Returns the render context
+    RenderContext *context();
+
 protected:
     RenderContext *m_context;
     int m_inputCount;
