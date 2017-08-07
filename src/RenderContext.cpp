@@ -78,38 +78,39 @@ GLuint RenderContext::blankTexture() {
 
 void RenderContext::render(Model *model, int chain) {
     //qDebug() << "RENDER!" << model << chain;
-    ModelGraph graph = model->graphRef();
+
+    auto m = model->createCopyForRendering();
 
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
     QVector<QVector<int> > inputs;
-    for (int i=0; i<graph.vertices().count(); i++) {
-        auto inputCount = graph.vertices().at(i)->inputCount();
+    for (int i=0; i<m.vertices.count(); i++) {
+        auto inputCount = m.vertices.at(i)->inputCount();
         inputs.append(QVector<int>(inputCount, -1));
     }
-    for (int i = 0; i < graph.edges().count(); i++) {
-        auto edge = graph.edges().at(i);
+    for (int i = 0; i < m.edges.count(); i++) {
+        auto edge = m.edges.at(i);
         inputs[edge.toVertex][edge.toInput] = edge.fromVertex;
     }
 
-    for (int i=0; i<graph.vertices().count(); i++) {
-        auto vertex = graph.vertices().at(i);
+    for (int i=0; i<m.vertices.count(); i++) {
+        auto vertex = m.vertices.at(i);
         QVector<GLuint> inputTextures(vertex->inputCount(), blankTexture());
         for (int j=0; j<vertex->inputCount(); j++) {
             auto fromVertex = inputs.at(i).at(j);
             if (fromVertex != -1) {
-                auto inpTexture = graph.vertices().at(fromVertex)->texture(chain);
+                auto inpTexture = m.vertices.at(fromVertex)->texture(chain);
                 if (inpTexture != 0) {
                     inputTextures[j] = inpTexture;
                 }
             }
         }
         vertex->paint(chain, inputTextures);
-        qDebug() << vertex << "wrote texture" << vertex->texture(chain);
+        //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
 
-    graph.deref();
+    model->copyBackRenderStates(chain, m.origVertices, m.vertices);
 }
 
 void RenderContext::addRenderTrigger(QQuickWindow *window, Model *model, int chain) {

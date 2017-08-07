@@ -6,8 +6,15 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QMutex>
+#include <QTimer>
 
 class EffectNode;
+
+struct EffectNodeRenderState : public VideoNodeRenderState {
+public:
+    QVector<QSharedPointer<QOpenGLFramebufferObject>> m_intermediate;
+    int m_textureIndex;
+};
 
 class EffectNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
@@ -30,6 +37,7 @@ class EffectNode
 
 public:
     EffectNode();
+    EffectNode(const EffectNode &other);
     ~EffectNode();
 
     static constexpr qreal MAX_INTEGRAL = 1024;
@@ -40,6 +48,15 @@ public:
     // Called from OpenGLWorker
     void initialize(QOpenGLFunctions *glFuncs);
 
+    // Get the output texture of this EffectNode
+    GLuint texture(int chain);
+
+    // Creates a copy of this node
+    QSharedPointer<VideoNode> createCopyForRendering();
+
+    // Reads back the new render state
+    void copyBackRenderState(int chain, QSharedPointer<VideoNode> copy);
+
 public slots:
     qreal intensity();
     QString name();
@@ -48,17 +65,14 @@ public slots:
 
 protected slots:
     void onInitialized();
+    void periodic();
 
 signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);
 
 private:
-    // First index: chain
-    // Second index: layer
-    QVector<QVector<QSharedPointer<QOpenGLFramebufferObject>>> m_intermediate;
-    // Indexed by chain
-    QVector<int> m_textureIndex;
+    QVector<EffectNodeRenderState> m_renderStates;
     QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
 
     bool loadProgram(QString name);
@@ -69,6 +83,7 @@ private:
     qreal m_realTimeLast;
     QString m_name;
     bool m_initialized;
-    EffectNodeOpenGLWorker m_openGLWorker;
-    QMutex m_intensityLock;
+    QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
+    QMutex m_stateLock;
+    QTimer m_periodic;
 };

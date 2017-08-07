@@ -4,20 +4,19 @@
 
 VideoNode::VideoNode(RenderContext *context, int inputCount)
     : m_context(context)
-    , m_inputCount(inputCount)
-    , m_textures(context->chainCount()) {
+    , m_inputCount(inputCount) {
+}
+
+VideoNode::VideoNode(const VideoNode &other)
+    : m_context(other.m_context)
+    , m_inputCount(other.m_inputCount) {
 }
 
 VideoNode::~VideoNode() {
-    Q_ASSERT(m_refCount == 0);
 }
 
 int VideoNode::inputCount() {
     return m_inputCount;
-}
-
-GLuint VideoNode::texture(int chain) {
-    return m_textures.at(chain);
 }
 
 QSize VideoNode::size(int chain) {
@@ -26,16 +25,4 @@ QSize VideoNode::size(int chain) {
 
 RenderContext *VideoNode::context() {
     return m_context;
-}
-
-void VideoNode::ref() {
-    m_refCount++;
-}
-
-void VideoNode::deRef() {
-    Q_ASSERT(m_refCount > 0);
-    m_refCount--;
-    if (m_refCount == 0) {
-        emit noMoreRef(this);
-    }
 }

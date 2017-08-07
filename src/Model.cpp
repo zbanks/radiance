@@ -10,8 +10,11 @@ Model::~Model() {
 
 void Model::addVideoNode(VideoNode *videoNode) {
     if (!m_vertices.contains(videoNode)) {
-        m_vertices.append(videoNode);
-        regenerateGraph(topoSort());
+        {
+            QMutexLocker locker(&m_graphLock);
+            m_vertices.append(videoNode);
+            regenerateGraph(topoSort());
+        }
         emit videoNodeAdded(videoNode);
         emitGraphChanged();
     }
@@ -20,26 +23,29 @@ void Model::addVideoNode(VideoNode *videoNode) {
 void Model::removeVideoNode(VideoNode *videoNode) {
     QList<Edge> removed;
 
-    QMutableListIterator<Edge> i(m_edges);
-    while (i.hasNext()) {
-        auto edgeCopy = i.next();
-        if (edgeCopy.fromVertex == videoNode || edgeCopy.toVertex == videoNode) {
-            i.remove();
-            removed.append(edgeCopy);
+    int count;
+    {
+        QMutexLocker locker(&m_graphLock);
+
+        QMutableListIterator<Edge> i(m_edges);
+        while (i.hasNext()) {
+            auto edgeCopy = i.next();
+            if (edgeCopy.fromVertex == videoNode || edgeCopy.toVertex == videoNode) {
+                i.remove();
+                removed.append(edgeCopy);
+            }
         }
+
+        count = m_vertices.removeAll(videoNode);
     }
 
-    int count = m_vertices.removeAll(videoNode);
-
     if (removed.count() > 0 || count > 0) {
-        if (count > 0) {
-            // Wait until there are truly no more refs
-            // before emitting deleted
-            connect(videoNode, &VideoNode::noMoreRef, this, &Model::videoNodeRemoved, Qt::QueuedConnection);
-        }
         regenerateGraph(topoSort());
         for (auto edge = removed.begin(); edge != removed.end(); edge++) {
             emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
+        }
+        if (count > 0) {
+            emit videoNodeRemoved(videoNode);
         }
         emitGraphChanged();
     }
@@ -56,29 +62,33 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
 
     QList<Edge> edgesOld;
 
-    for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
-        if (edge->toVertex == toVertex && edge->toInput == toInput) {
-            if (edge->fromVertex == fromVertex)
-                return;
-            auto edgeCopy = *edge;
-            m_edges.erase(edge);
-            removed.append(edgeCopy);
-        }
-    }
-
     Edge newEdge = {
         .fromVertex = fromVertex,
         .toVertex = toVertex,
         .toInput = toInput,
     };
-    m_edges.append(newEdge);
-    QVector<VideoNode *> sortedVertices = topoSort();
-    if(sortedVertices.count() < m_vertices.count()) {
-        // Roll back changes if a cycle was detected
-        m_edges = edgesOld;
-        return;
+    {
+        QMutexLocker locker(&m_graphLock); // TODO don't lock during emit
+
+        for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
+            if (edge->toVertex == toVertex && edge->toInput == toInput) {
+                if (edge->fromVertex == fromVertex)
+                    return;
+                auto edgeCopy = *edge;
+                m_edges.erase(edge);
+                removed.append(edgeCopy);
+            }
+        }
+
+        m_edges.append(newEdge);
+        QVector<VideoNode *> sortedVertices = topoSort();
+        if(sortedVertices.count() < m_vertices.count()) {
+            // Roll back changes if a cycle was detected
+            m_edges = edgesOld;
+            return;
+        }
+        regenerateGraph(sortedVertices);
     }
-    regenerateGraph(sortedVertices);
     for (auto edge = removed.begin(); edge != removed.end(); edge++) {
         emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
     }
@@ -93,49 +103,84 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
     Q_ASSERT(m_vertices.contains(fromVertex));
     Q_ASSERT(m_vertices.contains(toVertex));
 
-    for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
-        if (edge->fromVertex == fromVertex &&
-            edge->toVertex == toVertex &&
-            edge->toInput == toInput) {
 
-            auto edgeCopy = *edge;
-            m_edges.erase(edge);
-            regenerateGraph(topoSort());
-            emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
-            emitGraphChanged();
-            return;
+    Edge edgeCopy;
+    bool removed = false;
+    {
+        QMutexLocker locker(&m_graphLock);
+        QMutableListIterator<Edge> i(m_edges);
+        while (i.hasNext()) {
+            edgeCopy = i.next();
+            if (edgeCopy.fromVertex == fromVertex
+             && edgeCopy.toVertex == toVertex
+             && edgeCopy.toInput == toInput) {
+                i.remove();
+                removed = true;
+                break;
+            }
         }
+        if (removed) {
+            regenerateGraph(topoSort());
+        }
+    }
+    if (removed) {
+        emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
+        emitGraphChanged();
     }
 }
 
 void Model::regenerateGraph(QVector<VideoNode *> sortedVertices) {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto tmpGraph = ModelGraph(sortedVertices, m_edges);
     {
-        QMutexLocker locker(&m_graphLock);
-        tmpGraph.ref();
-        m_graph.deref();
+        QMutexLocker locker(&m_modelGraphLock);
         m_graph = tmpGraph;
     }
 }
 
 void Model::emitGraphChanged() {
+    Q_ASSERT(QThread::currentThread() == thread());
     emit graphChanged(m_graph);
     emit qmlGraphChanged();
 }
 
-ModelGraph Model::graph() {
-    QMutexLocker locker(&m_graphLock);
-    return m_graph;
+ModelCopyForRendering Model::createCopyForRendering() {
+    QMutexLocker locker(&m_modelGraphLock);
+    ModelCopyForRendering out;
+
+    out.edges = m_graph.edges();
+    out.origVertices = m_graph.vertices();
+    QVector<QSharedPointer<VideoNode>> vertices;
+    for(int i=0; i<out.origVertices.count(); i++) {
+        vertices.append(out.origVertices.at(i)->createCopyForRendering());
+    }
+    out.vertices = vertices;
+    return out;
 }
 
-ModelGraph Model::graphRef() {
-    QMutexLocker locker(&m_graphLock);
-    m_graph.ref();
+void Model::copyBackRenderStates(int chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices) {
+    Q_ASSERT(origVertices.count() == renderedVertices.count());
+    {
+        QMutexLocker locker(&m_graphLock);
+        for(int i=0; i<origVertices.count(); i++) {
+            // If the VideoNode is still in the DAG,
+            // Javascript shouldn't have deleted it
+            if(m_vertices.contains(origVertices.at(i))) {
+                origVertices[i]->copyBackRenderState(chain, renderedVertices.at(i));
+            } else {
+                //qDebug() << "Node was deleted during rendering";
+            }
+        }
+    }
+}
+
+ModelGraph Model::graph() {
+    Q_ASSERT(QThread::currentThread() == thread());
     return m_graph;
 }
 
 ModelGraph *Model::qmlGraph() {
-    QMutexLocker locker(&m_graphLock);
+    Q_ASSERT(QThread::currentThread() == thread());
     ModelGraph *mg = new ModelGraph(m_graph);
     QQmlEngine::setObjectOwnership(mg, QQmlEngine::JavaScriptOwnership);
     return mg;
@@ -223,21 +268,6 @@ ModelGraph::ModelGraph(const ModelGraph &other)
 ModelGraph::~ModelGraph() {
 }
 
-// This reference counting bullshit
-// is sort of bullshit. It would be
-// much better if it could live in a
-// constructor / destructor.
-void ModelGraph::ref() {
-    for (int i=0; i<m_vertices.count(); i++) {
-        m_vertices[i]->ref();
-    }
-}
-
-void ModelGraph::deref() {
-    for (int i=0; i<m_vertices.count(); i++) {
-        m_vertices[i]->deRef();
-    }
-}
 
 QVector<VideoNode *> ModelGraph::vertices() const {
     return m_vertices;

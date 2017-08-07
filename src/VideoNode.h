@@ -9,6 +9,11 @@
 
 class Model;
 
+struct VideoNodeRenderState {
+public:
+    int m_texture;
+};
+
 // VideoNodes have 0 or more inputs, and one output.
 
 class VideoNode : public QObject {
@@ -22,6 +27,9 @@ public:
     // Constructor may be called without a valid
     // OpenGL context.
     VideoNode(RenderContext *context, int inputCount = 0);
+
+    // VideoNodes must be copyable
+    VideoNode(const VideoNode &other);
 
    ~VideoNode() override;
 
@@ -45,7 +53,7 @@ public:
     // Returns the output texture
     // for the given chain
     // or 0 if the node is not ready for any reason
-    GLuint texture(int chain);
+    virtual GLuint texture(int chain) = 0;
 
     // Returns the framebuffer size of the given chain
     QSize size(int chain);
@@ -53,23 +61,16 @@ public:
     // Returns the render context
     RenderContext *context();
 
-    // VideoNodes are created and managed from Javascript
-    // but they are used in C++
-    // These methods act as a reference counter for C++ references
-    // so that we don't accidentally tell Javascript
-    // that a VideoNode can be deleted
-    // if it is still in use.
-    void ref();
-    void deRef();
+    // Creates a copy of this node
+    virtual QSharedPointer<VideoNode> createCopyForRendering() = 0;
 
-signals:
-    void noMoreRef(VideoNode *videoNode);
+    // Reads back the new render state
+    virtual void copyBackRenderState(int chain, QSharedPointer<VideoNode> copy) = 0;
 
 protected:
     RenderContext *m_context;
     int m_inputCount;
-    QVector<GLuint> m_textures;
-    QAtomicInt m_refCount;
+    QMutex m_stateLock;
 
 signals:
     void deleteMe();

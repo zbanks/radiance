@@ -19,6 +19,13 @@ struct ModelGraphEdge {
     int toInput;
 };
 
+// Return type of graphCopy
+struct ModelCopyForRendering {
+    QVector<VideoNode *> origVertices;
+    QVector<QSharedPointer<VideoNode>> vertices;
+    QVector<ModelGraphEdge> edges;
+};
+
 // This class is a snapshot of the model
 // The vertex list is always in topo-sorted order
 class ModelGraph : public QObject {
@@ -33,8 +40,6 @@ public:
     ModelGraph(const ModelGraph &other);
     int vertexCount() const;
     VideoNode *vertexAt(int index) const;
-    void ref();
-    void deref();
 
     // Careful with this one
     ModelGraph& operator=(const ModelGraph&);
@@ -67,7 +72,23 @@ public slots:
     void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     ModelGraph graph();
-    ModelGraph graphRef();
+
+    // This function is called before rendering
+    // from the render thread
+    // to create a temporary copy of the VideoNodes
+    // and their connections.
+    // This copy is necessary because
+    // sometimes nodes are deleted or edited during rendering.
+    ModelCopyForRendering createCopyForRendering();
+
+    // This function is called after rendering
+    // from the render thread
+    // to put the rendered textures and updated states
+    // back into the graph.
+    // Sometimes nodes are deleted during rendering,
+    // these nodes are not updated
+    // because they no longer exist.
+    void copyBackRenderStates(int chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices);
 
 signals:
     void videoNodeAdded(VideoNode *videoNode);
@@ -88,5 +109,19 @@ private:
     QList<VideoNode *> m_vertices;
     QList<Edge> m_edges;
     ModelGraph m_graph;
+
+    // m_vertices and m_edges can be
+    // written to by the render thread.
+    // This lock ensures that we aren't
+    // trying to read or write it
+    // from the GUI thread at the same time.
     QMutex m_graphLock;
+
+    // The m_graph can be read by
+    // the render thread.
+    // This lock ensures that we aren't writing it
+    // in the GUI thread
+    // while we are trying to generate a copy
+    // in the render thread.
+    QMutex m_modelGraphLock;
 };
