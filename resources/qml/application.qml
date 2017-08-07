@@ -29,11 +29,21 @@ ApplicationWindow {
 
     EffectNode {
         id: en
-        name: "wwave"
+        name: "yellow"
         intensity: 1
     }
     EffectNode {
         id: en2
+        name: "heart"
+        intensity: 1
+    }
+    EffectNode {
+        id: en3
+        name: "wwave"
+        intensity: 1
+    }
+    EffectNode {
+        id: en4
         name: "wwave"
         intensity: 1
     }
@@ -41,6 +51,8 @@ ApplicationWindow {
         color: "#FF0000"
         width: 500
         height: 500
+        x: 300
+        y: 300
         VideoNodeRender {
             id: vnr
             anchors.fill: parent
@@ -60,7 +72,10 @@ ApplicationWindow {
         UISettings.outputSize = "1024x768";
         model.addVideoNode(en);
         model.addVideoNode(en2);
+        model.addVideoNode(en3);
+        model.addVideoNode(en4);
         model.addEdge(en, en2, 0);
+        model.addEdge(en2, en3, 0);
         RenderContext.addRenderTrigger(window, model, 0);
         console.log(model.graph.vertices[0]), 
         console.log(model.graph.vertices[1]), 

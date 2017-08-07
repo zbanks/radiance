@@ -15,6 +15,10 @@ int VideoNode::inputCount() {
     return m_inputCount;
 }
 
-QSharedPointer<QOpenGLTexture> VideoNode::texture(int chain) {
+GLuint VideoNode::texture(int chain) {
     return m_textures.at(chain);
+}
+
+QSize VideoNode::size(int chain) {
+    return m_context->chainSize(chain);
 }

@@ -25,8 +25,7 @@ signals:
 
 private:
     int m_chain;
-    QSharedPointer<VideoNode>m_videoNode;
-    QSharedPointer<QOpenGLTexture> oglTexture;
+    VideoNode *m_videoNode;
     QSharedPointer<QSGTexture> sgTexture;
 
 protected:

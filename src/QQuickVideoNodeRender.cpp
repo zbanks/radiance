@@ -22,11 +22,11 @@ QQuickVideoNodeRender::~QQuickVideoNodeRender() {
 }
 
 VideoNode *QQuickVideoNodeRender::videoNode() {
-    return m_videoNode.data();
+    return m_videoNode;
 }
 
 void QQuickVideoNodeRender::setVideoNode(VideoNode *videoNode) {
-    m_videoNode = QSharedPointer<VideoNode>(videoNode);
+    m_videoNode = videoNode;
     emit videoNodeChanged(videoNode);
 }
 
@@ -40,30 +40,30 @@ void QQuickVideoNodeRender::setChain(int chain) {
 }
 
 QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
-    QSGImageNode *node = static_cast<QSGImageNode *>(oldNode); // TODO non-smart pointer is leaky?
-    if (m_chain >= 0 && !m_videoNode.isNull()) {
-        oglTexture = m_videoNode->texture(m_chain);
-        if (!oglTexture.isNull()) {
-            // TODO repeatedly creating the QSGTexture is probably not the most efficient
-            sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(oglTexture->textureId(),
-                                                                                 QSize(oglTexture->width(), oglTexture->height()),
-                                                                                 QQuickWindow::TextureHasAlphaChannel));
-        } else {
-            // Create a garbage QSGTexture if the real one is not ready yet
-            sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(0, QSize(1, 1), QQuickWindow::TextureHasAlphaChannel));
-            // It is important that we generate a node even if we are not ready
-            // so that we can mark it dirty. If we don't mark it dirty on the first call,
-            // this function will never get called again
-        }
-        if (!node) {
-            node = window()->createImageNode();
-            node->setFiltering(QSGTexture::Linear);
-            node->setTextureCoordinatesTransform(QSGImageNode::MirrorVertically);
-            node->markDirty(QSGNode::DirtyForceUpdate); // Notifies all connected renderers that the node has dirty bits ;)
-        }
+    QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
+    if (!node) {
+        node = window()->createImageNode();
+        node->setFiltering(QSGTexture::Linear);
+        node->setTextureCoordinatesTransform(QSGImageNode::MirrorVertically);
+        node->setRect(boundingRect());
 
+        // Create a garbage QSGTexture if the real one is not ready yet
+        sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(0, QSize(1, 1), QQuickWindow::TextureHasAlphaChannel));
         node->setTexture(sgTexture.data());
-        if(node) node->setRect(boundingRect());
+        // It is important that we generate a node even if we are not ready
+        // so that we can mark it dirty. If we don't mark it dirty on the first call,
+        // this function will never get called again
     }
+    if (m_chain >= 0 && m_videoNode != nullptr) {
+        auto textureId = m_videoNode->texture(m_chain);
+        auto size = m_videoNode->size(m_chain);
+        if (textureId != 0) {
+            qDebug() << "drawing texture" << textureId;
+            // TODO repeatedly creating the QSGTexture is probably not the most efficient
+            sgTexture = QSharedPointer<QSGTexture>(window()->createTextureFromId(textureId, size, QQuickWindow::TextureHasAlphaChannel));
+            node->setTexture(sgTexture.data());
+        }
+    }
+    node->markDirty(QSGNode::DirtyMaterial); // Notifies all connected renderers that the node has dirty bits ;)
     return node;
 }

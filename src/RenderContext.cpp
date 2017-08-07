@@ -22,22 +22,21 @@ void RenderContext::createNoiseTextures() {
     }
 }
 
-
 void RenderContext::createBlankTexture() {
-    m_blankTexture = QSharedPointer<QOpenGLTexture>(new QOpenGLTexture(QOpenGLTexture::Target2D));
-    m_blankTexture->setSize(1, 1);
-    m_blankTexture->setFormat(QOpenGLTexture::RGBA8_UNorm);
-    m_blankTexture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
-    m_blankTexture->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
-    m_blankTexture->setWrapMode(QOpenGLTexture::Repeat);
+    m_blankTexture.setSize(1, 1);
+    m_blankTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
+    m_blankTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+    m_blankTexture.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+    m_blankTexture.setWrapMode(QOpenGLTexture::Repeat);
 
     auto data = std::make_unique<uint8_t[]>(4);
-    m_blankTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+    m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 }
 
 RenderContext::RenderContext()
     : m_openGLWorker(this)
-    , m_initialized(false) {
+    , m_initialized(false)
+    , m_blankTexture(QOpenGLTexture::Target2D) {
     connect(&m_openGLWorker, &RenderContextOpenGLWorker::initialized, this, &RenderContext::onInitialized);
     Q_ASSERT(QMetaObject::invokeMethod(&m_openGLWorker, "initialize"));
 }
@@ -69,12 +68,12 @@ QSize RenderContext::chainSize(int chain) {
     }
 }
 
-QSharedPointer<QOpenGLTexture> RenderContext::noiseTexture(int chain) {
-    return m_noiseTextures.at(chain);
+GLuint RenderContext::noiseTexture(int chain) {
+    return m_noiseTextures.at(chain)->textureId();
 }
 
-QSharedPointer<QOpenGLTexture> RenderContext::blankTexture() {
-    return m_blankTexture;
+GLuint RenderContext::blankTexture() {
+    return m_blankTexture.textureId();
 }
 
 void RenderContext::render(Model *model, int chain) {
@@ -96,17 +95,18 @@ void RenderContext::render(Model *model, int chain) {
 
     for (int i=0; i<graph.vertices().count(); i++) {
         auto vertex = graph.vertices().at(i);
-        QVector<QSharedPointer<QOpenGLTexture> > inputTextures(vertex->inputCount(), blankTexture());
+        QVector<GLuint> inputTextures(vertex->inputCount(), blankTexture());
         for (int j=0; j<vertex->inputCount(); j++) {
             auto fromVertex = inputs.at(i).at(j);
             if (fromVertex != -1) {
                 auto inpTexture = graph.vertices().at(fromVertex)->texture(chain);
-                if (!inpTexture.isNull()) {
+                if (inpTexture != 0) {
                     inputTextures[j] = inpTexture;
                 }
             }
         }
         vertex->paint(chain, inputTextures);
+        qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
 }
 

@@ -36,7 +36,7 @@ public:
     // and is guaranteed to be non-null and have .count() == m_inputCount
     // and size corresponding to the chain.
     // These textures must not be written to.
-    virtual void paint(int chain, QVector<QSharedPointer<QOpenGLTexture> > inputTextures) = 0;
+    virtual void paint(int chain, QVector<GLuint> inputTextures) = 0;
 
     // Must not change after constructor
     int inputCount();
@@ -44,12 +44,15 @@ public:
     // Returns the output texture
     // for the given chain
     // or 0 if the node is not ready for any reason
-    QSharedPointer<QOpenGLTexture> texture(int chain);
+    GLuint texture(int chain);
+
+    // Returns the framebuffer size of the given chain
+    QSize size(int chain);
 
 protected:
     RenderContext *m_context;
     int m_inputCount;
-    QVector<QSharedPointer<QOpenGLTexture> > m_textures;
+    QVector<GLuint> m_textures;
 
 signals:
     void deleteMe();

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "FramebufferObject.h"
 #include "OpenGLWorker.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
@@ -36,7 +35,7 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
-    void paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) override;
+    void paint(int chain, QVector<GLuint> inputTextures) override;
 
     // Called from OpenGLWorker
     void initialize(QOpenGLFunctions *glFuncs);
@@ -57,11 +56,10 @@ signals:
 private:
     // First index: chain
     // Second index: layer
-    QVector<QVector<QSharedPointer<QOpenGLTexture> > > m_intermediate;
+    QVector<QVector<QSharedPointer<QOpenGLFramebufferObject>>> m_intermediate;
     // Indexed by chain
     QVector<int> m_textureIndex;
-    QVector<QSharedPointer<QOpenGLShaderProgram> > m_programs;
-    QVector<QSharedPointer<FramebufferObject> > m_fbos;
+    QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
 
     bool loadProgram(QString name);
 

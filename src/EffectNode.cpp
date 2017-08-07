@@ -21,7 +21,6 @@ EffectNode::~EffectNode() {
 }
 
 void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
-    //qDebug() << "Initializing EffectNode in thread" << QThread::currentThread();
     bool result = loadProgram(m_name);
     if(!result) {
         emit deleteMe();
@@ -30,22 +29,7 @@ void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
 
     m_intermediate.clear();
     for(int i = 0; i<m_context->chainCount(); i++) {
-        m_intermediate.append(QVector<QSharedPointer<QOpenGLTexture>>());
-        for(int j = 0; j < m_programs.count() + 1; j++) {
-            auto tex = QSharedPointer<QOpenGLTexture>(new QOpenGLTexture(QOpenGLTexture::Target2D));
-            auto size = m_context->chainSize(i);
-            tex->setSize(size.width(), size.height());
-            // This is a bit of hack, since tex->allocateStorage will create immutable storage
-            tex->bind();
-	        glFuncs->glTexImage2D(tex->target(), 0, GL_RGBA, tex->width(), tex->height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-            // for now, don't expect the texture backing the QOpenGLTexture to match, except for size
-            m_intermediate[i].append(tex);
-        }
-    }
-
-    m_fbos.clear();
-    for(int i=0; i<m_context->chainCount(); i++) {
-        m_fbos.append(QSharedPointer<FramebufferObject>(new FramebufferObject(glFuncs)));
+        m_intermediate.append(QVector<QSharedPointer<QOpenGLFramebufferObject>>());
     }
 }
 
@@ -53,15 +37,27 @@ void EffectNode::onInitialized() {
     m_initialized = true;
 }
 
-void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputTextures) {
+void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
     //qDebug() << "calling paint" << chain << inputTextures.count();
     if(!m_initialized) {
-        m_textures[chain] = nullptr; // Uninitialized
+        m_textures[chain] = 0; // Uninitialized
         //qDebug() << "but uninitialized :(";
         return;
     }
 
-    glClearColor(0, 0, 1., 1.);
+    // FBO creation must happen here, and not in initialize,
+    // because FBOs are not shared among contexts.
+    // Textures are, however, so in the future maybe we can move
+    // texture creation to initialize()
+    // and leave lightweight FBO creation here
+    if(m_intermediate.at(chain).isEmpty()) {
+        for(int i = 0; i < m_programs.count() + 1; i++) {
+            auto fbo = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(size(chain)));
+            m_intermediate[chain].append(fbo);
+        }
+    }
+
+    glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
 
@@ -78,57 +74,50 @@ void EffectNode::paint(int chain, QVector<QSharedPointer<QOpenGLTexture>> inputT
         double audioLevel = 0;
         audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
 
-        QOpenGLFramebufferObject fbo(300, 300);
+        auto size = m_context->chainSize(chain);
+        glViewport(0, 0, size.width(), size.height());
 
-        {
-            auto size = m_context->chainSize(chain);
+        auto previousTex = inputTextures.at(0);
 
-            glViewport(0, 0, size.width(), size.height());
-            auto previousTex = inputTextures.at(0);
+        for(int j = m_programs.count() - 1; j >= 0; j--) {
+            //qDebug() << "Rendering shader" << j << "onto" << (m_textureIndex.at(chain) + j + 1) % (m_programs.count() + 1);
+            auto fboIndex = (m_textureIndex.at(chain) + j + 1) % (m_programs.size() + 1);
+            auto & p = m_programs.at(j);
 
-                for(int j = m_programs.count() - 1; j >= 0; j--) {
-                    //qDebug() << "Rendering shader" << j << "onto" << (m_textureIndex.at(chain) + j + 1) % (m_programs.count() + 1);
-                    auto target = m_intermediate.at(chain).at((m_textureIndex.at(chain) + j + 1) % (m_programs.size() + 1));
-                    auto & p = m_programs.at(j);
+            p->bind();
+            m_intermediate.at(chain).at(fboIndex)->bind();
 
-                    p->bind();
-                    m_fbos[chain]->bind();
-                    m_fbos[chain]->setTexture(target->textureId());
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, previousTex);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(chain));
+            for(int k=0; k<m_programs.size(); k++) {
+                glActiveTexture(GL_TEXTURE2 + k);
+                glBindTexture(GL_TEXTURE_2D, m_intermediate.at(chain).at((m_textureIndex.at(chain) + k + (j < k)) % (m_programs.size() + 1))->texture());
+                //qDebug() << "Bind" << (m_textureIndex.at(chain) + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
+            }
 
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, previousTex->textureId());
-                    glActiveTexture(GL_TEXTURE1);
-                    glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(chain)->textureId());
-                    for(int k=0; k<m_programs.size(); k++) {
-                        glActiveTexture(GL_TEXTURE2 + k);
-                        glBindTexture(GL_TEXTURE_2D, m_intermediate.at(chain).at((m_textureIndex.at(chain) + k + (j < k)) % (m_programs.size() + 1))->textureId());
-                        //qDebug() << "Bind" << (m_textureIndex.at(chain) + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
-                    }
-
-                    auto intense = qreal(intensity());
-                    m_intensityIntegral = fmod(m_intensityIntegral + intense / FPS, MAX_INTEGRAL);
-                    p->setUniformValue("iIntensity", GLfloat(intense));
-                    p->setUniformValue("iIntensityIntegral", GLfloat(m_intensityIntegral));
-                    p->setUniformValue("iStep", GLfloat(step));
-                    p->setUniformValue("iTime", GLfloat(time));
-                    p->setUniformValue("iFPS",  GLfloat(FPS));
-                    p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
-                    p->setUniformValue("iFrame", 0);
-                    p->setUniformValue("iNoise", 1);
-                    p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
-                    p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
-                    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-                    //fbo.toImage().save("out.png");
-                    //qDebug() << "saved out.png";
-
-                    m_fbos[chain]->release();
-                    p->release();
-                }
-
-                m_textures[chain] = m_intermediate.at(chain).at((m_textureIndex.at(chain) + 1) % (m_programs.size() + 1));
-                //qDebug() << "Output is" << ((m_textureIndex.at(chain) + 1) % (m_programs.count() + 1));
+            auto intense = qreal(intensity());
+            m_intensityIntegral = fmod(m_intensityIntegral + intense / FPS, MAX_INTEGRAL);
+            p->setUniformValue("iIntensity", GLfloat(intense));
+            p->setUniformValue("iIntensityIntegral", GLfloat(m_intensityIntegral));
+            p->setUniformValue("iStep", GLfloat(step));
+            p->setUniformValue("iTime", GLfloat(time));
+            p->setUniformValue("iFPS",  GLfloat(FPS));
+            p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
+            p->setUniformValue("iFrame", 0);
+            p->setUniformValue("iNoise", 1);
+            p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
+            p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            m_intermediate.at(chain).at(fboIndex)->release();
+            m_intermediate.at(chain).at(fboIndex)->toImage().save(QString("out_%1.png").arg(m_intermediate.at(chain).at(fboIndex)->texture()));
+            p->release();
         }
+
+        m_textures[chain] = m_intermediate.at(chain).at((m_textureIndex.at(chain) + 1) % (m_programs.size() + 1))->texture();
+        qDebug() << "Output texture ID is" << m_textures[chain];
+        //qDebug() << "Output is" << ((m_textureIndex.at(chain) + 1) % (m_programs.count() + 1));
         m_textureIndex[chain] = (m_textureIndex.at(chain) + 1) % (m_programs.size() + 1);
     }
 }

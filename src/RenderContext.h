@@ -52,8 +52,8 @@ public:
    ~RenderContext() override;
     int chainCount();
     QSize chainSize(int chain);
-    QSharedPointer<QOpenGLTexture> noiseTexture(int chain);
-    QSharedPointer<QOpenGLTexture> blankTexture();
+    GLuint noiseTexture(int chain);
+    GLuint blankTexture();
     void makeCurrent();
 
     // Called from the OpenGLWorkerContext,
@@ -81,7 +81,7 @@ private:
     QList<int> topoSort(const ModelGraph &graph);
     bool m_initialized;
     QVector<QSharedPointer<QOpenGLTexture> > m_noiseTextures;
-    QSharedPointer<QOpenGLTexture> m_blankTexture;
+    QOpenGLTexture m_blankTexture;
     QList<RenderTrigger> m_renderTriggers;
     RenderContextOpenGLWorker m_openGLWorker;
 };
