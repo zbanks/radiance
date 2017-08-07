@@ -40,7 +40,6 @@ void QQuickVideoNodeRender::setChain(int chain) {
 }
 
 QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
-    window()->resetOpenGLState();
     QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
 
     if (!node) {

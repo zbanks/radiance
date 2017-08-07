@@ -55,7 +55,7 @@ ApplicationWindow {
             id: vnr
             anchors.fill: parent
             chain: 0
-            videoNode: en4
+            videoNode: en2
         }
         MouseArea {
             anchors.fill: parent

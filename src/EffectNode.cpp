@@ -113,6 +113,7 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             m_intermediate.at(chain).at(fboIndex)->release();
             //m_intermediate.at(chain).at(fboIndex)->toImage().save(QString("out_%1.png").arg(m_intermediate.at(chain).at(fboIndex)->texture()));
             p->release();
+            glActiveTexture(GL_TEXTURE0); // Very important to reset OpenGL state for scene graph rendering
         }
 
         m_textures[chain] = m_intermediate.at(chain).at((m_textureIndex.at(chain) + 1) % (m_programs.size() + 1))->texture();
