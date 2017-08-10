@@ -30,40 +30,22 @@ ApplicationWindow {
     EffectNode {
         id: en
         name: "yellow"
-        intensity: 1
+        intensity: ent.intensity
     }
     EffectNode {
         id: en2
         name: "heart"
-        intensity: 1
+        intensity: ent2.intensity
     }
     EffectNode {
         id: en3
         name: "wwave"
-        intensity: 1
+        intensity: ent3.intensity
     }
     EffectNode {
         id: en4
         name: "wwave"
-        intensity: 1
-    }
-    Rectangle {
-        color: "#FF0000"
-        width: 500
-        height: 500
-        VideoNodeRender {
-            id: vnr
-            anchors.fill: parent
-            chain: 0
-            videoNode: en2
-        }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                vnr.update()
-                model.removeVideoNode(en4);
-            }
-        }
+        intensity: ent4.intensity
     }
 
     Component.onCompleted: {
@@ -82,6 +64,46 @@ ApplicationWindow {
         console.log(model.graph.edges[0].fromVertex, 
                     model.graph.edges[0].toVertex, 
                     model.graph.edges[0].toInput);
+    }
+
+    ColumnLayout {
+        Rectangle {
+            color: "#FF0000"
+            width: 500
+            height: 500
+            VideoNodeRender {
+                id: vnr
+                anchors.fill: parent
+                chain: 0
+                videoNode: en2
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    vnr.update()
+                    model.removeVideoNode(en4);
+                }
+            }
+        }
+
+        RowLayout {
+            EffectNodeTile {
+                id: ent;
+                effect: en;
+            }
+            EffectNodeTile {
+                id: ent2;
+                effect: en2;
+            }
+            EffectNodeTile {
+                id: ent3;
+                effect: en3;
+            }
+            EffectNodeTile {
+                id: ent4;
+                effect: en4;
+            }
+        }
     }
 
     Action {
