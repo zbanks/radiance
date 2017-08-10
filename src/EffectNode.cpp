@@ -8,18 +8,18 @@
 #include <iostream>
 
 EffectNode::EffectNode()
-    : VideoNode(renderContext, 1)
+    : VideoNode(renderContext)
     , m_openGLWorker(new EffectNodeOpenGLWorker(this))
     , m_intensity(0)
-    , m_initialized(false)
-    , m_renderStates(m_context->chainCount()) {
-    connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
+    , m_renderStates(context()->chainCount()) {
 
+    setInputCount(1);
+    connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
     m_periodic.start(10);
 
-    if (!QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize"))
-        qFatal("Unable to initialize openGLWorker");
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+    Q_ASSERT(result);
 }
 
 EffectNode::EffectNode(const EffectNode &other)
@@ -27,7 +27,6 @@ EffectNode::EffectNode(const EffectNode &other)
     , m_openGLWorker(other.m_openGLWorker)
     , m_intensity(other.m_intensity)
     , m_intensityIntegral(other.m_intensityIntegral)
-    , m_initialized(other.m_initialized)
     , m_renderStates(other.m_renderStates)
     , m_programs(other.m_programs) {
 }
@@ -35,12 +34,12 @@ EffectNode::EffectNode(const EffectNode &other)
 EffectNode::~EffectNode() {
 }
 
-void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
+void EffectNode::initialize() {
     QMutexLocker locker(&m_stateLock); // TODO this lock can be MUCH shorter time
     // also there is an emit while locked, which is bad
     bool result = loadProgram(m_name);
     if(!result) {
-        emit deleteMe();
+        emit fatal("Could not load shaders");
         return;
     }
 
@@ -50,8 +49,7 @@ void EffectNode::initialize(QOpenGLFunctions *glFuncs) {
 }
 
 void EffectNode::onInitialized() {
-    QMutexLocker locker(&m_stateLock);
-    m_initialized = true;
+    setReady(true);
 }
 
 // Paint never needs to take the stateLock
@@ -67,7 +65,7 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
     Q_ASSERT(QThread::currentThread() == thread());
 
     //qDebug() << "calling paint" << this << chain << inputTextures.count();
-    if(!m_initialized) {
+    if(!m_ready) {
         m_renderStates[chain].m_texture = 0; // Uninitialized
         qDebug() << "uninitialized effectnode during paint :(";
         return;
@@ -234,15 +232,16 @@ QString EffectNode::name() {
 
 void EffectNode::setName(QString name) {
     Q_ASSERT(QThread::currentThread() == thread());
-    {
-        QMutexLocker locker(&m_stateLock);
-        m_name = name;
-        m_initialized = false;
+    if(name != m_name) {
+        setReady(false);
+        {
+            QMutexLocker locker(&m_stateLock);
+            m_name = name;
+        }
+        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+        Q_ASSERT(result);
+        emit nameChanged(name);
     }
-    if (!QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize"))
-        qFatal("Unable to initialize openGLWorker");
-
-    emit nameChanged(name);
 }
 
 // Creates a copy of this node for rendering
@@ -274,7 +273,7 @@ EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
 
 void EffectNodeOpenGLWorker::initialize() {
     makeCurrent();
-    m_p->initialize(glFuncs());
+    m_p->initialize();
     emit initialized();
 }
 

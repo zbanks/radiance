@@ -10,25 +10,43 @@
 
 class EffectNode;
 
+// This struct extends the VideoNodeRenderState
+// to add additional state to each render pipeline.
+// It adds some intermediate framebuffers
+// and an index into them.
 struct EffectNodeRenderState : public VideoNodeRenderState {
 public:
     QVector<QSharedPointer<QOpenGLFramebufferObject>> m_intermediate;
     int m_textureIndex;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+
+// This class extends OpenGLWorker
+// to enable shader compilation
+// and other initialization
+// in a background context
 class EffectNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
     EffectNodeOpenGLWorker(EffectNode *p);
-public slots:
+public slots:   
+    // Call this after changing
+    // "name"
     void initialize();
 signals:
+    // This is emitted when it is done
     void initialized();
 protected:
     EffectNode *m_p;
 };
 
+///////////////////////////////////////////////////////////////////////////////
+
+// This class extends VideoNode
+// to create a video effect
+// based on one or more shader programs.
 class EffectNode
     : public VideoNode {
     Q_OBJECT
@@ -46,7 +64,8 @@ public:
     void paint(int chain, QVector<GLuint> inputTextures) override;
 
     // Called from OpenGLWorker
-    void initialize(QOpenGLFunctions *glFuncs);
+    // (in a different thread)
+    void initialize();
 
     // Get the output texture of this EffectNode
     GLuint texture(int chain);
@@ -72,18 +91,18 @@ signals:
     void nameChanged(QString name);
 
 private:
-    QVector<EffectNodeRenderState> m_renderStates;
-    QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
-
+    // Called from initialize
+    // in a different thread
     bool loadProgram(QString name);
 
+protected:
+    QVector<EffectNodeRenderState> m_renderStates;
+    QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
     qreal m_intensity;
     qreal m_intensityIntegral;
     qreal m_realTime;
     qreal m_realTimeLast;
     QString m_name;
-    bool m_initialized;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
-    QMutex m_stateLock;
     QTimer m_periodic;
 };

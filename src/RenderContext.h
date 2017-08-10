@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QQuickWindow>
 #include <QMutex>
+#include "RenderTrigger.h"
 
 // The Everpresent God Object (EGO)
 
@@ -13,24 +14,6 @@ class VideoNode;
 class Model;
 class RenderContext;
 class ModelGraph;
-
-class RenderTrigger : public QObject {
-    Q_OBJECT
-
-public:
-    RenderTrigger(RenderContext *context, Model *model, int chain, QObject *obj);
-    RenderTrigger(const RenderTrigger&);
-   ~RenderTrigger();
-    bool operator==(const RenderTrigger &other) const;
-    RenderTrigger& operator=(const RenderTrigger&);
-public slots:
-    void render();
-private:
-    RenderContext *m_context;
-    int m_chain;
-    Model *m_model;
-    QObject *m_obj; // Object is only needed for equality check in removeRenderTrigger
-};
 
 class RenderContextOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
@@ -44,6 +27,8 @@ signals:
 protected:
     RenderContext *m_p;
 };
+
+///////////////////////////////////////////////////////////////////////////////
 
 class RenderContext : public QObject {
     Q_OBJECT

@@ -40,6 +40,7 @@ add_executable(radiance WIN32 src/main.cpp
     src/VideoNodeUI.cpp
 
     src/RenderContext.cpp
+    src/RenderTrigger.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/QQuickVideoNodeRender.cpp
