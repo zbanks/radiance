@@ -6,7 +6,6 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QMutex>
-#include <QTimer>
 
 class EffectNode;
 
@@ -106,5 +105,4 @@ protected:
     qreal m_realTimeLast;
     QString m_name;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
-    QTimer m_periodic;
 };

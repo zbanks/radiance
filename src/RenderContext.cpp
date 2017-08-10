@@ -8,6 +8,10 @@ RenderContext::RenderContext()
     , m_initialized(false)
     , m_blankTexture(QOpenGLTexture::Target2D) {
     connect(&m_openGLWorker, &RenderContextOpenGLWorker::initialized, this, &RenderContext::onInitialized);
+
+    connect(&m_periodic, &QTimer::timeout, this, &RenderContext::periodic);
+    m_periodic.start(10); // TODO make this adjustable?
+
     if (!QMetaObject::invokeMethod(&m_openGLWorker, "initialize"))
         qFatal("Unable to initialize openGLWorker");
 }

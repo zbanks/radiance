@@ -14,9 +14,8 @@ EffectNode::EffectNode()
     , m_renderStates(context()->chainCount()) {
 
     setInputCount(1);
+    connect(m_context, &RenderContext::periodic, this, &EffectNode::periodic);
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
-    connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
-    m_periodic.start(10);
 }
 
 EffectNode::EffectNode(const EffectNode &other)

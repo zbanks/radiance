@@ -6,6 +6,7 @@
 #include <QVector>
 #include <QQuickWindow>
 #include <QMutex>
+#include <QTimer>
 #include "RenderTrigger.h"
 
 // The Everpresent God Object (EGO)
@@ -58,6 +59,14 @@ public slots:
     // In the future we can override this function so that
     // more than just QQuickWindows can trigger renders
 
+signals:
+    // This signal is fired periodically
+    // to tell all nodes to update.
+    // Since rendering happens asynchronously,
+    // nodes should use this signal
+    // to increment counters, integrate values, etc.
+    void periodic();
+
 protected slots:
     void onInitialized();
 
@@ -68,4 +77,5 @@ private:
     QOpenGLTexture m_blankTexture;
     QList<RenderTrigger> m_renderTriggers;
     RenderContextOpenGLWorker m_openGLWorker;
+    QTimer m_periodic;
 };
