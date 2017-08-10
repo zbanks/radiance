@@ -25,6 +25,8 @@ public slots:
 signals:
     void initialized();
 protected:
+    void createBlankTexture();
+    void createNoiseTextures();
     RenderContext *m_p;
 };
 
@@ -32,6 +34,8 @@ protected:
 
 class RenderContext : public QObject {
     Q_OBJECT
+
+    friend class RenderContextOpenGLWorker;
 
 public:
     RenderContext();
@@ -41,9 +45,6 @@ public:
     GLuint noiseTexture(int chain);
     GLuint blankTexture();
     void makeCurrent();
-
-    // Called from the OpenGLWorkerContext,
-    void initialize();
 
 public slots:
     void render(Model *m, int chain);
@@ -61,12 +62,9 @@ protected slots:
     void onInitialized();
 
 private:
-    void createNoiseTextures();
-    void createBlankTexture();
-    void createOpenGLContext();
     QList<int> topoSort(const ModelGraph &graph);
     bool m_initialized;
-    QVector<QSharedPointer<QOpenGLTexture> > m_noiseTextures;
+    QVector<QSharedPointer<QOpenGLTexture>> m_noiseTextures;
     QOpenGLTexture m_blankTexture;
     QList<RenderTrigger> m_renderTriggers;
     RenderContextOpenGLWorker m_openGLWorker;

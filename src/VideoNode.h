@@ -103,6 +103,9 @@ public slots:
     bool ready();
 
     // Returns the framebuffer size of the given chain
+    // This method is thread-safe
+    // because it is accessing an element of RenderContext
+    // which will not change during this node's lifetime
     QSize size(int chain);
 
 protected slots:
@@ -118,9 +121,9 @@ protected:
 signals:
     // Emitted when the object wishes to be deleted
     // e.g. due to an error
-    void message(QString message);
-    void warning(QString warning);
-    void fatal(QString error);
+    void message(QString str);
+    void warning(QString str);
+    void fatal(QString str);
 
     // Emitted when the number of inputs changes
     void inputCountChanged(int value);

@@ -68,7 +68,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
         .toInput = toInput,
     };
     {
-        QMutexLocker locker(&m_graphLock); // TODO don't lock during emit
+        QMutexLocker locker(&m_graphLock);
 
         for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
             if (edge->toVertex == toVertex && edge->toInput == toInput) {

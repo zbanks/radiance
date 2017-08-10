@@ -17,9 +17,6 @@ EffectNode::EffectNode()
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
     m_periodic.start(10);
-
-    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
-    Q_ASSERT(result);
 }
 
 EffectNode::EffectNode(const EffectNode &other)
@@ -35,17 +32,6 @@ EffectNode::~EffectNode() {
 }
 
 void EffectNode::initialize() {
-    QMutexLocker locker(&m_stateLock); // TODO this lock can be MUCH shorter time
-    // also there is an emit while locked, which is bad
-    bool result = loadProgram(m_name);
-    if(!result) {
-        emit fatal("Could not load shaders");
-        return;
-    }
-
-    for(int i = 0; i<m_context->chainCount(); i++) {
-        m_renderStates[i].m_intermediate.clear(); // Let the paint operation populate this
-    }
 }
 
 void EffectNode::onInitialized() {
@@ -67,7 +53,7 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
     //qDebug() << "calling paint" << this << chain << inputTextures.count();
     if(!m_ready) {
         m_renderStates[chain].m_texture = 0; // Uninitialized
-        qDebug() << "uninitialized effectnode during paint :(";
+        //qDebug() << "uninitialized effectnode during paint :(";
         return;
     }
 
@@ -148,60 +134,6 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
     }
 }
 
-// Call this to load shader code into this Effect.
-// This function is thread-safe, avoid calling this in the render thread.
-// A current OpenGL context is required.
-// Returns true if the program was loaded successfully
-bool EffectNode::loadProgram(QString name) {
-    QFile header_file("../resources/glsl/effect_header.glsl");
-    if(!header_file.open(QIODevice::ReadOnly)) {
-        qDebug() << QString("Could not open \"../resources/effect_header.glsl\"");
-        return false;
-    }
-    QTextStream headerStream(&header_file);
-    auto headerString = headerStream.readAll();
-
-    for(int i=0;;i++) {
-        auto filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
-        QFile file(filename);
-
-        QFileInfo check_file(filename);
-        if(!(check_file.exists() && check_file.isFile()))
-            break;
-
-        if(!file.open(QIODevice::ReadOnly)) {
-            qDebug() << QString("Could not open \"%1\"").arg(filename);
-            goto err;
-        }
-        QTextStream stream(&file);
-        auto s = headerString + stream.readAll();
-        m_programs.append(QSharedPointer<QOpenGLShaderProgram>::create());
-        auto && program = m_programs.back();
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                       "#version 130\n"
-                                       "#extension GL_ARB_shading_language_420pack : enable\n"
-                                       "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
-                                       "varying vec2 coords;\n"
-                                       "void main() {"
-                                       "    vec2 vertex = varray[gl_VertexID];\n"
-                                       "    gl_Position = vec4(vertex,0.,1.);\n"
-                                       "    coords = vertex;\n"
-                                       "}")) goto err;
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s))
-            goto err;
-        if(!program->link())
-            goto err;
-    }
-    if(m_programs.empty()) {
-        qDebug() << QString("No shaders found for \"%1\"").arg(name);
-        return false;
-    }
-
-    return true;
-err:
-    return false;
-}
-
 void EffectNode::periodic() {
     Q_ASSERT(QThread::currentThread() == thread());
     QMutexLocker locker(&m_stateLock);
@@ -269,11 +201,87 @@ GLuint EffectNode::texture(int chain) {
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
     : OpenGLWorker(openGLWorkerContext)
     , m_p(p) {
+    connect(this, &EffectNodeOpenGLWorker::message, m_p, &EffectNode::message);
+    connect(this, &EffectNodeOpenGLWorker::warning, m_p, &EffectNode::warning);
+    connect(this, &EffectNodeOpenGLWorker::fatal,   m_p, &EffectNode::fatal);
 }
 
 void EffectNodeOpenGLWorker::initialize() {
     makeCurrent();
-    m_p->initialize();
+    bool result = loadProgram(m_p->m_name);
+    if(!result) {
+        return;
+    }
+
+    for(int i = 0; i<m_p->m_context->chainCount(); i++) {
+        m_p->m_renderStates[i].m_intermediate.clear(); // Let the paint operation populate this
+    }
     emit initialized();
+}
+
+// Call this to load shader code into this Effect.
+// Returns true if the program was loaded successfully
+bool EffectNodeOpenGLWorker::loadProgram(QString name) {
+    Q_ASSERT(!m_p->m_ready); // Must have been marked unready
+
+    QFile header_file("../resources/glsl/effect_header.glsl");
+    if(!header_file.open(QIODevice::ReadOnly)) {
+        emit fatal(("Could not open \"../resources/effect_header.glsl\""));
+        return false;
+    }
+    QTextStream headerStream(&header_file);
+    auto headerString = headerStream.readAll();
+
+    QVector<QSharedPointer<QOpenGLShaderProgram>> programs;
+
+    for(int i=0;;i++) {
+        auto filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
+        QFile file(filename);
+
+        QFileInfo check_file(filename);
+        if(!(check_file.exists() && check_file.isFile()))
+            break;
+
+        if(!file.open(QIODevice::ReadOnly)) {
+            emit fatal(QString("Could not open \"%1\"").arg(filename));
+            return false;
+        }
+        QTextStream stream(&file);
+        auto s = headerString + stream.readAll();
+        programs.append(QSharedPointer<QOpenGLShaderProgram>::create());
+        auto && program = programs.back();
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                       "#version 130\n"
+                                       "#extension GL_ARB_shading_language_420pack : enable\n"
+                                       "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+                                       "varying vec2 coords;\n"
+                                       "void main() {"
+                                       "    vec2 vertex = varray[gl_VertexID];\n"
+                                       "    gl_Position = vec4(vertex,0.,1.);\n"
+                                       "    coords = vertex;\n"
+                                       "}")) {
+            emit fatal("Could not compile vertex shader");
+            return false;
+        }
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s)) {
+            emit fatal("Could not compile fragment shader");
+            return false;
+        }
+        if(!program->link()) {
+            emit fatal("Could not link shader program");
+            return false;
+        }
+    }
+    if(programs.empty()) {
+        emit fatal(QString("No shaders found for \"%1\"").arg(name));
+        return false;
+    }
+
+    {
+        QMutexLocker locker(&m_p->m_stateLock);
+        m_p->m_programs = programs;
+    }
+
+    return true;
 }
 

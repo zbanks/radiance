@@ -38,7 +38,12 @@ public slots:
 signals:
     // This is emitted when it is done
     void initialized();
+
+    void message(QString str);
+    void warning(QString str);
+    void fatal(QString str);
 protected:
+    bool loadProgram(QString name);
     EffectNode *m_p;
 };
 
@@ -52,6 +57,8 @@ class EffectNode
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+
+    friend class EffectNodeOpenGLWorker;
 
 public:
     EffectNode();
@@ -89,11 +96,6 @@ protected slots:
 signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);
-
-private:
-    // Called from initialize
-    // in a different thread
-    bool loadProgram(QString name);
 
 protected:
     QVector<EffectNodeRenderState> m_renderStates;

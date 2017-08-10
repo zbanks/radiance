@@ -37,7 +37,7 @@ void OpenGLWorkerContext::initialize() {
 }
 
 void OpenGLWorkerContext::makeCurrent() {
-    qDebug() << "Make context current" << this;
+    //qDebug() << "Make context current" << this;
     m_context->makeCurrent(m_surface.data());
 }
 
