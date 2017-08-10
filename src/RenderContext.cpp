@@ -38,7 +38,8 @@ RenderContext::RenderContext()
     , m_initialized(false)
     , m_blankTexture(QOpenGLTexture::Target2D) {
     connect(&m_openGLWorker, &RenderContextOpenGLWorker::initialized, this, &RenderContext::onInitialized);
-    Q_ASSERT(QMetaObject::invokeMethod(&m_openGLWorker, "initialize"));
+    if (!QMetaObject::invokeMethod(&m_openGLWorker, "initialize"))
+        qFatal("Unable to initialize openGLWorker");
 }
 
 RenderContext::~RenderContext() {
