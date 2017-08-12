@@ -8,6 +8,7 @@
 #include "Lux.h"
 
 // OutputManager singleton
+// TODO make points QSharedPointer probably
 class OutputManager : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(QQmlListProperty<LuxBus> buses READ buses NOTIFY busesChanged)

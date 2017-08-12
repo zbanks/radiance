@@ -14,44 +14,44 @@
 #include "NodeList.h"
 #include "main.h"
 
-RenderContext *renderContext = 0;
-OpenGLWorkerContext *openGLWorkerContext = 0;
-QSettings *settings = 0;
-QSettings *outputSettings = 0;
-UISettings *uiSettings = 0;
-Audio *audio = 0;
-OutputManager *outputManager = 0;
-NodeList *nodeList = 0;
-Timebase *timebase = 0;
+QSharedPointer<RenderContext> renderContext;
+QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
+QSharedPointer<QSettings> settings;
+QSharedPointer<QSettings> outputSettings;
+QSharedPointer<UISettings> uiSettings;
+QSharedPointer<Audio> audio;
+QSharedPointer<OutputManager> outputManager;
+QSharedPointer<NodeList> nodeList;
+QSharedPointer<Timebase> timebase;
 
 QObject *uiSettingsProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return uiSettings;
+    return uiSettings.data();
 }
 
 QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return audio;
+    return audio.data();
 }
 
 QObject *outputManagerProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return outputManager;
+    return outputManager.data();
 }
 
 QObject *nodeListProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return nodeList;
+    return nodeList.data();
 }
 
 QObject *renderContextProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
-    return renderContext;
+    return renderContext.data();
 }
 
 int main(int argc, char *argv[]) {
@@ -60,23 +60,22 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setApplicationName("Radiance");
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication app(argc, argv);
-    //qRegisterMetaType<Effect*>("Effect*");
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = new OpenGLWorkerContext();
+    openGLWorkerContext = QSharedPointer<OpenGLWorkerContext>(new OpenGLWorkerContext());
     openGLWorkerContext->setObjectName("openGLWorkerContext");
     openGLWorkerContext->start();
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, openGLWorkerContext, &QThread::quit);
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, openGLWorkerContext.data(), &QThread::quit);
 
-    settings = new QSettings();
-    outputSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output");
-    uiSettings = new UISettings();
-    audio = new Audio();
-    outputManager = new OutputManager(outputSettings);
-    timebase = new Timebase();
-    nodeList = new NodeList();
-    renderContext = new RenderContext();
+    settings = QSharedPointer<QSettings>(new QSettings());
+    outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));
+    uiSettings = QSharedPointer<UISettings>(new UISettings());
+    audio = QSharedPointer<Audio>(new Audio());
+    outputManager = QSharedPointer<OutputManager>(new OutputManager(outputSettings.data()));
+    timebase = QSharedPointer<Timebase>(new Timebase());
+    nodeList = QSharedPointer<NodeList>(new NodeList());
+    renderContext = QSharedPointer<RenderContext>(new RenderContext());
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");

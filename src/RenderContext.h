@@ -19,7 +19,7 @@ class RenderContextOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    RenderContextOpenGLWorker(RenderContext *p);
+    RenderContextOpenGLWorker(RenderContext* p);
 public slots:
     void initialize();
 signals:

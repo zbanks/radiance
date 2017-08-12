@@ -11,12 +11,12 @@
 #include <QSharedPointer>
 #include <QQmlApplicationEngine>
 
-extern RenderContext *renderContext;
-extern RenderContextOld *renderContextOld;
-extern QSettings *settings;
-extern UISettings *uiSettings;
-extern Audio *audio;
-extern Timebase *timebase;
-extern OpenGLWorkerContext *openGLWorkerContext;
+extern QSharedPointer<RenderContext> renderContext;
+extern QSharedPointer<RenderContextOld> renderContextOld;
+extern QSharedPointer<QSettings> settings;
+extern QSharedPointer<UISettings> uiSettings;
+extern QSharedPointer<Audio> audio;
+extern QSharedPointer<Timebase> timebase;
+extern QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 
 #endif

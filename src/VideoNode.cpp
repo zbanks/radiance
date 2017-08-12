@@ -2,7 +2,7 @@
 #include "RenderContext.h"
 #include "Model.h"
 
-VideoNode::VideoNode(RenderContext *context)
+VideoNode::VideoNode(QSharedPointer<RenderContext> context)
     : m_context(context)
     , m_inputCount(0) 
     , m_ready(false)
@@ -33,7 +33,7 @@ QSize VideoNode::size(int chain) {
     return m_context->chainSize(chain);
 }
 
-RenderContext *VideoNode::context() {
+QSharedPointer<RenderContext> VideoNode::context() {
     return m_context;
 }
 

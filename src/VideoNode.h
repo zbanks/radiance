@@ -39,7 +39,7 @@ public:
     // before initialize() has been run.
     // Constructor may be called without a valid
     // OpenGL context.
-    VideoNode(RenderContext *context);
+    VideoNode(QSharedPointer<RenderContext> context);
 
     // VideoNodes must be copyable
     VideoNode(const VideoNode &other);
@@ -52,7 +52,7 @@ public:
     virtual GLuint texture(int chain) = 0;
 
     // Returns the render context
-    RenderContext *context();
+    QSharedPointer<RenderContext> context();
 
     // Methods for rendering
 
@@ -113,7 +113,7 @@ protected slots:
     void setReady(bool value);
 
 protected:
-    RenderContext *m_context;
+    QSharedPointer<RenderContext> m_context;
     int m_inputCount;
     bool m_ready;
     QMutex m_stateLock;
