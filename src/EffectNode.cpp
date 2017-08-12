@@ -3,9 +3,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QOpenGLFramebufferObject>
+#include <memory>
 #include "main.h"
-
-#include <iostream>
 
 EffectNode::EffectNode()
     : VideoNode(renderContext)

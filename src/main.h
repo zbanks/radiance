@@ -3,7 +3,6 @@
 
 #include <QSettings>
 #include "UISettings.h"
-#include "RenderContextOld.h"
 #include "Audio.h"
 #include "Timebase.h"
 #include "RenderContext.h"
@@ -12,7 +11,6 @@
 #include <QQmlApplicationEngine>
 
 extern QSharedPointer<RenderContext> renderContext;
-extern QSharedPointer<RenderContextOld> renderContextOld;
 extern QSharedPointer<QSettings> settings;
 extern QSharedPointer<UISettings> uiSettings;
 extern QSharedPointer<Audio> audio;

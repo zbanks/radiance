@@ -27,22 +27,18 @@ ApplicationWindow {
     EffectNode {
         id: en
         name: "yellow"
-        intensity: ent.intensity
     }
     EffectNode {
         id: en2
         name: "heart"
-        intensity: ent2.intensity
     }
     EffectNode {
         id: en3
         name: "wwave"
-        intensity: ent3.intensity
     }
     EffectNode {
         id: en4
         name: "wwave"
-        intensity: ent4.intensity
     }
 
     Component.onCompleted: {

@@ -2,7 +2,6 @@
 #include "liblux/lux.h"
 #include <unistd.h>
 #include <math.h>
-#include "RenderContextOld.h"
 
 // Lux helper functions
 static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
@@ -160,9 +159,9 @@ void LuxDevice::setBus(LuxBus * bus, bool blind) {
 }
 
 QVector<QColor> LuxDevice::frame() {
-    if (m_videoNode == nullptr)
+    //if (m_videoNode == nullptr)
         return QVector<QColor>();
-    return m_videoNode->pixels(m_videoNode->context()->outputFboIndex(), m_pixels); // TODO put this back
+    //return m_videoNode->pixels(m_videoNode->context()->outputFboIndex(), m_pixels); // TODO put this back
 }
 void LuxDevice::refresh() {
 }

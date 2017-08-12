@@ -7,7 +7,7 @@
 #include <QList>
 #include <string>
 #include <vector>
-#include "VideoNodeOld.h"
+#include "VideoNode.h"
 
 class LuxBus;
 
@@ -46,7 +46,7 @@ public:
     int length();
     void setLength(int length);
 
-    VideoNodeOld * m_videoNode;
+    VideoNode * m_videoNode;
     QVector<QColor> frame();
 
 public slots:
