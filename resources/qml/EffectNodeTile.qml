@@ -6,13 +6,17 @@ import radiance 1.0
 
 FocusScope {
     id: tile;
-    property var effect;
+    property var videoNode;
     property alias intensity: slider.value;
     property alias slider: slider;
     property alias sliderGhost: sliderGhost;
 
     width: 100;
     height: 170;
+
+    onVideoNodeChanged: {
+        videoNode.intensity = Qt.binding(function() { return slider.value });
+    }
 
     RadianceTile {
         anchors.fill: parent;
@@ -26,7 +30,7 @@ FocusScope {
 
         Label {
             Layout.fillWidth: true;
-            text: effect.name;
+            text: videoNode.name;
             color: "#ddd";
         }
 
@@ -43,7 +47,7 @@ FocusScope {
                 anchors.fill: parent;
                 chain: 0;
                 id: vnr;
-                videoNode: tile.effect;
+                videoNode: tile.videoNode;
             }
         }
 

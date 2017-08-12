@@ -6,13 +6,10 @@
 #include "RenderContextOld.h"
 #include "Audio.h"
 #include "Timebase.h"
-#include <utility>
-#include <functional>
-#include <algorithm>
-#include <type_traits>
-#include <numeric>
 #include "RenderContext.h"
 #include "OpenGLWorkerContext.h"
+#include <QSharedPointer>
+#include <QQmlApplicationEngine>
 
 extern RenderContext *renderContext;
 extern RenderContextOld *renderContextOld;

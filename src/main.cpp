@@ -101,7 +101,5 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    QObject *window = engine.rootObjects().first();
-
     return app.exec();
 }

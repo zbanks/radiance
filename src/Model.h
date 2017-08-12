@@ -24,31 +24,6 @@ struct ModelCopyForRendering {
     QVector<int> toInput;
 };
 
-/*
-// This class is a snapshot of the model
-// The vertex list is always in topo-sorted order
-class ModelGraph : public QObject {
-    Q_OBJECT
-
-public:
-    ModelGraph();
-   ~ModelGraph() override;
-    ModelGraph(QVector<VideoNode *> vertices, QList<Edge> edges);
-    ModelGraph(const ModelGraph &other);
-
-    // Careful with this one
-    ModelGraph& operator=(const ModelGraph&);
-
-public slots:
-
-private:
-    QVector<VideoNode *> m_vertices;
-    QVector<ModelGraphEdge> m_edges;
-    static int vertexCount(QQmlListProperty<VideoNode> *);
-    static VideoNode *vertexAt(QQmlListProperty<VideoNode> *, int);
-};
-*/
-
 class Model : public QObject {
     Q_OBJECT
     Q_PROPERTY(QQmlListProperty<VideoNode> vertices READ qmlVertices)

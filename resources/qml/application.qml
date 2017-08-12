@@ -78,23 +78,14 @@ ApplicationWindow {
             }
         }
 
-        RowLayout {
-            EffectNodeTile {
-                id: ent;
-                effect: en;
+        View {
+            model: model;
+            delegates: {
+                "EffectNode": "EffectNodeTile",
+                "": "VideoNodeTile"
             }
-            EffectNodeTile {
-                id: ent2;
-                effect: en2;
-            }
-            EffectNodeTile {
-                id: ent3;
-                effect: en3;
-            }
-            EffectNodeTile {
-                id: ent4;
-                effect: en4;
-            }
+            width: 500
+            height: 500
         }
     }
 
