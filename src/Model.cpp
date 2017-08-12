@@ -13,10 +13,9 @@ void Model::addVideoNode(VideoNode *videoNode) {
         {
             QMutexLocker locker(&m_graphLock);
             m_vertices.append(videoNode);
-            regenerateGraph(topoSort());
+            m_verticesSortedForRendering = topoSort();
         }
         emit videoNodeAdded(videoNode);
-        emitGraphChanged();
     }
 }
 
@@ -40,14 +39,13 @@ void Model::removeVideoNode(VideoNode *videoNode) {
     }
 
     if (removed.count() > 0 || count > 0) {
-        regenerateGraph(topoSort());
+        m_verticesSortedForRendering = topoSort();
         for (auto edge = removed.begin(); edge != removed.end(); edge++) {
             emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
         }
         if (count > 0) {
             emit videoNodeRemoved(videoNode);
         }
-        emitGraphChanged();
     }
 }
 
@@ -87,13 +85,12 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
             m_edges = edgesOld;
             return;
         }
-        regenerateGraph(sortedVertices);
+        m_verticesSortedForRendering = sortedVertices;
     }
     for (auto edge = removed.begin(); edge != removed.end(); edge++) {
         emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
     }
     emit edgeAdded(newEdge.fromVertex, newEdge.toVertex, newEdge.toInput);
-    emitGraphChanged();
 }
 
 void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
@@ -120,36 +117,31 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
             }
         }
         if (removed) {
-            regenerateGraph(topoSort());
+            m_verticesSortedForRendering = topoSort();
         }
     }
     if (removed) {
         emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
-        emitGraphChanged();
     }
-}
-
-void Model::regenerateGraph(QVector<VideoNode *> sortedVertices) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    auto tmpGraph = ModelGraph(sortedVertices, m_edges);
-    {
-        QMutexLocker locker(&m_modelGraphLock);
-        m_graph = tmpGraph;
-    }
-}
-
-void Model::emitGraphChanged() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    emit graphChanged(m_graph);
-    emit qmlGraphChanged();
 }
 
 ModelCopyForRendering Model::createCopyForRendering() {
-    QMutexLocker locker(&m_modelGraphLock);
+    QMutexLocker locker(&m_graphLock);
     ModelCopyForRendering out;
 
-    out.edges = m_graph.edges();
-    out.origVertices = m_graph.vertices();
+    // Create a map from VideoNodes to indices
+    QMap<VideoNode *, int> map;
+    for (int i=0; i<m_vertices.count(); i++) {
+        map.insert(m_vertices.at(i), i);
+    }
+
+    for(int i=0; i<m_edges.count(); i++) {
+        out.fromVertex.append(map.value(m_edges.at(i).fromVertex, -1));
+        out.toVertex.append(map.value(m_edges.at(i).toVertex, -1));
+        out.toInput.append(m_edges.at(i).toInput);
+    }
+
+    out.origVertices = m_verticesSortedForRendering;
     QVector<QSharedPointer<VideoNode>> vertices;
     for(int i=0; i<out.origVertices.count(); i++) {
         vertices.append(out.origVertices.at(i)->createCopyForRendering());
@@ -174,22 +166,10 @@ void Model::copyBackRenderStates(int chain, QVector<VideoNode *> origVertices, Q
     }
 }
 
-ModelGraph Model::graph() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    return m_graph;
-}
-
-ModelGraph *Model::qmlGraph() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    ModelGraph *mg = new ModelGraph(m_graph);
-    QQmlEngine::setObjectOwnership(mg, QQmlEngine::JavaScriptOwnership);
-    return mg;
-}
-
 QVector<VideoNode *> Model::topoSort() {
     // Kahn's algorithm from Wikipedia
 
-    QList<Edge> edges = m_edges;
+    auto edges = m_edges;
 
     QVector<VideoNode *> l;
     QList<VideoNode *> s;
@@ -240,6 +220,7 @@ QVector<VideoNode *> Model::topoSort() {
 
 // ModelGraph methods
 
+/*
 ModelGraph::ModelGraph() {
 }
 
@@ -267,50 +248,51 @@ ModelGraph::ModelGraph(const ModelGraph &other)
 
 ModelGraph::~ModelGraph() {
 }
+*/
 
-
-QVector<VideoNode *> ModelGraph::vertices() const {
+QList<VideoNode *> Model::vertices() const {
     return m_vertices;
 }
 
-QVector<ModelGraphEdge> ModelGraph::edges() const {
+QList<Edge> Model::edges() const {
     return m_edges;
 }
 
-QQmlListProperty<VideoNode> ModelGraph::qmlVertices() {
-    return QQmlListProperty<VideoNode>(this, this, &ModelGraph::vertexCount, &ModelGraph::vertexAt);
+QQmlListProperty<VideoNode> Model::qmlVertices() {
+    return QQmlListProperty<VideoNode>(this, this, &Model::vertexCount, &Model::vertexAt);
 }
 
-int ModelGraph::vertexCount() const { 
+int Model::vertexCount() const { 
     return m_vertices.count();
 }
 
-VideoNode *ModelGraph::vertexAt(int index) const {
+VideoNode *Model::vertexAt(int index) const {
     return m_vertices.at(index);
 }
 
-QVariantList ModelGraph::qmlEdges() const {
+QVariantList Model::qmlEdges() const {
     QVariantList edges;
+
+    QMap<VideoNode *, int> map;
+    int i = 0;
+    for (int i=0; i<m_vertices.count(); i++) {
+        map.insert(m_vertices.at(i), i);
+    }
+
     for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
         QVariantMap vedge;
-        vedge.insert("fromVertex", edge->fromVertex);
-        vedge.insert("toVertex", edge->toVertex);
+        vedge.insert("fromVertex", map.value(edge->fromVertex, -1));
+        vedge.insert("toVertex", map.value(edge->toVertex, -1));
         vedge.insert("toInput", edge->toInput);
         edges.append(vedge);
     }
     return edges;
 }
 
-ModelGraph& ModelGraph::operator=(const ModelGraph &other) {
-    m_vertices = other.m_vertices;
-    m_edges = other.m_edges;
-    return *this;
+int Model::vertexCount(QQmlListProperty<VideoNode>* list) {
+    return reinterpret_cast< Model* >(list->data)->vertexCount();
 }
 
-int ModelGraph::vertexCount(QQmlListProperty<VideoNode>* list) {
-    return reinterpret_cast< ModelGraph* >(list->data)->vertexCount();
-}
-
-VideoNode* ModelGraph::vertexAt(QQmlListProperty<VideoNode>* list, int i) {
-    return reinterpret_cast< ModelGraph* >(list->data)->vertexAt(i);
+VideoNode* Model::vertexAt(QQmlListProperty<VideoNode>* list, int i) {
+    return reinterpret_cast< Model* >(list->data)->vertexAt(i);
 }

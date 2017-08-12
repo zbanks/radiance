@@ -14,7 +14,6 @@
 class VideoNode;
 class Model;
 class RenderContext;
-class ModelGraph;
 
 class RenderContextOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
@@ -71,7 +70,6 @@ protected slots:
     void onInitialized();
 
 private:
-    QList<int> topoSort(const ModelGraph &graph);
     bool m_initialized;
     QVector<QSharedPointer<QOpenGLTexture>> m_noiseTextures;
     QOpenGLTexture m_blankTexture;

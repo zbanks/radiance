@@ -22,9 +22,6 @@ ApplicationWindow {
         onEdgeRemoved: {
             console.log("Removed edge");
         }
-        onGraphChanged: {
-            console.log("Graph Changed");
-        }
     }
 
     EffectNode {
@@ -59,11 +56,6 @@ ApplicationWindow {
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, en4, 0);
         RenderContext.addRenderTrigger(window, model, 0);
-        console.log(model.graph.vertices[0]), 
-        console.log(model.graph.vertices[1]), 
-        console.log(model.graph.edges[0].fromVertex, 
-                    model.graph.edges[0].toVertex, 
-                    model.graph.edges[0].toInput);
     }
 
     ColumnLayout {

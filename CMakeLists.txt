@@ -25,28 +25,25 @@ qt5_add_resources(resources/resources.qrc)
 add_executable(radiance WIN32 src/main.cpp
     src/Audio.cpp
     src/CrossFader.cpp
-    src/CrossFaderUI.cpp
     src/Effect.cpp
-    src/EffectUI.cpp
-    src/GraphicalDisplayUI.cpp
     src/Lux.cpp
     src/Midi.cpp
     src/Output.cpp
-    src/OutputUI.cpp
     src/RenderContextOld.cpp
     src/Timebase.cpp
     src/UISettings.cpp
     src/VideoNodeOld.cpp
-    src/VideoNodeUI.cpp
 
     src/RenderContext.cpp
     src/RenderTrigger.cpp
+    src/NodeList.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/QQuickVideoNodeRender.cpp
     src/Model.cpp
     src/OpenGLWorkerContext.cpp
     src/OpenGLWorker.cpp
+    src/View.cpp
     src/liblux/lux.c
     src/liblux/crc.c
     BTrack/src/BTrack.c

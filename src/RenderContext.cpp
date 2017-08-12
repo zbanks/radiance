@@ -54,14 +54,21 @@ void RenderContext::render(Model *model, int chain) {
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
-    QVector<QVector<int> > inputs;
+    QVector<QVector<int>> inputs;
+
+    // Create a list of -1's
     for (int i=0; i<m.vertices.count(); i++) {
         auto inputCount = m.vertices.at(i)->inputCount();
         inputs.append(QVector<int>(inputCount, -1));
     }
-    for (int i = 0; i < m.edges.count(); i++) {
-        auto edge = m.edges.at(i);
-        inputs[edge.toVertex][edge.toInput] = edge.fromVertex;
+
+    Q_ASSERT(m.fromVertex.count() == m.toVertex.count());
+    Q_ASSERT(m.fromVertex.count() == m.toInput.count());
+    for (int i = 0; i < m.toVertex.count(); i++) {
+        auto to = m.toVertex.at(i);
+        if (to >= 0) {
+            inputs[to][m.toInput.at(i)] = m.fromVertex.at(i);
+        }
     }
 
     for (int i=0; i<m.vertices.count(); i++) {
