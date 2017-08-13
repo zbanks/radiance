@@ -10,9 +10,20 @@ FocusScope {
     property alias intensity: slider.value;
     property alias slider: slider;
     property alias sliderGhost: sliderGhost;
+    property var inputHeights;
+    property int gridX;
+    property int gridY;
+
+    function sum(l) {
+        var result = 0;
+        for(var i=0; i<l.length; i++) result += l;
+        return result;
+    }
 
     width: 100;
-    height: 170;
+    height: 170 * sum(inputHeights);
+    x: parent.width - (gridX + 1) * 100;
+    y: gridY * 170;
 
     onVideoNodeChanged: {
         videoNode.intensity = Qt.binding(function() { return slider.value });

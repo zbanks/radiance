@@ -5,6 +5,7 @@
 struct Child {
     VideoNode *videoNode;
     QSharedPointer<QQuickItem> item;
+    QVector<int> inputHeights;
 };
 
 class View : public QQuickItem {

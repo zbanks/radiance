@@ -50,7 +50,7 @@ ApplicationWindow {
         model.addVideoNode(en4);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
-        model.addEdge(en3, en4, 0);
+        //model.addEdge(en3, en4, 0);
         RenderContext.addRenderTrigger(window, model, 0);
     }
 
