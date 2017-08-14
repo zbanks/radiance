@@ -218,38 +218,6 @@ QVector<VideoNode *> Model::topoSort() {
     return l;
 }
 
-// ModelGraph methods
-
-/*
-ModelGraph::ModelGraph() {
-}
-
-ModelGraph::ModelGraph(QVector<VideoNode *> vertices, QList<Edge> edges)
-    : m_vertices(vertices) {
-    QMap<VideoNode *, int> map;
-    int i = 0;
-    for (int i=0; i<m_vertices.count(); i++) {
-        map.insert(m_vertices.at(i), i);
-    }
-    for (auto edge = edges.begin(); edge != edges.end(); edge++) {
-        ModelGraphEdge mge {
-            .fromVertex = map.value(edge->fromVertex, -1),
-            .toVertex = map.value(edge->toVertex, -1),
-            .toInput = edge->toInput,
-        };
-        m_edges.append(mge);
-    }
-}
-
-ModelGraph::ModelGraph(const ModelGraph &other)
-    : m_vertices(other.m_vertices)
-    , m_edges(other.m_edges) {
-}
-
-ModelGraph::~ModelGraph() {
-}
-*/
-
 QList<VideoNode *> Model::vertices() const {
     return m_vertices;
 }
