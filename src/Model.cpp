@@ -131,8 +131,8 @@ ModelCopyForRendering Model::createCopyForRendering() {
 
     // Create a map from VideoNodes to indices
     QMap<VideoNode *, int> map;
-    for (int i=0; i<m_vertices.count(); i++) {
-        map.insert(m_vertices.at(i), i);
+    for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
+        map.insert(m_verticesSortedForRendering.at(i), i);
     }
 
     for(int i=0; i<m_edges.count(); i++) {
