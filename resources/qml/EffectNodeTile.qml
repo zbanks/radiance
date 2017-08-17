@@ -16,7 +16,7 @@ FocusScope {
 
     function sum(l) {
         var result = 0;
-        for(var i=0; i<l.length; i++) result += l;
+        for(var i=0; i<l.length; i++) result += l[i];
         return result;
     }
 

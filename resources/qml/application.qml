@@ -38,7 +38,13 @@ ApplicationWindow {
     }
     EffectNode {
         id: en4
-        name: "wwave"
+        name: "test"
+    }
+
+    EffectNode {
+        id: cross
+        name: "crossfader"
+        inputCount: 2
     }
 
     Component.onCompleted: {
@@ -48,8 +54,11 @@ ApplicationWindow {
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
+        model.addVideoNode(cross);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
+        model.addEdge(en3, cross, 0);
+        model.addEdge(en4, cross, 1);
         //model.addEdge(en3, en4, 0);
         RenderContext.addRenderTrigger(window, model, 0);
     }
@@ -63,7 +72,7 @@ ApplicationWindow {
                 id: vnr
                 anchors.fill: parent
                 chain: 0
-                videoNode: en2
+                videoNode: cross
             }
             MouseArea {
                 anchors.fill: parent

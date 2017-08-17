@@ -191,13 +191,17 @@ QVector<VideoNode *> Model::topoSort() {
         l.append(n);
 
         QSet<VideoNode *> newStartNodes; // Potential new start nodes
-        for (auto e = edges.begin(); e != edges.end(); e++) {
+        for (auto e = edges.begin(); e != edges.end();) {
             // Remove edges originating from the node we just took
+            // See https://stackoverflow.com/questions/16269696/erasing-while-iterating-an-stdlist
+            // about erasing while using iterators
             if (e->fromVertex == n) {
                 newStartNodes.insert(e->toVertex);
-                edges.erase(e);
+                e = edges.erase(e);
                 // Any node pointed to by one of these deleted edges
                 // is a potential new start node
+            } else {
+                e++;
             }
         }
         // Prune the potential new start nodes down to just the ones
@@ -230,7 +234,7 @@ QQmlListProperty<VideoNode> Model::qmlVertices() {
     return QQmlListProperty<VideoNode>(this, this, &Model::vertexCount, &Model::vertexAt);
 }
 
-int Model::vertexCount() const { 
+int Model::vertexCount() const {
     return m_vertices.count();
 }
 

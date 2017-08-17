@@ -27,7 +27,10 @@ uniform float iIntensityIntegral;
 // (Ideal) output rate in frames per second
 uniform float iFPS;
 
-// Output of the previous pattern
+// Outputs of previous patterns
+uniform sampler2D iInputs[];
+
+// Output of the previous pattern.  Alias to iInputs[0]
 uniform sampler2D iFrame;
 
 // Full frame RGBA noise

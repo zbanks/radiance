@@ -74,7 +74,9 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
 
     {
         auto chanTex = std::make_unique<GLuint[]>(m_programs.size());
-        std::iota(&chanTex[0], &chanTex[0] + m_programs.size(), 2);
+        std::iota(&chanTex[0], &chanTex[0] + m_programs.size(), 1 + m_inputCount);
+        auto inputTex = std::make_unique<GLuint[]>(m_inputCount);
+        std::iota(&inputTex[0], &inputTex[0] + m_inputCount, 0);
         auto   time = timebase->beat();
         m_realTimeLast = m_realTime;
         m_realTime     = timebase->wallTime();
@@ -88,8 +90,6 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
         auto size = m_context->chainSize(chain);
         glViewport(0, 0, size.width(), size.height());
 
-        auto previousTex = inputTextures.at(0);
-
         for(int j = m_programs.count() - 1; j >= 0; j--) {
             //qDebug() << "Rendering shader" << j << "onto" << (m_renderStates.at(chain).m_textureIndex + j + 1) % (m_programs.count() + 1);
             auto fboIndex = (m_renderStates.at(chain).m_textureIndex + j + 1) % (m_programs.size() + 1);
@@ -98,12 +98,15 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             p->bind();
             m_renderStates.at(chain).m_intermediate.at(fboIndex)->bind();
 
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, previousTex);
-            glActiveTexture(GL_TEXTURE1);
+            for (int k = 0; k < m_inputCount; k++) {
+                glActiveTexture(GL_TEXTURE0 + k);
+                glBindTexture(GL_TEXTURE_2D, inputTextures.at(k));
+            }
+
+            glActiveTexture(GL_TEXTURE0 + m_inputCount);
             glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(chain));
             for(int k=0; k<m_programs.size(); k++) {
-                glActiveTexture(GL_TEXTURE2 + k);
+                glActiveTexture(GL_TEXTURE1 + m_inputCount + k);
                 glBindTexture(GL_TEXTURE_2D, m_renderStates.at(chain).m_intermediate.at((m_renderStates.at(chain).m_textureIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
                 //qDebug() << "Bind" << (m_renderStates.at(chain).m_textureIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
             }
@@ -116,7 +119,8 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             p->setUniformValue("iFPS",  GLfloat(FPS));
             p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
             p->setUniformValue("iFrame", 0);
-            p->setUniformValue("iNoise", 1);
+            p->setUniformValueArray("iInputs", &inputTex[0], m_inputCount);
+            p->setUniformValue("iNoise", m_inputCount);
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
             p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
