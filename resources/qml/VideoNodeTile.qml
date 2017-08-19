@@ -53,14 +53,29 @@ FocusScope {
             var t = tile.Drag.target;
             if (t !== null) {
                 var me = tile.videoNode;
-                if (t.fromNode !== null && t.toNode !== null) {
-                    tile.model.addEdge(t.fromNode, t.toNode, t.toInputu);
+                var fn = t.fromNode;
+                var tn = t.toNode;
+                var ti = t.toInput;
+                var e = tile.model.edges;
+                var v = tile.model.vertices;
+                var toRemove = [];
+                for (var i=0; i<e.length; i++) {
+                    if (v[e[i].fromVertex] == me
+                     || v[e[i].toVertex] == me) {
+                        toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
+                    }
                 }
-                if (t.fromNode !== null) {
-                    tile.model.addEdge(t.fromNode, me, 0);
+                for (var i=0; i<toRemove.length; i++) {
+                    console.log(toRemove[i]);
+                    tile.model.removeEdge(toRemove[i][0],toRemove[i][1],toRemove[i][2]);
                 }
-                if (t.toNode !== null) {
-                    tile.model.addEdge(me, t.toNode, t.toInput);
+                if (fn !== null) {
+                    console.log(fn+" ...");
+                    tile.model.addEdge(fn, me, 0);
+                    console.log(fn+" OK");
+                }
+                if (tn !== null) {
+                    tile.model.addEdge(me, tn, ti);
                 }
             }
             drop();
@@ -68,6 +83,7 @@ FocusScope {
 
         drag.onActiveChanged: {
             if(drag.active) {
+                tile.Drag.hotSpot = Qt.point(dragArea.mouseX, dragArea.mouseY);
                 tile.z = 1;
             } else {
                 tile.z = 0;

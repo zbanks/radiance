@@ -93,7 +93,7 @@ ApplicationWindow {
                 "EffectNode": "EffectNodeTile",
                 "": "VideoNodeTile"
             }
-            width: 500
+            width: 800
             height: 500
         }
 
