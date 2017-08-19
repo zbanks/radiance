@@ -13,8 +13,9 @@ void main(void) {
     else freq = 0.25;
 
     if(freq > 0) {
-        vec3 hsv = rgb2hsv(gl_FragColor.rgb);
+        vec3 hsv = rgb2hsv(demultiply(gl_FragColor).rgb);
         hsv.y = hsv.y * (1. - sawtooth(iTime / freq, 0.1));
         gl_FragColor.rgb = hsv2rgb(hsv);
+        gl_FragColor = premultiply(gl_FragColor);
     }
 }

@@ -17,7 +17,7 @@ void main(void) {
 
     if(freq > 0) {
         c = vec4(0., 0., 0., 1. - mod(iTime, freq) / freq);
-        //c.a *= pow(iIntensity, 0.3);
+        //c *= pow(iIntensity, 0.3);
         gl_FragColor = composite(gl_FragColor, c);
     }
 }

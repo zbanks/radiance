@@ -6,4 +6,5 @@ void main(void) {
     gl_FragColor.g = c.g * (1. - iIntensity);
     gl_FragColor.b = c.b * (1. - iIntensity);
     gl_FragColor.a = c.a;
+    gl_FragColor = clamp(gl_FragColor, 0.0, 1.0);
 }

@@ -12,7 +12,7 @@ void main(void) {
     vec4 c = vec4(0., 1., 1., y);
     c = composite(c, vec4(0., 0., 1., g * smoothstep(0.5, 0.8, iIntensity)));
 
-    c.a *= smoothstep(0., 0.1, iIntensity);
+    c *= smoothstep(0., 0.1, iIntensity);
     c = clamp(c, 0., 1.);
     gl_FragColor = composite(gl_FragColor, c);
 }

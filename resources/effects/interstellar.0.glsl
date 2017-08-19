@@ -56,5 +56,6 @@ void main()
 	vec3 fragColor = ToGamma(col);
     float v = max(max(fragColor.r, fragColor.g), fragColor.b);
     vec4 c = texture2D(iFrame, uv);
-    gl_FragColor = composite(c, vec4(fragColor / max(v, 0.1), v * smoothstep(0., .1, iIntensity)));
+    vec4 d = vec4(fragColor / max(v, 0.1), v * smoothstep(0., .1, iIntensity));
+    gl_FragColor = composite(c, premultiply(d));
 }

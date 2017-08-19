@@ -11,8 +11,9 @@ void main(void) {
 
     c.r = mix(x, y, 0.3);
     c.b = pow(mix(x, y, 0.7), 0.6);
-    c.g = 0;
-    c.a = iIntensity;
+    c.g = 0.;
+    c.a = 1.;
+    c *= iIntensity;
 
     gl_FragColor = composite(texture2D(iFrame, uv), c);
 }

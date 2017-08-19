@@ -21,8 +21,8 @@ void main() {
         s += d;
         vec4 res = lookup(s);
         //res = smoothstep(0., 1., res); // Makes colors more vibrant
-        res.a *= w;
-        res.a *= max(res.r, max(res.g, res.b));
+        res *= max(res.r, max(res.g, res.b));
+        res *= w;
         col = composite(col, res);
     }
 

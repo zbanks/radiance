@@ -7,7 +7,7 @@ void main(void) {
     c.r = 0.0;
     c.g = 0.5 * sin((normCoord.x + normCoord.y) * ratio) + 0.5;
     c.b = 0.5 * sin((normCoord.x - normCoord.y) * ratio) + 0.5;
-    c.a = iIntensity;
+    c.a = 1.0;
 
-    gl_FragColor = composite(texture2D(iFrame, uv), c);
+    gl_FragColor = composite(texture2D(iFrame, uv), c * iIntensity);
 }

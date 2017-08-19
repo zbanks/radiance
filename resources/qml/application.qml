@@ -30,11 +30,11 @@ ApplicationWindow {
     }
     EffectNode {
         id: en2
-        name: "heart"
+        name: "hue"
     }
     EffectNode {
         id: en3
-        name: "wwave"
+        name: "tunnel"
     }
     EffectNode {
         id: en4

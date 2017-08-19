@@ -14,7 +14,7 @@ void main(void) {
     newUV = newUV / aspectCorrection + 0.5;
 
     vec4 nc = texture2D(iFrame, newUV);
-    nc.a *= box(newUV);
+    nc *= box(newUV);
 
     gl_FragColor = nc;
 }

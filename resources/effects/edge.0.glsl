@@ -28,8 +28,8 @@ void main()
 	vec4 grad = sqrt(gx * gx + gy * gy);
 
     vec4 original = texture2D(iFrame, uv);
-    grad.a *= smoothstep(0., 0.5, iIntensity);
-    original.a *= 1. - smoothstep(0.5, 1., iIntensity);
+    grad *= smoothstep(0., 0.5, iIntensity);
+    original *= 1. - smoothstep(0.5, 1., iIntensity);
 
     gl_FragColor = composite(original, grad);
 }

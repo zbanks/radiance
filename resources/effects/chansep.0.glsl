@@ -13,7 +13,7 @@ void main(void) {
     vec4 greenImage = texture2D(iFrame, greenOffset / aspectCorrection + 0.5);
     vec4 blueImage = texture2D(iFrame, blueOffset / aspectCorrection + 0.5);
 
-    vec3 rgb = vec3(redImage.r * redImage.a, greenImage.g * greenImage.a, blueImage.b * blueImage.a);
+    vec3 rgb = vec3(redImage.r, greenImage.g, blueImage.b);
     float a_out = 1. - (1. - rgb.r) * (1. - rgb.g) * (1. - rgb.b);
-    gl_FragColor = vec4(rgb / a_out, a_out);
+    gl_FragColor = vec4(rgb, a_out);
 }

@@ -9,4 +9,5 @@ void main(void) {
     hsl.g *= 1.0 - factor;
     gl_FragColor.rgb = hsv2rgb(hsl);
     gl_FragColor.a = samp.a;
+    gl_FragColor = premultiply(gl_FragColor);
 }

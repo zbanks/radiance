@@ -6,5 +6,6 @@ void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     float x = mod((normCoord.x + normCoord.y) * 0.5 * xfreq + xpos, 1.);
     gl_FragColor = texture2D(iFrame, uv);
-    gl_FragColor = composite(gl_FragColor, vec4(1., 1., 1., step(x, 0.3) * smoothstep(0., 0.5, iIntensity)));
+    vec4 c = vec4(1.) * step(x, 0.3) * smoothstep(0., 0.5, iIntensity);
+    gl_FragColor = composite(gl_FragColor, c);
 }

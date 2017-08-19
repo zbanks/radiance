@@ -18,13 +18,12 @@ void main()
 
     vec2 texcoords = vec2(a + 0.1 / len, r1);
 	vec4 tex1 = texture2D(iFrame, abs(mod(texcoords, 2.) - 1.));
-	vec4 c = vec4(tex1.rgb, tex1.a * smoothstep(0., 0.1, len));
-
-    c.a *= smoothstep(0.1, 0.2, iIntensity);
+    vec4 c = tex1 * smoothstep(0., 0.1, len);
+    c *= smoothstep(0.1, 0.2, iIntensity);
 
     vec2 texcoords2 = (uv - 0.5 - offset) / (1. - smoothstep(0., 0.2, iIntensity)) + 0.5 + offset;
     vec4 c2 = texture2D(iFrame, texcoords2);
-    c2.a *= box(texcoords2);
+    c2 *= box(texcoords2);
 
     gl_FragColor = composite(c2, c);
 }

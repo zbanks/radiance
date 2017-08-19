@@ -5,6 +5,6 @@ void main(void) {
 
     vec4 c = texture2D(iFrame, uv);
     float s = smoothstep(0.90, 1., 1. - mod(iTime, 1.)) * iAudioLevel;
-    c.a *=  min(3. * s, 1.);
+    c *=  min(3. * s, 1.);
     gl_FragColor = composite(gl_FragColor, c);
 }

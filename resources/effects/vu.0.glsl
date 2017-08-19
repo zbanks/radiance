@@ -9,8 +9,11 @@ void main(void) {
     audio = audio * 2. * iIntensity;
 
     vec3 draw = 1. - smoothstep(audio - onePixel, audio, vec3(abs(normCoord.x)));
+    vec4 dLow = vec4(0.0, 0.0, 0.5, 1.0) * draw.x;
+    vec4 dMid = vec4(0.0, 0.0, 1.0, 1.0) * draw.y;
+    vec4 dHi  = vec4(0.3, 0.3, 1.0, 1.0) * draw.z;
 
-    vec4 c = composite(composite(vec4(0., 0., 0.5, draw.x), vec4(0., 0., 1., draw.y)), vec4(0.3, 0.3, 1., draw.z));
+    vec4 c = composite(composite(dLow, dMid), dHi);
     c = clamp(c, 0., 1.);
     gl_FragColor = composite(gl_FragColor, c);
 }
