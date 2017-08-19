@@ -105,19 +105,21 @@ FocusScope {
     Behavior on x {
         NumberAnimation {
             easing {
-                type: Easing.OutElastic
+                type: Easing.InOutQuad
                 amplitude: 1.0
                 period: 0.5
             }
+            duration: 500
         }
     }
     Behavior on y {
         NumberAnimation {
             easing {
-                type: Easing.OutElastic
+                type: Easing.InOutQuad
                 amplitude: 1.0
                 period: 0.5
             }
+            duration: 500
         }
     }
 }
