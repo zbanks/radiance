@@ -18,8 +18,8 @@ DropArea {
     property int blockWidth: 100;
     property int blockHeight: 170;
 
-    width: blockWidth
-    height: blockHeight
+    width: blockWidth - 2 * padding
+    height: (blockHeight - padding) * gridHeight - padding
     x: parent.width - (gridX + 1) * (blockWidth + padding)
     y: gridY * (blockHeight + padding)
 
