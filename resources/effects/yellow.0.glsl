@@ -12,5 +12,5 @@ void main(void) {
 
     c.a *= smoothstep(0., 0.1, iIntensity);
     c = clamp(c, 0., 1.);
-    gl_FragColor = composite(gl_FragColor, c);
+    gl_FragColor = composite(gl_FragColor, premultiply(c));
 }

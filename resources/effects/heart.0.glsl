@@ -12,5 +12,5 @@ void main(void) {
     float d = (13.0*h - 22.0*h*h + 10.0*h*h*h)/(6.0-5.0*h);
 
     vec4 c = vec4(1., 0.5, 0.5, 1. - smoothstep(0, 3. * onePixel, r - d));
-    gl_FragColor = composite(gl_FragColor, c);
+    gl_FragColor = composite(gl_FragColor, premultiply(c));
 }

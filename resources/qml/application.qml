@@ -26,7 +26,7 @@ ApplicationWindow {
 
     EffectNode {
         id: en
-        name: "yellow"
+        name: "test"
     }
     EffectNode {
         id: en2
@@ -38,7 +38,7 @@ ApplicationWindow {
     }
     EffectNode {
         id: en4
-        name: "test"
+        name: "yellow"
     }
 
     EffectNode {
@@ -47,6 +47,14 @@ ApplicationWindow {
         inputCount: 2
     }
 
+    /*
+    EffectNode {
+        id: rgbmask
+        name: "rgbmask"
+        inputCount: 4
+    }
+    */
+
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
@@ -54,11 +62,21 @@ ApplicationWindow {
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
+
+        /*
+        model.addVideoNode(rgbmask);
+        model.addEdge(en, rgbmask, 0);
+        model.addEdge(en2, rgbmask, 1);
+        model.addEdge(en3, rgbmask, 2);
+        model.addEdge(en4, rgbmask, 3);
+        */
+
         model.addVideoNode(cross);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, cross, 0);
         model.addEdge(en4, cross, 1);
+
         //model.addEdge(en3, en4, 0);
         RenderContext.addRenderTrigger(window, model, 0);
     }

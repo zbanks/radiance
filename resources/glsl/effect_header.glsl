@@ -10,10 +10,6 @@ uniform vec4  iAudio;
 #define iAudioMid   iAudio.y
 #define iAudioHi    iAudio.z
 #define iAudioLevel iAudio.w
-//uniform float iAudioHi;
-//uniform float iAudioLow;
-//uniform float iAudioMid;
-//uniform float iAudioLevel;
 
 // Resolution of the output pattern
 uniform vec2 iResolution;
@@ -64,10 +60,20 @@ vec3 hsv2rgb(vec3 c) {
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-// Alpha-compsite two colors, putting one on top of the other
+// Turn non-premultipled alpha RGBA into premultipled alpha RGBA
+vec4 premultiply(vec4 c) {
+    return vec4(c.rgb * c.a, c.a);
+}
+
+// Turn premultipled alpha RGBA into non-premultipled alpha RGBA
+vec4 demultiply(vec4 c) {
+    return clamp(vec4(c.rgb / c.a, c.a), vec4(0.), vec4(1.));
+}
+
+// Alpha-compsite two colors, putting one on top of the other. Everything is premultipled
 vec4 composite(vec4 under, vec4 over) {
     float a_out = 1. - (1. - over.a) * (1. - under.a);
-    return clamp(vec4((over.rgb * over.a  + under.rgb * under.a * (1. - over.a)) / a_out, a_out), vec4(0.), vec4(1.));
+    return clamp(vec4((over.rgb + under.rgb * (1. - over.a)), a_out), vec4(0.), vec4(1.));
 }
 
 // Sawtooth wave
