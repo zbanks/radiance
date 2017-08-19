@@ -55,8 +55,10 @@ FocusScope {
         }
         onReleased: {
             var t = tile.Drag.target;
-            if (t !== null) {
-                var me = tile.videoNode;
+            var me = tile.videoNode;
+            if (t !== null
+             && t.fromNode != me
+             && t.toNode != me) {
                 var fn = t.fromNode;
                 var tn = t.toNode;
                 var ti = t.toInput;
