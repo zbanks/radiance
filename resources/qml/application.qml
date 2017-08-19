@@ -66,7 +66,6 @@ ApplicationWindow {
         model.addVideoNode(en);
         model.addVideoNode(en2);
         model.addVideoNode(en3);
-        model.addVideoNode(en4);
 
         /*
         model.addVideoNode(rgbmask);
@@ -76,13 +75,15 @@ ApplicationWindow {
         model.addEdge(en4, rgbmask, 3);
         */
 
+        console.log("Crossfader:");
         model.addVideoNode(cross);
-        model.addVideoNode(after);
+        //model.addVideoNode(after);
+        model.addVideoNode(en4);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, cross, 0);
-        model.addEdge(en4, cross, 1);
-        model.addEdge(cross, after, 0);
+        //model.addEdge(en4, cross, 1);
+        //model.addEdge(cross, after, 0);
         RenderContext.addRenderTrigger(window, model, 0);
     }
 

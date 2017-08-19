@@ -59,7 +59,7 @@ static void setInputHeight(const QVector<QVector<int>> &inputs, QVector<QVector<
     for(int i=0; i<myInputs.count(); i++) {
         int attachedNode = myInputs.at(i);
         if (attachedNode >= 0) {
-            setInputHeight(inputs, inputHeight, myInputs.at(i));
+            setInputHeight(inputs, inputHeight, attachedNode);
             auto childInputHeights = inputHeight.at(attachedNode);
             int myInputHeight = 0;
             for(int j=0; j<childInputHeights.count(); j++) {
@@ -176,8 +176,10 @@ void View::onGraphChanged() {
         setInputHeight(inputs, inputHeight, s.at(i));
         setLayer(inputs, gridX, s.at(i), 0);
         setStackup(inputs, inputHeight, gridY, s.at(i), stack);
-        auto myInputHeights = inputHeight.at(i);
-        for (int j=0; j<myInputHeights.count(); j++) stack += myInputHeights.at(j);
+        auto myInputHeights = inputHeight.at(s.at(i));
+        for (int j=0; j<myInputHeights.count(); j++) {
+            stack += myInputHeights.at(j);
+        }
     }
 
     for (int i=0; i<m_children.count(); i++) {
