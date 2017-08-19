@@ -6,6 +6,7 @@ import radiance 1.0
 
 FocusScope {
     id: tile;
+    property var model;
     property var videoNode;
     property var inputHeights;
     property int gridX;
@@ -49,6 +50,19 @@ FocusScope {
             tile.forceActiveFocus();
         }
         onReleased: {
+            var t = tile.Drag.target;
+            if (t !== null) {
+                var me = tile.videoNode;
+                if (t.fromNode !== null && t.toNode !== null) {
+                    tile.model.addEdge(t.fromNode, t.toNode, t.toInputu);
+                }
+                if (t.fromNode !== null) {
+                    tile.model.addEdge(t.fromNode, me, 0);
+                }
+                if (t.toNode !== null) {
+                    tile.model.addEdge(me, t.toNode, t.toInput);
+                }
+            }
             drop();
         }
 

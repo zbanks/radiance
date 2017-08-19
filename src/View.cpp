@@ -46,6 +46,9 @@ Child View::newChild(VideoNode *videoNode) {
     QVariant v;
     v.setValue(videoNode);
     item->setProperty("videoNode", v);
+    QVariant m;
+    m.setValue(m_model);
+    item->setProperty("model", m);
     c.item = item;
 
     return c;
@@ -208,6 +211,23 @@ void View::onGraphChanged() {
             item->setProperty("gridX", gridX.at(i) + 0.5);
             item->setProperty("gridY", gridY.at(i) + j);
             item->setProperty("gridHeight", myInputHeights.at(j));
+            QVariant fromNode;
+            fromNode.setValue(static_cast<VideoNode *>(nullptr));
+
+            // TODO this makes this N^2, a clever QMap could solve this
+            for (int k=0; k<edges.count(); k++) {
+                if (edges.at(k).toVertex == vertices.at(i)
+                 && edges.at(k).toInput == j) {
+                    fromNode.setValue(edges.at(k).fromVertex);
+                    break;
+                }
+            }
+
+            item->setProperty("fromNode", fromNode);
+            QVariant toNode;
+            toNode.setValue(vertices.at(i));
+            item->setProperty("toNode", toNode);
+            item->setProperty("toInput", j);
             dropAreas.append(item);
         }
     }
