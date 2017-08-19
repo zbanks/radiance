@@ -14,10 +14,14 @@ DropArea {
     property real gridY;
     property real gridHeight;
 
-    width: 100
-    height: 170 * gridHeight
-    x: parent.width - (gridX + 1) * 100
-    y: gridY * 170
+    property int padding: 5;
+    property int blockWidth: 100;
+    property int blockHeight: 170;
+
+    width: blockWidth
+    height: blockHeight
+    x: parent.width - (gridX + 1) * (blockWidth + padding)
+    y: gridY * (blockHeight + padding)
 
     keys: [ "videonode" ]
 

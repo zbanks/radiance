@@ -9,6 +9,9 @@ Rectangle {
     property color endColor: activeFocus ? "#181838" : "#181818";
     property real borderWidth: 3;
     property color borderColor: "#666";
+    property int padding: 5;
+    property int blockWidth: 100;
+    property int blockHeight: 170;
     layer.enabled: true;
 
     id: rect;

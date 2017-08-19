@@ -12,6 +12,10 @@ FocusScope {
     property int gridX;
     property int gridY;
 
+    property int padding: 5;
+    property int blockWidth: 100;
+    property int blockHeight: 170;
+
     function sum(l) {
         var result = 0;
         for(var i=0; i<l.length; i++) result += l[i];
@@ -19,8 +23,8 @@ FocusScope {
     }
 
     function drop() {
-        x = parent.width - (gridX + 1) * 100;
-        y = gridY * 170;
+        x = parent.width - (gridX + 1) * (blockWidth + padding);
+        y = gridY * (blockHeight + padding);
     }
 
     onGridXChanged: {
@@ -31,8 +35,8 @@ FocusScope {
         drop();
     }
 
-    width: 100;
-    height: 170 * sum(inputHeights);
+    width: blockWidth;
+    height: (blockHeight + padding) * sum(inputHeights) - padding;
 
     Drag.active: dragArea.drag.active;
     Drag.keys: [ "videonode" ]
