@@ -32,10 +32,6 @@ FocusScope {
 
     width: 100;
     height: 170 * sum(inputHeights);
-    /*
-    x: parent.width - (gridX + 1) * 100;
-    y: gridY * 170;
-    */
 
     Drag.active: dragArea.drag.active;
     Drag.keys: [ "videonode" ]
@@ -70,5 +66,24 @@ FocusScope {
     RadianceTile {
         anchors.fill: parent;
         focus: true;
+    }
+
+    Behavior on x {
+        NumberAnimation {
+            easing {
+                type: Easing.OutElastic
+                amplitude: 1.0
+                period: 0.5
+            }
+        }
+    }
+    Behavior on y {
+        NumberAnimation {
+            easing {
+                type: Easing.OutElastic
+                amplitude: 1.0
+                period: 0.5
+            }
+        }
     }
 }
