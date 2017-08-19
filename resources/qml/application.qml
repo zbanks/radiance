@@ -86,7 +86,17 @@ ApplicationWindow {
         RenderContext.addRenderTrigger(window, model, 0);
     }
 
-    ColumnLayout {
+    RowLayout {
+        View {
+            model: model;
+            delegates: {
+                "EffectNode": "EffectNodeTile",
+                "": "VideoNodeTile"
+            }
+            width: 500
+            height: 500
+        }
+
         Rectangle {
             color: "#FF0000"
             width: 500
@@ -104,16 +114,6 @@ ApplicationWindow {
                     model.removeVideoNode(en4);
                 }
             }
-        }
-
-        View {
-            model: model;
-            delegates: {
-                "EffectNode": "EffectNodeTile",
-                "": "VideoNodeTile"
-            }
-            width: 500
-            height: 500
         }
     }
 
