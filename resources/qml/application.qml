@@ -47,6 +47,10 @@ ApplicationWindow {
         //name: "greenscreen"
         inputCount: 2
     }
+    EffectNode {
+        id: after
+        name: "pixelate"
+    }
 
     /*
     EffectNode {
@@ -73,12 +77,12 @@ ApplicationWindow {
         */
 
         model.addVideoNode(cross);
+        model.addVideoNode(after);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, cross, 0);
         model.addEdge(en4, cross, 1);
-
-        //model.addEdge(en3, en4, 0);
+        model.addEdge(cross, after, 0);
         RenderContext.addRenderTrigger(window, model, 0);
     }
 

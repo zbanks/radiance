@@ -31,6 +31,7 @@ protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
+    QList<QSharedPointer<QQuickItem>> m_dropAreas;
     void rebuild();
     Child newChild(VideoNode *videoNode);
 

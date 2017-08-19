@@ -188,6 +188,31 @@ void View::onGraphChanged() {
         m_children[i].item->setProperty("gridY", gridY.at(i));
     }
 
+    QList<QSharedPointer<QQuickItem>> dropAreas;
+    for (int i=0; i<m_children.count(); i++) {
+        auto myInputHeights = inputHeight.at(i);
+        for (int j=0; j<myInputHeights.count(); j++) {
+            auto qmlFileInfo = QFileInfo(QString("../resources/qml/TileDropArea.qml"));
+            QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
+            QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
+            if( component.status() != QQmlComponent::Ready )
+            {
+                if(component.status() == QQmlComponent::Error) {
+                    qDebug() << component.errorString();
+                    qFatal("Could not construct TileDropArea");
+                }
+            }
+            QSharedPointer<QQuickItem> item(qobject_cast<QQuickItem *>(component.create()));
+
+            item->setParentItem(this);
+            item->setProperty("gridX", gridX.at(i) + 0.5);
+            item->setProperty("gridY", gridY.at(i) + j);
+            item->setProperty("gridHeight", myInputHeights.at(j));
+            dropAreas.append(item);
+        }
+    }
+    m_dropAreas = dropAreas;
+
     //qDebug() << "vertices" << vertices;
     //qDebug() << "root nodes" << s;
     //qDebug() << "input heights" << inputHeight;
