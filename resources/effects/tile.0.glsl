@@ -8,8 +8,8 @@ void main(void) {
     newUV = abs(newUV - 1.) - 0.5;
     newUV = newUV / aspectCorrection + 0.5;
 
-    vec4 oc = texture2D(iFrame, (uv - 0.5) * bins + 0.5);
-    vec4 nc = texture2D(iFrame, newUV);
+    vec4 oc = texture2D(iInput, (uv - 0.5) * bins + 0.5);
+    vec4 nc = texture2D(iInput, newUV);
 
     oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
     nc.a *= smoothstep(0, 0.1, iIntensity);

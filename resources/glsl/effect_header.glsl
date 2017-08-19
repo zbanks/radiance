@@ -27,7 +27,7 @@ uniform float iFPS;
 uniform sampler2D iInputs[];
 
 // Output of the previous pattern.  Alias to iInputs[0]
-uniform sampler2D iFrame;
+#define iInput iInputs[0]
 
 // Full frame RGBA noise
 uniform sampler2D iNoise;

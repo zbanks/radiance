@@ -29,8 +29,8 @@ void main(void) {
     newUV *= min(iResolution.x, iResolution.y) / max(iResolution.x, iResolution.y);
     newUV += 0.5;
 
-    vec4 oc = texture2D(iFrame, uv);
-    vec4 nc = texture2D(iFrame, newUV);
+    vec4 oc = texture2D(iInput, uv);
+    vec4 nc = texture2D(iInput, newUV);
     nc.a *= box(newUV);
 
     gl_FragColor = mix(oc, nc, smoothstep(0, 0.2, iIntensity));

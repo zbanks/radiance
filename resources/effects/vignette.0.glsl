@@ -5,7 +5,7 @@ float hyper_length(vec2 c, float f) {
 }
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
     vec2 coord = (uv - 0.5);
 
     float f = 3. / iIntensity;

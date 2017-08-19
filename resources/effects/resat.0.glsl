@@ -9,7 +9,7 @@ void main(void) {
     //n = mod(n + 0.5, 1.0);
     //n = mod(n + hsl.r, 1.0);
 
-    vec4 samp = texture2D(iFrame, uv);
+    vec4 samp = texture2D(iInput, uv);
     vec3 hsl = rgb2hsv(samp.rgb);
     hsl.g = 1.0 - (1.0 - hsl.g) * (1.0 - factor);
     //hsl.r = mix(hsl.r, n, iIntensity);

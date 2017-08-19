@@ -1,7 +1,7 @@
 // A green & red circle in the center
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
     vec4 c;
 
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;

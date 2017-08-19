@@ -5,7 +5,7 @@
 #define DEPTH 64
 
 vec4 lookup(vec2 coord) {
-    return texture2D(iFrame, coord / aspectCorrection + 0.5);
+    return texture2D(iInput, coord / aspectCorrection + 0.5);
 }
 
 void main() {

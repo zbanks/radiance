@@ -1,7 +1,7 @@
 // Fire from the bottom
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
 
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 

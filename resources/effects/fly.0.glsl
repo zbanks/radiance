@@ -10,7 +10,7 @@ void main()
     puv = abs(mod(0.2 * puv, 2.) - 1.);
 
     puv = mix(uv, puv, smoothstep(0.0, 0.2, iIntensity));
-    vec4 c = texture2D(iFrame, puv);
+    vec4 c = texture2D(iInput, puv);
     //c.a *= abs(uv.y * 0.8);
     c.a = mix(c.a, c.a * min(abs(p.y)* 3.8, 1.), smoothstep(0.0, 0.2, iIntensity));
 	gl_FragColor = premultiply(c);

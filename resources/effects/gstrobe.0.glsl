@@ -1,7 +1,7 @@
 // Strobe alpha to the beat
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
     vec4 c;
 
     float freq;

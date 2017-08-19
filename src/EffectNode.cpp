@@ -118,7 +118,6 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             p->setUniformValue("iTime", GLfloat(time));
             p->setUniformValue("iFPS",  GLfloat(FPS));
             p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
-            p->setUniformValue("iFrame", 0);
             p->setUniformValueArray("iInputs", &inputTex[0], m_inputCount);
             p->setUniformValue("iNoise", m_inputCount);
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));

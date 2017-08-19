@@ -1,7 +1,7 @@
 // Cycle the color (in HSV) over time
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
 
     float deviation;
     deviation = mod(iIntensityIntegral, 1.);

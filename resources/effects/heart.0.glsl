@@ -1,7 +1,7 @@
 // Pink heart
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
 
     // heart from shadertoy
     vec2 normCoord = (uv - 0.5) * aspectCorrection + vec2(0., -0.15);

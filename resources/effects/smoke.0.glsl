@@ -13,6 +13,6 @@ void main(void) {
 
     float a = clamp(n * n * 5., 0., 1.) * smoothstep(0., 0.2, iIntensity);
 
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
     gl_FragColor = composite(gl_FragColor, vec4(0., 1., 0., a));
 }

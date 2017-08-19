@@ -1,7 +1,7 @@
 // Shift the hue on the beat
 
 void main(void) {
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
     
     float t;
     if (iIntensity < 0.85)

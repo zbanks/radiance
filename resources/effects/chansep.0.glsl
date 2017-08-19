@@ -9,9 +9,9 @@ void main(void) {
     vec2 greenOffset = normCoord - separate * vec2(cos(2. + spin), sin(2. + spin));
     vec2 blueOffset = normCoord - separate * vec2(cos(4. + spin), sin(4. + spin));
 
-    vec4 redImage = texture2D(iFrame, redOffset / aspectCorrection + 0.5);
-    vec4 greenImage = texture2D(iFrame, greenOffset / aspectCorrection + 0.5);
-    vec4 blueImage = texture2D(iFrame, blueOffset / aspectCorrection + 0.5);
+    vec4 redImage = texture2D(iInput, redOffset / aspectCorrection + 0.5);
+    vec4 greenImage = texture2D(iInput, greenOffset / aspectCorrection + 0.5);
+    vec4 blueImage = texture2D(iInput, blueOffset / aspectCorrection + 0.5);
 
     vec3 rgb = vec3(redImage.r, greenImage.g, blueImage.b);
     float a_out = 1. - (1. - rgb.r) * (1. - rgb.g) * (1. - rgb.b);

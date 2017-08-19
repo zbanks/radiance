@@ -2,7 +2,7 @@
 
 void main(void) {
     vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iFrame, uv);
+    vec4 next = texture2D(iInput, uv);
     gl_FragColor.rgb = next.rgb;
     if (next.a > prev.a) {
         gl_FragColor = next;

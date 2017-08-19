@@ -5,7 +5,7 @@ void main(void) {
     float xpos = iIntensityIntegral * 1.5;
     float xfreq = (iIntensity + 0.5) * 2.;
     float x = mod(normCoord.x * xfreq + xpos, 1.);
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
     vec4 c = vec4(1., 1., 1., step(x, 0.3) * smoothstep(0., 0.5, iIntensity));
     gl_FragColor = composite(gl_FragColor, premultiply(c));
 }

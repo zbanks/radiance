@@ -2,7 +2,7 @@
 
 void main(void) {
     vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iFrame, uv);
+    vec4 next = texture2D(iInput, uv);
     float factor = pow(iIntensity, 2.0);
 
     float t = mod(iTime / 4.0 - uv.x, 1.0);

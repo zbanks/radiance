@@ -2,7 +2,7 @@
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
-    gl_FragColor = texture2D(iFrame, uv);
+    gl_FragColor = texture2D(iInput, uv);
 
     float y = smoothstep(0.2, 0.7, abs(mod(normCoord.x * 4. - iIntensityIntegral, 2.) - 1.));
     float g = smoothstep(0.5, 0.9, abs(mod(1. + normCoord.x * 4. - iIntensityIntegral, 2.) - 1.));
