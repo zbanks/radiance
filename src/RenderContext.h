@@ -46,6 +46,8 @@ public:
     GLuint blankTexture();
     void makeCurrent();
 
+    static constexpr int PERIODIC_MS = 10;
+
 public slots:
     void render(Model *m, int chain);
 

@@ -11,6 +11,7 @@
 #include "Model.h"
 #include "View.h"
 #include "EffectNode.h"
+#include "ImageNode.h"
 #include "NodeList.h"
 #include "main.h"
 
@@ -80,6 +81,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
+    qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
     qmlRegisterType<QQuickVideoNodeRender>("radiance", 1, 0, "VideoNodeRender");

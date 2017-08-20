@@ -6,6 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DILUT_USE_OPENGL")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native")
 set(CMAKE_CXX_STANDARD 14)
 
@@ -19,6 +20,7 @@ find_package(FFTW)
 find_package(SampleRate)
 find_package(RtMidi)
 find_package(OpenGL)
+find_package(DevIL)
 
 qt5_add_resources(resources/resources.qrc)
 
@@ -34,6 +36,7 @@ add_executable(radiance WIN32 src/main.cpp
     src/NodeList.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
+    src/ImageNode.cpp
     src/QQuickVideoNodeRender.cpp
     src/Model.cpp
     src/OpenGLWorkerContext.cpp
@@ -45,4 +48,4 @@ add_executable(radiance WIN32 src/main.cpp
     BTrack/src/OnsetDetectionFunction.c
     resources/resources.qrc)
 
-target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
+target_link_libraries(radiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${IL_LIBRARIES} ${ILU_LIBRARIES} ${ILUT_LIBRARIES})

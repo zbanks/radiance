@@ -10,7 +10,7 @@ RenderContext::RenderContext()
     connect(&m_openGLWorker, &RenderContextOpenGLWorker::initialized, this, &RenderContext::onInitialized);
 
     connect(&m_periodic, &QTimer::timeout, this, &RenderContext::periodic);
-    m_periodic.start(10); // TODO make this adjustable?
+    m_periodic.start(PERIODIC_MS); // TODO make this adjustable?
 
     if (!QMetaObject::invokeMethod(&m_openGLWorker, "initialize"))
         qFatal("Unable to initialize openGLWorker");
