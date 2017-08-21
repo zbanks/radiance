@@ -44,6 +44,7 @@ ApplicationWindow {
     ImageNode {
         id: img1
         imagePath: "nyancat.gif"
+        inputCount: 1 // FIXME: this should be 0
     }
 
     EffectNode {
@@ -88,8 +89,8 @@ ApplicationWindow {
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, cross, 0);
-        model.addEdge(img1, cross, 1);
-        //model.addEdge(en4, cross, 1);
+        model.addEdge(img1, en4, 0);
+        model.addEdge(en4, cross, 1);
         //model.addEdge(cross, after, 0);
         RenderContext.addRenderTrigger(window, model, 0);
     }
@@ -99,6 +100,7 @@ ApplicationWindow {
             model: model;
             delegates: {
                 "EffectNode": "EffectNodeTile",
+                "ImageNode": "ImageNodeTile",
                 "": "VideoNodeTile"
             }
             width: 800
