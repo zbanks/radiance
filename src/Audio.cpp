@@ -79,6 +79,7 @@ Audio::~Audio()
 {
     quit();
     wait();
+    /* TODO: Figure this out.
     fftw_destroy_plan(plan);
     btrack_del(&btrack);
     delete chunk;
@@ -103,6 +104,7 @@ Audio::~Audio()
     window = 0;
     delete m_waveformTexture;
     m_waveformTexture = 0;
+    */
 }
 
 void Audio::quit()

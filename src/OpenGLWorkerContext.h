@@ -6,16 +6,14 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 
-// I know you aren't supposed to subclass QThread
-// but I think I know what I'm doing
-class OpenGLWorkerContext
-    : public QThread
-    , protected QOpenGLFunctions {
+class OpenGLWorkerContext : public QObject, protected QOpenGLFunctions {
 public:
-    OpenGLWorkerContext(QSharedPointer<QSurface> surface = QSharedPointer<QSurface>());
-    ~OpenGLWorkerContext() override;
+    OpenGLWorkerContext(bool threaded = true, QSharedPointer<QSurface> surface = QSharedPointer<QSurface>());
+    ~OpenGLWorkerContext();
     QOpenGLContext *context();
     QOpenGLFunctions *glFuncs();
+    QThread *thread();
+
 protected slots:
     void initialize();
 public slots:
@@ -24,4 +22,6 @@ protected:
     QSharedPointer<QSurface> m_surface;
     QSharedPointer<QOpenGLContext> m_context;
     QSharedPointer<QOpenGLFunctions> m_glFuncs;
+private:
+    QSharedPointer<QThread> m_thread;
 };

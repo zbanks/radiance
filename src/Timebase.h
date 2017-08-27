@@ -13,8 +13,9 @@ public:
 
     enum TimeSource {
         TimeSourceAudio,
-        TimeSourceUser,
-        TimeSourceClock,
+        //TimeSourceUser,
+        //TimeSourceClock,
+        TimeSourceDiscrete,
         //TimeSourceNetwork,
     };
 

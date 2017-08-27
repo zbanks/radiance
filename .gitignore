@@ -3,3 +3,6 @@ build
 .*.swn
 .*.swo
 *.o
+src/doxygen.cfg
+src/moc_*.cpp
+src/CMake*

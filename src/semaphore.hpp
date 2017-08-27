@@ -19,7 +19,7 @@
 #endif
 
 namespace radiance {
-#if defined(Q_OS_MACK)
+#if defined(Q_OS_MAC)
 class RSemaphore {
     semaphore_t m_d;
     public:

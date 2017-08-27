@@ -2,13 +2,26 @@
 #include <QOffscreenSurface>
 #include <QDebug>
 
-OpenGLWorkerContext::OpenGLWorkerContext(QSharedPointer<QSurface> surface)
+OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSharedPointer<QSurface> surface)
     : m_surface(surface) {
-    moveToThread(this); // I know, I know...
-    connect(this, &QThread::started, this, &OpenGLWorkerContext::initialize);
+    if (threaded) {
+        m_thread = QSharedPointer<QThread>(new QThread());
+        moveToThread(m_thread.data());
+        connect(m_thread.data(), &QThread::started, this, &OpenGLWorkerContext::initialize);
+    } else {
+        m_thread = QSharedPointer<QThread>(nullptr);
+        initialize();
+    }
 }
 
 OpenGLWorkerContext::~OpenGLWorkerContext() {
+}
+
+QThread *OpenGLWorkerContext::thread() {
+    QThread * thread = m_thread.data();
+    if (thread != nullptr)
+        return thread;
+    return QThread::currentThread();
 }
 
 void OpenGLWorkerContext::initialize() {

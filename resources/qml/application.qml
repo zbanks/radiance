@@ -49,8 +49,8 @@ ApplicationWindow {
 
     EffectNode {
         id: cross
-        name: "crossfader"
-        //name: "greenscreen"
+        //name: "crossfader"
+        name: "greenscreen"
         inputCount: 2
     }
     EffectNode {
