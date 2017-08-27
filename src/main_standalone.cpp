@@ -6,7 +6,6 @@
 #include <QFile>
 #include "VideoNode.h"
 #include "FramebufferVideoNodeRender.h"
-#include "ImageVideoNodeRender.h"
 #include "Model.h"
 #include "View.h"
 #include "EffectNode.h"
@@ -86,7 +85,7 @@ int main(int argc, char *argv[]) {
         model->removeVideoNode(&effect);
 
         QProcess ffmpeg;
-        ffmpeg.start("/usr/bin/ffmpeg",
+        ffmpeg.start("ffmpeg",
             QStringList()
                 << "-y" << "-i"
                 << QString("%1/%2/%d.png").arg(outputDir.path(), effectName)
