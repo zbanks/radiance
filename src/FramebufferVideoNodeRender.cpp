@@ -3,12 +3,12 @@
 #include <QOpenGLTexture>
 #include <QOpenGLFramebufferObject>
 
-FramebufferVideoNodeRender::FramebufferVideoNodeRender()
+FramebufferVideoNodeRender::FramebufferVideoNodeRender(QSize size)
     : m_videoNode(nullptr)
     , m_chain(-1)
-    , m_size(200, 200)
-    , m_blitter() 
-    , m_fbo(nullptr) {
+    , m_size(size)
+    , m_blitter()
+    , m_fbo(m_size) {
     m_blitter.create();
 }
 
@@ -36,17 +36,18 @@ void FramebufferVideoNodeRender::setChain(int chain) {
 
 QImage FramebufferVideoNodeRender::render() {
     auto textureId = m_videoNode->texture(m_chain);
-    auto size = m_videoNode->size(m_chain);
 
-    m_fbo = new QOpenGLFramebufferObject(size);
-    auto rc = m_fbo->bind();
+    m_fbo.bind();
     m_blitter.bind();
 
-    const QRect targetRect(QPoint(0, 0), size);
-    const QMatrix4x4 target = QOpenGLTextureBlitter::targetTransform(targetRect, targetRect);
-    m_blitter.blit(textureId, target, QOpenGLTextureBlitter::OriginBottomLeft);
+    const QRect targetRect(QPoint(0, 0), m_fbo.size());
+    const QRect inputRect(QPoint(0, 0), m_videoNode->size(m_chain));
+    // TODO: This doesn't actually work if the two sizes aren't equal :(
+    Q_ASSERT(targetRect == inputRect);
+    const QMatrix4x4 target = QOpenGLTextureBlitter::targetTransform(targetRect, inputRect);
+    m_blitter.blit(textureId, target, QOpenGLTextureBlitter::OriginTopLeft);
 
     m_blitter.release();
-    m_fbo->release();
-    return m_fbo->toImage();
+    m_fbo.release();
+    return m_fbo.toImage();
 }

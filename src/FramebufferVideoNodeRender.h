@@ -12,7 +12,7 @@ class FramebufferVideoNodeRender : public QObject {
     Q_PROPERTY(int chain READ chain WRITE setChain NOTIFY chainChanged)
 
 public:
-    FramebufferVideoNodeRender();
+    FramebufferVideoNodeRender(QSize size = QSize(200, 200));
     virtual ~FramebufferVideoNodeRender();
 
     VideoNode *videoNode();
@@ -30,14 +30,6 @@ private:
     int m_chain;
     VideoNode *m_videoNode;
     QSize m_size;
-    QOpenGLFramebufferObject * m_fbo;
+    QOpenGLFramebufferObject m_fbo;
     QOpenGLTextureBlitter m_blitter;
-    //QSharedPointer<QSGTexture> sgTexture;
-
-protected:
-    //QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
-    //QQuickWindow *m_window;
-
-protected slots:
-    //void onWindowChanged(QQuickWindow *window);
 };

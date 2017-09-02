@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     openGLWorkerContext = QSharedPointer<OpenGLWorkerContext>(new OpenGLWorkerContext());
     openGLWorkerContext->setObjectName("openGLWorkerContext");
     openGLWorkerContext->thread()->start();
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, openGLWorkerContext.data()->thread(), &QThread::quit);
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, openGLWorkerContext->thread(), &QThread::quit);
 
     settings = QSharedPointer<QSettings>(new QSettings());
     outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));

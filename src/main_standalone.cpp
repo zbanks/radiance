@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     Model * model = new Model();
     model->addVideoNode(testEffect);
 
-    FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender();
+    FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender(QSize(300, 300));
     imgRender->setChain(0);
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
@@ -61,25 +61,25 @@ int main(int argc, char *argv[]) {
     QTextStream html(&outputHtml);
     html << "<!doctype html>\n";
     html << "<html><body>\n";
-    html << "<style>td.static { background-color: #000; }; td.gif { }</style>\n";
+    html << "<style>td.static, td.gif { background-color: #FFF; }</style>\n";
     html << "<table><tr><th>name</th><th>comment</th><th>static</th><th>gif</th><tr>\n";
 
     for (auto effectName : nodeList->effectNames()) {
         EffectNode effect;
         effect.setName(effectName);
-        effect.setIntensity(1.0);
         model->addVideoNode(&effect);
         model->addEdge(testEffect, &effect, 0);
         imgRender->setVideoNode(&effect);
         outputDir.mkdir(effectName);
         for (int i = 1; i <= 100; i++) {
+            effect.setIntensity(i / 50.);
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
             renderContext->periodic();
 
             renderContext->render(model, 0);
             QImage img = imgRender->render();
             QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), effectName, QString::number(i));
-            img.save(filename);
+            img.scaled(QSize(80, 80)).save(filename);
         }
         model->removeEdge(testEffect, &effect, 0);
         model->removeVideoNode(&effect);
@@ -89,14 +89,14 @@ int main(int argc, char *argv[]) {
             QStringList()
                 << "-y" << "-i"
                 << QString("%1/%2/%d.png").arg(outputDir.path(), effectName)
-                << QString("%1/%2.gif").arg(outputDir.path(), effectName));
+                << QString("%1/%2.webp").arg(outputDir.path(), effectName));
         ffmpeg.waitForFinished();
         qInfo() << "Rendered" << effectName << ffmpeg.exitCode() << ffmpeg.exitStatus();
 
         html << "<tr><td>" << effectName << "</td>\n";
         html << "    <td>" << "" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./" << effectName << "/1.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./" << effectName << ".gif'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << effectName << "/51.png'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./" << effectName << ".webp'>" << "</td>\n";
         html.flush();
     }
 

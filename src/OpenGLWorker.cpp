@@ -4,7 +4,7 @@
 OpenGLWorker::OpenGLWorker(QSharedPointer<OpenGLWorkerContext> context)
     : m_context(context)
 {
-    moveToThread(context.data()->thread());
+    moveToThread(context->thread());
 }
 
 OpenGLWorker::~OpenGLWorker() {
