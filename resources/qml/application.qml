@@ -96,15 +96,38 @@ ApplicationWindow {
     }
 
     RowLayout {
-        View {
-            model: model;
-            delegates: {
-                "EffectNode": "EffectNodeTile",
-                "ImageNode": "ImageNodeTile",
-                "": "VideoNodeTile"
+        ColumnLayout {
+            RowLayout {
+                Layout.fillWidth: true;
+
+                // This is kind of crappy, but it was easy 
+                ComboBox {
+                    id: effectSelector;
+                    model: NodeList.effectNames();
+                    editable: true;
+                    Layout.preferredWidth: 300;
+                }
+                Button {
+                    text: "Add"
+                    onClicked: {
+                        var e = Qt.createQmlObject("import radiance 1.0; EffectNode { }", window, "");
+                        e.name = effectSelector.currentText;
+                        model.addVideoNode(e);
+                        console.log("New Effect", effectSelector.currentText, e);
+                    }
+                }
             }
-            width: 800
-            height: 500
+
+            View {
+                model: model;
+                delegates: {
+                    "EffectNode": "EffectNodeTile",
+                    "ImageNode": "ImageNodeTile",
+                    "": "VideoNodeTile"
+                }
+                width: 800
+                height: 500
+            }
         }
 
         Rectangle {

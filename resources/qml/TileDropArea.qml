@@ -20,7 +20,7 @@ DropArea {
 
     width: blockWidth - 2 * padding
     height: (blockHeight - padding) * gridHeight - padding
-    x: parent.width - (gridX + 1) * (blockWidth + padding)
+    x: (parent ? parent.width : 0) - (gridX + 1) * (blockWidth + padding)
     y: gridY * (blockHeight + padding)
 
     keys: [ "videonode" ]

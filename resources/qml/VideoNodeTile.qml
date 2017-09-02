@@ -68,7 +68,9 @@ FocusScope {
                 var ti = t.toInput;
                 var e = tile.model.edges;
                 var v = tile.model.vertices;
+                // We can only move the whole tree if it would not create a cycle
                 var meOnly = tile.model.isAncestor(tn, me);
+                // Keep track of removed connections so we can splice them back together
                 var prevFromVertex = null;
                 var prevToVertex = null;
                 var prevToInput = null;
@@ -87,9 +89,6 @@ FocusScope {
                 for (var i=0; i<toRemove.length; i++) {
                     console.log(toRemove[i]);
                     tile.model.removeEdge(toRemove[i][0],toRemove[i][1],toRemove[i][2]);
-                }
-                if (fn !== null && tn !== null) {
-                    tile.model.removeEdge(fn, tn, ti);
                 }
                 if (prevFromVertex !== null && prevToVertex !== null & prevToInput !== null) {
                     console.log(prevFromVertex, prevToVertex, prevToInput);

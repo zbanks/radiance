@@ -280,7 +280,6 @@ QList<VideoNode *> Model::ancestors(VideoNode *node) {
             ancestorSet.insert(newNode);
             nodeStack.append(newNode);
         }
-        qInfo() << "nodeStack len" << nodeStack.length();
     }
 
     return ancestorSet.values();
