@@ -68,16 +68,32 @@ FocusScope {
                 var ti = t.toInput;
                 var e = tile.model.edges;
                 var v = tile.model.vertices;
+                var meOnly = tile.model.isAncestor(tn, me);
+                var prevFromVertex = null;
+                var prevToVertex = null;
+                var prevToInput = null;
                 var toRemove = [];
                 for (var i=0; i<e.length; i++) {
-                    if (v[e[i].fromVertex] == me
-                     || v[e[i].toVertex] == me) {
+                    if (v[e[i].fromVertex] == me) {
                         toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
+                        prevToVertex = v[e[i].toVertex];
+                        prevToInput = e[i].toInput;
+                    }
+                    if (meOnly && v[e[i].toVertex] == me) {
+                        toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
+                        prevFromVertex = v[e[i].fromVertex];
                     }
                 }
                 for (var i=0; i<toRemove.length; i++) {
                     console.log(toRemove[i]);
                     tile.model.removeEdge(toRemove[i][0],toRemove[i][1],toRemove[i][2]);
+                }
+                if (fn !== null && tn !== null) {
+                    tile.model.removeEdge(fn, tn, ti);
+                }
+                if (prevFromVertex !== null && prevToVertex !== null & prevToInput !== null) {
+                    console.log(prevFromVertex, prevToVertex, prevToInput);
+                    tile.model.addEdge(prevFromVertex, prevToVertex, prevToInput);
                 }
                 if (fn !== null) {
                     console.log(fn+" ...");

@@ -74,6 +74,14 @@ public slots:
     // suitable for QML / Javascript
     QVariantList qmlEdges() const;
 
+    // Returns a list of verticies that
+    // are ancestors of the given node
+    QList<VideoNode *> ancestors(VideoNode *node);
+
+    // Returns true if `parent`
+    // is an ancestor of `child`
+    bool isAncestor(VideoNode *parent, VideoNode *child);
+
 signals:
     void videoNodeAdded(VideoNode *videoNode);
     void videoNodeRemoved(VideoNode *videoNode);

@@ -261,6 +261,36 @@ QVariantList Model::qmlEdges() const {
     return edges;
 }
 
+QList<VideoNode *> Model::ancestors(VideoNode *node) {
+    QSet<VideoNode *> ancestorSet;
+    QList<VideoNode *> nodeStack;
+    nodeStack.append(node);
+
+    while (!nodeStack.isEmpty()) {
+        VideoNode * n = nodeStack.takeLast();
+        for (auto e : m_edges) {
+            if (e.toVertex != n)
+                continue;
+
+            VideoNode * newNode = e.fromVertex;
+            Q_ASSERT(newNode != node); // cycles are bad
+            if (ancestorSet.contains(newNode))
+                continue;
+
+            ancestorSet.insert(newNode);
+            nodeStack.append(newNode);
+        }
+        qInfo() << "nodeStack len" << nodeStack.length();
+    }
+
+    return ancestorSet.values();
+}
+
+bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
+    // TODO: This is obviously not optimal
+    return ancestors(child).contains(parent);
+}
+
 int Model::vertexCount(QQmlListProperty<VideoNode>* list) {
     return reinterpret_cast< Model* >(list->data)->vertexCount();
 }
@@ -268,3 +298,4 @@ int Model::vertexCount(QQmlListProperty<VideoNode>* list) {
 VideoNode* Model::vertexAt(QQmlListProperty<VideoNode>* list, int i) {
     return reinterpret_cast< Model* >(list->data)->vertexAt(i);
 }
+
