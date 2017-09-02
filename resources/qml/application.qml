@@ -98,6 +98,15 @@ ApplicationWindow {
     RowLayout {
         ColumnLayout {
             RowLayout {
+                Waveform {
+
+                }
+                Spectrum {
+
+                }
+            }
+
+            RowLayout {
                 Layout.fillWidth: true;
 
                 // This is kind of crappy, but it was easy 

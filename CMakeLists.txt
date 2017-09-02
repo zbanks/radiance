@@ -40,6 +40,7 @@ add_library(libradiance
     src/ImageNode.cpp
     src/QQuickVideoNodeRender.cpp
     src/FramebufferVideoNodeRender.cpp
+    src/GraphicalDisplay.cpp
     src/Model.cpp
     src/OpenGLWorkerContext.cpp
     src/OpenGLWorker.cpp

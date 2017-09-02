@@ -3,16 +3,17 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QThread>
+#include "EffectNode.h"
+#include "GraphicalDisplay.h"
+#include "ImageNode.h"
 #include "Lux.h"
 #include "Midi.h"
-#include "Output.h"
-#include "VideoNode.h"
-#include "QQuickVideoNodeRender.h"
 #include "Model.h"
-#include "View.h"
-#include "EffectNode.h"
-#include "ImageNode.h"
 #include "NodeList.h"
+#include "Output.h"
+#include "QQuickVideoNodeRender.h"
+#include "VideoNode.h"
+#include "View.h"
 #include "main.h"
 
 QSharedPointer<RenderContext> renderContext;
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterType<QQuickVideoNodeRender>("radiance", 1, 0, "VideoNodeRender");
     qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
+    qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
 
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
