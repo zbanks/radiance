@@ -68,12 +68,14 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
     {
         QMutexLocker locker(&m_graphLock);
 
-        for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
-            if (edge->toVertex == toVertex && edge->toInput == toInput) {
-                if (edge->fromVertex == fromVertex)
+        QMutableListIterator<Edge> i(m_edges);
+        while (i.hasNext()) {
+            Edge edgeCopy = i.next();
+            if (edgeCopy.toVertex == toVertex && edgeCopy.toInput == toInput) {
+                if (edgeCopy.fromVertex == fromVertex)
                     return;
-                auto edgeCopy = *edge;
-                m_edges.erase(edge);
+                qInfo() << "erasing" << edgeCopy.fromVertex << edgeCopy.toVertex << edgeCopy.toInput;
+                i.remove();
                 removed.append(edgeCopy);
             }
         }

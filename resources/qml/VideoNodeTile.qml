@@ -68,8 +68,9 @@ FocusScope {
                 var ti = t.toInput;
                 var e = tile.model.edges;
                 var v = tile.model.vertices;
-                // We can only move the whole tree if it would not create a cycle
-                var meOnly = tile.model.isAncestor(tn, me);
+                // We can only move the whole tree if it would not create a cycle and fromNode is empty
+                // Maybe this should be controlled by a keyboard shortcut like Shift?
+                var meOnly = fn !== null || tile.model.isAncestor(tn, me);
                 // Keep track of removed connections so we can splice them back together
                 var prevFromVertex = null;
                 var prevToVertex = null;
