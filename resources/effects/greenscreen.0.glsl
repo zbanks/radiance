@@ -7,6 +7,7 @@ void main() {
     // x is 1.0 in pure green areas and ~0.0 elsewhere
     m = demultiply(m); // don't use alpha to detect green-ness
     float x = pow(clamp(m.g - (m.r + m.b) * 3.0, 0.0, 1.0), 0.2);
+    x *= m.a; // Put alpha back in
 
     gl_FragColor = composite(gl_FragColor, g * x * iIntensity);
 }

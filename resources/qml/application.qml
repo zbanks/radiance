@@ -140,7 +140,7 @@ ApplicationWindow {
         }
 
         Rectangle {
-            color: "#FF0000"
+            color: "#000"
             width: 500
             height: 500
             VideoNodeRender {
