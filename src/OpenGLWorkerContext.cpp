@@ -3,29 +3,28 @@
 #include <QDebug>
 
 OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSharedPointer<QSurface> surface)
-    : m_surface(surface) {
-    if (threaded) {
-        m_thread = QSharedPointer<QThread>(new QThread());
-        moveToThread(m_thread.data());
-        connect(m_thread.data(), &QThread::started, this, &OpenGLWorkerContext::initialize);
+    : m_surface(surface)
+    , m_threaded(threaded) {
+    if (m_threaded) {
+        QThread *thread = new QThread();
+        moveToThread(thread);
+        connect(thread, &QThread::started, this, &OpenGLWorkerContext::initialize);
     } else {
-        m_thread = QSharedPointer<QThread>(nullptr);
         initialize();
     }
 }
 
 OpenGLWorkerContext::~OpenGLWorkerContext() {
-}
-
-QThread *OpenGLWorkerContext::thread() {
-    QThread * thread = m_thread.data();
-    if (thread != nullptr)
-        return thread;
-    return QThread::currentThread();
+    if (m_threaded) {
+        thread()->quit();
+        delete thread();
+    }
+    // FIXME: Figure out how to free this without crashing
+    //delete m_context;
 }
 
 void OpenGLWorkerContext::initialize() {
-    m_context = QSharedPointer<QOpenGLContext>(new QOpenGLContext());
+    m_context = new QOpenGLContext();
     auto scontext = QOpenGLContext::globalShareContext();
     if(scontext) {
         m_context->setFormat(scontext->format());
@@ -46,7 +45,6 @@ void OpenGLWorkerContext::initialize() {
         m_surface = surface;
     }
     makeCurrent();
-    m_glFuncs = QSharedPointer<QOpenGLFunctions>(new QOpenGLFunctions(m_context.data()));
 }
 
 void OpenGLWorkerContext::makeCurrent() {
@@ -55,9 +53,9 @@ void OpenGLWorkerContext::makeCurrent() {
 }
 
 QOpenGLContext *OpenGLWorkerContext::context() {
-    return m_context.data();
+    return m_context;
 }
 
 QOpenGLFunctions *OpenGLWorkerContext::glFuncs() {
-    return m_glFuncs.data();
+    return m_context->functions();
 }

@@ -63,13 +63,7 @@ public:
     // We don't actually need to do anything in paint(), because
     // periodic() advances the frame when necessary.  As a result,
     // there's no point in making a copy of the ImageNode before
-    // paint() and copying it back afterwards.  However, we need
-    // to return *something* from createCopyForRendering (it doesn't
-    // seem worth refactoring Model for an edge case like this), and
-    // we can't naively return a QSharedPointer<VideoNode>(this) because
-    // it'll start with a refcount of 0 and be deleted after it goes
-    // out of scope in Model.  As a resut, ImageNode keeps a shared pointer
-    // to itself (m_sharedThis), and returns it here
+    // paint() and copying it back afterwards.
     QSharedPointer<VideoNode> createCopyForRendering();
     void copyBackRenderState(int chain, QSharedPointer<VideoNode> copy);
     void paint(int chain, QVector<GLuint> inputTextures) override;
@@ -100,7 +94,4 @@ protected:
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
     uint m_ticksToNextFrame;
-
-    // See comment on createCopyForRendering
-    QSharedPointer<ImageNode> m_sharedThis;
 };

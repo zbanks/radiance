@@ -15,9 +15,7 @@ static bool ilInitted = false;
 ImageNode::ImageNode()
     : VideoNode(renderContext)
     , m_openGLWorker(new ImageNodeOpenGLWorker(this))
-    , m_ticksToNextFrame(0)
-    // See comment in ImageNode.h for m_sharedThis
-    , m_sharedThis(this) {
+    , m_ticksToNextFrame(0) {
 
     connect(m_context.data(), &RenderContext::periodic, this, &ImageNode::periodic);
     connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
@@ -76,7 +74,7 @@ void ImageNode::setImagePath(QString imagePath) {
 
 // See comments in ImageNode.h about these 3 functions
 QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
-    return m_sharedThis;
+    return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 
 void ImageNode::paint(int chain, QVector<GLuint> inputTextures) {

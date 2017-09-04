@@ -20,7 +20,7 @@ VideoNodeTile {
 
         Label {
             Layout.fillWidth: true;
-            text: videoNode.name;
+            text: videoNode ? videoNode.name : "(loading)";
             color: "#ddd";
         }
         
@@ -45,7 +45,7 @@ VideoNodeTile {
                 anchors.fill: parent;
                 chain: 0;
                 id: vnr;
-                videoNode: tile.videoNode;
+                videoNode: tile.videoNode ? tile.videoNode : null;
             }
         }
 

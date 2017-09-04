@@ -87,7 +87,7 @@ void NodeRegistry::reload() {
     imgDir.setSorting(QDir::Name);
 
     for (auto imageName : imgDir.entryList()) {
-        QString name = imageName.replace(".gif", "");
+        QString name = imageName;
         VideoNodeType nodeType = {
             .name = name,
             .type = VideoNodeType::IMAGE_NODE,

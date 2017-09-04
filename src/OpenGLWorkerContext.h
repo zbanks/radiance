@@ -12,7 +12,6 @@ public:
     ~OpenGLWorkerContext();
     QOpenGLContext *context();
     QOpenGLFunctions *glFuncs();
-    QThread *thread();
 
 protected slots:
     void initialize();
@@ -20,8 +19,7 @@ public slots:
     void makeCurrent();
 protected:
     QSharedPointer<QSurface> m_surface;
-    QSharedPointer<QOpenGLContext> m_context;
-    QSharedPointer<QOpenGLFunctions> m_glFuncs;
+    QOpenGLContext *m_context;
 private:
-    QSharedPointer<QThread> m_thread;
+    bool m_threaded;
 };

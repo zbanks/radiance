@@ -29,30 +29,35 @@ QSharedPointer<Timebase> timebase;
 QObject *uiSettingsProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
+    QQmlEngine::setObjectOwnership(uiSettings.data(), QQmlEngine::CppOwnership);
     return uiSettings.data();
 }
 
 QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
+    QQmlEngine::setObjectOwnership(audio.data(), QQmlEngine::CppOwnership);
     return audio.data();
 }
 
 QObject *outputManagerProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
+    QQmlEngine::setObjectOwnership(outputManager.data(), QQmlEngine::CppOwnership);
     return outputManager.data();
 }
 
 QObject *nodeRegistryProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
+    QQmlEngine::setObjectOwnership(nodeRegistry.data(), QQmlEngine::CppOwnership);
     return nodeRegistry.data();
 }
 
 QObject *renderContextProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
+    QQmlEngine::setObjectOwnership(renderContext.data(), QQmlEngine::CppOwnership);
     return renderContext.data();
 }
 
@@ -73,9 +78,9 @@ int main(int argc, char *argv[]) {
     settings = QSharedPointer<QSettings>(new QSettings());
     outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));
     uiSettings = QSharedPointer<UISettings>(new UISettings());
+    timebase = QSharedPointer<Timebase>(new Timebase());
     audio = QSharedPointer<Audio>(new Audio());
     outputManager = QSharedPointer<OutputManager>(new OutputManager(outputSettings.data()));
-    timebase = QSharedPointer<Timebase>(new Timebase());
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
     renderContext = QSharedPointer<RenderContext>(new RenderContext());
 

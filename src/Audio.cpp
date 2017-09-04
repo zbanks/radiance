@@ -113,6 +113,9 @@ void Audio::quit()
 }
 
 void Audio::run() {
+    // TODO: This is a hack to keep the pointer alive while we're still running
+    QSharedPointer<Timebase> timebaseRef = timebase;
+
     PaError err = Pa_Initialize();
     PaStream *stream = NULL;
 

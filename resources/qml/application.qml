@@ -72,7 +72,7 @@ ApplicationWindow {
         model.addVideoNode(en);
         model.addVideoNode(en2);
         model.addVideoNode(en3);
-        //model.addVideoNode(img1);
+        model.addVideoNode(img1);
 
         /*
         model.addVideoNode(rgbmask);
