@@ -4,9 +4,10 @@
 #include <QSettings>
 #include "UISettings.h"
 #include "Audio.h"
-#include "Timebase.h"
-#include "RenderContext.h"
+#include "NodeRegistry.h"
 #include "OpenGLWorkerContext.h"
+#include "RenderContext.h"
+#include "Timebase.h"
 #include <QSharedPointer>
 #include <QQmlApplicationEngine>
 

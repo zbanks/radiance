@@ -34,7 +34,7 @@ add_library(libradiance
     src/UISettings.cpp
     src/RenderContext.cpp
     src/RenderTrigger.cpp
-    src/NodeList.cpp
+    src/NodeRegistry.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/ImageNode.cpp

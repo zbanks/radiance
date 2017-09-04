@@ -9,14 +9,14 @@
 #include "Model.h"
 #include "View.h"
 #include "EffectNode.h"
-#include "NodeList.h"
+#include "NodeRegistry.h"
 #include "main.h"
 
 QSharedPointer<RenderContext> renderContext;
 QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<Audio> audio;
-QSharedPointer<NodeList> nodeList;
+QSharedPointer<NodeRegistry> nodeRegistry;
 QSharedPointer<Timebase> timebase;
 
 int main(int argc, char *argv[]) {
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());
     timebase = QSharedPointer<Timebase>(new Timebase());
-    nodeList = QSharedPointer<NodeList>(new NodeList());
+    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
     renderContext = QSharedPointer<RenderContext>(new RenderContext());
 
     EffectNode * testEffect = new EffectNode();
@@ -64,39 +64,43 @@ int main(int argc, char *argv[]) {
     html << "<style>td.static, td.gif { background-color: #FFF; }</style>\n";
     html << "<table><tr><th>name</th><th>comment</th><th>static</th><th>gif</th><tr>\n";
 
-    for (auto effectName : nodeList->effectNames()) {
-        EffectNode effect;
-        effect.setName(effectName);
-        model->addVideoNode(&effect);
-        model->addEdge(testEffect, &effect, 0);
-        imgRender->setVideoNode(&effect);
-        outputDir.mkdir(effectName);
+    for (auto nodeType : nodeRegistry->nodeTypes()) {
+        QSharedPointer<VideoNode> effect = nodeRegistry->createNode(nodeType.name);
+        if (!effect)
+            continue;
+        EffectNode * effectNode = qobject_cast<EffectNode *>(effect.data());
+
+        model->addVideoNode(effect.data());
+        model->addEdge(testEffect, effect.data(), 0);
+        imgRender->setVideoNode(effect.data());
+        outputDir.mkdir(nodeType.name);
         for (int i = 1; i <= 100; i++) {
-            effect.setIntensity(i / 50.);
+            if (effectNode)
+                effectNode->setIntensity(i / 50.);
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
             renderContext->periodic();
 
             renderContext->render(model, 0);
             QImage img = imgRender->render();
-            QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), effectName, QString::number(i));
+            QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), nodeType.name, QString::number(i));
             img.scaled(QSize(80, 80)).save(filename);
         }
-        model->removeEdge(testEffect, &effect, 0);
-        model->removeVideoNode(&effect);
+        model->removeEdge(testEffect, effect.data(), 0);
+        model->removeVideoNode(effect.data());
 
         QProcess ffmpeg;
         ffmpeg.start("ffmpeg",
             QStringList()
                 << "-y" << "-i"
-                << QString("%1/%2/%d.png").arg(outputDir.path(), effectName)
-                << QString("%1/%2.webp").arg(outputDir.path(), effectName));
+                << QString("%1/%2/%d.png").arg(outputDir.path(), nodeType.name)
+                << QString("%1/%2.webp").arg(outputDir.path(), nodeType.name));
         ffmpeg.waitForFinished();
-        qInfo() << "Rendered" << effectName << ffmpeg.exitCode() << ffmpeg.exitStatus();
+        qInfo() << "Rendered" << nodeType.name << ffmpeg.exitCode() << ffmpeg.exitStatus();
 
-        html << "<tr><td>" << effectName << "</td>\n";
+        html << "<tr><td>" << nodeType.name << "</td>\n";
         html << "    <td>" << "" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./" << effectName << "/51.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./" << effectName << ".webp'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << nodeType.name << "/51.png'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./" << nodeType.name << ".webp'>" << "</td>\n";
         html.flush();
     }
 

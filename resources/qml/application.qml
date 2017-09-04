@@ -112,7 +112,7 @@ ApplicationWindow {
                 // This is kind of crappy, but it was easy 
                 ComboBox {
                     id: effectSelector;
-                    model: NodeList.effectNames();
+                    model: Object.keys(NodeRegistry.nodeTypes);
                     editable: true;
                     Layout.preferredWidth: 300;
                 }

@@ -108,8 +108,9 @@ public slots:
     // which will not change during this node's lifetime
     QSize size(int chain);
 
+    void setInputCount(int value); // This was protected, why? (@zbanks)
+
 protected slots:
-    void setInputCount(int value);
     void setReady(bool value);
 
 protected:
