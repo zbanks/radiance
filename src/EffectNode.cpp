@@ -3,7 +3,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QOpenGLFramebufferObject>
+#include <QRegularExpression>
 #include <memory>
+#include <utility>
+#include <functional>
+#include <algorithm>
 #include "main.h"
 
 EffectNode::EffectNode()
@@ -246,46 +250,84 @@ void EffectNodeOpenGLWorker::initialize() {
 bool EffectNodeOpenGLWorker::loadProgram(QString name) {
     Q_ASSERT(!m_p->m_ready); // Must have been marked unready
 
-    QFile header_file("../resources/glsl/effect_header.glsl");
-    if(!header_file.open(QIODevice::ReadOnly)) {
-        emit fatal(("Could not open \"../resources/effect_header.glsl\""));
-        return false;
-    }
-    QTextStream headerStream(&header_file);
-    auto headerString = headerStream.readAll();
-
-    QVector<QSharedPointer<QOpenGLShaderProgram>> programs;
-
-    for(int i=0;;i++) {
-        auto filename = QString("../resources/effects/%1.%2.glsl").arg(name).arg(i);
-        QFile file(filename);
-
-        QFileInfo check_file(filename);
-        if(!(check_file.exists() && check_file.isFile()))
-            break;
-
-        if(!file.open(QIODevice::ReadOnly)) {
-            emit fatal(QString("Could not open \"%1\"").arg(filename));
+    auto headerString = QString{};
+    {
+        QFile header_file("../resources/glsl/effect_header.glsl");
+        if(!header_file.open(QIODevice::ReadOnly)) {
+            emit fatal(("Could not open \"../resources/effect_header.glsl\""));
             return false;
         }
-        QTextStream stream(&file);
-        auto s = headerString + stream.readAll();
+        QTextStream headerStream(&header_file);
+        headerString = headerStream.readAll();
+    }
+    auto vertexString = QString{
+        "#version 130\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+        "out vec2 coords;\n"
+        "void main() {"
+        "    vec2 vertex = varray[gl_VertexID];\n"
+        "    gl_Position = vec4(vertex,0.,1.);\n"
+        "    coords = vertex;\n"
+        "}"};
+    auto programs = QVector<QSharedPointer<QOpenGLShaderProgram>>{};
+    auto filename = QString("../resources/effects/%1.glsl").arg(name);
+
+    QFileInfo check_file(filename);
+    if(!(check_file.exists() && check_file.isFile()))
+        return false;
+
+    QFile file(filename);
+    if(!file.open(QIODevice::ReadOnly)) {
+        emit fatal(QString("Could not open \"%1\"").arg(filename));
+        return false;
+    }
+
+    QTextStream stream(&file);
+
+    auto buffershader_reg = QRegularExpression(
+        "^\\s*#buffershader\\s*$"
+      , QRegularExpression::CaseInsensitiveOption
+        );
+    auto property_reg = QRegularExpression(
+        "^\\s*#property\\s+(?<name>\\w+)\\s+(?<value>.*)$"
+      , QRegularExpression::CaseInsensitiveOption
+        );
+    auto passes = QVector<QStringList>{QStringList{"#line 0"}};
+    auto props  = QMap<QString,QString>{{"inputCount","1"}};
+    auto lineno = 0;
+    for(auto next_line = QString{}; stream.readLineInto(&next_line);++lineno) {
+        {
+            auto m = property_reg.match(next_line);
+            if(m.hasMatch()) {
+                props.insert(m.captured("name"),m.captured("value"));
+                passes.back().append(QString{"#line %1"}.arg(lineno));
+                qDebug() << "setting property " << m.captured("name") << " to value " << m.captured("value");
+                continue;
+            }
+        }
+        {
+            auto m = buffershader_reg.match(next_line);
+            if(m.hasMatch()) {
+                passes.append({QString{"#line %1"}.arg(lineno)});
+                continue;
+            }
+        }
+        passes.back().append(next_line);
+    }
+
+    for(auto pass : passes) {
         programs.append(QSharedPointer<QOpenGLShaderProgram>::create());
         auto && program = programs.back();
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                       "#version 130\n"
-                                       "#extension GL_ARB_shading_language_420pack : enable\n"
-                                       "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
-                                       "varying vec2 coords;\n"
-                                       "void main() {"
-                                       "    vec2 vertex = varray[gl_VertexID];\n"
-                                       "    gl_Position = vec4(vertex,0.,1.);\n"
-                                       "    coords = vertex;\n"
-                                       "}")) {
+        if(!program->addShaderFromSourceCode(
+            QOpenGLShader::Vertex
+          , vertexString
+            )) {
             emit fatal("Could not compile vertex shader");
             return false;
         }
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, s)) {
+        auto frag = headerString + "\n" + pass.join("\n");
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
             emit fatal("Could not compile fragment shader");
             return false;
         }
@@ -298,12 +340,33 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         emit fatal(QString("No shaders found for \"%1\"").arg(name));
         return false;
     }
+    auto mo = m_p->metaObject();
+    if(!props.isEmpty()) {
+        for(auto i = props.cbegin(),e = props.cend(); i!= e; ++i) {
+            auto prop_name = i.key().trimmed().toLocal8Bit();
+            auto mpi = mo->indexOfProperty(prop_name.constData());
+            if(mpi < 0) {
+                qDebug() << "couldn't find property" << prop_name.constData();
+                continue;
+            }
+            auto mp  = mo->property(mpi);
+            if(!mp.isValid()) {
+                qDebug() << "not a valid property" << prop_name.constData();
+                continue;
+            }
+            auto success = mp.write(m_p, i.value());
+            if(success) {
+                qDebug() << "wrote " << mp.name() << " to value " << i.value();
+            }else{
+                qDebug() << "failed to write " << mp.name() << " to value " << i.value();
 
+            }
+        }
+    }
     {
         QMutexLocker locker(&m_p->m_stateLock);
         m_p->m_programs = programs;
     }
-
     return true;
 }
 

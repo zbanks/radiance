@@ -3,7 +3,7 @@
 #include <QDebug>
 
 VideoNode::VideoNode()
-    : m_inputCount(0) 
+    : m_inputCount(0)
 {
 }
 

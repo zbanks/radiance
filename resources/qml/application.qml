@@ -33,7 +33,7 @@ ApplicationWindow {
     }
     EffectNode {
         id: en2
-        name: "hue"
+        name: "flow"
     }
     EffectNode {
         id: en3

@@ -195,4 +195,3 @@ float onePixel = 1. / min(iResolution.x, iResolution.y);
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
 vec2 uv = gl_FragCoord.xy / iResolution;
 
-#line 0
