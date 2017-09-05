@@ -341,3 +341,13 @@ void View::toggleSelection(QVariantList tiles) {
         addToSelection(tiles);
     }
 }
+
+QVariantList View::selection() {
+    QVariantList selection;
+    for (int i=0; i<m_children.count(); i++) {
+        if (m_selection.contains(m_children.at(i).item.data())) {
+            selection.append(QVariant::fromValue(m_children.at(i).item.data()));
+        }
+    }
+    return selection;
+}

@@ -32,6 +32,7 @@ public slots:
     void addToSelection(QVariantList tiles);
     void removeFromSelection(QVariantList tiles);
     void toggleSelection(QVariantList tiles);
+    QVariantList selection();
 
 protected:
     Model *m_model;

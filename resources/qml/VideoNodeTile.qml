@@ -17,45 +17,113 @@ FocusScope {
     property int blockHeight: 170;
     property bool selected: false;
 
+    property var lastX;
+    property var lastY;
+    property var dragObjects;
+    property var dragging;
+
     function sum(l) {
         var result = 0;
         for(var i=0; i<l.length; i++) result += l[i];
         return result;
     }
 
-    function drop() {
+    function regrid() {
         x = parent.width - (gridX + 1) * (blockWidth + padding);
         y = (gridY + 0.5 * (inputHeights[0] - 1)) * (blockHeight + padding);
         height = (blockHeight + padding) * (sum(inputHeights) - (inputHeights[inputHeights.length - 1] - 1)) - padding;
     }
 
     onGridXChanged: {
-        drop();
+        if (!dragging) regrid();
     }
 
     onGridYChanged: {
-        drop();
+        if (!dragging) regrid();
     }
 
     onInputHeightsChanged: {
-        drop();
+        if (!dragging) regrid();
     }
 
     width: blockWidth;
 
-    Drag.active: dragArea.drag.active;
     Drag.keys: [ "videonode" ]
     Drag.hotSpot: Qt.point(width / 2, height / 2)
+    Drag.active: dragArea.drag.active;
 
-    states: State {
-        when: dragArea.drag.active
-        AnchorChanges { target: tile; anchors.verticalCenter: undefined; anchors.horizontalCenter: undefined }
+    function dragLift() {
+        dragObjects = parent.selection();
+        lastX = x;
+        lastY = y;
+        for (var i=0; i<dragObjects.length; i++) {
+            dragObjects[i].dragging = true;
+            dragObjects[i].z = 1;
+        }
+    }
+
+    function dragDrop() {
+        for (var i=0; i<dragObjects.length; i++) {
+            dragObjects[i].dragging = false;
+            dragObjects[i].z = 0;
+        }
+
+        var t = Drag.target;
+        var me = videoNode;
+        if (t !== null
+         && t.fromNode != me
+         && t.toNode != me) {
+            var fn = t.fromNode;
+            var tn = t.toNode;
+            var ti = t.toInput;
+            var e = model.edges;
+            var v = model.vertices;
+            // We can only move the whole tree if it would not create a cycle and fromNode is empty
+            // Maybe this should be controlled by a keyboard shortcut like Shift?
+            var meOnly = fn !== null || model.isAncestor(tn, me);
+            // Keep track of removed connections so we can splice them back together
+            var prevFromVertex = null;
+            var prevToVertex = null;
+            var prevToInput = null;
+            var toRemove = [];
+            for (var i=0; i<e.length; i++) {
+                if (v[e[i].fromVertex] == me) {
+                    toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
+                    prevToVertex = v[e[i].toVertex];
+                    prevToInput = e[i].toInput;
+                }
+                if (meOnly && v[e[i].toVertex] == me) {
+                    toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
+                    prevFromVertex = v[e[i].fromVertex];
+                }
+            }
+            for (var i=0; i<toRemove.length; i++) {
+                console.log(toRemove[i]);
+                model.removeEdge(toRemove[i][0],toRemove[i][1],toRemove[i][2]);
+            }
+            if (prevFromVertex !== null && prevToVertex !== null & prevToInput !== null) {
+                console.log(prevFromVertex, prevToVertex, prevToInput);
+                model.addEdge(prevFromVertex, prevToVertex, prevToInput);
+            }
+            if (fn !== null) {
+                console.log(fn+" ...");
+                model.addEdge(fn, me, 0);
+                console.log(fn+" OK");
+            }
+            if (tn !== null) {
+                model.addEdge(me, tn, ti);
+            }
+        }
+        for (var i=0; i<dragObjects.length; i++) {
+            dragObjects[i].regrid();
+        }
     }
 
     MouseArea {
         id: dragArea;
         z: -1;
         anchors.fill: parent;
+
         onClicked: {
             if (mouse.button == Qt.LeftButton) {
                 tile.forceActiveFocus();
@@ -70,58 +138,14 @@ FocusScope {
                 }
             }
         }
-        onReleased: {
-            var t = tile.Drag.target;
-            var me = tile.videoNode;
-            if (t !== null
-             && t.fromNode != me
-             && t.toNode != me) {
-                var fn = t.fromNode;
-                var tn = t.toNode;
-                var ti = t.toInput;
-                var e = tile.model.edges;
-                var v = tile.model.vertices;
-                // We can only move the whole tree if it would not create a cycle and fromNode is empty
-                // Maybe this should be controlled by a keyboard shortcut like Shift?
-                var meOnly = fn !== null || tile.model.isAncestor(tn, me);
-                // Keep track of removed connections so we can splice them back together
-                var prevFromVertex = null;
-                var prevToVertex = null;
-                var prevToInput = null;
-                var toRemove = [];
-                for (var i=0; i<e.length; i++) {
-                    if (v[e[i].fromVertex] == me) {
-                        toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
-                        prevToVertex = v[e[i].toVertex];
-                        prevToInput = e[i].toInput;
-                    }
-                    if (meOnly && v[e[i].toVertex] == me) {
-                        toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
-                        prevFromVertex = v[e[i].fromVertex];
-                    }
-                }
-                for (var i=0; i<toRemove.length; i++) {
-                    console.log(toRemove[i]);
-                    tile.model.removeEdge(toRemove[i][0],toRemove[i][1],toRemove[i][2]);
-                }
-                if (prevFromVertex !== null && prevToVertex !== null & prevToInput !== null) {
-                    console.log(prevFromVertex, prevToVertex, prevToInput);
-                    tile.model.addEdge(prevFromVertex, prevToVertex, prevToInput);
-                }
-                if (fn !== null) {
-                    console.log(fn+" ...");
-                    tile.model.addEdge(fn, me, 0);
-                    console.log(fn+" OK");
-                }
-                if (tn !== null) {
-                    tile.model.addEdge(me, tn, ti);
-                }
-            }
-            drop();
-        }
 
         drag.onActiveChanged: {
-            tile.z = drag.active? 1 : 0;
+            tile.parent.addToSelection([tile]);
+            if (drag.active) {
+                dragLift();
+            } else {
+                dragDrop();
+            }
         }
 
         drag.target: tile;
@@ -134,6 +158,7 @@ FocusScope {
     }
 
     Behavior on x {
+        enabled: !dragging
         NumberAnimation {
             easing {
                 type: Easing.InOutQuad
@@ -144,6 +169,7 @@ FocusScope {
         }
     }
     Behavior on y {
+        enabled: !dragging
         NumberAnimation {
             easing {
                 type: Easing.InOutQuad
@@ -154,6 +180,7 @@ FocusScope {
         }
     }
     Behavior on height {
+        enabled: !dragging
         NumberAnimation {
             easing {
                 type: Easing.InOutQuad
@@ -161,6 +188,30 @@ FocusScope {
                 period: 0.5
             }
             duration: 500
+        }
+    }
+
+    onXChanged: {
+        if (Drag.active) {
+            var deltaX = x - lastX;
+            for(var i = 0; i < dragObjects.length; ++i) {
+                if (dragObjects[i] != this) {
+                    dragObjects[i].x += deltaX;
+                }
+            }
+            lastX = x;
+        }
+    }
+
+    onYChanged: {
+        if (Drag.active) {
+            var deltaY = y - lastY;
+            for(var i = 0; i < dragObjects.length; ++i) {
+                if (dragObjects[i] != this) {
+                    dragObjects[i].y += deltaY;
+                }
+            }
+            lastY = y;
         }
     }
 }
