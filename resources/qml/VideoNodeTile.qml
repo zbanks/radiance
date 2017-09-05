@@ -19,7 +19,7 @@ FocusScope {
 
     property var lastX;
     property var lastY;
-    property var dragObjects;
+    property var dragCC;
     property var dragging;
 
     function sum(l) {
@@ -59,31 +59,69 @@ FocusScope {
             if (ccs[i].tiles.indexOf(tile) >= 0) break;
         }
         if (i == ccs.length) return; // Drag object was not found in selection??
-        dragObjects = ccs[i].tiles;
+        dragCC = ccs[i];
         lastX = x;
         lastY = y;
-        for (var i=0; i<dragObjects.length; i++) {
-            dragObjects[i].dragging = true;
-            dragObjects[i].z = 1;
+        for (var i=0; i<dragCC.tiles.length; i++) {
+            dragCC.tiles[i].dragging = true;
+            dragCC.tiles[i].z = 1;
         }
     }
 
     function dragDrop() {
-        for (var i=0; i<dragObjects.length; i++) {
-            dragObjects[i].dragging = false;
-            dragObjects[i].z = 0;
+        for (var i=0; i<dragCC.tiles.length; i++) {
+            dragCC.tiles[i].dragging = false;
+            dragCC.tiles[i].z = 0;
         }
 
         var t = Drag.target;
         var me = videoNode;
         if (t !== null
-         && t.fromNode != me
-         && t.toNode != me) {
+         && dragCC.vertices.indexOf(t.fromNode) < 0
+         && dragCC.vertices.indexOf(t.toNode) < 0) {
             var fn = t.fromNode;
             var tn = t.toNode;
             var ti = t.toInput;
             var e = model.edges;
             var v = model.vertices;
+
+            // Step 1. Rewire the nodes surrounding drag source
+            // to cut out the dragged blocks
+
+            for (var i=0; i<dragCC.inputEdges.length; i++) {
+                var e = dragCC.inputEdges[i];
+                model.removeEdge(e.fromVertex, e.toVertex, e.toInput);
+            }
+            for (var i=0; i<dragCC.outputEdges.length; i++) {
+                var e = dragCC.outputEdges[i];
+                model.removeEdge(e.fromVertex, e.toVertex, e.toInput);
+            }
+
+            // Step 2. Stitch those back together
+            if (dragCC.inputEdges.length >= 1) {
+                for (var i=0; i<dragCC.outputEdges.length; i++) {
+                    var f = dragCC.inputEdges[0];
+                    var t = dragCC.outputEdges[i];
+                    model.addEdge(f.fromVertex, t.toVertex, t.toInput);
+                }
+            }
+
+            // Step 3. Cut the connection at the drag target
+            if (fn !== null && tn !== null) model.removeEdge(fn, tn, ti);
+
+            // Step 4. Connect up the dragged blocks at the drag target
+            if (fn !== null) {
+                for (var i=0; i<dragCC.inputPorts.length; i++) {
+                    var t = dragCC.inputPorts[i];
+                    model.addEdge(fn, t.vertex, t.input);
+                    break; // TODO hook this up to every input?
+                }
+            }
+            if (tn !== null) {
+                model.addEdge(dragCC.outputNode, tn, ti);
+            }
+
+/*
             // We can only move the whole tree if it would not create a cycle and fromNode is empty
             // Maybe this should be controlled by a keyboard shortcut like Shift?
             var meOnly = fn !== null || model.isAncestor(tn, me);
@@ -119,9 +157,10 @@ FocusScope {
             if (tn !== null) {
                 model.addEdge(me, tn, ti);
             }
+*/
         }
-        for (var i=0; i<dragObjects.length; i++) {
-            dragObjects[i].regrid();
+        for (var i=0; i<dragCC.tiles.length; i++) {
+            dragCC.tiles[i].regrid();
         }
     }
 
@@ -200,9 +239,9 @@ FocusScope {
     onXChanged: {
         if (Drag.active) {
             var deltaX = x - lastX;
-            for(var i = 0; i < dragObjects.length; ++i) {
-                if (dragObjects[i] != this) {
-                    dragObjects[i].x += deltaX;
+            for(var i = 0; i < dragCC.tiles.length; ++i) {
+                if (dragCC.tiles[i] != this) {
+                    dragCC.tiles[i].x += deltaX;
                 }
             }
             lastX = x;
@@ -212,9 +251,9 @@ FocusScope {
     onYChanged: {
         if (Drag.active) {
             var deltaY = y - lastY;
-            for(var i = 0; i < dragObjects.length; ++i) {
-                if (dragObjects[i] != this) {
-                    dragObjects[i].y += deltaY;
+            for(var i = 0; i < dragCC.tiles.length; ++i) {
+                if (dragCC.tiles[i] != this) {
+                    dragCC.tiles[i].y += deltaY;
                 }
             }
             lastY = y;

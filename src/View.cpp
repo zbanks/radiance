@@ -375,12 +375,25 @@ static void setColor(const QVector<QVector<int>> &edges, QVector<int> &colors, i
     colors[node] = myColor;
 }
 
+static void findColoredInputs(const QVector<QVector<int>> &revEdges, const QVector<int> &colors, int node, int color, QVector<int> &inputNodes, QVector<int> &inputPorts) {
+    for (int i=0; i<revEdges.at(node).count(); i++) {
+        auto parent = revEdges.at(node).at(i);
+        if (parent < 0 || colors.at(parent) != color) {
+            inputNodes.append(node);
+            inputPorts.append(i);
+        } else {
+            findColoredInputs(revEdges, colors, parent, color, inputNodes, inputPorts);
+        }
+    }
+}
+
 QVariantList View::selectedConnectedComponents() {
     // * tiles = A QVariantList of tiles contained within the connected component
     // * vertices = A QVariantList of vertices (VideoNodes) contained within the connected component
     // * edges = A QVariantList of edges contained within the connected component
     // * inputEdges = A QVariantList of input edges to the connected component (ordered)
     // * outputEdges = A QVariantList of output edges from the connected component (unordered)
+    // * outputNode = The output VideoNode
 
     // First, we color each node of the subgraph according to the following algorithm:
     //    If all of the children have the same color, use that color
@@ -433,6 +446,20 @@ QVariantList View::selectedConnectedComponents() {
         setColor(edgeLookup, colors, i, curColor);
     }
 
+    // Create a data structure for looking up edges in reverse
+    QVector<QVector<int>> edgeRevLookup(selectedVertices.count());
+    for (int i=0; i<selectedVertices.count(); i++) {
+        edgeRevLookup[i] = QVector<int>(selectedVertices.at(i)->inputCount(), -1);
+    }
+    for (int i=0; i<selectedEdges.count(); i++) {
+        auto fromIndex = map.value(selectedEdges.at(i).fromVertex, -1);
+        auto toIndex = map.value(selectedEdges.at(i).toVertex, -1);
+        auto toPort = selectedEdges.at(i).toInput;
+        Q_ASSERT(fromIndex >= 0);
+        Q_ASSERT(toIndex >= 0);
+        edgeRevLookup[toIndex][toPort] = fromIndex;
+    }
+
     // Loop over each color and populate the output
     QVariantList result;
     for (int c=1; c<curColor; c++) { // TODO this is a little bit N^2
@@ -465,9 +492,36 @@ QVariantList View::selectedConnectedComponents() {
             } else if (containsFrom) {
                 outputEdges.append(edges.at(i).toVariantMap());
             } else if (containsTo) {
-                // TODO these edges should be sorted
                 inputEdges.append(edges.at(i).toVariantMap());
             }
+        }
+
+        // Find the output node (the node with no outgoing edges)
+        QSet<VideoNode *> sSet = coloredVerticesSet;
+        for (auto e = selectedEdges.begin(); e != selectedEdges.end(); e++) {
+            auto toIndex = map.value(e->toVertex, -1);
+            auto fromIndex = map.value(e->toVertex, -1);
+            if (toIndex >= 0 && fromIndex >= 0
+             && colors.at(toIndex) == c && colors.at(fromIndex) == c) {
+                sSet.remove(e->fromVertex);
+            }
+        }
+
+        Q_ASSERT(sSet.count() == 1);
+        auto outputNode = *sSet.begin();
+
+        // Find the input ports
+        QVector<int> inputNodes;
+        QVector<int> inputPorts;
+        auto node = map.value(outputNode, -1);
+        Q_ASSERT(node >= 0);
+        findColoredInputs(edgeRevLookup, colors, node, c, inputNodes, inputPorts);
+        QVariantList ports;
+        for (int i=0; i<inputNodes.count(); i++) {
+            QVariantMap port;
+            port.insert("vertex", QVariant::fromValue(selectedVertices.at(inputNodes.at(i))));
+            port.insert("input", inputPorts.at(i));
+            ports.append(port);
         }
 
         QVariantMap obj;
@@ -476,6 +530,8 @@ QVariantList View::selectedConnectedComponents() {
         obj.insert("edges", componentEdges);
         obj.insert("inputEdges", inputEdges);
         obj.insert("outputEdges", outputEdges);
+        obj.insert("inputPorts", ports);
+        obj.insert("outputNode", QVariant::fromValue(outputNode));
         result.append(obj);
     }
 

@@ -45,6 +45,8 @@ public slots:
     // * edges = A QVariantList of edges contained within the connected component
     // * inputEdges = A QVariantList of input edges to the connected component (ordered)
     // * outputEdges = A QVariantList of output edges from the connected component (unordered)
+    // * inputPorts = A QVariantList of QVariantMaps of {vertex, input}
+    // * outputNode = The output VideoNode
     QVariantList selectedConnectedComponents();
 
 protected:
