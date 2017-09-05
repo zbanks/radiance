@@ -359,3 +359,102 @@ QVariantList View::selection() {
     }
     return selection;
 }
+
+static void setColor(const QVector<QVector<int>> &edges, QVector<int> &colors, int node, int &curColor) {
+    if (colors.at(node) != 0) return;
+    int myColor = 0;
+    bool newColor = false;
+    for (int i=0; i<edges.at(node).count(); i++) {
+        auto child = edges.at(node).at(i);
+        setColor(edges, colors, child, curColor);
+        Q_ASSERT(colors.at(child) != 0);
+        if (myColor != 0 && colors.at(child) != myColor) newColor = true;
+        myColor = colors.at(child);
+    }
+    if (newColor || myColor == 0) myColor = curColor++;
+    colors[node] = myColor;
+}
+
+QVariantMap View::selectedConnectedComponent(QQuickItem *tile) {
+    // * tiles = A QVariantList of tiles contained within the connected component
+    // * edges = A QVariantList of edges contained within the connected component
+    // * inputEdges = A QVariantList of input edges to the connected component (ordered)
+    // * outputEdges = A QVariantList of output edges from the connected component (unordered)
+
+    // First, we color each node of the subgraph according to the following algorithm:
+    //    If all of the children have the same color, use that color
+    //    If the children have different colors, or there are no children, pick a new unique color.
+
+    // We then return the subgraph consisting of nodes that have the same color as the
+    // given node.
+
+    // Find only the vertices contained in the selection
+    QSet<VideoNode *> selectedVerticesSet;
+    QVector<VideoNode *> selectedVertices;
+    for (int i=0; i<m_children.count(); i++) {
+        if (m_selection.contains(m_children.at(i).item.data())) {
+            selectedVertices.append(m_children.at(i).videoNode);
+            selectedVerticesSet.insert(m_children.at(i).videoNode);
+        }
+    }
+
+    // Find only the edges contained in the selection
+    QVector<Edge> selectedEdges;
+    {
+        auto edges = m_model->edges();
+        for (int i=0; i<edges.count(); i++) {
+            if (selectedVerticesSet.contains(edges.at(i).fromVertex)
+             && selectedVerticesSet.contains(edges.at(i).toVertex)) {
+                selectedEdges.append(edges.at(i));
+            }
+        }
+    }
+
+    // Create a map from VideoNodes to indices
+    QMap<VideoNode *, int> map;
+    for (int i=0; i<selectedVertices.count(); i++) {
+        map.insert(selectedVertices.at(i), i);
+    }
+
+    // Create a data structure for looking up edges
+    QVector<QVector<int>> edges(selectedVertices.count());
+    for (int i=0; i<selectedEdges.count(); i++) {
+        auto fromIndex = map.value(selectedEdges.at(i).fromVertex, -1);
+        auto toIndex = map.value(selectedEdges.at(i).toVertex, -1);
+        Q_ASSERT(fromIndex >= 0);
+        Q_ASSERT(toIndex >= 0);
+        edges[fromIndex].append(toIndex);
+    }
+
+    QVector<int> colors(selectedVertices.count(), 0);
+    int curColor = 1;
+    // Color the graph
+    for (int i=0; i<selectedVertices.count(); i++) {
+        setColor(edges, colors, i, curColor);
+    }
+
+    // Find the color associated with the given tile
+    int myColor = 0;
+    for (int i=0; i<m_children.count(); i++) {
+        if (m_children.at(i).item.data() == tile) {
+            auto tileIndex = map.value(m_children.at(i).videoNode, -1);
+            if (tileIndex < 0) break;
+            myColor = colors.at(tileIndex);
+            break;
+        }
+    }
+    if (myColor == 0) qFatal("Given tile must be part of selection");
+
+    // Find all tiles of that color
+    QVariantList tiles;
+    for (int i=0; i<m_children.count(); i++) {
+        auto tileIndex = map.value(m_children.at(i).videoNode, -1);
+        if (tileIndex >= 0 && colors.at(tileIndex) == myColor) {
+            tiles.append(QVariant::fromValue(m_children.at(i).item.data()));
+        }
+    }
+
+    QVariantMap result;
+    result.insert("tiles", tiles);
+    return result;
+}

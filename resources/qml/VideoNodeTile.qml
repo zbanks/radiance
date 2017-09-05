@@ -53,7 +53,8 @@ FocusScope {
     Drag.active: dragArea.drag.active;
 
     function dragLift() {
-        dragObjects = parent.selection();
+        var comp = parent.selectedConnectedComponent(tile);
+        dragObjects = comp.tiles;
         lastX = x;
         lastY = y;
         for (var i=0; i<dragObjects.length; i++) {

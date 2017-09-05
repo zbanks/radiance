@@ -35,6 +35,17 @@ public slots:
     void ensureSelected(QQuickItem *tile);
     QVariantList selection();
 
+    // Finds the connected component of the selection containing the specified tile
+    // It is truncated to the largest component with a single output. 
+    // The connected component will have zero or more inputs and one output
+    // (though possibly multiple output edges.)
+    // Returns an object with three keys:
+    // * tiles = A QVariantList of tiles contained within the connected component
+    // * edges = A QVariantList of edges contained within the connected component
+    // * inputEdges = A QVariantList of input edges to the connected component (ordered)
+    // * outputEdges = A QVariantList of output edges from the connected component (unordered)
+    QVariantMap selectedConnectedComponent(QQuickItem *tile);
+
 protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;
