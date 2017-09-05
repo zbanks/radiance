@@ -5,10 +5,11 @@ import QtGraphicalEffects 1.0
 import radiance 1.0
 
 Rectangle {
-    property color startColor: activeFocus ? "#113" : "#111";
-    property color endColor: activeFocus ? "#181838" : "#181818";
+    property bool selected: false;
+    property color startColor: selected ? "#116" : "#111";
+    property color endColor: selected ? "#181868" : "#181818";
     property real borderWidth: 3;
-    property color borderColor: "#666";
+    property color borderColor: activeFocus ? "#A92" : "#666";
     property int padding: 5;
     property int blockWidth: 100;
     property int blockHeight: 170;

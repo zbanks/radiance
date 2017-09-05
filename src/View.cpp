@@ -15,6 +15,7 @@ View::~View() {
 
 void View::rebuild() {
     m_children.clear();
+    m_selection.clear();
     onGraphChanged();
 }
 
@@ -240,6 +241,18 @@ void View::onGraphChanged() {
     //qDebug() << "input heights" << inputHeight;
     //qDebug() << "gridX" << gridX;
     //qDebug() << "gridY" << gridY;
+
+    selectionChanged();
+}
+
+void View::selectionChanged() {
+    QSet<VideoNode *> found;
+    for (int i=0; i<m_children.count(); i++) {
+        auto selected = m_selection.contains(m_children.at(i).videoNode);
+        m_children[i].item->setProperty("selected", selected);
+        if (selected) found.insert(m_children.at(i).videoNode);
+    }
+    m_selection = found;
 }
 
 Model *View::model() {
@@ -287,4 +300,44 @@ void View::qml_setDelegates(QVariantMap value) {
     rebuild();
     emit delegatesChanged(m_delegates);
     emit qml_delegatesChanged(qml_delegates());
+}
+
+void View::select(QVariantList videoNodes) {
+    m_selection.clear();
+    for (int i=0; i<videoNodes.count(); i++) {
+        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
+        m_selection.insert(videoNode);
+    }
+    selectionChanged();
+}
+
+void View::addToSelection(QVariantList videoNodes) {
+    for (int i=0; i<videoNodes.count(); i++) {
+        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
+        m_selection.insert(videoNode);
+    }
+    selectionChanged();
+}
+
+void View::removeFromSelection(QVariantList videoNodes) {
+    for (int i=0; i<videoNodes.count(); i++) {
+        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
+        m_selection.remove(videoNode);
+    }
+    selectionChanged();
+}
+
+void View::toggleSelection(QVariantList videoNodes) {
+    bool allSelected = true;
+    for (int i=0; i<videoNodes.count(); i++) {
+        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
+        if (!m_selection.contains(videoNode)) {
+            allSelected = false;
+        }
+    }
+    if (allSelected) {
+        removeFromSelection(videoNodes);
+    } else {
+        addToSelection(videoNodes);
+    }
 }

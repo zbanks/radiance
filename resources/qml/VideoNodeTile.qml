@@ -15,6 +15,7 @@ FocusScope {
     property int padding: 5;
     property int blockWidth: 100;
     property int blockHeight: 170;
+    property bool selected: false;
 
     function sum(l) {
         var result = 0;
@@ -44,6 +45,7 @@ FocusScope {
 
     Drag.active: dragArea.drag.active;
     Drag.keys: [ "videonode" ]
+    Drag.hotSpot: Qt.point(width / 2, height / 2)
 
     states: State {
         when: dragArea.drag.active
@@ -55,7 +57,18 @@ FocusScope {
         z: -1;
         anchors.fill: parent;
         onClicked: {
-            tile.forceActiveFocus();
+            if (mouse.button == Qt.LeftButton) {
+                tile.forceActiveFocus();
+                if (mouse.modifiers & Qt.ShiftModifier) {
+                    tile.parent.addToSelection([videoNode]);
+                } else if (mouse.modifiers & Qt.ControlModifier) {
+                    tile.parent.toggleSelection([videoNode]);
+                } else if (mouse.modifiers & Qt.AltModifier) {
+                    tile.parent.removeFromSelection([videoNode]);
+                } else {
+                    tile.parent.select([videoNode]);
+                }
+            }
         }
         onReleased: {
             var t = tile.Drag.target;
@@ -108,12 +121,7 @@ FocusScope {
         }
 
         drag.onActiveChanged: {
-            if(drag.active) {
-                tile.Drag.hotSpot = Qt.point(dragArea.mouseX, dragArea.mouseY);
-                tile.z = 1;
-            } else {
-                tile.z = 0;
-            }
+            tile.z = drag.active? 1 : 0;
         }
 
         drag.target: tile;
@@ -121,6 +129,7 @@ FocusScope {
 
     RadianceTile {
         anchors.fill: parent;
+        selected: parent.selected;
         focus: true;
     }
 
