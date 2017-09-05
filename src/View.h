@@ -28,10 +28,10 @@ public slots:
     void onGraphChanged();
 
     // Selection
-    void select(QVariantList videoNodes);
-    void addToSelection(QVariantList videoNodes);
-    void removeFromSelection(QVariantList videoNodes);
-    void toggleSelection(QVariantList videoNodes);
+    void select(QVariantList tiles);
+    void addToSelection(QVariantList tiles);
+    void removeFromSelection(QVariantList tiles);
+    void toggleSelection(QVariantList tiles);
 
 protected:
     Model *m_model;
@@ -40,7 +40,7 @@ protected:
     QList<QSharedPointer<QQuickItem>> m_dropAreas;
     void rebuild();
     Child newChild(VideoNode *videoNode);
-    QSet<VideoNode *> m_selection;
+    QSet<QQuickItem *> m_selection;
     void selectionChanged();
 
 signals:

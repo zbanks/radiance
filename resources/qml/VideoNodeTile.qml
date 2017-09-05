@@ -60,13 +60,13 @@ FocusScope {
             if (mouse.button == Qt.LeftButton) {
                 tile.forceActiveFocus();
                 if (mouse.modifiers & Qt.ShiftModifier) {
-                    tile.parent.addToSelection([videoNode]);
+                    tile.parent.addToSelection([tile]);
                 } else if (mouse.modifiers & Qt.ControlModifier) {
-                    tile.parent.toggleSelection([videoNode]);
+                    tile.parent.toggleSelection([tile]);
                 } else if (mouse.modifiers & Qt.AltModifier) {
-                    tile.parent.removeFromSelection([videoNode]);
+                    tile.parent.removeFromSelection([tile]);
                 } else {
-                    tile.parent.select([videoNode]);
+                    tile.parent.select([tile]);
                 }
             }
         }

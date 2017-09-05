@@ -246,11 +246,11 @@ void View::onGraphChanged() {
 }
 
 void View::selectionChanged() {
-    QSet<VideoNode *> found;
+    QSet<QQuickItem *> found;
     for (int i=0; i<m_children.count(); i++) {
-        auto selected = m_selection.contains(m_children.at(i).videoNode);
+        auto selected = m_selection.contains(m_children.at(i).item.data());
         m_children[i].item->setProperty("selected", selected);
-        if (selected) found.insert(m_children.at(i).videoNode);
+        if (selected) found.insert(m_children.at(i).item.data());
     }
     m_selection = found;
 }
@@ -302,42 +302,42 @@ void View::qml_setDelegates(QVariantMap value) {
     emit qml_delegatesChanged(qml_delegates());
 }
 
-void View::select(QVariantList videoNodes) {
+void View::select(QVariantList tiles) {
     m_selection.clear();
-    for (int i=0; i<videoNodes.count(); i++) {
-        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
-        m_selection.insert(videoNode);
+    for (int i=0; i<tiles.count(); i++) {
+        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        m_selection.insert(tile);
     }
     selectionChanged();
 }
 
-void View::addToSelection(QVariantList videoNodes) {
-    for (int i=0; i<videoNodes.count(); i++) {
-        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
-        m_selection.insert(videoNode);
+void View::addToSelection(QVariantList tiles) {
+    for (int i=0; i<tiles.count(); i++) {
+        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        m_selection.insert(tile);
     }
     selectionChanged();
 }
 
-void View::removeFromSelection(QVariantList videoNodes) {
-    for (int i=0; i<videoNodes.count(); i++) {
-        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
-        m_selection.remove(videoNode);
+void View::removeFromSelection(QVariantList tiles) {
+    for (int i=0; i<tiles.count(); i++) {
+        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        m_selection.remove(tile);
     }
     selectionChanged();
 }
 
-void View::toggleSelection(QVariantList videoNodes) {
+void View::toggleSelection(QVariantList tiles) {
     bool allSelected = true;
-    for (int i=0; i<videoNodes.count(); i++) {
-        auto videoNode = qvariant_cast<VideoNode*>(videoNodes[i]);
-        if (!m_selection.contains(videoNode)) {
+    for (int i=0; i<tiles.count(); i++) {
+        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        if (!m_selection.contains(tile)) {
             allSelected = false;
         }
     }
     if (allSelected) {
-        removeFromSelection(videoNodes);
+        removeFromSelection(tiles);
     } else {
-        addToSelection(videoNodes);
+        addToSelection(tiles);
     }
 }
