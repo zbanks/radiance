@@ -32,6 +32,7 @@ public slots:
     void addToSelection(QVariantList tiles);
     void removeFromSelection(QVariantList tiles);
     void toggleSelection(QVariantList tiles);
+    void ensureSelected(QQuickItem *tile);
     QVariantList selection();
 
 protected:

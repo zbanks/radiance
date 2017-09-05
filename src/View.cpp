@@ -342,6 +342,14 @@ void View::toggleSelection(QVariantList tiles) {
     }
 }
 
+void View::ensureSelected(QQuickItem *tile) {
+    if (!m_selection.contains(tile)) {
+        m_selection.clear();
+        m_selection.insert(tile);
+        selectionChanged();
+    }
+}
+
 QVariantList View::selection() {
     QVariantList selection;
     for (int i=0; i<m_children.count(); i++) {

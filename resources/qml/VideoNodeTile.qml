@@ -140,7 +140,7 @@ FocusScope {
         }
 
         drag.onActiveChanged: {
-            tile.parent.addToSelection([tile]);
+            tile.parent.ensureSelected(tile);
             if (drag.active) {
                 dragLift();
             } else {
