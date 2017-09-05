@@ -2,6 +2,14 @@
 #include "EffectNode.h"
 #include "main.h"
 
+QVariantMap Edge::toVariantMap() const {
+    QVariantMap result;
+    result.insert("fromVertex", QVariant::fromValue(fromVertex));
+    result.insert("toVertex", QVariant::fromValue(fromVertex));
+    result.insert("toInput", toInput);
+    return result;
+}
+
 Model::Model() {
 }
 

@@ -11,6 +11,9 @@ struct Edge {
     VideoNode *fromVertex;
     VideoNode *toVertex;
     int toInput;
+
+public:
+    QVariantMap toVariantMap() const;
 };
 
 // Return type of graphCopy

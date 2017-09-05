@@ -375,8 +375,9 @@ static void setColor(const QVector<QVector<int>> &edges, QVector<int> &colors, i
     colors[node] = myColor;
 }
 
-QVariantMap View::selectedConnectedComponent(QQuickItem *tile) {
+QVariantList View::selectedConnectedComponents() {
     // * tiles = A QVariantList of tiles contained within the connected component
+    // * vertices = A QVariantList of vertices (VideoNodes) contained within the connected component
     // * edges = A QVariantList of edges contained within the connected component
     // * inputEdges = A QVariantList of input edges to the connected component (ordered)
     // * outputEdges = A QVariantList of output edges from the connected component (unordered)
@@ -389,6 +390,7 @@ QVariantMap View::selectedConnectedComponent(QQuickItem *tile) {
     // given node.
 
     // Find only the vertices contained in the selection
+    auto vertices = m_model->vertices();
     QSet<VideoNode *> selectedVerticesSet;
     QVector<VideoNode *> selectedVertices;
     for (int i=0; i<m_children.count(); i++) {
@@ -400,13 +402,11 @@ QVariantMap View::selectedConnectedComponent(QQuickItem *tile) {
 
     // Find only the edges contained in the selection
     QVector<Edge> selectedEdges;
-    {
-        auto edges = m_model->edges();
-        for (int i=0; i<edges.count(); i++) {
-            if (selectedVerticesSet.contains(edges.at(i).fromVertex)
-             && selectedVerticesSet.contains(edges.at(i).toVertex)) {
-                selectedEdges.append(edges.at(i));
-            }
+    auto edges = m_model->edges();
+    for (int i=0; i<edges.count(); i++) {
+        if (selectedVerticesSet.contains(edges.at(i).fromVertex)
+         && selectedVerticesSet.contains(edges.at(i).toVertex)) {
+            selectedEdges.append(edges.at(i));
         }
     }
 
@@ -417,44 +417,67 @@ QVariantMap View::selectedConnectedComponent(QQuickItem *tile) {
     }
 
     // Create a data structure for looking up edges
-    QVector<QVector<int>> edges(selectedVertices.count());
+    QVector<QVector<int>> edgeLookup(selectedVertices.count());
     for (int i=0; i<selectedEdges.count(); i++) {
         auto fromIndex = map.value(selectedEdges.at(i).fromVertex, -1);
         auto toIndex = map.value(selectedEdges.at(i).toVertex, -1);
         Q_ASSERT(fromIndex >= 0);
         Q_ASSERT(toIndex >= 0);
-        edges[fromIndex].append(toIndex);
+        edgeLookup[fromIndex].append(toIndex);
     }
 
     QVector<int> colors(selectedVertices.count(), 0);
     int curColor = 1;
     // Color the graph
     for (int i=0; i<selectedVertices.count(); i++) {
-        setColor(edges, colors, i, curColor);
+        setColor(edgeLookup, colors, i, curColor);
     }
 
-    // Find the color associated with the given tile
-    int myColor = 0;
-    for (int i=0; i<m_children.count(); i++) {
-        if (m_children.at(i).item.data() == tile) {
+    // Loop over each color and populate the output
+    QVariantList result;
+    for (int c=1; c<curColor; c++) { // TODO this is a little bit N^2
+        // Find all tiles of that color
+        QVariantList tiles;
+        QSet<VideoNode *> coloredVerticesSet;
+        for (int i=0; i<m_children.count(); i++) {
             auto tileIndex = map.value(m_children.at(i).videoNode, -1);
-            if (tileIndex < 0) break;
-            myColor = colors.at(tileIndex);
-            break;
+            if (tileIndex >= 0 && colors.at(tileIndex) == c) {
+                tiles.append(QVariant::fromValue(m_children.at(i).item.data()));
+                coloredVerticesSet.insert(m_children.at(i).videoNode);
+            }
         }
-    }
-    if (myColor == 0) qFatal("Given tile must be part of selection");
-
-    // Find all tiles of that color
-    QVariantList tiles;
-    for (int i=0; i<m_children.count(); i++) {
-        auto tileIndex = map.value(m_children.at(i).videoNode, -1);
-        if (tileIndex >= 0 && colors.at(tileIndex) == myColor) {
-            tiles.append(QVariant::fromValue(m_children.at(i).item.data()));
+        // Find all vertices of that color
+        QVariantList componentVertices;
+        for (int i=0; i<vertices.count(); i++) {
+            if (coloredVerticesSet.contains(vertices.at(i))) {
+                componentVertices.append(QVariant::fromValue(vertices.at(i)));
+            }
         }
+        // Find all relevent edges
+        QVariantList componentEdges;
+        QVariantList inputEdges;
+        QVariantList outputEdges;
+        for (int i=0; i<edges.count(); i++) {
+            auto containsFrom = coloredVerticesSet.contains(edges.at(i).fromVertex);
+            auto containsTo = coloredVerticesSet.contains(edges.at(i).toVertex);
+            if (containsFrom && containsTo) {
+                componentEdges.append(edges.at(i).toVariantMap());
+            } else if (containsFrom) {
+                outputEdges.append(edges.at(i).toVariantMap());
+            } else if (containsTo) {
+                // TODO these edges should be sorted
+                inputEdges.append(edges.at(i).toVariantMap());
+            }
+        }
+
+        QVariantMap obj;
+        obj.insert("tiles", tiles);
+        obj.insert("vertices", componentVertices);
+        obj.insert("edges", componentEdges);
+        obj.insert("inputEdges", inputEdges);
+        obj.insert("outputEdges", outputEdges);
+        result.append(obj);
     }
 
-    QVariantMap result;
-    result.insert("tiles", tiles);
     return result;
 }

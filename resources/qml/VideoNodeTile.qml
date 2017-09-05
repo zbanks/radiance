@@ -53,8 +53,13 @@ FocusScope {
     Drag.active: dragArea.drag.active;
 
     function dragLift() {
-        var comp = parent.selectedConnectedComponent(tile);
-        dragObjects = comp.tiles;
+        var ccs = parent.selectedConnectedComponents();
+        var i;
+        for (i=0; i<ccs.length; i++) {
+            if (ccs[i].tiles.indexOf(tile) >= 0) break;
+        }
+        if (i == ccs.length) return; // Drag object was not found in selection??
+        dragObjects = ccs[i].tiles;
         lastX = x;
         lastY = y;
         for (var i=0; i<dragObjects.length; i++) {
