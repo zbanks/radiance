@@ -120,44 +120,6 @@ FocusScope {
             if (tn !== null) {
                 model.addEdge(dragCC.outputNode, tn, ti);
             }
-
-/*
-            // We can only move the whole tree if it would not create a cycle and fromNode is empty
-            // Maybe this should be controlled by a keyboard shortcut like Shift?
-            var meOnly = fn !== null || model.isAncestor(tn, me);
-            // Keep track of removed connections so we can splice them back together
-            var prevFromVertex = null;
-            var prevToVertex = null;
-            var prevToInput = null;
-            var toRemove = [];
-            for (var i=0; i<e.length; i++) {
-                if (v[e[i].fromVertex] == me) {
-                    toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
-                    prevToVertex = v[e[i].toVertex];
-                    prevToInput = e[i].toInput;
-                }
-                if (meOnly && v[e[i].toVertex] == me) {
-                    toRemove.push([v[e[i].fromVertex], v[e[i].toVertex], e[i].toInput]);
-                    prevFromVertex = v[e[i].fromVertex];
-                }
-            }
-            for (var i=0; i<toRemove.length; i++) {
-                console.log(toRemove[i]);
-                model.removeEdge(toRemove[i][0],toRemove[i][1],toRemove[i][2]);
-            }
-            if (prevFromVertex !== null && prevToVertex !== null & prevToInput !== null) {
-                console.log(prevFromVertex, prevToVertex, prevToInput);
-                model.addEdge(prevFromVertex, prevToVertex, prevToInput);
-            }
-            if (fn !== null) {
-                console.log(fn+" ...");
-                model.addEdge(fn, me, 0);
-                console.log(fn+" OK");
-            }
-            if (tn !== null) {
-                model.addEdge(me, tn, ti);
-            }
-*/
         }
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].regrid();

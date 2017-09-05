@@ -236,12 +236,6 @@ void View::onGraphChanged() {
     }
     m_dropAreas = dropAreas;
 
-    //qDebug() << "vertices" << vertices;
-    //qDebug() << "root nodes" << s;
-    //qDebug() << "input heights" << inputHeight;
-    //qDebug() << "gridX" << gridX;
-    //qDebug() << "gridY" << gridY;
-
     selectionChanged();
 }
 
