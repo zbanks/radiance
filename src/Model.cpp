@@ -10,6 +10,12 @@ QVariantMap Edge::toVariantMap() const {
     return result;
 }
 
+bool Edge::operator==(const Edge &other) const {
+    return fromVertex == other.fromVertex
+        && toVertex == other.toVertex
+        && toInput == other.toInput;
+}
+
 Model::Model() {
 }
 
@@ -18,51 +24,33 @@ Model::~Model() {
 
 void Model::addVideoNode(VideoNode *videoNode) {
     if (!m_vertices.contains(videoNode)) {
-        {
-            QMutexLocker locker(&m_graphLock);
-            m_vertices.append(videoNode);
-            m_verticesSortedForRendering = topoSort();
-        }
-        emit videoNodeAdded(videoNode);
+        m_vertices.append(videoNode);
     }
 }
 
 void Model::removeVideoNode(VideoNode *videoNode) {
     QList<Edge> removed;
 
-    int count;
-    {
-        QMutexLocker locker(&m_graphLock);
-
-        QMutableListIterator<Edge> i(m_edges);
-        while (i.hasNext()) {
-            auto edgeCopy = i.next();
-            if (edgeCopy.fromVertex == videoNode || edgeCopy.toVertex == videoNode) {
-                i.remove();
-                removed.append(edgeCopy);
-            }
-        }
-
-        count = m_vertices.removeAll(videoNode);
-    }
-
-    if (removed.count() > 0 || count > 0) {
-        m_verticesSortedForRendering = topoSort();
-        for (auto edge = removed.begin(); edge != removed.end(); edge++) {
-            emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
-        }
-        if (count > 0) {
-            emit videoNodeRemoved(videoNode);
+    QMutableListIterator<Edge> i(m_edges);
+    while (i.hasNext()) {
+        auto edgeCopy = i.next();
+        if (edgeCopy.fromVertex == videoNode || edgeCopy.toVertex == videoNode) {
+            i.remove();
         }
     }
+
+    m_vertices.removeAll(videoNode);
 }
 
 void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
-    Q_ASSERT(fromVertex != nullptr);
-    Q_ASSERT(toVertex != nullptr);
-    Q_ASSERT(toInput >= 0);
-    Q_ASSERT(m_vertices.contains(fromVertex));
-    Q_ASSERT(m_vertices.contains(toVertex));
+    if (fromVertex == nullptr
+     || toVertex == nullptr
+     || toInput < 0
+     || !m_vertices.contains(fromVertex)
+     || !m_vertices.contains(toVertex)) {
+        qWarning() << "Bad edge:" << fromVertex << toVertex << toInput;
+        return;
+    }
 
     QList<Edge> removed;
 
@@ -73,65 +61,47 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
         .toVertex = toVertex,
         .toInput = toInput,
     };
-    {
-        QMutexLocker locker(&m_graphLock);
-
-        QMutableListIterator<Edge> i(m_edges);
-        while (i.hasNext()) {
-            Edge edgeCopy = i.next();
-            if (edgeCopy.toVertex == toVertex && edgeCopy.toInput == toInput) {
-                if (edgeCopy.fromVertex == fromVertex)
-                    return;
-                qInfo() << "erasing" << edgeCopy.fromVertex << edgeCopy.toVertex << edgeCopy.toInput;
-                i.remove();
-                removed.append(edgeCopy);
-            }
+    QMutableListIterator<Edge> i(m_edges);
+    while (i.hasNext()) {
+        Edge edgeCopy = i.next();
+        if (edgeCopy.toVertex == toVertex && edgeCopy.toInput == toInput) {
+            if (edgeCopy.fromVertex == fromVertex)
+                return;
+            qInfo() << "Erasing" << edgeCopy.fromVertex << edgeCopy.toVertex << edgeCopy.toInput;
+            i.remove();
         }
+    }
 
-        m_edges.append(newEdge);
-        QVector<VideoNode *> sortedVertices = topoSort();
-        if(sortedVertices.count() < m_vertices.count()) {
-            // Roll back changes if a cycle was detected
-            m_edges = edgesOld;
-            return;
-        }
-        m_verticesSortedForRendering = sortedVertices;
+    m_edges.append(newEdge);
+    QVector<VideoNode *> sortedVertices = topoSort();
+    if(sortedVertices.count() < m_vertices.count()) {
+        // Roll back changes if a cycle was detected
+        m_edges = edgesOld;
+        qWarning() << "Not adding edge because it would create a cycle: " << fromVertex << toVertex << toInput;
+        return;
     }
-    for (auto edge = removed.begin(); edge != removed.end(); edge++) {
-        emit edgeRemoved(edge->fromVertex, edge->toVertex, edge->toInput);
-    }
-    emit edgeAdded(newEdge.fromVertex, newEdge.toVertex, newEdge.toInput);
 }
 
 void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
-    Q_ASSERT(fromVertex != nullptr);
-    Q_ASSERT(toVertex != nullptr);
-    Q_ASSERT(toInput >= 0);
-    Q_ASSERT(m_vertices.contains(fromVertex));
-    Q_ASSERT(m_vertices.contains(toVertex));
-
+    if (fromVertex == nullptr
+     || toVertex == nullptr
+     || toInput < 0
+     || !m_vertices.contains(fromVertex)
+     || !m_vertices.contains(toVertex)) {
+        qWarning() << "Bad edge:" << fromVertex << toVertex << toInput;
+        return;
+    }
 
     Edge edgeCopy;
-    bool removed = false;
-    {
-        QMutexLocker locker(&m_graphLock);
-        QMutableListIterator<Edge> i(m_edges);
-        while (i.hasNext()) {
-            edgeCopy = i.next();
-            if (edgeCopy.fromVertex == fromVertex
-             && edgeCopy.toVertex == toVertex
-             && edgeCopy.toInput == toInput) {
-                i.remove();
-                removed = true;
-                break;
-            }
+    QMutableListIterator<Edge> i(m_edges);
+    while (i.hasNext()) {
+        edgeCopy = i.next();
+        if (edgeCopy.fromVertex == fromVertex
+         && edgeCopy.toVertex == toVertex
+         && edgeCopy.toInput == toInput) {
+            i.remove();
+            break;
         }
-        if (removed) {
-            m_verticesSortedForRendering = topoSort();
-        }
-    }
-    if (removed) {
-        emit edgeRemoved(edgeCopy.fromVertex, edgeCopy.toVertex, edgeCopy.toInput);
     }
 }
 
@@ -145,10 +115,10 @@ ModelCopyForRendering Model::createCopyForRendering() {
         map.insert(m_verticesSortedForRendering.at(i), i);
     }
 
-    for(int i=0; i<m_edges.count(); i++) {
-        out.fromVertex.append(map.value(m_edges.at(i).fromVertex, -1));
-        out.toVertex.append(map.value(m_edges.at(i).toVertex, -1));
-        out.toInput.append(m_edges.at(i).toInput);
+    for(int i=0; i<m_edgesForRendering.count(); i++) {
+        out.fromVertex.append(map.value(m_edgesForRendering.at(i).fromVertex, -1));
+        out.toVertex.append(map.value(m_edgesForRendering.at(i).toVertex, -1));
+        out.toInput.append(m_edgesForRendering.at(i).toInput);
     }
 
     out.origVertices = m_verticesSortedForRendering;
@@ -259,6 +229,60 @@ QVariantList Model::qmlEdges() const {
         edges.append(vedge);
     }
     return edges;
+}
+
+void Model::flush() {
+    QList<VideoNode *> verticesAdded;
+    QList<VideoNode *> verticesRemoved;
+    QList<Edge> edgesAdded;
+    QList<Edge> edgesRemoved;
+
+    // Compute the changeset
+    {
+        auto v = QSet<VideoNode *>::fromList(m_vertices);
+        auto v4r = QSet<VideoNode *>::fromList(m_verticesForRendering);
+        // TODO Can't use QSet without implementing qHash
+        //auto e = QSet<Edge>::fromList(m_edges);
+        //auto e4r = QSet<Edge>::fromList(m_edgesForRendering);
+        auto e = m_edges;
+        auto e4r = m_edgesForRendering;
+
+        for (int i=0; i<m_vertices.count(); i++) {
+            if (!v4r.contains(m_vertices.at(i))) verticesAdded.append(m_vertices.at(i));
+        }
+        for (int i=0; i<m_verticesForRendering.count(); i++) {
+            if (!v.contains(m_verticesForRendering.at(i))) verticesRemoved.append(m_verticesForRendering.at(i));
+        }
+        for (int i=0; i<m_edges.count(); i++) {
+            if (!e4r.contains(m_edges.at(i))) edgesAdded.append(m_edges.at(i));
+        }
+        for (int i=0; i<m_edgesForRendering.count(); i++) {
+            if (!e.contains(m_edgesForRendering.at(i))) edgesRemoved.append(m_edgesForRendering.at(i));
+        }
+    }
+
+    // Swap
+    {
+        QMutexLocker locker(&m_graphLock);
+        m_verticesForRendering = m_vertices;
+        m_edgesForRendering = m_edges;
+        m_verticesSortedForRendering = topoSort();
+    }
+
+    // Convert the changeset to VariantLists for QML
+    QVariantList verticesAddedVL;
+    for (int i=0; i<verticesAdded.count(); i++) verticesAddedVL.append(QVariant::fromValue(verticesAdded.at(i)));
+
+    QVariantList verticesRemovedVL;
+    for (int i=0; i<verticesRemoved.count(); i++) verticesRemovedVL.append(QVariant::fromValue(verticesRemoved.at(i)));
+
+    QVariantList edgesAddedVL;
+    for (int i=0; i<edgesAdded.count(); i++) edgesAddedVL.append(edgesAdded.at(i).toVariantMap());
+
+    QVariantList edgesRemovedVL;
+    for (int i=0; i<edgesRemoved.count(); i++) edgesRemovedVL.append(edgesRemoved.at(i).toVariantMap());
+
+    emit graphChanged(verticesAddedVL, verticesRemovedVL, edgesAddedVL, edgesRemovedVL);
 }
 
 QList<VideoNode *> Model::ancestors(VideoNode *node) {

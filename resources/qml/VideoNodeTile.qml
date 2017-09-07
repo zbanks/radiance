@@ -118,10 +118,15 @@ FocusScope {
             if (tn !== null) {
                 model.addEdge(dragCC.outputNode, tn, ti);
             }
+            model.flush();
         }
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].regrid();
         }
+    }
+
+    function deleteSelected() {
+        var ccs = parent.selectedConnectedComponents();
     }
 
     MouseArea {
@@ -228,6 +233,12 @@ FocusScope {
                 }
             }
             lastY = y;
+        }
+    }
+
+    Keys.onPressed: {
+        if (event.key == Qt.Key_Delete) {
+            deleteSelected();
         }
     }
 }

@@ -285,10 +285,7 @@ void View::setModel(Model *model) {
     if(m_model != nullptr) disconnect(model, nullptr, this, nullptr);
     m_model = model;
     if(m_model != nullptr) {
-        connect(model, &Model::videoNodeAdded, this, &View::onGraphChanged);
-        connect(model, &Model::videoNodeRemoved, this, &View::onGraphChanged);
-        connect(model, &Model::edgeAdded, this, &View::onGraphChanged);
-        connect(model, &Model::edgeRemoved, this, &View::onGraphChanged);
+        connect(model, &Model::graphChanged, this, &View::onGraphChanged);
     }
     rebuild();
     emit modelChanged(model);

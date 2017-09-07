@@ -13,6 +13,7 @@ struct Edge {
 
 public:
     QVariantMap toVariantMap() const;
+    bool operator==(const Edge &other) const;
 };
 
 // Return type of graphCopy
@@ -36,10 +37,19 @@ public:
    ~Model() override;
 
 public slots:
+    // These functions mutate the graph.
+    // Calling these functions does not emit signals
+    // or change what is rendered
+    // until flush() is called.
     void addVideoNode(VideoNode *videoNode);
     void removeVideoNode(VideoNode *videoNode);
     void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
+
+    // Atomically update the graph used for rendering
+    // and emit signals describing how the graph was changed.
+    // Call this after adding or removing nodes or edges.
+    void flush();
 
     // This function is called before rendering
     // from the render thread
@@ -85,10 +95,9 @@ public slots:
     bool isAncestor(VideoNode *parent, VideoNode *child);
 
 signals:
-    void videoNodeAdded(VideoNode *videoNode);
-    void videoNodeRemoved(VideoNode *videoNode);
-    void edgeAdded(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
-    void edgeRemoved(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
+    // Emitted after flush() is called (assuming the graph did actually change)
+    // with the interim changes
+    void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
 
 protected:
     void emitGraphChanged();
@@ -97,6 +106,8 @@ protected:
 private:
     QList<VideoNode *> m_vertices;
     QList<Edge> m_edges;
+    QList<VideoNode *> m_verticesForRendering;
+    QList<Edge> m_edgesForRendering;
     QVector<VideoNode *> m_verticesSortedForRendering;
 
     // m_vertices and m_edges can be

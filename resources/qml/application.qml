@@ -10,17 +10,10 @@ ApplicationWindow {
 
     Model {
         id: model;
-        onVideoNodeAdded: {
-            console.log("Added video node", videoNode);
-        }
-        onVideoNodeRemoved: {
-            console.log("Removed video node", videoNode);
-        }
-        onEdgeAdded: {
-            console.log("Added edge");
-        }
-        onEdgeRemoved: {
-            console.log("Removed edge");
+        onGraphChanged: {
+            var changeset = "+" + verticesAdded.length + " -" + verticesRemoved.length + " vertices, ";
+            changeset += "+" + edgesAdded.length + " -" + edgesRemoved.length + " edges";
+            console.log("Graph changed!", changeset);
         }
     }
 
@@ -92,6 +85,7 @@ ApplicationWindow {
         //model.addEdge(img1, en4, 0);
         model.addEdge(en4, cross, 1);
         //model.addEdge(cross, after, 0);
+        model.flush();
         RenderContext.addRenderTrigger(window, model, 0);
     }
 
@@ -122,6 +116,7 @@ ApplicationWindow {
                         var e = Qt.createQmlObject("import radiance 1.0; EffectNode { }", window, "");
                         e.name = effectSelector.currentText;
                         model.addVideoNode(e);
+                        model.flush();
                         console.log("New Effect", effectSelector.currentText, e);
                     }
                 }
@@ -154,6 +149,7 @@ ApplicationWindow {
                 onClicked: {
                     vnr.update()
                     model.removeVideoNode(en4);
+                    model.flush();
                 }
             }
         }
