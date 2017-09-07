@@ -97,6 +97,23 @@ static void setStackup(const QVector<QVector<int>> &inputs, const QVector<QVecto
     }
 }
 
+QSharedPointer<QQuickItem> View::createDropArea() {
+    auto qmlFileInfo = QFileInfo(QString("../resources/qml/TileDropArea.qml"));
+    QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
+    QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
+    if( component.status() != QQmlComponent::Ready )
+    {
+        if(component.status() == QQmlComponent::Error) {
+            qDebug() << component.errorString();
+            qFatal("Could not construct TileDropArea");
+        }
+    }
+    QSharedPointer<QQuickItem> item(qobject_cast<QQuickItem *>(component.create()));
+
+    item->setParentItem(this);
+    return item;
+}
+
 void View::onGraphChanged() {
     if (m_model == nullptr) return;
 
@@ -156,19 +173,17 @@ void View::onGraphChanged() {
 
     // Find the root nodes
     QVector<int> s;
-    {
-        QSet<VideoNode *> sSet;
-        // Populate s, the start nodes
-        for (int i=0; i<vertices.count(); i++) {
-            sSet.insert(vertices.at(i));
-        }
-        for (auto e = edges.begin(); e != edges.end(); e++) {
-            sSet.remove(e->fromVertex);
-        }
-        for (int i=0; i<vertices.count(); i++) {
-            if (sSet.contains(vertices.at(i))) {
-                s.append(i);
-            }
+    QSet<VideoNode *> sSet;
+    // Populate s, the start nodes
+    for (int i=0; i<vertices.count(); i++) {
+        sSet.insert(vertices.at(i));
+    }
+    for (auto e = edges.begin(); e != edges.end(); e++) {
+        sSet.remove(e->fromVertex);
+    }
+    for (int i=0; i<vertices.count(); i++) {
+        if (sSet.contains(vertices.at(i))) {
+            s.append(i);
         }
     }
 
@@ -197,29 +212,19 @@ void View::onGraphChanged() {
     QList<QSharedPointer<QQuickItem>> dropAreas;
     for (int i=0; i<m_children.count(); i++) {
         auto myInputHeights = inputHeight.at(i);
+        auto vertex = m_children.at(i).videoNode;
         for (int j=0; j<myInputHeights.count(); j++) {
-            auto qmlFileInfo = QFileInfo(QString("../resources/qml/TileDropArea.qml"));
-            QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
-            QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
-            if( component.status() != QQmlComponent::Ready )
-            {
-                if(component.status() == QQmlComponent::Error) {
-                    qDebug() << component.errorString();
-                    qFatal("Could not construct TileDropArea");
-                }
-            }
-            QSharedPointer<QQuickItem> item(qobject_cast<QQuickItem *>(component.create()));
+            // Create a drop area at each input of every node
+            auto item = createDropArea();
 
-            item->setParentItem(this);
             item->setProperty("gridX", gridX.at(i) + 0.5);
             item->setProperty("gridY", gridY.at(i) + j);
             item->setProperty("gridHeight", myInputHeights.at(j));
-            QVariant fromNode;
-            fromNode.setValue(static_cast<VideoNode *>(nullptr));
+            QVariant fromNode = QVariant::fromValue(static_cast<VideoNode *>(nullptr));
 
             // TODO this makes this N^2, a clever QMap could solve this
             for (int k=0; k<edges.count(); k++) {
-                if (edges.at(k).toVertex == vertices.at(i)
+                if (edges.at(k).toVertex == vertex
                  && edges.at(k).toInput == j) {
                     fromNode.setValue(edges.at(k).fromVertex);
                     break;
@@ -227,10 +232,21 @@ void View::onGraphChanged() {
             }
 
             item->setProperty("fromNode", fromNode);
-            QVariant toNode;
-            toNode.setValue(vertices.at(i));
-            item->setProperty("toNode", toNode);
+            item->setProperty("toNode", QVariant::fromValue(vertex));
             item->setProperty("toInput", j);
+            dropAreas.append(item);
+        }
+        // Create a drop area at the output of root nodes
+        if (sSet.contains(vertex)) {
+            auto item = createDropArea();
+            int totalHeight = 0;
+            for (int j=0; j<myInputHeights.count(); j++) totalHeight += myInputHeights.at(j);
+            item->setProperty("gridX", gridX.at(i) - 0.5);
+            item->setProperty("gridY", gridY.at(i));
+            item->setProperty("gridHeight", totalHeight);
+            item->setProperty("fromNode", QVariant::fromValue(vertex));
+            item->setProperty("toNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));
+            item->setProperty("toInput", -1);
             dropAreas.append(item);
         }
     }

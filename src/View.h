@@ -59,6 +59,9 @@ protected:
     QSet<QQuickItem *> m_selection;
     void selectionChanged();
 
+private:
+    QSharedPointer<QQuickItem> createDropArea();
+
 signals:
     void modelChanged(Model *model);
     void qml_delegatesChanged(QVariantMap delegates);
