@@ -8,9 +8,11 @@ FocusScope {
     id: tile;
     property var model;
     property var videoNode;
-    property var inputHeights;
+    property var inputGridHeights;
     property int gridX;
     property int gridY;
+    property real posX;
+    property real posY;
 
     property int padding: 5;
     property int blockWidth: 100;
@@ -29,12 +31,13 @@ FocusScope {
     }
 
     function regrid() {
-        x = parent.width - (gridX + 1) * (blockWidth + padding);
-        y = (gridY + 0.5 * (inputHeights[0] - 1)) * (blockHeight + padding);
-        height = (blockHeight + padding) * (sum(inputHeights) - (inputHeights[inputHeights.length - 1] - 1)) - padding;
+        //x = parent.width - (gridX + 1) * (blockWidth + padding);
+        x = posX;
+        y = (gridY + 0.5 * (inputGridHeights[0] - 1)) * (blockHeight + padding);
+        height = (blockHeight + padding) * (sum(inputGridHeights) - (inputGridHeights[inputGridHeights.length - 1] - 1)) - padding;
     }
 
-    onGridXChanged: {
+    onPosXChanged: {
         if (!dragging) regrid();
     }
 
@@ -42,7 +45,7 @@ FocusScope {
         if (!dragging) regrid();
     }
 
-    onInputHeightsChanged: {
+    onInputGridHeightsChanged: {
         if (!dragging) regrid();
     }
 

@@ -122,27 +122,10 @@ ApplicationWindow {
                 }
             }
 
-            Item {
-                property var lastClickedTile;
-
+            Graph {
                 width: 800
                 height: 500
-
-                Rectangle {
-                    color: "red"
-                    opacity: 0.5
-                    anchors.fill: parent
-                }
-
-                View {
-                    model: model;
-                    delegates: {
-                        "EffectNode": "EffectNodeTile",
-                        "ImageNode": "ImageNodeTile",
-                        "": "VideoNodeTile"
-                    }
-                    anchors.fill: parent;
-                }
+                model: model
             }
         }
 
