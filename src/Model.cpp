@@ -215,7 +215,6 @@ QVector<VideoNode *> Model::topoSort() {
             }
         }
         // Prune the potential new start nodes down to just the ones
-        // with no edges
         for (auto e = edges.begin(); e != edges.end(); e++) {
             newStartNodes.remove(e->toVertex);
         }
@@ -240,31 +239,22 @@ QList<Edge> Model::edges() const {
     return m_edges;
 }
 
-QQmlListProperty<VideoNode> Model::qmlVertices() {
-    return QQmlListProperty<VideoNode>(this, this, &Model::vertexCount, &Model::vertexAt);
-}
+QVariantList Model::qmlVertices() const {
+    QVariantList vertices;
 
-int Model::vertexCount() const {
-    return m_vertices.count();
-}
-
-VideoNode *Model::vertexAt(int index) const {
-    return m_vertices.at(index);
+    for (auto vertex = m_vertices.begin(); vertex != m_vertices.end(); vertex++) {
+        vertices.append(QVariant::fromValue(*vertex));
+    }
+    return vertices;
 }
 
 QVariantList Model::qmlEdges() const {
     QVariantList edges;
 
-    QMap<VideoNode *, int> map;
-    int i = 0;
-    for (int i=0; i<m_vertices.count(); i++) {
-        map.insert(m_vertices.at(i), i);
-    }
-
     for (auto edge = m_edges.begin(); edge != m_edges.end(); edge++) {
         QVariantMap vedge;
-        vedge.insert("fromVertex", map.value(edge->fromVertex, -1));
-        vedge.insert("toVertex", map.value(edge->toVertex, -1));
+        vedge.insert("fromVertex", QVariant::fromValue(edge->fromVertex));
+        vedge.insert("toVertex", QVariant::fromValue(edge->toVertex));
         vedge.insert("toInput", edge->toInput);
         edges.append(vedge);
     }
@@ -299,12 +289,3 @@ bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
     // TODO: This is obviously not optimal
     return ancestors(child).contains(parent);
 }
-
-int Model::vertexCount(QQmlListProperty<VideoNode>* list) {
-    return reinterpret_cast< Model* >(list->data)->vertexCount();
-}
-
-VideoNode* Model::vertexAt(QQmlListProperty<VideoNode>* list, int i) {
-    return reinterpret_cast< Model* >(list->data)->vertexAt(i);
-}
-

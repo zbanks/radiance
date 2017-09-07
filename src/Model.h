@@ -5,7 +5,6 @@
 #include <QList>
 #include <QVector>
 #include <QVariantList>
-#include <QQmlListProperty>
 
 struct Edge {
     VideoNode *fromVertex;
@@ -29,7 +28,7 @@ struct ModelCopyForRendering {
 
 class Model : public QObject {
     Q_OBJECT
-    Q_PROPERTY(QQmlListProperty<VideoNode> vertices READ qmlVertices)
+    Q_PROPERTY(QVariantList vertices READ qmlVertices)
     Q_PROPERTY(QVariantList edges READ qmlEdges)
 
 public:
@@ -70,7 +69,7 @@ public slots:
     // Returns a list of vertices
     // in the order they were added
     // suitable for QML / Javascript
-    QQmlListProperty<VideoNode> qmlVertices();
+    QVariantList qmlVertices() const;
 
     // Returns a list of edges
     // in the order they were added
@@ -94,8 +93,6 @@ signals:
 protected:
     void emitGraphChanged();
     QVector<VideoNode *> topoSort();
-    int vertexCount() const;
-    VideoNode *vertexAt(int index) const;
 
 private:
     QList<VideoNode *> m_vertices;
@@ -108,7 +105,4 @@ private:
     // trying to read or write it
     // from the GUI thread at the same time.
     QMutex m_graphLock;
-
-    static int vertexCount(QQmlListProperty<VideoNode> *);
-    static VideoNode *vertexAt(QQmlListProperty<VideoNode> *, int);
 };

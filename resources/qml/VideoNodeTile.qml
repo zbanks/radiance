@@ -82,8 +82,6 @@ FocusScope {
             var fn = t.fromNode;
             var tn = t.toNode;
             var ti = t.toInput;
-            var e = model.edges;
-            var v = model.vertices;
 
             // Step 1. Rewire the nodes surrounding drag source
             // to cut out the dragged blocks
