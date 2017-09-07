@@ -134,7 +134,6 @@ FocusScope {
             // Step 1. Delete nodes
             for (var i=0; i<deleteCC.vertices.length; i++) {
                 var e = deleteCC.vertices[i];
-                console.log("Remove video node", e)
                 model.removeVideoNode(e);
             }
 
@@ -158,15 +157,19 @@ FocusScope {
         onClicked: {
             if (mouse.button == Qt.LeftButton) {
                 tile.forceActiveFocus();
-                if (mouse.modifiers & Qt.ShiftModifier) {
-                    tile.parent.addToSelection([tile]);
-                } else if (mouse.modifiers & Qt.ControlModifier) {
-                    tile.parent.toggleSelection([tile]);
-                } else if (mouse.modifiers & Qt.AltModifier) {
-                    tile.parent.removeFromSelection([tile]);
-                } else {
-                    tile.parent.select([tile]);
+                var tiles = [tile];
+                if (mouse.modifiers & Qt.ShiftModifier && tile.parent.parent.lastClickedTile) {
+                    tiles = tile.parent.tilesBetween(tile.parent.parent.lastClickedTile, tile);
+                    if (tiles.length == 0) tiles = [tile];
                 }
+                if (mouse.modifiers & Qt.ControlModifier) {
+                    tile.parent.toggleSelection(tiles);
+                } else if (mouse.modifiers & Qt.AltModifier) {
+                    tile.parent.removeFromSelection(tiles);
+                } else {
+                    tile.parent.select(tiles);
+                }
+                tile.parent.parent.lastClickedTile = tile;
             }
         }
 

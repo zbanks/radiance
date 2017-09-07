@@ -49,6 +49,10 @@ public slots:
     // * outputNode = The output VideoNode
     QVariantList selectedConnectedComponents();
 
+    // Finds all tiles in between tile1 and tile2
+    // Returns a QVariantList of tiles
+    QVariantList tilesBetween(QQuickItem *tile1, QQuickItem *tile2);
+
 protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;

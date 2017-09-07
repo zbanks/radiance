@@ -562,3 +562,68 @@ QVariantList View::selectedConnectedComponents() {
 
     return result;
 }
+
+static void findAllPaths(int n, int end, const QVector<QVector<int>> &edges, QVector<int> path, QSet<int> &visited, QSet<int> &result) {
+    if (visited.contains(n)) return;
+    path.append(n);
+    if (n == end) {
+        for (int i=0; i<path.count(); i++) {
+            result.insert(path.at(i));
+        }
+        return;
+    }
+    visited.insert(n);
+    auto outgoingEdges = edges.at(n);
+    for (int i=0; i<outgoingEdges.count(); i++) {
+        findAllPaths(outgoingEdges.at(i), end, edges, path, visited, result);
+    }
+}
+
+QVariantList View::tilesBetween(QQuickItem *tile1, QQuickItem *tile2) {
+    // Create a map from VideoNodes to indices
+    auto vertices = m_model->vertices();
+    QMap<VideoNode *, int> map;
+    for (int i=0; i<vertices.count(); i++) {
+        map.insert(vertices.at(i), i);
+    }
+
+    // Find only the vertices contained in the selection
+    int n1 = -1;
+    int n2 = -1;
+    for (int i=0; i<m_children.count(); i++) {
+        if (tile1 == m_children.at(i).item.data()) n1 = map.value(m_children.at(i).videoNode, -1);
+        if (tile2 == m_children.at(i).item.data()) n2 = map.value(m_children.at(i).videoNode, -1);
+    }
+
+    if (n1 < 0 || n2 < 0) {
+        qWarning() << "Could not find tiles" << tile1 << tile2;
+        return QVariantList();
+    }
+
+    // Create a data structure for looking up edges
+    auto edges = m_model->edges();
+    QVector<QVector<int>> edgeLookup(vertices.count());
+    for (int i=0; i<edges.count(); i++) {
+        auto fromIndex = map.value(edges.at(i).fromVertex, -1);
+        auto toIndex = map.value(edges.at(i).toVertex, -1);
+        Q_ASSERT(fromIndex >= 0);
+        Q_ASSERT(toIndex >= 0);
+        edgeLookup[fromIndex].append(toIndex);
+    }
+
+    // Do DFS in both directions, finding all possible paths between the nodes
+    QSet<int> result;
+    QSet<int> visited;
+    findAllPaths(n1, n2, edgeLookup, QVector<int>(), visited, result);
+    visited.clear();
+    findAllPaths(n2, n1, edgeLookup, QVector<int>(), visited, result);
+
+    QVariantList tilesBetween;
+
+    for (int i=0; i<m_children.count(); i++) {
+        if (result.contains(map.value(m_children.at(i).videoNode, -1))) {
+            tilesBetween.append(QVariant::fromValue(m_children.at(i).item.data()));
+        }
+    }
+    return tilesBetween;
+}
