@@ -250,6 +250,18 @@ void View::onGraphChanged() {
             dropAreas.append(item);
         }
     }
+    // Create a drop area from starting a new row
+    {
+        auto item = createDropArea();
+        item->setProperty("gridX", -0.5);
+        item->setProperty("gridY", stack);
+        item->setProperty("gridHeight", 1);
+        item->setProperty("fromNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));
+        item->setProperty("toNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));
+        item->setProperty("toInput", -1);
+        dropAreas.append(item);
+    }
+
     m_dropAreas = dropAreas;
 
     selectionChanged();
