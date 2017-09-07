@@ -126,7 +126,28 @@ FocusScope {
     }
 
     function deleteSelected() {
-        var ccs = parent.selectedConnectedComponents();
+        for (;;) {
+            var ccs = parent.selectedConnectedComponents();
+            if (ccs.length == 0) break;
+            var deleteCC = ccs[0];
+
+            // Step 1. Delete nodes
+            for (var i=0; i<deleteCC.vertices.length; i++) {
+                var e = deleteCC.vertices[i];
+                console.log("Remove video node", e)
+                model.removeVideoNode(e);
+            }
+
+            // Step 2. Stitch the surrounding blocks back together
+            if (deleteCC.inputEdges.length >= 1) {
+                for (var i=0; i<deleteCC.outputEdges.length; i++) {
+                    var f = deleteCC.inputEdges[0];
+                    var t = deleteCC.outputEdges[i];
+                    model.addEdge(f.fromVertex, t.toVertex, t.toInput);
+                }
+            }
+        }
+        model.flush();
     }
 
     MouseArea {

@@ -285,7 +285,9 @@ void View::setModel(Model *model) {
     if(m_model != nullptr) disconnect(model, nullptr, this, nullptr);
     m_model = model;
     if(m_model != nullptr) {
-        connect(model, &Model::graphChanged, this, &View::onGraphChanged);
+        // It is important that this connection is queued
+        // so we don't delete any tiles while their signal handlers are still running
+        connect(model, &Model::graphChanged, this, &View::onGraphChanged, Qt::QueuedConnection);
     }
     rebuild();
     emit modelChanged(model);
@@ -425,10 +427,14 @@ QVariantList View::selectedConnectedComponents() {
     auto vertices = m_model->vertices();
     QSet<VideoNode *> selectedVerticesSet;
     QVector<VideoNode *> selectedVertices;
-    for (int i=0; i<m_children.count(); i++) {
-        if (m_selection.contains(m_children.at(i).item.data())) {
-            selectedVertices.append(m_children.at(i).videoNode);
-            selectedVerticesSet.insert(m_children.at(i).videoNode);
+    {
+        auto vSet = QSet<VideoNode *>::fromList(vertices);
+        for (int i=0; i<m_children.count(); i++) {
+            if (m_selection.contains(m_children.at(i).item.data())
+             && vSet.contains(m_children.at(i).videoNode)) {
+                selectedVertices.append(m_children.at(i).videoNode);
+                selectedVerticesSet.insert(m_children.at(i).videoNode);
+            }
         }
     }
 
