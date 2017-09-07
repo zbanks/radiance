@@ -184,6 +184,17 @@ FocusScope {
             duration: 500
         }
     }
+    Behavior on z {
+        enabled: !dragging
+        NumberAnimation {
+            easing {
+                type: Easing.InOutQuad
+                amplitude: 1.0
+                period: 0.5
+            }
+            duration: 500
+        }
+    }
     Behavior on height {
         enabled: !dragging
         NumberAnimation {
