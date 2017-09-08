@@ -16,7 +16,7 @@ Rectangle {
 
         anchors.fill: parent
         contentWidth: view.width;
-        contentHeight: height * 1.5;
+        contentHeight: view.height;
         clip: true;
 
         View {
@@ -27,11 +27,13 @@ Rectangle {
                 "ImageNode": "ImageNodeTile",
                 "": "VideoNodeTile"
             }
+            /*
             Rectangle {
                 opacity: 0.5
                 color: "red"
                 anchors.fill: parent
             }
+            */
         }
     }
 }

@@ -259,9 +259,6 @@ void View::onGraphChanged() {
         xs[i] = totalWidth - xs.at(i);
     }
 
-    setWidth(totalWidth);
-    setHeight(totalHeight);
-
     for (int i=0; i<m_children.count(); i++) {
         QVariantList gridHeightsVar;
         auto myInputGridHeights = inputGridHeight.at(i);
@@ -336,7 +333,7 @@ void View::onGraphChanged() {
             dropAreas.append(item);
         }
     }
-    // Create a drop area from starting a new row
+    // Create a drop area for starting a new row
     {
         auto item = createDropArea();
         item->setProperty("posX", totalWidth);
@@ -347,8 +344,12 @@ void View::onGraphChanged() {
         item->setProperty("fromNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));
         item->setProperty("toNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));
         item->setProperty("toInput", -1);
+        totalHeight += item->property("posHeight").toReal();
         dropAreas.append(item);
     }
+
+    setWidth(totalWidth);
+    setHeight(totalHeight);
 
     m_dropAreas = dropAreas;
 
