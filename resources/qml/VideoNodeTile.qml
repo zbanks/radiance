@@ -11,13 +11,16 @@ FocusScope {
     property var inputGridHeights;
     property int gridX;
     property int gridY;
+    property var inputHeights;
     property real posX;
     property real posY;
 
-    property int padding: 5;
     property int blockWidth: 100;
     property int blockHeight: 170;
+    property var minInputHeight: 170;
+
     property bool selected: false;
+    property int padding: 5;
 
     property var lastX;
     property var lastY;
@@ -32,9 +35,11 @@ FocusScope {
 
     function regrid() {
         //x = parent.width - (gridX + 1) * (blockWidth + padding);
+        //y = (gridY + 0.5 * (inputGridHeights[0] - 1)) * (blockHeight + padding);
         x = posX;
-        y = (gridY + 0.5 * (inputGridHeights[0] - 1)) * (blockHeight + padding);
-        height = (blockHeight + padding) * (sum(inputGridHeights) - (inputGridHeights[inputGridHeights.length - 1] - 1)) - padding;
+        y = gridY * (blockHeight + padding);
+        //height = (blockHeight + padding) * (sum(inputGridHeights) - (inputGridHeights[inputGridHeights.length - 1] - 1)) - padding;
+        height = sum(inputHeights);
     }
 
     onPosXChanged: {

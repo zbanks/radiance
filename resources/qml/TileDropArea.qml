@@ -7,21 +7,23 @@ import radiance 1.0
 DropArea {
     id: dragTarget
     property alias dropProxy: dragTarget
-    property VideoNode fromNode;
-    property VideoNode toNode;
-    property int toInput;
-    property real gridX;
-    property real gridY;
-    property real gridHeight;
-    property real posX;
-    property real posY;
+    property VideoNode fromNode
+    property VideoNode toNode
+    property int toInput
+    property real gridX
+    property real gridY
+    property real gridHeight
+    property real posX
+    property real posY
+    property real posHeight: 170
 
-    property int padding: 5;
-    property int blockWidth: 100;
-    property int blockHeight: 170;
+    property int padding: 5
+    property int blockWidth: 100
+    property int blockHeight: 170
 
     width: blockWidth - 2 * padding
-    height: (blockHeight - padding) * gridHeight - padding
+    //height: (blockHeight - padding) * gridHeight - padding
+    height: posHeight;
     //x: (parent ? parent.width : 0) - (gridX + 1) * (blockWidth + padding)
     x: posX - width / 2
     y: gridY * (blockHeight + padding)
