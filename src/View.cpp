@@ -96,16 +96,19 @@ static void setLayer(const QVector<QVector<int>> &inputs, const QVector<qreal> &
     }
 }
 
-static void setStackup(const QVector<QVector<int>> &inputs, const QVector<QVector<int>> &inputGridHeight, QVector<int> &stacks, int node, int stack) {
+static void setStackup(const QVector<QVector<int>> &inputs, const QVector<QVector<int>> &inputGridHeight, const QVector<QVector<qreal>> &inputHeight, QVector<int> &stacks, QVector<qreal> &ys, int node, int stack, qreal y) {
     stacks[node] = stack;
+    ys[node] = y;
     auto myInputs = inputs.at(node);
     auto myInputGridHeights = inputGridHeight.at(node);
+    auto myInputHeights = inputHeight.at(node);
     for(int i=0; i<myInputs.count(); i++) {
         int attachedNode = myInputs.at(i);
         if (attachedNode >= 0) {
-            setStackup(inputs, inputGridHeight, stacks, attachedNode, stack);
+            setStackup(inputs, inputGridHeight, inputHeight, stacks, ys, attachedNode, stack, y);
         }
         stack += myInputGridHeights.at(i);
+        y += myInputHeights.at(i);
     }
 }
 
@@ -197,6 +200,7 @@ void View::onGraphChanged() {
     QVector<int> gridX(vertices.count(), -1);
     QVector<qreal> xs(vertices.count(), -1);
     QVector<int> gridY(vertices.count(), -1);
+    QVector<qreal> ys(vertices.count(), -1);
 
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
@@ -230,13 +234,17 @@ void View::onGraphChanged() {
     }
 
     int stack = 0;
+    qreal totalHeight = 0;
     for (int i=0; i<s.count(); i++) {
         setInputHeight(inputs, minHeights, inputGridHeight, inputHeight, s.at(i));
         setLayer(inputs, widths, gridX, xs, s.at(i), 0, 0);
-        setStackup(inputs, inputGridHeight, gridY, s.at(i), stack);
+        setStackup(inputs, inputGridHeight, inputHeight, gridY, ys, s.at(i), stack, totalHeight);
         auto myInputGridHeights = inputGridHeight.at(s.at(i));
+        auto myInputHeights = inputHeight.at(s.at(i));
+        Q_ASSERT(myInputGridHeights.count() == myInputHeights.count());
         for (int j=0; j<myInputGridHeights.count(); j++) {
             stack += myInputGridHeights.at(j);
+            totalHeight += myInputHeights.at(j);
         }
     }
 
@@ -252,6 +260,7 @@ void View::onGraphChanged() {
     }
 
     setWidth(totalWidth);
+    setHeight(totalHeight);
 
     for (int i=0; i<m_children.count(); i++) {
         QVariantList gridHeightsVar;
@@ -264,10 +273,11 @@ void View::onGraphChanged() {
         for (int j=0; j<myInputHeights.count(); j++) {
             heightsVar.append(myInputHeights.at(j));
         }
-        m_children[i].item->setProperty("inputGridHeights", gridHeightsVar);
         m_children[i].item->setProperty("inputHeights", heightsVar);
-        m_children[i].item->setProperty("gridX", gridX.at(i));
         m_children[i].item->setProperty("posX", xs.at(i));
+        m_children[i].item->setProperty("posY", ys.at(i));
+        m_children[i].item->setProperty("inputGridHeights", gridHeightsVar);
+        m_children[i].item->setProperty("gridX", gridX.at(i));
         m_children[i].item->setProperty("gridY", gridY.at(i));
     }
 
@@ -281,11 +291,12 @@ void View::onGraphChanged() {
             // Create a drop area at each input of every node
             auto item = createDropArea();
 
+            item->setProperty("posX", xs.at(i));
+            item->setProperty("posY", ys.at(i));
+            item->setProperty("posHeight", myInputHeights.at(j));
             item->setProperty("gridX", gridX.at(i) + 0.5);
             item->setProperty("gridY", gridY.at(i) + j);
             item->setProperty("gridHeight", myInputGridHeights.at(j));
-            item->setProperty("posX", xs.at(i));
-            item->setProperty("posHeight", myInputHeights.at(j));
             QVariant fromNode = QVariant::fromValue(static_cast<VideoNode *>(nullptr));
 
             // TODO this makes this N^2, a clever QMap could solve this
@@ -311,11 +322,12 @@ void View::onGraphChanged() {
                 totalGridHeight += myInputGridHeights.at(j);
                 totalHeight += myInputHeights.at(j);
             }
+            item->setProperty("posX", xs.at(i) + widths.at(i));
+            item->setProperty("posY", ys.at(i));
+            item->setProperty("posHeight", totalHeight);
             item->setProperty("gridX", gridX.at(i) - 0.5);
             item->setProperty("gridY", gridY.at(i));
             item->setProperty("gridHeight", totalGridHeight);
-            item->setProperty("posX", xs.at(i) + widths.at(i));
-            item->setProperty("posHeight", totalHeight);
             item->setProperty("fromNode", QVariant::fromValue(vertex));
             item->setProperty("toNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));
             item->setProperty("toInput", -1);
@@ -325,8 +337,9 @@ void View::onGraphChanged() {
     // Create a drop area from starting a new row
     {
         auto item = createDropArea();
-        item->setProperty("gridX", -0.5);
         item->setProperty("posX", totalWidth);
+        item->setProperty("posY", totalHeight);
+        item->setProperty("gridX", -0.5);
         item->setProperty("gridY", stack);
         item->setProperty("gridHeight", 1);
         item->setProperty("fromNode", QVariant::fromValue(static_cast<VideoNode *>(nullptr)));

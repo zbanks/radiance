@@ -37,7 +37,7 @@ FocusScope {
         //x = parent.width - (gridX + 1) * (blockWidth + padding);
         //y = (gridY + 0.5 * (inputGridHeights[0] - 1)) * (blockHeight + padding);
         x = posX;
-        y = gridY * (blockHeight + padding);
+        y = posY;
         //height = (blockHeight + padding) * (sum(inputGridHeights) - (inputGridHeights[inputGridHeights.length - 1] - 1)) - padding;
         height = sum(inputHeights);
     }
