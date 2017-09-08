@@ -158,13 +158,11 @@ void View::onGraphChanged() {
         map.insert(vertices.at(i), i);
     }
 
-    // Create a list of heights and widths parallel to vertices
-    QVector<qreal> widths(m_children.count(), -1);
+    // Create a list of heights parallel to vertices
     QVector<QVector<qreal>> minHeights(m_children.count());
     for (int i=0; i<m_children.count(); i++) {
         auto index = map.value(m_children.at(i).videoNode, -1);
         Q_ASSERT(index >= 0);
-        widths[index] = m_children.at(i).item->property("blockWidth").toReal();
         QVariant heightVar = m_children.at(i).item->property("minInputHeight");
         if (heightVar.canConvert(QMetaType::QVariantList)) {
             QVariantList heightList = heightVar.toList();
@@ -210,6 +208,7 @@ void View::onGraphChanged() {
         inputHeight.append(QVector<qreal>(inputCount, -1));
     }
 
+    // Create a vector for looking up a node's inputs
     for (int i = 0; i < toVertex.count(); i++) {
         auto to = toVertex.at(i);
         if (to >= 0) {
@@ -233,11 +232,13 @@ void View::onGraphChanged() {
         }
     }
 
+    // First we deal with heights and Y
+
+    // Compute heights and Y positions
     int stack = 0;
     qreal totalHeight = 0;
     for (int i=0; i<s.count(); i++) {
         setInputHeight(inputs, minHeights, inputGridHeight, inputHeight, s.at(i));
-        setLayer(inputs, widths, gridX, xs, s.at(i), 0, 0);
         setStackup(inputs, inputGridHeight, inputHeight, gridY, ys, s.at(i), stack, totalHeight);
         auto myInputGridHeights = inputGridHeight.at(s.at(i));
         auto myInputHeights = inputHeight.at(s.at(i));
@@ -246,6 +247,40 @@ void View::onGraphChanged() {
             stack += myInputGridHeights.at(j);
             totalHeight += myInputHeights.at(j);
         }
+    }
+
+    // Assign heights and Ys
+    for (int i=0; i<m_children.count(); i++) {
+        QVariantList gridHeightsVar;
+        auto myInputGridHeights = inputGridHeight.at(i);
+        for (int j=0; j<myInputGridHeights.count(); j++) {
+            gridHeightsVar.append(myInputGridHeights.at(j));
+        }
+        QVariantList heightsVar;
+        auto myInputHeights = inputHeight.at(i);
+        for (int j=0; j<myInputHeights.count(); j++) {
+            heightsVar.append(myInputHeights.at(j));
+        }
+        m_children[i].item->setProperty("inputHeights", heightsVar);
+        m_children[i].item->setProperty("posY", ys.at(i));
+        m_children[i].item->setProperty("inputGridHeights", gridHeightsVar);
+        m_children[i].item->setProperty("gridY", gridY.at(i));
+    }
+
+    // Now we deal with widths and X,
+    // in case they are dependent on heights and Y
+
+    // Create a list of widths parallel to vertices
+    QVector<qreal> widths(m_children.count(), -1);
+    for (int i=0; i<m_children.count(); i++) {
+        auto index = map.value(m_children.at(i).videoNode, -1);
+        Q_ASSERT(index >= 0);
+        widths[index] = m_children.at(i).item->property("blockWidth").toReal();
+    }
+
+    // Compute widths and X positions
+    for (int i=0; i<s.count(); i++) {
+        setLayer(inputs, widths, gridX, xs, s.at(i), 0, 0);
     }
 
     // Find the bounds of the whole graph
@@ -259,23 +294,10 @@ void View::onGraphChanged() {
         xs[i] = totalWidth - xs.at(i);
     }
 
+    // Assign width and X
     for (int i=0; i<m_children.count(); i++) {
-        QVariantList gridHeightsVar;
-        auto myInputGridHeights = inputGridHeight.at(i);
-        for (int j=0; j<myInputGridHeights.count(); j++) {
-            gridHeightsVar.append(myInputGridHeights.at(j));
-        }
-        QVariantList heightsVar;
-        auto myInputHeights = inputHeight.at(i);
-        for (int j=0; j<myInputHeights.count(); j++) {
-            heightsVar.append(myInputHeights.at(j));
-        }
-        m_children[i].item->setProperty("inputHeights", heightsVar);
         m_children[i].item->setProperty("posX", xs.at(i));
-        m_children[i].item->setProperty("posY", ys.at(i));
-        m_children[i].item->setProperty("inputGridHeights", gridHeightsVar);
         m_children[i].item->setProperty("gridX", gridX.at(i));
-        m_children[i].item->setProperty("gridY", gridY.at(i));
     }
 
     QList<QSharedPointer<QQuickItem>> dropAreas;

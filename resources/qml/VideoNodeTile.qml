@@ -5,27 +5,26 @@ import QtQuick.Controls.Styles 1.4
 import radiance 1.0
 
 FocusScope {
-    id: tile;
-    property var model;
-    property var videoNode;
-    property var inputGridHeights;
-    property int gridX;
-    property int gridY;
-    property var inputHeights;
-    property real posX;
-    property real posY;
+    id: tile
+    property var model
+    property var videoNode
+    property var inputGridHeights
+    property int gridX
+    property int gridY
+    property var inputHeights
+    property real posX: -1
+    property real posY: -1
 
-    property int blockWidth: 100;
-    property int blockHeight: 170;
-    property var minInputHeight: 170;
+    property int blockWidth: 100
+    property var minInputHeight: 170
 
-    property bool selected: false;
-    property int padding: 5;
+    property bool selected: false
+    property int padding: 2
 
-    property var lastX;
-    property var lastY;
-    property var dragCC;
-    property var dragging;
+    property var lastX
+    property var lastY
+    property var dragCC
+    property var dragging
 
     function sum(l) {
         var result = 0;
@@ -33,28 +32,38 @@ FocusScope {
         return result;
     }
 
+    function min(a, b) {
+        return a < b ? a : b;
+    }
+
     function regrid() {
-        //x = parent.width - (gridX + 1) * (blockWidth + padding);
-        //y = (gridY + 0.5 * (inputGridHeights[0] - 1)) * (blockHeight + padding);
-        x = posX;
-        y = posY;
-        //height = (blockHeight + padding) * (sum(inputGridHeights) - (inputGridHeights[inputGridHeights.length - 1] - 1)) - padding;
-        height = sum(inputHeights);
+        regridY();
+        regridX();
+    }
+
+    function regridX() {
+        x = posX + padding;
+        width = blockWidth - 2 * padding
+    }
+
+    function regridY() {
+        y = posY + (inputHeights[0] - minInputHeight) / 2 + padding;
+        var blockHeight = sum(inputHeights) - (inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
+        height = blockHeight - 2 * padding;
+        blockWidth = min(blockHeight * 0.6, 150)
+    }
+
+    onPosYChanged: {
+        if (!dragging) regridY();
     }
 
     onPosXChanged: {
-        if (!dragging) regrid();
+        if (!dragging) regridX();
     }
 
-    onGridYChanged: {
-        if (!dragging) regrid();
+    onInputHeightsChanged: {
+        if (!dragging) regridY();
     }
-
-    onInputGridHeightsChanged: {
-        if (!dragging) regrid();
-    }
-
-    width: blockWidth;
 
     Drag.keys: [ "videonode" ]
     Drag.hotSpot: Qt.point(width / 2, height / 2)

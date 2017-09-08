@@ -47,6 +47,18 @@ ApplicationWindow {
         inputCount: 2
     }
     EffectNode {
+        id: cross2
+        //name: "crossfader"
+        name: "greenscreen"
+        inputCount: 2
+    }
+    EffectNode {
+        id: cross3
+        //name: "crossfader"
+        name: "greenscreen"
+        inputCount: 2
+    }
+    EffectNode {
         id: after
         name: "pixelate"
     }
@@ -77,6 +89,8 @@ ApplicationWindow {
 
         console.log("Crossfader:");
         model.addVideoNode(cross);
+        model.addVideoNode(cross2);
+        model.addVideoNode(cross3);
         //model.addVideoNode(after);
         model.addVideoNode(en4);
         model.addEdge(en, en2, 0);
