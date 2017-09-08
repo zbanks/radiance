@@ -287,12 +287,14 @@ void View::onGraphChanged() {
         auto myInputHeights = inputHeight.at(i);
         auto vertex = m_children.at(i).videoNode;
         Q_ASSERT(myInputGridHeights.count() == myInputHeights.count());
+        qreal sumInputHeights = 0;
         for (int j=0; j<myInputGridHeights.count(); j++) {
             // Create a drop area at each input of every node
             auto item = createDropArea();
 
             item->setProperty("posX", xs.at(i));
-            item->setProperty("posY", ys.at(i));
+            item->setProperty("posY", ys.at(i) + sumInputHeights);
+            sumInputHeights += myInputHeights.at(j);
             item->setProperty("posHeight", myInputHeights.at(j));
             item->setProperty("gridX", gridX.at(i) + 0.5);
             item->setProperty("gridY", gridY.at(i) + j);

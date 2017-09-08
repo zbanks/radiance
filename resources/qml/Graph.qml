@@ -27,14 +27,11 @@ Rectangle {
                 "ImageNode": "ImageNodeTile",
                 "": "VideoNodeTile"
             }
-            /*
-            height: 500
             Rectangle {
                 opacity: 0.5
                 color: "red"
                 anchors.fill: parent
             }
-            */
         }
     }
 }
