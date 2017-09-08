@@ -72,6 +72,8 @@ int main(int argc, char *argv[]) {
 
         model->addVideoNode(effect.data());
         model->addEdge(testEffect, effect.data(), 0);
+        model->flush();
+
         imgRender->setVideoNode(effect.data());
         outputDir.mkdir(nodeType.name);
         for (int i = 1; i <= 100; i++) {
@@ -87,6 +89,7 @@ int main(int argc, char *argv[]) {
         }
         model->removeEdge(testEffect, effect.data(), 0);
         model->removeVideoNode(effect.data());
+        model->flush();
 
         QProcess ffmpeg;
         ffmpeg.start("ffmpeg",
