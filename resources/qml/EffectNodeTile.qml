@@ -40,7 +40,6 @@ VideoNodeTile {
             CheckerboardBackground {
                 anchors.fill: parent;
             }
-
             VideoNodeRender {
                 anchors.fill: parent;
                 chain: 0;

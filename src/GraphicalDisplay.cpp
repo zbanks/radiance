@@ -84,6 +84,7 @@ err:
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_program->disableAttributeArray(0);
             m_program->release();
+            glActiveTexture(GL_TEXTURE0);
         }
         update();
     }

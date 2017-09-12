@@ -26,7 +26,6 @@ signals:
 private:
     int m_chain;
     VideoNode *m_videoNode;
-    QSharedPointer<QSGTexture> sgTexture;
 
 protected:
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
