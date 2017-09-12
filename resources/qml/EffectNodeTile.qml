@@ -44,7 +44,7 @@ VideoNodeTile {
                 anchors.fill: parent;
                 chain: 0;
                 id: vnr;
-                videoNode: tile.videoNode ? tile.videoNode : null;
+                videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
             }
         }
 

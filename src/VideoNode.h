@@ -9,16 +9,6 @@
 
 class Model;
 
-// This struct serves as a base class
-// for any state which can be mutated
-// during a call to paint()
-// Since rendering often happens in different threads
-// it is useful to split out this data.
-struct VideoNodeRenderState {
-public:
-    int m_texture;
-};
-
 // This is an abstract base class
 // for nodes in the DAG.
 // VideoNodes have 0 or more inputs, and one output.
@@ -33,6 +23,7 @@ class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
     Q_PROPERTY(bool ready READ ready NOTIFY readyChanged);
+    Q_PROPERTY(int id READ id);
 
 public:
     // Calls to paint() may return nullptr
@@ -45,11 +36,6 @@ public:
     VideoNode(const VideoNode &other);
 
    ~VideoNode() override;
-
-    // Returns the output texture
-    // for the given chain
-    // or 0 if the node is not ready for any reason
-    virtual GLuint texture(int chain) = 0;
 
     // Returns the render context
     QSharedPointer<RenderContext> context();
@@ -66,9 +52,9 @@ public:
     virtual QSharedPointer<VideoNode> createCopyForRendering() = 0;
 
     // Paint is run from a valid OpenGL context.
-    // It should update all the framebuffers,
-    // and set m_texture to the QOpenGLTexture
-    // that serves as the output.
+    // It should return the OpenGL texture ID
+    // that serves as the output,
+    // or 0 if the node is not ready for any reason.
     // This texture must remain valid
     // _throughout_ the _next_ call to paint,
     // i.e. nodes should take care to double-buffer properly.
@@ -86,7 +72,7 @@ public:
     // The new RenderState can be propogated back
     // to the original VideoNode object
     // using the thread-safe method copyBackRenderState.
-    virtual void paint(int chain, QVector<GLuint> inputTextures) = 0;
+    virtual GLuint paint(int chain, QVector<GLuint> inputTextures) = 0;
 
     // Copies back the new render state into the original object
     // This function is thread safe.
@@ -98,6 +84,7 @@ public:
 public slots:
     // Number of inputs
     int inputCount();
+    void setInputCount(int value);
 
     // If the VideoNode is ready to go
     bool ready();
@@ -108,7 +95,9 @@ public slots:
     // which will not change during this node's lifetime
     QSize size(int chain);
 
-    void setInputCount(int value); // This was protected, why? (@zbanks)
+    // Returns a unique identifier
+    // within the render context
+    VnId id();
 
 protected slots:
     void setReady(bool value);
@@ -118,6 +107,7 @@ protected:
     int m_inputCount;
     bool m_ready;
     QMutex m_stateLock;
+    VnId m_id;
 
 signals:
     // Emitted when the object wishes to be deleted
@@ -131,4 +121,11 @@ signals:
 
     // Emitted when the ready state changes
     void readyChanged(bool value);
+};
+
+class VideoNodeReference : public QObject {
+    Q_OBJECT
+public:
+    virtual VideoNode *videoNode() = 0;
+    virtual QSharedPointer<VideoNode> createCopyForRendering() = 0;
 };

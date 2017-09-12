@@ -13,7 +13,7 @@ class EffectNode;
 // to add additional state to each render pipeline.
 // It adds some intermediate framebuffers
 // and an index into them.
-struct EffectNodeRenderState : public VideoNodeRenderState {
+struct EffectNodeRenderState {
 public:
     QVector<QSharedPointer<QOpenGLFramebufferObject>> m_intermediate;
     int m_textureIndex;
@@ -67,7 +67,7 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
-    void paint(int chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(int chain, QVector<GLuint> inputTextures) override;
 
     // Called from OpenGLWorker
     // (in a different thread)

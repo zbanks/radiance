@@ -77,21 +77,11 @@ QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 
-void ImageNode::paint(int chain, QVector<GLuint> inputTextures) {
+GLuint ImageNode::paint(int chain, QVector<GLuint> inputTextures) {
+    return m_currentTexture;
 }
 
 void ImageNode::copyBackRenderState(int chain, QSharedPointer<VideoNode> copy) {
-}
-
-GLuint ImageNode::texture(int chain) {
-    // Note that we don't need to take any locks out (as compared to EffectNode)
-    // because we're just returning a single texture that's guaranteed to be valid
-    // if m_ready is true
-    if (!m_ready) {
-        return 0;
-    }
-
-    return m_currentTexture;
 }
 
 // ImageNodeOpenGLWorker methods

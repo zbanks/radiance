@@ -3,9 +3,11 @@
 #include <QQuickWindow>
 #include <QOpenGLTexture>
 #include <QOpenGLFramebufferObject>
+#include "main.h"
 
 QQuickVideoNodeRender::QQuickVideoNodeRender()
-    : m_videoNode(nullptr)
+    : m_context(renderContext)
+    , m_videoNodeId(0)
     , m_chain(-1)
     , m_window(nullptr) {
     setFlags(QQuickItem::ItemHasContents);
@@ -21,13 +23,13 @@ void QQuickVideoNodeRender::onWindowChanged(QQuickWindow *window) {
 QQuickVideoNodeRender::~QQuickVideoNodeRender() {
 }
 
-VideoNode *QQuickVideoNodeRender::videoNode() {
-    return m_videoNode;
+VnId QQuickVideoNodeRender::videoNodeId() {
+    return m_videoNodeId;
 }
 
-void QQuickVideoNodeRender::setVideoNode(VideoNode *videoNode) {
-    m_videoNode = videoNode;
-    emit videoNodeChanged(videoNode);
+void QQuickVideoNodeRender::setVideoNodeId(VnId videoNodeId) {
+    m_videoNodeId = videoNodeId;
+    emit videoNodeIdChanged(videoNodeId);
 }
 
 int QQuickVideoNodeRender::chain() {
@@ -58,9 +60,9 @@ QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNod
 
     //qDebug() << "render with chain" << m_chain << m_videoNode;
 
-    if (m_chain >= 0 && m_videoNode != nullptr) {
-        auto textureId = m_videoNode->texture(m_chain);
-        auto size = m_videoNode->size(m_chain);
+    if (m_chain >= 0 && m_videoNodeId != 0) {
+        auto textureId = m_context->lastRender(m_chain, m_videoNodeId);
+        auto size = m_context->chainSize(m_chain);
         if (textureId != 0) {
             // TODO repeatedly creating the QSGTexture is probably not the most efficient
             node->setTexture(window()->createTextureFromId(textureId, size, QQuickWindow::TextureHasAlphaChannel));

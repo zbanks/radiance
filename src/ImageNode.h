@@ -66,7 +66,7 @@ public:
     // paint() and copying it back afterwards.
     QSharedPointer<VideoNode> createCopyForRendering();
     void copyBackRenderState(int chain, QSharedPointer<VideoNode> copy);
-    void paint(int chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(int chain, QVector<GLuint> inputTextures) override;
 
 public slots:
     QString imagePath();

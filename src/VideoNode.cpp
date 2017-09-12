@@ -6,6 +6,7 @@ VideoNode::VideoNode(QSharedPointer<RenderContext> context)
     : m_context(context)
     , m_inputCount(0) 
     , m_ready(false)
+    , m_id(context->registerVideoNode())
 {
 }
 
@@ -13,6 +14,7 @@ VideoNode::VideoNode(const VideoNode &other)
     : m_context(other.m_context)
     , m_inputCount(other.m_inputCount)
     , m_ready(other.m_ready)
+    , m_id(other.m_id)
 {
 }
 
@@ -59,4 +61,9 @@ void VideoNode::setReady(bool value) {
         }
         emit readyChanged(value);
     }
+}
+
+VnId VideoNode::id() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_id;
 }

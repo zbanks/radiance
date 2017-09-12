@@ -42,18 +42,19 @@ void EffectNode::onInitialized() {
 // and this copy will never be modified
 // out from under it, unlike the parent
 // from which it was created
-void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
+GLuint EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
     // Hitting this assert means
     // that you failed to make a copy
     // of the VideoNode
     // before rendering in a different thread
     Q_ASSERT(QThread::currentThread() == thread());
 
+    GLuint outTexture = 0;
+
     //qDebug() << "calling paint" << this << chain << inputTextures.count();
     if(!m_ready) {
-        m_renderStates[chain].m_texture = 0; // Uninitialized
         //qDebug() << "uninitialized effectnode during paint :(";
-        return;
+        return outTexture;
     }
 
     // FBO creation must happen here, and not in initialize,
@@ -129,11 +130,12 @@ void EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             glActiveTexture(GL_TEXTURE0); // Very important to reset OpenGL state for scene graph rendering
         }
 
-        m_renderStates[chain].m_texture = m_renderStates.at(chain).m_intermediate.at((m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.size() + 1))->texture();
-        //qDebug() << "Output texture ID is" << m_renderStates.at(chain).m_texture;
+        outTexture = m_renderStates.at(chain).m_intermediate.at((m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.size() + 1))->texture();
+        //qDebug() << "Output texture ID is" << outTexture;
         //qDebug() << "Output is" << ((m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.count() + 1));
         m_renderStates[chain].m_textureIndex = (m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.size() + 1);
     }
+    return outTexture;
 }
 
 void EffectNode::periodic() {
@@ -191,11 +193,6 @@ void EffectNode::copyBackRenderState(int chain, QSharedPointer<VideoNode> copy) 
     QSharedPointer<EffectNode> c = qSharedPointerCast<EffectNode>(copy);
     QMutexLocker locker(&m_stateLock);
     m_renderStates[chain] = c->m_renderStates.at(chain);
-}
-
-GLuint EffectNode::texture(int chain) {
-    QMutexLocker locker(&m_stateLock);
-    return m_renderStates.at(chain).m_texture;
 }
 
 // EffectNodeOpenGLWorker methods

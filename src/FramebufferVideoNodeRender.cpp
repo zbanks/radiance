@@ -35,7 +35,8 @@ void FramebufferVideoNodeRender::setChain(int chain) {
 }
 
 QImage FramebufferVideoNodeRender::render() {
-    auto textureId = m_videoNode->texture(m_chain);
+    //auto textureId = m_videoNode->texture(m_chain);
+    GLuint textureId = 0; // XXX FIXME
 
     m_fbo.bind();
     m_blitter.bind();

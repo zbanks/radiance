@@ -6,7 +6,9 @@
 RenderContext::RenderContext()
     : m_openGLWorker(this)
     , m_initialized(false)
-    , m_blankTexture(QOpenGLTexture::Target2D) {
+    , m_blankTexture(QOpenGLTexture::Target2D)
+    , m_vnId(1)
+    , m_lastRender(chainCount()) {
     connect(&m_openGLWorker, &RenderContextOpenGLWorker::initialized, this, &RenderContext::onInitialized);
 
     connect(&m_periodic, &QTimer::timeout, this, &RenderContext::periodic);
@@ -46,7 +48,7 @@ GLuint RenderContext::blankTexture() {
     return m_blankTexture.textureId();
 }
 
-void RenderContext::render(Model *model, int chain) {
+QMap<VnId, GLuint> RenderContext::render(Model *model, int chain) {
     //qDebug() << "RENDER!" << model << chain;
 
     auto m = model->createCopyForRendering();
@@ -71,23 +73,34 @@ void RenderContext::render(Model *model, int chain) {
         }
     }
 
+    QVector<GLuint> resultTextures(m.vertices.count(), 0);
+
     for (int i=0; i<m.vertices.count(); i++) {
         auto vertex = m.vertices.at(i);
         QVector<GLuint> inputTextures(vertex->inputCount(), blankTexture());
         for (int j=0; j<vertex->inputCount(); j++) {
             auto fromVertex = inputs.at(i).at(j);
             if (fromVertex != -1) {
-                auto inpTexture = m.vertices.at(fromVertex)->texture(chain);
+                auto inpTexture = resultTextures.at(fromVertex);
                 if (inpTexture != 0) {
                     inputTextures[j] = inpTexture;
                 }
             }
         }
-        vertex->paint(chain, inputTextures);
+        resultTextures[i] = vertex->paint(chain, inputTextures);
         //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
 
     model->copyBackRenderStates(chain, m.origVertices, m.vertices);
+
+    QMap<VnId, GLuint> result;
+    for (int i=0; i<resultTextures.count(); i++) {
+        if (resultTextures.at(i) != 0 && m.vertices.at(i)->id() != 0) {
+            result.insert(m.vertices.at(i)->id(), resultTextures.at(i));
+        }
+    }
+    m_lastRender[chain] = result;
+    return result;
 }
 
 void RenderContext::addRenderTrigger(QQuickWindow *window, Model *model, int chain) {
@@ -102,7 +115,13 @@ void RenderContext::removeRenderTrigger(QQuickWindow *window, Model *model, int 
     m_renderTriggers.removeAll(rt);
 }
 
-// RenderTrigger methods
+VnId RenderContext::registerVideoNode() {
+    return m_vnId++;
+}
+
+GLuint RenderContext::lastRender(int chain, VnId videoNodeId) {
+    return m_lastRender.at(chain).value(videoNodeId, 0);
+}
 
 // RenderContextOpenGLWorker methods
 
@@ -151,4 +170,3 @@ void RenderContextOpenGLWorker::createBlankTexture() {
     auto data = std::make_unique<uint8_t[]>(4);
     m_p->m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 }
-

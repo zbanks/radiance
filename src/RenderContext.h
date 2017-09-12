@@ -11,6 +11,8 @@
 
 // The Everpresent God Object (EGO)
 
+typedef int VnId;
+
 class VideoNode;
 class Model;
 class RenderContext;
@@ -49,7 +51,7 @@ public:
     static constexpr int PERIODIC_MS = 10;
 
 public slots:
-    void render(Model *m, int chain);
+    QMap<VnId, GLuint> render(Model *m, int chain);
 
     // This is an annoying little hack
     // to get around QML's difficulty
@@ -59,6 +61,16 @@ public slots:
     void removeRenderTrigger(QQuickWindow *window, Model *model, int chain);
     // In the future we can override this function so that
     // more than just QQuickWindows can trigger renders
+
+    // Returns a unique ID
+    // (just a sequence number)
+    VnId registerVideoNode();
+
+    // Returns the texture from the last render
+    // Used as a hack to pass textures
+    // into the scene graph
+    // where they are set in updatePaintNode
+    GLuint lastRender(int chain, VnId videoNodeId); // XXX dirty hack
 
 signals:
     // This signal is fired periodically
@@ -78,4 +90,6 @@ private:
     QList<RenderTrigger> m_renderTriggers;
     RenderContextOpenGLWorker m_openGLWorker;
     QTimer m_periodic;
+    VnId m_vnId;
+    QVector<QMap<VnId, GLuint>> m_lastRender; // XXX dirty hack
 };

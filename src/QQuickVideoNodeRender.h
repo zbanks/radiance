@@ -7,27 +7,28 @@
 
 class QQuickVideoNodeRender : public QQuickItem {
     Q_OBJECT
-    Q_PROPERTY(VideoNode *videoNode READ videoNode WRITE setVideoNode NOTIFY videoNodeChanged)
+    Q_PROPERTY(int videoNodeId READ videoNodeId WRITE setVideoNodeId NOTIFY videoNodeIdChanged)
     Q_PROPERTY(int chain READ chain WRITE setChain NOTIFY chainChanged)
 
 public:
     QQuickVideoNodeRender();
     virtual ~QQuickVideoNodeRender();
 
-    VideoNode *videoNode();
+    VnId videoNodeId();
     int chain();
-    void setVideoNode(VideoNode *videoNode);
+    void setVideoNodeId(VnId value);
     void setChain(int chain);
 
 signals:
-    void videoNodeChanged(VideoNode *videoNode);
+    void videoNodeIdChanged(VnId videoNodeId);
     void chainChanged(int chain);
 
 private:
     int m_chain;
-    VideoNode *m_videoNode;
+    VnId m_videoNodeId;
 
 protected:
+    QSharedPointer<RenderContext> m_context;
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
     QQuickWindow *m_window;
 
