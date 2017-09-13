@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
     model->addVideoNode(testEffect);
 
     FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender(QSize(300, 300));
-    imgRender->setChain(0);
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
@@ -74,7 +73,6 @@ int main(int argc, char *argv[]) {
         model->addEdge(testEffect, effect.data(), 0);
         model->flush();
 
-        imgRender->setVideoNode(effect.data());
         outputDir.mkdir(nodeType.name);
         for (int i = 1; i <= 100; i++) {
             if (effectNode)
@@ -82,10 +80,13 @@ int main(int argc, char *argv[]) {
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
             renderContext->periodic();
 
-            renderContext->render(model, 0);
-            QImage img = imgRender->render();
-            QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), nodeType.name, QString::number(i));
-            img.scaled(QSize(80, 80)).save(filename);
+            auto rendering = renderContext->render(model, 0);
+            auto outputTextureId = rendering.value(effect->id(), 0);
+            if (outputTextureId != 0) {
+                QImage img = imgRender->render(outputTextureId);
+                QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), nodeType.name, QString::number(i));
+                img.scaled(QSize(80, 80)).save(filename);
+            }
         }
         model->removeEdge(testEffect, effect.data(), 0);
         model->removeVideoNode(effect.data());

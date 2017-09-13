@@ -99,7 +99,10 @@ QMap<VnId, GLuint> RenderContext::render(Model *model, int chain) {
             result.insert(m.vertices.at(i)->id(), resultTextures.at(i));
         }
     }
-    m_lastRender[chain] = result;
+    {
+        QMutexLocker locker(&m_lastRenderLock);
+        m_lastRender[chain] = result;
+    }
     return result;
 }
 
@@ -120,6 +123,7 @@ VnId RenderContext::registerVideoNode() {
 }
 
 GLuint RenderContext::lastRender(int chain, VnId videoNodeId) {
+    QMutexLocker locker(&m_lastRenderLock);
     return m_lastRender.at(chain).value(videoNodeId, 0);
 }
 

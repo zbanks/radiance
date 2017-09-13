@@ -92,4 +92,5 @@ private:
     QTimer m_periodic;
     VnId m_vnId;
     QVector<QMap<VnId, GLuint>> m_lastRender; // XXX dirty hack
+    QMutex m_lastRenderLock; // XXX dirty hack
 };

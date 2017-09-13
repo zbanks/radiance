@@ -97,6 +97,12 @@ public slots:
 
     // Returns a unique identifier
     // within the render context
+    // Anything that references this node in the main thread
+    // can use its pointer.
+    // Anything that references this node outside of the main thread
+    // (mostly render artifacts)
+    // should use this ID
+    // since the pointer may become invalidated or non-unique.
     VnId id();
 
 protected slots:
