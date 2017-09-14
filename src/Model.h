@@ -66,7 +66,7 @@ public slots:
     // Sometimes nodes are deleted during rendering,
     // these nodes are not updated
     // because they no longer exist.
-    void copyBackRenderStates(int chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices);
+    void copyBackRenderStates(QSharedPointer<Chain> chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices);
 
     // Returns a list of vertices
     // in the order they were added
@@ -94,14 +94,23 @@ public slots:
     // is an ancestor of `child`
     bool isAncestor(VideoNode *parent, VideoNode *child);
 
+    // TODO these might be replaced with something better in the future
+    // like outputs
+    QList<QSharedPointer<Chain>> chains();
+    void setChains(QList<QSharedPointer<Chain>> chains);
+
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)
     // with the interim changes
     void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
 
+    void chainsChanged(QList<QSharedPointer<Chain>> chains);
+
 protected:
     void emitGraphChanged();
     QVector<VideoNode *> topoSort();
+    void prepareNode(VideoNode * node);
+    void disownNode(VideoNode * node);
 
 private:
     QList<VideoNode *> m_vertices;
@@ -116,4 +125,7 @@ private:
     // trying to read or write it
     // from the GUI thread at the same time.
     QMutex m_graphLock;
+
+    // Chains used for rendering this model
+    QList<QSharedPointer<Chain>> m_chains;
 };

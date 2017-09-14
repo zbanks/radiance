@@ -6,12 +6,10 @@
 #include "Audio.h"
 #include "NodeRegistry.h"
 #include "OpenGLWorkerContext.h"
-#include "RenderContext.h"
 #include "Timebase.h"
 #include <QSharedPointer>
 #include <QQmlApplicationEngine>
 
-extern QSharedPointer<RenderContext> renderContext;
 extern QSharedPointer<QSettings> settings;
 extern QSharedPointer<UISettings> uiSettings;
 extern QSharedPointer<Audio> audio;

@@ -1,19 +1,13 @@
 #include "VideoNode.h"
-#include "RenderContext.h"
 #include "Model.h"
 
-VideoNode::VideoNode(QSharedPointer<RenderContext> context)
-    : m_context(context)
-    , m_inputCount(0) 
-    , m_ready(false)
-    , m_id(context->registerVideoNode())
+VideoNode::VideoNode()
+    : m_inputCount(0) 
 {
 }
 
 VideoNode::VideoNode(const VideoNode &other)
-    : m_context(other.m_context)
-    , m_inputCount(other.m_inputCount)
-    , m_ready(other.m_ready)
+    : m_inputCount(other.m_inputCount)
     , m_id(other.m_id)
 {
 }
@@ -24,19 +18,6 @@ VideoNode::~VideoNode() {
 int VideoNode::inputCount() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_inputCount;
-}
-
-bool VideoNode::ready() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    return m_ready;
-}
-
-QSize VideoNode::size(int chain) {
-    return m_context->chainSize(chain);
-}
-
-QSharedPointer<RenderContext> VideoNode::context() {
-    return m_context;
 }
 
 void VideoNode::setInputCount(int value) {
@@ -51,19 +32,28 @@ void VideoNode::setInputCount(int value) {
     }
 }
 
-void VideoNode::setReady(bool value) {
-    Q_ASSERT(QThread::currentThread() == thread());
-
-    if(value != m_ready) {
-        {
-            QMutexLocker locker(&m_stateLock);
-            m_ready = value;
-        }
-        emit readyChanged(value);
-    }
-}
-
-VnId VideoNode::id() {
+int VideoNode::id() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_id;
+}
+
+QList<QSharedPointer<Chain>> VideoNode::chains() {
+    return m_chains;
+}
+
+void VideoNode::setChains(QList<QSharedPointer<Chain>> chains) {
+    QList<QSharedPointer<Chain>> toRemove = m_chains;
+    QList<QSharedPointer<Chain>> toAdd;
+    for (int i=0; i<chains.count(); i++) {
+        if (m_chains.contains(chains.at(i))) {
+            // If it exists already, don't remove it
+            toRemove.removeAll(chains.at(i));
+        } else {
+            // If it doesn't exist already, add it
+            toAdd.append(chains.at(i)); // Add it
+        }
+    }
+    chainsEdited(toAdd, toRemove);
+    m_chains = chains;
+    emit chainsChanged(chains);
 }

@@ -14,21 +14,20 @@ public:
     QQuickVideoNodeRender();
     virtual ~QQuickVideoNodeRender();
 
-    VnId videoNodeId();
+    int videoNodeId();
     int chain();
-    void setVideoNodeId(VnId value);
+    void setVideoNodeId(int value);
     void setChain(int chain);
 
 signals:
-    void videoNodeIdChanged(VnId videoNodeId);
+    void videoNodeIdChanged(int videoNodeId);
     void chainChanged(int chain);
 
 private:
     int m_chain;
-    VnId m_videoNodeId;
+    int m_videoNodeId;
 
 protected:
-    QSharedPointer<RenderContext> m_context;
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
     QQuickWindow *m_window;
 

@@ -6,6 +6,8 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QMutex>
+#include <QTimer>
+#include <QOpenGLFramebufferObject>
 
 class EffectNode;
 
@@ -67,20 +69,13 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
-    GLuint paint(int chain, QVector<GLuint> inputTextures) override;
-
-    // Called from OpenGLWorker
-    // (in a different thread)
-    void initialize();
-
-    // Get the output texture of this EffectNode
-    GLuint texture(int chain);
+    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
     // Creates a copy of this node
-    QSharedPointer<VideoNode> createCopyForRendering();
+    QSharedPointer<VideoNode> createCopyForRendering() override;
 
     // Reads back the new render state
-    void copyBackRenderState(int chain, QSharedPointer<VideoNode> copy);
+    void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) override;
 
 public slots:
     qreal intensity();
@@ -91,13 +86,14 @@ public slots:
 protected slots:
     void onInitialized();
     void periodic();
+    void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
 signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);
 
 protected:
-    QVector<EffectNodeRenderState> m_renderStates;
+    QMap<QSharedPointer<Chain>, EffectNodeRenderState> m_renderStates;
     QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
     qreal m_intensity;
     qreal m_intensityIntegral;
@@ -105,4 +101,6 @@ protected:
     qreal m_realTimeLast;
     QString m_name;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
+    QTimer m_periodic; // XXX do something better here
+    bool m_ready;
 };

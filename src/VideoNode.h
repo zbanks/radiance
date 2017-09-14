@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderContext.h"
+#include "Chain.h"
 #include <QObject>
 #include <QOpenGLTexture>
 #include <QSharedPointer>
@@ -22,23 +22,19 @@ class Model;
 class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
-    Q_PROPERTY(bool ready READ ready NOTIFY readyChanged);
     Q_PROPERTY(int id READ id);
 
 public:
-    // Calls to paint() may return nullptr
+    // Calls to paint() may return 0
     // before initialize() has been run.
     // Constructor may be called without a valid
     // OpenGL context.
-    VideoNode(QSharedPointer<RenderContext> context);
+    VideoNode();
 
     // VideoNodes must be copyable
     VideoNode(const VideoNode &other);
 
    ~VideoNode() override;
-
-    // Returns the render context
-    QSharedPointer<RenderContext> context();
 
     // Methods for rendering
 
@@ -72,48 +68,46 @@ public:
     // The new RenderState can be propogated back
     // to the original VideoNode object
     // using the thread-safe method copyBackRenderState.
-    virtual GLuint paint(int chain, QVector<GLuint> inputTextures) = 0;
+    // Returns 0 if the chain does not exist or is not ready.
+    virtual GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) = 0;
 
     // Copies back the new render state into the original object
     // This function is thread safe.
     // Since only a single RenderState entry is copied back,
     // only operations that access (or mutate) the RenderState
     // need to take the stateLock.
-    virtual void copyBackRenderState(int chain, QSharedPointer<VideoNode> copy) = 0;
+    virtual void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) = 0;
 
 public slots:
     // Number of inputs
     int inputCount();
     void setInputCount(int value);
 
-    // If the VideoNode is ready to go
-    bool ready();
-
-    // Returns the framebuffer size of the given chain
-    // This method is thread-safe
-    // because it is accessing an element of RenderContext
-    // which will not change during this node's lifetime
-    QSize size(int chain);
-
     // Returns a unique identifier
-    // within the render context
+    // within the context
     // Anything that references this node in the main thread
     // can use its pointer.
     // Anything that references this node outside of the main thread
     // (mostly render artifacts)
     // should use this ID
     // since the pointer may become invalidated or non-unique.
-    VnId id();
+    int id();
+
+    // Chains are context and metadata for a render.
+    // Creating and destroying chains may be expensive,
+    // so we perform a diff and only tell you
+    // which ones that changed through the function chainsEdited.
+    QList<QSharedPointer<Chain>> chains();
+    void setChains(QList<QSharedPointer<Chain>> chains);
 
 protected slots:
-    void setReady(bool value);
+    virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
 
 protected:
-    QSharedPointer<RenderContext> m_context;
     int m_inputCount;
-    bool m_ready;
     QMutex m_stateLock;
-    VnId m_id;
+    int m_id;
+    QList<QSharedPointer<Chain>> m_chains;
 
 signals:
     // Emitted when the object wishes to be deleted
@@ -125,8 +119,7 @@ signals:
     // Emitted when the number of inputs changes
     void inputCountChanged(int value);
 
-    // Emitted when the ready state changes
-    void readyChanged(bool value);
+    void chainsChanged(QList<QSharedPointer<Chain>> chains);
 };
 
 class VideoNodeReference : public QObject {

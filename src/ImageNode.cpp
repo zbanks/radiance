@@ -1,5 +1,4 @@
 #include "ImageNode.h"
-#include "RenderContext.h"
 #include <IL/il.h>
 #include <IL/ilu.h>
 #include <IL/ilut.h>
@@ -13,11 +12,13 @@
 static bool ilInitted = false;
 
 ImageNode::ImageNode()
-    : VideoNode(renderContext)
-    , m_openGLWorker(new ImageNodeOpenGLWorker(this))
-    , m_ticksToNextFrame(0) {
+    : m_openGLWorker(new ImageNodeOpenGLWorker(this))
+    , m_ticksToNextFrame(0)
+    , m_ready(false) {
 
-    connect(m_context.data(), &RenderContext::periodic, this, &ImageNode::periodic);
+    m_periodic.setInterval(100);
+    m_periodic.start();
+    connect(&m_periodic, &QTimer::timeout, this, &ImageNode::periodic);
     connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
 }
 
@@ -32,11 +33,14 @@ ImageNode::ImageNode(const ImageNode &other)
 ImageNode::~ImageNode() {
 }
 
-void ImageNode::initialize() {
+void ImageNode::onInitialized() {
+    m_ready = true;
 }
 
-void ImageNode::onInitialized() {
-    setReady(true);
+void imagePathChanged(QString imagePath) {
+}
+
+void ImageNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
 }
 
 void ImageNode::periodic() {
@@ -45,12 +49,8 @@ void ImageNode::periodic() {
     // Lock this because we need to adjust the frames
     QMutexLocker locker(&m_stateLock);
 
-    m_ticksToNextFrame = (++m_ticksToNextFrame) % TICKS_PER_FRAME;
-
-    if (m_ticksToNextFrame == 0) {
-        m_currentTextureIdx = (++m_currentTextureIdx) % m_frameTextures.size();
-        m_currentTexture = m_frameTextures.at(m_currentTextureIdx);
-    }
+    m_currentTextureIdx = (++m_currentTextureIdx) % m_frameTextures.size();
+    m_currentTexture = m_frameTextures.at(m_currentTextureIdx);
 }
 
 QString ImageNode::imagePath() {
@@ -61,7 +61,7 @@ QString ImageNode::imagePath() {
 void ImageNode::setImagePath(QString imagePath) {
     Q_ASSERT(QThread::currentThread() == thread());
     if(imagePath != m_imagePath) {
-        setReady(false);
+        m_ready = false;
         {
             QMutexLocker locker(&m_stateLock);
             m_imagePath = imagePath;
@@ -77,11 +77,12 @@ QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 
-GLuint ImageNode::paint(int chain, QVector<GLuint> inputTextures) {
+GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
+    if (!m_ready) return 0;
     return m_currentTexture;
 }
 
-void ImageNode::copyBackRenderState(int chain, QSharedPointer<VideoNode> copy) {
+void ImageNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
 }
 
 // ImageNodeOpenGLWorker methods

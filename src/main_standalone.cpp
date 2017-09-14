@@ -12,7 +12,6 @@
 #include "NodeRegistry.h"
 #include "main.h"
 
-QSharedPointer<RenderContext> renderContext;
 QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<Audio> audio;
@@ -36,7 +35,10 @@ int main(int argc, char *argv[]) {
     audio = QSharedPointer<Audio>(new Audio());
     timebase = QSharedPointer<Timebase>(new Timebase());
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
-    renderContext = QSharedPointer<RenderContext>(new RenderContext());
+
+    QSize renderSize(300, 300);
+    QList<QSharedPointer<Chain>> chains;
+    chains.append(QSharedPointer<Chain>(new Chain(renderSize)));
 
     EffectNode * testEffect = new EffectNode();
     testEffect->setName("test");
@@ -44,8 +46,9 @@ int main(int argc, char *argv[]) {
 
     Model * model = new Model();
     model->addVideoNode(testEffect);
+    model->setChains(chains);
 
-    FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender(QSize(300, 300));
+    FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender(renderSize);
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
@@ -78,10 +81,10 @@ int main(int argc, char *argv[]) {
             if (effectNode)
                 effectNode->setIntensity(i / 50.);
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
-            renderContext->periodic();
 
-            auto rendering = renderContext->render(model, 0);
-            auto outputTextureId = rendering.value(effect->id(), 0);
+            //auto rendering = model->render(chains.at(0));
+            //auto outputTextureId = rendering.value(effect->id(), 0);
+            GLuint outputTextureId = 0; // XXX FIXME
             if (outputTextureId != 0) {
                 QImage img = imgRender->render(outputTextureId);
                 QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), nodeType.name, QString::number(i));

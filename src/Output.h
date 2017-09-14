@@ -1,44 +1,25 @@
 #pragma once
 
-#include <QQuickItem>
-#include <QSettings>
-#include <QThread>
-#include <vector>
+#include "Chain.h"
 
-#include "Lux.h"
-
-// OutputManager singleton
-// TODO make points QSharedPointer probably
-class OutputManager : public QQuickItem {
+class Output : public QObject {
     Q_OBJECT
-    Q_PROPERTY(QQmlListProperty<LuxBus> buses READ buses NOTIFY busesChanged)
-    Q_PROPERTY(QQmlListProperty<LuxDevice> devices READ devices NOTIFY devicesChanged)
 
 public:
-    OutputManager(QSettings * settings, QQuickItem * p = nullptr);
+    Output();
+   ~Output() override;
 
-    Q_INVOKABLE void saveSettings(QSettings * settings = nullptr);
+    // Returns the chain corresponding to this output
+    virtual QSharedPointer<Chain> chain() = 0;
 
-    QQmlListProperty<LuxBus> buses();
-    Q_INVOKABLE LuxBus * createLuxBus(QString uri = 0);
-
-    QQmlListProperty<LuxDevice> devices();
-    Q_INVOKABLE LuxDevice * createLuxDevice();
-
-public slots:
-    void refresh();
+    // This method is called when the render is finished
+    // and there is a result to display.
+    virtual void display(QMap<int, GLuint> result) = 0;
 
 signals:
-    void busesChanged(QList<LuxBus *>);
-    void devicesChanged(QList<LuxDevice *>);
-
-private:
-    // not sure if this should be public
-    void loadSettings(QSettings * settings);
-
-
-    QList<LuxBus*> m_buses;
-    QList<LuxDevice *> m_devices;
-    QSettings * m_settings;
+    // This signal is emitted when this output wants something to be rendered
+    // It is recommended to only make direct connections
+    // to this signal, synchronously render,
+    // and directly call onRender when done.
+    void renderRequested();
 };
-

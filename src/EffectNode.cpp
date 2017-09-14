@@ -1,5 +1,4 @@
 #include "EffectNode.h"
-#include "RenderContext.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -8,13 +7,14 @@
 #include "main.h"
 
 EffectNode::EffectNode()
-    : VideoNode(renderContext)
-    , m_openGLWorker(new EffectNodeOpenGLWorker(this))
+    : m_openGLWorker(new EffectNodeOpenGLWorker(this))
     , m_intensity(0)
-    , m_renderStates(context()->chainCount()) {
+    , m_ready(false) {
 
     setInputCount(1);
-    connect(m_context.data(), &RenderContext::periodic, this, &EffectNode::periodic);
+    m_periodic.setInterval(10);
+    m_periodic.start();
+    connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
 }
 
@@ -30,11 +30,18 @@ EffectNode::EffectNode(const EffectNode &other)
 EffectNode::~EffectNode() {
 }
 
-void EffectNode::initialize() {
+void EffectNode::onInitialized() {
+    m_ready = true;
 }
 
-void EffectNode::onInitialized() {
-    setReady(true);
+void EffectNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+    QMutexLocker locker(&m_stateLock);
+    for (int i=0; i<added.count(); i++) {
+        m_renderStates[added.at(i)];
+    }
+    for (int i=0; i<removed.count(); i++) {
+        m_renderStates.remove(removed.at(i));
+    }
 }
 
 // Paint never needs to take the stateLock
@@ -42,7 +49,7 @@ void EffectNode::onInitialized() {
 // and this copy will never be modified
 // out from under it, unlike the parent
 // from which it was created
-GLuint EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
+GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     // Hitting this assert means
     // that you failed to make a copy
     // of the VideoNode
@@ -51,21 +58,19 @@ GLuint EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
 
     GLuint outTexture = 0;
 
-    //qDebug() << "calling paint" << this << chain << inputTextures.count();
-    if(!m_ready) {
-        //qDebug() << "uninitialized effectnode during paint :(";
-        return outTexture;
-    }
+    if (!m_ready) return outTexture;
+    if (!m_renderStates.contains(chain)) return outTexture;
+    auto renderState = m_renderStates[chain];
 
     // FBO creation must happen here, and not in initialize,
     // because FBOs are not shared among contexts.
     // Textures are, however, so in the future maybe we can move
     // texture creation to initialize()
     // and leave lightweight FBO creation here
-    if(m_renderStates.at(chain).m_intermediate.isEmpty()) {
+    if(renderState.m_intermediate.isEmpty()) {
         for(int i = 0; i < m_programs.count() + 1; i++) {
-            auto fbo = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(size(chain)));
-            m_renderStates[chain].m_intermediate.append(fbo);
+            auto fbo = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(chain->size()));
+            renderState.m_intermediate.append(fbo);
         }
     }
 
@@ -88,16 +93,16 @@ GLuint EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
         double audioLevel = 0;
         audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
 
-        auto size = m_context->chainSize(chain);
+        auto size = chain->size();
         glViewport(0, 0, size.width(), size.height());
 
         for(int j = m_programs.count() - 1; j >= 0; j--) {
-            //qDebug() << "Rendering shader" << j << "onto" << (m_renderStates.at(chain).m_textureIndex + j + 1) % (m_programs.count() + 1);
-            auto fboIndex = (m_renderStates.at(chain).m_textureIndex + j + 1) % (m_programs.size() + 1);
+            //qDebug() << "Rendering shader" << j << "onto" << (renderState.m_textureIndex + j + 1) % (m_programs.count() + 1);
+            auto fboIndex = (renderState.m_textureIndex + j + 1) % (m_programs.size() + 1);
             auto & p = m_programs.at(j);
 
             p->bind();
-            m_renderStates.at(chain).m_intermediate.at(fboIndex)->bind();
+            renderState.m_intermediate.at(fboIndex)->bind();
 
             for (int k = 0; k < m_inputCount; k++) {
                 glActiveTexture(GL_TEXTURE0 + k);
@@ -105,11 +110,11 @@ GLuint EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             }
 
             glActiveTexture(GL_TEXTURE0 + m_inputCount);
-            glBindTexture(GL_TEXTURE_2D, m_context->noiseTexture(chain));
+            glBindTexture(GL_TEXTURE_2D, chain->noiseTexture());
             for(int k=0; k<m_programs.size(); k++) {
                 glActiveTexture(GL_TEXTURE1 + m_inputCount + k);
-                glBindTexture(GL_TEXTURE_2D, m_renderStates.at(chain).m_intermediate.at((m_renderStates.at(chain).m_textureIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
-                //qDebug() << "Bind" << (m_renderStates.at(chain).m_textureIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
+                glBindTexture(GL_TEXTURE_2D, renderState.m_intermediate.at((renderState.m_textureIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
+                //qDebug() << "Bind" << (renderState.m_textureIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
             }
 
             auto intense = qreal(intensity());
@@ -124,16 +129,16 @@ GLuint EffectNode::paint(int chain, QVector<GLuint> inputTextures) {
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
             p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            m_renderStates.at(chain).m_intermediate.at(fboIndex)->release();
-            //m_renderStates.at(chain).m_intermediate.at(fboIndex)->toImage().save(QString("out_%1.png").arg(m_renderStates.at(chain).m_intermediate.at(fboIndex)->texture()));
+            renderState.m_intermediate.at(fboIndex)->release();
+            //renderState.m_intermediate.at(fboIndex)->toImage().save(QString("out_%1.png").arg(renderState.m_intermediate.at(fboIndex)->texture()));
             p->release();
             glActiveTexture(GL_TEXTURE0); // Very important to reset OpenGL state for scene graph rendering
         }
 
-        outTexture = m_renderStates.at(chain).m_intermediate.at((m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.size() + 1))->texture();
+        outTexture = renderState.m_intermediate.at((renderState.m_textureIndex + 1) % (m_programs.size() + 1))->texture();
         //qDebug() << "Output texture ID is" << outTexture;
-        //qDebug() << "Output is" << ((m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.count() + 1));
-        m_renderStates[chain].m_textureIndex = (m_renderStates.at(chain).m_textureIndex + 1) % (m_programs.size() + 1);
+        //qDebug() << "Output is" << ((renderState.m_textureIndex + 1) % (m_programs.count() + 1));
+        renderState.m_textureIndex = (renderState.m_textureIndex + 1) % (m_programs.size() + 1);
     }
     return outTexture;
 }
@@ -169,7 +174,7 @@ QString EffectNode::name() {
 void EffectNode::setName(QString name) {
     Q_ASSERT(QThread::currentThread() == thread());
     if(name != m_name) {
-        setReady(false);
+        m_ready = false;
         {
             QMutexLocker locker(&m_stateLock);
             m_name = name;
@@ -189,10 +194,14 @@ QSharedPointer<VideoNode> EffectNode::createCopyForRendering() {
 }
 
 // Reads back the new render state
-void EffectNode::copyBackRenderState(int chain, QSharedPointer<VideoNode> copy) {
+void EffectNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
     QSharedPointer<EffectNode> c = qSharedPointerCast<EffectNode>(copy);
     QMutexLocker locker(&m_stateLock);
-    m_renderStates[chain] = c->m_renderStates.at(chain);
+    if (m_renderStates.contains(chain)) {
+        m_renderStates[chain] = c->m_renderStates[chain];
+    } else {
+        //qDebug() << "Chain was deleted during rendering";
+    }
 }
 
 // EffectNodeOpenGLWorker methods
@@ -212,9 +221,6 @@ void EffectNodeOpenGLWorker::initialize() {
         return;
     }
 
-    for(int i = 0; i<m_p->m_context->chainCount(); i++) {
-        m_p->m_renderStates[i].m_intermediate.clear(); // Let the paint operation populate this
-    }
     emit initialized();
 }
 

@@ -32,19 +32,19 @@ add_library(libradiance
     src/Output.cpp
     src/Timebase.cpp
     src/UISettings.cpp
-    src/RenderContext.cpp
-    src/RenderTrigger.cpp
     src/NodeRegistry.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/ImageNode.cpp
-    src/QQuickVideoNodeRender.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/Model.cpp
     src/OpenGLWorkerContext.cpp
     src/OpenGLWorker.cpp
     src/View.cpp
+    src/Chain.cpp
+    src/Renderer.cpp
+    src/Context.cpp
     src/liblux/lux.c
     src/liblux/crc.c
     BTrack/src/BTrack.c
@@ -53,6 +53,7 @@ add_library(libradiance
     )
 
 add_executable(radiance WIN32 src/main.cpp
+    src/QQuickVideoNodeRender.cpp
     resources/resources.qrc)
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)

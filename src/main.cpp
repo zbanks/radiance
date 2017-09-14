@@ -16,13 +16,11 @@
 #include "View.h"
 #include "main.h"
 
-QSharedPointer<RenderContext> renderContext;
 QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<QSettings> outputSettings;
 QSharedPointer<UISettings> uiSettings;
 QSharedPointer<Audio> audio;
-QSharedPointer<OutputManager> outputManager;
 QSharedPointer<NodeRegistry> nodeRegistry;
 QSharedPointer<Timebase> timebase;
 
@@ -40,25 +38,11 @@ QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     return audio.data();
 }
 
-QObject *outputManagerProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    QQmlEngine::setObjectOwnership(outputManager.data(), QQmlEngine::CppOwnership);
-    return outputManager.data();
-}
-
 QObject *nodeRegistryProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
     Q_UNUSED(scriptEngine)
     QQmlEngine::setObjectOwnership(nodeRegistry.data(), QQmlEngine::CppOwnership);
     return nodeRegistry.data();
-}
-
-QObject *renderContextProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    QQmlEngine::setObjectOwnership(renderContext.data(), QQmlEngine::CppOwnership);
-    return renderContext.data();
 }
 
 int main(int argc, char *argv[]) {
@@ -80,9 +64,7 @@ int main(int argc, char *argv[]) {
     uiSettings = QSharedPointer<UISettings>(new UISettings());
     timebase = QSharedPointer<Timebase>(new Timebase());
     audio = QSharedPointer<Audio>(new Audio());
-    outputManager = QSharedPointer<OutputManager>(new OutputManager(outputSettings.data()));
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
-    renderContext = QSharedPointer<RenderContext>(new RenderContext());
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
@@ -97,11 +79,9 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
     qmlRegisterSingletonType<NodeRegistry>("radiance", 1, 0, "NodeRegistry", nodeRegistryProvider);
-    qmlRegisterSingletonType<RenderContext>("radiance", 1, 0, "RenderContext", renderContextProvider);
 
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
-    qmlRegisterSingletonType<OutputManager>("radiance", 1, 0, "OutputManager", outputManagerProvider);
 
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
     if(engine.rootObjects().isEmpty()) {

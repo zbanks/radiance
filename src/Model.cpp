@@ -22,8 +22,27 @@ Model::Model() {
 Model::~Model() {
 }
 
+void Model::setChains(QList<QSharedPointer<Chain>> chains) {
+    m_chains = chains;
+    emit chainsChanged(chains);
+}
+
+QList<QSharedPointer<Chain>> Model::chains() {
+    return m_chains;
+}
+
+void Model::prepareNode(VideoNode *videoNode) {
+    videoNode->setChains(m_chains);
+    connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
+}
+
+void Model::disownNode(VideoNode *videoNode) {
+    disconnect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
+}
+
 void Model::addVideoNode(VideoNode *videoNode) {
     if (!m_vertices.contains(videoNode)) {
+        prepareNode(videoNode);
         m_vertices.append(videoNode);
     }
 }
@@ -39,6 +58,7 @@ void Model::removeVideoNode(VideoNode *videoNode) {
         }
     }
 
+    disownNode(videoNode);
     m_vertices.removeAll(videoNode);
 }
 
@@ -130,7 +150,7 @@ ModelCopyForRendering Model::createCopyForRendering() {
     return out;
 }
 
-void Model::copyBackRenderStates(int chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices) {
+void Model::copyBackRenderStates(QSharedPointer<Chain> chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices) {
     Q_ASSERT(origVertices.count() == renderedVertices.count());
     {
         QMutexLocker locker(&m_graphLock);

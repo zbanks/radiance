@@ -1,6 +1,6 @@
 #include "NodeRegistry.h"
 #include "EffectNode.h"
-#include "ImageNode.h"
+//#include "ImageNode.h"
 
 #include <QDir>
 #include <QDebug>
@@ -25,12 +25,13 @@ QSharedPointer<VideoNode> NodeRegistry::createNode(QString name) {
         effect->setInputCount(vnt.nInputs);
         return effect;
     }
-    case VideoNodeType::IMAGE_NODE: {
-        QSharedPointer<ImageNode> image = QSharedPointer<ImageNode>(new ImageNode());
-        image->setImagePath(name);
-        image->setInputCount(vnt.nInputs);
-        return image;
-    }
+// XXX
+//    case VideoNodeType::IMAGE_NODE: {
+//        QSharedPointer<ImageNode> image = QSharedPointer<ImageNode>(new ImageNode());
+//        image->setImagePath(name);
+//        image->setInputCount(vnt.nInputs);
+//        return image;
+//    }
     default:
         qInfo() << "Unknown type" << vnt.type;
         return nullptr;
