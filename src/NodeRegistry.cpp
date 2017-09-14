@@ -13,20 +13,20 @@ NodeRegistry::~NodeRegistry() {
 
 }
 
-QSharedPointer<VideoNode> NodeRegistry::createNode(QString name) {
+VideoNode *NodeRegistry::createNode(const QString &name) {
     if (!m_nodeTypes.contains(name))
         return nullptr;
 
     VideoNodeType vnt = m_nodeTypes.value(name);
     switch (vnt.type) {
     case VideoNodeType::EFFECT_NODE: {
-        QSharedPointer<EffectNode> effect = QSharedPointer<EffectNode>(new EffectNode());
+        EffectNode *effect = new EffectNode();
         effect->setName(name);
         effect->setInputCount(vnt.nInputs);
         return effect;
     }
     case VideoNodeType::IMAGE_NODE: {
-        QSharedPointer<ImageNode> image = QSharedPointer<ImageNode>(new ImageNode());
+        ImageNode *image = new ImageNode();
         image->setImagePath(name);
         image->setInputCount(vnt.nInputs);
         return image;
@@ -78,6 +78,16 @@ void NodeRegistry::reload() {
             .description = effectName,
             .nInputs = 1,
         };
+
+        // TODO: Get this information in a real way
+        if (name == "greenscreen" || name == "crossfader") {
+            nodeType.nInputs = 2;
+        } else if (name == "rgbmask") {
+            nodeType.nInputs = 4;
+            qInfo() << name << 4;
+        }
+        //qInfo() << name << nodeType.name;
+
         m_nodeTypes.insert(name, nodeType);
     }
 

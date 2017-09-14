@@ -23,7 +23,7 @@ class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
     Q_PROPERTY(bool ready READ ready NOTIFY readyChanged);
-    Q_PROPERTY(int id READ id);
+    Q_PROPERTY(int id READ id CONSTANT);
 
 public:
     // Calls to paint() may return nullptr

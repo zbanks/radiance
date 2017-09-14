@@ -46,6 +46,9 @@ public slots:
     void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
 
+    // Creates a Model-owned VideoNode & adds it to the graph
+    VideoNode *createVideoNode(const QString &name);
+
     // Atomically update the graph used for rendering
     // and emit signals describing how the graph was changed.
     // Call this after adding or removing nodes or edges.

@@ -96,9 +96,17 @@ ApplicationWindow {
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, cross, 0);
-        //model.addEdge(img1, en4, 0);
-        model.addEdge(en4, cross, 1);
+        model.addEdge(img1, cross2, 0);
+        //model.addEdge(en4, cross, 1);
         //model.addEdge(cross, after, 0);
+
+        var n1 = model.createVideoNode("test");
+        var n2 = model.createVideoNode("interstellar");
+        var n3 = model.createVideoNode("nogreen");
+        model.addEdge(n1, n2, 0);
+        model.addEdge(n2, n3, 0);
+        model.addEdge(n3, cross, 1);
+
         model.flush();
         RenderContext.addRenderTrigger(window, model, 0);
     }
@@ -127,11 +135,9 @@ ApplicationWindow {
                 Button {
                     text: "Add"
                     onClicked: {
-                        var e = Qt.createQmlObject("import radiance 1.0; EffectNode { }", window, "");
-                        e.name = effectSelector.currentText;
-                        model.addVideoNode(e);
+                        var node = model.createVideoNode(effectSelector.currentText);
                         model.flush();
-                        console.log("New Effect", effectSelector.currentText, e);
+                        console.log("New Node", effectSelector.currentText, node);
                     }
                 }
             }

@@ -64,13 +64,12 @@ int main(int argc, char *argv[]) {
     html << "<table><tr><th>name</th><th>comment</th><th>static</th><th>gif</th><tr>\n";
 
     for (auto nodeType : nodeRegistry->nodeTypes()) {
-        QSharedPointer<VideoNode> effect = nodeRegistry->createNode(nodeType.name);
+        VideoNode *effect = model->createVideoNode(nodeType.name);
         if (!effect)
             continue;
-        EffectNode * effectNode = qobject_cast<EffectNode *>(effect.data());
+        EffectNode * effectNode = qobject_cast<EffectNode *>(effect);
 
-        model->addVideoNode(effect.data());
-        model->addEdge(testEffect, effect.data(), 0);
+        model->addEdge(testEffect, effect, 0);
         model->flush();
 
         outputDir.mkdir(nodeType.name);
@@ -88,8 +87,8 @@ int main(int argc, char *argv[]) {
                 img.scaled(QSize(80, 80)).save(filename);
             }
         }
-        model->removeEdge(testEffect, effect.data(), 0);
-        model->removeVideoNode(effect.data());
+        model->removeEdge(testEffect, effect, 0);
+        model->removeVideoNode(effect);
         model->flush();
 
         QProcess ffmpeg;

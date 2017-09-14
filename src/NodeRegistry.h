@@ -25,7 +25,8 @@ public:
     NodeRegistry();
     ~NodeRegistry() override;
 
-    QSharedPointer<VideoNode> createNode(QString name);
+    // Create node from string; resulting VideoNode is caller-owned
+    VideoNode *createNode(const QString &name);
 
 public slots:
     QHash<QString, VideoNodeType> nodeTypes();

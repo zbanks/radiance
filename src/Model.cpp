@@ -22,6 +22,17 @@ Model::Model() {
 Model::~Model() {
 }
 
+VideoNode *Model::createVideoNode(const QString &name) {
+    VideoNode *videoNode = nodeRegistry->createNode(name);
+    if (!videoNode) {
+        return nullptr;
+    }
+
+    videoNode->setParent(this);
+    addVideoNode(videoNode);
+    return videoNode;
+}
+
 void Model::addVideoNode(VideoNode *videoNode) {
     if (!m_vertices.contains(videoNode)) {
         m_vertices.append(videoNode);
@@ -40,6 +51,10 @@ void Model::removeVideoNode(VideoNode *videoNode) {
     }
 
     m_vertices.removeAll(videoNode);
+
+    if (videoNode->parent() == this) {
+        videoNode->deleteLater(); // Not sure if this is required
+    }
 }
 
 void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
