@@ -37,7 +37,7 @@ VideoNode *NodeRegistry::createNode(const QString &name) {
     }
 }
 
-QHash<QString, VideoNodeType> NodeRegistry::nodeTypes() {
+QMap<QString, VideoNodeType> NodeRegistry::nodeTypes() {
     return m_nodeTypes;
 }
 
