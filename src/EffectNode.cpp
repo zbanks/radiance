@@ -180,6 +180,12 @@ void EffectNode::setName(QString name) {
     }
 }
 
+void EffectNode::reload() {
+    setReady(false);
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+    Q_ASSERT(result);
+}
+
 // Creates a copy of this node for rendering
 QSharedPointer<VideoNode> EffectNode::createCopyForRendering() {
     QMutexLocker locker(&m_stateLock);

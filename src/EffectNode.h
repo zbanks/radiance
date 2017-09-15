@@ -87,6 +87,7 @@ public slots:
     QString name();
     void setIntensity(qreal value);
     void setName(QString name);
+    void reload();
 
 protected slots:
     void onInitialized();

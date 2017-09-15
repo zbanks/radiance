@@ -1,4 +1,4 @@
-// Zero out the green channel (green is not a creative color)
+// Zero out the everything but the green channel (green is not a creative color)
 
 void main(void) {
     gl_FragColor = texture2D(iInput, uv);

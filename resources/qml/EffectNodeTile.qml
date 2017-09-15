@@ -103,5 +103,7 @@ VideoNodeTile {
             slider.value = 0.9;
         else if (event.key == Qt.Key_0)
             slider.value = 1.0;
+        else if (event.key == Qt.Key_R)
+            videoNode.reload();
     }
 }
