@@ -7,7 +7,7 @@ void main(void) {
     if (next.a > prev.a) {
         gl_FragColor = next;
     } else {
-        prev.a *= pow(iIntensity, 0.1);
+        prev *= pow(iIntensity, 0.1);
         gl_FragColor = composite(next, prev);
     }
     gl_FragColor.a = clamp(gl_FragColor.a, 0, 1);

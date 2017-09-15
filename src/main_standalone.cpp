@@ -129,6 +129,8 @@ int main(int argc, char *argv[]) {
     html << "</body></html>\n";
     html.flush();
 
+    qInfo() << "Done.";
+
     app.quit();
     return 0;
 }
