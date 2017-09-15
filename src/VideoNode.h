@@ -22,7 +22,7 @@ class Model;
 class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
-    Q_PROPERTY(int id READ id);
+    Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged);
 
 public:
     // Calls to paint() may return 0
@@ -92,6 +92,7 @@ public slots:
     // should use this ID
     // since the pointer may become invalidated or non-unique.
     int id();
+    void setId(int id);
 
     // Chains are context and metadata for a render.
     // Creating and destroying chains may be expensive,
@@ -120,6 +121,7 @@ signals:
     void inputCountChanged(int value);
 
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
+    void idChanged(int id);
 };
 
 class VideoNodeReference : public QObject {

@@ -37,6 +37,12 @@ int VideoNode::id() {
     return m_id;
 }
 
+void VideoNode::setId(int id) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    m_id = id;
+    emit idChanged(id);
+}
+
 QList<QSharedPointer<Chain>> VideoNode::chains() {
     return m_chains;
 }

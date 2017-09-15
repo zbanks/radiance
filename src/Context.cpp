@@ -3,86 +3,87 @@
 #include "Model.h"
 #include <memory>
 
-Context::Context() {
-    connect(&m_renderer, &Renderer::renderRequested, this, &Context::onRenderRequested);
-    connect(&m_renderer, &Renderer::outputsChanged, this, &Context::onOutputsChanged);
+Context::Context(bool hasPreview) 
+    : m_hasPreview(hasPreview) {
+
+    if (m_hasPreview) {
+        m_previewChain = QSharedPointer<Chain>(new Chain(m_previewSize)); // TODO setSize
+    }
 }
 
 Context::~Context() {
 }
 
 Model *Context::model() {
-    return &m_model;
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_model;
 }
 
-Renderer *Context::renderer() {
-    return &m_renderer;
+void Context::setModel(Model *model) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    m_model = model;
+    emit modelChanged(model);
 }
 
-void Context::onRenderRequested(Output *output) {
-    auto result = render(output->chain());
-    output->display(result);
+QSize Context::previewSize() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_previewSize;
 }
 
-void Context::onOutputsChanged(QList<Output *> outputs) {
+void Context::setPreviewSize(QSize size) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (size != m_previewSize) {
+        m_previewSize = size;
+        QSharedPointer<Chain> previewChain(new Chain(size));
+        m_previewChain = previewChain;
+        chainsChanged();
+        emit previewSizeChanged(size);
+    }
+}
+
+void Context::onRenderRequested() {
+    auto output = qobject_cast<Output *>(sender());
+    auto chain = output->chain();
+    auto modelCopy = m_model->createCopyForRendering();
+    auto result = modelCopy.render(chain);
+    m_model->copyBackRenderStates(chain, &modelCopy);
+}
+
+QList<QSharedPointer<Chain>> Context::chains() {
+    auto o = outputs();
     QList<QSharedPointer<Chain>> chains;
-    for (int i=0; i<outputs.count(); i++) {
-        chains.append(outputs.at(i)->chain());
+    if (m_hasPreview) {
+        chains.append(m_previewChain);
     }
-    m_model.setChains(chains);
+    for (int i=0; i<o.count(); i++) {
+        chains.append(o.at(i)->chain());
+    }
+    return chains;
 }
 
-QMap<int, GLuint> Context::render(QSharedPointer<Chain> chain) {
-    //qDebug() << "RENDER!" << chain;
-
-    auto m = m_model.createCopyForRendering();
-
-    // inputs is parallel to vertices
-    // and contains the VideoNodes connected to the
-    // corresponding vertex's inputs
-    QVector<QVector<int>> inputs;
-
-    // Create a list of -1's
-    for (int i=0; i<m.vertices.count(); i++) {
-        auto inputCount = m.vertices.at(i)->inputCount();
-        inputs.append(QVector<int>(inputCount, -1));
-    }
-
-    Q_ASSERT(m.fromVertex.count() == m.toVertex.count());
-    Q_ASSERT(m.fromVertex.count() == m.toInput.count());
-    for (int i = 0; i < m.toVertex.count(); i++) {
-        auto to = m.toVertex.at(i);
-        if (to >= 0) {
-            inputs[to][m.toInput.at(i)] = m.fromVertex.at(i);
-        }
-    }
-
-    QVector<GLuint> resultTextures(m.vertices.count(), 0);
-
-    for (int i=0; i<m.vertices.count(); i++) {
-        auto vertex = m.vertices.at(i);
-        QVector<GLuint> inputTextures(vertex->inputCount(), chain->blankTexture());
-        for (int j=0; j<vertex->inputCount(); j++) {
-            auto fromVertex = inputs.at(i).at(j);
-            if (fromVertex != -1) {
-                auto inpTexture = resultTextures.at(fromVertex);
-                if (inpTexture != 0) {
-                    inputTextures[j] = inpTexture;
-                }
-            }
-        }
-        resultTextures[i] = vertex->paint(chain, inputTextures);
-        //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
-    }
-
-    m_model.copyBackRenderStates(chain, m.origVertices, m.vertices);
-
-    QMap<int, GLuint> result;
-    for (int i=0; i<resultTextures.count(); i++) {
-        if (resultTextures.at(i) != 0 && m.vertices.at(i)->id() != 0) {
-            result.insert(m.vertices.at(i)->id(), resultTextures.at(i));
-        }
-    }
-    return result;
+void Context::chainsChanged() {
+    m_model->setChains(chains());
 }
 
+QList<Output *> Context::outputs() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_outputs;
+}
+
+void Context::setOutputs(QList<Output *> outputs) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_outputs != outputs) {
+        // TODO I am lazy
+        for (int i=0; i<m_outputs.count(); i++) {
+            disconnect(m_outputs.at(i), &Output::renderRequested, this, &Context::onRenderRequested);
+            disconnect(m_outputs.at(i), &Output::chainChanged, this, &Context::chainsChanged);
+        }
+        m_outputs = outputs;
+        for (int i=0; i<outputs.count(); i++) {
+            connect(outputs.at(i), &Output::renderRequested, this, &Context::onRenderRequested, Qt::DirectConnection);
+            connect(outputs.at(i), &Output::chainChanged, this, &Context::chainsChanged);
+        }
+        chainsChanged();
+        emit outputsChanged(outputs);
+    }
+}

@@ -18,13 +18,22 @@ public:
 
 // Return type of graphCopy
 struct ModelCopyForRendering {
-    QVector<VideoNode *> origVertices;
+    // VideoNode IDs of original vertices
+    // (for copy-back)
+    QVector<int> origVertices;
+
+    // Parallel array of vertex copies
     QVector<QSharedPointer<VideoNode>> vertices;
 
-    // Edges
+    // Edges, as indices into vertices
     QVector<int> fromVertex;
     QVector<int> toVertex;
     QVector<int> toInput;
+
+    // Render this model
+    // The return value is a mapping of VideoNode IDs to OpenGL textures
+    // that were rendered into
+    QMap<int, GLuint> render(QSharedPointer<Chain> chain);
 };
 
 class Model : public QObject {
@@ -66,7 +75,7 @@ public slots:
     // Sometimes nodes are deleted during rendering,
     // these nodes are not updated
     // because they no longer exist.
-    void copyBackRenderStates(QSharedPointer<Chain> chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices);
+    void copyBackRenderStates(QSharedPointer<Chain> chain, const ModelCopyForRendering *modelCopy);
 
     // Returns a list of vertices
     // in the order they were added
@@ -94,8 +103,12 @@ public slots:
     // is an ancestor of `child`
     bool isAncestor(VideoNode *parent, VideoNode *child);
 
-    // TODO these might be replaced with something better in the future
-    // like outputs
+    // Chains are instances of the
+    // model render pipeline
+    // You need a different chain for a different size / shape output,
+    // or a different thead.
+    // When requesting a render of the model,
+    // you must use one of its chains.
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
 
@@ -128,4 +141,7 @@ private:
 
     // Chains used for rendering this model
     QList<QSharedPointer<Chain>> m_chains;
+
+    // Counter to give VideoNodes unique IDs
+    int m_vnId;
 };

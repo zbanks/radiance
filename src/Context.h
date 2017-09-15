@@ -1,32 +1,43 @@
 #pragma once
 
 #include "Output.h"
-#include "Renderer.h"
 #include "Model.h"
 #include <QList>
 
-// This class is like an output manager I guess
-
 class Context : public QObject {
     Q_OBJECT
-    Q_PROPERTY(Model *model READ model)
-    Q_PROPERTY(Renderer *renderer READ renderer)
+    Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
+    Q_PROPERTY(QList<Output *> outputs READ outputs WRITE setOutputs NOTIFY outputsChanged)
+    Q_PROPERTY(QSize previewSize READ previewSize WRITE setPreviewSize NOTIFY previewSizeChanged)
 
 public:
-    Context();
+    Context(bool hasPreview=true);
    ~Context() override;
 
 public slots:
     Model *model();
-    Renderer *renderer();
+    void setModel(Model *model);
+    QSize previewSize();
+    void setPreviewSize(QSize size);
+
+    QList<Output *> outputs();
+    void setOutputs(QList<Output *> outputs);
 
 protected slots:
-    void onRenderRequested(Output *output);
-    void onOutputsChanged(QList<Output *> outputs);
+    void onRenderRequested();
 
-private:
-    QMap<int, GLuint> render(QSharedPointer<Chain> chain);
+signals:
+    void previewSizeChanged(QSize size);
+    void outputsChanged(QList<Output *> outputs);
+    void modelChanged(Model *model);
 
-    Model m_model;
-    Renderer m_renderer;
+protected:
+    void chainsChanged();
+    QList<QSharedPointer<Chain>> chains();
+
+    Model *m_model;
+    QList<Output *> m_outputs;
+    bool m_hasPreview;
+    QSize m_previewSize;
+    QSharedPointer<Chain> m_previewChain;
 };

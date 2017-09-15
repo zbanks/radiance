@@ -16,7 +16,8 @@ bool Edge::operator==(const Edge &other) const {
         && toInput == other.toInput;
 }
 
-Model::Model() {
+Model::Model()
+    : m_vnId(0) {
 }
 
 Model::~Model() {
@@ -34,6 +35,7 @@ QList<QSharedPointer<Chain>> Model::chains() {
 void Model::prepareNode(VideoNode *videoNode) {
     videoNode->setChains(m_chains);
     connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
+    videoNode->setId(m_vnId++);
 }
 
 void Model::disownNode(VideoNode *videoNode) {
@@ -135,32 +137,26 @@ ModelCopyForRendering Model::createCopyForRendering() {
         map.insert(m_verticesSortedForRendering.at(i), i);
     }
 
-    for(int i=0; i<m_edgesForRendering.count(); i++) {
+    for (int i=0; i<m_edgesForRendering.count(); i++) {
         out.fromVertex.append(map.value(m_edgesForRendering.at(i).fromVertex, -1));
         out.toVertex.append(map.value(m_edgesForRendering.at(i).toVertex, -1));
         out.toInput.append(m_edgesForRendering.at(i).toInput);
     }
 
-    out.origVertices = m_verticesSortedForRendering;
-    QVector<QSharedPointer<VideoNode>> vertices;
-    for(int i=0; i<out.origVertices.count(); i++) {
-        vertices.append(out.origVertices.at(i)->createCopyForRendering());
+    for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
+        out.origVertices.append(m_verticesSortedForRendering.at(i)->id());
+        out.vertices.append(m_verticesSortedForRendering.at(i)->createCopyForRendering());
     }
-    out.vertices = vertices;
     return out;
 }
 
-void Model::copyBackRenderStates(QSharedPointer<Chain> chain, QVector<VideoNode *> origVertices, QVector<QSharedPointer<VideoNode>> renderedVertices) {
-    Q_ASSERT(origVertices.count() == renderedVertices.count());
+void Model::copyBackRenderStates(QSharedPointer<Chain> chain, const ModelCopyForRendering *modelCopy) {
+    Q_ASSERT(modelCopy->origVertices.count() == modelCopy->vertices.count());
     {
         QMutexLocker locker(&m_graphLock);
-        for(int i=0; i<origVertices.count(); i++) {
-            // If the VideoNode is still in the DAG,
-            // Javascript shouldn't have deleted it
-            if(m_vertices.contains(origVertices.at(i))) {
-                origVertices[i]->copyBackRenderState(chain, renderedVertices.at(i));
-            } else {
-                //qDebug() << "Node was deleted during rendering";
+        for(int i=0; i<m_vertices.count(); i++) {
+            if(modelCopy->origVertices.contains(m_vertices.at(i)->id())) {
+                m_vertices[i]->copyBackRenderState(chain, modelCopy->vertices.at(i));
             }
         }
     }
@@ -333,3 +329,57 @@ bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
     // TODO: This is obviously not optimal
     return ancestors(child).contains(parent);
 }
+
+QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
+    //qDebug() << "RENDER!" << chain;
+
+    // inputs is parallel to vertices
+    // and contains the VideoNodes connected to the
+    // corresponding vertex's inputs
+    QVector<QVector<int>> inputs;
+
+    // Create a list of -1's
+    for (int i=0; i<vertices.count(); i++) {
+        auto inputCount = vertices.at(i)->inputCount();
+        inputs.append(QVector<int>(inputCount, -1));
+    }
+
+    Q_ASSERT(fromVertex.count() == toVertex.count());
+    Q_ASSERT(fromVertex.count() == toInput.count());
+    for (int i = 0; i < toVertex.count(); i++) {
+        auto to = toVertex.at(i);
+        if (to >= 0) {
+            inputs[to][toInput.at(i)] = fromVertex.at(i);
+        }
+    }
+
+    QVector<GLuint> resultTextures(vertices.count(), 0);
+
+    for (int i=0; i<vertices.count(); i++) {
+        auto vertex = vertices.at(i);
+        QVector<GLuint> inputTextures(vertex->inputCount(), chain->blankTexture());
+        for (int j=0; j<vertex->inputCount(); j++) {
+            auto fromVertex = inputs.at(i).at(j);
+            if (fromVertex != -1) {
+                auto inpTexture = resultTextures.at(fromVertex);
+                if (inpTexture != 0) {
+                    inputTextures[j] = inpTexture;
+                }
+            }
+        }
+        resultTextures[i] = vertex->paint(chain, inputTextures);
+        //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
+    }
+
+    QMap<int, GLuint> result;
+    for (int i=0; i<resultTextures.count(); i++) {
+        if (resultTextures.at(i) != 0 && vertices.at(i)->id() != 0) {
+            result.insert(vertices.at(i)->id(), resultTextures.at(i));
+        }
+    }
+    return result;
+}
+
+//createCopyForRendering();
+//render(chain);
+//copyBackRenderStates(chain, origVertices, vertices);

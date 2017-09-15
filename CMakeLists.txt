@@ -43,7 +43,6 @@ add_library(libradiance
     src/OpenGLWorker.cpp
     src/View.cpp
     src/Chain.cpp
-    src/Renderer.cpp
     src/Context.cpp
     src/liblux/lux.c
     src/liblux/crc.c
