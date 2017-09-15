@@ -9,8 +9,11 @@
 #include "Model.h"
 #include "View.h"
 #include "EffectNode.h"
+#include "ImageNode.h"
 #include "NodeRegistry.h"
 #include "main.h"
+
+#define IMG_FORMAT ".gif"
 
 QSharedPointer<RenderContext> renderContext;
 QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
@@ -38,14 +41,26 @@ int main(int argc, char *argv[]) {
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
     renderContext = QSharedPointer<RenderContext>(new RenderContext());
 
-    EffectNode * testEffect = new EffectNode();
-    testEffect->setName("test");
-    testEffect->setIntensity(0.7);
 
-    Model * model = new Model();
-    model->addVideoNode(testEffect);
+    EffectNode testEffect;
+    testEffect.setName("test");
+    testEffect.setIntensity(0.7);
 
-    FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender(QSize(300, 300));
+    ImageNode nyanCatImage;
+    nyanCatImage.setImagePath("nyancat.gif");
+
+    VideoNode *baseEffect = &testEffect;
+    //VideoNode *baseEffect = &nyanCatImage;
+
+    EffectNode onblackEffect;
+    onblackEffect.setName("onblack");
+    onblackEffect.setIntensity(1.0);
+
+    Model model;
+    model.addVideoNode(baseEffect);
+    model.addVideoNode(&onblackEffect);
+
+    FramebufferVideoNodeRender imgRender(QSize(300, 300));
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
@@ -61,49 +76,52 @@ int main(int argc, char *argv[]) {
     html << "<!doctype html>\n";
     html << "<html><body>\n";
     html << "<style>td.static, td.gif { background-color: #FFF; }</style>\n";
-    html << "<table><tr><th>name</th><th>comment</th><th>static</th><th>gif</th><tr>\n";
+    html << "<table><tr><th>name</th><th>comment</th><th>0</th><th>static</th><th>gif</th><tr>\n";
 
     for (auto nodeType : nodeRegistry->nodeTypes()) {
-        VideoNode *effect = model->createVideoNode(nodeType.name);
+        if (nodeType.nInputs > 1)
+            continue;
+        VideoNode *effect = model.createVideoNode(nodeType.name);
         if (!effect)
             continue;
         EffectNode * effectNode = qobject_cast<EffectNode *>(effect);
 
-        model->addEdge(testEffect, effect, 0);
-        model->flush();
+        model.addEdge(baseEffect, effect, 0);
+        model.addEdge(effect, &onblackEffect, 0);
+        model.flush();
 
         outputDir.mkdir(nodeType.name);
-        for (int i = 1; i <= 100; i++) {
+        for (int i = 0; i <= 100; i++) {
             if (effectNode)
                 effectNode->setIntensity(i / 50.);
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
             renderContext->periodic();
 
-            auto rendering = renderContext->render(model, 0);
-            auto outputTextureId = rendering.value(effect->id(), 0);
+            auto rendering = renderContext->render(&model, 0);
+            auto outputTextureId = rendering.value(onblackEffect.id(), 0);
             if (outputTextureId != 0) {
-                QImage img = imgRender->render(outputTextureId);
+                QImage img = imgRender.render(outputTextureId);
                 QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), nodeType.name, QString::number(i));
                 img.scaled(QSize(80, 80)).save(filename);
             }
         }
-        model->removeEdge(testEffect, effect, 0);
-        model->removeVideoNode(effect);
-        model->flush();
+        model.removeVideoNode(effect); // implicitly deletes edges
+        model.flush();
 
         QProcess ffmpeg;
         ffmpeg.start("ffmpeg",
             QStringList()
                 << "-y" << "-i"
                 << QString("%1/%2/%d.png").arg(outputDir.path(), nodeType.name)
-                << QString("%1/%2.webp").arg(outputDir.path(), nodeType.name));
+                << QString("%1/%2" IMG_FORMAT).arg(outputDir.path(), nodeType.name));
         ffmpeg.waitForFinished();
         qInfo() << "Rendered" << nodeType.name << ffmpeg.exitCode() << ffmpeg.exitStatus();
 
         html << "<tr><td>" << nodeType.name << "</td>\n";
         html << "    <td>" << "" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << nodeType.name << "/0.png'>" << "</td>\n";
         html << "    <td class='static'>" << "<img src='./" << nodeType.name << "/51.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./" << nodeType.name << ".webp'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./" << nodeType.name << IMG_FORMAT "'>" << "</td>\n";
         html.flush();
     }
 
