@@ -13,8 +13,8 @@ void main(void) {
     shift /= aspectCorrection;
 
     uv = uv + shift;
-    vec4 color = vec4(1., uv.y * 0.6, 0., smoothstep(0.1, 0.3, (1. - uv.y)));
-    
+    vec4 color = vec4(1., uv.y * 0.6, 0., 1.0);
+    color *= smoothstep(0.1, 0.3, (1. - uv.y));
     color *= smoothstep(0., 0.2, iIntensity);
     
     gl_FragColor = composite(gl_FragColor, color);

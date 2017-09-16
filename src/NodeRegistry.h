@@ -25,10 +25,11 @@ public:
     NodeRegistry();
     ~NodeRegistry() override;
 
-    QSharedPointer<VideoNode> createNode(QString name);
+    // Create node from string; resulting VideoNode is caller-owned
+    VideoNode *createNode(const QString &name);
 
 public slots:
-    QHash<QString, VideoNodeType> nodeTypes();
+    QMap<QString, VideoNodeType> nodeTypes();
     QVariantMap qmlNodeTypes();
 
     void reload();
@@ -37,6 +38,6 @@ signals:
     void nodeTypesChanged();
 
 private:
-    QHash<QString, VideoNodeType> m_nodeTypes;
+    QMap<QString, VideoNodeType> m_nodeTypes;
 };
 

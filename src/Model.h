@@ -57,6 +57,9 @@ public slots:
     // Call connectOutput with videoNode = nullptr to disconnect an output
     void connectOutput(QString outputName, VideoNode *videoNode);
 
+    // Creates a Model-owned VideoNode & adds it to the graph
+    VideoNode *createVideoNode(const QString &name);
+
     // Atomically update the graph used for rendering
     // and emit signals describing how the graph was changed.
     // Call this after adding or removing nodes edges, or outputs.

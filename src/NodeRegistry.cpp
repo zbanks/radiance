@@ -13,32 +13,48 @@ NodeRegistry::~NodeRegistry() {
 
 }
 
-QSharedPointer<VideoNode> NodeRegistry::createNode(QString name) {
-    if (!m_nodeTypes.contains(name))
+VideoNode *NodeRegistry::createNode(const QString &nodeName) {
+    QString arg, name;
+    bool has_arg = false;
+
+    int colon = nodeName.indexOf(':');
+    if (colon >= 0) {
+        arg = nodeName.mid(colon + 1);
+        name = nodeName.left(colon);
+        has_arg = true;
+    } else {
+        name = nodeName;
+    }
+
+    if (!m_nodeTypes.contains(name)) {
+        qInfo() << "Unknown node type:" << name;
         return nullptr;
+    }
 
     VideoNodeType vnt = m_nodeTypes.value(name);
     switch (vnt.type) {
     case VideoNodeType::EFFECT_NODE: {
-        QSharedPointer<EffectNode> effect = QSharedPointer<EffectNode>(new EffectNode());
+        EffectNode *effect = new EffectNode();
         effect->setName(name);
         effect->setInputCount(vnt.nInputs);
+        if (has_arg) {
+            effect->setIntensity(arg.toFloat());
+        }
         return effect;
     }
-// XXX
-//    case VideoNodeType::IMAGE_NODE: {
-//        QSharedPointer<ImageNode> image = QSharedPointer<ImageNode>(new ImageNode());
-//        image->setImagePath(name);
-//        image->setInputCount(vnt.nInputs);
-//        return image;
-//    }
+    case VideoNodeType::IMAGE_NODE: {
+        ImageNode *image = new ImageNode();
+        image->setImagePath(name);
+        image->setInputCount(vnt.nInputs);
+        return image;
+    }
     default:
-        qInfo() << "Unknown type" << vnt.type;
+        qInfo() << "Unknown type:" << vnt.type;
         return nullptr;
     }
 }
 
-QHash<QString, VideoNodeType> NodeRegistry::nodeTypes() {
+QMap<QString, VideoNodeType> NodeRegistry::nodeTypes() {
     return m_nodeTypes;
 }
 
@@ -79,6 +95,18 @@ void NodeRegistry::reload() {
             .description = effectName,
             .nInputs = 1,
         };
+
+        // TODO: Get this information in a real way
+        if (name == "greenscreen" ||
+            name == "crossfader" ||
+            name == "composite") {
+            nodeType.nInputs = 2;
+        } else if (name == "rgbmask") {
+            nodeType.nInputs = 4;
+            qInfo() << name << 4;
+        }
+        //qInfo() << name << nodeType.name;
+
         m_nodeTypes.insert(name, nodeType);
     }
 

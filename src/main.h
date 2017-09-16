@@ -13,6 +13,7 @@
 extern QSharedPointer<QSettings> settings;
 extern QSharedPointer<UISettings> uiSettings;
 extern QSharedPointer<Audio> audio;
+extern QSharedPointer<NodeRegistry> nodeRegistry;
 extern QSharedPointer<Timebase> timebase;
 extern QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 

@@ -19,7 +19,7 @@ QImage FramebufferVideoNodeRender::render(GLuint textureId) {
     const QRect targetRect(QPoint(0, 0), m_fbo.size());
     // TODO: This assumes the two sizes are equal
     const QMatrix4x4 target = QOpenGLTextureBlitter::targetTransform(targetRect, targetRect);
-    m_blitter.blit(textureId, target, QOpenGLTextureBlitter::OriginTopLeft);
+    m_blitter.blit(textureId, target, QOpenGLTextureBlitter::OriginBottomLeft);
 
     m_blitter.release();
     m_fbo.release();
