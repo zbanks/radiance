@@ -2,6 +2,10 @@
 
 #include "Chain.h"
 
+// This class is pretty fucked.
+// It really needs to copy at least some of itself before rendering
+// instead of just trying to lock everywhere and possibly getting deleted
+
 class Output : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
@@ -23,13 +27,17 @@ public:
     // This method is thread-safe
     void setName(QString name);
 
+    // This method wraps display()
+    // but takes the renderLock
+    // so that subclasses can't possibly fuck it up
+    void renderReady(GLuint texture);
+
     // This method is called when the render is finished
     // and there is a result to display.
     // It should be called from the same thread that renderRequested
     // was emitted from.
-    // All methods that your implementation of display() uses
-    // must be thread-safe.
-    virtual void display(QMap<int, GLuint> result) = 0;
+    // This method runs with the renderLock claimed.
+    virtual void display(GLuint texture) = 0;
 
 signals:
     // This signal is emitted when this output wants something to be rendered
@@ -42,8 +50,10 @@ signals:
     void nameChanged(QString name);
 
 protected:
-    QMutex m_chainLock;
-    QMutex m_nameLock;
+    // This lock should be taken during rendering
+    // to ensure that name and chain do not change
+    // and that the node is not deleted during rendering.
+    QMutex m_renderLock;
     QSharedPointer<Chain> m_chain;
     QString m_name;
 };

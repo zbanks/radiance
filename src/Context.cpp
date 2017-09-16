@@ -43,10 +43,18 @@ void Context::setPreviewSize(QSize size) {
 
 void Context::onRenderRequested() {
     auto output = qobject_cast<Output *>(sender());
-    auto chain = output->chain();
+    auto name = output->name();
     auto modelCopy = m_model->createCopyForRendering();
-    auto result = modelCopy.render(chain);
-    m_model->copyBackRenderStates(chain, &modelCopy);
+    auto vnId = modelCopy.outputs.value(name, 0);
+    GLuint textureId = 0;
+    if (vnId != 0) { // Don't bother rendering this chain
+        // if it is not connected
+        auto chain = output->chain();
+        auto result = modelCopy.render(chain);
+        textureId = result.value(vnId, 0);
+        m_model->copyBackRenderStates(chain, &modelCopy);
+    }
+    output->renderReady(textureId);
 }
 
 QList<QSharedPointer<Chain>> Context::chains() {

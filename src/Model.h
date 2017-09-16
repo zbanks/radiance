@@ -30,6 +30,9 @@ struct ModelCopyForRendering {
     QVector<int> toVertex;
     QVector<int> toInput;
 
+    // Map of output name to VideoNode ID
+    QMap<QString, int> outputs;
+
     // Render this model
     // The return value is a mapping of VideoNode IDs to OpenGL textures
     // that were rendered into
@@ -40,6 +43,7 @@ class Model : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList vertices READ qmlVertices)
     Q_PROPERTY(QVariantList edges READ qmlEdges)
+    Q_PROPERTY(QVariantMap outputConnections READ qmlOutputConnections)
 
 public:
     Model();
@@ -54,10 +58,12 @@ public slots:
     void removeVideoNode(VideoNode *videoNode);
     void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
+    // Call connectOutput with videoNode = nullptr to disconnect an output
+    void connectOutput(QString outputName, VideoNode *videoNode);
 
     // Atomically update the graph used for rendering
     // and emit signals describing how the graph was changed.
-    // Call this after adding or removing nodes or edges.
+    // Call this after adding or removing nodes edges, or outputs.
     void flush();
 
     // This function is called before rendering
@@ -85,6 +91,9 @@ public slots:
     // in the order they were added
     QList<Edge> edges() const;
 
+    // Returns a map of output names to VideoNodes
+    QMap<QString, VideoNode *> outputConnections() const;
+
     // Returns a list of vertices
     // in the order they were added
     // suitable for QML / Javascript
@@ -94,6 +103,10 @@ public slots:
     // in the order they were added
     // suitable for QML / Javascript
     QVariantList qmlEdges() const;
+
+    // Returns a map of output names to VideoNodes
+    // suitable for QML / Javascript
+    QVariantMap qmlOutputConnections() const;
 
     // Returns a list of verticies that
     // are ancestors of the given node
@@ -115,7 +128,7 @@ public slots:
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)
     // with the interim changes
-    void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
+    void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved, QVariantMap outputsAdded, QVariantMap outputsRemoved);
 
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
 
@@ -131,6 +144,8 @@ private:
     QList<VideoNode *> m_verticesForRendering;
     QList<Edge> m_edgesForRendering;
     QVector<VideoNode *> m_verticesSortedForRendering;
+    QMap<QString, VideoNode *> m_outputConnections;
+    QMap<QString, VideoNode *> m_outputConnectionsForRendering;
 
     // m_vertices and m_edges can be
     // read from or written to by the render thread.
