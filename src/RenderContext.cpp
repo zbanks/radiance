@@ -26,7 +26,7 @@ void RenderContext::onInitialized() {
 }
 
 int RenderContext::chainCount() {
-    return 2;
+    return 3;
 }
 
 QSize RenderContext::chainSize(int chain) {
@@ -35,6 +35,8 @@ QSize RenderContext::chainSize(int chain) {
             return QSize(300, 300);
         case 1:
             return QSize(1024, 768);
+        case 2:
+            return QSize(128, 128);
         default:
             Q_ASSERT(false);
     }

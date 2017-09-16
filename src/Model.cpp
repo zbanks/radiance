@@ -25,6 +25,7 @@ Model::~Model() {
 VideoNode *Model::createVideoNode(const QString &name) {
     VideoNode *videoNode = nodeRegistry->createNode(name);
     if (!videoNode) {
+        qInfo() << "Failed to create videoNode:" << name;
         return nullptr;
     }
 

@@ -13,9 +13,23 @@ NodeRegistry::~NodeRegistry() {
 
 }
 
-VideoNode *NodeRegistry::createNode(const QString &name) {
-    if (!m_nodeTypes.contains(name))
+VideoNode *NodeRegistry::createNode(const QString &nodeName) {
+    QString arg, name;
+    bool has_arg = false;
+
+    int colon = nodeName.indexOf(':');
+    if (colon >= 0) {
+        arg = nodeName.mid(colon + 1);
+        name = nodeName.left(colon);
+        has_arg = true;
+    } else {
+        name = nodeName;
+    }
+
+    if (!m_nodeTypes.contains(name)) {
+        qInfo() << "Unknown node type:" << name;
         return nullptr;
+    }
 
     VideoNodeType vnt = m_nodeTypes.value(name);
     switch (vnt.type) {
@@ -23,6 +37,9 @@ VideoNode *NodeRegistry::createNode(const QString &name) {
         EffectNode *effect = new EffectNode();
         effect->setName(name);
         effect->setInputCount(vnt.nInputs);
+        if (has_arg) {
+            effect->setIntensity(arg.toFloat());
+        }
         return effect;
     }
     case VideoNodeType::IMAGE_NODE: {
@@ -32,7 +49,7 @@ VideoNode *NodeRegistry::createNode(const QString &name) {
         return image;
     }
     default:
-        qInfo() << "Unknown type" << vnt.type;
+        qInfo() << "Unknown type:" << vnt.type;
         return nullptr;
     }
 }
@@ -80,7 +97,9 @@ void NodeRegistry::reload() {
         };
 
         // TODO: Get this information in a real way
-        if (name == "greenscreen" || name == "crossfader") {
+        if (name == "greenscreen" ||
+            name == "crossfader" ||
+            name == "composite") {
             nodeType.nInputs = 2;
         } else if (name == "rgbmask") {
             nodeType.nInputs = 4;

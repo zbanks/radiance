@@ -13,8 +13,8 @@ void main(void) {
     shift = (iIntensity * 0.7 + 0.3) * shift;
 
     normCoord = normCoord + shift;
-    vec4 color = vec4(1., length(normCoord) * 2., 0., smoothstep(0.4, 0.5, (1. - length(normCoord))));
-    
+    vec4 color = vec4(1., length(normCoord) * 2., 0., 1.0);
+    color *= smoothstep(0.4, 0.5, (1. - length(normCoord)));
     color *= smoothstep(0., 0.2, iIntensity);
     
     gl_FragColor = composite(gl_FragColor, color);
