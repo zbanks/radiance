@@ -19,9 +19,9 @@ public:
 public slots:
     Model *model();
     void setModel(Model *model);
-    QSize previewSize();
+    QSize previewSize(); // thread-safe
     void setPreviewSize(QSize size);
-    QQuickWindow *previewWindow();
+    QQuickWindow *previewWindow(); // thread-safe
     void setPreviewWindow(QQuickWindow *window);
 
     QList<Output *> outputs();
@@ -33,7 +33,7 @@ public slots:
 
 protected slots:
     void onRenderRequested();
-    void onPreviewFrameSwapped();
+    void onBeforeSynchronizing();
 
 signals:
     void previewSizeChanged(QSize size);
@@ -52,4 +52,5 @@ protected:
     QSharedPointer<Chain> m_previewChain;
     QQuickWindow *m_previewWindow;
     QMap<int, GLuint> m_lastPreviewRender;
+    QMutex m_previewLock;
 };

@@ -25,10 +25,12 @@ signals:
     void videoNodeIdChanged(int videoNodeId);
     void contextChanged(Context *context);
 
-private:
-    int m_videoNodeId;
-    Context *m_context;
+protected slots:
+    void onWindowChanged(QQuickWindow *window);
 
 protected:
+    int m_videoNodeId;
+    Context *m_context;
+    QQuickWindow *m_window;
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
 };

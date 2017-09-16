@@ -13,6 +13,7 @@ Rectangle {
 
     Flickable {
         property var lastClickedTile
+        property var context: parent.parent.globalContext
 
         anchors.fill: parent
         contentWidth: view.width;

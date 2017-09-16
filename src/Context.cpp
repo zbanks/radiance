@@ -4,7 +4,8 @@
 #include <memory>
 
 Context::Context(bool hasPreview) 
-    : m_hasPreview(hasPreview) {
+    : m_hasPreview(hasPreview)
+    , m_previewSize(QSize(300, 300)) {
 
     if (m_hasPreview) {
         m_previewChain = QSharedPointer<Chain>(new Chain(m_previewSize));
@@ -22,12 +23,13 @@ Model *Context::model() {
 void Context::setModel(Model *model) {
     Q_ASSERT(QThread::currentThread() == thread());
     m_model = model;
+    chainsChanged();
     emit modelChanged(model);
 }
 
 QSize Context::previewSize() {
     Q_ASSERT(m_hasPreview);
-    Q_ASSERT(QThread::currentThread() == thread());
+    QMutexLocker locker(&m_previewLock);
     return m_previewSize;
 }
 
@@ -35,9 +37,12 @@ void Context::setPreviewSize(QSize size) {
     Q_ASSERT(m_hasPreview);
     Q_ASSERT(QThread::currentThread() == thread());
     if (size != m_previewSize) {
-        m_previewSize = size;
-        QSharedPointer<Chain> previewChain(new Chain(size));
-        m_previewChain = previewChain;
+        {
+            QMutexLocker locker(&m_previewLock);
+            m_previewSize = size;
+            QSharedPointer<Chain> previewChain(new Chain(size));
+            m_previewChain = previewChain;
+        }
         chainsChanged();
         emit previewSizeChanged(size);
     }
@@ -50,13 +55,16 @@ QQuickWindow *Context::previewWindow() {
 void Context::setPreviewWindow(QQuickWindow *window) {
     Q_ASSERT(m_hasPreview);
     Q_ASSERT(QThread::currentThread() == thread());
-    disconnect(m_previewWindow, &QQuickWindow::frameSwapped, this, &Context::onPreviewFrameSwapped);
-    m_previewWindow = window;
-    connect(m_previewWindow, &QQuickWindow::frameSwapped, this, &Context::onPreviewFrameSwapped, Qt::DirectConnection);
+    {
+        QMutexLocker locker(&m_previewLock);
+        disconnect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing);
+        m_previewWindow = window;
+        connect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing, Qt::DirectConnection);
+    }
     emit previewWindowChanged(window);
 }
 
-void Context::onPreviewFrameSwapped() {
+void Context::onBeforeSynchronizing() {
     Q_ASSERT(m_hasPreview);
     auto modelCopy = m_model->createCopyForRendering();
     m_lastPreviewRender = modelCopy.render(m_previewChain);

@@ -93,7 +93,7 @@ signals:
     void nameChanged(QString name);
 
 protected:
-    QMap<QSharedPointer<Chain>, EffectNodeRenderState> m_renderStates;
+    QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
     QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
     qreal m_intensity;
     qreal m_intensityIntegral;

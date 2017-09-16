@@ -7,8 +7,16 @@
 
 QQuickVideoNodeRender::QQuickVideoNodeRender()
     : m_videoNodeId(0)
-    , m_context(nullptr) {
+    , m_context(nullptr)
+    , m_window(nullptr) {
     setFlags(QQuickItem::ItemHasContents);
+    connect(this, &QQuickItem::windowChanged, this, &QQuickVideoNodeRender::onWindowChanged);
+}
+
+void QQuickVideoNodeRender::onWindowChanged(QQuickWindow *window) {
+    if(m_window != nullptr) disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
+    if(window != nullptr)   connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
+    m_window = window;
 }
 
 QQuickVideoNodeRender::~QQuickVideoNodeRender() {
@@ -48,8 +56,6 @@ QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNod
         // so that we can mark it dirty. If we don't mark it dirty on the first call,
         // this function will never get called again
     }
-
-    //qDebug() << "render with chain" << m_chain << m_videoNode;
 
     if (m_context != nullptr && m_videoNodeId != 0) {
         auto textureId = m_context->previewTexture(m_videoNodeId);

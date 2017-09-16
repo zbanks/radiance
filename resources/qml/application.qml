@@ -3,10 +3,17 @@ import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import QtGraphicalEffects 1.0
 import radiance 1.0
+import "."
 
 ApplicationWindow {
     id: window;
     visible: true;
+
+    Context {
+        id: globalContext;
+        model: model;
+        previewWindow: window;
+    }
 
     Model {
         id: model;
@@ -73,6 +80,7 @@ ApplicationWindow {
     */
 
     Component.onCompleted: {
+        Globals.context = globalContext;
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
         model.addVideoNode(en);
@@ -151,6 +159,7 @@ ApplicationWindow {
             VideoNodeRender {
                 id: vnr
                 anchors.fill: parent
+                context: globalContext
                 videoNodeId: cross.id
             }
             MouseArea {

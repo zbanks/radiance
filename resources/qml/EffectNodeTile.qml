@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
 import radiance 1.0
+import "."
 
 VideoNodeTile {
     id: tile;
@@ -43,6 +44,7 @@ VideoNodeTile {
             VideoNodeRender {
                 anchors.fill: parent;
                 id: vnr;
+                context: Globals.context;
                 videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
             }
         }

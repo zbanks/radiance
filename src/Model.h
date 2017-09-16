@@ -18,11 +18,7 @@ public:
 
 // Return type of graphCopy
 struct ModelCopyForRendering {
-    // VideoNode IDs of original vertices
-    // (for copy-back)
-    QVector<int> origVertices;
-
-    // Parallel array of vertex copies
+    // Copies of the vertices
     QVector<QSharedPointer<VideoNode>> vertices;
 
     // Edges, as indices into vertices

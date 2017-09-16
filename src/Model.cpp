@@ -17,7 +17,7 @@ bool Edge::operator==(const Edge &other) const {
 }
 
 Model::Model()
-    : m_vnId(0) {
+    : m_vnId(1) {
 }
 
 Model::~Model() {
@@ -25,6 +25,9 @@ Model::~Model() {
 
 void Model::setChains(QList<QSharedPointer<Chain>> chains) {
     m_chains = chains;
+    for (int i=0; i<m_vertices.count(); i++) {
+        m_vertices.at(i)->setChains(chains);
+    }
     emit chainsChanged(chains);
 }
 
@@ -48,12 +51,10 @@ void Model::connectOutput(QString outputName, VideoNode *videoNode) {
 
 void Model::prepareNode(VideoNode *videoNode) {
     videoNode->setChains(m_chains);
-    connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
     videoNode->setId(m_vnId++);
 }
 
 void Model::disownNode(VideoNode *videoNode) {
-    disconnect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
     auto outputNames = m_outputConnections.keys();
     for (int i=0; i<outputNames.count(); i++) {
         auto outputName = outputNames.at(i);
@@ -165,7 +166,6 @@ ModelCopyForRendering Model::createCopyForRendering() {
     }
 
     for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
-        out.origVertices.append(m_verticesSortedForRendering.at(i)->id());
         out.vertices.append(m_verticesSortedForRendering.at(i)->createCopyForRendering());
     }
 
@@ -177,13 +177,18 @@ ModelCopyForRendering Model::createCopyForRendering() {
 }
 
 void Model::copyBackRenderStates(QSharedPointer<Chain> chain, const ModelCopyForRendering *modelCopy) {
-    Q_ASSERT(modelCopy->origVertices.count() == modelCopy->vertices.count());
-    {
-        QMutexLocker locker(&m_graphLock);
-        for(int i=0; i<m_vertices.count(); i++) {
-            if(modelCopy->origVertices.contains(m_vertices.at(i)->id())) {
-                m_vertices[i]->copyBackRenderState(chain, modelCopy->vertices.at(i));
-            }
+    QMutexLocker locker(&m_graphLock);
+    QMap<int, QSharedPointer<VideoNode>> m;
+    for (int i=0; i<modelCopy->vertices.count(); i++) {
+        auto vnId = modelCopy->vertices.at(i)->id();
+        if (vnId != 0) {
+            m.insert(vnId, modelCopy->vertices.at(i));
+        }
+    }
+    for (int i=0; i<m_vertices.count(); i++) {
+        auto videoNodeCopy = m.value(m_vertices.at(i)->id());
+        if (!videoNodeCopy.isNull()) {
+            m_vertices[i]->copyBackRenderState(chain, videoNodeCopy);
         }
     }
 }
@@ -439,7 +444,3 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     }
     return result;
 }
-
-//createCopyForRendering();
-//render(chain);
-//copyBackRenderStates(chain, origVertices, vertices);

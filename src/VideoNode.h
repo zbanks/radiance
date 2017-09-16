@@ -91,6 +91,7 @@ public slots:
     // (mostly render artifacts)
     // should use this ID
     // since the pointer may become invalidated or non-unique.
+    // This method is thread-safe.
     int id();
     void setId(int id);
 
@@ -109,6 +110,7 @@ protected:
     QMutex m_stateLock;
     int m_id;
     QList<QSharedPointer<Chain>> m_chains;
+    QMutex m_idLock;
 
 signals:
     // Emitted when the object wishes to be deleted

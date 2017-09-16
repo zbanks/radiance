@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterType<Context>("radiance", 1, 0, "Context");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
