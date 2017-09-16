@@ -11,16 +11,15 @@ Rectangle {
     border.width: 1
     color: "transparent"
 
-    ScrollView {
-        anchors.fill: parent;
+    Flickable {
+        anchors.fill: parent
+        contentWidth: view.width;
+        contentHeight: view.height;
+        clip: true;
 
-        Flickable {
+        Item {
             property var lastClickedTile
-
-            anchors.fill: parent
-            contentWidth: view.width;
-            contentHeight: view.height;
-            clip: true;
+            property string currentOutputName: "Screen"
 
             View {
                 id: view

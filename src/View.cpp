@@ -55,14 +55,14 @@ Child View::newChild(VideoNode *videoNode) {
     return c;
 }
 
-static void setInputHeight(const QVector<QVector<int>> &inputs, const QVector<QVector<qreal>> &minInputHeights, QVector<QVector<int>> &inputGridHeight, QVector<QVector<qreal>> &inputHeight, int node) {
+static void setInputHeightFwd(const QVector<QVector<int>> &inputs, const QVector<QVector<qreal>> &minInputHeights, QVector<QVector<int>> &inputGridHeight, QVector<QVector<qreal>> &inputHeight, int node) {
     auto myInputs = inputs.at(node);
     for(int i=0; i<myInputs.count(); i++) {
         int attachedNode = myInputs.at(i);
         inputHeight[node][i] = minInputHeights.at(node).at(i);
         inputGridHeight[node][i] = 1;
         if (attachedNode >= 0) {
-            setInputHeight(inputs, minInputHeights, inputGridHeight, inputHeight, attachedNode);
+            setInputHeightFwd(inputs, minInputHeights, inputGridHeight, inputHeight, attachedNode);
             auto childInputGridHeights = inputGridHeight.at(attachedNode);
             auto childInputHeights = inputHeight.at(attachedNode);
             Q_ASSERT(childInputGridHeights.count() == childInputHeights.count());
@@ -80,6 +80,24 @@ static void setInputHeight(const QVector<QVector<int>> &inputs, const QVector<QV
             if (myInputHeight > inputHeight.at(node).at(i)) {
                 inputHeight[node][i] = myInputHeight;
             }
+        }
+    }
+}
+
+static void setInputHeightRev(const QVector<QVector<int>> &inputs, QVector<QVector<qreal>> &inputHeight, int node) {
+    auto myInputs = inputs.at(node);
+    for (int i=0; i<myInputs.count(); i++) {
+        auto attachedNode = myInputs.at(i);
+        auto myInputHeight = inputHeight[node][i];
+        if (attachedNode >= 0) {
+            auto childInputHeights = inputHeight.at(attachedNode);
+            qreal childHeight = 0;
+            for(int j=0; j<childInputHeights.count(); j++) childHeight += childInputHeights.at(j);
+            if (childHeight < myInputHeight) { 
+                auto correctionFactor = myInputHeight / childHeight;
+                for(int j=0; j<childInputHeights.count(); j++) inputHeight[attachedNode][j] *= correctionFactor;
+            }
+            setInputHeightRev(inputs, inputHeight, attachedNode);
         }
     }
 }
@@ -151,6 +169,19 @@ void View::onGraphChanged() {
     }
 
     m_children = newChildren;
+
+    // First we assign outputs,
+    // in case height / width is affected by
+    // whether a node is an output.
+    QMap<VideoNode *, QString> outputConnectionsReversed;
+    auto outputConnections = m_model->outputConnections();
+    auto outputConnectionsKeys = outputConnections.keys();
+    for (int i=0; i<outputConnectionsKeys.count(); i++) {
+        outputConnectionsReversed.insert(outputConnections.value(outputConnectionsKeys.at(i)), outputConnectionsKeys.at(i));
+    }
+    for (int i=0; i<m_children.count(); i++) {
+        m_children[i].item->setProperty("outputName", outputConnectionsReversed.value(m_children.at(i).videoNode));
+    }
 
     // Create a map from VideoNodes to indices
     QMap<VideoNode *, int> map;
@@ -232,13 +263,15 @@ void View::onGraphChanged() {
         }
     }
 
-    // First we deal with heights and Y
+    // Then we deal with heights and Y,
+    // in case widths are dependent on heights
 
     // Compute heights and Y positions
     int stack = 0;
     qreal totalHeight = 0;
     for (int i=0; i<s.count(); i++) {
-        setInputHeight(inputs, minHeights, inputGridHeight, inputHeight, s.at(i));
+        setInputHeightFwd(inputs, minHeights, inputGridHeight, inputHeight, s.at(i));
+        setInputHeightRev(inputs, inputHeight, s.at(i));
         setStackup(inputs, inputGridHeight, inputHeight, gridY, ys, s.at(i), stack, totalHeight);
         auto myInputGridHeights = inputGridHeight.at(s.at(i));
         auto myInputHeights = inputHeight.at(s.at(i));
@@ -267,7 +300,7 @@ void View::onGraphChanged() {
         m_children[i].item->setProperty("gridY", gridY.at(i));
     }
 
-    // Now we deal with widths and X,
+    // Finally we deal with widths and X,
     // in case they are dependent on heights and Y
 
     // Create a list of widths parallel to vertices

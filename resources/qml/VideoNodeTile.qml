@@ -12,6 +12,7 @@ FocusScope {
     property int gridX
     property int gridY
     property var inputHeights
+    property string outputName
     property real posX: -1
     property real posY: -1
 
@@ -36,33 +37,46 @@ FocusScope {
         return a < b ? a : b;
     }
 
-    function regrid() {
-        regridY();
-        regridX();
+    function max(a, b) {
+        return a > b ? a : b;
     }
 
-    function regridX() {
+    function regrid() {
+        // Size
+        var outputHeight = 400;
+        var outputWidth = 300;
+        var normalHeight = 170;
+        var normalWidth = 150;
+        minInputHeight = outputName ? max(normalHeight, outputHeight / inputHeights.length) : normalHeight;
+
+        var shrinkageY = (inputHeights[0] - minInputHeight) / 2;
+        var shrinkageHeight = -(inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
+
+        // Y
+        y = posY + padding + shrinkageY;
+        var blockHeight = sum(inputHeights) + shrinkageHeight;
+        height = blockHeight - 2 * padding;
+
+        // X
         x = posX + padding;
+        blockWidth = outputName ? outputWidth : min(blockHeight * 0.6, normalWidth);
         width = blockWidth - 2 * padding
     }
 
-    function regridY() {
-        y = posY + (inputHeights[0] - minInputHeight) / 2 + padding;
-        var blockHeight = sum(inputHeights) - (inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
-        height = blockHeight - 2 * padding;
-        blockWidth = min(blockHeight * 0.6, 150)
+    onOutputNameChanged: {
+        if (!dragging) regrid();
     }
 
     onPosYChanged: {
-        if (!dragging) regridY();
+        if (!dragging) regrid();
     }
 
     onPosXChanged: {
-        if (!dragging) regridX();
+        if (!dragging) regrid();
     }
 
     onInputHeightsChanged: {
-        if (!dragging) regridY();
+        if (!dragging) regrid();
     }
 
     Drag.keys: [ "videonode" ]
@@ -166,6 +180,12 @@ FocusScope {
         model.flush();
     }
 
+    function setSelectedAsOutput() {
+        var output = tile.parent.parent.currentOutputName;
+        model.connectOutput(output, tile.videoNode);
+        model.flush();
+    }
+
     MouseArea {
         id: dragArea;
         z: -1;
@@ -186,6 +206,7 @@ FocusScope {
                 } else {
                     tile.parent.select(tiles);
                 }
+                console.log(tile.parent.parent);
                 tile.parent.parent.lastClickedTile = tile;
             }
         }
@@ -241,6 +262,19 @@ FocusScope {
             duration: 500
         }
     }
+
+    Behavior on width {
+        enabled: !dragging
+        NumberAnimation {
+            easing {
+                type: Easing.InOutQuad
+                amplitude: 1.0
+                period: 0.5
+            }
+            duration: 500
+        }
+    }
+
     Behavior on height {
         enabled: !dragging
         NumberAnimation {
@@ -280,6 +314,8 @@ FocusScope {
     Keys.onPressed: {
         if (event.key == Qt.Key_Delete) {
             deleteSelected();
+        } else if (event.key == Qt.Key_Return) {
+            setSelectedAsOutput();
         }
     }
 }

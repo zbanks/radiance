@@ -69,6 +69,7 @@ void Context::onBeforeSynchronizing() {
     auto modelCopy = m_model->createCopyForRendering();
     m_lastPreviewRender = modelCopy.render(m_previewChain);
     m_model->copyBackRenderStates(m_previewChain, &modelCopy);
+    qDebug() << "Rendered preview:" << m_lastPreviewRender;
 }
 
 GLuint Context::previewTexture(int videoNodeId) {

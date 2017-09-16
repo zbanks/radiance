@@ -76,9 +76,7 @@ ApplicationWindow {
         model.addEdge(n1, n2, 0);
         model.addEdge(n2, n3, 0);
         model.addEdge(n3, cross, 1);
-
         model.flush();
-        RenderContext.addRenderTrigger(window, model, 0);
     }
 
     RowLayout {
