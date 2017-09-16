@@ -24,7 +24,7 @@ QSharedPointer<NodeRegistry> nodeRegistry;
 QSharedPointer<Timebase> timebase;
 
 void generateHtml(QDir outputDir, QList<QString> nodeNames) {
-    QFile outputHtml(outputDir.filePath("output.html"));
+    QFile outputHtml(outputDir.filePath("index.html"));
     outputHtml.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream html(&outputHtml);
     html << "<!doctype html>\n";

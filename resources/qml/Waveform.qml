@@ -2,7 +2,7 @@ import QtQuick 2.3
 import radiance 1.0
 
 GraphicalDisplay {
-    implicitWidth: 300;
+    implicitWidth: 500;
     implicitHeight: 100;
 
     fragmentShader: "

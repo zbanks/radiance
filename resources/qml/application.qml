@@ -17,6 +17,7 @@ ApplicationWindow {
         }
     }
 
+    // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
     EffectNode {
         id: en
         name: "test"
@@ -33,43 +34,16 @@ ApplicationWindow {
         id: en4
         name: "yellow"
     }
-
     ImageNode {
         id: img1
         imagePath: "nyancat.gif"
         inputCount: 1 // FIXME: this should be 0
     }
-
     EffectNode {
         id: cross
-        //name: "crossfader"
         name: "greenscreen"
         inputCount: 2
     }
-    EffectNode {
-        id: cross2
-        //name: "crossfader"
-        name: "greenscreen"
-        inputCount: 2
-    }
-    EffectNode {
-        id: cross3
-        //name: "crossfader"
-        name: "greenscreen"
-        inputCount: 2
-    }
-    EffectNode {
-        id: after
-        name: "pixelate"
-    }
-
-    /*
-    EffectNode {
-        id: rgbmask
-        name: "rgbmask"
-        inputCount: 4
-    }
-    */
 
     Component.onCompleted: {
         UISettings.previewSize = "100x100";
@@ -77,28 +51,15 @@ ApplicationWindow {
         model.addVideoNode(en);
         model.addVideoNode(en2);
         model.addVideoNode(en3);
-        model.addVideoNode(img1);
-
-        /*
-        model.addVideoNode(rgbmask);
-        model.addEdge(en, rgbmask, 0);
-        model.addEdge(en2, rgbmask, 1);
-        model.addEdge(en3, rgbmask, 2);
-        model.addEdge(en4, rgbmask, 3);
-        */
-
-        console.log("Crossfader:");
-        model.addVideoNode(cross);
-        model.addVideoNode(cross2);
-        model.addVideoNode(cross3);
-        //model.addVideoNode(after);
         model.addVideoNode(en4);
+        model.addVideoNode(img1);
+        model.addVideoNode(cross);
+
+        model.addEdge(img1, en, 0);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
-        model.addEdge(en3, cross, 0);
-        model.addEdge(img1, cross2, 0);
-        //model.addEdge(en4, cross, 1);
-        //model.addEdge(cross, after, 0);
+        model.addEdge(en3, en4, 0);
+        model.addEdge(en4, cross, 0);
 
         var n1 = model.createVideoNode("test");
         var n2 = model.createVideoNode("interstellar");
@@ -112,15 +73,9 @@ ApplicationWindow {
     }
 
     RowLayout {
+        anchors.fill: parent;
+
         ColumnLayout {
-            RowLayout {
-                Waveform {
-
-                }
-                Spectrum {
-
-                }
-            }
 
             RowLayout {
                 Layout.fillWidth: true;
@@ -143,28 +98,34 @@ ApplicationWindow {
             }
 
             Graph {
-                width: 800
-                height: 500
                 model: model
             }
         }
 
-        Rectangle {
-            color: "#000"
-            width: 500
-            height: 500
-            VideoNodeRender {
-                id: vnr
-                anchors.fill: parent
-                chain: 0
-                videoNodeId: cross.id
+        ColumnLayout {
+            Waveform {
+                width: 500
             }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    vnr.update()
-                    model.removeVideoNode(en4);
-                    model.flush();
+            Spectrum {
+                width: 500
+            }
+            Rectangle {
+                color: "#000"
+                width: 500
+                height: 500
+                VideoNodeRender {
+                    id: vnr
+                    anchors.fill: parent
+                    chain: 0
+                    videoNodeId: cross.id
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        vnr.update()
+                        model.removeVideoNode(en4);
+                        model.flush();
+                    }
                 }
             }
         }
