@@ -64,7 +64,7 @@ ApplicationWindow {
         model.addVideoNode(img1);
         model.addVideoNode(cross);
 
-        model.addEdge(img1, en, 0);
+        //model.addEdge(img1, en, 0);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, en4, 0);
@@ -91,17 +91,30 @@ ApplicationWindow {
 
                 // This is kind of crappy, but it was easy 
                 ComboBox {
-                    id: effectSelector;
+                    id: nodeSelector;
                     model: Object.keys(NodeRegistry.nodeTypes);
                     editable: true;
                     Layout.preferredWidth: 300;
+                    onAccepted: nodeAddAction.trigger()
+                }
+                Action {
+                    id: nodeAddAction
+                    onTriggered: {
+                        var node = model.createVideoNode(nodeSelector.currentText);
+                        model.flush();
+                        console.log("New Node", nodeSelector.currentText, node);
+                    }
                 }
                 Button {
+                    id: nodeAddButton
                     text: "Add"
+                    action: nodeAddAction
+                }
+                Button {
+                    id: nodeRegistryReload
+                    text: "Reload Registry"
                     onClicked: {
-                        var node = model.createVideoNode(effectSelector.currentText);
-                        model.flush();
-                        console.log("New Node", effectSelector.currentText, node);
+                        NodeRegistry.reload();
                     }
                 }
             }
@@ -144,5 +157,12 @@ ApplicationWindow {
         id: quitAction
         text: "&Quit"
         onTriggered: Qt.quit()
+    }
+
+    Action {
+        id: newNodeAction
+        text: "&New Node"
+        shortcut: ":"
+        onTriggered: nodeSelector.forceActiveFocus()
     }
 }

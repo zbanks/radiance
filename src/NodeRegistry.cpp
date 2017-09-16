@@ -103,7 +103,6 @@ void NodeRegistry::reload() {
             nodeType.nInputs = 2;
         } else if (name == "rgbmask") {
             nodeType.nInputs = 4;
-            qInfo() << name << 4;
         }
         //qInfo() << name << nodeType.name;
 
@@ -126,5 +125,6 @@ void NodeRegistry::reload() {
         m_nodeTypes.insert(name, nodeType);
     }
 
+    qInfo() << "Reloaded NodeRegistry:" << m_nodeTypes.size();
     emit nodeTypesChanged();
 }
