@@ -30,7 +30,7 @@ VideoNodeTile {
                 anchors.fill: parent;
             }
 
-            VideoNodeRender {
+            VideoNodePreview {
                 anchors.fill: parent;
                 id: vnr;
                 videoNodeId: tile.videoNode ? tile.videoNode.id : 0;

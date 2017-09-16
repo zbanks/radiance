@@ -1,46 +1,46 @@
-#include "QQuickVideoNodeRender.h"
+#include "QQuickVideoNodePreview.h"
 #include <QSGImageNode>
 #include <QQuickWindow>
 #include <QOpenGLTexture>
 #include <QOpenGLFramebufferObject>
 #include "main.h"
 
-QQuickVideoNodeRender::QQuickVideoNodeRender()
+QQuickVideoNodePreview::QQuickVideoNodePreview()
     : m_videoNodeId(0)
     , m_context(nullptr)
     , m_window(nullptr) {
     setFlags(QQuickItem::ItemHasContents);
-    connect(this, &QQuickItem::windowChanged, this, &QQuickVideoNodeRender::onWindowChanged);
+    connect(this, &QQuickItem::windowChanged, this, &QQuickVideoNodePreview::onWindowChanged);
 }
 
-void QQuickVideoNodeRender::onWindowChanged(QQuickWindow *window) {
+void QQuickVideoNodePreview::onWindowChanged(QQuickWindow *window) {
     if(m_window != nullptr) disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
     if(window != nullptr)   connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
     m_window = window;
 }
 
-QQuickVideoNodeRender::~QQuickVideoNodeRender() {
+QQuickVideoNodePreview::~QQuickVideoNodePreview() {
 }
 
-int QQuickVideoNodeRender::videoNodeId() {
+int QQuickVideoNodePreview::videoNodeId() {
     return m_videoNodeId;
 }
 
-void QQuickVideoNodeRender::setVideoNodeId(int videoNodeId) {
+void QQuickVideoNodePreview::setVideoNodeId(int videoNodeId) {
     m_videoNodeId = videoNodeId;
     emit videoNodeIdChanged(videoNodeId);
 }
 
-Context *QQuickVideoNodeRender::context() {
+Context *QQuickVideoNodePreview::context() {
     return m_context;
 }
 
-void QQuickVideoNodeRender::setContext(Context *context) {
+void QQuickVideoNodePreview::setContext(Context *context) {
     m_context = context;
     emit contextChanged(context);
 }
 
-QSGNode *QQuickVideoNodeRender::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
+QSGNode *QQuickVideoNodePreview::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
     QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
 
     if (!node) {

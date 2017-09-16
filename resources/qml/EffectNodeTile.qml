@@ -41,7 +41,7 @@ VideoNodeTile {
             CheckerboardBackground {
                 anchors.fill: parent;
             }
-            VideoNodeRender {
+            VideoNodePreview {
                 id: vnr;
                 anchors.fill: parent;
                 context: Globals.context;

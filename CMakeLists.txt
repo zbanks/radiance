@@ -52,7 +52,7 @@ add_library(libradiance
     )
 
 add_executable(radiance WIN32 src/main.cpp
-    src/QQuickVideoNodeRender.cpp
+    src/QQuickVideoNodePreview.cpp
     resources/resources.qrc)
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)

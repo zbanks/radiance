@@ -6,14 +6,14 @@
 #include <QOpenGLTexture>
 #include <QSGTexture>
 
-class QQuickVideoNodeRender : public QQuickItem {
+class QQuickVideoNodePreview : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(Context *context READ context WRITE setContext NOTIFY contextChanged)
     Q_PROPERTY(int videoNodeId READ videoNodeId WRITE setVideoNodeId NOTIFY videoNodeIdChanged)
 
 public:
-    QQuickVideoNodeRender();
-    virtual ~QQuickVideoNodeRender();
+    QQuickVideoNodePreview();
+    virtual ~QQuickVideoNodePreview();
 
     int videoNodeId();
     void setVideoNodeId(int value);

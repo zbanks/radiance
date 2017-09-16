@@ -133,7 +133,7 @@ ApplicationWindow {
                 color: "#000"
                 width: 500
                 height: 500
-                VideoNodeRender {
+                VideoNodePreview {
                     id: vnr
                     anchors.fill: parent
                     context: globalContext
