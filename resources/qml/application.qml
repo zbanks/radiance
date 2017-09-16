@@ -12,7 +12,8 @@ ApplicationWindow {
         id: model;
         onGraphChanged: {
             var changeset = "+" + verticesAdded.length + " -" + verticesRemoved.length + " vertices, ";
-            changeset += "+" + edgesAdded.length + " -" + edgesRemoved.length + " edges";
+            changeset += "+" + edgesAdded.length + " -" + edgesRemoved.length + " edges, ";
+            changeset += "+" + Object.keys(outputsAdded).length + " -" + Object.keys(outputsRemoved).length + " outputs";
             console.log("Graph changed!", changeset);
         }
     }
@@ -150,7 +151,6 @@ ApplicationWindow {
             VideoNodeRender {
                 id: vnr
                 anchors.fill: parent
-                chain: 0
                 videoNodeId: cross.id
             }
             MouseArea {

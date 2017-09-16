@@ -26,11 +26,13 @@ void Context::setModel(Model *model) {
 }
 
 QSize Context::previewSize() {
+    Q_ASSERT(m_hasPreview);
     Q_ASSERT(QThread::currentThread() == thread());
     return m_previewSize;
 }
 
 void Context::setPreviewSize(QSize size) {
+    Q_ASSERT(m_hasPreview);
     Q_ASSERT(QThread::currentThread() == thread());
     if (size != m_previewSize) {
         m_previewSize = size;
@@ -41,12 +43,29 @@ void Context::setPreviewSize(QSize size) {
     }
 }
 
-void Context::previewRenderRequested() {
+QQuickWindow *Context::previewWindow() {
+    return m_previewWindow;
+}
+
+void Context::setPreviewWindow(QQuickWindow *window) {
+    Q_ASSERT(m_hasPreview);
+    Q_ASSERT(QThread::currentThread() == thread());
+    disconnect(m_previewWindow, &QQuickWindow::frameSwapped, this, &Context::onPreviewFrameSwapped);
+    m_previewWindow = window;
+    connect(m_previewWindow, &QQuickWindow::frameSwapped, this, &Context::onPreviewFrameSwapped, Qt::DirectConnection);
+    emit previewWindowChanged(window);
+}
+
+void Context::onPreviewFrameSwapped() {
     Q_ASSERT(m_hasPreview);
     auto modelCopy = m_model->createCopyForRendering();
-    auto result = modelCopy.render(m_previewChain);
-    emit previewRendered(result);
+    m_lastPreviewRender = modelCopy.render(m_previewChain);
     m_model->copyBackRenderStates(m_previewChain, &modelCopy);
+}
+
+GLuint Context::previewTexture(int videoNodeId) {
+    Q_ASSERT(m_hasPreview);
+    return m_lastPreviewRender.value(videoNodeId, 0);
 }
 
 void Context::onRenderRequested() {
