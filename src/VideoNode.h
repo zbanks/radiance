@@ -22,12 +22,7 @@ class Model;
 class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
-<<<<<<< HEAD
     Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged);
-=======
-    Q_PROPERTY(bool ready READ ready NOTIFY readyChanged);
-    Q_PROPERTY(int id READ id CONSTANT);
->>>>>>> modelview
 
 public:
     // Calls to paint() may return 0

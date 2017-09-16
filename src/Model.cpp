@@ -23,7 +23,6 @@ Model::Model()
 Model::~Model() {
 }
 
-<<<<<<< HEAD
 void Model::setChains(QList<QSharedPointer<Chain>> chains) {
     m_chains = chains;
     for (int i=0; i<m_vertices.count(); i++) {
@@ -63,7 +62,8 @@ void Model::disownNode(VideoNode *videoNode) {
             m_outputConnections.remove(outputName);
         }
     }
-=======
+}
+
 VideoNode *Model::createVideoNode(const QString &name) {
     VideoNode *videoNode = nodeRegistry->createNode(name);
     if (!videoNode) {
@@ -74,7 +74,6 @@ VideoNode *Model::createVideoNode(const QString &name) {
     videoNode->setParent(this);
     addVideoNode(videoNode);
     return videoNode;
->>>>>>> modelview
 }
 
 void Model::addVideoNode(VideoNode *videoNode) {

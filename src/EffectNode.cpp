@@ -197,7 +197,7 @@ void EffectNode::setName(QString name) {
 }
 
 void EffectNode::reload() {
-    setReady(false);
+    m_ready = false;
     bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
     Q_ASSERT(result);
 }

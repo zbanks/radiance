@@ -78,20 +78,6 @@ int main(int argc, char *argv[]) {
     timebase = QSharedPointer<Timebase>(new Timebase());
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
 
-    QSize renderSize(300, 300);
-    QList<QSharedPointer<Chain>> chains;
-    chains.append(QSharedPointer<Chain>(new Chain(renderSize)));
-
-    EffectNode * testEffect = new EffectNode();
-    testEffect->setName("test");
-    testEffect->setIntensity(0.7);
-
-    Model * model = new Model();
-    model->addVideoNode(testEffect);
-    model->setChains(chains);
-
-    FramebufferVideoNodeRender *imgRender = new FramebufferVideoNodeRender(renderSize);
-
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
     // Set up output directory
@@ -120,10 +106,14 @@ int main(int argc, char *argv[]) {
     if (parser.isSet(chainOption)) {
         chain = parser.value(chainOption).toInt();
     }
-    FramebufferVideoNodeRender imgRender(renderContext->chainSize(chain));
+    QSize renderSize(128, 128);
+    QList<QSharedPointer<Chain>> chains;
+    chains.append(QSharedPointer<Chain>(new Chain(renderSize)));
+    FramebufferVideoNodeRender imgRender(renderSize);
 
     // Set up Model & common effects
     Model model;
+    model.setChains(chains);
     VideoNode *onblackEffect = model.createVideoNode("onblack:1.0");
 
     VideoNode *baseEffect = nullptr;

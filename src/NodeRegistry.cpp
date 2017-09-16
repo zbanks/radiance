@@ -1,6 +1,6 @@
 #include "NodeRegistry.h"
 #include "EffectNode.h"
-//#include "ImageNode.h"
+#include "ImageNode.h"
 
 #include <QDir>
 #include <QDebug>
