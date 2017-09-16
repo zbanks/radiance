@@ -27,6 +27,8 @@ public:
 
     // Create node from string; resulting VideoNode is caller-owned
     VideoNode *createNode(const QString &name);
+    // Inverse of `createNode`
+    QString serializeNode(VideoNode *node);
 
 public slots:
     QMap<QString, VideoNodeType> nodeTypes();

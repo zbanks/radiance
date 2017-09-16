@@ -1,6 +1,7 @@
 #include "Model.h"
 #include "EffectNode.h"
 #include "main.h"
+#include <QJsonArray>
 
 QVariantMap Edge::toVariantMap() const {
     QVariantMap result;
@@ -460,3 +461,74 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     }
     return result;
 }
+
+/*
+void Model::serialize(QTextStream *output) {
+    for (auto vertex : m_vertices) {
+        *output << "v " << vertex->id() << " " << nodeRegistry->serializeNode(vertex) << "\n";
+    }
+    for (auto edge : m_edges) {
+        *output << "e " << edge.fromVertex->id() <<
+                    " " << edge.toVertex->id() <<
+                    " " << edge.toInput << "\n";
+    }
+}
+*/
+
+QJsonObject Model::serialize() {
+    QJsonObject jsonOutput;
+
+    QJsonObject jsonVertices;
+    for (auto vertex : m_vertices) {
+        jsonVertices[QString::number(vertex->id())] = nodeRegistry->serializeNode(vertex);
+    }
+    jsonOutput["vertices"] = jsonVertices;
+
+    QJsonArray jsonEdges;
+    for (auto edge : m_edges) {
+        QJsonObject jsonEdge;
+        jsonEdge["fromVertex"] = QString::number(edge.fromVertex->id());
+        jsonEdge["toVertex"] = QString::number(edge.toVertex->id());
+        jsonEdge["toInput"] = edge.toInput;
+        jsonEdges.append(jsonEdge);
+    }
+    jsonOutput["edges"] = jsonEdges;
+
+    return jsonOutput;
+}
+
+void Model::deserialize(const QJsonObject &data) {
+    //TODO: needs error handling
+
+    QMap<QString, VideoNode *> addedVertices;
+    QJsonObject jsonVertices = data["vertices"].toObject();
+    for (auto vertexName : jsonVertices.keys()) {
+        VideoNode *vertex = createVideoNode(jsonVertices[vertexName].toString());
+        qInfo() << vertex << jsonVertices[vertexName];
+        addedVertices.insert(vertexName, vertex);
+    }
+
+    QJsonArray jsonEdges = data["edges"].toArray();
+    for (auto _jsonEdge : jsonEdges) {
+        QJsonObject jsonEdge = _jsonEdge.toObject();
+        VideoNode *fromVertex = addedVertices.value(jsonEdge["fromVertex"].toString());
+        VideoNode *toVertex = addedVertices.value(jsonEdge["toVertex"].toString());
+        int toInput = jsonEdge["toInput"].toInt();
+        addEdge(fromVertex, toVertex, toInput);
+    }
+}
+
+/*
+#include <QFile>
+#include <QByteArray>
+#include <QJsonDocument>
+
+void Model::testDes() {
+    QFile f("deck.json");
+    f.open(QIODevice::ReadOnly);
+    QByteArray data = f.readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    deserialize(doc.object());
+    flush();
+}
+*/

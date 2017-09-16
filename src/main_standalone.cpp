@@ -152,6 +152,7 @@ int main(int argc, char *argv[]) {
         model.addEdge(baseEffect, effect, 0);
         model.addEdge(effect, onblackEffect, 0);
         model.flush();
+        qInfo() << model.serialize();
 
         outputDir.mkdir(nodeName);
         for (int i = 0; i <= 100; i++) {

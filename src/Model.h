@@ -5,6 +5,7 @@
 #include <QList>
 #include <QVector>
 #include <QVariantList>
+#include <QJsonObject>
 
 struct Edge {
     VideoNode *fromVertex;
@@ -123,6 +124,9 @@ public slots:
     // you must use one of its chains.
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
+
+    QJsonObject serialize();
+    void deserialize(const QJsonObject &data);
 
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)

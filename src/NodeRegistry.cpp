@@ -54,6 +54,22 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
     }
 }
 
+QString NodeRegistry::serializeNode(VideoNode *node) {
+    //TODO: this should use JSON and delegate to each VideoNode type
+    EffectNode * effectNode = qobject_cast<EffectNode *>(node);
+    if (effectNode) {
+        return QString("%1:%2").arg(effectNode->name(), QString::number(effectNode->intensity()));
+    }
+
+    ImageNode * imageNode = qobject_cast<ImageNode *>(node);
+    if (imageNode) {
+        return imageNode->imagePath();
+    }
+
+    qInfo() << "Unable to serialize unknown node:" << node;
+    return QString("unknown");
+}
+
 QMap<QString, VideoNodeType> NodeRegistry::nodeTypes() {
     return m_nodeTypes;
 }
