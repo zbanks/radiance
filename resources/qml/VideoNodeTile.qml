@@ -96,6 +96,7 @@ FocusScope {
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].dragging = true;
             dragCC.tiles[i].z = 1;
+            dragCC.tiles[i].opacity = 0.5;
         }
     }
 
@@ -103,6 +104,7 @@ FocusScope {
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].dragging = false;
             dragCC.tiles[i].z = 0;
+            dragCC.tiles[i].opacity = 1;
         }
 
         var t = Drag.target;
@@ -284,6 +286,17 @@ FocusScope {
                 period: 0.5
             }
             duration: 500
+        }
+    }
+
+    Behavior on opacity {
+        NumberAnimation {
+            easing {
+                type: Easing.InOutQuad
+                amplitude: 1.0
+                period: 0.5
+            }
+            duration: 100
         }
     }
 
