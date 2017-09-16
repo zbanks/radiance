@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
     parser.addOption(onlyNodeOption);
     const QCommandLineOption backgroundNodeOption(QStringList() << "b" << "background-node", "Use this node string for the background", "node");
     parser.addOption(backgroundNodeOption);
-    const QCommandLineOption chainOption(QStringList() << "c" << "chain", "Render using this chain ID", "id");
-    parser.addOption(chainOption);
+    const QCommandLineOption sizeOption(QStringList() << "s" << "size", "Render using this size [128x128]", "wxh");
+    parser.addOption(sizeOption);
     //TODO:
     //const QCommandLineOption treeOption(QStringList() << "t" << "tree", "Render this node tree", "nodes");
     //parser.addOption(treeOption);
@@ -102,13 +102,20 @@ int main(int argc, char *argv[]) {
     generateHtml(outputDir, nodeNames);
 
     // Set up output chain & FBO renderer
-    int chain = 2;
-    if (parser.isSet(chainOption)) {
-        chain = parser.value(chainOption).toInt();
-    }
     QSize renderSize(128, 128);
+    if (parser.isSet(sizeOption)) {
+        QString rawSize = parser.value(sizeOption);
+        int x = rawSize.indexOf('x');
+        if (x >= 0) {
+            renderSize.rwidth() = rawSize.mid(x + 1).toInt();
+            renderSize.rheight() = rawSize.left(x).toInt();
+        }
+        //TODO: handle failure
+    }
     QList<QSharedPointer<Chain>> chains;
-    chains.append(QSharedPointer<Chain>(new Chain(renderSize)));
+    QSharedPointer<Chain> chain(new Chain(renderSize));
+    chains.append(chain);
+
     FramebufferVideoNodeRender imgRender(renderSize);
 
     // Set up Model & common effects
@@ -152,7 +159,10 @@ int main(int argc, char *argv[]) {
                 effectNode->setIntensity(i / 50.);
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
 
-            auto rendering = renderContext->render(&model, chain);
+            auto modelCopy = model.createCopyForRendering();
+            auto rendering = modelCopy.render(chain);
+            model.copyBackRenderStates(chain, &modelCopy);
+
             auto outputTextureId = rendering.value(onblackEffect->id(), 0);
             if (outputTextureId != 0) {
                 QImage img = imgRender.render(outputTextureId);
