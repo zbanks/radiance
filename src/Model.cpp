@@ -46,23 +46,6 @@ void Model::connectOutput(QString outputName, VideoNode *videoNode) {
     }
 }
 
-//void Model::pruneOutputConnections() {
-//    QSet<VideoNode *> vs;
-//    for (int i=0; i<m_vertices.count(); i++) {
-//        vs.insert(m_vertices.at(i);
-//    }
-//
-//    auto outputNames = m_outputConnections.keys()
-//
-//    for (int i=0; i<outputNames.count(); i++) {
-//        auto outputName = outputNames.at(i);
-//        auto vn = m_outputConnections.value(outputName);
-//        if (!vs.contains(vn)) {
-//            m_outputConnections.delete(outputName);
-//        }
-//    }
-//}
-
 void Model::prepareNode(VideoNode *videoNode) {
     videoNode->setChains(m_chains);
     connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);

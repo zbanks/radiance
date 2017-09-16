@@ -23,6 +23,9 @@ public slots:
     QList<Output *> outputs();
     void setOutputs(QList<Output *> outputs);
 
+    // Call this method to render the preview chain
+    void previewRenderRequested();
+
 protected slots:
     void onRenderRequested();
 
@@ -30,6 +33,12 @@ signals:
     void previewSizeChanged(QSize size);
     void outputsChanged(QList<Output *> outputs);
     void modelChanged(Model *model);
+
+    // This signal is emitted
+    // once the preview has finished rendering.
+    // It should be DirectConnected to your
+    // preview's display() slot.
+    void previewRendered(QMap<int, GLuint>);
 
 protected:
     void chainsChanged();

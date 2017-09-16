@@ -7,7 +7,7 @@ Context::Context(bool hasPreview)
     : m_hasPreview(hasPreview) {
 
     if (m_hasPreview) {
-        m_previewChain = QSharedPointer<Chain>(new Chain(m_previewSize)); // TODO setSize
+        m_previewChain = QSharedPointer<Chain>(new Chain(m_previewSize));
     }
 }
 
@@ -39,6 +39,14 @@ void Context::setPreviewSize(QSize size) {
         chainsChanged();
         emit previewSizeChanged(size);
     }
+}
+
+void Context::previewRenderRequested() {
+    Q_ASSERT(m_hasPreview);
+    auto modelCopy = m_model->createCopyForRendering();
+    auto result = modelCopy.render(m_previewChain);
+    emit previewRendered(result);
+    m_model->copyBackRenderStates(m_previewChain, &modelCopy);
 }
 
 void Context::onRenderRequested() {
