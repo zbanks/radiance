@@ -237,7 +237,7 @@ void EffectNodeOpenGLWorker::initialize() {
     if(!result) {
         return;
     }
-
+    glFlush();
     emit initialized();
 }
 

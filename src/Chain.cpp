@@ -61,8 +61,10 @@ void ChainOpenGLWorker::createNoiseTexture() {
     auto byteCount = m_p->size().width() * m_p->size().height() * 4;
     auto data = std::make_unique<uint8_t[]>(byteCount);
     qsrand(1);
-    std::generate(&data[0],&data[0] + byteCount,qrand);
+    std::generate(&data[0], &data[0] + byteCount, qrand);
     m_p->m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+
+    glFlush();
 }
 
 void ChainOpenGLWorker::createBlankTexture() {

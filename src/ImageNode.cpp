@@ -27,7 +27,8 @@ ImageNode::ImageNode(const ImageNode &other)
     , m_openGLWorker(other.m_openGLWorker)
     , m_currentTexture(other.m_currentTexture)
     , m_currentTextureIdx(other.m_currentTextureIdx)
-    , m_frameTextures(other.m_frameTextures) {
+    , m_frameTextures(other.m_frameTextures)
+    , m_ready(other.m_ready) {
 }
 
 ImageNode::~ImageNode() {
@@ -99,13 +100,14 @@ void ImageNodeOpenGLWorker::initialize() {
     makeCurrent();
     bool result = loadImage(m_p->m_imagePath);
     if (!result) {
+        qWarning() << "Can't load image!" << m_p->m_imagePath;
         return;
     }
 
     // Set the current frame to 0
     m_p->m_currentTexture = m_p->m_frameTextures.at(0);
     m_p->m_currentTextureIdx = 0;
-
+    glFlush();
     emit initialized();
 }
 
@@ -172,4 +174,6 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
 
     // Now that it's been loaded into OpenGL delete it.
     ilDeleteImages(1, &imageInfo);
+
+    return true;
 }

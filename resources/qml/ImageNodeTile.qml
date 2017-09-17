@@ -33,6 +33,7 @@ VideoNodeTile {
             VideoNodePreview {
                 anchors.fill: parent;
                 id: vnr;
+                context: Globals.context;
                 videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
             }
         }
