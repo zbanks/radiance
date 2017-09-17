@@ -12,6 +12,7 @@ Rectangle {
     color: "transparent"
 
     Flickable {
+        id: flickable
         anchors.fill: parent
         contentWidth: view.width;
         contentHeight: view.height;
@@ -20,6 +21,8 @@ Rectangle {
         Item {
             property var lastClickedTile
             property string currentOutputName: "Screen"
+            width: Math.max(view.width, flickable.width)
+            height: Math.max(view.height, flickable.height)
 
             View {
                 id: view
@@ -29,13 +32,19 @@ Rectangle {
                     "ImageNode": "ImageNodeTile",
                     "": "VideoNodeTile"
                 }
+                x: (parent.width - width) / 2
+                y: (parent.height - height) / 2
+
+                Behavior on x { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
+                Behavior on y { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
+
                 /*
                 Rectangle {
                     opacity: 0.5
                     color: "red"
                     anchors.fill: parent
                 }
-                */
+                //*/
             }
         }
     }

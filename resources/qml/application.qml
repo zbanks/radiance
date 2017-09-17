@@ -79,73 +79,60 @@ ApplicationWindow {
         model.flush();
     }
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent;
 
-        ColumnLayout {
+        RowLayout {
+            Layout.fillWidth: true;
 
-            RowLayout {
-                Layout.fillWidth: true;
-
-                // This is kind of crappy, but it was easy 
-                ComboBox {
-                    id: nodeSelector;
-                    model: Object.keys(NodeRegistry.nodeTypes);
-                    editable: true;
-                    Layout.preferredWidth: 300;
-                    onAccepted: nodeAddAction.trigger()
-                }
-                Action {
-                    id: nodeAddAction
-                    onTriggered: {
-                        var node = model.createVideoNode(nodeSelector.currentText);
-                        model.flush();
-                        console.log("New Node", nodeSelector.currentText, node);
-                    }
-                }
-                Button {
-                    id: nodeAddButton
-                    text: "Add"
-                    action: nodeAddAction
-                }
-                Button {
-                    id: nodeRegistryReload
-                    text: "Reload Registry"
-                    onClicked: {
-                        NodeRegistry.reload();
-                    }
+            // This is kind of crappy, but it was easy 
+            ComboBox {
+                id: nodeSelector;
+                model: Object.keys(NodeRegistry.nodeTypes);
+                editable: true;
+                Layout.preferredWidth: 300;
+                onAccepted: nodeAddAction.trigger()
+            }
+            Action {
+                id: nodeAddAction
+                onTriggered: {
+                    var node = model.createVideoNode(nodeSelector.currentText);
+                    model.flush();
+                    console.log("New Node", nodeSelector.currentText, node);
                 }
             }
-
-            Graph {
-                model: model
+            Button {
+                id: nodeAddButton
+                text: "Add"
+                action: nodeAddAction
+            }
+            Button {
+                id: nodeRegistryReload
+                text: "Reload Registry"
+                onClicked: {
+                    NodeRegistry.reload();
+                }
             }
         }
 
-        ColumnLayout {
-            Waveform {
-                width: 500
+        Rectangle {
+            Layout.fillWidth: true;
+            Layout.fillHeight: true;
+            color: "#333";
+
+            Graph {
+                model: model
+                anchors.fill: parent
             }
-            Spectrum {
-                width: 500
-            }
-            Rectangle {
-                color: "#000"
-                width: 500
-                height: 500
-                VideoNodePreview {
-                    id: vnr
-                    anchors.fill: parent
-                    context: globalContext
-                    videoNodeId: cross.id
+
+            RowLayout {
+                Waveform {
+                    width: 500
+                    opacity: .9
                 }
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        vnr.update()
-                        model.removeVideoNode(en4);
-                        model.flush();
-                    }
+                Spectrum {
+                    width: 500
+                    opacity: .9
                 }
             }
         }

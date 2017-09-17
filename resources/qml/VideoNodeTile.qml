@@ -208,7 +208,6 @@ FocusScope {
                 } else {
                     tile.parent.select(tiles);
                 }
-                console.log(tile.parent.parent);
                 tile.parent.parent.lastClickedTile = tile;
             }
         }
