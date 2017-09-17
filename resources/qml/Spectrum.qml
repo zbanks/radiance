@@ -26,7 +26,7 @@ GraphicalDisplay {
             float mag = (0.5 - uv.y) + 0.5;
             float d = (texture1D(iSpectrum, freq).r - mag) * 90.;
             float a = smoothstep(0., 1., d);
-            float gb = 0.5 * clamp(0., 1., d / 30.);
+            float gb = 0.5 * clamp(d / 30., 0., 1.);
             gl_FragColor = composite(gl_FragColor, vec4(1., gb, gb, a));
             gl_FragColor.rgb *= gl_FragColor.a;
         }"
