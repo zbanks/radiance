@@ -60,8 +60,20 @@ void ChainOpenGLWorker::createNoiseTexture() {
 
     auto byteCount = m_p->size().width() * m_p->size().height() * 4;
     auto data = std::make_unique<uint8_t[]>(byteCount);
+
     qsrand(1);
-    std::generate(&data[0], &data[0] + byteCount, qrand);
+    for (int i=0; i<m_p->size().width(); i++) {
+        qsrand(i + qrand());
+        for(int j=0; j<m_p->size().height(); j++) {
+            auto k = i * m_p->size().height() + j;
+            data[4*k+0] = qrand();
+            data[4*k+1] = qrand();
+            data[4*k+2] = qrand();
+            data[4*k+3] = qrand();
+        }
+    }
+
+    //std::generate(&data[0], &data[0] + byteCount, qrand);
     m_p->m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 
     glFlush();
