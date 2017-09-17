@@ -11,6 +11,7 @@ QQuickVideoNodePreview::QQuickVideoNodePreview()
     , m_window(nullptr) {
     setFlags(QQuickItem::ItemHasContents);
     connect(this, &QQuickItem::windowChanged, this, &QQuickVideoNodePreview::onWindowChanged);
+    onWindowChanged(window());
 }
 
 void QQuickVideoNodePreview::onWindowChanged(QQuickWindow *window) {

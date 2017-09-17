@@ -2,10 +2,6 @@
 
 #include "Chain.h"
 
-// This class is pretty fucked.
-// It really needs to copy at least some of itself before rendering
-// instead of just trying to lock everywhere and possibly getting deleted
-
 class Output : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
