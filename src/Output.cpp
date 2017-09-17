@@ -42,6 +42,10 @@ void Output::setName(QString name) {
     if (changed) emit nameChanged(name);
 }
 
+void Output::requestRender() {
+    emit renderRequested(this);
+}
+
 // This method is thread-safe
 void Output::renderReady(GLuint texture) {
     QMutexLocker locker(&m_renderLock);

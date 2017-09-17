@@ -13,6 +13,7 @@ public:
     void display(GLuint textureId) override {
         m_p->m_textureId = textureId;
     }
+
 protected:
     QQuickOutputItem *m_p;
 };
@@ -33,11 +34,11 @@ QQuickOutputItem::~QQuickOutputItem() {
 void QQuickOutputItem::onWindowChanged(QQuickWindow *window) {
     if(m_window != nullptr) {
         disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
-        disconnect(m_window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::renderRequested);
+        disconnect(m_window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender);
     }
     if(window != nullptr) {
         connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
-        connect(window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::renderRequested, Qt::DirectConnection);
+        connect(window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender, Qt::DirectConnection);
     }
     m_window = window;
 }

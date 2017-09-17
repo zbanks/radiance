@@ -76,8 +76,7 @@ GLuint Context::previewTexture(int videoNodeId) {
     return m_lastPreviewRender.value(videoNodeId, 0);
 }
 
-void Context::onRenderRequested() {
-    auto output = qobject_cast<Output *>(sender());
+void Context::onRenderRequested(Output *output) {
     auto name = output->name();
     auto modelCopy = m_model->createCopyForRendering();
     auto vnId = modelCopy.outputs.value(name, 0);
@@ -111,6 +110,25 @@ void Context::chainsChanged() {
 QList<Output *> Context::outputs() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_outputs;
+}
+
+QVariantList Context::outputsQml() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    QVariantList outputsVL;
+    for (int i=0; i<m_outputs.count(); i++) outputsVL.append(QVariant::fromValue(m_outputs.at(i)));
+    return outputsVL;
+}
+
+void Context::setOutputsQml(QVariantList outputsVL) {
+    QList<Output *> outputs;
+    for (int i=0; i<outputsVL.count(); i++) {
+        if (outputsVL.at(i).canConvert<Output *>()) {
+            outputs.append(outputsVL.at(i).value<Output *>());
+        } else {
+            qWarning() << "Bad entry in output list:" << outputsVL.at(i);
+        }
+    }
+    setOutputs(outputs); // TODO this emits a non-QML compatible signal
 }
 
 void Context::setOutputs(QList<Output *> outputs) {

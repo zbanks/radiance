@@ -8,7 +8,7 @@
 class Context : public QObject {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
-    Q_PROPERTY(QList<Output *> outputs READ outputs WRITE setOutputs NOTIFY outputsChanged)
+    Q_PROPERTY(QVariantList outputs READ outputsQml WRITE setOutputsQml NOTIFY outputsChanged)
     Q_PROPERTY(QSize previewSize READ previewSize WRITE setPreviewSize NOTIFY previewSizeChanged)
     Q_PROPERTY(QQuickWindow *previewWindow READ previewWindow WRITE setPreviewWindow NOTIFY previewWindowChanged)
 
@@ -26,13 +26,15 @@ public slots:
 
     QList<Output *> outputs();
     void setOutputs(QList<Output *> outputs);
+    QVariantList outputsQml();
+    void setOutputsQml(QVariantList outputs);
 
     // Use this method to retrieve
     // rendered preview textures
     GLuint previewTexture(int videoNodeId);
 
 protected slots:
-    void onRenderRequested();
+    void onRenderRequested(Output *output);
     void onBeforeSynchronizing();
 
 signals:

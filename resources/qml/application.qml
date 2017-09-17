@@ -120,6 +120,19 @@ ApplicationWindow {
             Layout.fillHeight: true;
             color: "#333";
 
+            OutputItem {
+                size: "1024x768"
+
+                Component.onCompleted: {
+                    output.name = "Screen";
+                    console.log(output);
+                    globalContext.outputs = [output];
+                }
+
+                height: 600;    
+                width: 600;
+            }
+
             Graph {
                 model: model
                 anchors.fill: parent

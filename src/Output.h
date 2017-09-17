@@ -35,12 +35,20 @@ public:
     // This method runs with the renderLock claimed.
     virtual void display(GLuint texture) = 0;
 
+public slots:
+    // Convenience function to request a render
+    // from a signal that takes no arguments
+    void requestRender();
+
 signals:
     // This signal is emitted when this output wants something to be rendered
     // It is recommended to only make direct connections
     // to this signal, synchronously render,
     // and directly call display when done.
-    void renderRequested();
+    // It should be called with `this` as an argument
+    // so that the receiver knows where the render request
+    // is coming from
+    void renderRequested(Output *output);
 
     void chainChanged(QSharedPointer<Chain> chain);
     void nameChanged(QString name);
