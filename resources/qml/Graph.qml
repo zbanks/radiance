@@ -4,12 +4,10 @@ import QtQuick.Controls 1.4
 import QtGraphicalEffects 1.0
 import radiance 1.0
 
-Rectangle {
+Item {
     property alias model: view.model
     Layout.fillWidth: true;
     Layout.fillHeight: true;
-    border.width: 1
-    color: "transparent"
 
     Flickable {
         id: flickable

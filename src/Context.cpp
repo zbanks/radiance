@@ -5,7 +5,8 @@
 
 Context::Context(bool hasPreview) 
     : m_hasPreview(hasPreview)
-    , m_previewSize(QSize(300, 300)) {
+    , m_previewSize(QSize(300, 300))
+    , m_previewWindow(nullptr) {
 
     if (m_hasPreview) {
         m_previewChain = QSharedPointer<Chain>(new Chain(m_previewSize));
@@ -57,9 +58,9 @@ void Context::setPreviewWindow(QQuickWindow *window) {
     Q_ASSERT(QThread::currentThread() == thread());
     {
         QMutexLocker locker(&m_previewLock);
-        disconnect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing);
+        if (m_previewWindow != nullptr) disconnect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing);
         m_previewWindow = window;
-        connect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing, Qt::DirectConnection);
+        if (m_previewWindow != nullptr) connect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing, Qt::DirectConnection);
     }
     emit previewWindowChanged(window);
 }

@@ -13,6 +13,7 @@
 #include "Output.h"
 #include "QQuickVideoNodePreview.h"
 #include "QQuickOutputItem.h"
+#include "QQuickOutputWindow.h"
 #include "VideoNode.h"
 #include "View.h"
 #include "main.h"
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
     qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
+    qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
 

@@ -8,6 +8,7 @@ import "."
 ApplicationWindow {
     id: window;
     visible: true;
+    color: "#333";
 
     Context {
         id: globalContext;
@@ -51,6 +52,24 @@ ApplicationWindow {
         id: cross
         name: "greenscreen"
         inputCount: 2
+    }
+
+    OutputWindow {
+        id: outputWindow
+        window.visible: screenWidget.outputVisibleChecked
+        screen: screenWidget.screenSelected
+        window.color: "black"
+
+        OutputItem {
+            parent: outputWindow.window.contentItem
+            size: "1024x768"
+            anchors.fill: parent
+
+            Component.onCompleted: {
+                output.name = "Screen"
+                globalContext.outputs = [output];
+            }
+        }
     }
 
     Component.onCompleted: {
@@ -113,25 +132,16 @@ ApplicationWindow {
                     NodeRegistry.reload();
                 }
             }
+
+            ScreenWidget {
+                id: screenWidget
+                outputWindow: outputWindow
+            }
         }
 
-        Rectangle {
+        Item {
             Layout.fillWidth: true;
             Layout.fillHeight: true;
-            color: "#333";
-
-            OutputItem {
-                size: "1024x768"
-
-                Component.onCompleted: {
-                    output.name = "Screen";
-                    console.log(output);
-                    globalContext.outputs = [output];
-                }
-
-                height: 600;    
-                width: 600;
-            }
 
             Graph {
                 model: model
