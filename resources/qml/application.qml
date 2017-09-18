@@ -61,19 +61,28 @@ ApplicationWindow {
         window.color: "black"
 
         OutputItem {
+            id: outputItem
             parent: outputWindow.window.contentItem
             size: "1024x768"
             anchors.fill: parent
 
             Component.onCompleted: {
                 output.name = "Screen"
-                globalContext.outputs = [output];
             }
         }
     }
 
+    OutputImageSequence {
+        id: outputImageSequence
+        name: "ImageSequence"
+        size: "500x500"
+        fps: 30;
+        enabled: outputImageSequenceCheckbox.checked;
+    }
+
     Component.onCompleted: {
         Globals.context = globalContext;
+        globalContext.outputs = [outputItem.output, outputImageSequence];
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
         model.addVideoNode(en);
@@ -137,6 +146,30 @@ ApplicationWindow {
                 id: screenWidget
                 outputWindow: outputWindow
             }
+
+            ComboBox {
+                id: outputSelector;
+                function outputNames() {
+                    var o = globalContext.outputs;
+                    var a = [];
+                    for (var i=0; i<o.length; i++) {
+                        a.push(o[i].name);
+                    }
+                    return a;
+                }
+                model: outputNames()
+            }
+
+            CheckBox {
+                id: outputImageSequenceCheckbox
+                text: "Save to disk"
+            }
+            Button {
+                text: "Stop saving to disk"
+                onClicked: {
+                    outputImageSequence.stop();
+                }
+            }
         }
 
         Item {
@@ -145,6 +178,7 @@ ApplicationWindow {
 
             Graph {
                 model: model
+                currentOutputName: outputSelector.currentText
                 anchors.fill: parent
             }
 

@@ -44,6 +44,7 @@ add_library(libradiance
     src/View.cpp
     src/Chain.cpp
     src/Context.cpp
+    src/OutputImageSequence.cpp
     src/liblux/lux.c
     src/liblux/crc.c
     BTrack/src/BTrack.c

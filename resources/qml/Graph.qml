@@ -6,6 +6,7 @@ import radiance 1.0
 
 Item {
     property alias model: view.model
+    property alias currentOutputName: viewWrapper.currentOutputName
     Layout.fillWidth: true;
     Layout.fillHeight: true;
 
@@ -17,8 +18,9 @@ Item {
         clip: true;
 
         Item {
+            id: viewWrapper
             property var lastClickedTile
-            property string currentOutputName: "Screen"
+            property string currentOutputName: ""
             width: Math.max(view.width, flickable.width)
             height: Math.max(view.height, flickable.height)
 

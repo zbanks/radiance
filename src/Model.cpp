@@ -41,6 +41,7 @@ QMap<QString, VideoNode *> Model::outputConnections() const {
 }
 
 void Model::connectOutput(QString outputName, VideoNode *videoNode) {
+    if (outputName.isEmpty()) return;
     if (videoNode == nullptr) {
         m_outputConnections.remove(outputName);
     } else if (m_vertices.contains(videoNode)) {
