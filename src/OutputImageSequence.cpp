@@ -1,31 +1,69 @@
 #include "OutputImageSequence.h"
 #include <QTimer>
+#include <QOpenGLFramebufferObject>
+#include <QOpenGLTextureBlitter>
+#include <QDir>
 
 class OutputImageSequenceWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    OutputImageSequenceWorker(OutputImageSequence *p, int frameDelay, QString filename)
+    OutputImageSequenceWorker(OutputImageSequence *p, int frameDelay, QString filename, QSize size)
         : m_p(p)
+        , m_size(size)
         , OpenGLWorker(p->m_context)
         , m_filename(filename)
         , m_frameDelay(frameDelay) {
     }
 
     void display(GLuint textureId) {
-        qDebug() << "Display" << textureId;
+        m_fbo->bind();
+        glClearColor(0, 0, 0, 1); // Replace with 0, 0, 0, 0 to get transparent images
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        if (textureId != 0) {
+            m_blitter->bind();
+
+            const QRect targetRect(QPoint(0, 0), m_fbo->size());
+            const QMatrix4x4 target = QOpenGLTextureBlitter::targetTransform(targetRect, targetRect);
+            m_blitter->blit(textureId, target, QOpenGLTextureBlitter::OriginBottomLeft);
+
+            m_blitter->release();
+        }
+        m_fbo->release();
+        QString filename = m_filename + QString().sprintf("/%06d.png", m_index++);
+        if (!m_fbo->toImage().save(filename)) {
+            qWarning() << "Failed to write"  << filename;
+        }
     }
 
 public slots:
     void start() {
+        makeCurrent();
         m_timer = QSharedPointer<QTimer>(new QTimer(this));
+        m_fbo = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(m_size));
+        m_blitter = QSharedPointer<QOpenGLTextureBlitter>(new QOpenGLTextureBlitter());
+        m_blitter->create();
+
+        QDir(m_filename).removeRecursively();
+        if (!QDir().mkdir(m_filename)) {
+            qWarning() << "Could not create directory" << m_filename;
+            return;
+        }
+        m_index = 0;
+
         m_timer->setInterval(m_frameDelay);
         connect(m_timer.data(), &QTimer::timeout, this, &OutputImageSequenceWorker::onTimeout);
         m_timer->start();
     }
 
     void stop() {
-        m_timer->stop();
+        m_timer = QSharedPointer<QTimer>(nullptr);
+        m_fbo = QSharedPointer<QOpenGLFramebufferObject>(nullptr);
+        m_blitter = QSharedPointer<QOpenGLTextureBlitter>(nullptr);
         emit stopped();
     }
 
@@ -42,7 +80,11 @@ protected:
     OutputImageSequence *m_p;
     QString m_filename;
     int m_frameDelay;
+    QSize m_size;
     QSharedPointer<QTimer> m_timer;
+    QSharedPointer<QOpenGLFramebufferObject> m_fbo;
+    QSharedPointer<QOpenGLTextureBlitter> m_blitter;
+    int m_index;
 };
 
 OutputImageSequence::OutputImageSequence()
@@ -67,7 +109,7 @@ void OutputImageSequence::setEnabled(bool enabled) {
         if (m_chain->size() != m_size) {
             setChain(QSharedPointer<Chain>(new Chain(m_size)));
         }
-        m_worker = QSharedPointer<OutputImageSequenceWorker>(new OutputImageSequenceWorker(this, m_frameDelay, m_filename));
+        m_worker = QSharedPointer<OutputImageSequenceWorker>(new OutputImageSequenceWorker(this, m_frameDelay, m_filename, m_size));
         bool result = QMetaObject::invokeMethod(m_worker.data(), "start");
         Q_ASSERT(result);
 

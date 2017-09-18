@@ -76,7 +76,7 @@ ApplicationWindow {
         id: outputImageSequence
         name: "ImageSequence"
         size: "500x500"
-        fps: 30;
+        fps: 60;
         enabled: outputImageSequenceCheckbox.checked;
     }
 
