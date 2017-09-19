@@ -115,6 +115,7 @@ void NodeRegistry::reload() {
         // TODO: Get this information in a real way
         if (name == "greenscreen" ||
             name == "crossfader" ||
+            name == "uvmap" ||
             name == "composite") {
             nodeType.nInputs = 2;
         } else if (name == "rgbmask") {
