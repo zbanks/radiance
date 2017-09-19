@@ -2,8 +2,6 @@
 
 #include "VideoNode.h"
 #include "OpenGLWorker.h"
-#include <QOpenGLFunctions>
-#include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include <QMutex>
 #include <QTimer>
@@ -74,20 +72,14 @@ signals:
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
-    QVector<GLuint> m_frameTextures;
-
-    // We keep both the textre and texture idx to avoid having
-    // to look up m_currentTextureIdx in m_frameTextures in texture()
-    // which would involve taking out a lock to guard against
-    // m_frameTextures being modified, and we need to take a lock
-    // out in periodic() to increment m_ticksToNextFrame
-    GLuint m_currentTexture;
-    GLuint m_currentTextureIdx;
+    QVector<int> m_frameDelays; // milliseconds
+    QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures;
+    QSharedPointer<QOpenGLTexture> m_currentTexture;
+    int m_currentTextureIdx;
 
     QString m_imagePath;
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
-    uint m_ticksToNextFrame;
     QTimer m_periodic;
     bool m_ready;
 };

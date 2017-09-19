@@ -1,19 +1,15 @@
 #include "ImageNode.h"
-#include <IL/il.h>
-#include <IL/ilu.h>
-#include <IL/ilut.h>
-#include <memory>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QOpenGLFramebufferObject>
+#include <QImageReader>
 #include "main.h"
 
 static bool ilInitted = false;
 
 ImageNode::ImageNode()
     : m_openGLWorker(new ImageNodeOpenGLWorker(this))
-    , m_ticksToNextFrame(0)
     , m_ready(false) {
 
     m_periodic.setInterval(100);
@@ -25,9 +21,10 @@ ImageNode::ImageNode()
 ImageNode::ImageNode(const ImageNode &other)
     : VideoNode(other)
     , m_openGLWorker(other.m_openGLWorker)
+    , m_frameTextures(other.m_frameTextures)
     , m_currentTexture(other.m_currentTexture)
     , m_currentTextureIdx(other.m_currentTextureIdx)
-    , m_frameTextures(other.m_frameTextures)
+    , m_imagePath(other.m_imagePath)
     , m_ready(other.m_ready) {
 }
 
@@ -47,9 +44,10 @@ void ImageNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPo
 void ImageNode::periodic() {
     Q_ASSERT(QThread::currentThread() == thread());
 
-    // Lock this because we need to adjust the frames
+    // Lock this because we need to use m_frameTextures
     QMutexLocker locker(&m_stateLock);
 
+    // TODO: actually use m_frameDelays
     m_currentTextureIdx = (++m_currentTextureIdx) % m_frameTextures.size();
     m_currentTexture = m_frameTextures.at(m_currentTextureIdx);
 }
@@ -79,8 +77,8 @@ QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
 }
 
 GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
-    if (!m_ready) return 0;
-    return m_currentTexture;
+    if (!m_ready || !m_currentTexture) return 0;
+    return m_currentTexture->textureId();
 }
 
 void ImageNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
@@ -97,6 +95,9 @@ ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode *p)
 }
 
 void ImageNodeOpenGLWorker::initialize() {
+    // Lock this because we need to use m_frameTextures
+    QMutexLocker locker(&m_p->m_stateLock);
+
     makeCurrent();
     bool result = loadImage(m_p->m_imagePath);
     if (!result) {
@@ -105,9 +106,8 @@ void ImageNodeOpenGLWorker::initialize() {
     }
 
     // Set the current frame to 0
-    m_p->m_currentTexture = m_p->m_frameTextures.at(0);
     m_p->m_currentTextureIdx = 0;
-    glFlush();
+    m_p->m_currentTexture = m_p->m_frameTextures.at(0);
     emit initialized();
 }
 
@@ -123,57 +123,30 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
         return false;
     }
 
-    if (!ilInitted) {
-        // See http://openil.sourceforge.net/docs/DevIL%20Manual.pdf for this sequence
-        ilInit();
-        iluInit();
-        ilutRenderer(ILUT_OPENGL);
-
-        ilInitted = true;
-    }
-
-    // Give ourselves an image name to bind to.
-    ILuint imageInfo;
-    ilGenImages(1, &imageInfo);
-    ilBindImage(imageInfo);
-
-    if (!ilLoadImage(qPrintable(filename))) {
-        qCritical() << "Could not load image" << filename << ": " << iluErrorString(ilGetError());
-        return false;
-    }
-
-    int nFrames = ilGetInteger(IL_NUM_IMAGES) + 1;
-    qDebug() << "Found" << nFrames << "frames in image" << filename;
+    QImageReader imageReader(filename);
+    int nFrames = imageReader.imageCount();
+    if (nFrames == 0)
+        nFrames = 1; // Returns 0 if animation isn't supported
 
     m_p->m_frameTextures.resize(nFrames);
     m_p->m_frameTextures.squeeze();
+    m_p->m_frameDelays.resize(nFrames);
+    m_p->m_frameDelays.squeeze();
 
     for (int i = 0; i < nFrames; i++) {
-        ILenum bindError;
-
-        // It's really important to call this each time or it has trouble loading frames
-        ilBindImage(imageInfo);
-
-        if (ilActiveImage(i) == IL_FALSE) {
-            qCritical() << "Error setting active frame" << i << "of image: " << iluErrorString(ilGetError());
-
+        QImage frame = imageReader.read();
+        if (frame.isNull()) {
+            qWarning() << "Unable to read frame" << i << "of image:" << imageReader.errorString();
             return false;
         }
 
-        m_p->m_frameTextures[i] = ilutGLBindTexImage();
-
-        bindError = ilGetError();
-
-        if (bindError != IL_NO_ERROR) {
-            qCritical() << "Error binding frame" << i << "of image: " << iluErrorString(bindError);
-            return false;
-        }
+        m_p->m_frameDelays[i] = imageReader.nextImageDelay();
+        m_p->m_frameTextures[i] = QSharedPointer<QOpenGLTexture>(
+                new QOpenGLTexture(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps));
     }
 
-    qDebug() << "Successfully loaded image" << filename;
-
-    // Now that it's been loaded into OpenGL delete it.
-    ilDeleteImages(1, &imageInfo);
+    glFlush();
+    qDebug() << "Successfully loaded image" << filename << "with" << nFrames << "frames";
 
     return true;
 }

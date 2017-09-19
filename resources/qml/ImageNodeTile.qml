@@ -17,7 +17,7 @@ VideoNodeTile {
 
         Label {
             Layout.fillWidth: true;
-            text: videoNode.imagePath;
+            text: videoNode ? videoNode.imagePath : "";
             color: "#ddd";
         }
 
