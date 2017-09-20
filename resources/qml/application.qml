@@ -50,8 +50,8 @@ ApplicationWindow {
     }
     EffectNode {
         id: cross
-        name: "greenscreen"
-        inputCount: 2
+        name: "crossfade"
+//        inputCount: 2
     }
 
     OutputWindow {
