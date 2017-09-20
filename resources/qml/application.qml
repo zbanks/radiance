@@ -69,7 +69,16 @@ ApplicationWindow {
             Component.onCompleted: {
                 output.name = "Screen"
             }
+
+            Action {
+                shortcut: "Esc"
+                onTriggered: function() {
+                    console.log("try to hide");
+                    screenWidget.outputVisibleChecked = false;
+                }
+            }
         }
+
     }
 
     OutputImageSequence {
