@@ -126,12 +126,13 @@ void NodeRegistry::reload() {
         m_nodeTypes.insert(name, nodeType);
     }
 
-    auto imgFilters = QStringList{} << QString{"*.gif"};
     QDir imgDir("../resources/images/");
-    imgDir.setNameFilters(imgFilters);
     imgDir.setSorting(QDir::Name);
 
     for (auto imageName : imgDir.entryList()) {
+        if (imageName[0] == '.')
+            continue;
+
         QString name = imageName;
         VideoNodeType nodeType = {
             .name = name,
