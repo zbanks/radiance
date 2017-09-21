@@ -1,3 +1,5 @@
+#property inputCount 4
+
 void main() {
     vec4 m = texture2D(iInputs[0], uv);
     vec4 r = texture2D(iInputs[1], uv);
