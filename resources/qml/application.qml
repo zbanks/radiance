@@ -27,7 +27,7 @@ ApplicationWindow {
     }
 
     // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
-    EffectNode {
+/*    EffectNode {
         id: en
         name: "test"
     }
@@ -51,8 +51,8 @@ ApplicationWindow {
     EffectNode {
         id: cross
         name: "crossfade"
-//        inputCount: 2
-    }
+        inputCount: 2
+    }*/
 
     OutputWindow {
         id: outputWindow
@@ -94,7 +94,7 @@ ApplicationWindow {
         globalContext.outputs = [outputItem.output, outputImageSequence];
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
-        model.addVideoNode(en);
+/*        model.addVideoNode(en);
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
@@ -113,7 +113,7 @@ ApplicationWindow {
         model.addEdge(n1, n2, 0);
         model.addEdge(n2, n3, 0);
         model.addEdge(n3, cross, 1);
-        model.flush();
+        model.flush();*/
     }
 
     ColumnLayout {
@@ -122,7 +122,7 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true;
 
-            // This is kind of crappy, but it was easy 
+            // This is kind of crappy, but it was easy
             ComboBox {
                 id: nodeSelector;
                 model: Object.keys(NodeRegistry.nodeTypes);

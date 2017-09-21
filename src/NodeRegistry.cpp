@@ -4,6 +4,7 @@
 
 #include <QDir>
 #include <QDebug>
+#include <QRegularExpression>
 
 NodeRegistry::NodeRegistry() {
     reload();
@@ -98,29 +99,71 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
 void NodeRegistry::reload() {
     m_nodeTypes.clear();
 
-    auto filters = QStringList{} << QString{"*.0.glsl"};
+    auto filters = QStringList{} << QString{"*.glsl"};
     QDir dir("../resources/effects/");
     dir.setNameFilters(filters);
     dir.setSorting(QDir::Name);
 
     for (auto effectName : dir.entryList()) {
-        QString name = effectName.replace(".0.glsl", "");
+        auto name = effectName.replace(".glsl", "");
+        auto filename = QString("../resources/effects/%1.glsl").arg(name);
         VideoNodeType nodeType = {
             .name = name,
             .type = VideoNodeType::EFFECT_NODE,
             .description = effectName,
             .nInputs = 1,
         };
+        QFileInfo check_file(filename);
+        if(!(check_file.exists() && check_file.isFile()))
+            continue;
 
+        QFile file(filename);
+        if(!file.open(QIODevice::ReadOnly)) {
+            continue;
+        }
+
+        QTextStream stream(&file);
+
+        auto buffershader_reg = QRegularExpression(
+            "^\\s*#buffershader\\s*$"
+        , QRegularExpression::CaseInsensitiveOption
+            );
+        auto property_reg = QRegularExpression(
+            "^\\s*#property\\s+(?<name>\\w+)\\s+(?<value>.*)$"
+        , QRegularExpression::CaseInsensitiveOption
+            );
+        auto passes = QVector<QStringList>{QStringList{"#line 0"}};
+        auto props  = QMap<QString,QString>{{"inputCount","1"}};
+        auto lineno = 0;
+        for(auto next_line = QString{}; stream.readLineInto(&next_line);++lineno) {
+            {
+                auto m = property_reg.match(next_line);
+                if(m.hasMatch()) {
+                    props.insert(m.captured("name"),m.captured("value"));
+                    passes.back().append(QString{"#line %1"}.arg(lineno));
+                    qDebug() << "setting property " << m.captured("name") << " to value " << m.captured("value");
+                    continue;
+                }
+            }
+            {
+                auto m = buffershader_reg.match(next_line);
+                if(m.hasMatch()) {
+                    passes.append({QString{"#line %1"}.arg(lineno)});
+                    continue;
+                }
+            }
+            passes.back().append(next_line);
+        }
+        nodeType.nInputs = QVariant::fromValue(props["inputCount"]).value<int>();
         // TODO: Get this information in a real way
-        if (name == "greenscreen" ||
+/*        if (name == "greenscreen" ||
             name == "crossfader" ||
             name == "uvmap" ||
             name == "composite") {
             nodeType.nInputs = 2;
         } else if (name == "rgbmask") {
             nodeType.nInputs = 4;
-        }
+        }*/
         //qInfo() << name << nodeType.name;
 
         m_nodeTypes.insert(name, nodeType);

@@ -15,7 +15,7 @@ EffectNode::EffectNode()
     , m_intensity(0)
     , m_ready(false) {
 
-    setInputCount(1);
+    setInputCount(0);
     m_periodic.setInterval(10);
     m_periodic.start();
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
