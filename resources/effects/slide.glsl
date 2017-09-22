@@ -9,8 +9,8 @@ void main(void) {
     vec4 oc = texture2D(iInput, uv);
     vec4 c = texture2D(iInput, uv2);
 
-    oc.a *= (1. - smoothstep(0.1, 0.2, iIntensity));
-    c.a *= smoothstep(0, 0.1, iIntensity);
+    oc *= (1. - smoothstep(0.1, 0.2, iIntensity));
+    c *= smoothstep(0, 0.1, iIntensity);
 
     gl_FragColor = composite(oc, c);
 }

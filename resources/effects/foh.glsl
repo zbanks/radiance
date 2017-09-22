@@ -14,6 +14,7 @@ void main(void) {
     gl_FragColor = mix(next, prev, pow(iIntensity, 0.4));
     gl_FragColor = clamp(gl_FragColor, 0, 1);
 }
+
 #buffershader
 void main(void) {
     float t = pow(2, round(6 * iIntensity - 4));

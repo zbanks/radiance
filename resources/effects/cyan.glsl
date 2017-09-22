@@ -10,7 +10,8 @@ void main(void) {
     float g = smoothstep(0.5, 0.9, abs(mod(1. + t - 3. * iIntensityIntegral, 2.) - 1.));
 
     vec4 c = vec4(0., 1., 1., 1.) * y;
-    c = composite(c, vec4(0., 0., 1., g * smoothstep(0.5, 0.8, iIntensity)));
+    vec4 d = vec4(0., 0., 1., 1.) * g * smoothstep(0.5, 0.8, iIntensity);
+    c = composite(c, d);
 
     c *= smoothstep(0., 0.1, iIntensity);
     c = clamp(c, 0., 1.);
