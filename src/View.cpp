@@ -195,9 +195,11 @@ void View::onGraphChanged() {
         auto index = map.value(m_children.at(i).videoNode, -1);
         Q_ASSERT(index >= 0);
         QVariant heightVar = m_children.at(i).item->property("minInputHeight");
+        auto inputCount = m_children.at(i).videoNode->inputCount();
+        if (inputCount < 1) inputCount = 1; // Handle zero-input nodes
         if (heightVar.canConvert(QMetaType::QVariantList)) {
             QVariantList heightList = heightVar.toList();
-            for (int j=0; j<m_children.at(i).videoNode->inputCount(); j++) {
+            for (int j=0; j<inputCount; j++) {
                 if (j < heightList.count()) {
                     minHeights[index].append(heightList.at(j).toReal());
                 } else if (!heightList.empty()) {
@@ -208,7 +210,7 @@ void View::onGraphChanged() {
             }
         } else {
             qreal height = heightVar.toReal();
-            for (int j=0; j<m_children.at(i).videoNode->inputCount(); j++) {
+            for (int j=0; j<inputCount; j++) {
                 minHeights[index].append(height);
             }
         }
@@ -234,6 +236,7 @@ void View::onGraphChanged() {
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
         auto inputCount = vertices.at(i)->inputCount();
+        if (inputCount < 1) inputCount = 1;
         inputs.append(QVector<int>(inputCount, -1));
         inputGridHeight.append(QVector<int>(inputCount, -1));
         inputHeight.append(QVector<qreal>(inputCount, -1));
@@ -242,7 +245,7 @@ void View::onGraphChanged() {
     // Create a vector for looking up a node's inputs
     for (int i = 0; i < toVertex.count(); i++) {
         auto to = toVertex.at(i);
-        if (to >= 0) {
+        if (to >= 0 && edges.at(i).toInput < inputs.at(to).count()) {
             inputs[to][edges.at(i).toInput] = fromVertex.at(i);
         }
     }
@@ -255,7 +258,7 @@ void View::onGraphChanged() {
         sSet.insert(vertices.at(i));
     }
     for (auto e = edges.begin(); e != edges.end(); e++) {
-        sSet.remove(e->fromVertex);
+        if (e->toInput < e->toVertex->inputCount()) sSet.remove(e->fromVertex);
     }
     for (int i=0; i<vertices.count(); i++) {
         if (sSet.contains(vertices.at(i))) {
@@ -340,7 +343,8 @@ void View::onGraphChanged() {
         auto vertex = m_children.at(i).videoNode;
         Q_ASSERT(myInputGridHeights.count() == myInputHeights.count());
         qreal sumInputHeights = 0;
-        for (int j=0; j<myInputGridHeights.count(); j++) {
+
+        for (int j=0; j<vertex->inputCount(); j++) {
             // Create a drop area at each input of every node
             auto item = createDropArea();
 

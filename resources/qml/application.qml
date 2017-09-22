@@ -24,10 +24,20 @@ ApplicationWindow {
             changeset += "+" + Object.keys(outputsAdded).length + " -" + Object.keys(outputsRemoved).length + " outputs";
             console.log("Graph changed!", changeset);
         }
+
+        onMessage: {
+            console.log("MESSAGE: ", str);
+        }
+        onWarning: {
+            console.log("WARNING: ", str);
+        }
+        onFatal: {
+            console.log("FATAL: ", str);
+        }
     }
 
     // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
-/*    EffectNode {
+    EffectNode {
         id: en
         name: "test"
     }
@@ -42,17 +52,16 @@ ApplicationWindow {
     EffectNode {
         id: en4
         name: "yellow"
-    }
-    ImageNode {
+    }/*
+    ImageNode { // FIXME: Uncommenting this node causes segfault on startup
         id: img1
         imagePath: "nyancat.gif"
-        inputCount: 1 // FIXME: this should be 0
-    }
+    }*/
     EffectNode {
         id: cross
-        name: "crossfade"
+        name: "crossfader"
         inputCount: 2
-    }*/
+    }
 
     OutputWindow {
         id: outputWindow
@@ -94,11 +103,11 @@ ApplicationWindow {
         globalContext.outputs = [outputItem.output, outputImageSequence];
         UISettings.previewSize = "100x100";
         UISettings.outputSize = "1024x768";
-/*        model.addVideoNode(en);
+        model.addVideoNode(en);
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
-        model.addVideoNode(img1);
+        //model.addVideoNode(img1);
         model.addVideoNode(cross);
 
         //model.addEdge(img1, en, 0);
@@ -113,7 +122,7 @@ ApplicationWindow {
         model.addEdge(n1, n2, 0);
         model.addEdge(n2, n3, 0);
         model.addEdge(n3, cross, 1);
-        model.flush();*/
+        model.flush();
     }
 
     ColumnLayout {

@@ -15,7 +15,7 @@ EffectNode::EffectNode()
     , m_intensity(0)
     , m_ready(false) {
 
-    setInputCount(0);
+    setInputCount(1);
     m_periodic.setInterval(10);
     m_periodic.start();
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
@@ -239,6 +239,7 @@ void EffectNodeOpenGLWorker::initialize() {
     makeCurrent();
     bool result = loadProgram(m_p->m_name);
     if(!result) {
+        qDebug() << m_p << "Load program failed :(";
         return;
     }
     glFlush();
@@ -274,8 +275,10 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
     auto filename = QString("../resources/effects/%1.glsl").arg(name);
 
     QFileInfo check_file(filename);
-    if(!(check_file.exists() && check_file.isFile()))
+    if(!(check_file.exists() && check_file.isFile())) {
+        emit fatal(QString("Could not open \"%1\"").arg(filename));
         return false;
+    }
 
     QFile file(filename);
     if(!file.open(QIODevice::ReadOnly)) {

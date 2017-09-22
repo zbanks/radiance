@@ -135,11 +135,20 @@ signals:
 
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
 
+    void message(VideoNode *videoNode, QString str);
+    void warning(VideoNode *videoNode, QString str);
+    void fatal(VideoNode *videoNode, QString str);
+
 protected:
     void emitGraphChanged();
     QVector<VideoNode *> topoSort();
     void prepareNode(VideoNode * node);
     void disownNode(VideoNode * node);
+
+protected slots:
+    void onMessage(QString message);
+    void onWarning(QString str);
+    void onFatal(QString str);
 
 private:
     QList<VideoNode *> m_vertices;

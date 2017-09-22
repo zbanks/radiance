@@ -54,6 +54,11 @@ void Model::connectOutput(QString outputName, VideoNode *videoNode) {
 void Model::prepareNode(VideoNode *videoNode) {
     videoNode->setChains(m_chains);
     videoNode->setId(m_vnId++);
+
+    connect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
+    connect(videoNode, &VideoNode::message, this, &Model::onMessage);
+    connect(videoNode, &VideoNode::warning, this, &Model::onWarning);
+    connect(videoNode, &VideoNode::fatal, this, &Model::onFatal);
 }
 
 void Model::disownNode(VideoNode *videoNode) {
@@ -64,6 +69,27 @@ void Model::disownNode(VideoNode *videoNode) {
             m_outputConnections.remove(outputName);
         }
     }
+    disconnect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
+    disconnect(videoNode, &VideoNode::message, this, &Model::onMessage);
+    disconnect(videoNode, &VideoNode::warning, this, &Model::onWarning);
+    disconnect(videoNode, &VideoNode::fatal, this, &Model::onFatal);
+}
+
+void Model::onMessage(QString str) {
+    auto vn = qobject_cast<VideoNode *>(sender());
+    emit message(vn, str);
+}
+
+void Model::onWarning(QString str) {
+    auto vn = qobject_cast<VideoNode *>(sender());
+    emit warning(vn, str);
+}
+
+void Model::onFatal(QString str) {
+    auto vn = qobject_cast<VideoNode *>(sender());
+    emit fatal(vn, str);
+    removeVideoNode(vn);
+    flush();
 }
 
 VideoNode *Model::createVideoNode(const QString &name) {
@@ -100,7 +126,7 @@ void Model::removeVideoNode(VideoNode *videoNode) {
     m_vertices.removeAll(videoNode);
 
     if (videoNode->parent() == this) {
-        videoNode->deleteLater(); // Not sure if this is required
+        videoNode->deleteLater();
     }
 }
 
@@ -314,6 +340,16 @@ void Model::flush() {
     QMap<QString, VideoNode *> outputsAdded;
     QMap<QString, VideoNode *> outputsRemoved;
 
+    // Prune invalid edges
+    QMutableListIterator<Edge> i(m_edges);
+    while (i.hasNext()) {
+        auto edgeCopy = i.next();
+        if (edgeCopy.toInput >= edgeCopy.toVertex->inputCount()) {
+            qDebug() << "Removing invalid edge to" << edgeCopy.toVertex << edgeCopy.toInput;
+            i.remove();
+        }
+    }
+
     // Compute the changeset
     {
         auto v = QSet<VideoNode *>::fromList(m_vertices);
@@ -432,7 +468,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     for (int i = 0; i < toVertex.count(); i++) {
         auto to = toVertex.at(i);
         if (to >= 0) {
-            inputs[to][toInput.at(i)] = fromVertex.at(i);
+            if (toInput.at(i) < inputs.at(to).count()) inputs[to][toInput.at(i)] = fromVertex.at(i);
         }
     }
 
