@@ -340,7 +340,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         emit fatal(QString("No shaders found for \"%1\"").arg(name));
         return false;
     }
-    auto mo = m_p->metaObject();
+/*    auto mo = m_p->metaObject();
     if(!props.isEmpty()) {
         for(auto i = props.cbegin(),e = props.cend(); i!= e; ++i) {
             auto prop_name = i.key().trimmed().toLocal8Bit();
@@ -362,7 +362,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
 
             }
         }
-    }
+    }*/
     {
         QMutexLocker locker(&m_p->m_stateLock);
         m_p->m_programs = programs;
