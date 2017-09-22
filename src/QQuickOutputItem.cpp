@@ -21,7 +21,8 @@ protected:
 QQuickOutputItem::QQuickOutputItem()
     : m_textureId(0)
     , m_size(QSize(300, 300))
-    , m_output(QSharedPointer<QQuickOutputItemOutput>(new QQuickOutputItemOutput(this))) {
+    , m_output(QSharedPointer<QQuickOutputItemOutput>(new QQuickOutputItemOutput(this)))
+    , m_window(nullptr) {
     setFlags(QQuickItem::ItemHasContents);
     connect(this, &QQuickItem::windowChanged, this, &QQuickOutputItem::onWindowChanged);
     onWindowChanged(window());

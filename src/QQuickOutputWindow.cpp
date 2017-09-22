@@ -7,7 +7,7 @@
 // QQuickOutputWindow
 
 QQuickOutputWindow::QQuickOutputWindow()
-    : m_screen(0) {
+    : m_screen(nullptr) {
     m_outputWindow = QSharedPointer<QQuickWindow>(new QQuickWindow());
     m_screen = m_outputWindow->screen();
     connect(m_outputWindow.data(), &QWindow::screenChanged, this, &QQuickOutputWindow::onScreenChanged);

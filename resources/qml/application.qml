@@ -52,11 +52,11 @@ ApplicationWindow {
     EffectNode {
         id: en4
         name: "yellow"
-    }/*
-    ImageNode { // FIXME: Uncommenting this node causes segfault on startup
+    }
+    ImageNode {
         id: img1
         imagePath: "nyancat.gif"
-    }*/
+    }
     EffectNode {
         id: cross
         name: "crossfader"
@@ -107,10 +107,10 @@ ApplicationWindow {
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
-        //model.addVideoNode(img1);
+        model.addVideoNode(img1);
         model.addVideoNode(cross);
 
-        //model.addEdge(img1, en, 0);
+        model.addEdge(img1, en, 0);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, en4, 0);
