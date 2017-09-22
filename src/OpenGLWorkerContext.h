@@ -8,7 +8,7 @@
 
 class OpenGLWorkerContext : public QObject, protected QOpenGLFunctions {
 public:
-    OpenGLWorkerContext(bool threaded = true, QSharedPointer<QSurface> surface = QSharedPointer<QSurface>());
+    OpenGLWorkerContext(bool threaded=true, QSurface *surface=nullptr);
     ~OpenGLWorkerContext();
     QOpenGLContext *context();
     QOpenGLFunctions *glFuncs();
@@ -18,7 +18,7 @@ protected slots:
 public slots:
     void makeCurrent();
 protected:
-    QSharedPointer<QSurface> m_surface;
+    QSurface *m_surface;
     QOpenGLContext *m_context;
 private:
     bool m_threaded;

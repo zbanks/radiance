@@ -16,7 +16,7 @@
 
 #define IMG_FORMAT ".gif"
 
-QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
+OpenGLWorkerContext *openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<Audio> audio;
 QSharedPointer<NodeRegistry> nodeRegistry;
@@ -69,9 +69,10 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = QSharedPointer<OpenGLWorkerContext>(new OpenGLWorkerContext(false));
+    openGLWorkerContext = new OpenGLWorkerContext(false);
     openGLWorkerContext->setObjectName("openGLWorkerContext");
     openGLWorkerContext->thread()->start();
+    openGLWorkerContext->setParent(&app);
 
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());

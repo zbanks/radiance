@@ -2,7 +2,7 @@
 #include <QOffscreenSurface>
 #include <QDebug>
 
-OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSharedPointer<QSurface> surface)
+OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
     : m_surface(surface)
     , m_threaded(threaded) {
     if (m_threaded) {
@@ -17,10 +17,11 @@ OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSharedPointer<QSurface>
 OpenGLWorkerContext::~OpenGLWorkerContext() {
     if (m_threaded) {
         thread()->quit();
+        thread()->wait();
         delete thread();
     }
-    // FIXME: Figure out how to free this without crashing
-    //delete m_context;
+    m_context->doneCurrent();
+    delete m_context;
 }
 
 void OpenGLWorkerContext::initialize() {
@@ -33,15 +34,16 @@ void OpenGLWorkerContext::initialize() {
 
     m_context->create();
 
-    if(m_surface.isNull()) {
+    if(m_surface == nullptr) {
         // Creating a QOffscreenSurface with no window
         // may fail on some platforms
         // (e.g. wayland)
         // On these platforms, you must pass in
         // a valid surface.
-        QSharedPointer<QOffscreenSurface> surface(new QOffscreenSurface());
+        auto surface = new QOffscreenSurface();
         surface->setFormat(m_context->format());
         surface->create();
+        surface->setParent(m_context);
         m_surface = surface;
     }
     makeCurrent();
@@ -49,7 +51,7 @@ void OpenGLWorkerContext::initialize() {
 
 void OpenGLWorkerContext::makeCurrent() {
     //qDebug() << "Make context current" << this;
-    m_context->makeCurrent(m_surface.data());
+    m_context->makeCurrent(m_surface);
 }
 
 QOpenGLContext *OpenGLWorkerContext::context() {

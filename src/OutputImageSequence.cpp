@@ -101,6 +101,8 @@ OutputImageSequence::OutputImageSequence()
 }
 
 OutputImageSequence::~OutputImageSequence() {
+    m_context->thread()->quit();
+    m_context->thread()->wait();
 }
 
 void OutputImageSequence::setEnabled(bool enabled) {

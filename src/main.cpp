@@ -19,7 +19,7 @@
 #include "View.h"
 #include "main.h"
 
-QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
+OpenGLWorkerContext *openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<QSettings> outputSettings;
 QSharedPointer<UISettings> uiSettings;
@@ -57,10 +57,10 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = QSharedPointer<OpenGLWorkerContext>(new OpenGLWorkerContext());
+    openGLWorkerContext = new OpenGLWorkerContext();
     openGLWorkerContext->thread()->start();
     openGLWorkerContext->thread()->setObjectName("openGLWorkerContextThread");
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, openGLWorkerContext->thread(), &QThread::quit);
+    openGLWorkerContext->setParent(&app);
 
     settings = QSharedPointer<QSettings>(new QSettings());
     outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));

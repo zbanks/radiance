@@ -1,7 +1,7 @@
 #include "OpenGLWorker.h"
 #include "main.h"
 
-OpenGLWorker::OpenGLWorker(QSharedPointer<OpenGLWorkerContext> context)
+OpenGLWorker::OpenGLWorker(OpenGLWorkerContext *context)
     : m_context(context)
 {
     moveToThread(context->thread());

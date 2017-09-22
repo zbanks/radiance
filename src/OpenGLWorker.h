@@ -17,7 +17,7 @@ class OpenGLWorker : public QObject {
     Q_OBJECT
 
 public:
-    OpenGLWorker(QSharedPointer<OpenGLWorkerContext> m_context);
+    OpenGLWorker(OpenGLWorkerContext *context);
    ~OpenGLWorker() override;
 
     // This method switches to the worker's
@@ -34,5 +34,5 @@ public:
     // within the context
     QOpenGLFunctions *glFuncs();
 private:
-    QSharedPointer<OpenGLWorkerContext> m_context;
+    OpenGLWorkerContext *m_context;
 };

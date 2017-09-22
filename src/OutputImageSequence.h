@@ -41,7 +41,7 @@ protected:
     QString m_filename;
     QThread m_thread;
     bool m_enabled;
-    QSharedPointer<OpenGLWorkerContext> m_context;
+    OpenGLWorkerContext *m_context;
 
     void join();
 
