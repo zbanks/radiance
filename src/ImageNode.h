@@ -33,6 +33,8 @@ signals:
 protected:
     bool loadImage(QString imagePath);
     ImageNode *m_p;
+protected slots:
+    void onDestroyed();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,8 +75,8 @@ protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
     QVector<int> m_frameDelays; // milliseconds
-    QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures;
-    QSharedPointer<QOpenGLTexture> m_currentTexture;
+    QVector<QOpenGLTexture *> m_frameTextures;
+    QOpenGLTexture *m_currentTexture;
     int m_currentTextureIdx;
 
     QString m_imagePath;

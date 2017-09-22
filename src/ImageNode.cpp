@@ -92,11 +92,14 @@ ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode *p)
     connect(this, &ImageNodeOpenGLWorker::message, m_p, &ImageNode::message);
     connect(this, &ImageNodeOpenGLWorker::warning, m_p, &ImageNode::warning);
     connect(this, &ImageNodeOpenGLWorker::fatal,   m_p, &ImageNode::fatal);
+    connect(this, &QObject::destroyed, this, &ImageNodeOpenGLWorker::onDestroyed);
 }
 
 void ImageNodeOpenGLWorker::initialize() {
     // Lock this because we need to use m_frameTextures
     QMutexLocker locker(&m_p->m_stateLock);
+
+    m_p->m_currentTexture = nullptr;
 
     makeCurrent();
     bool result = loadImage(m_p->m_imagePath);
@@ -128,10 +131,10 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
     if (nFrames == 0)
         nFrames = 1; // Returns 0 if animation isn't supported
 
-    m_p->m_frameTextures.resize(nFrames);
-    m_p->m_frameTextures.squeeze();
-    m_p->m_frameDelays.resize(nFrames);
-    m_p->m_frameDelays.squeeze();
+    qDeleteAll(m_p->m_frameTextures.begin(), m_p->m_frameTextures.end());
+
+    m_p->m_frameTextures = QVector<QOpenGLTexture *>(nFrames);
+    m_p->m_frameDelays = QVector<int>(nFrames);
 
     for (int i = 0; i < nFrames; i++) {
         QImage frame = imageReader.read();
@@ -141,12 +144,17 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
         }
 
         m_p->m_frameDelays[i] = imageReader.nextImageDelay();
-        m_p->m_frameTextures[i] = QSharedPointer<QOpenGLTexture>(
-                new QOpenGLTexture(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps));
+        m_p->m_frameTextures[i] = new QOpenGLTexture(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps);
     }
 
     glFlush();
     qDebug() << "Successfully loaded image" << filename << "with" << nFrames << "frames";
 
     return true;
+}
+
+void ImageNodeOpenGLWorker::onDestroyed() {
+    // For some reason, QOpenGLTexture does not have setParent
+    // and so we cannot use Qt object tree deletion semantics
+    qDeleteAll(m_p->m_frameTextures.begin(), m_p->m_frameTextures.end());
 }
