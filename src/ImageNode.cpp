@@ -46,7 +46,8 @@ void ImageNode::periodic() {
 
     // Lock this because we need to use m_frameTextures
     QMutexLocker locker(&m_stateLock);
-
+    if(!m_frameTextures.size())
+        return;
     // TODO: actually use m_frameDelays
     m_currentTextureIdx = (++m_currentTextureIdx) % m_frameTextures.size();
     m_currentTexture = m_frameTextures.at(m_currentTextureIdx);
