@@ -9,7 +9,9 @@ before_install:
     - sudo apt-get -qy update
 
 install:
-    - sudo apt-get -qy install doxygen graphviz qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev gcc-5
+    - sudo apt-get install -qq g++-6
+    - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
+    - sudo apt-get -qy install doxygen graphviz qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev
     - git clone --quiet --depth=100 "https://github.com/EddieRingle/portaudio" ~/builds/portaudio
       && pushd ~/builds/portaudio
       && ./configure
@@ -29,11 +31,11 @@ before_script:
     - cd build
     - cmake -DCMAKE_PREFIX_PATH=/opt/qt59/ -DCMAKE_BUILD_TYPE=Debug ..
 
-script: make CC=gcc-5 CXX=g++-5
+script: make
 
 after_success: 
     - mkdir -p render_output
-    - ./radiance_cli -b nyancat.gif -o render_output
+    - ./radiance_cli -b nyancat.gif -o render_output; head render_output/index.html
 
 deploy:
     provider: pages
