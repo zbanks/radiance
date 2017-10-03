@@ -9,7 +9,7 @@ VideoNodeTile {
     id: tile;
     property alias intensity: slider.value;
     property alias slider: slider;
-    property alias sliderGhost: sliderGhost;
+    //property alias sliderGhost: sliderGhost;
 
     onVideoNodeChanged: {
         videoNode.intensity = Qt.binding(function() { return slider.value });
@@ -65,6 +65,7 @@ VideoNodeTile {
         }
         */
 
+        /* No MIDI indicator until we actually need it
         Slider {
             // TODO: How do we make this indicator-only?
             id: sliderGhost;
@@ -75,6 +76,7 @@ VideoNodeTile {
                 handle: Rectangle {}
             }
         }
+        */
     }
 
     Keys.onPressed: {
