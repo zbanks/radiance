@@ -1,0 +1,14 @@
+// Apply a Dunkirk-esque palette
+
+void main(void) {
+    gl_FragColor = texture2D(iInput, uv);
+    vec3 hsv = rgb2hsv(gl_FragColor.rgb);
+    float h = hsv.x;
+    h = mod(h - 1. / 12., 1.0) - 6. / 12.;
+    h *= (1. - iIntensity * 0.7);
+    h = mod(h + 7. / 12., 1.0);
+    hsv.x = h;
+    hsv.y = mix(hsv.y, 0., iIntensity * 0.4);
+    hsv.z = mix(hsv.z, 0., iIntensity * 0.3);
+    gl_FragColor.rgb = hsv2rgb(hsv);
+}

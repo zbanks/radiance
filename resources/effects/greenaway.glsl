@@ -4,7 +4,7 @@ void main(void) {
     gl_FragColor = texture2D(iInput, uv);
     vec3 hsv = rgb2hsv(gl_FragColor.rgb);
     float h = hsv.x;
-    h = mod(h + 2. / 3., 1.0) - 0.5;
+    h = mod(h + 4. / 6., 1.0) - 3. / 6.;
     h *= (1 - iIntensity / 3.);
     h = mod(h - 1. / 6., 1.0);
     hsv.x = h;

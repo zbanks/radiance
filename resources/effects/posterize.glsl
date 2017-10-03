@@ -6,5 +6,6 @@ void main(void) {
     
     // bin in non-premultiplied space, then re-premultiply
     vec4 c = demultiply(texture2D(iInput, uv));
-    gl_FragColor = premultiply(round(c * bins) / bins);
+    c.rgb = round(c.rgb * bins) / bins;
+    gl_FragColor = premultiply(c);
 }
