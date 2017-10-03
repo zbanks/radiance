@@ -42,7 +42,7 @@ deploy:
     provider: pages
     skip_cleanup: true
     github_token: $GITHUB_TOKEN
-    target_branch: gh-pages
+    target_branch: gh-pages-travis
     local_dir: render_output
     on:
         branch: modelview
