@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
     // Generate HTML page with previews
     QList<QString> nodeNames;
     for (auto nodeType : nodeRegistry->nodeTypes()) {
-        if (nodeType.nInputs > 1)
+        if (nodeType.nInputs > 2)
             continue;
         nodeNames.append(nodeType.name);
     }
@@ -138,6 +138,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    VideoNode *crossEffect = model.createVideoNode("test:0.8");
+    if (!crossEffect) {
+        qInfo() << "Unable to set up crossfade effect";
+        return EXIT_FAILURE;
+    }
+
     // Render node(s)
     if (parser.isSet(onlyNodeOption)) {
         nodeNames.clear();
@@ -150,8 +156,11 @@ int main(int argc, char *argv[]) {
             continue;
         EffectNode * effectNode = qobject_cast<EffectNode *>(effect);
 
-        model.addEdge(baseEffect, effect, 0);
         model.addEdge(effect, onblackEffect, 0);
+        model.addEdge(baseEffect, effect, 0);
+        if (effect->inputCount() > 1)
+            model.addEdge(crossEffect, effect, 1);
+
         model.flush();
         qInfo() << model.serialize();
 

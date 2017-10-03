@@ -4,14 +4,17 @@
 #define ITERS 64
 
 vec4 lookup(vec2 coord) {
-    return texture2D(iInput, coord / aspectCorrection + 0.5);
+    vec2 xy = coord / aspectCorrection + 0.5;
+    xy = clamp(xy, 0., 1.);
+    return texture2D(iInput, xy);
 }
 
 void main() {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec2  d = vec2(WIDTH, 0.) / ITERS.;
     vec2  s = normCoord;
-    float phi = iIntensityIntegral * 4;
+    //float phi = iIntensityIntegral * 4;
+    float phi = iTime * 1.0;
     s.x /= sin(phi);
 
     // This isn't quite right, but it's super easy compared to real geometry
