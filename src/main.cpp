@@ -16,6 +16,7 @@
 #include "QQuickOutputWindow.h"
 #include "OutputImageSequence.h"
 #include "VideoNode.h"
+#include "MovieNode.h"
 #include "View.h"
 #include "main.h"
 
@@ -74,6 +75,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
+    qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");

@@ -53,9 +53,9 @@ ApplicationWindow {
         id: en4
         name: "yellow"
     }
-    ImageNode {
-        id: img1
-        imagePath: "nyancat.gif"
+    MovieNode {
+        id: vid1
+        videoPath: "zedd.mkv"
     }
     EffectNode {
         id: cross
@@ -107,10 +107,10 @@ ApplicationWindow {
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
-        model.addVideoNode(img1);
+        model.addVideoNode(vid1);
         model.addVideoNode(cross);
 
-        model.addEdge(img1, en, 0);
+        model.addEdge(vid1, en, 0);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, en4, 0);

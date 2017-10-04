@@ -30,6 +30,7 @@ Item {
                 delegates: {
                     "EffectNode": "EffectNodeTile",
                     "ImageNode": "ImageNodeTile",
+                    "MovieNode": "MovieNodeTile",
                     "": "VideoNodeTile"
                 }
                 x: (parent.width - width) / 2
