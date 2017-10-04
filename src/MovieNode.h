@@ -34,7 +34,7 @@ public slots:
     void drawFrame();
 
 protected:
-    const int m_bufferCount = 2;
+    const int m_bufferCount = 3; // TODO double buffering doesn't quite work for some reason
     MovieNode *m_p;
     mpv::qt::Handle m_mpv;
     mpv_opengl_cb_context *m_mpv_gl;

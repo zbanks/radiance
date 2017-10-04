@@ -115,14 +115,14 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         int i = m_openGLWorker->lastIndex();
         QMutexLocker locker(m_openGLWorker->m_fboLocks.at(i));
         if (m_openGLWorker->m_fbos.at(i) == nullptr) return outTexture;
-        //qDebug() << "Got texture" << m_openGLWorker->m_fbos.at(i)->texture();
         glBindTexture(GL_TEXTURE_2D, m_openGLWorker->m_fbos.at(i)->texture());
         m_blitShader->setUniformValue("iVideoFrame", 0);
         m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        renderFbo->release();
         glFlush();
     }
+    m_blitShader->release();
+    renderFbo->release();
     outTexture = renderFbo->texture();
 
     return outTexture;
@@ -172,8 +172,8 @@ void MovieNodeOpenGLWorker::initialize() {
     if (mpv_initialize(m_mpv) < 0)
         throw std::runtime_error("could not initialize mpv context");
 
-    mpv_set_property_string(m_mpv, "video-sync", "display-resample");
-    mpv_set_property_string(m_mpv, "display-fps", "60");
+    //mpv_set_property_string(m_mpv, "video-sync", "display-resample");
+    //mpv_set_property_string(m_mpv, "display-fps", "60");
     mpv_set_property_string(m_mpv, "hwdec", "auto");
     mpv_set_property_string(m_mpv, "loop", "inf");
 
@@ -203,11 +203,19 @@ void MovieNodeOpenGLWorker::initialize() {
 void MovieNodeOpenGLWorker::drawFrame() {
     {
         QMutexLocker locker(m_fboLocks[m_fboIndex]);
-        if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != QSize(100, 100)) {
+        qint64 videoWidth;
+        qint64 videoHeight;
+        if (mpv_get_property(m_mpv, "video-params/w", MPV_FORMAT_INT64, &videoWidth) < 0)
+            throw std::runtime_error("could not get video width");
+        if (mpv_get_property(m_mpv, "video-params/h", MPV_FORMAT_INT64, &videoHeight) < 0)
+            throw std::runtime_error("could not get video height");
+        QSize size = QSize(videoWidth, videoHeight);
+        if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != size) {
             delete m_fbos.at(m_fboIndex);
-            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(QSize(100, 100));
+            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(size);
         }
         auto fbo = m_fbos.at(m_fboIndex);
+
         mpv_opengl_cb_draw(m_mpv_gl, fbo->handle(), fbo->width(), -fbo->height());
         glFlush();
     }
