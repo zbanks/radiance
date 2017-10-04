@@ -9,7 +9,10 @@ Screenshots
 -----------
 
 ![screenshot](https://i.imgur.com/hgdTxPU.png)
-![video](https://i.imgur.com/I4qnMQo.mp4)
+
+![GIF Screencapture](https://i.imgur.com/I4qnMQo.gif)
+
+[Example effects](https://zbanks.github.io/radiance/)
 
 Build
 -----
@@ -50,42 +53,19 @@ If you `git pull` changes, make sure you also do `git submodule update` to pull 
 Keyboard Shortcuts
 ------------------
 
-### Movement
-- *arrow keys* / `hjkl` - Change selected item
-- Space - Select the crossfader
-- Escape - Deselect everything
-- Tab - Select the next pattern in the deck
-- Shift-Tab - Select the previous pattern in the deck
-- Home / `^` - Select the first pattern in the deck
-- End / `$` - Select the last pattern in the deck
-
 ### Sliders
-- Shift-Down / `J` - Decrement selected slider by 10%
-- Shift-Up / `K`  - Increment selected slider by 10%
+- `j` - Decrement selected slider by 10%
+- `k`  - Increment selected slider by 10%
 - `` ` ``, `0-9` - Set selected slider. `` ` `` = 0%; `1` = 10%; `5` = 50%; `0` = 100%
 
-### Patterns
-- Delete / `d` - Delete the currently selected pattern
-- `:` - Load pattern (*see below*)
-
-### Decks
-- `[` - Flip between the two left decks
-- `]` - Flip between the two right decks
-- Enter - Flip between the two decks on the highlighted side
+### Nodes
+- `r` - Reload node
+- Enter - Set node as output
+- Delete - Delete the currently selected node
 
 ### Other
-- `q` - Cycle through strip indicator: None, Solid, or Colored.
-- `r` - Reload just parameters (`params.ini`)
-- `R` - Reload parameters, MIDI & output configuration
-- `W` - Append current deck state to the `decks.ini` file
-
-### Loading Patterns
-Hitting colon (`:`) when a pattern is selected brings up a textbox to enter a pattern name. 
-This can be used to do 3 things:
-
-- Typing the name of a pattern (ex. `vu`) then hitting Enter causes the named pattern to be loaded into the highlighed slot.
-- Hitting Enter immediately causes the existing pattern to be reloaded.
-- Typing `:` again, followed by the name of a deck and Enter causes the deck to be loaded (ex. `:vurain`)
+- `q` - Close output window
+- `:` - Load node
 
 Patterns
 --------
