@@ -11,16 +11,20 @@ MovieNode::MovieNode()
 
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
 
+    setlocale(LC_NUMERIC, "C");
     m_mpv = mpv::qt::Handle::FromRawHandle(mpv_create());
     if (!m_mpv)
         throw std::runtime_error("could not create mpv context");
 
     mpv_set_option_string(m_mpv, "terminal", "yes");
     mpv_set_option_string(m_mpv, "msg-level", "all=v");
-    mpv_set_option_string(m_mpv, "video-sync", "display");
-    mpv_set_option_string(m_mpv, "display-fps", "60");
     if (mpv_initialize(m_mpv) < 0)
         throw std::runtime_error("could not initialize mpv context");
+
+    mpv_set_property_string(m_mpv, "video-sync", "display-resample");
+    mpv_set_property_string(m_mpv, "display-fps", "60");
+    mpv_set_property_string(m_mpv, "hwdec", "auto");
+    mpv_set_property_string(m_mpv, "loop", "inf");
 
     // Make use of the MPV_SUB_API_OPENGL_CB API.
     mpv::qt::set_option_variant(m_mpv, "vo", "opengl-cb");
