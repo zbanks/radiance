@@ -10,31 +10,7 @@ MovieNode::MovieNode()
     , m_ready(false) {
 
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
-
-    setlocale(LC_NUMERIC, "C");
-    m_mpv = mpv::qt::Handle::FromRawHandle(mpv_create());
-    if (!m_mpv)
-        throw std::runtime_error("could not create mpv context");
-
-    mpv_set_option_string(m_mpv, "terminal", "yes");
-    mpv_set_option_string(m_mpv, "msg-level", "all=v");
-    if (mpv_initialize(m_mpv) < 0)
-        throw std::runtime_error("could not initialize mpv context");
-
-    mpv_set_property_string(m_mpv, "video-sync", "display-resample");
-    mpv_set_property_string(m_mpv, "display-fps", "60");
-    mpv_set_property_string(m_mpv, "hwdec", "auto");
-    mpv_set_property_string(m_mpv, "loop", "inf");
-
-    // Make use of the MPV_SUB_API_OPENGL_CB API.
-    mpv::qt::set_option_variant(m_mpv, "vo", "opengl-cb");
-
-    m_mpv_gl = (mpv_opengl_cb_context *)mpv_get_sub_api(m_mpv, MPV_SUB_API_OPENGL_CB);
-    if (!m_mpv_gl)
-        throw std::runtime_error("OpenGL not compiled in");
-
-    mpv_observe_property(m_mpv, 0, "duration", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(m_mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
+    connect(this, &MovieNode::videoPathChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
 
     bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
     Q_ASSERT(result);
@@ -44,8 +20,7 @@ MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
     , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready)
-    , m_mpv(other.m_mpv)
-    , m_mpv_gl(other.m_mpv_gl) {
+    , m_blitShader(other.m_blitShader) {
 
     auto k = other.m_renderFbos.keys();
     for (int i=0; i<k.count(); i++) {
@@ -55,10 +30,6 @@ MovieNode::MovieNode(const MovieNode &other)
 }
 
 MovieNode::~MovieNode() {
-}
-
-void MovieNode::command(const QVariant &params) {
-    mpv::qt::command_variant(m_mpv, params);
 }
 
 void MovieNode::onInitialized() {
@@ -86,14 +57,6 @@ void MovieNode::setVideoPath(QString videoPath) {
         {
             QMutexLocker locker(&m_stateLock);
             m_videoPath = videoPath;
-        }
-
-        if (m_ready) {
-            bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "loadVideo");
-            Q_ASSERT(result);
-        } else {
-            // If not ready, the video will be loaded by the OpenGLWorker's initialize
-            qDebug() << "Node not yet ready, waiting for initialize before loading video";
         }
 
         emit videoPathChanged(videoPath);
@@ -142,7 +105,24 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         renderFbo = m_renderFbos.value(chain);
     }
 
-    mpv_opengl_cb_draw(m_mpv_gl, renderFbo->handle(), chain->size().width(), -chain->size().height());
+    glClearColor(0, 0, 0, 0);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    renderFbo->bind();
+    m_blitShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    {
+        int i = m_openGLWorker->lastIndex();
+        QMutexLocker locker(m_openGLWorker->m_fboLocks.at(i));
+        if (m_openGLWorker->m_fbos.at(i) == nullptr) return outTexture;
+        //qDebug() << "Got texture" << m_openGLWorker->m_fbos.at(i)->texture();
+        glBindTexture(GL_TEXTURE_2D, m_openGLWorker->m_fbos.at(i)->texture());
+        m_blitShader->setUniformValue("iVideoFrame", 0);
+        m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        renderFbo->release();
+        glFlush();
+    }
     outTexture = renderFbo->texture();
 
     return outTexture;
@@ -162,33 +142,89 @@ void MovieNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<
 
 MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
     : OpenGLWorker(openGLWorkerContext)
-    , m_p(p) {
+    , m_p(p)
+    , m_fbos(m_bufferCount)
+    , m_fboLocks(m_bufferCount)
+    , m_fboIndex(0) {
+
+    for (int i=0; i<m_bufferCount; i++) {
+        m_fboLocks[i] = new QMutex();
+    }
+
     connect(this, &MovieNodeOpenGLWorker::message, m_p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, m_p, &MovieNode::warning);
     connect(this, &MovieNodeOpenGLWorker::fatal,   m_p, &MovieNode::fatal);
     connect(this, &QObject::destroyed, this, &MovieNodeOpenGLWorker::onDestroyed);
 }
 
-void MovieNodeOpenGLWorker::initialize() {
-    //QMutexLocker locker(&m_p->m_stateLock);
+static void requestUpdate(void *ctx) {
+    QMetaObject::invokeMethod((MovieNodeOpenGLWorker*)ctx, "drawFrame");
+}
 
-    int r = mpv_opengl_cb_init_gl(m_p->m_mpv_gl, NULL, get_proc_address, NULL);
+void MovieNodeOpenGLWorker::initialize() {
+    setlocale(LC_NUMERIC, "C");
+    m_mpv = mpv::qt::Handle::FromRawHandle(mpv_create());
+    if (!m_mpv)
+        throw std::runtime_error("could not create mpv context");
+
+    mpv_set_option_string(m_mpv, "terminal", "yes");
+    mpv_set_option_string(m_mpv, "msg-level", "all=v");
+    if (mpv_initialize(m_mpv) < 0)
+        throw std::runtime_error("could not initialize mpv context");
+
+    mpv_set_property_string(m_mpv, "video-sync", "display-resample");
+    mpv_set_property_string(m_mpv, "display-fps", "60");
+    mpv_set_property_string(m_mpv, "hwdec", "auto");
+    mpv_set_property_string(m_mpv, "loop", "inf");
+
+    // Make use of the MPV_SUB_API_OPENGL_CB API.
+    mpv::qt::set_option_variant(m_mpv, "vo", "opengl-cb");
+
+    m_mpv_gl = (mpv_opengl_cb_context *)mpv_get_sub_api(m_mpv, MPV_SUB_API_OPENGL_CB);
+    if (!m_mpv_gl)
+        throw std::runtime_error("OpenGL not compiled in");
+
+    mpv_observe_property(m_mpv, 0, "duration", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(m_mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
+
+    int r = mpv_opengl_cb_init_gl(m_mpv_gl, NULL, get_proc_address, NULL);
     if (r < 0)
         throw std::runtime_error("could not initialize OpenGL");
 
-    loadVideo();
+    mpv_opengl_cb_set_update_callback(m_mpv_gl, requestUpdate, (void *)this);
+
+    if (!loadBlitShader()) return;
 
     emit initialized();
+
+    onVideoChanged();
 }
 
-// Call this to load an video into m_frameTextures
-// Returns true if the program was loaded successfully
-void MovieNodeOpenGLWorker::loadVideo() {
+void MovieNodeOpenGLWorker::drawFrame() {
+    {
+        QMutexLocker locker(m_fboLocks[m_fboIndex]);
+        if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != QSize(100, 100)) {
+            delete m_fbos.at(m_fboIndex);
+            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(QSize(100, 100));
+        }
+        auto fbo = m_fbos.at(m_fboIndex);
+        mpv_opengl_cb_draw(m_mpv_gl, fbo->handle(), fbo->width(), -fbo->height());
+        glFlush();
+    }
+    m_fboIndex = (m_fboIndex + 1) % m_bufferCount;
+}
+
+int MovieNodeOpenGLWorker::lastIndex() {
+    return (m_fboIndex + m_bufferCount - 1) % m_bufferCount;
+}
+
+void MovieNodeOpenGLWorker::onVideoChanged() {
     qDebug() << "LOAD" << m_p->m_videoPath;
+    if (!m_mpv_gl) return; // Wait for initialization
     QString filename;
     {
-        if (m_p->m_videoPath.isEmpty()) return;
         QMutexLocker locker(&m_p->m_stateLock);
+        if (m_p->m_videoPath.isEmpty()) return;
         filename = QString("../resources/videos/%1").arg(m_p->m_videoPath);
     }
 
@@ -198,11 +234,54 @@ void MovieNodeOpenGLWorker::loadVideo() {
         emit warning(QString("Could not find %1").arg(filename));
     }
 
-    m_p->command(QStringList() << "loadfile" << filename);
+    command(QStringList() << "loadfile" << filename);
 
     qDebug() << "Successfully loaded video" << filename;
 }
 
+void MovieNodeOpenGLWorker::command(const QVariant &params) {
+    mpv::qt::command_variant(m_mpv, params);
+}
+
 void MovieNodeOpenGLWorker::onDestroyed() {
-    // TODO delete FBOs here
+    qDeleteAll(m_fbos.begin(), m_fbos.end());
+    qDeleteAll(m_fboLocks.begin(), m_fboLocks.end());
+}
+
+bool MovieNodeOpenGLWorker::loadBlitShader() {
+    auto vertexString = QString{
+        "#version 130\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+        "out vec2 coords;\n"
+        "void main() {\n"
+        "    vec2 vertex = varray[gl_VertexID];\n"
+        "    gl_Position = vec4(vertex,0.,1.);\n"
+        "    coords = vertex;\n"
+        "}\n"};
+    auto fragmentString = QString{
+        "#version 130\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "uniform sampler2D iVideoFrame;\n"
+        "uniform vec2 iResolution;\n"
+        "vec2 uv = gl_FragCoord.xy / iResolution;\n"
+        "void main() {\n"
+        "    gl_FragColor = texture2D(iVideoFrame, uv);\n"
+        "}\n"};
+
+    m_p->m_blitShader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
+    if(!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
+        emit fatal("Could not compile vertex shader");
+        return false;
+    }
+    if(!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
+        emit fatal("Could not compile fragment shader");
+        return false;
+    }
+    if(!m_p->m_blitShader->link()) {
+        emit fatal("Could not link shader program");
+        return false;
+    }
+    qDebug() << "Loaded blit shader";
+    return true;
 }

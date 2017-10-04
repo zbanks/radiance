@@ -4,7 +4,7 @@
 #include "OpenGLWorker.h"
 #include <QOpenGLFramebufferObject>
 #include <QMutex>
-#include <QTimer>
+#include <QOpenGLShaderProgram>
 #include <mpv/client.h>
 #include <mpv/opengl_cb.h>
 #include <mpv/qthelper.hpp>
@@ -13,31 +13,39 @@ class MovieNode;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// This class extends OpenGLWorker
-// to enable shader compilation
-// and other initialization
-// in a background context
 class MovieNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
     MovieNodeOpenGLWorker(MovieNode *p);
-
-public slots:
-    void initialize();
+    QVector<QOpenGLFramebufferObject *> m_fbos;
+    QVector<QMutex *> m_fboLocks;
+    int lastIndex();
 
 signals:
-    // This is emitted when it is done
-    void initialized();
-
     void message(QString str);
     void warning(QString str);
     void fatal(QString str);
+    void initialized();
+
+public slots:
+    void onVideoChanged();
+    void command(const QVariant &params);
+    void drawFrame();
+
 protected:
-    void loadVideo();
+    const int m_bufferCount = 2;
     MovieNode *m_p;
+    mpv::qt::Handle m_mpv;
+    mpv_opengl_cb_context *m_mpv_gl;
+    QAtomicInt m_fboIndex;
+
 protected slots:
+    void initialize();
     void onDestroyed();
+
+private:
+    bool loadBlitShader();
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,13 +79,11 @@ signals:
 
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
-    void command(const QVariant &params);
 
     QString m_videoPath;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
     QMap<QSharedPointer<Chain>, QSharedPointer<QOpenGLFramebufferObject>> m_renderFbos;
-    mpv::qt::Handle m_mpv;
-    mpv_opengl_cb_context *m_mpv_gl;
+    QSharedPointer<QOpenGLShaderProgram> m_blitShader;
 
     bool m_ready;
 };
