@@ -11,7 +11,7 @@ before_install:
 install:
     - sudo apt-get install -qq g++-6
     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
-    - sudo apt-get -qy install doxygen graphviz qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev
+    - sudo apt-get -qy install doxygen graphviz qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev libmpv-dev
     - git clone --quiet --depth=100 "https://github.com/EddieRingle/portaudio" ~/builds/portaudio
       && pushd ~/builds/portaudio
       && ./configure
