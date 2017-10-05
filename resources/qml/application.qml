@@ -55,7 +55,7 @@ ApplicationWindow {
     }
     MovieNode {
         id: vid1
-        videoPath: "zedd.mkv"
+        videoPath: "https://www.youtube.com/watch?v=i-gyZ35074k"
     }
     EffectNode {
         id: cross

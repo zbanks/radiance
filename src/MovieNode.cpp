@@ -205,6 +205,7 @@ void MovieNodeOpenGLWorker::initialize() {
 
     mpv_set_option_string(m_mpv, "terminal", "yes");
     mpv_set_option_string(m_mpv, "msg-level", "all=v");
+    mpv_set_option_string(m_mpv, "ytdl", "yes");
     if (mpv_initialize(m_mpv) < 0)
         throw std::runtime_error("could not initialize mpv context");
 
@@ -310,7 +311,8 @@ void MovieNodeOpenGLWorker::onVideoChanged() {
     {
         QMutexLocker locker(&m_p->m_stateLock);
         if (m_p->m_videoPath.isEmpty()) return;
-        filename = QString("../resources/videos/%1").arg(m_p->m_videoPath);
+        //filename = QString("../resources/videos/%1").arg(m_p->m_videoPath);
+        filename = QString("%1").arg(m_p->m_videoPath);
     }
 
     QFileInfo check_file(filename);
