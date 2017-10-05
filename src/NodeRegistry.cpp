@@ -58,7 +58,7 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
     }
     case VideoNodeType::MOVIE_NODE: {
         MovieNode *movie = new MovieNode();
-        movie->setVideoPath(name);
+        movie->setVideoPath(QString("../resources/videos/%1").arg(name)); // FIXME
         return movie;
     }
     default:
