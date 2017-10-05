@@ -26,6 +26,9 @@ signals:
     void message(QString str);
     void warning(QString str);
     void fatal(QString str);
+    void positionChanged(qreal position);
+    void durationChanged(qreal duration);
+    void videoSizeChanged(QSize size);
     void initialized();
 
 public slots:
@@ -34,15 +37,19 @@ public slots:
     void drawFrame();
 
 protected:
-    const int m_bufferCount = 3; // TODO double buffering doesn't quite work for some reason
+    void handleEvent(mpv_event *event);
+
+    static constexpr int BUFFER_COUNT = 3; // TODO double buffering doesn't quite work for some reason
     MovieNode *m_p;
     mpv::qt::Handle m_mpv;
     mpv_opengl_cb_context *m_mpv_gl;
+    QSize m_size;
     QAtomicInt m_fboIndex;
 
 protected slots:
     void initialize();
     void onDestroyed();
+    void onEvent();
 
 private:
     bool loadBlitShader();
@@ -55,6 +62,7 @@ class MovieNode
     : public VideoNode {
     Q_OBJECT
     Q_PROPERTY(QString videoPath READ videoPath WRITE setVideoPath NOTIFY videoPathChanged)
+    Q_PROPERTY(QSize videoSize READ videoSize NOTIFY videoSizeChanged)
 
     friend class MovieNodeOpenGLWorker;
 
@@ -69,13 +77,16 @@ public:
 
 public slots:
     QString videoPath();
+    QSize videoSize();
     void setVideoPath(QString videoPath);
 
 protected slots:
     void onInitialized();
+    void setVideoSize(QSize size);
 
 signals:
     void videoPathChanged(QString videoPath);
+    void videoSizeChanged(QSize size);
 
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
@@ -84,6 +95,8 @@ protected:
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
     QMap<QSharedPointer<Chain>, QSharedPointer<QOpenGLFramebufferObject>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
+    OpenGLWorkerContext *m_openGLWorkerContext;
+    QSize m_videoSize;
 
     bool m_ready;
 };
