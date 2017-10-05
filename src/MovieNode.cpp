@@ -359,7 +359,7 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "vec2 uv = gl_FragCoord.xy / iResolution;\n"
         "void main() {\n"
         "    vec2 factorFit = iVideoResolution.yx * iResolution.xy / iVideoResolution.xy / iResolution.yx;\n"
-        "    vec2 factor = max(factorFit, 1.);\n"
+        "    vec2 factor = min(factorFit, 1.);\n"
         "    vec2 texUV = (uv - 0.5) * factor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
         "    gl_FragColor = texture2D(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
