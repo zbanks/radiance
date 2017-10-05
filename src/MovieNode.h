@@ -18,6 +18,7 @@ class MovieNodeOpenGLWorker : public OpenGLWorker {
 
 public:
     MovieNodeOpenGLWorker(MovieNode *p);
+    ~MovieNodeOpenGLWorker() override;
     QVector<QOpenGLFramebufferObject *> m_fbos;
     QVector<QMutex *> m_fboLocks;
     int lastIndex();
@@ -48,7 +49,6 @@ protected:
 
 protected slots:
     void initialize();
-    void onDestroyed();
     void onEvent();
 
 private:
@@ -92,7 +92,7 @@ protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
     QString m_videoPath;
-    QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
+    MovieNodeOpenGLWorker *m_openGLWorker;
     QMap<QSharedPointer<Chain>, QSharedPointer<QOpenGLFramebufferObject>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
     OpenGLWorkerContext *m_openGLWorkerContext;

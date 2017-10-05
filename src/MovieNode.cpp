@@ -13,17 +13,16 @@ MovieNode::MovieNode()
     , m_videoSize(0, 0) {
 
     m_openGLWorkerContext = new OpenGLWorkerContext();
-    m_openGLWorkerContext->thread()->start();
-    m_openGLWorkerContext->thread()->setObjectName("MovieNode_openGLWorkerContextThread");
-    m_openGLWorkerContext->setParent(this); // TODO This doesn't work
+    m_openGLWorkerContext->setParent(this);
 
-    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(this));
+    m_openGLWorker = new MovieNodeOpenGLWorker(this);
 
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
-    connect(this, &MovieNode::videoPathChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::setVideoSize);
+    connect(m_openGLWorker, &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
+    connect(this, &MovieNode::videoPathChanged, m_openGLWorker, &MovieNodeOpenGLWorker::onVideoChanged);
+    connect(m_openGLWorker, &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::setVideoSize);
+    connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater, Qt::DirectConnection);
 
-    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+    bool result = QMetaObject::invokeMethod(m_openGLWorker, "initialize");
     Q_ASSERT(result);
 }
 
@@ -186,7 +185,6 @@ MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
     connect(this, &MovieNodeOpenGLWorker::message, m_p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, m_p, &MovieNode::warning);
     connect(this, &MovieNodeOpenGLWorker::fatal,   m_p, &MovieNode::fatal);
-    connect(this, &QObject::destroyed, this, &MovieNodeOpenGLWorker::onDestroyed);
 }
 
 static void requestUpdate(void *ctx) {
@@ -330,7 +328,13 @@ void MovieNodeOpenGLWorker::command(const QVariant &params) {
     mpv::qt::command_variant(m_mpv, params);
 }
 
-void MovieNodeOpenGLWorker::onDestroyed() {
+MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
+    if (m_mpv_gl)
+        mpv_opengl_cb_set_update_callback(m_mpv_gl, NULL, NULL);
+    // Until this call is done, we need to make sure the player remains
+    // alive. This is done implicitly with the mpv::qt::Handle instance
+    // in this class.
+    mpv_opengl_cb_uninit_gl(m_mpv_gl);
     qDeleteAll(m_fbos.begin(), m_fbos.end());
     qDeleteAll(m_fboLocks.begin(), m_fboLocks.end());
 }
