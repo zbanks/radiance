@@ -1,6 +1,7 @@
 #include "NodeRegistry.h"
 #include "EffectNode.h"
 #include "ImageNode.h"
+#include "MovieNode.h"
 
 #include <QDir>
 #include <QDebug>
@@ -27,6 +28,12 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
         name = nodeName;
     }
 
+    if (has_arg && name == "youtube") {
+        MovieNode *movie = new MovieNode();
+        movie->setVideoPath(QString("ytdl://ytsearch:%1").arg(arg));
+        return movie;
+    }
+
     if (!m_nodeTypes.contains(name)) {
         qInfo() << "Unknown node type:" << name;
         return nullptr;
@@ -49,6 +56,11 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
         image->setInputCount(vnt.nInputs);
         return image;
     }
+    case VideoNodeType::MOVIE_NODE: {
+        MovieNode *movie = new MovieNode();
+        movie->setVideoPath(name);
+        return movie;
+    }
     default:
         qInfo() << "Unknown type:" << vnt.type;
         return nullptr;
@@ -65,6 +77,11 @@ QString NodeRegistry::serializeNode(VideoNode *node) {
     ImageNode * imageNode = qobject_cast<ImageNode *>(node);
     if (imageNode) {
         return imageNode->imagePath();
+    }
+
+    MovieNode * movieNode = qobject_cast<MovieNode *>(node);
+    if (movieNode) {
+        return movieNode->videoPath();
     }
 
     qInfo() << "Unable to serialize unknown node:" << node;
@@ -87,6 +104,9 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
             break;
         case VideoNodeType::IMAGE_NODE:
             entry.insert("type", "ImageNode");
+            break;
+        case VideoNodeType::MOVIE_NODE:
+            entry.insert("type", "MovieNode");
             break;
         }
         entry.insert("description", vnt.description);
@@ -181,6 +201,23 @@ void NodeRegistry::reload() {
             .name = name,
             .type = VideoNodeType::IMAGE_NODE,
             .description = imageName,
+            .nInputs = 1, // TODO: This should be 0 but it breaks the UI
+        };
+        m_nodeTypes.insert(name, nodeType);
+    }
+
+    QDir movieDir("../resources/videos/");
+    movieDir.setSorting(QDir::Name);
+
+    for (auto movieName : movieDir.entryList()) {
+        if (movieName[0] == '.')
+            continue;
+
+        QString name = movieName;
+        VideoNodeType nodeType = {
+            .name = name,
+            .type = VideoNodeType::MOVIE_NODE,
+            .description = movieName,
             .nInputs = 1, // TODO: This should be 0 but it breaks the UI
         };
         m_nodeTypes.insert(name, nodeType);
