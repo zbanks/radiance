@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QOpenGLFramebufferObjectFormat>
 #include "main.h"
 
 MovieNode::MovieNode()
@@ -131,7 +132,8 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     // texture creation to initialize()
     // and leave lightweight FBO creation here
     if(renderFbo.isNull()) {
-        m_renderFbos[chain] = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(chain->size()));
+        auto fmt = QOpenGLFramebufferObjectFormat{};
+        m_renderFbos[chain] = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
         renderFbo = m_renderFbos.value(chain);
     }
 
@@ -288,7 +290,8 @@ void MovieNodeOpenGLWorker::drawFrame() {
         QMutexLocker locker(m_fboLocks[m_fboIndex]);
         if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != m_size) {
             delete m_fbos.at(m_fboIndex);
-            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(m_size);
+            auto fmt = QOpenGLFramebufferObjectFormat{};
+            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(m_size,fmt);
         }
         auto fbo = m_fbos.at(m_fboIndex);
 

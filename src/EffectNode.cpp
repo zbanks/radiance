@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QOpenGLFramebufferObject>
+#include <QOpenGLFramebufferObjectFormat>
 #include <QRegularExpression>
 #include <memory>
 #include <utility>
@@ -84,8 +85,10 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
     // texture creation to initialize()
     // and leave lightweight FBO creation here
     if(renderState->m_intermediate.isEmpty()) {
+        auto fmt = QOpenGLFramebufferObjectFormat{};
+        fmt.setInternalTextureFormat(GL_RGBA);
         for(int i = 0; i < m_programs.count() + 1; i++) {
-            auto fbo = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(chain->size()));
+            auto fbo = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
             renderState->m_intermediate.append(fbo);
         }
     }
