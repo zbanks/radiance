@@ -1,7 +1,6 @@
 #include "Audio.h"
 
 #include <QDebug>
-#include <portaudio.h>
 #include <cmath>
 
 #include "main.h"
@@ -116,43 +115,24 @@ void Audio::run() {
     // TODO: This is a hack to keep the pointer alive while we're still running
     QSharedPointer<Timebase> timebaseRef = timebase;
 
-    PaError err = Pa_Initialize();
-    PaStream *stream = NULL;
+    QAudioFormat format;
+    format.setSampleRate(FrameRate);
+    format.setChannelCount(1);
+    format.setSampleSize(32);
+    format.setCodec("audio/pcm");
+    format.setByteOrder(QAudioFormat::LittleEndian);
+    format.setSampleType(QAudioFormat::Float);
 
-    if(err != paNoError) {
-        qDebug() << "Could not initialize PortAudio";
-        goto err;
+    QAudioDeviceInfo deviceInfo = QAudioDeviceInfo::defaultInputDevice();
+    if (!deviceInfo.isFormatSupported(format)) {
+        qWarning() << "Format not supported; using nearest";
+        format = deviceInfo.nearestFormat(format);
     }
+    qInfo() << "Using audio format" << format;
 
-    PaStreamParameters inputParameters;
-    inputParameters.device = Pa_GetDefaultInputDevice();
-    if (inputParameters.device < 0) {
-        qWarning() << "Could not find input device, running without";
-        while(m_run) {
-            // i'm so sorry
-            QMutexLocker locker(&m_audioLock);
-            m_time = fmod((m_time + 0.003), 128.);
-        }
-        goto err;
-    }
-    inputParameters.channelCount = 1;
-    inputParameters.sampleFormat = paFloat32;
-    inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultHighInputLatency ;
-    inputParameters.hostApiSpecificStreamInfo = NULL;
+    m_audio = new QAudioInput(format, this);
 
-    err = Pa_OpenStream(&stream,
-                        &inputParameters,
-                        0,
-                        FrameRate,
-                        ChunkSize,
-                        paClipOff,
-                        0,
-                        0);
-    if(err != paNoError) {
-        qDebug() << "Could not open PortAudio input stream";
-        goto err;
-    }
-
+    /*
     err = Pa_StartStream(stream);
     if(err != paNoError) {
         qDebug() << "Could not open audio input stream";
@@ -176,6 +156,7 @@ void Audio::run() {
 err:
     err = Pa_Terminate();
     if(err != paNoError) qDebug() << "Could not cleanly terminate PortAudio";
+    */
 }
 
 double Audio::time() {

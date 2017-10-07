@@ -5,6 +5,7 @@
 #include <QVector>
 #include <QAtomicInt>
 #include <QMutex>
+#include <QtMultimedia/QAudioInput>
 #include <fftw3.h>
 #include <QOpenGLFunctions>
 #include <QOpenGLTexture>
@@ -30,6 +31,8 @@ protected:
 private:
     QAtomicInt m_run;
     double m_time;
+
+    QAudioInput *m_audio;
 
     float *chunk;
     float *sampQueue;

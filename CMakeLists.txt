@@ -18,7 +18,7 @@ include_directories(BTrack/src)
 find_package(Qt5Widgets)
 find_package(Qt5Quick)
 find_package(Qt5Gui)
-find_package(PortAudio)
+find_package(Qt5Multimedia)
 find_package(FFTW)
 find_package(SampleRate)
 find_package(RtMidi)
@@ -61,6 +61,6 @@ add_executable(radiance WIN32 src/main.cpp
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 
-target_link_libraries(libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
-target_link_libraries(radiance libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
-target_link_libraries(radiance_cli libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
+target_link_libraries(libradiance Qt5::Widgets Qt5::Quick Qt5::Gui Qt5::Multimedia ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
+target_link_libraries(radiance libradiance Qt5::Widgets Qt5::Quick Qt5::Gui Qt5::Multimedia ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
+target_link_libraries(radiance_cli libradiance Qt5::Widgets Qt5::Quick Qt5::Gui Qt5::Multimedia ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
