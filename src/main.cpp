@@ -59,8 +59,6 @@ int main(int argc, char *argv[]) {
     QThread::currentThread()->setObjectName("mainThread");
 
     openGLWorkerContext = new OpenGLWorkerContext();
-    openGLWorkerContext->thread()->start();
-    openGLWorkerContext->thread()->setObjectName("openGLWorkerContextThread");
     openGLWorkerContext->setParent(&app);
 
     settings = QSharedPointer<QSettings>(new QSettings());

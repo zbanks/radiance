@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QOpenGLFramebufferObjectFormat>
 #include "main.h"
 
 MovieNode::MovieNode()
@@ -13,17 +14,16 @@ MovieNode::MovieNode()
     , m_videoSize(0, 0) {
 
     m_openGLWorkerContext = new OpenGLWorkerContext();
-    m_openGLWorkerContext->thread()->start();
-    m_openGLWorkerContext->thread()->setObjectName("MovieNode_openGLWorkerContextThread");
-    m_openGLWorkerContext->setParent(this); // TODO This doesn't work
+    m_openGLWorkerContext->setParent(this);
 
-    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(this));
+    m_openGLWorker = new MovieNodeOpenGLWorker(this);
 
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
-    connect(this, &MovieNode::videoPathChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::setVideoSize);
+    connect(m_openGLWorker, &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
+    connect(this, &MovieNode::videoPathChanged, m_openGLWorker, &MovieNodeOpenGLWorker::onVideoChanged);
+    connect(m_openGLWorker, &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::setVideoSize);
+    connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater, Qt::DirectConnection);
 
-    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+    bool result = QMetaObject::invokeMethod(m_openGLWorker, "initialize");
     Q_ASSERT(result);
 }
 
@@ -132,7 +132,8 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     // texture creation to initialize()
     // and leave lightweight FBO creation here
     if(renderFbo.isNull()) {
-        m_renderFbos[chain] = QSharedPointer<QOpenGLFramebufferObject>(new QOpenGLFramebufferObject(chain->size()));
+        auto fmt = QOpenGLFramebufferObjectFormat{};
+        m_renderFbos[chain] = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
         renderFbo = m_renderFbos.value(chain);
     }
 
@@ -186,7 +187,6 @@ MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
     connect(this, &MovieNodeOpenGLWorker::message, m_p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, m_p, &MovieNode::warning);
     connect(this, &MovieNodeOpenGLWorker::fatal,   m_p, &MovieNode::fatal);
-    connect(this, &QObject::destroyed, this, &MovieNodeOpenGLWorker::onDestroyed);
 }
 
 static void requestUpdate(void *ctx) {
@@ -290,7 +290,8 @@ void MovieNodeOpenGLWorker::drawFrame() {
         QMutexLocker locker(m_fboLocks[m_fboIndex]);
         if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != m_size) {
             delete m_fbos.at(m_fboIndex);
-            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(m_size);
+            auto fmt = QOpenGLFramebufferObjectFormat{};
+            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(m_size,fmt);
         }
         auto fbo = m_fbos.at(m_fboIndex);
 
@@ -330,7 +331,13 @@ void MovieNodeOpenGLWorker::command(const QVariant &params) {
     mpv::qt::command_variant(m_mpv, params);
 }
 
-void MovieNodeOpenGLWorker::onDestroyed() {
+MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
+    if (m_mpv_gl)
+        mpv_opengl_cb_set_update_callback(m_mpv_gl, NULL, NULL);
+    // Until this call is done, we need to make sure the player remains
+    // alive. This is done implicitly with the mpv::qt::Handle instance
+    // in this class.
+    mpv_opengl_cb_uninit_gl(m_mpv_gl);
     qDeleteAll(m_fbos.begin(), m_fbos.end());
     qDeleteAll(m_fboLocks.begin(), m_fboLocks.end());
 }
@@ -355,7 +362,7 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "vec2 uv = gl_FragCoord.xy / iResolution;\n"
         "void main() {\n"
         "    vec2 factorFit = iVideoResolution.yx * iResolution.xy / iVideoResolution.xy / iResolution.yx;\n"
-        "    vec2 factor = max(factorFit, 1.);\n"
+        "    vec2 factor = min(factorFit, 1.);\n"
         "    vec2 texUV = (uv - 0.5) * factor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
         "    gl_FragColor = texture2D(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
