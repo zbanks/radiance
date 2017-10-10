@@ -23,6 +23,7 @@ VideoNodeTile {
             Layout.fillWidth: true;
             text: videoNode ? videoNode.name : "(loading)";
             color: "#ddd";
+            elide: Text.ElideMiddle;
         }
         
         /*

@@ -44,6 +44,7 @@ float exp_step(float v) {
     return pow(v, iStep * iFPS);
 }
 // Utilities to convert from an RGB vec3 to an HSV vec3
+// 0 <= H, S, V <= 1
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
     vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
@@ -58,6 +59,29 @@ vec3 hsv2rgb(vec3 c) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// Utilities to convert from an RGB vec3 to a YUV vec3
+// 0 <= Y, U, V <= 1 (*not* -1 <= U, V <= 1)
+// U is greenish<->bluish; V is bluish<->redish
+// https://en.wikipedia.org/wiki/YUV#Full_swing_for_BT.601
+vec3 rgb2yuv(vec3 rgb) {
+    vec3 yuv = vec3(0.);
+    yuv.x = rgb.r *  0.2126  + rgb.g *  0.7152  + rgb.b *  0.0722;
+    yuv.y = rgb.r * -0.09991 + rgb.g * -0.33609 + rgb.b *  0.436;
+    yuv.z = rgb.r *  0.615   + rgb.g * -0.55861 + rgb.b * -0.05639;
+    yuv.yz += 1.0;
+    yuv.yz *= 0.5;
+    return yuv;
+}
+vec3 yuv2rgb(vec3 yuv) {
+    yuv.yz /= 0.5;
+    yuv.yz -= 1.0;
+    vec3 rgb = vec3(0.);
+    rgb.r = yuv.x +                    yuv.z *  1.28033;
+    rgb.g = yuv.x + yuv.y * -0.21482 + yuv.z * -0.38059;
+    rgb.b = yuv.x + yuv.y *  2.12798;
+    return rgb;
 }
 
 // Turn non-premultipled alpha RGBA into premultipled alpha RGBA

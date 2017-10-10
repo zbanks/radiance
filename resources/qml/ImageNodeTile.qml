@@ -19,6 +19,7 @@ VideoNodeTile {
             Layout.fillWidth: true;
             text: videoNode ? videoNode.imagePath : "";
             color: "#ddd";
+            elide: Text.ElideMiddle;
         }
 
         Item {
