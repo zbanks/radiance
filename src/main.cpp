@@ -22,17 +22,9 @@
 OpenGLWorkerContext *openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<QSettings> outputSettings;
-QSharedPointer<UISettings> uiSettings;
 QSharedPointer<Audio> audio;
 QSharedPointer<NodeRegistry> nodeRegistry;
 QSharedPointer<Timebase> timebase;
-
-QObject *uiSettingsProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    QQmlEngine::setObjectOwnership(uiSettings.data(), QQmlEngine::CppOwnership);
-    return uiSettings.data();
-}
 
 QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
     Q_UNUSED(engine)
@@ -64,7 +56,6 @@ int main(int argc, char *argv[]) {
 
     settings = QSharedPointer<QSettings>(new QSettings());
     outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));
-    uiSettings = QSharedPointer<UISettings>(new UISettings());
     timebase = QSharedPointer<Timebase>(new Timebase());
     audio = QSharedPointer<Audio>(new Audio());
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
@@ -83,7 +74,6 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
 
-    qmlRegisterSingletonType<UISettings>("radiance", 1, 0, "UISettings", uiSettingsProvider);
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
     qmlRegisterSingletonType<NodeRegistry>("radiance", 1, 0, "NodeRegistry", nodeRegistryProvider);
 

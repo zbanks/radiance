@@ -32,7 +32,6 @@ add_library(libradiance
     src/Midi.cpp
     src/Output.cpp
     src/Timebase.cpp
-    src/UISettings.cpp
     src/NodeRegistry.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
