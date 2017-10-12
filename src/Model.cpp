@@ -1,7 +1,10 @@
 #include "Model.h"
 #include "EffectNode.h"
 #include "main.h"
+#include <QByteArray>
+#include <QFile>
 #include <QJsonArray>
+#include <QJsonDocument>
 
 QVariantMap Edge::toVariantMap() const {
     QVariantMap result;
@@ -332,6 +335,12 @@ QVariantMap Model::qmlOutputConnections() const {
     return outputConnections;
 }
 
+void Model::clear() {
+    while (!m_vertices.empty()) {
+        removeVideoNode(m_vertices[0]);
+    }
+}
+
 void Model::flush() {
     QList<VideoNode *> verticesAdded;
     QList<VideoNode *> verticesRemoved;
@@ -555,17 +564,24 @@ void Model::deserialize(const QJsonObject &data) {
     }
 }
 
-/*
-#include <QFile>
-#include <QByteArray>
-#include <QJsonDocument>
-
-void Model::testDes() {
-    QFile f("deck.json");
-    f.open(QIODevice::ReadOnly);
-    QByteArray data = f.readAll();
+void Model::loadFile(QString filename) {
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Unable to open file for reading:" << filename;
+        return;
+    }
+    QByteArray data = file.readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
     deserialize(doc.object());
     flush();
 }
-*/
+
+void Model::saveFile(QString filename) {
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "Unable to open file for writing:" << filename;
+        return;
+    }
+    QJsonDocument doc(serialize());
+    file.write(doc.toJson());
+}

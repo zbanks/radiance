@@ -101,8 +101,6 @@ ApplicationWindow {
     Component.onCompleted: {
         Globals.context = globalContext;
         globalContext.outputs = [outputItem.output, outputImageSequence];
-        UISettings.previewSize = "100x100";
-        UISettings.outputSize = "1024x768";
         model.addVideoNode(en);
         model.addVideoNode(en2);
         model.addVideoNode(en3);
@@ -186,6 +184,26 @@ ApplicationWindow {
                 text: "Stop saving to disk"
                 onClicked: {
                     outputImageSequence.stop();
+                }
+            }
+
+            Button {
+                text: "Save"
+                onClicked: {
+                    model.saveFile("radiance_state.json");
+                }
+            }
+            Button {
+                text: "Load"
+                onClicked: {
+                    model.loadFile("radiance_state.json");
+                }
+            }
+            Button {
+                text: "Clear"
+                onClicked: {
+                    model.clear();
+                    model.flush();
                 }
             }
         }

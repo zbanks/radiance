@@ -61,6 +61,9 @@ public slots:
     // Creates a Model-owned VideoNode & adds it to the graph
     VideoNode *createVideoNode(const QString &name);
 
+    // Delete all nodes & edges (still need to call flush())
+    void clear();
+
     // Atomically update the graph used for rendering
     // and emit signals describing how the graph was changed.
     // Call this after adding or removing nodes edges, or outputs.
@@ -128,6 +131,11 @@ public slots:
     QJsonObject serialize();
     void deserialize(const QJsonObject &data);
 
+    // These are to wrap serialize/deserialize for the UI
+    // This almost certainly should live elsewhere.
+    void loadFile(QString filename);
+    void saveFile(QString filename);
+    
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)
     // with the interim changes
