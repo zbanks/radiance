@@ -7,10 +7,6 @@ import radiance 1.0
 VideoNodeTile {
     id: tile;
 
-    onVideoNodeChanged: {
-
-    }
-
     ColumnLayout {
         anchors.fill: parent;
         anchors.margins: 15;
@@ -36,6 +32,29 @@ VideoNodeTile {
                 context: Globals.context;
                 videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
             }
+        }
+
+        Slider {
+            id: slider
+            enabled: tile.videoNode.duration > 0
+            value: tile.videoNode.duration > 0 ? tile.videoNode.position / tile.videoNode.duration : 0
+            state: pressed ? "seeking" : ""
+            onValueChanged: {
+                if (state == "seeking"
+                    && tile.videoNode.duration > 0) {
+                    tile.videoNode.position = tile.videoNode.duration * value;
+                }
+            }
+
+            states: [
+                State {
+                    name: "seeking"
+                    PropertyChanges {
+                        target: slider;
+                        value: value;
+                    }
+                }
+            ]
         }
     }
 

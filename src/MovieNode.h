@@ -36,6 +36,7 @@ public slots:
     void onVideoChanged();
     void command(const QVariant &params);
     void drawFrame();
+    void setPosition(qreal position);
 
 protected:
     void handleEvent(mpv_event *event);
@@ -63,6 +64,8 @@ class MovieNode
     Q_OBJECT
     Q_PROPERTY(QString videoPath READ videoPath WRITE setVideoPath NOTIFY videoPathChanged)
     Q_PROPERTY(QSize videoSize READ videoSize NOTIFY videoSizeChanged)
+    Q_PROPERTY(qreal duration READ duration NOTIFY durationChanged)
+    Q_PROPERTY(qreal position READ position NOTIFY positionChanged WRITE setPosition)
 
     friend class MovieNodeOpenGLWorker;
 
@@ -79,14 +82,21 @@ public slots:
     QString videoPath();
     QSize videoSize();
     void setVideoPath(QString videoPath);
+    qreal position();
+    qreal duration();
+    void setPosition(qreal position);
 
 protected slots:
     void onInitialized();
-    void setVideoSize(QSize size);
+    void onVideoSizeChanged(QSize size);
+    void onPositionChanged(qreal position);
+    void onDurationChanged(qreal duration);
 
 signals:
     void videoPathChanged(QString videoPath);
     void videoSizeChanged(QSize size);
+    void positionChanged(qreal position);
+    void durationChanged(qreal duration);
 
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
@@ -99,4 +109,6 @@ protected:
     QSize m_videoSize;
 
     bool m_ready;
+    qreal m_position;
+    qreal m_duration;
 };
