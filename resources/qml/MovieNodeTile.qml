@@ -36,13 +36,16 @@ VideoNodeTile {
 
         Slider {
             id: slider
+            Layout.fillWidth: true
+            minimumValue: 0
+            maximumValue: tile.videoNode.duration
             enabled: tile.videoNode.duration > 0
-            value: tile.videoNode.duration > 0 ? tile.videoNode.position / tile.videoNode.duration : 0
+            value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
             state: pressed ? "seeking" : ""
             onValueChanged: {
                 if (state == "seeking"
                     && tile.videoNode.duration > 0) {
-                    tile.videoNode.position = tile.videoNode.duration * value;
+                    tile.videoNode.position = value;
                 }
             }
 
