@@ -34,30 +34,43 @@ VideoNodeTile {
             }
         }
 
-        Slider {
-            id: slider
+        RowLayout {
             Layout.fillWidth: true
-            minimumValue: 0
-            maximumValue: tile.videoNode.duration
-            enabled: tile.videoNode.duration > 0
-            value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
-            state: pressed ? "seeking" : ""
-            onValueChanged: {
-                if (state == "seeking"
-                    && tile.videoNode.duration > 0) {
-                    tile.videoNode.position = value;
+            CheckBox {
+                id: mutedCheck
+                checked: tile.videoNode ? tile.videoNode.mute : false;
+                Binding {
+                    target: tile.videoNode
+                    property: "mute"
+                    value: mutedCheck.checked
                 }
             }
 
-            states: [
-                State {
-                    name: "seeking"
-                    PropertyChanges {
-                        target: slider;
-                        value: value;
+            Slider {
+                id: slider
+                Layout.fillWidth: true
+                minimumValue: 0
+                maximumValue: tile.videoNode.duration
+                enabled: tile.videoNode.duration > 0
+                value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
+                state: pressed ? "seeking" : ""
+                onValueChanged: {
+                    if (state == "seeking"
+                        && tile.videoNode.duration > 0) {
+                        tile.videoNode.position = value;
                     }
                 }
-            ]
+
+                states: [
+                    State {
+                        name: "seeking"
+                        PropertyChanges {
+                            target: slider;
+                            value: value;
+                        }
+                    }
+                ]
+            }
         }
     }
 

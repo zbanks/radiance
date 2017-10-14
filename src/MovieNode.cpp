@@ -25,6 +25,7 @@ MovieNode::MovieNode()
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
+    connect(m_openGLWorker, &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
     connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater, Qt::DirectConnection);
 
     bool result = QMetaObject::invokeMethod(m_openGLWorker, "initialize");
@@ -69,18 +70,6 @@ QString MovieNode::videoPath() {
     return m_videoPath;
 }
 
-void MovieNode::setVideoPath(QString videoPath) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    if(videoPath != m_videoPath) {
-        {
-            QMutexLocker locker(&m_stateLock);
-            m_videoPath = videoPath;
-        }
-
-        emit videoPathChanged(videoPath);
-    }
-}
-
 qreal MovieNode::position() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_position;
@@ -94,6 +83,11 @@ qreal MovieNode::duration() {
 QSize MovieNode::videoSize() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_videoSize;
+}
+
+bool MovieNode::mute() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_mute;
 }
 
 void MovieNode::onVideoSizeChanged(QSize size) {
@@ -132,9 +126,37 @@ void MovieNode::onDurationChanged(qreal duration) {
     }
 }
 
+void MovieNode::onMuteChanged(bool mute) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (mute != m_mute) {
+        {
+            QMutexLocker locker(&m_stateLock);
+            m_mute = mute;
+        }
+        emit muteChanged(mute);
+    }
+}
+
+void MovieNode::setVideoPath(QString videoPath) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if(videoPath != m_videoPath) {
+        {
+            QMutexLocker locker(&m_stateLock);
+            m_videoPath = videoPath;
+        }
+
+        emit videoPathChanged(videoPath);
+    }
+}
+
 void MovieNode::setPosition(qreal position) {
     Q_ASSERT(QThread::currentThread() == thread());
     QMetaObject::invokeMethod(m_openGLWorker, "setPosition", Qt::QueuedConnection, Q_ARG(qreal, position));
+}
+
+void MovieNode::setMute(bool mute) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    QMetaObject::invokeMethod(m_openGLWorker, "setMute", Qt::QueuedConnection, Q_ARG(bool, mute));
 }
 
 // See comments in MovieNode.h about these 3 functions
@@ -268,6 +290,7 @@ void MovieNodeOpenGLWorker::initialize() {
     mpv_observe_property(m_mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, 0, "video-params/w", MPV_FORMAT_INT64);
     mpv_observe_property(m_mpv, 0, "video-params/h", MPV_FORMAT_INT64);
+    mpv_observe_property(m_mpv, 0, "mute", MPV_FORMAT_FLAG);
 
     int r = mpv_opengl_cb_init_gl(m_mpv_gl, NULL, get_proc_address, NULL);
     if (r < 0)
@@ -319,6 +342,11 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
                 qint64 d = *(qint64 *)prop->data;
                 m_size.setHeight(d);
                 emit videoSizeChanged(m_size);
+            }
+        } else if (strcmp(prop->name, "mute") == 0) {
+            if (prop->format == MPV_FORMAT_FLAG) {
+                bool d = *(int *)prop->data;
+                emit muteChanged(d);
             }
         }
         break;
@@ -376,6 +404,10 @@ void MovieNodeOpenGLWorker::command(const QVariant &params) {
 
 void MovieNodeOpenGLWorker::setPosition(qreal position) {
     command(QVariantList() << "seek" << position << "absolute");
+}
+
+void MovieNodeOpenGLWorker::setMute(bool mute) {
+    command(QVariantList() << "set" << "mute" << (mute ? "yes" : "no"));
 }
 
 MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
