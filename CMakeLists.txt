@@ -23,6 +23,7 @@ find_package(FFTW)
 find_package(SampleRate)
 find_package(RtMidi)
 find_package(OpenGL)
+find_package(MPV)
 
 qt5_add_resources(resources/resources.qrc)
 
@@ -36,6 +37,7 @@ add_library(libradiance
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/ImageNode.cpp
+    src/MovieNode.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/Model.cpp
@@ -60,6 +62,6 @@ add_executable(radiance WIN32 src/main.cpp
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 
-target_link_libraries(libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
-target_link_libraries(radiance libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
-target_link_libraries(radiance_cli libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES})
+target_link_libraries(libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${MPV_LIBRARY})
+target_link_libraries(radiance libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${MPV_LIBRARY})
+target_link_libraries(radiance_cli libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${MPV_LIBRARY})

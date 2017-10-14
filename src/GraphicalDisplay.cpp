@@ -2,6 +2,7 @@
 #include "main.h"
 
 #include <QOpenGLFramebufferObject>
+#include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 
@@ -44,7 +45,8 @@ err:
     }
 
     QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) override {
-        return new QOpenGLFramebufferObject(size);
+        auto fmt = QOpenGLFramebufferObjectFormat{};
+        return new QOpenGLFramebufferObject(size,fmt);
     }
 
     void synchronize(QQuickFramebufferObject *item) override {

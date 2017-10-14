@@ -12,6 +12,7 @@ struct VideoNodeType {
     enum {
         EFFECT_NODE,
         IMAGE_NODE,
+        MOVIE_NODE,
     } type;
     QString description;
     int nInputs;

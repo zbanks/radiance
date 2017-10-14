@@ -53,10 +53,6 @@ ApplicationWindow {
         id: en4
         name: "yellow"
     }
-    ImageNode {
-        id: img1
-        imagePath: "nyancat.gif"
-    }
     EffectNode {
         id: cross
         name: "crossfader"
@@ -105,14 +101,15 @@ ApplicationWindow {
         model.addVideoNode(en2);
         model.addVideoNode(en3);
         model.addVideoNode(en4);
-        model.addVideoNode(img1);
         model.addVideoNode(cross);
 
-        model.addEdge(img1, en, 0);
         model.addEdge(en, en2, 0);
         model.addEdge(en2, en3, 0);
         model.addEdge(en3, en4, 0);
         model.addEdge(en4, cross, 0);
+
+        var video = model.createVideoNode("youtube:zedd clarity");
+        model.addEdge(video, en, 0);
 
         var n1 = model.createVideoNode("test");
         var n2 = model.createVideoNode("interstellar");
@@ -121,6 +118,7 @@ ApplicationWindow {
         model.addEdge(n2, n3, 0);
         model.addEdge(n3, cross, 1);
         model.flush();
+
     }
 
     ColumnLayout {

@@ -6,8 +6,6 @@
 #include <QImageReader>
 #include "main.h"
 
-static bool ilInitted = false;
-
 ImageNode::ImageNode()
     : m_openGLWorker(new ImageNodeOpenGLWorker(this))
     , m_ready(false) {
@@ -33,9 +31,6 @@ ImageNode::~ImageNode() {
 
 void ImageNode::onInitialized() {
     m_ready = true;
-}
-
-void imagePathChanged(QString imagePath) {
 }
 
 void ImageNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
