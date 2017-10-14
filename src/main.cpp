@@ -7,7 +7,6 @@
 #include "GraphicalDisplay.h"
 #include "ImageNode.h"
 #include "Lux.h"
-#include "Midi.h"
 #include "Model.h"
 #include "NodeRegistry.h"
 #include "Output.h"
@@ -16,9 +15,16 @@
 #include "QQuickOutputWindow.h"
 #include "OutputImageSequence.h"
 #include "VideoNode.h"
-#include "MovieNode.h"
 #include "View.h"
 #include "main.h"
+
+#if RTMIDI_FOUND
+#include "Midi.h"
+#endif 
+
+#if MPV_FOUND
+#include "MovieNode.h"
+#endif
 
 OpenGLWorkerContext *openGLWorkerContext;
 QSharedPointer<QSettings> settings;
@@ -64,14 +70,18 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
+#if MPV_FOUND
     qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
+#endif
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
     qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
     qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
+#if RTMIDI_FOUND
     qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
+#endif
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
 
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);

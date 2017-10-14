@@ -22,15 +22,18 @@ Build
 - `Qt 5.6`
 - `SDL2-TTF`
 - `PortAudio`
-- `rtmidi`
 - `FFTW3`
 - `libsamplerate`
+
+### Optional Dependencies
+- `libmpv`
+- `rtmidi`
 
 Install dependencies on Ubuntu:
 
     $ sudo apt-add-repository ppa:beineri/opt-qt591-trusty
     $ sudo apt-get update
-    $ sudo apt-get install qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev
+    $ sudo apt-get install qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev libmpv-dev
     $ git clone https://github.com/EddieRingle/portaudio    # build & install
     $ git clone https://github.com/thestk/rtmidi            # build & install
 

@@ -108,7 +108,8 @@ ApplicationWindow {
         model.addEdge(en3, en4, 0);
         model.addEdge(en4, cross, 0);
 
-        var video = model.createVideoNode("youtube:zedd clarity");
+        //var video = model.createVideoNode("youtube:zedd clarity");
+        var video = model.createVideoNode("nyancat.gif");
         model.addEdge(video, en, 0);
 
         var n1 = model.createVideoNode("test");

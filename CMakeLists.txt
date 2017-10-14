@@ -15,29 +15,28 @@ set(CMAKE_CXX_STANDARD 14)
 include(Doxygen)
 include_directories(BTrack/src)
 
-find_package(Qt5Widgets)
-find_package(Qt5Quick)
-find_package(Qt5Gui)
-find_package(PortAudio)
-find_package(FFTW)
-find_package(SampleRate)
+find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Quick REQUIRED)
+find_package(Qt5Gui REQUIRED)
+find_package(PortAudio REQUIRED)
+find_package(FFTW REQUIRED)
+find_package(SampleRate REQUIRED)
+find_package(OpenGL REQUIRED)
 find_package(RtMidi)
-find_package(OpenGL)
 find_package(MPV)
 
 qt5_add_resources(resources/resources.qrc)
 
-add_library(libradiance
+set(libradiance_SOURCES)
+list(APPEND libradiance_SOURCES
     src/Audio.cpp
     src/Lux.cpp
-    src/Midi.cpp
     src/Output.cpp
     src/Timebase.cpp
     src/NodeRegistry.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/ImageNode.cpp
-    src/MovieNode.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/Model.cpp
@@ -54,6 +53,34 @@ add_library(libradiance
     resources/resources.qrc
     )
 
+set(radiance_LIBRARIES)
+list(APPEND radiance_LIBRARIES
+    Qt5::Widgets
+    Qt5::Quick
+    Qt5::Gui
+    ${FFTW_LIBRARIES}
+    ${SAMPLERATE_LIBRARIES}
+    ${PORTAUDIO_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    )
+
+add_definitions( -DTRUE=1 -DFALSE=0 )
+
+add_definitions( -DRTMIDI_FOUND=${RtMidi_FOUND} )
+if(RtMidi_FOUND)
+    list(APPEND libradiance_SOURCES src/Midi.cpp)
+    list(APPEND radiance_LIBRARIES ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
+endif()
+
+add_definitions( -DMPV_FOUND=${MPV_FOUND} )
+if(MPV_FOUND)
+    list(APPEND libradiance_SOURCES src/MovieNode.cpp)
+    list(APPEND radiance_LIBRARIES ${MPV_LIBRARY})
+endif()
+
+
+add_library(libradiance ${libradiance_SOURCES})
+
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickOutputItem.cpp
@@ -62,6 +89,6 @@ add_executable(radiance WIN32 src/main.cpp
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 
-target_link_libraries(libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${MPV_LIBRARY})
-target_link_libraries(radiance libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${MPV_LIBRARY})
-target_link_libraries(radiance_cli libradiance Qt5::Widgets Qt5::Quick Qt5::Gui ${FFTW_LIBRARIES} ${SAMPLERATE_LIBRARIES} ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES} ${OPENGL_LIBRARIES} ${MPV_LIBRARY})
+target_link_libraries(libradiance ${radiance_LIBRARIES})
+target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
+target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})

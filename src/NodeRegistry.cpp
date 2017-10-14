@@ -1,7 +1,10 @@
 #include "NodeRegistry.h"
 #include "EffectNode.h"
 #include "ImageNode.h"
+
+#if MPV_FOUND
 #include "MovieNode.h"
+#endif
 
 #include <QDir>
 #include <QDebug>
@@ -28,11 +31,19 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
         name = nodeName;
     }
 
+#if MPV_FOUND
     if (has_arg && name == "youtube") {
         MovieNode *movie = new MovieNode();
         movie->setVideoPath(QString("ytdl://ytsearch:%1").arg(arg));
         return movie;
     }
+
+    if (has_arg && name == "mpv") {
+        MovieNode *movie = new MovieNode();
+        movie->setVideoPath(arg);
+        return movie;
+    }
+#endif
 
     if (!m_nodeTypes.contains(name)) {
         qInfo() << "Unknown node type:" << name;
@@ -56,11 +67,13 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
         image->setInputCount(vnt.nInputs);
         return image;
     }
+#if MPV_FOUND
     case VideoNodeType::MOVIE_NODE: {
         MovieNode *movie = new MovieNode();
         movie->setVideoPath(QString("../resources/videos/%1").arg(name)); // FIXME
         return movie;
     }
+#endif
     default:
         qInfo() << "Unknown type:" << vnt.type;
         return nullptr;
@@ -79,10 +92,12 @@ QString NodeRegistry::serializeNode(VideoNode *node) {
         return imageNode->imagePath();
     }
 
+#if MPV_FOUND
     MovieNode * movieNode = qobject_cast<MovieNode *>(node);
     if (movieNode) {
         return movieNode->videoPath();
     }
+#endif
 
     qInfo() << "Unable to serialize unknown node:" << node;
     return QString("unknown");
@@ -105,9 +120,11 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
         case VideoNodeType::IMAGE_NODE:
             entry.insert("type", "ImageNode");
             break;
+#if MPV_FOUND
         case VideoNodeType::MOVIE_NODE:
             entry.insert("type", "MovieNode");
             break;
+#endif
         }
         entry.insert("description", vnt.description);
         entry.insert("nInputs", vnt.nInputs);
@@ -206,6 +223,7 @@ void NodeRegistry::reload() {
         m_nodeTypes.insert(name, nodeType);
     }
 
+#if MPV_FOUND
     QDir movieDir("../resources/videos/");
     movieDir.setSorting(QDir::Name);
 
@@ -222,6 +240,7 @@ void NodeRegistry::reload() {
         };
         m_nodeTypes.insert(name, nodeType);
     }
+#endif
 
     qInfo() << "Reloaded NodeRegistry:" << m_nodeTypes.size();
     emit nodeTypesChanged();
