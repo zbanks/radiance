@@ -193,10 +193,10 @@ FocusScope {
                 console.log("replacing", videoNode, child, childInput);
 
                 model.removeEdge(videoNode, child, childInput);
-                model.addEdge(videoNode, other, 0);
                 model.addEdge(other, child, childInput);
             }
         }
+        model.addEdge(videoNode, other, 0);
         model.flush();
     }
 

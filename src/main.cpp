@@ -18,11 +18,11 @@
 #include "View.h"
 #include "main.h"
 
-#if RTMIDI_FOUND
+#if RTMIDI_FOUND == TRUE
 #include "Midi.h"
 #endif 
 
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
 #include "MovieNode.h"
 #endif
 
@@ -70,8 +70,10 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
     qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
+#else
+    qInfo() << "radiance compiled without mpv support";
 #endif
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
@@ -79,8 +81,10 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
     qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
-#if RTMIDI_FOUND
+#if RTMIDI_FOUND == TRUE
     qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
+#else
+    qInfo() << "radiance compiled without midi support";
 #endif
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
 

@@ -2,7 +2,7 @@
 #include "EffectNode.h"
 #include "ImageNode.h"
 
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
 #include "MovieNode.h"
 #endif
 
@@ -31,7 +31,7 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
         name = nodeName;
     }
 
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
     if (has_arg && name == "youtube") {
         MovieNode *movie = new MovieNode();
         movie->setVideoPath(QString("ytdl://ytsearch:%1").arg(arg));
@@ -67,7 +67,7 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
         image->setInputCount(vnt.nInputs);
         return image;
     }
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
     case VideoNodeType::MOVIE_NODE: {
         MovieNode *movie = new MovieNode();
         movie->setVideoPath(QString("../resources/videos/%1").arg(name)); // FIXME
@@ -92,7 +92,7 @@ QString NodeRegistry::serializeNode(VideoNode *node) {
         return imageNode->imagePath();
     }
 
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
     MovieNode * movieNode = qobject_cast<MovieNode *>(node);
     if (movieNode) {
         return movieNode->videoPath();
@@ -120,7 +120,7 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
         case VideoNodeType::IMAGE_NODE:
             entry.insert("type", "ImageNode");
             break;
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
         case VideoNodeType::MOVIE_NODE:
             entry.insert("type", "MovieNode");
             break;
@@ -222,7 +222,7 @@ void NodeRegistry::reload() {
         m_nodeTypes.insert(name, nodeType);
     }
 
-#if MPV_FOUND
+#if MPV_FOUND == TRUE
     QDir movieDir("../resources/videos/");
     movieDir.setSorting(QDir::Name);
 
