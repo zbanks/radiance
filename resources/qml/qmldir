@@ -1,0 +1,2 @@
+# qmldir
+singleton Globals Globals.qml
