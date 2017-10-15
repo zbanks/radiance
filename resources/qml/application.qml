@@ -140,8 +140,10 @@ ApplicationWindow {
                 id: nodeAddAction
                 onTriggered: {
                     var node = model.createVideoNode(nodeSelector.currentText);
+                    if (graph.lastClickedTile) {
+                        graph.lastClickedTile.insertAfter(node);
+                    }
                     model.flush();
-                    console.log("New Node", nodeSelector.currentText, node);
                 }
             }
             Button {
@@ -212,6 +214,7 @@ ApplicationWindow {
             Layout.fillHeight: true;
 
             Graph {
+                id: graph
                 model: model
                 currentOutputName: outputSelector.currentText
                 anchors.fill: parent

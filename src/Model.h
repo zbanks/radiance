@@ -132,7 +132,7 @@ public slots:
     void deserialize(const QJsonObject &data);
 
     // These are to wrap serialize/deserialize for the UI
-    // This almost certainly should live elsewhere.
+    // TODO: This almost certainly should live elsewhere.
     void loadFile(QString filename);
     void saveFile(QString filename);
     

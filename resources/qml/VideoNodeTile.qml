@@ -182,6 +182,24 @@ FocusScope {
         model.flush();
     }
 
+    function insertAfter(other) {
+        // Replace `this -> child` with `this -> other -> child` on input 0
+        var edges = model.edges;
+        for (var i = 0; i < edges.length; i++) {
+            var edge = edges[i];
+            if (edge.fromVertex == videoNode) {
+                var child = edge.toVertex;
+                var childInput = edge.toInput;
+                console.log("replacing", videoNode, child, childInput);
+
+                model.removeEdge(videoNode, child, childInput);
+                model.addEdge(videoNode, other, 0);
+                model.addEdge(other, child, childInput);
+            }
+        }
+        model.flush();
+    }
+
     function setSelectedAsOutput() {
         var output = tile.parent.parent.currentOutputName;
         model.connectOutput(output, tile.videoNode);
