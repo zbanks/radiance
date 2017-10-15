@@ -308,7 +308,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
             if(m.hasMatch()) {
                 props.insert(m.captured("name"),m.captured("value"));
                 passes.back().append(QString{"#line %1"}.arg(lineno));
-                qDebug() << "setting property " << m.captured("name") << " to value " << m.captured("value");
+                //qDebug() << "setting property " << m.captured("name") << " to value " << m.captured("value");
                 continue;
             }
         }
