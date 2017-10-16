@@ -12,7 +12,7 @@ struct VideoNodeType {
     enum {
         EFFECT_NODE,
         IMAGE_NODE,
-#if MPV_FOUND == TRUE
+#ifdef MPV_FOUND
         MOVIE_NODE,
 #endif
     } type;

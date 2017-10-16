@@ -64,16 +64,14 @@ list(APPEND radiance_LIBRARIES
     ${OPENGL_LIBRARIES}
     )
 
-add_definitions( -DTRUE=1 -DFALSE=0 )
-
-add_definitions( -DRTMIDI_FOUND=${RtMidi_FOUND} )
 if(RtMidi_FOUND)
+    add_definitions( -DRTMIDI_FOUND )
     list(APPEND libradiance_SOURCES src/Midi.cpp)
     list(APPEND radiance_LIBRARIES ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
 endif()
 
-add_definitions( -DMPV_FOUND=${MPV_FOUND} )
 if(MPV_FOUND)
+    add_definitions( -DMPV_FOUND )
     list(APPEND libradiance_SOURCES src/MovieNode.cpp)
     list(APPEND radiance_LIBRARIES ${MPV_LIBRARY})
 endif()
