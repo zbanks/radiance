@@ -31,6 +31,7 @@ signals:
     void durationChanged(qreal duration);
     void videoSizeChanged(QSize size);
     void muteChanged(bool mute);
+    void pauseChanged(bool pause);
     void initialized();
 
 public slots:
@@ -39,6 +40,7 @@ public slots:
     void drawFrame();
     void setPosition(qreal position);
     void setMute(bool mute);
+    void setPause(bool pause);
 
 protected:
     void handleEvent(mpv_event *event);
@@ -69,6 +71,7 @@ class MovieNode
     Q_PROPERTY(qreal duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(qreal position READ position NOTIFY positionChanged WRITE setPosition)
     Q_PROPERTY(bool mute READ mute NOTIFY muteChanged WRITE setMute)
+    Q_PROPERTY(bool pause READ pause NOTIFY pauseChanged WRITE setPause)
 
     friend class MovieNodeOpenGLWorker;
 
@@ -87,9 +90,11 @@ public slots:
     qreal position();
     qreal duration();
     bool mute();
+    bool pause();
     void setVideoPath(QString videoPath);
     void setPosition(qreal position);
     void setMute(bool mute);
+    void setPause(bool pause);
 
 protected slots:
     void onInitialized();
@@ -97,6 +102,7 @@ protected slots:
     void onPositionChanged(qreal position);
     void onDurationChanged(qreal duration);
     void onMuteChanged(bool mute);
+    void onPauseChanged(bool pause);
 
 signals:
     void videoPathChanged(QString videoPath);
@@ -104,6 +110,7 @@ signals:
     void positionChanged(qreal position);
     void durationChanged(qreal duration);
     void muteChanged(bool mute);
+    void pauseChanged(bool pause);
 
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
@@ -119,4 +126,5 @@ protected:
     qreal m_position;
     qreal m_duration;
     bool m_mute;
+    bool m_pause;
 };

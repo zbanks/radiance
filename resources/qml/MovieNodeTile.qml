@@ -47,6 +47,19 @@ VideoNodeTile {
                 }
             }
 
+            CheckBox {
+                id: pausedCheck
+                checked: tile.videoNode ? tile.videoNode.pause : false;
+                Binding {
+                    target: tile.videoNode
+                    property: "pause"
+                    value: pausedCheck.checked
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
             Slider {
                 id: slider
                 Layout.fillWidth: true

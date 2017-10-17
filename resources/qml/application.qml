@@ -108,8 +108,8 @@ ApplicationWindow {
         model.addEdge(en3, en4, 0);
         model.addEdge(en4, cross, 0);
 
-        //var video = model.createVideoNode("youtube:zedd clarity");
-        var video = model.createVideoNode("nyancat.gif");
+        var video = model.createVideoNode("youtube:zedd clarity");
+        //var video = model.createVideoNode("nyancat.gif");
         model.addEdge(video, en, 0);
 
         var n1 = model.createVideoNode("test");
@@ -133,7 +133,7 @@ ApplicationWindow {
                 id: nodeSelector;
                 model: Object.keys(NodeRegistry.nodeTypes);
                 editable: true;
-                Layout.preferredWidth: 300;
+                Layout.preferredWidth: 200;
                 onAccepted: nodeAddAction.trigger()
             }
             Action {
@@ -176,7 +176,7 @@ ApplicationWindow {
                 }
                 model: outputNames()
             }
-
+            /*
             CheckBox {
                 id: outputImageSequenceCheckbox
                 text: "Save to disk"
@@ -187,6 +187,7 @@ ApplicationWindow {
                     outputImageSequence.stop();
                 }
             }
+            */
 
             Button {
                 text: "Save"

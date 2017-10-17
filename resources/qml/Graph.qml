@@ -14,16 +14,16 @@ Item {
     Flickable {
         id: flickable
         anchors.fill: parent
-        contentWidth: view.width;
-        contentHeight: view.height;
+        contentWidth: view.width + 600;
+        contentHeight: view.height + 400;
         clip: true;
 
         Item {
             id: viewWrapper
             property var lastClickedTile
             property string currentOutputName: ""
-            width: Math.max(view.width, flickable.width)
-            height: Math.max(view.height, flickable.height)
+            width: Math.max(view.width + 400, flickable.width)
+            height: Math.max(view.height + 400, flickable.height)
 
             View {
                 id: view

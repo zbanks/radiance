@@ -3,6 +3,7 @@
 void main(void) {
     vec4 baseImage = texture2D(iInput, uv);
     float sep = iIntensity * ((baseImage.r + baseImage.g + baseImage.b) * 0.2 + 0.4) * 0.1;
+    sep *= mix(0.3, 1.0, iAudioMid);
 
     vec4 redImage = texture2D(iInput, uv + vec2(sep, 0.));
     vec4 blueImage = texture2D(iInput, uv - vec2(sep, 0.));
