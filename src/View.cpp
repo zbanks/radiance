@@ -20,6 +20,7 @@ void View::rebuild() {
 }
 
 Child View::newChild(VideoNode *videoNode) {
+    qInfo() << "adding child" << videoNode;
     Child c;
     c.videoNode = videoNode;
     c.item = nullptr;
@@ -28,7 +29,7 @@ Child View::newChild(VideoNode *videoNode) {
     if (delegate.isEmpty()) {
         delegate = m_delegates.value("");
         if (delegate.isEmpty()) {
-            qFatal(QString("Could not find a delegate for %1").arg(videoNode->metaObject()->className()).toLatin1().data());
+            qFatal("Could not find a delegate for %s", videoNode->metaObject()->className());
         }
     }
     auto qmlFileInfo = QFileInfo(QString("../resources/qml/%1.qml").arg(delegate));
@@ -774,4 +775,13 @@ QVariantList View::tilesBetween(QQuickItem *tile1, QQuickItem *tile2) {
         }
     }
     return tilesBetween;
+}
+
+QVariant View::tileForVideoNode(VideoNode *videoNode) {
+    qInfo() << "Looking up" << videoNode;
+    for (auto child : m_children) {
+        if (child.videoNode == videoNode)
+            return QVariant::fromValue(child.item.data());
+    }
+    return QVariant();
 }

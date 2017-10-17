@@ -67,6 +67,10 @@ public:
     EffectNode(const EffectNode &other);
     ~EffectNode();
 
+    QString serialize();
+    bool deserialize(const VideoNodeType &vnt, const QString &arg);
+    static QList<VideoNodeType> availableNodeTypes();
+
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 

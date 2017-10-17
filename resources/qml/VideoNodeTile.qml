@@ -6,6 +6,7 @@ import radiance 1.0
 
 FocusScope {
     id: tile
+    property alias view: tile.parent
     property var model
     property var videoNode
     property var inputGridHeights
@@ -84,7 +85,7 @@ FocusScope {
     Drag.active: dragArea.drag.active;
 
     function dragLift() {
-        var ccs = parent.selectedConnectedComponents();
+        var ccs = view.selectedConnectedComponents();
         var i;
         for (i=0; i<ccs.length; i++) {
             if (ccs[i].tiles.indexOf(tile) >= 0) break;
@@ -160,7 +161,7 @@ FocusScope {
 
     function deleteSelected() {
         for (;;) {
-            var ccs = parent.selectedConnectedComponents();
+            var ccs = view.selectedConnectedComponents();
             if (ccs.length == 0) break;
             var deleteCC = ccs[0];
 
@@ -177,6 +178,18 @@ FocusScope {
                     var t = deleteCC.outputEdges[i];
                     model.addEdge(f.fromVertex, t.toVertex, t.toInput);
                 }
+            }
+        }
+        model.flush();
+    }
+
+    function detachOutput() {
+        // Remove output edge to detach chain at this node
+        var edges = model.edges;
+        for (var i = 0; i < edges.length; i++) {
+            var edge = edges[i];
+            if (edge.fromVertex == videoNode) {
+                model.removeEdge(videoNode, edge.toVertex, edge.toInput);
             }
         }
         model.flush();
@@ -201,7 +214,7 @@ FocusScope {
     }
 
     function setSelectedAsOutput() {
-        var output = tile.parent.parent.currentOutputName;
+        var output = view.parent.currentOutputName;
         model.connectOutput(output, tile.videoNode);
         model.flush();
     }
@@ -215,23 +228,23 @@ FocusScope {
             if (mouse.button == Qt.LeftButton) {
                 tile.forceActiveFocus();
                 var tiles = [tile];
-                if (mouse.modifiers & Qt.ShiftModifier && tile.parent.parent.lastClickedTile) {
-                    tiles = tile.parent.tilesBetween(tile.parent.parent.lastClickedTile, tile);
+                if (mouse.modifiers & Qt.ShiftModifier && view.parent.lastClickedTile) {
+                    tiles = view.tilesBetween(view.parent.lastClickedTile, tile);
                     if (tiles.length == 0) tiles = [tile];
                 }
                 if (mouse.modifiers & Qt.ControlModifier) {
-                    tile.parent.toggleSelection(tiles);
+                    view.toggleSelection(tiles);
                 } else if (mouse.modifiers & Qt.AltModifier) {
-                    tile.parent.removeFromSelection(tiles);
+                    view.removeFromSelection(tiles);
                 } else {
-                    tile.parent.select(tiles);
+                    view.select(tiles);
                 }
-                tile.parent.parent.lastClickedTile = tile;
+                view.parent.lastClickedTile = tile;
             }
         }
 
         drag.onActiveChanged: {
-            tile.parent.ensureSelected(tile);
+            view.ensureSelected(tile);
             if (drag.active) {
                 dragLift();
             } else {
@@ -346,6 +359,8 @@ FocusScope {
             deleteSelected();
         } else if (event.key == Qt.Key_Return) {
             setSelectedAsOutput();
+        } else if (event.key == Qt.Key_Slash) {
+            detachOutput();
         }
     }
 }

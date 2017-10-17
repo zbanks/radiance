@@ -6,6 +6,7 @@ import radiance 1.0
 
 Item {
     property alias model: view.model
+    property alias view: view
     property alias currentOutputName: viewWrapper.currentOutputName
     property alias lastClickedTile: viewWrapper.lastClickedTile
     Layout.fillWidth: true;

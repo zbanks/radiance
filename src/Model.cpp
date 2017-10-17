@@ -526,7 +526,7 @@ QJsonObject Model::serialize() {
 
     QJsonObject jsonVertices;
     for (auto vertex : m_vertices) {
-        jsonVertices[QString::number(vertex->id())] = nodeRegistry->serializeNode(vertex);
+        jsonVertices[QString::number(vertex->id())] = vertex->serialize();
     }
     jsonOutput["vertices"] = jsonVertices;
 

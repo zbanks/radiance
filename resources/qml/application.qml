@@ -144,6 +144,10 @@ ApplicationWindow {
                         graph.lastClickedTile.insertAfter(node);
                     }
                     model.flush();
+                    // TODO: This doesn't work because the view hasn't reloaded the graph yet
+                    //var tile = graph.view.tileForVideoNode(node);
+                    //graph.lastClickedTile = tile;
+                    //console.log("last tile", tile, node);
                 }
             }
             Button {
@@ -176,7 +180,6 @@ ApplicationWindow {
                 }
                 model: outputNames()
             }
-            /*
             CheckBox {
                 id: outputImageSequenceCheckbox
                 text: "Save to disk"
@@ -187,7 +190,6 @@ ApplicationWindow {
                     outputImageSequence.stop();
                 }
             }
-            */
 
             Button {
                 text: "Save"

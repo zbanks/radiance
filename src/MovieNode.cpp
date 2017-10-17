@@ -52,6 +52,58 @@ MovieNode::MovieNode(const MovieNode &other)
 MovieNode::~MovieNode() {
 }
 
+QString MovieNode::serialize() {
+    return QString("mpv:%1").arg(m_videoPath);
+}
+
+bool MovieNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
+    if (vnt.name == "youtube") {
+        setVideoPath(QString("ytdl://ytsearch:%1").arg(arg));
+    } else if (vnt.name == "mpv") {
+        setVideoPath(arg);
+    } else {
+        setVideoPath(QString("../resources/videos/%1").arg(vnt.name));
+    }
+    setInputCount(vnt.nInputs);
+    return true;
+}
+
+QList<VideoNodeType> MovieNode::availableNodeTypes() {
+    QList<VideoNodeType> types;
+
+    QDir movieDir("../resources/videos/");
+    movieDir.setSorting(QDir::Name);
+
+    for (auto movieName : movieDir.entryList()) {
+        if (movieName[0] == '.')
+            continue;
+
+        QString name = movieName;
+        VideoNodeType nodeType = {
+            .name = name,
+            .description = movieName,
+            .nInputs = 1,
+        };
+        types.append(nodeType);
+    }
+
+    types << (VideoNodeType) {
+        .name = "youtube",
+        .description = "Youtube Search",
+        .nInputs = 1,
+        .argRequired = true,
+    };
+
+    types << (VideoNodeType) {
+        .name = "mpv",
+        .description = "libmpv URI",
+        .nInputs = 1,
+        .argRequired = true,
+    };
+
+    return types;
+}
+
 void MovieNode::onInitialized() {
     m_ready = true;
 }

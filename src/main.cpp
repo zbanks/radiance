@@ -63,18 +63,23 @@ int main(int argc, char *argv[]) {
     outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));
     timebase = QSharedPointer<Timebase>(new Timebase());
     audio = QSharedPointer<Audio>(new Audio());
-    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
 
-    qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
-    qmlRegisterType<Context>("radiance", 1, 0, "Context");
-    qmlRegisterType<Model>("radiance", 1, 0, "Model");
+    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
+    nodeRegistry->registerVideoNodeSubclass<EffectNode>();
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
+    nodeRegistry->registerVideoNodeSubclass<ImageNode>();
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
 #ifdef MPV_FOUND
+    nodeRegistry->registerVideoNodeSubclass<MovieNode>();
     qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
 #else
     qInfo() << "radiance compiled without mpv support";
 #endif
+    nodeRegistry->reload();
+
+    qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterType<Context>("radiance", 1, 0, "Context");
+    qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");

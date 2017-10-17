@@ -9,6 +9,14 @@
 
 class Model;
 
+struct VideoNodeType {
+    QString name;
+    QString description;
+    int nInputs;
+    bool argRequired;
+    QString className;
+};
+
 // This is an abstract base class
 // for nodes in the DAG.
 // VideoNodes have 0 or more inputs, and one output.
@@ -35,6 +43,15 @@ public:
     VideoNode(const VideoNode &other);
 
    ~VideoNode() override;
+
+    // Methods for de/serializing VideoNodes
+    // All 3 methods need to be implemented for each subclass of VideoNode
+    // TODO: is it awkward that serialize returns 1 string; but deserialize takes 2?
+    // TODO: How can we ensure deserialize & availableNodeTypes are impl'd at compile time?
+    // TODO: Classes still need to be registered in main.cpp
+    virtual QString serialize() = 0;
+    virtual bool deserialize(const VideoNodeType &vnt, const QString &arg) = 0;
+    //static QList<VideoNodeType> availableNodeTypes();
 
     // Methods for rendering
 

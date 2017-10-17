@@ -53,6 +53,9 @@ public slots:
     // Returns a QVariantList of tiles
     QVariantList tilesBetween(QQuickItem *tile1, QQuickItem *tile2);
 
+    // Returns the tile for the given VideoNode instance
+    QVariant tileForVideoNode(VideoNode *videoNode);
+
 protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;

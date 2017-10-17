@@ -29,6 +29,37 @@ ImageNode::ImageNode(const ImageNode &other)
 ImageNode::~ImageNode() {
 }
 
+QString ImageNode::serialize() {
+    return m_imagePath;
+}
+
+bool ImageNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
+    setImagePath(vnt.name);
+    setInputCount(vnt.nInputs);
+    return true;
+}
+
+QList<VideoNodeType> ImageNode::availableNodeTypes() {
+    QList<VideoNodeType> types;
+
+    QDir imgDir("../resources/images/");
+    imgDir.setSorting(QDir::Name);
+
+    for (auto imageName : imgDir.entryList()) {
+        if (imageName[0] == '.')
+            continue;
+
+        QString name = imageName;
+        VideoNodeType nodeType = {
+            .name = name,
+            .description = imageName,
+            .nInputs = 1,
+        };
+        types.append(nodeType);
+    }
+    return types;
+}
+
 void ImageNode::onInitialized() {
     m_ready = true;
 }

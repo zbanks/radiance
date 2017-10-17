@@ -52,6 +52,10 @@ public:
     ImageNode(const ImageNode &other);
     ~ImageNode();
 
+    QString serialize();
+    bool deserialize(const VideoNodeType &vnt, const QString &arg);
+    static QList<VideoNodeType> availableNodeTypes();
+
     // We don't actually need to do anything in paint(), because
     // periodic() advances the frame when necessary.  As a result,
     // there's no point in making a copy of the ImageNode before

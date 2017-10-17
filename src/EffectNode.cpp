@@ -41,6 +41,83 @@ EffectNode::EffectNode(const EffectNode &other)
 EffectNode::~EffectNode() {
 }
 
+QString EffectNode::serialize() {
+    return QString("%1:%2").arg(m_name, QString::number(m_intensity));
+}
+
+bool EffectNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
+    setName(vnt.name);
+    setInputCount(vnt.nInputs);
+    if (!arg.isNull()) {
+        setIntensity(arg.toFloat());
+    }
+    return true;
+}
+
+QList<VideoNodeType> EffectNode::availableNodeTypes() {
+    QList<VideoNodeType> types;
+
+    auto filters = QStringList{} << QString{"*.glsl"};
+    QDir dir("../resources/effects/");
+    dir.setNameFilters(filters);
+    dir.setSorting(QDir::Name);
+
+    for (auto effectName : dir.entryList()) {
+        // TODO: Refactor the parsing logic so it's not duplicated
+        auto name = effectName.replace(".glsl", "");
+        auto filename = QString("../resources/effects/%1.glsl").arg(name);
+        VideoNodeType nodeType = {
+            .name = name,
+            .description = effectName,
+            .nInputs = 1,
+        };
+        QFileInfo check_file(filename);
+        if(!(check_file.exists() && check_file.isFile()))
+            continue;
+
+        QFile file(filename);
+        if(!file.open(QIODevice::ReadOnly)) {
+            continue;
+        }
+
+        QTextStream stream(&file);
+
+        auto buffershader_reg = QRegularExpression(
+            "^\\s*#buffershader\\s*$"
+        , QRegularExpression::CaseInsensitiveOption
+            );
+        auto property_reg = QRegularExpression(
+            "^\\s*#property\\s+(?<name>\\w+)\\s+(?<value>.*)$"
+        , QRegularExpression::CaseInsensitiveOption
+            );
+        auto passes = QVector<QStringList>{QStringList{"#line 0"}};
+        auto props  = QMap<QString,QString>{{"inputCount","1"}};
+        auto lineno = 0;
+        for(auto next_line = QString{}; stream.readLineInto(&next_line);++lineno) {
+            {
+                auto m = property_reg.match(next_line);
+                if(m.hasMatch()) {
+                    props.insert(m.captured("name"),m.captured("value"));
+                    passes.back().append(QString{"#line %1"}.arg(lineno));
+                    continue;
+                }
+            }
+            {
+                auto m = buffershader_reg.match(next_line);
+                if(m.hasMatch()) {
+                    passes.append({QString{"#line %1"}.arg(lineno)});
+                    continue;
+                }
+            }
+            passes.back().append(next_line);
+        }
+        nodeType.nInputs = QVariant::fromValue(props["inputCount"]).value<int>();
+
+        types.append(nodeType);
+    }
+    return types;
+}
+
 void EffectNode::onInitialized() {
     m_ready = true;
 }

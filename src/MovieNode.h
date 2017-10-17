@@ -80,6 +80,10 @@ public:
     MovieNode(const MovieNode &other);
     ~MovieNode();
 
+    QString serialize();
+    bool deserialize(const VideoNodeType &vnt, const QString &arg);
+    static QList<VideoNodeType> availableNodeTypes();
+
     QSharedPointer<VideoNode> createCopyForRendering() override;
     void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;

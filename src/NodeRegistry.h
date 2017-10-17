@@ -7,19 +7,6 @@
 #include <QVariantMap>
 #include <QSharedPointer>
 
-struct VideoNodeType {
-    QString name;
-    enum {
-        EFFECT_NODE,
-        IMAGE_NODE,
-#ifdef MPV_FOUND
-        MOVIE_NODE,
-#endif
-    } type;
-    QString description;
-    int nInputs;
-};
-
 class NodeRegistry : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantMap nodeTypes READ qmlNodeTypes NOTIFY nodeTypesChanged)
@@ -30,8 +17,14 @@ public:
 
     // Create node from string; resulting VideoNode is caller-owned
     VideoNode *createNode(const QString &name);
-    // Inverse of `createNode`
-    QString serializeNode(VideoNode *node);
+
+    template <typename VN>
+    void registerVideoNodeSubclass() {
+        Q_ASSERT(VN::staticMetaObject.inherits(&VideoNode::staticMetaObject));
+        QString className = QString(VN::staticMetaObject.className());
+        m_videoNodeCreateFns.insert(className, &videoNodeCreate<VN>);
+        m_videoNodeListTypesFns.insert(className, &videoNodeListTypes<VN>);
+    }
 
 public slots:
     QMap<QString, VideoNodeType> nodeTypes();
@@ -44,5 +37,17 @@ signals:
 
 private:
     QMap<QString, VideoNodeType> m_nodeTypes;
+
+    QMap<QString, VideoNode* (*)()> m_videoNodeCreateFns;
+    template <typename VN>
+    static VideoNode* videoNodeCreate() {
+        return new VN();
+    }
+
+    QMap<QString, QList<VideoNodeType> (*)()> m_videoNodeListTypesFns;
+    template <typename VN>
+    static QList<VideoNodeType> videoNodeListTypes() {
+        return VN::availableNodeTypes();
+    }
 };
 
