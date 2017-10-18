@@ -363,4 +363,8 @@ FocusScope {
             detachOutput();
         }
     }
+
+    function onControlRelChange(control, value) {
+        console.log("control changed:" + control + " " + value);
+    }
 }

@@ -99,6 +99,9 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
 
+    qmlRegisterUncreatableType<Control>("radiance", 1, 0, "Control", "Control is an enum class and cannot be instantiated");
+    qRegisterMetaType<Control::ControlEnum>("Control::ControlEnum");
+
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
     if(engine.rootObjects().isEmpty()) {
         qFatal("Failed to load main QML application");

@@ -25,6 +25,7 @@ Item {
             property string currentOutputName: ""
             width: Math.max(view.width + 400, flickable.width)
             height: Math.max(view.height + 400, flickable.height)
+            focus: true
 
             View {
                 id: view
@@ -40,6 +41,13 @@ Item {
 
                 Behavior on x { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
                 Behavior on y { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
+
+                // Temporary
+                Keys.onPressed: {
+                    if (event.key == Qt.Key_Space) {
+                        view.onControlRelChange(Control.Enter, 1);
+                    }
+                }
 
                 /*
                 Rectangle {

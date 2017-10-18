@@ -530,6 +530,15 @@ QVariantList View::selection() {
     return selection;
 }
 
+QQuickItem *View::focusedChild() {
+    for (int i=0; i<m_children.count(); i++) {
+        if (m_children.at(i).item->hasActiveFocus()) {
+            return m_children.at(i).item.data();
+        }
+    }
+    return nullptr;
+}
+
 static void setColor(const QVector<QVector<int>> &edges, QVector<int> &colors, int node, int &curColor) {
     if (colors.at(node) != 0) return;
     int myColor = 0;
@@ -777,6 +786,7 @@ QVariantList View::tilesBetween(QQuickItem *tile1, QQuickItem *tile2) {
     return tilesBetween;
 }
 
+// Shouldn't this return a QQuickItem *
 QVariant View::tileForVideoNode(VideoNode *videoNode) {
     qInfo() << "Looking up" << videoNode;
     for (auto child : m_children) {
@@ -784,4 +794,36 @@ QVariant View::tileForVideoNode(VideoNode *videoNode) {
             return QVariant::fromValue(child.item.data());
     }
     return QVariant();
+}
+
+void View::onControlAbsChange(Control::ControlEnum control, qreal value) {
+    qDebug() << "control abs change" << control << value;
+    QQuickItem *tile = focusedChild();
+    if (tile != nullptr) {
+        QMetaObject::invokeMethod(tile, "onControlAbsChange",
+                Q_ARG(Control::ControlEnum, control),
+                Q_ARG(qreal, value));
+    }
+}
+
+void View::onControlRelChange(Control::ControlEnum control, qreal value) {
+    qDebug() << "control rel change" << control << value;
+    switch (control) {
+        case Control::Scroll:
+            break;
+        case Control::ScrollHorizontal:
+            break;
+        case Control::ScrollVertical:
+            break;
+        default:
+        {
+            QQuickItem *tile = focusedChild();
+            if (tile != nullptr) {
+                QMetaObject::invokeMethod(tile, "onControlRelChange",
+                        Q_ARG(Control::ControlEnum, control),
+                        Q_ARG(qreal, value));
+            }
+            break;
+        }
+    }
 }

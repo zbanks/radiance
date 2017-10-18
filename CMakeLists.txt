@@ -48,6 +48,7 @@ list(APPEND libradiance_SOURCES
     src/OutputImageSequence.cpp
     src/liblux/lux.c
     src/liblux/crc.c
+    src/Control.cpp
     BTrack/src/BTrack.c
     BTrack/src/OnsetDetectionFunction.c
     resources/resources.qrc

@@ -1,6 +1,7 @@
 #pragma once
 #include <QQuickItem>
 #include "Model.h"
+#include "Control.h"
 
 struct Child {
     VideoNode *videoNode;
@@ -55,6 +56,15 @@ public slots:
 
     // Returns the tile for the given VideoNode instance
     QVariant tileForVideoNode(VideoNode *videoNode);
+
+    // Control Changes
+    // (for hooking up to MIDI)
+    void onControlAbsChange(Control::ControlEnum control, double value);
+    void onControlRelChange(Control::ControlEnum control, double value);
+
+    // The tile that has focus,
+    // or nullptr if no tile has focus
+    QQuickItem *focusedChild();
 
 protected:
     Model *m_model;
