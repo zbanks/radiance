@@ -8,6 +8,7 @@
 #include <mpv/client.h>
 #include <mpv/opengl_cb.h>
 #include <mpv/qthelper.hpp>
+#include <vector>
 
 class MovieNode;
 
@@ -20,7 +21,7 @@ public:
     MovieNodeOpenGLWorker(MovieNode *p);
     ~MovieNodeOpenGLWorker() override;
     QVector<QOpenGLFramebufferObject *> m_fbos;
-    QVector<QMutex *> m_fboLocks;
+    std::vector<QMutex> m_fboLocks;
     int lastIndex();
 
 signals:

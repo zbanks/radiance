@@ -272,6 +272,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     // and leave lightweight FBO creation here
     if(renderFbo.isNull()) {
         auto fmt = QOpenGLFramebufferObjectFormat{};
+        fmt.setInternalTextureFormat(GL_RGBA);
         m_renderFbos[chain] = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
         renderFbo = m_renderFbos.value(chain);
     }
@@ -284,7 +285,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     glActiveTexture(GL_TEXTURE0);
     {
         int i = m_openGLWorker->lastIndex();
-        QMutexLocker locker(m_openGLWorker->m_fboLocks.at(i));
+        QMutexLocker locker(&m_openGLWorker->m_fboLocks.at(i));
         if (m_openGLWorker->m_fbos.at(i) == nullptr) return outTexture;
         glBindTexture(GL_TEXTURE_2D, m_openGLWorker->m_fbos.at(i)->texture());
         m_blitShader->setUniformValue("iVideoFrame", 0);
@@ -318,10 +319,6 @@ MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
     , m_fboIndex(0)
     , m_mpv_gl(nullptr)
     , m_size(0, 0) {
-
-    for (int i=0; i<BUFFER_COUNT; i++) {
-        m_fboLocks[i] = new QMutex();
-    }
 
     connect(this, &MovieNodeOpenGLWorker::message, m_p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, m_p, &MovieNode::warning);
@@ -438,10 +435,11 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
 
 void MovieNodeOpenGLWorker::drawFrame() {
     {
-        QMutexLocker locker(m_fboLocks[m_fboIndex]);
+        QMutexLocker locker(&m_fboLocks.at(m_fboIndex));
         if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != m_size) {
             delete m_fbos.at(m_fboIndex);
             auto fmt = QOpenGLFramebufferObjectFormat{};
+            fmt.setInternalTextureFormat(GL_RGBA);
             m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(m_size,fmt);
         }
         auto fbo = m_fbos.at(m_fboIndex);
@@ -502,7 +500,6 @@ MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
     // in this class.
     mpv_opengl_cb_uninit_gl(m_mpv_gl);
     qDeleteAll(m_fbos.begin(), m_fbos.end());
-    qDeleteAll(m_fboLocks.begin(), m_fboLocks.end());
 }
 
 bool MovieNodeOpenGLWorker::loadBlitShader() {
