@@ -45,7 +45,7 @@ Item {
                 // Temporary
                 Keys.onPressed: {
                     if (event.key == Qt.Key_Space) {
-                        view.onControlRelChange(Control.Enter, 1);
+                        view.Controls.changeControlRel(0, Controls.Enter, 1);
                     }
                 }
 

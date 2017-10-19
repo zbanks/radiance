@@ -9,7 +9,7 @@ struct Child {
     QVector<int> inputHeights;
 };
 
-class View : public BaseVideoNodeTile {
+class View : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QVariantMap delegates READ qml_delegates WRITE qml_setDelegates NOTIFY qml_delegatesChanged)
@@ -70,6 +70,7 @@ protected:
     Child newChild(VideoNode *videoNode);
     QSet<BaseVideoNodeTile *> m_selection;
     void selectionChanged();
+    void componentComplete() override;
 
 protected slots:
     void onControlChangedAbs(int bank, Controls::Control control, qreal value);

@@ -366,7 +366,7 @@ BaseVideoNodeTile {
         }
     }
 
-    /*Controls.onControlChangeRel: {
+    Controls.onControlChangedRel: {
         console.log("control changed:" + bank + " " + control + " " + value);
-    }*/
+    }
 }

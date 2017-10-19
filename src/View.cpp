@@ -8,6 +8,10 @@ View::View()
     : m_model(nullptr)
 {
     setFlag(ItemHasContents, true);
+}
+
+void View::componentComplete() {
+    QQuickItem::componentComplete();
     auto ao = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(this));
     connect(ao, &ControlsAttachedType::controlChangedAbs, this, &View::onControlChangedAbs);
     connect(ao, &ControlsAttachedType::controlChangedRel, this, &View::onControlChangedRel);
