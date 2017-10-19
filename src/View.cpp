@@ -45,7 +45,7 @@ Child View::newChild(VideoNode *videoNode) {
             qFatal("Could not construct delegate");
         }
     }
-    QSharedPointer<QQuickItem> item(qobject_cast<QQuickItem *>(component.create()));
+    QSharedPointer<BaseVideoNodeTile> item(qobject_cast<BaseVideoNodeTile *>(component.create()));
 
     item->setParentItem(this);
     QVariant v;
@@ -134,7 +134,7 @@ static void setStackup(const QVector<QVector<int>> &inputs, const QVector<QVecto
     }
 }
 
-QSharedPointer<QQuickItem> View::createDropArea() {
+QQuickItem *View::createDropArea() {
     auto qmlFileInfo = QFileInfo(QString("../resources/qml/TileDropArea.qml"));
     QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
     QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
@@ -145,9 +145,10 @@ QSharedPointer<QQuickItem> View::createDropArea() {
             qFatal("Could not construct TileDropArea");
         }
     }
-    QSharedPointer<QQuickItem> item(qobject_cast<QQuickItem *>(component.create()));
+    auto item = qobject_cast<QQuickItem *>(component.create());
 
     item->setParentItem(this);
+    item->setParent(this);
     return item;
 }
 
@@ -340,7 +341,7 @@ void View::onGraphChanged() {
         m_children[i].item->setProperty("gridX", gridX.at(i));
     }
 
-    QList<QSharedPointer<QQuickItem>> dropAreas;
+    QList<QQuickItem *> dropAreas;
     for (int i=0; i<m_children.count(); i++) {
         auto myInputGridHeights = inputGridHeight.at(i);
         auto myInputHeights = inputHeight.at(i);
@@ -414,13 +415,14 @@ void View::onGraphChanged() {
     setWidth(totalWidth);
     setHeight(totalHeight);
 
+    qDeleteAll(m_dropAreas.begin(), m_dropAreas.end());
     m_dropAreas = dropAreas;
 
     selectionChanged();
 }
 
 void View::selectionChanged() {
-    QSet<QQuickItem *> found;
+    QSet<BaseVideoNodeTile *> found;
     for (int i=0; i<m_children.count(); i++) {
         auto selected = m_selection.contains(m_children.at(i).item.data());
         m_children[i].item->setProperty("selected", selected);
@@ -478,7 +480,7 @@ void View::qml_setDelegates(QVariantMap value) {
 void View::select(QVariantList tiles) {
     m_selection.clear();
     for (int i=0; i<tiles.count(); i++) {
-        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
         m_selection.insert(tile);
     }
     selectionChanged();
@@ -486,7 +488,7 @@ void View::select(QVariantList tiles) {
 
 void View::addToSelection(QVariantList tiles) {
     for (int i=0; i<tiles.count(); i++) {
-        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
         m_selection.insert(tile);
     }
     selectionChanged();
@@ -494,7 +496,7 @@ void View::addToSelection(QVariantList tiles) {
 
 void View::removeFromSelection(QVariantList tiles) {
     for (int i=0; i<tiles.count(); i++) {
-        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
         m_selection.remove(tile);
     }
     selectionChanged();
@@ -503,7 +505,7 @@ void View::removeFromSelection(QVariantList tiles) {
 void View::toggleSelection(QVariantList tiles) {
     bool allSelected = true;
     for (int i=0; i<tiles.count(); i++) {
-        auto tile = qvariant_cast<QQuickItem*>(tiles[i]);
+        auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
         if (!m_selection.contains(tile)) {
             allSelected = false;
         }
@@ -515,7 +517,7 @@ void View::toggleSelection(QVariantList tiles) {
     }
 }
 
-void View::ensureSelected(QQuickItem *tile) {
+void View::ensureSelected(BaseVideoNodeTile *tile) {
     if (!m_selection.contains(tile)) {
         m_selection.clear();
         m_selection.insert(tile);
@@ -533,7 +535,7 @@ QVariantList View::selection() {
     return selection;
 }
 
-QQuickItem *View::focusedChild() {
+BaseVideoNodeTile *View::focusedChild() {
     for (int i=0; i<m_children.count(); i++) {
         if (m_children.at(i).item->hasActiveFocus()) {
             return m_children.at(i).item.data();
@@ -740,7 +742,7 @@ static void findAllPaths(int n, int end, const QVector<QVector<int>> &edges, QVe
     }
 }
 
-QVariantList View::tilesBetween(QQuickItem *tile1, QQuickItem *tile2) {
+QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *tile2) {
     // Create a map from VideoNodes to indices
     auto vertices = m_model->vertices();
     QMap<VideoNode *, int> map;
@@ -789,7 +791,7 @@ QVariantList View::tilesBetween(QQuickItem *tile1, QQuickItem *tile2) {
     return tilesBetween;
 }
 
-// Shouldn't this return a QQuickItem *
+// Shouldn't this return a BaseVideoNodeTile *
 QVariant View::tileForVideoNode(VideoNode *videoNode) {
     qInfo() << "Looking up" << videoNode;
     for (auto child : m_children) {
@@ -800,7 +802,7 @@ QVariant View::tileForVideoNode(VideoNode *videoNode) {
 }
 
 void View::onControlChangedAbs(int bank, Controls::Control control, qreal value) {
-    QQuickItem *tile = focusedChild();
+    BaseVideoNodeTile *tile = focusedChild();
     if (tile != nullptr) {
         QMetaObject::invokeMethod(tile, "onControlAbsChange",
                 Q_ARG(QVariant, control),
@@ -818,7 +820,7 @@ void View::onControlChangedRel(int bank, Controls::Control control, qreal value)
             break;
         default:
         {
-            QQuickItem *tile = focusedChild();
+            BaseVideoNodeTile *tile = focusedChild();
             if (tile != nullptr) {
                 QMetaObject::invokeMethod(tile, "onControlRelChange",
                         Q_ARG(QVariant, control),

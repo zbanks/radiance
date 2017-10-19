@@ -1,15 +1,15 @@
 #pragma once
-#include <QQuickItem>
+#include "BaseVideoNodeTile.h"
 #include "Model.h"
 #include "Controls.h"
 
 struct Child {
     VideoNode *videoNode;
-    QSharedPointer<QQuickItem> item;
+    QSharedPointer<BaseVideoNodeTile> item;
     QVector<int> inputHeights;
 };
 
-class View : public QQuickItem {
+class View : public BaseVideoNodeTile {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QVariantMap delegates READ qml_delegates WRITE qml_setDelegates NOTIFY qml_delegatesChanged)
@@ -34,7 +34,7 @@ public slots:
     void addToSelection(QVariantList tiles);
     void removeFromSelection(QVariantList tiles);
     void toggleSelection(QVariantList tiles);
-    void ensureSelected(QQuickItem *tile);
+    void ensureSelected(BaseVideoNodeTile *tile);
     QVariantList selection();
 
     // Finds the connected components of the selection
@@ -53,14 +53,14 @@ public slots:
 
     // Finds all tiles in between tile1 and tile2
     // Returns a QVariantList of tiles
-    QVariantList tilesBetween(QQuickItem *tile1, QQuickItem *tile2);
+    QVariantList tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *tile2);
 
     // Returns the tile for the given VideoNode instance
     QVariant tileForVideoNode(VideoNode *videoNode);
 
     // The tile that has focus,
     // or nullptr if no tile has focus
-    QQuickItem *focusedChild();
+    BaseVideoNodeTile *focusedChild();
 
     // Controls attached property
     // (for hooking up to MIDI)
@@ -70,11 +70,11 @@ protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
-    QList<QSharedPointer<QQuickItem>> m_dropAreas;
+    QList<QQuickItem *> m_dropAreas;
     Controls *m_controls;
     void rebuild();
     Child newChild(VideoNode *videoNode);
-    QSet<QQuickItem *> m_selection;
+    QSet<BaseVideoNodeTile *> m_selection;
     void selectionChanged();
 
 protected slots:
@@ -82,7 +82,7 @@ protected slots:
     void onControlChangedRel(int bank, Controls::Control control, qreal value);
 
 private:
-    QSharedPointer<QQuickItem> createDropArea();
+    QQuickItem *createDropArea();
 
 signals:
     void modelChanged(Model *model);
