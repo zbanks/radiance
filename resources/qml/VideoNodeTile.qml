@@ -30,6 +30,9 @@ BaseVideoNodeTile {
     property var dragCC
     property var dragging
 
+    property var tab;
+    property var backtab;
+
     function sum(l) {
         var result = 0;
         for(var i=0; i<l.length; i++) result += l[i];
@@ -220,6 +223,9 @@ BaseVideoNodeTile {
         model.connectOutput(output, tile.videoNode);
         model.flush();
     }
+
+    KeyNavigation.tab: tab;
+    KeyNavigation.backtab: backtab;
 
     MouseArea {
         id: dragArea;

@@ -3,6 +3,7 @@
 #include <QQmlContext>
 #include <QQmlProperty>
 #include <QFileInfo>
+#include <QQueue>
 
 View::View()
     : m_model(nullptr)
@@ -343,6 +344,33 @@ void View::onGraphChanged() {
     for (int i=0; i<m_children.count(); i++) {
         m_children[i].item->setProperty("posX", xs.at(i));
         m_children[i].item->setProperty("gridX", gridX.at(i));
+    }
+
+    // Now let's do some tab ordering.
+    // We tab order the nodes using a reverse-BFS
+    // because @zbanks thinks it's cool
+
+    QVector<int> sortedNodes;
+    QQueue<int> bfsQueue;
+    for (int i=0; i<s.count(); i++) {
+        bfsQueue.append(s.at(i));
+        while (!bfsQueue.isEmpty()) {
+            auto n = bfsQueue.dequeue();
+            sortedNodes.append(n);
+            auto toAdd = inputs.at(n);
+            for (int j=toAdd.count()-1; j>=0; j--) {
+                if (toAdd.at(j) >= 0) bfsQueue.enqueue(toAdd.at(j));
+            }
+        }
+    }
+
+    for (int i=0; i<sortedNodes.count(); i++) {
+        auto cur = sortedNodes.at(i);
+        auto next = sortedNodes.at((i + 1) % sortedNodes.count());
+        auto prev = sortedNodes.at((i + sortedNodes.count() - 1) % sortedNodes.count());
+
+        m_children[cur].item->setProperty("tab", QVariant::fromValue(m_children[prev].item.data()));
+        m_children[cur].item->setProperty("backtab", QVariant::fromValue(m_children[next].item.data()));
     }
 
     QList<QQuickItem *> dropAreas;
@@ -806,23 +834,25 @@ QVariant View::tileForVideoNode(VideoNode *videoNode) {
 }
 
 void View::onControlChangedAbs(int bank, Controls::Control control, qreal value) {
-    BaseVideoNodeTile *tile = focusedChild();
-    if (tile != nullptr) {
-        if (tile != nullptr) {
-            auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
-            controls->changeControlAbs(bank, control, value);
+    switch (control) {
+        // Optionally handle some control changes here
+        // instead of just passing them all to the focused node
+        default:
+        {
+            BaseVideoNodeTile *tile = focusedChild();
+            if (tile != nullptr) {
+                auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
+                controls->changeControlAbs(bank, control, value);
+            }
+            break;
         }
     }
 }
 
 void View::onControlChangedRel(int bank, Controls::Control control, qreal value) {
     switch (control) {
-        case Controls::Scroll:
-            break;
-        case Controls::ScrollHorizontal:
-            break;
-        case Controls::ScrollVertical:
-            break;
+        // Optionally handle some control changes here
+        // instead of just passing them all to the focused node
         default:
         {
             BaseVideoNodeTile *tile = focusedChild();
