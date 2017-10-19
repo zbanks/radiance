@@ -4,7 +4,7 @@ import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
 import radiance 1.0
 
-FocusScope {
+BaseVideoNodeTile {
     id: tile
     property alias view: tile.parent
     property var model
@@ -364,7 +364,7 @@ FocusScope {
         }
     }
 
-    function onControlRelChange(control, value) {
+    /*view.onControlRelChange(control, value) {
         console.log("control changed:" + control + " " + value);
-    }
+    }*/
 }

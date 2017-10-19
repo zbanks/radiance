@@ -15,6 +15,7 @@
 #include "QQuickOutputWindow.h"
 #include "OutputImageSequence.h"
 #include "VideoNode.h"
+#include "BaseVideoNodeTile.h"
 #include "View.h"
 #include "main.h"
 
@@ -99,8 +100,10 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
 
-    qmlRegisterUncreatableType<Control>("radiance", 1, 0, "Control", "Control is an enum class and cannot be instantiated");
-    qRegisterMetaType<Control::ControlEnum>("Control::ControlEnum");
+    qmlRegisterType<BaseVideoNodeTile>("radiance", 1, 0, "BaseVideoNodeTile");
+
+    qmlRegisterUncreatableType<Controls>("radiance", 1, 0, "Controls", "Controls cannot be instantiated");
+    qRegisterMetaType<Controls::Control>("Controls::Control");
 
     QQmlApplicationEngine engine(QUrl("../resources/qml/application.qml"));
     if(engine.rootObjects().isEmpty()) {

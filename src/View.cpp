@@ -6,8 +6,11 @@
 
 View::View()
     : m_model(nullptr)
+    , m_controls(new Controls(this))
 {
     setFlag(ItemHasContents, true);
+    connect(m_controls, &Controls::controlChangedAbs, this, &View::onControlChangedAbs);
+    connect(m_controls, &Controls::controlChangedRel, this, &View::onControlChangedRel);
 }
 
 View::~View() {
@@ -796,34 +799,36 @@ QVariant View::tileForVideoNode(VideoNode *videoNode) {
     return QVariant();
 }
 
-void View::onControlAbsChange(Control::ControlEnum control, qreal value) {
-    qDebug() << "control abs change" << control << value;
+void View::onControlChangedAbs(int bank, Controls::Control control, qreal value) {
     QQuickItem *tile = focusedChild();
     if (tile != nullptr) {
         QMetaObject::invokeMethod(tile, "onControlAbsChange",
-                Q_ARG(Control::ControlEnum, control),
-                Q_ARG(qreal, value));
+                Q_ARG(QVariant, control),
+                Q_ARG(QVariant, value));
     }
 }
 
-void View::onControlRelChange(Control::ControlEnum control, qreal value) {
-    qDebug() << "control rel change" << control << value;
+void View::onControlChangedRel(int bank, Controls::Control control, qreal value) {
     switch (control) {
-        case Control::Scroll:
+        case Controls::Scroll:
             break;
-        case Control::ScrollHorizontal:
+        case Controls::ScrollHorizontal:
             break;
-        case Control::ScrollVertical:
+        case Controls::ScrollVertical:
             break;
         default:
         {
             QQuickItem *tile = focusedChild();
             if (tile != nullptr) {
                 QMetaObject::invokeMethod(tile, "onControlRelChange",
-                        Q_ARG(Control::ControlEnum, control),
-                        Q_ARG(qreal, value));
+                        Q_ARG(QVariant, control),
+                        Q_ARG(QVariant, value));
             }
             break;
         }
     }
+}
+
+Controls *View::controls() {
+    return m_controls;
 }

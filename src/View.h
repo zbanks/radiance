@@ -1,7 +1,7 @@
 #pragma once
 #include <QQuickItem>
 #include "Model.h"
-#include "Control.h"
+#include "Controls.h"
 
 struct Child {
     VideoNode *videoNode;
@@ -13,6 +13,7 @@ class View : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QVariantMap delegates READ qml_delegates WRITE qml_setDelegates NOTIFY qml_delegatesChanged)
+    Q_PROPERTY(Controls *controls READ controls CONSTANT)
 
 public:
     View();
@@ -57,24 +58,28 @@ public slots:
     // Returns the tile for the given VideoNode instance
     QVariant tileForVideoNode(VideoNode *videoNode);
 
-    // Control Changes
-    // (for hooking up to MIDI)
-    void onControlAbsChange(Control::ControlEnum control, double value);
-    void onControlRelChange(Control::ControlEnum control, double value);
-
     // The tile that has focus,
     // or nullptr if no tile has focus
     QQuickItem *focusedChild();
+
+    // Controls attached property
+    // (for hooking up to MIDI)
+    Controls *controls();
 
 protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
     QList<QSharedPointer<QQuickItem>> m_dropAreas;
+    Controls *m_controls;
     void rebuild();
     Child newChild(VideoNode *videoNode);
     QSet<QQuickItem *> m_selection;
     void selectionChanged();
+
+protected slots:
+    void onControlChangedAbs(int bank, Controls::Control control, qreal value);
+    void onControlChangedRel(int bank, Controls::Control control, qreal value);
 
 private:
     QSharedPointer<QQuickItem> createDropArea();
