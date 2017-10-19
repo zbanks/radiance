@@ -1,16 +1,21 @@
 #include "Controls.h"
 
-void Controls::changeControlAbs(int bank, Controls::Control control, qreal value) {
+ControlsAttachedType::ControlsAttachedType(QObject *parent)
+    : QObject(parent)
+{   
+}
+
+ControlsAttachedType::~ControlsAttachedType() {
+}
+
+void ControlsAttachedType::changeControlAbs(int bank, Controls::Control control, qreal value) {
     emit controlChangedAbs(bank, control, value);
 }
 
-void Controls::changeControlRel(int bank, Controls::Control control, qreal value) {
+void ControlsAttachedType::changeControlRel(int bank, Controls::Control control, qreal value) {
     emit controlChangedRel(bank, control, value);
 }
 
-Controls::Controls(QObject *parent)
-    : QObject(parent) {
-}
-
-Controls::~Controls() {
+ControlsAttachedType *Controls::qmlAttachedProperties(QObject *object) {
+    return new ControlsAttachedType(object);
 }

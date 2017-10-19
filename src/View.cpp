@@ -6,11 +6,11 @@
 
 View::View()
     : m_model(nullptr)
-    , m_controls(new Controls(this))
 {
     setFlag(ItemHasContents, true);
-    connect(m_controls, &Controls::controlChangedAbs, this, &View::onControlChangedAbs);
-    connect(m_controls, &Controls::controlChangedRel, this, &View::onControlChangedRel);
+    auto ao = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(this));
+    connect(ao, &ControlsAttachedType::controlChangedAbs, this, &View::onControlChangedAbs);
+    connect(ao, &ControlsAttachedType::controlChangedRel, this, &View::onControlChangedRel);
 }
 
 View::~View() {
@@ -804,9 +804,10 @@ QVariant View::tileForVideoNode(VideoNode *videoNode) {
 void View::onControlChangedAbs(int bank, Controls::Control control, qreal value) {
     BaseVideoNodeTile *tile = focusedChild();
     if (tile != nullptr) {
-        QMetaObject::invokeMethod(tile, "onControlAbsChange",
-                Q_ARG(QVariant, control),
-                Q_ARG(QVariant, value));
+        if (tile != nullptr) {
+            auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
+            controls->changeControlAbs(bank, control, value);
+        }
     }
 }
 
@@ -822,15 +823,10 @@ void View::onControlChangedRel(int bank, Controls::Control control, qreal value)
         {
             BaseVideoNodeTile *tile = focusedChild();
             if (tile != nullptr) {
-                QMetaObject::invokeMethod(tile, "onControlRelChange",
-                        Q_ARG(QVariant, control),
-                        Q_ARG(QVariant, value));
+                auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
+                controls->changeControlRel(bank, control, value);
             }
             break;
         }
     }
-}
-
-Controls *View::controls() {
-    return m_controls;
 }

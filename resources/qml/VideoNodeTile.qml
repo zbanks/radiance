@@ -6,6 +6,8 @@ import radiance 1.0
 
 BaseVideoNodeTile {
     id: tile
+
+    // TODO move most of these to BaseVideoNodeTile.cpp
     property alias view: tile.parent
     property var model
     property var videoNode
@@ -364,7 +366,7 @@ BaseVideoNodeTile {
         }
     }
 
-    /*view.onControlRelChange(control, value) {
-        console.log("control changed:" + control + " " + value);
+    /*Controls.onControlChangeRel: {
+        console.log("control changed:" + bank + " " + control + " " + value);
     }*/
 }

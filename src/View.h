@@ -13,7 +13,6 @@ class View : public BaseVideoNodeTile {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QVariantMap delegates READ qml_delegates WRITE qml_setDelegates NOTIFY qml_delegatesChanged)
-    Q_PROPERTY(Controls *controls READ controls CONSTANT)
 
 public:
     View();
@@ -62,16 +61,11 @@ public slots:
     // or nullptr if no tile has focus
     BaseVideoNodeTile *focusedChild();
 
-    // Controls attached property
-    // (for hooking up to MIDI)
-    Controls *controls();
-
 protected:
     Model *m_model;
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
     QList<QQuickItem *> m_dropAreas;
-    Controls *m_controls;
     void rebuild();
     Child newChild(VideoNode *videoNode);
     QSet<BaseVideoNodeTile *> m_selection;
