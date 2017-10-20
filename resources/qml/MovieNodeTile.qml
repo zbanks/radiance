@@ -61,13 +61,14 @@ VideoNodeTile {
         RowLayout {
             Layout.fillWidth: true
             Slider {
+                property bool controlled;
                 id: slider
                 Layout.fillWidth: true
                 minimumValue: 0
                 maximumValue: tile.videoNode.duration
                 enabled: tile.videoNode.duration > 0
                 value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
-                state: pressed ? "seeking" : ""
+                state: (pressed || controlled) ? "seeking" : ""
                 onValueChanged: {
                     if (state == "seeking"
                         && tile.videoNode.duration > 0) {
@@ -88,7 +89,19 @@ VideoNodeTile {
         }
     }
 
-    Keys.onPressed: {
+    Timer {
+        id: expireControl
+        interval: 300; running: false; repeat: false
+        onTriggered: {
+            slider.controlled = false;
+        }
+    }
 
+    Controls.onControlChangedRel: {
+        if (control == Controls.PrimaryParameter) {
+            slider.controlled = true;
+            slider.value += value * 10;
+            expireControl.restart();
+        }
     }
 }

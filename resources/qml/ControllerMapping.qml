@@ -4,6 +4,11 @@ import radiance 1.0
 QtObject {
     property variant target;
 
+    property variant lpfTimer: Timer {
+        interval: 50; running: true; repeat: true
+        onTriggered: mc.scrollAccumulator *= 0.9;
+    }
+
     property variant mc: MidiController {
         id: controller
         deviceName: "DJ Control Air"
