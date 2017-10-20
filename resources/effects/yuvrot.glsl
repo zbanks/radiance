@@ -1,8 +1,8 @@
 // Shift the color in YUV space by rotating on the UV plane
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
-    vec3 yuv = rgb2yuv(demultiply(gl_FragColor).rgb);
+    fragColor = texture(iInput, uv);
+    vec3 yuv = rgb2yuv(demultiply(fragColor).rgb);
 
     float t = iIntensity * 2 * M_PI;
     yuv.gb *= 2.;
@@ -12,5 +12,5 @@ void main(void) {
     yuv.gb += 1.;
     yuv.gb /= 2.;
 
-    gl_FragColor.rgb = yuv2rgb(yuv) * gl_FragColor.a;
+    fragColor.rgb = yuv2rgb(yuv) * fragColor.a;
 }

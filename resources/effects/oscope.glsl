@@ -1,5 +1,5 @@
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
 
 
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
@@ -20,6 +20,6 @@ void main(void) {
     float glow = 1. - smoothstep(0, (0.02 + iAudioHi * 0.3) * smoothstep(0., 0.5, iIntensity), d);
     glow += 0.5 * (1. - smoothstep(0, (0.3 + iAudioHi * 0.3) * iIntensity, d));
     vec4 c = vec4(0., 1., 0., 1.) * glow;
-    gl_FragColor = composite(gl_FragColor, c);
+    fragColor = composite(fragColor, c);
 }
 

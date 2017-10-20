@@ -12,5 +12,5 @@ void main(void) {
     vec2 rtheta = vec2(length(xy_cent) * corr, 0.5 + angle / (2. * M_PI));
     vec2 uv = mix(xy, rtheta, clamp(iIntensity * 5., 0., 1.));
 
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
 }

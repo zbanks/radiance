@@ -1,23 +1,23 @@
 // Pixels radiating from the center
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
-    vec4 c = texture2D(iChannel[1], uv);
+    fragColor = texture(iInput, uv);
+    vec4 c = texture(iChannel[1], uv);
     c *= smoothstep(0., 0.2, iIntensity);
-    gl_FragColor = composite(gl_FragColor, c);
+    fragColor = composite(fragColor, c);
 }
 #buffershader
 void main(void) {
-    gl_FragColor = texture2D(iChannel[1], (uv - 0.5) * 0.99 + 0.5);
-    gl_FragColor.a *= exp(-1 / 20.);
+    fragColor = texture(iChannel[1], (uv - 0.5) * 0.99 + 0.5);
+    fragColor.a *= exp(-1 / 20.);
     if (rand(vec3(uv, iTime)) < exp((iIntensity - 2.) * 4.))
-        gl_FragColor = vec4(1.);
+        fragColor = vec4(1.);
 }
 
 #buffershader
 void main(void) {
-    gl_FragColor = texture2D(iChannel[1], (uv - 0.5) * 0.99 + 0.5);
-    gl_FragColor *= exp(-1 / 20.);
+    fragColor = texture(iChannel[1], (uv - 0.5) * 0.99 + 0.5);
+    fragColor *= exp(-1 / 20.);
     if (rand(vec3(uv, iTime)) < exp((iIntensity - 2.) * 4.))
-        gl_FragColor = vec4(1.);
+        fragColor = vec4(1.);
 }

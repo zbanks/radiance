@@ -1,7 +1,7 @@
 // Shift the hue on the beat
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     
     float t;
     if (iIntensity < 0.85)
@@ -14,7 +14,7 @@ void main(void) {
     float deviation = mod(3. * floor(t), 8.) / 8.;
     deviation *= clamp(iIntensity / 0.8, 0., 1.);
 
-    vec3 hsv = rgb2hsv(gl_FragColor.rgb);
+    vec3 hsv = rgb2hsv(fragColor.rgb);
     hsv.r = mod(hsv.r + 1. + deviation, 1.);
-    gl_FragColor.rgb = hsv2rgb(hsv);
+    fragColor.rgb = hsv2rgb(hsv);
 }

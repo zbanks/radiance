@@ -342,9 +342,8 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         headerString = headerStream.readAll();
     }
     auto vertexString = QString{
-        "#version 130\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+        "#version 150\n"
+        "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
         "out vec2 coords;\n"
         "void main() {"
         "    vec2 vertex = varray[gl_VertexID];\n"

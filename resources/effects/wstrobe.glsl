@@ -1,7 +1,7 @@
 // White strobe to the beat
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     vec4 c;
 
     float freq;
@@ -13,9 +13,9 @@ void main(void) {
     else freq = 0.25;
 
     if(freq > 0) {
-        vec3 hsv = rgb2hsv(demultiply(gl_FragColor).rgb);
+        vec3 hsv = rgb2hsv(demultiply(fragColor).rgb);
         hsv.y = hsv.y * (1. - sawtooth(iTime / freq, 0.1));
-        gl_FragColor.rgb = hsv2rgb(hsv);
-        gl_FragColor = premultiply(gl_FragColor);
+        fragColor.rgb = hsv2rgb(hsv);
+        fragColor = premultiply(fragColor);
     }
 }

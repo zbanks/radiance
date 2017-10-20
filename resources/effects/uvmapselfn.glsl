@@ -8,8 +8,8 @@ void main(void) {
 
     vec2 newUV = uv;
     for (int i = 0; i < N; i++) {
-        vec4 map = texture2D(iInput, newUV);
+        vec4 map = texture(iInput, newUV);
         newUV = mix(newUV, map.rg, intensity * map.a);
     }
-    gl_FragColor = texture2D(iInput, newUV);
+    fragColor = texture(iInput, newUV);
 }

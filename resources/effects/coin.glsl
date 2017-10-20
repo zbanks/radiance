@@ -6,7 +6,7 @@
 vec4 lookup(vec2 coord) {
     vec2 xy = coord / aspectCorrection + 0.5;
     xy = clamp(xy, 0., 1.);
-    return texture2D(iInput, xy);
+    return texture(iInput, xy);
 }
 
 void main() {
@@ -28,6 +28,6 @@ void main() {
         col = composite(res, col);
     }
 
-    gl_FragColor = lookup(normCoord);
-	gl_FragColor = mix(gl_FragColor, col, smoothstep(0.0, 0.2, iIntensity));
+    fragColor = lookup(normCoord);
+	fragColor = mix(fragColor, col, smoothstep(0.0, 0.2, iIntensity));
 }

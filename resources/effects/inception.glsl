@@ -5,7 +5,7 @@
 #define MAX_DEPTH 12
 
 vec4 lookup(vec2 coord) {
-    return texture2D(iInput, coord / aspectCorrection + 0.5);
+    return texture(iInput, coord / aspectCorrection + 0.5);
 }
 
 void main() {
@@ -26,5 +26,5 @@ void main() {
         col = composite(col, res);
     }
 
-	gl_FragColor = col;
+	fragColor = col;
 }

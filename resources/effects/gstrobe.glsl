@@ -1,7 +1,7 @@
 // Strobe alpha to the beat
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     vec4 c;
 
     float freq;
@@ -11,8 +11,8 @@ void main(void) {
 
     if(freq > 0) {
         float i = (1. - sawtooth(iTime / freq, 0.1)) * min(3. * iAudioLevel, 1.);
-        gl_FragColor.r *= i;
-        gl_FragColor.b *= i;
-        gl_FragColor.g *= 1. - i;
+        fragColor.r *= i;
+        fragColor.b *= i;
+        fragColor.g *= 1. - i;
     }
 }

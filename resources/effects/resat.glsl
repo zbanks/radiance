@@ -9,11 +9,11 @@ void main(void) {
     //n = mod(n + 0.5, 1.0);
     //n = mod(n + hsl.r, 1.0);
 
-    vec4 samp = texture2D(iInput, uv);
+    vec4 samp = texture(iInput, uv);
     vec3 hsl = rgb2hsv(samp.rgb);
     hsl.g = 1.0 - (1.0 - hsl.g) * (1.0 - factor);
     //hsl.r = mix(hsl.r, n, iIntensity);
     hsl.r = mod(hsl.r + n * iIntensity, 1.0);
-    gl_FragColor.rgb = hsv2rgb(hsl);
-    gl_FragColor.a = samp.a;
+    fragColor.rgb = hsv2rgb(hsl);
+    fragColor.a = samp.a;
 }

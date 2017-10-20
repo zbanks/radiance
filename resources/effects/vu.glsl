@@ -1,7 +1,7 @@
 // Blue vertical VU meter
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
     vec3 audio = vec3(iAudioLow, iAudioMid, iAudioHi);
@@ -15,5 +15,5 @@ void main(void) {
 
     vec4 c = composite(composite(dLow, dMid), dHi);
     c = clamp(c, 0., 1.);
-    gl_FragColor = composite(gl_FragColor, c);
+    fragColor = composite(fragColor, c);
 }

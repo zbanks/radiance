@@ -5,6 +5,6 @@ void main(void) {
     float x = iIntensity;
     vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
     color *= 1. - step(0.5 * onePixel.x, abs(x - uv.x));
-    gl_FragColor = texture2D(iInput, uv);
-    gl_FragColor = composite(gl_FragColor, color);
+    fragColor = texture(iInput, uv);
+    fragColor = composite(fragColor, color);
 }

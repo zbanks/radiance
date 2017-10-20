@@ -19,7 +19,7 @@ vec3 ToGamma( in vec3 col )
 
 vec4 Noise( in ivec2 x )
 {
-	return 2. * texture2D(iNoise, (vec2(x)+0.5)/256.0, -100.);
+	return 2. * texture(iNoise, (vec2(x)+0.5)/256.0, -100.);
 }
 
 void main()
@@ -53,9 +53,9 @@ void main()
 		pos += stp;
 	}
 	
-	vec3 fragColor = ToGamma(col);
-    float v = max(max(fragColor.r, fragColor.g), fragColor.b);
-    vec4 c = texture2D(iInput, uv);
-    vec4 d = vec4(fragColor / max(v, 0.1), v * smoothstep(0., .1, iIntensity));
-    gl_FragColor = composite(c, premultiply(d));
+	vec4 fc;
+    fc.rgb = ToGamma(col);
+    fc.a = max(max(fragColor.r, fragColor.g), fragColor.b);
+    vec4 c = texture(iInput, uv);
+    fragColor = composite(c, fc * iIntensity);
 }

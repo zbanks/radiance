@@ -1,7 +1,7 @@
 // Smooth output
 
 void main(void) {
-    vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iInput, uv);
-    gl_FragColor = mix(next, prev, pow(iIntensity, 0.4));
+    vec4 prev = texture(iChannel[0], uv);
+    vec4 next = texture(iInput, uv);
+    fragColor = mix(next, prev, pow(iIntensity, 0.4));
 }
