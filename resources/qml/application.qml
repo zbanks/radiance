@@ -16,15 +16,8 @@ ApplicationWindow {
         previewWindow: window;
     }
 
-    MidiController {
-        deviceName: "Launchkey MK2"
-        onDeviceListChanged: {
-            console.log("LIST: " + deviceList);
-        }
-
-        onConnectedChanged: {
-            console.log(deviceName + " " + (connected ? "connected" : "disconnected"));
-        }
+    ControllerMapping {
+        target: graph.view
     }
 
     Model {

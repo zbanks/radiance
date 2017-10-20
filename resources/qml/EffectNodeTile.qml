@@ -110,4 +110,19 @@ VideoNodeTile {
         else if (event.key == Qt.Key_R)
             videoNode.reload();
     }
+
+    Controls.onControlChangedAbs: {
+        if (control == Controls.PrimaryParameter) {
+            intensity = value; // TODO soft takeover
+        }
+    }
+
+    Controls.onControlChangedRel: {
+        if (control == Controls.PrimaryParameter) {
+            var i = intensity + value;
+            if (i > 1) i = 1;
+            if (i < 0) i = 0;
+            intensity = i;
+        }
+    }
 }

@@ -373,6 +373,12 @@ BaseVideoNodeTile {
     }
 
     Controls.onControlChangedRel: {
-        console.log("control changed:" + bank + " " + control + " " + value);
+        if (control == Controls.Scroll) {
+            if (value > 0) {
+                tab.focus = true;
+            } else if (value < 0) {
+                backtab.focus = true;
+            }
+        }
     }
 }
