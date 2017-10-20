@@ -6,20 +6,31 @@ QtObject {
 
     property variant mc: MidiController {
         id: controller
-        deviceName: "Launchkey MK2"
+        deviceName: "DJ Control Air"
+
+        property real scrollAccumulator;
 
         onConnectedChanged: {
             console.log(deviceName + " " + (connected ? "connected" : "disconnected"));
         }
 
         onControlChange: {
-            if (control == 1) { // "Modulation"
-                target.Controls.changeControlAbs(0, Controls.PrimaryParameter, value / 127);
+            //console.log(control + " " + value);
+            if (control == 48) { // "A" jogwheel
+                var N = 4;
+                var v = value << 25 >> 25;
+                scrollAccumulator += v;
+                if (scrollAccumulator > N / 2) {
+                    target.Controls.changeControlRel(0, Controls.Scroll, 1);
+                    scrollAccumulator -= N;
+                } else if (scrollAccumulator <= -N / 2) {
+                    target.Controls.changeControlRel(0, Controls.Scroll, -1);
+                    scrollAccumulator += N;
+                }
+            } else if (control == 49) { // "B" jogwheel
+                var v = value << 25 >> 25;
+                target.Controls.changeControlRel(0, Controls.PrimaryParameter, v / 127);
             }
-        }
-
-        onPitchBend: {
-            target.Controls.changeControlRel(0, Controls.Scroll, bend); // Not super useful but sort of funny
         }
     }
 }
