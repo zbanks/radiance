@@ -144,7 +144,7 @@ ApplicationWindow {
                 id: nodeAddAction
                 onTriggered: {
                     var node = model.createVideoNode(nodeSelector.currentText);
-                    if (graph.lastClickedTile) {
+                    if (node && graph.lastClickedTile) {
                         graph.lastClickedTile.insertAfter(node);
                     }
                     model.flush();
