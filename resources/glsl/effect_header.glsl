@@ -1,8 +1,8 @@
-#version 120
+#version 130
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
-uniform highp float iStep;
-uniform highp float iTime;
+uniform float iStep;
+uniform float iTime;
 
 // Audio levels, high/mid/low/level, [0.0, 1.0]
 uniform vec4  iAudio;
@@ -15,7 +15,7 @@ uniform vec4  iAudio;
 uniform vec2 iResolution;
 
 // Intensity slider, [0.0, 1.0]
-uniform lowp float iIntensity;
+uniform float iIntensity;
 
 // Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
 uniform float iIntensityIntegral;
@@ -217,5 +217,4 @@ float noise(vec4 p) {
 
 float onePixel = 1. / min(iResolution.x, iResolution.y);
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
-vec2 uv = gl_FragCoord.xy / iResolution;
-
+in vec2 uv;

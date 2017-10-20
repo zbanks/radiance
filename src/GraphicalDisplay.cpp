@@ -25,15 +25,17 @@ protected:
         m_fragmentShader = fragmentShader;
 
         auto program = new QOpenGLShaderProgram();
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                           "attribute highp vec4 vertices;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    gl_Position = vertices;"
-                                           "    coords = vertices.xy;"
-                                           "}")) goto err;
-        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader)) goto err;
-        program->bindAttributeLocation("vertices", 0);
+        auto vertexString = QString{
+            "#version 130\n"
+            "out vec2 uv;\n"
+            "void main() {"
+            "    uv = vec2(float(gl_VertexID&1),float((gl_VertexID>>1)&1));\n"
+            "    gl_Position = vec4(2.0 * uv - 1., 0, 1);\n"
+            "}"};
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,vertexString))
+            goto err;
+        if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader))
+            goto err;
         if(!program->link()) goto err;
 
         delete m_program;
@@ -63,30 +65,19 @@ err:
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
 
-            float values[] = {
-                -1, -1,
-                1, -1,
-                -1, 1,
-                1, 1
-            };
-
             m_program->bind();
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_1D, audio->m_waveformBeatsTexture->textureId());
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_1D, audio->m_spectrumTexture->textureId());
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_1D, audio->m_waveformBeatsTexture->textureId());
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iWaveform", 0);
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
-            m_program->enableAttributeArray(0);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            m_program->disableAttributeArray(0);
             m_program->release();
-            glActiveTexture(GL_TEXTURE0);
         }
         update();
     }

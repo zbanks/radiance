@@ -2,8 +2,6 @@
 
 void main()
 {
-	//vec2 uv = fragCoord.xy / iResolution.xy;
-	
 	// Sobel operator
 	float offset = onePixel;
 	vec3 o = vec3(-offset, 0.0, offset);
