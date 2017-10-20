@@ -352,7 +352,7 @@ void View::onGraphChanged() {
 
     QVector<int> sortedNodes;
     QQueue<int> bfsQueue;
-    for (int i=0; i<s.count(); i++) {
+    for (int i=s.count() - 1; i>=0; i--) {
         bfsQueue.append(s.at(i));
         while (!bfsQueue.isEmpty()) {
             auto n = bfsQueue.dequeue();

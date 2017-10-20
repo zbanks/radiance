@@ -68,7 +68,7 @@ list(APPEND radiance_LIBRARIES
 
 if(RtMidi_FOUND)
     add_definitions( -DRTMIDI_FOUND )
-    list(APPEND libradiance_SOURCES src/Midi.cpp)
+    list(APPEND libradiance_SOURCES src/MidiController.cpp)
     list(APPEND radiance_LIBRARIES ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
 endif()
 

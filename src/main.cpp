@@ -20,7 +20,7 @@
 #include "main.h"
 
 #ifdef RTMIDI_FOUND
-#include "Midi.h"
+#include "MidiController.h"
 #endif 
 
 #ifdef MPV_FOUND
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
 #ifdef RTMIDI_FOUND
-    qmlRegisterType<MidiDevice>("radiance", 1, 0, "MidiDevice");
+    qmlRegisterType<MidiController>("radiance", 1, 0, "MidiController");
 #else
     qInfo() << "radiance compiled without midi support";
 #endif
