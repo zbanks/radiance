@@ -7,7 +7,7 @@ float gaussian(float x, float sigma)
 
 void main()
 {
-    float sigma = iIntensity / 32.;
+    float sigma = iIntensity * 16.;
     vec4 acc = vec4(0.,0.,0.,0);
     float norm = 0.;
     float stp = 1./iResolution.y;
@@ -30,7 +30,7 @@ float gaussian(float x, float sigma)
 
 void main()
 {
-    float sigma = iIntensity / 32.;
+    float sigma = iIntensity * 16.;
     vec4 acc = vec4(0.,0.,0.,0);
     float norm = 0.;
     float stp = 1./iResolution.x;
@@ -38,7 +38,7 @@ void main()
         float off = stp * i;
         vec2 pt = vec2(uv.x + off,uv.y);
 
-        float k = gaussian(off,sigma);
+        float k = gaussian(i,sigma);
         norm += k;
         acc += k * texture2D(iInputs[0],pt);
     }
