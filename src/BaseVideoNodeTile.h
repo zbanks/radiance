@@ -7,6 +7,6 @@ class BaseVideoNodeTile : public QQuickItem {
     Q_OBJECT
 
 public:
-    BaseVideoNodeTile();
-   ~BaseVideoNodeTile();
+    BaseVideoNodeTile(QQuickItem *p = nullptr);
+   ~BaseVideoNodeTile() override;
 };

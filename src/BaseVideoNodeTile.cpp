@@ -1,8 +1,9 @@
 #include "BaseVideoNodeTile.h"
 
-BaseVideoNodeTile::BaseVideoNodeTile() {
+BaseVideoNodeTile::BaseVideoNodeTile(QQuickItem *p)
+    : QQuickItem(p)
+{
     setFlag(QQuickItem::ItemIsFocusScope);
 }
 
-BaseVideoNodeTile::~BaseVideoNodeTile() {
-}
+BaseVideoNodeTile::~BaseVideoNodeTile() = default;
