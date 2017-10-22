@@ -28,12 +28,12 @@ protected:
         auto program = new QOpenGLShaderProgram();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                            "#version 150\n"
-                                           "out vec2 coords;\n"
+                                           "out vec2 uv;\n"
                                            "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
                                            "void main() {\n"
                                            "    vec2 vertex = varray[gl_VertexID];\n"
                                            "    gl_Position = vec4(vertex,0.,1.);\n"
-                                           "    coords = vertex;\n"
+                                           "    uv = 0.5 * ( vertex + 1.);\n"
                                            "}\n")) goto err;
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader)) goto err;
         program->bindAttributeLocation("vertices", 0);

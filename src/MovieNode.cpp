@@ -510,12 +510,12 @@ MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
 bool MovieNodeOpenGLWorker::loadBlitShader() {
     auto vertexString = QString{
         "#version 150\n"
-        "out vec2 coords;\n"
+        "out vec2 uv;\n"
         "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
         "void main() {\n"
         "    vec2 vertex = varray[gl_VertexID];\n"
         "    gl_Position = vec4(vertex,0.,1.);\n"
-        "    coords = vertex;\n"
+        "    uv = 0.5*(vertex+1.);\n"
         "}\n"};
     auto fragmentString = QString{
         "#version 150\n"
@@ -523,8 +523,8 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "uniform vec2 iResolution;\n"
         "uniform vec2 iVideoResolution;\n"
         "in vec4 gl_FragCoord;\n"
+        "in vec2 uv;\n"
         "out vec4 fragColor;\n"
-        "vec2 uv = gl_FragCoord.xy / iResolution;\n"
         "void main() {\n"
         "    vec2 factorFit = iVideoResolution.yx * iResolution.xy / iVideoResolution.xy / iResolution.yx;\n"
         "    vec2 factor = min(factorFit, 1.);\n"

@@ -1,6 +1,7 @@
 #version 150
 
 in vec4 gl_FragCoord;
+in vec2 uv;
 out vec4 fragColor;
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
@@ -220,5 +221,3 @@ float noise(vec4 p) {
 
 float onePixel = 1. / min(iResolution.x, iResolution.y);
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
-vec2 uv = gl_FragCoord.xy / iResolution;
-

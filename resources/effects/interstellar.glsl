@@ -28,19 +28,19 @@ void main()
 	ray.xy = 2.0*(gl_FragCoord.xy-iResolution.xy*.5)/iResolution.x;
 	ray.z = 1.0;
 
-	//float offset = iTime*.5;	
+	//float offset = iTime*.5;
 	//float speed2 = (cos(offset)+1.0)*2.0;
-	float offset = iIntensityIntegral * 0.5;	
+	float offset = iIntensityIntegral * 0.5;
 	float speed2 = 3. * iAudioLow;
 	float speed = speed2+.1;
 	//offset += sin(offset)*.96;
 	//offset *= 2.0;
-	
-	
+
+
 	vec3 col = vec3(0);
-	
+
 	vec3 stp = ray/max(abs(ray.x),abs(ray.y));
-	
+
 	vec3 pos = 2.0*stp+.5;
 	for ( int i=0; i < 20; i++ )
 	{
@@ -52,7 +52,7 @@ void main()
 		col += 1.5*(1.0-z)*c*w;
 		pos += stp;
 	}
-	
+
 	vec4 fc;
     fc.rgb = ToGamma(col);
     fc.a = max(max(fragColor.r, fragColor.g), fragColor.b);

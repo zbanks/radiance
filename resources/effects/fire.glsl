@@ -12,10 +12,10 @@ void main(void) {
     shift = (iIntensity * 0.5 + 0.5) * shift + vec2(0., 0.5 - 0.5 * iIntensity);
     shift /= aspectCorrection;
 
-    uv = uv + shift;
-    vec4 color = vec4(1., uv.y * 0.6, 0., 1.0);
-    color *= smoothstep(0.1, 0.3, (1. - uv.y));
+    vec2 uv2 = uv + shift;
+    vec4 color = vec4(1., uv2.y * 0.6, 0., 1.0);
+    color *= smoothstep(0.1, 0.3, (1. - uv2.y));
     color *= smoothstep(0., 0.2, iIntensity);
-    
+
     fragColor = composite(fragColor, color);
 }

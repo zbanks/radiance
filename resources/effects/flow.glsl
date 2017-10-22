@@ -1,7 +1,5 @@
 // Radiate color from the center based on audio
 void main(void) {
-    vec2 uv = gl_FragCoord.xy / iResolution;
-
     fragColor = texture(iInput, uv);
     vec4 c = texture(iChannel[1], uv);
     c *= smoothstep(0., 0.2, iIntensity);

@@ -8,7 +8,7 @@ GraphicalDisplay {
     fragmentShader: "
         #version 150
 
-        in vec4 gl_FragCoord;
+        in vec2 uv;
         out vec4 fragColor;
 
         // Alpha-compsite two colors, putting one on top of the other
@@ -22,7 +22,6 @@ GraphicalDisplay {
         uniform vec2 iResolution;
 
         void main(void) {
-            vec2 uv = gl_FragCoord.xy / iResolution;
             float g = uv.y * 0.5 + 0.1;
             float w = 4.;
 
