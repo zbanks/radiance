@@ -5,6 +5,7 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLVertexArrayObject>
 
 class GraphicalDisplayRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
     QOpenGLShaderProgram *m_program;
@@ -27,11 +28,12 @@ protected:
         auto program = new QOpenGLShaderProgram();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                            "#version 150\n"
-                                           "in vec4 vertices;\n"
                                            "out vec2 coords;\n"
+                                           "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
                                            "void main() {\n"
-                                           "    gl_Position = vertices;\n"
-                                           "    coords = vertices.xy;\n"
+                                           "    vec2 vertex = varray[gl_VertexID];\n"
+                                           "    gl_Position = vec4(vertex,0.,1.);\n"
+                                           "    coords = vertex;\n"
                                            "}\n")) goto err;
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader)) goto err;
         program->bindAttributeLocation("vertices", 0);
@@ -64,13 +66,6 @@ err:
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_BLEND);
 
-            float values[] = {
-                -1, -1,
-                1, -1,
-                -1, 1,
-                1, 1
-            };
-
             m_program->bind();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
@@ -78,14 +73,14 @@ err:
             glBindTexture(GL_TEXTURE_1D, audio->m_waveformBeatsTexture->textureId());
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_1D, audio->m_spectrumTexture->textureId());
-            m_program->setAttributeArray(0, GL_FLOAT, values, 2);
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iWaveform", 0);
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
-            m_program->enableAttributeArray(0);
+            QOpenGLVertexArrayObject vao;
+            vao.create();
+            vao.bind();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            m_program->disableAttributeArray(0);
             m_program->release();
             glActiveTexture(GL_TEXTURE0);
         }
