@@ -343,10 +343,13 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
     }
     auto vertexString = QString{
         "#version 130\n"
-        "out vec2 uv;\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+        "out vec2 coords;\n"
         "void main() {"
-        "    uv = vec2(float(gl_VertexID&1),float((gl_VertexID>>1)&1));\n"
-        "    gl_Position = vec4(2.0 * uv - 1., 0, 1);\n"
+        "    vec2 vertex = varray[gl_VertexID];\n"
+        "    gl_Position = vec4(vertex,0.,1.);\n"
+        "    coords = vertex;\n"
         "}"};
     auto programs = QVector<QSharedPointer<QOpenGLShaderProgram>>{};
     auto filename = QString("../resources/effects/%1.glsl").arg(name);
@@ -420,6 +423,29 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         emit fatal(QString("No shaders found for \"%1\"").arg(name));
         return false;
     }
+/*    auto mo = m_p->metaObject();
+    if(!props.isEmpty()) {
+        for(auto i = props.cbegin(),e = props.cend(); i!= e; ++i) {
+            auto prop_name = i.key().trimmed().toLocal8Bit();
+            auto mpi = mo->indexOfProperty(prop_name.constData());
+            if(mpi < 0) {
+                qDebug() << "couldn't find property" << prop_name.constData();
+                continue;
+            }
+            auto mp  = mo->property(mpi);
+            if(!mp.isValid()) {
+                qDebug() << "not a valid property" << prop_name.constData();
+                continue;
+            }
+            auto success = mp.write(m_p, i.value());
+            if(success) {
+                qDebug() << "wrote " << mp.name() << " to value " << i.value();
+            }else{
+                qDebug() << "failed to write " << mp.name() << " to value " << i.value();
+
+            }
+        }
+    }*/
     {
         QMutexLocker locker(&m_p->m_stateLock);
         m_p->m_programs = programs;
