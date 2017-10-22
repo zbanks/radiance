@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QOpenGLFramebufferObjectFormat>
+#include <QOpenGLVertexArrayObject>
 #include "main.h"
 
 MovieNode::MovieNode()
@@ -291,6 +292,9 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         m_blitShader->setUniformValue("iVideoFrame", 0);
         m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
         m_blitShader->setUniformValue("iVideoResolution", GLfloat(m_videoSize.width()), GLfloat(m_videoSize.height()));
+        QOpenGLVertexArrayObject vao;
+        vao.create();
+        vao.bind();
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     m_blitShader->release();
@@ -505,7 +509,6 @@ MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
 bool MovieNodeOpenGLWorker::loadBlitShader() {
     auto vertexString = QString{
         "#version 150\n"
-        "in int gl_VertexID;\n"
         "out vec2 coords;\n"
         "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
         "void main() {\n"
