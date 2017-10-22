@@ -30,7 +30,6 @@ qt5_add_resources(resources/resources.qrc)
 set(libradiance_SOURCES)
 list(APPEND libradiance_SOURCES
     src/Audio.cpp
-    src/Lux.cpp
     src/Output.cpp
     src/Timebase.cpp
     src/NodeRegistry.cpp
@@ -46,8 +45,6 @@ list(APPEND libradiance_SOURCES
     src/Chain.cpp
     src/Context.cpp
     src/OutputImageSequence.cpp
-    src/liblux/lux.c
-    src/liblux/crc.c
     src/Controls.cpp
     src/BaseVideoNodeTile.cpp
     BTrack/src/BTrack.c
@@ -66,18 +63,26 @@ list(APPEND radiance_LIBRARIES
     ${OPENGL_LIBRARIES}
     )
 
-if(RtMidi_FOUND)
-    add_definitions( -DRTMIDI_FOUND )
+if(RtMidi_FOUND AND NOT WITHOUT_RTMIDI)
+    add_definitions( -DUSE_RTMIDI )
     list(APPEND libradiance_SOURCES src/MidiController.cpp)
     list(APPEND radiance_LIBRARIES ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
 endif()
 
-if(MPV_FOUND)
-    add_definitions( -DMPV_FOUND )
+if(MPV_FOUND AND NOT WITHOUT_MPV)
+    add_definitions( -DUSE_MPV )
     list(APPEND libradiance_SOURCES src/MovieNode.cpp)
     list(APPEND radiance_LIBRARIES ${MPV_LIBRARY})
 endif()
 
+# lux uses epoll, which is not supported on MacOS
+if(NOT APPLE AND NOT WITHOUT_LUX)
+    add_definitions( -DUSE_LUX )
+    list(APPEND libradiance_SOURCES src/liblux/lux.c
+                                    src/liblux/crc.c
+                                    src/Lux.cpp
+    )
+endif()
 
 add_library(libradiance ${libradiance_SOURCES})
 

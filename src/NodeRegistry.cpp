@@ -2,7 +2,7 @@
 #include "EffectNode.h"
 #include "ImageNode.h"
 
-#ifdef MPV_FOUND
+#ifdef USE_MPV
 #include "MovieNode.h"
 #endif
 

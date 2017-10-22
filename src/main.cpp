@@ -6,7 +6,6 @@
 #include "EffectNode.h"
 #include "GraphicalDisplay.h"
 #include "ImageNode.h"
-#include "Lux.h"
 #include "Model.h"
 #include "NodeRegistry.h"
 #include "Output.h"
@@ -19,12 +18,16 @@
 #include "View.h"
 #include "main.h"
 
-#ifdef RTMIDI_FOUND
+#ifdef USE_RTMIDI
 #include "MidiController.h"
 #endif
 
-#ifdef MPV_FOUND
+#ifdef USE_MPV
 #include "MovieNode.h"
+#endif
+
+#ifdef USE_LUX
+#include "Lux.h"
 #endif
 
 OpenGLWorkerContext *openGLWorkerContext;
@@ -79,7 +82,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
     nodeRegistry->registerVideoNodeSubclass<ImageNode>();
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
-#ifdef MPV_FOUND
+#ifdef USE_MPV
     nodeRegistry->registerVideoNodeSubclass<MovieNode>();
     qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
 #else
@@ -96,7 +99,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
     qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
-#ifdef RTMIDI_FOUND
+#ifdef USE_RTMIDI
     qmlRegisterType<MidiController>("radiance", 1, 0, "MidiController");
 #else
     qInfo() << "radiance compiled without midi support";
@@ -106,8 +109,12 @@ int main(int argc, char *argv[]) {
     qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
     qmlRegisterSingletonType<NodeRegistry>("radiance", 1, 0, "NodeRegistry", nodeRegistryProvider);
 
+#ifdef USE_LUX
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
     qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
+#else
+    qInfo() << "radiance compiled without lux support";
+#endif
 
     qmlRegisterType<BaseVideoNodeTile>("radiance", 1, 0, "BaseVideoNodeTile");
 
