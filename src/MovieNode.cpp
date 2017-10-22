@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QOpenGLFramebufferObjectFormat>
+#include <QOpenGLVertexArrayObject>
 #include "main.h"
 
 MovieNode::MovieNode()
@@ -291,6 +292,9 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         m_blitShader->setUniformValue("iVideoFrame", 0);
         m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
         m_blitShader->setUniformValue("iVideoResolution", GLfloat(m_videoSize.width()), GLfloat(m_videoSize.height()));
+        QOpenGLVertexArrayObject vao;
+        vao.create();
+        vao.bind();
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     m_blitShader->release();
@@ -504,28 +508,28 @@ MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
 
 bool MovieNodeOpenGLWorker::loadBlitShader() {
     auto vertexString = QString{
-        "#version 130\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+        "#version 150\n"
         "out vec2 coords;\n"
+        "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
         "void main() {\n"
         "    vec2 vertex = varray[gl_VertexID];\n"
         "    gl_Position = vec4(vertex,0.,1.);\n"
         "    coords = vertex;\n"
         "}\n"};
     auto fragmentString = QString{
-        "#version 130\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "#version 150\n"
         "uniform sampler2D iVideoFrame;\n"
         "uniform vec2 iResolution;\n"
         "uniform vec2 iVideoResolution;\n"
+        "in vec4 gl_FragCoord;\n"
+        "out vec4 fragColor;\n"
         "vec2 uv = gl_FragCoord.xy / iResolution;\n"
         "void main() {\n"
         "    vec2 factorFit = iVideoResolution.yx * iResolution.xy / iVideoResolution.xy / iResolution.yx;\n"
         "    vec2 factor = min(factorFit, 1.);\n"
         "    vec2 texUV = (uv - 0.5) * factor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
-        "    gl_FragColor = texture2D(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
+        "    fragColor = texture2D(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
         "}\n"};
 
     m_p->m_blitShader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());

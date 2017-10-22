@@ -17,14 +17,14 @@ void main()
 	float r2 = 0.2 / len + t * 0.5;
 
     vec2 texcoords = vec2(a + 0.1 / len, r1);
-	vec4 tex1 = texture2D(iInput, abs(mod(texcoords, 2.) - 1.));
+	vec4 tex1 = texture(iInput, abs(mod(texcoords, 2.) - 1.));
     vec4 c = tex1 * smoothstep(0., 0.1, len);
     c *= smoothstep(0.1, 0.2, iIntensity);
 
     vec2 texcoords2 = (uv - 0.5 - offset) / (1. - smoothstep(0., 0.2, iIntensity)) + 0.5 + offset;
-    vec4 c2 = texture2D(iInput, texcoords2);
+    vec4 c2 = texture(iInput, texcoords2);
     c2 *= box(texcoords2);
 
-    gl_FragColor = composite(c2, c);
+    fragColor = composite(c2, c);
 }
 

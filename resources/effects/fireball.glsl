@@ -2,7 +2,7 @@
 
 void main(void) {
     vec2 uv = gl_FragCoord.xy / iResolution;
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
 
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
@@ -17,5 +17,5 @@ void main(void) {
     color *= smoothstep(0.4, 0.5, (1. - length(normCoord)));
     color *= smoothstep(0., 0.2, iIntensity);
     
-    gl_FragColor = composite(gl_FragColor, color);
+    fragColor = composite(fragColor, color);
 }

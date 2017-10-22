@@ -8,5 +8,5 @@ void main(void) {
 
     vec2 uv = mix(xy, rtheta, iIntensity);
 
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
 }

@@ -26,12 +26,13 @@ protected:
 
         auto program = new QOpenGLShaderProgram();
         if(!program->addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                           "attribute highp vec4 vertices;"
-                                           "varying highp vec2 coords;"
-                                           "void main() {"
-                                           "    gl_Position = vertices;"
-                                           "    coords = vertices.xy;"
-                                           "}")) goto err;
+                                           "#version 150\n"
+                                           "in vec4 vertices;\n"
+                                           "out vec2 coords;\n"
+                                           "void main() {\n"
+                                           "    gl_Position = vertices;\n"
+                                           "    coords = vertices.xy;\n"
+                                           "}\n")) goto err;
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShader)) goto err;
         program->bindAttributeLocation("vertices", 0);
         if(!program->link()) goto err;

@@ -6,5 +6,5 @@ void main(void) {
     vec2 newUV = vec2(length(normCoord) / sqrt(2.), abs(atan(normCoord.x, -normCoord.y) / M_PI)) - 0.5;
     newUV = newUV / aspectCorrection + 0.5;
 
-    gl_FragColor = texture2D(iInput, mix(uv, newUV, iIntensity));
+    fragColor = texture(iInput, mix(uv, newUV, iIntensity));
 }

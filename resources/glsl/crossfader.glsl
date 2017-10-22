@@ -10,7 +10,7 @@ vec4 composite(vec4 under, vec4 over) {
 }
 
 void main() {
-    vec4 l = texture2D(iLeft, 0.5 * (coords + 1.));
-    vec4 r = texture2D(iRight, 0.5 * (coords + 1.));
+    vec4 l = texture(iLeft, 0.5 * (coords + 1.));
+    vec4 r = texture(iRight, 0.5 * (coords + 1.));
     gl_FragColor = l * (1. - iParameter) + r * iParameter;
 }

@@ -30,8 +30,8 @@ BaseVideoNodeTile {
     property var dragCC
     property var dragging
 
-    property var tab;
-    property var backtab;
+    property var tab: null
+    property var backtab: null
 
     function sum(l) {
         var result = 0;

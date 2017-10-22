@@ -10,5 +10,5 @@ void main(void) {
 
     vec2 new_uv = vec2(x, uv.y);
     new_uv = mix(uv, new_uv, smoothstep(0., 0.15, iIntensity));
-    gl_FragColor = texture2D(iInput, new_uv);
+    fragColor = texture(iInput, new_uv);
 }

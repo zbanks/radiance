@@ -1,27 +1,27 @@
 // A green & red circle in the center
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     vec4 c;
 
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;
 
     c = vec4(1.) * (1. - smoothstep(iIntensity - 0.1, iIntensity, length(normCoord)));
-    gl_FragColor = composite(gl_FragColor, c);
+    fragColor = composite(fragColor, c);
 
-    c = texture2D(iChannel[1], (uv - 0.5) / iIntensity + 0.5);
+    c = texture(iChannel[1], (uv - 0.5) / iIntensity + 0.5);
     c *= 1. - smoothstep(iIntensity - 0.2, iIntensity - 0.1, length(normCoord));
-    gl_FragColor = composite(gl_FragColor, c);
+    fragColor = composite(fragColor, c);
 
 }
 #buffershader
 void main(void) {
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;
-    gl_FragColor = vec4(abs(normCoord), 0., 1.);
+    fragColor = vec4(abs(normCoord), 0., 1.);
 }
 
 #buffershader
 void main(void) {
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;
-    gl_FragColor = vec4(abs(normCoord), 0., 1.);
+    fragColor = vec4(abs(normCoord), 0., 1.);
 }

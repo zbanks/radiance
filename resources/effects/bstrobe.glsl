@@ -1,7 +1,7 @@
 // Full black strobe. Intensity increases frequency
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     vec4 c;
 
     float freq;
@@ -18,6 +18,6 @@ void main(void) {
     if(freq > 0) {
         c = vec4(0., 0., 0., 1. - mod(iTime, freq) / freq);
         //c *= pow(iIntensity, 0.3);
-        gl_FragColor = composite(gl_FragColor, c);
+        fragColor = composite(fragColor, c);
     }
 }

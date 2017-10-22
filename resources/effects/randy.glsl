@@ -13,8 +13,8 @@ void main(void) {
     vec2 newUV = normCoord * rot;
     newUV = newUV / aspectCorrection + 0.5;
 
-    vec4 nc = texture2D(iInput, newUV);
+    vec4 nc = texture(iInput, newUV);
     nc *= box(newUV);
 
-    gl_FragColor = nc;
+    fragColor = nc;
 }

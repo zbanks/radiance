@@ -1,7 +1,7 @@
 // Fire from the bottom
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
 
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
@@ -17,5 +17,5 @@ void main(void) {
     color *= smoothstep(0.1, 0.3, (1. - uv.y));
     color *= smoothstep(0., 0.2, iIntensity);
     
-    gl_FragColor = composite(gl_FragColor, color);
+    fragColor = composite(fragColor, color);
 }

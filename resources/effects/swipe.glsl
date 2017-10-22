@@ -1,8 +1,8 @@
 // Only update a vertical slice that slides across
 
 void main(void) {
-    vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iInput, uv);
+    vec4 prev = texture(iChannel[0], uv);
+    vec4 next = texture(iInput, uv);
     float factor = pow(iIntensity, 2.0);
 
     float t = mod(iTime / 4.0 - uv.x, 1.0);
@@ -12,5 +12,5 @@ void main(void) {
     factor = min(factor, 1.0 - x);
     factor = clamp(factor, 0.0, 1.0);
 
-    gl_FragColor = mix(next, prev, factor);
+    fragColor = mix(next, prev, factor);
 }

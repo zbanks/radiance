@@ -1,7 +1,7 @@
 // Cyan diagonal stripes
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
 
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
@@ -15,5 +15,5 @@ void main(void) {
 
     c *= smoothstep(0., 0.1, iIntensity);
     c = clamp(c, 0., 1.);
-    gl_FragColor = composite(gl_FragColor, c);
+    fragColor = composite(fragColor, c);
 }

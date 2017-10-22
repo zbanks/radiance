@@ -5,6 +5,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFramebufferObjectFormat>
 #include <QRegularExpression>
+#include <QOpenGLVertexArrayObject>
 #include <memory>
 #include <utility>
 #include <functional>
@@ -223,6 +224,10 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             p->setUniformValue("iNoise", m_inputCount);
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
             p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
+
+            QOpenGLVertexArrayObject vao;
+            vao.create();
+            vao.bind();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             renderState->m_intermediate.at(fboIndex)->release();
             //renderState->m_intermediate.at(fboIndex)->toImage().save(QString("out_%1.png").arg(renderState->m_intermediate.at(fboIndex)->texture()));
@@ -342,9 +347,8 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         headerString = headerStream.readAll();
     }
     auto vertexString = QString{
-        "#version 130\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "const vec2 varray[4] = { vec2( 1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.)};\n"
+        "#version 150\n"
+        "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., -1.),vec2(-1., 1.),vec2(-1., -1.));\n"
         "out vec2 coords;\n"
         "void main() {"
         "    vec2 vertex = varray[gl_VertexID];\n"

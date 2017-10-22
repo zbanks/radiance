@@ -1,18 +1,18 @@
 // First order (expontential) hold
 
 void main(void) {
-    vec4 prev = texture2D(iChannel[0], uv);
-    vec4 next = texture2D(iChannel[1], uv);
+    vec4 prev = texture(iChannel[0], uv);
+    vec4 next = texture(iChannel[1], uv);
 
-    gl_FragColor = mix(next, prev, pow(iIntensity, 0.4));
-    gl_FragColor = clamp(gl_FragColor, 0, 1);
+    fragColor = mix(next, prev, pow(iIntensity, 0.4));
+    fragColor = clamp(fragColor, 0, 1);
 }
 
 #buffershader
 void main(void) {
     float t = pow(2, round(6 * iIntensity - 4));
     if (iIntensity < 0.09 || mod(iTime, t) < 0.1)
-        gl_FragColor = texture2D(iInput, uv);
+        fragColor = texture(iInput, uv);
     else
-        gl_FragColor = texture2D(iChannel[1], uv);
+        fragColor = texture(iChannel[1], uv);
 }

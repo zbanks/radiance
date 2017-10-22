@@ -19,5 +19,5 @@ void main(void) {
 
     float amount = 0.1 * iIntensity;
 
-    gl_FragColor = texture2D(iInput, (normCoord + shift * amount) / aspectCorrection + 0.5);
+    fragColor = texture(iInput, (normCoord + shift * amount) / aspectCorrection + 0.5);
 }

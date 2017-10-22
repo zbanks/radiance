@@ -1,4 +1,7 @@
-#version 120
+#version 150
+
+in vec4 gl_FragCoord;
+out vec4 fragColor;
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform highp float iStep;

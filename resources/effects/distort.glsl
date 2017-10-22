@@ -8,5 +8,5 @@ void main(void) {
     shift = 0.3 * shift;
     shift /= aspectCorrection;
 
-    gl_FragColor = texture2D(iInput, uv + shift * iIntensity * (15. * iAudioLevel) * sawtooth(iTime, 0.1));
+    fragColor = texture(iInput, uv + shift * iIntensity * (15. * iAudioLevel) * sawtooth(iTime, 0.1));
 }

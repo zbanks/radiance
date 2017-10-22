@@ -17,9 +17,9 @@ void main()
 
         float k = gaussian(i,sigma);
         norm += k;
-        acc += k * texture2D(iChannel[1],pt);
+        acc += k * texture(iChannel[1],pt);
     }
-    gl_FragColor = acc / norm;
+    fragColor = acc / norm;
 }
 #buffershader
 float squared(float x) { return x * x;}
@@ -40,7 +40,7 @@ void main()
 
         float k = gaussian(i,sigma);
         norm += k;
-        acc += k * texture2D(iInputs[0],pt);
+        acc += k * texture(iInputs[0],pt);
     }
-    gl_FragColor = acc / norm;
+    fragColor = acc / norm;
 }

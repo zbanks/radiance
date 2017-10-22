@@ -5,12 +5,12 @@ float hyper_length(vec2 c, float f) {
 }
 
 void main(void) {
-    gl_FragColor = texture2D(iInput, uv);
+    fragColor = texture(iInput, uv);
     vec2 coord = (uv - 0.5);
 
     float f = 3. / iIntensity;
     float edge1 = 2 * hyper_length(coord, f);
     float edge2 = 0.5 * length(coord / max(abs(coord.x), abs(coord.y)));
 
-    gl_FragColor *= 1. - smoothstep(1. - 0.5 * iIntensity, 1., edge1);
+    fragColor *= 1. - smoothstep(1. - 0.5 * iIntensity, 1., edge1);
 }
