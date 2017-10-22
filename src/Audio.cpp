@@ -1,6 +1,9 @@
 #include "Audio.h"
 
 #include <QDebug>
+#include <numeric>
+#include <algorithm>
+#include <utility>
 #include <portaudio.h>
 #include <cmath>
 
@@ -24,51 +27,16 @@ const float LevelDownAlpha = 0.01;
 
 Audio::Audio(QObject *p)
     : QThread(p)
-    , m_run(true)
-    , m_time(0)
-    , chunk(0)
-    , sampQueue(0)
-    , fftIn(0)
-    , fftOut(0)
-    , spectrum(0)
-    , spectrumLPF(0)
-    , spectrumGL(0)
-    , waveformGL(0)
-    , waveformBeatsGL(0)
-    , window(0)
-    , sampQueuePtr(0)
-    , waveformPtr(0)
-    , plan(0)
-    , audioThreadHi(0)
-    , audioThreadMid(0)
-    , audioThreadLow(0)
-    , audioThreadLevel(0)
-    , beatLPF(0)
-    , btrack {}
-    , m_waveformTexture(0)
-    , m_waveformBeatsTexture(0)
-    , m_spectrumTexture(0)
 {
     setObjectName("AudioThread");
 
-    chunk = new float[ChunkSize]();
-
     // Audio processing
-    sampQueue = new float[FFTLength]();
-    fftIn = new double[FFTLength]();
-    fftOut = new fftw_complex[FFTLength / 2 + 1]();
-    spectrum = new double[SpectrumBins]();
-    spectrumLPF = new double[SpectrumBins]();
-    spectrumGL = new GLfloat[SpectrumBins]();
-    spectrumCount = new int[SpectrumBins]();
-    waveformGL = new GLfloat[WaveformLength * 8]();
-    waveformBeatsGL = new GLfloat[WaveformLength * 8]();
-    window = new double[FFTLength];
-    for(int i=0; i<FFTLength; i++) window[i] = hannWindow(i);
+    for(int i=0; i<FFTLength; i++)
+        window[i] = hannWindow(i);
 
-    plan = fftw_plan_dft_r2c_1d(FFTLength, fftIn, fftOut, FFTW_ESTIMATE);
     //if (btrack_init(&btrack, chunk_size, FFTLength, sample_rate) != 0)
-    if(btrack_init(&btrack, ChunkSize, 1024, FrameRate) != 0) throw std::runtime_error("Could not initialize BTrack");
+    if(btrack_init(&btrack, ChunkSize, 1024, FrameRate) != 0)
+        throw std::runtime_error("Could not initialize BTrack");
     //if (time_master_register_source(&analyze_audio_time_source) != 0)
     //    PFAIL("Could not register btrack time source");
 
@@ -79,6 +47,10 @@ Audio::~Audio()
 {
     quit();
     wait();
+    if(m_plan)
+        fftwf_destroy_plan(m_plan);
+    m_plan = 0;
+    btrack_del(&btrack);
     /* TODO: Figure this out.
     fftw_destroy_plan(plan);
     btrack_del(&btrack);
@@ -128,7 +100,7 @@ void Audio::run() {
     inputParameters.device = Pa_GetDefaultInputDevice();
     if (inputParameters.device < 0) {
         qWarning() << "Could not find input device, running without";
-        while(m_run) {
+        while(m_run.load()) {
             // i'm so sorry
             QMutexLocker locker(&m_audioLock);
             m_time = fmod((m_time + 0.003), 128.);
@@ -159,8 +131,8 @@ void Audio::run() {
         goto err;
     }
 
-    while(m_run) {
-        err = Pa_ReadStream(stream, chunk, ChunkSize);
+    while(m_run.load()) {
+        err = Pa_ReadStream(stream, &chunk[0], ChunkSize);
         if(err != paNoError) {
             qDebug() << "Could not read audio chunk";
             goto err;
@@ -200,24 +172,24 @@ void Audio::analyzeChunk() {
     }
 
     // Run the FFT
-    fftw_execute(plan);
+    fftwf_execute(m_plan);
 
     // Convert to spectrum (log(freq))
-    memset(spectrum, 0, SpectrumBins * sizeof *spectrum);
-    memset(spectrumCount, 0, SpectrumBins * sizeof *spectrumCount);
-    double binFactor = SpectrumBins / log(FFTLength / 2);
-    for(int i=1; i<FFTLength / 2; i++) {
-        int bin = (int)(log(i) * binFactor);
+    std::fill(spectrum.begin(),spectrum.end(),0);
+    std::fill(spectrumCount.begin(),spectrumCount.end(),0);
+    auto binFactor = SpectrumBins / std::log(FFTLength / 2.0f);
+    for(auto i=1; i<FFTLength / 2; i++) {
+        auto bin = (int)(std::log(float(i)) * binFactor);
         spectrum[bin] += fftOut[i][0] * fftOut[i][0] + fftOut[i][1] * fftOut[i][1];
         spectrumCount[bin]++;
     }
 
     // Convert to spectrum (log(power))
-    for(int i=0; i<SpectrumBins; i++) {
+    for(auto i=0; i<SpectrumBins; i++) {
         if(spectrumCount[i] == 0) {
             spectrum[i] = spectrum[i - 1];
         } else {
-            spectrum[i] = SpectrumGain * (log1p(spectrum[i]) - SpectrumOffset);
+            spectrum[i] = SpectrumGain * (std::log1p(spectrum[i]) - SpectrumOffset);
             if(spectrum[i] < 0) spectrum[i] = 0;
             if(spectrum[i] > 1) spectrum[i] = 1;
         }
@@ -229,13 +201,13 @@ void Audio::analyzeChunk() {
     double low = 0;
     double level = 0;
 
-    for(int i=0; i<SpectrumBins; i++) {
+    for(auto i=0; i<SpectrumBins; i++) {
         if(spectrum[i] > spectrumLPF[i]) {
             spectrumLPF[i] = spectrum[i] * SpectrumUpAlpha + spectrumLPF[i] * (1 - SpectrumUpAlpha);
         } else {
             spectrumLPF[i] = spectrum[i] * SpectrumDownAlpha + spectrumLPF[i] * (1 - SpectrumDownAlpha);
         }
-        double freqFrac = (double)i / SpectrumBins;
+        auto freqFrac = (float)i / SpectrumBins;
         if(freqFrac < LowCutoff) {
             low += spectrumLPF[i];
         } else if(freqFrac > HiCutoff) {
@@ -246,11 +218,11 @@ void Audio::analyzeChunk() {
     }
 
     // Pass to BTrack. TODO: use already FFT'd values
-    btrack_process_audio_frame(&btrack, chunk);
+    btrack_process_audio_frame(&btrack, chunk.data());
 
-    double btrackBPM = btrack_get_bpm(&btrack);
+    auto btrackBPM = btrack_get_bpm(&btrack);
     timebase->update(Timebase::TimeSourceAudio, Timebase::TimeSourceEventBPM, btrackBPM);
-    double msUntilBeat = btrack_get_time_until_beat(&btrack) * 1000.;
+    auto msUntilBeat = btrack_get_time_until_beat(&btrack) * 1000.;
     timebase->update(Timebase::TimeSourceAudio, Timebase::TimeSourceEventBeat, msUntilBeat);
 
     if (btrack_beat_due_in_current_frame(&btrack)) {
@@ -281,19 +253,21 @@ void Audio::analyzeChunk() {
 
         audioThreadLevel = level;
 
-        for(int i=0; i<SpectrumBins; i++) {
-            spectrumGL[i] = spectrumLPF[i];
-        }
-
+        std::copy(spectrumLPF.begin(),spectrumLPF.end(),spectrumGL.begin());
         waveformGL[waveformPtr * 4 + 0] = audioThreadHi;
         waveformGL[waveformPtr * 4 + 1] = audioThreadMid;
         waveformGL[waveformPtr * 4 + 2] = audioThreadLow;
         waveformGL[waveformPtr * 4 + 3] = audioThreadLevel;
         waveformBeatsGL[waveformPtr * 4] = beatLPF;
 
-        memcpy(&waveformGL[(WaveformLength + waveformPtr) * 4], &waveformGL[waveformPtr * 4], 4 * sizeof *waveformGL);
-        memcpy(&waveformBeatsGL[(WaveformLength + waveformPtr) * 4], &waveformBeatsGL[waveformPtr * 4], 4 * sizeof *waveformBeatsGL);
-
+        {
+            auto it = waveformGL.begin() + waveformPtr * 4;
+            std::copy_n(it, 4, it + WaveformLength * 4);
+        }
+        {
+            auto it = waveformBeatsGL.begin() + waveformPtr * 4;
+            std::copy_n(it, 1, it + WaveformLength * 4);
+        }
         waveformPtr = (waveformPtr + 1) % WaveformLength;
     }
 }
@@ -342,5 +316,5 @@ void Audio::renderGraphics() {
     }
     m_waveformTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformGL[waveformPtr * 4]);
     m_waveformBeatsTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformBeatsGL[waveformPtr * 4]);
-    m_spectrumTexture->setData(QOpenGLTexture::Red, QOpenGLTexture::Float32, spectrumGL);
+    m_spectrumTexture->setData(QOpenGLTexture::Red, QOpenGLTexture::Float32, spectrumGL.data());
 }
