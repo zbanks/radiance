@@ -142,10 +142,3 @@ signals:
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
     void idChanged(int id);
 };
-
-class VideoNodeReference : public QObject {
-    Q_OBJECT
-public:
-    virtual VideoNode *videoNode() = 0;
-    virtual QSharedPointer<VideoNode> createCopyForRendering() = 0;
-};
