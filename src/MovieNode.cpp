@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLVertexArrayObject>
+#include <locale.h>
 #include "main.h"
 
 MovieNode::MovieNode()
