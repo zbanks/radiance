@@ -1,4 +1,4 @@
-#property description Distort the screen
+#property description Rectilinear distortion
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

@@ -1,3 +1,4 @@
+#property description Mix between the two inputs
 #property inputCount 2
 void main() {
     vec4 l = texture(iInputs[0], uv);

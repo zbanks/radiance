@@ -1,4 +1,4 @@
-#property description Desaturate to the beat
+#property description Desaturate to the beat (in HSV space)
 
 void main(void) {
     float t = mod(iTime, 4.0) / 4.0;

@@ -4,7 +4,7 @@ void main(void) {
     fragColor = texture(iInput, uv);
 
     float deviation;
-    deviation = mod(iIntensityIntegral, 1.);
+    deviation = mod(iIntensityIntegral * 0.5, 1.);
 
     vec3 hsv = rgb2hsv(fragColor.rgb);
     hsv.r = mod(hsv.r + 1. + deviation, 1.);

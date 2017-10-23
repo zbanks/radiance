@@ -1,3 +1,4 @@
+#property description Fake waveform visualizer that looks like an oscilloscope
 void main(void) {
     fragColor = texture(iInput, uv);
 

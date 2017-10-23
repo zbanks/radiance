@@ -1,3 +1,4 @@
+#property description Replace green parts of the first input with the second
 #property inputCount 2
 void main() {
     vec4 m = texture(iInputs[0], uv);

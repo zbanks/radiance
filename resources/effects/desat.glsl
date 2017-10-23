@@ -1,4 +1,4 @@
-#property description Desaturate (make white)
+#property description Desaturate in YUV space
 
 void main(void) {
     float factor = pow(iIntensity, 3.);
