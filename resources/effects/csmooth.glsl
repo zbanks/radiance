@@ -1,4 +1,4 @@
-#property description Apply gaussian blur
+#property description Apply gaussian spatial blur
 float squared(float x) { return x * x;}
 float gaussian(float x)
 {

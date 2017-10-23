@@ -1,4 +1,4 @@
-#property description Apply gaussian blur
+#property description Apply gaussian resampling ( at pixel aligned points )
 float squared(float x) { return x * x;}
 float gaussian(float x, float sigma)
 {
