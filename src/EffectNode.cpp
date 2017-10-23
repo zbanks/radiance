@@ -18,9 +18,8 @@ EffectNode::EffectNode()
     , m_ready(false) {
 
     setInputCount(1);
-    m_periodic.setInterval(10);
-    m_periodic.start();
-    connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
+    m_beatLast = timebase->beat();
+    m_realTimeLast = timebase->wallTime();
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
 }
 
@@ -29,6 +28,9 @@ EffectNode::EffectNode(const EffectNode &other)
     , m_openGLWorker(other.m_openGLWorker)
     , m_intensity(other.m_intensity)
     , m_intensityIntegral(other.m_intensityIntegral)
+    , m_beatLast(other.m_beatLast)
+    , m_realTime(other.m_realTime)
+    , m_realTimeLast(other.m_realTimeLast)
     , m_programs(other.m_programs)
     , m_ready(other.m_ready) {
 
@@ -245,8 +247,14 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
 
 void EffectNode::periodic() {
     Q_ASSERT(QThread::currentThread() == thread());
+
     QMutexLocker locker(&m_stateLock);
-    m_intensityIntegral = fmod(m_intensityIntegral + m_intensity / FPS, MAX_INTEGRAL);
+    qreal beatNow = timebase->beat();
+    qreal beatDiff = beatNow - m_beatLast;
+    if (beatDiff < 0)
+        beatDiff += Timebase::MAX_BEAT;
+    m_intensityIntegral = fmod(m_intensityIntegral + m_intensity * beatDiff, MAX_INTEGRAL);
+    m_beatLast = beatNow;
 }
 
 qreal EffectNode::intensity() {
@@ -293,10 +301,13 @@ void EffectNode::reload() {
 
 // Creates a copy of this node for rendering
 QSharedPointer<VideoNode> EffectNode::createCopyForRendering() {
-    QMutexLocker locker(&m_stateLock);
-    QSharedPointer<VideoNode> v(new EffectNode(*this));
-    v->moveToThread(QThread::currentThread()); // Move it to the thread that rendering will take place in
-    return v;
+    periodic();
+    {
+        QMutexLocker locker(&m_stateLock);
+        QSharedPointer<VideoNode> v(new EffectNode(*this));
+        v->moveToThread(QThread::currentThread()); // Move it to the thread that rendering will take place in
+        return v;
+    }
 }
 
 // Reads back the new render state

@@ -10,6 +10,7 @@ public:
     static constexpr double MS_PER_MINUTE =  S_PER_MINUTE * 1000;
     static constexpr double US_PER_MINUTE = MS_PER_MINUTE * 1000;
     static constexpr double NS_PER_MINUTE = US_PER_MINUTE * 1000;
+    static constexpr double MAX_BEAT = 1024;
 
     enum TimeSource {
         TimeSourceAudio,

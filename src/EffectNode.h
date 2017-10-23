@@ -103,10 +103,10 @@ protected:
     QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
     qreal m_intensity;
     qreal m_intensityIntegral;
+    qreal m_beatLast;
     qreal m_realTime;
     qreal m_realTimeLast;
     QString m_name;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
-    QTimer m_periodic; // XXX do something better here
     bool m_ready;
 };

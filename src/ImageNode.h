@@ -86,6 +86,5 @@ protected:
     QString m_imagePath;
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
-    QTimer m_periodic;
     bool m_ready;
 };

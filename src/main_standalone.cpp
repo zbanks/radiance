@@ -38,9 +38,9 @@ void generateHtml(QDir outputDir, QList<QString> nodeNames) {
 
     for (auto name : nodeNames) {
         html << "<tr><td>" << name << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./" << name << "/" << name << "_0.png'>" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./" << name << "/" << name << "_51.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./" << name << IMG_FORMAT "'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
     }
 
     html << "</table>\n";
@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
     QDir outputDir;
     outputDir.mkpath("render_output");
     outputDir.cd("render_output");
+    outputDir.mkpath("_assets");
     //outputDir.removeRecursively();
     //qInfo() << "Wiped" << outputDir.absolutePath();
 
@@ -190,7 +191,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i <= 100; i++) {
             if (effectNode)
                 effectNode->setIntensity(i / 50.);
-            timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 25.0);
+            timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
 
             auto modelCopy = model.createCopyForRendering();
             auto rendering = modelCopy.render(chain);
@@ -204,13 +205,20 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        QFile::copy(
+            outputDir.filePath(QString("%1/%1_0.png").arg(nodeName)),
+            outputDir.filePath(QString("_assets/%1_0.png").arg(nodeName)));
+        QFile::copy(
+            outputDir.filePath(QString("%1/%1_51.png").arg(nodeName)),
+            outputDir.filePath(QString("_assets/%1_51.png").arg(nodeName)));
+
         // ffmpeg: Easiest way to convert images into a GIF other format
         QProcess ffmpeg;
         ffmpeg.start("ffmpeg",
             QStringList()
                 << "-y" << "-i"
                 << QString("%1/%2/%2_%d.png").arg(outputDir.path(), nodeName)
-                << QString("%1/%2" IMG_FORMAT).arg(outputDir.path(), nodeName));
+                << QString("%1/_assets/%2" IMG_FORMAT).arg(outputDir.path(), nodeName));
         ffmpeg.waitForFinished();
         qInfo() << "Rendered" << nodeName << ffmpeg.exitCode() << ffmpeg.exitStatus();
 

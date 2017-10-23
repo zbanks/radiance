@@ -10,9 +10,6 @@ ImageNode::ImageNode()
     : m_openGLWorker(new ImageNodeOpenGLWorker(this))
     , m_ready(false) {
 
-    m_periodic.setInterval(100);
-    m_periodic.start();
-    connect(&m_periodic, &QTimer::timeout, this, &ImageNode::periodic);
     connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
 }
 
@@ -74,8 +71,8 @@ void ImageNode::periodic() {
     QMutexLocker locker(&m_stateLock);
     if(!m_frameTextures.size())
         return;
-    // TODO: actually use m_frameDelays
-    m_currentTextureIdx = (++m_currentTextureIdx) % m_frameTextures.size();
+    // TODO: actually use m_frameDelays, also this has a discontinuity at MAX_BEAT
+    m_currentTextureIdx = (int) (6.0 * timebase->beat()) % m_frameTextures.size();
     m_currentTexture = m_frameTextures.at(m_currentTextureIdx);
 }
 
@@ -100,6 +97,7 @@ void ImageNode::setImagePath(QString imagePath) {
 
 // See comments in ImageNode.h about these 3 functions
 QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
+    periodic();
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 

@@ -52,14 +52,14 @@ void Timebase::update(enum Timebase::TimeSource source, enum Timebase::TimeSourc
         {
             if (source == TimeSourceDiscrete) {
                 m_beatFrac = fmod(eventArg, 1.0);
-                m_beatIndex = ((int) eventArg)  % 1024;
+                m_beatIndex = ((int) eventArg) % (int) MAX_BEAT;
             } else {
                 auto nsUntilEvent = eventArg * 1000 * 1000;
                 auto masterBeatPerNs = m_bpm / NS_PER_MINUTE;
                 char status = '!';
                 if(eventArg == 0) {
                     m_beatFrac = 0;
-                    m_beatIndex = (m_beatIndex + 1) % 1024;
+                    m_beatIndex = (m_beatIndex + 1) % (int) MAX_BEAT;
                 } else if (eventArg < 0) { // How long ago was the last beat
                     m_beatFrac = -nsUntilEvent * masterBeatPerNs;
                     status = '<';
