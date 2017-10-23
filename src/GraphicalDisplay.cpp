@@ -77,6 +77,7 @@ err:
             m_program->setUniformValue("iWaveform", 0);
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
+            m_program->setUniformValue("iTime", (GLfloat) timebase->beat());
             QOpenGLVertexArrayObject vao;
             vao.create();
             vao.bind();

@@ -228,6 +228,10 @@ ApplicationWindow {
             }
 
             RowLayout {
+                BeatIndicator {
+                    width: 25
+                    opacity: .9
+                }
                 Waveform {
                     width: 500
                     opacity: .9
