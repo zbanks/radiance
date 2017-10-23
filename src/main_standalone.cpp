@@ -11,6 +11,7 @@
 #include "View.h"
 #include "EffectNode.h"
 #include "ImageNode.h"
+#include "MovieNode.h"
 #include "NodeRegistry.h"
 #include "main.h"
 
@@ -28,14 +29,17 @@ void generateHtml(QDir outputDir, QList<QString> nodeNames) {
     QTextStream html(&outputHtml);
     html << "<!doctype html>\n";
     html << "<html><body>\n";
-    html << "<style>td.static, td.gif { background-color: #FFF; }</style>\n";
-    html << "<table><tr><th>name</th><th>comment</th><th>0</th><th>static</th><th>gif</th><tr>\n";
+    html << "<style>\n";
+    html << "body { color: #FFF; background-color: #111; font-family: Monospace; width: 640px; margin: auto; }\n";
+    html << "h1, td, th { padding: 5px; }\n";
+    html << "</style>\n";
+    html << "<h1>radiance library</h1>\n";
+    html << "<table><tr><th>name</th><th>0%</th><th>100%</th><th>gif</th><tr>\n";
 
     for (auto name : nodeNames) {
         html << "<tr><td>" << name << "</td>\n";
-        html << "    <td>" << "" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./" << name << "/0.png'>" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./" << name << "/51.png'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << name << "/" << name << "_0.png'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << name << "/" << name << "_51.png'>" << "</td>\n";
         html << "    <td class='gif'>" << "<img src='./" << name << IMG_FORMAT "'>" << "</td>\n";
     }
 
@@ -83,7 +87,19 @@ int main(int argc, char *argv[]) {
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());
     timebase = QSharedPointer<Timebase>(new Timebase());
+
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
+    nodeRegistry->registerVideoNodeSubclass<EffectNode>();
+    qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
+    nodeRegistry->registerVideoNodeSubclass<ImageNode>();
+    qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
+#ifdef USE_MPV
+    nodeRegistry->registerVideoNodeSubclass<MovieNode>();
+    qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
+#else
+    qInfo() << "radiance compiled without mpv support";
+#endif
+    nodeRegistry->reload();
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
@@ -183,7 +199,7 @@ int main(int argc, char *argv[]) {
             auto outputTextureId = rendering.value(onblackEffect->id(), 0);
             if (outputTextureId != 0) {
                 QImage img = imgRender.render(outputTextureId);
-                QString filename = QString("%1/%2/%3.png").arg(outputDir.path(), nodeName, QString::number(i));
+                QString filename = QString("%1/%2/%2_%3.png").arg(outputDir.path(), nodeName, QString::number(i));
                 img.save(filename);
             }
         }
@@ -193,7 +209,7 @@ int main(int argc, char *argv[]) {
         ffmpeg.start("ffmpeg",
             QStringList()
                 << "-y" << "-i"
-                << QString("%1/%2/%d.png").arg(outputDir.path(), nodeName)
+                << QString("%1/%2/%2_%d.png").arg(outputDir.path(), nodeName)
                 << QString("%1/%2" IMG_FORMAT).arg(outputDir.path(), nodeName));
         ffmpeg.waitForFinished();
         qInfo() << "Rendered" << nodeName << ffmpeg.exitCode() << ffmpeg.exitStatus();

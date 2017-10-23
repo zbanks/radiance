@@ -1,8 +1,10 @@
 // Convert rings to vertical lines
 
 void main(void) {
-    float angle  = xy2.y * M_PI * 1.0;
-    vec2 rtheta = xy2.x * sqrt(2.) * vec2(sin(angle), -cos(angle));
+    float angle  = uv.y * M_PI * 1.0;
+    //float lengthFactor = sqrt(2.);
+    float lengthFactor = 1.0;
+    vec2 rtheta = uv.x * lengthFactor * vec2(sin(angle), -cos(angle));
     rtheta = (rtheta + 1.) / 2.;
 
     vec2 uv2 = mix(uv, rtheta, iIntensity);
