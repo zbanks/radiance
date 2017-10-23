@@ -1,4 +1,4 @@
-// Identity input for yuvmap
+#property description Identity input for yuvmap
 
 void main(void) {
     // Y could be anything, use 0.5

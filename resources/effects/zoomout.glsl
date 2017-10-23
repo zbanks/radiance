@@ -1,4 +1,4 @@
-// Zoom out
+#property description Zoom out
 
 void main(void) {
     float factor = mix(1.0, 8.0, pow(iIntensity, 4.0));

@@ -1,4 +1,4 @@
-// Fire from the bottom
+#property description Fire from the bottom
 
 void main(void) {
     fragColor = texture(iInput, uv);

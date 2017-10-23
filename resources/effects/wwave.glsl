@@ -1,4 +1,4 @@
-// White wave with hard edges
+#property description White wave with hard edges
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

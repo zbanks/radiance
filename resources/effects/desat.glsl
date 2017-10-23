@@ -1,4 +1,4 @@
-// Desaturate (make white)
+#property description Desaturate (make white)
 
 void main(void) {
     float factor = pow(iIntensity, 3.);

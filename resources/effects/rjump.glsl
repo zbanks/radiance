@@ -1,4 +1,4 @@
-// Shift the hue on the beat
+#property description Shift the hue on the beat
 
 void main(void) {
     fragColor = texture(iInput, uv);

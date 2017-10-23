@@ -1,4 +1,4 @@
-// YUV color channel separation
+#property description YUV color channel separation
 
 void main(void) {
     float spin = iTime * 0.2;

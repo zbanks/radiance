@@ -1,4 +1,4 @@
-// Basic white fill
+#property description Basic white fill
 
 void main(void) {
     vec4 c = vec4(1.) * iIntensity;

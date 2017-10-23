@@ -1,4 +1,4 @@
-// Blue vertical VU meter
+#property description Blue vertical VU meter
 
 void main(void) {
     fragColor = texture(iInput, uv);

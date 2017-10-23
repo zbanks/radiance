@@ -1,4 +1,4 @@
-// Base identity pattern for use with `uvmap`
+#property description Base identity pattern for use with `uvmap`
 
 void main(void) {
     vec4 base = texture(iInput, uv);

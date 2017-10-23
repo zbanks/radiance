@@ -1,4 +1,4 @@
-// Convert vertical lines to rings
+#property description Convert vertical lines to rings
 
 void main(void) {
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;

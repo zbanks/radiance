@@ -1,4 +1,4 @@
-// Convert rings to vertical lines
+#property description Convert rings to vertical lines
 
 void main(void) {
     float angle  = uv.y * M_PI * 1.0;

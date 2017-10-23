@@ -1,4 +1,4 @@
-// Distort the screen to the beat
+#property description Distort the screen to the beat
 
 void main(void) {
     vec3 noise_input = vec3(uv, iTime * 0.3);

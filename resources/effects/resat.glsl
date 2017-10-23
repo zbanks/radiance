@@ -1,4 +1,4 @@
-// Recolor output with noise rainbow
+#property description Recolor output with noise rainbow
 
 void main(void) {
     float factor = pow(iIntensity, 0.6);

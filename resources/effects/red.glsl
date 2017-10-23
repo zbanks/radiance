@@ -1,4 +1,4 @@
-// Change the color (in HSV) to red
+#property description Change the color (in HSV) to red
 
 void main(void) {
     vec4 c = texture(iInput, uv);

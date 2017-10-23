@@ -1,4 +1,4 @@
-// Zoom in
+#property description Zoom in
 
 void main(void) {
     float factor = 1.0 - iIntensity;

@@ -1,4 +1,4 @@
-// Diagonal white wave
+#property description Diagonal white wave
 
 void main(void) {
     float xpos = iIntensityIntegral * 1.5;

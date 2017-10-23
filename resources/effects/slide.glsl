@@ -1,4 +1,4 @@
-// Slide the screen left-to-right
+#property description Slide the screen left-to-right
 
 void main(void) {
     float deviation = iIntensityIntegral;

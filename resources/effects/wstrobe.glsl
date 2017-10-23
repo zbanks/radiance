@@ -1,4 +1,4 @@
-// White strobe to the beat
+#property description White strobe to the beat
 
 void main(void) {
     fragColor = texture(iInput, uv);

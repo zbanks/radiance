@@ -1,4 +1,4 @@
-// Black sine wave from left to right.
+#property description Black sine wave from left to right.
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

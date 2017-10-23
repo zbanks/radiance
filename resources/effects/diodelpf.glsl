@@ -1,4 +1,4 @@
-// Apply smoothing over time with new hits happening instantly
+#property description Apply smoothing over time with new hits happening instantly
 
 void main(void) {
     vec4 prev = texture(iChannel[0], uv);

@@ -1,4 +1,4 @@
-// Applies vignette
+#property description Applies vignette
 
 float hyper_length(vec2 c, float f) {
     return pow(abs(pow(c.x, f)) + abs(pow(c.y, f)), 1. / f);

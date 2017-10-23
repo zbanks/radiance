@@ -23,7 +23,7 @@ QSharedPointer<Audio> audio;
 QSharedPointer<NodeRegistry> nodeRegistry;
 QSharedPointer<Timebase> timebase;
 
-void generateHtml(QDir outputDir, QList<QString> nodeNames) {
+void generateHtml(QDir outputDir, QList<VideoNodeType> nodeTypes) {
     QFile outputHtml(outputDir.filePath("index.html"));
     outputHtml.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream html(&outputHtml);
@@ -34,13 +34,19 @@ void generateHtml(QDir outputDir, QList<QString> nodeNames) {
     html << "h1, td, th { padding: 5px; }\n";
     html << "</style>\n";
     html << "<h1>radiance library</h1>\n";
-    html << "<table><tr><th>name</th><th>0%</th><th>100%</th><th>gif</th><tr>\n";
+    html << "<table><tr><th>name</th><th>0%</th><th>100%</th><th>gif</th><th>description</th><tr>\n";
 
-    for (auto name : nodeNames) {
+    for (auto nodeType : nodeTypes) {
+        QString name = nodeType.name;
         html << "<tr><td>" << name << "</td>\n";
         html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
         html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
         html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
+        html << "    <td class='desc'>" << nodeType.description;
+        if (!nodeType.author.isNull()) {
+            html << "<p>[" << nodeType.author << "]</p>";
+        }
+        html << "</td>\n";
     }
 
     html << "</table>\n";
@@ -93,12 +99,14 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
     nodeRegistry->registerVideoNodeSubclass<ImageNode>();
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
+    /* Don't load MovieNodes, because they don't render well here
 #ifdef USE_MPV
     nodeRegistry->registerVideoNodeSubclass<MovieNode>();
     qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
 #else
     qInfo() << "radiance compiled without mpv support";
 #endif
+    */
     nodeRegistry->reload();
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
@@ -117,13 +125,15 @@ int main(int argc, char *argv[]) {
     //qInfo() << "Wiped" << outputDir.absolutePath();
 
     // Generate HTML page with previews
+    QList<VideoNodeType> nodeTypes = nodeRegistry->nodeTypes().values();
+    generateHtml(outputDir, nodeTypes);
+
     QList<QString> nodeNames;
-    for (auto nodeType : nodeRegistry->nodeTypes()) {
+    for (auto nodeType : nodeTypes) {
         if (nodeType.nInputs > 2)
             continue;
         nodeNames.append(nodeType.name);
     }
-    generateHtml(outputDir, nodeNames);
 
     // Set up output chain & FBO renderer
     QSize renderSize(128, 128);

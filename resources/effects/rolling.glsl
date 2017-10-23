@@ -1,4 +1,4 @@
-// Rolling shutter effect
+#property description Rolling shutter effect
 
 void main(void) {
     float rate = 4.;

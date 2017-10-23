@@ -1,4 +1,4 @@
-// Yellow and green vertical waves
+#property description Yellow and green vertical waves
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

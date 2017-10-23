@@ -1,4 +1,4 @@
-// Zero order hold to the beat
+#property description Zero order hold to the beat
 
 void main(void) {
     vec4 prev = texture(iChannel[0], uv);

@@ -1,4 +1,4 @@
-// Rotate the screen
+#property description Rotate the screen
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

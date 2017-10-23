@@ -1,4 +1,4 @@
-// Cycle the color (in HSV) over time
+#property description Cycle the color (in HSV) over time
 
 void main(void) {
     fragColor = texture(iInput, uv);

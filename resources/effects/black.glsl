@@ -1,4 +1,4 @@
-// Reduce alpha
+#property description Reduce alpha
 
 void main(void) {
     fragColor = texture(iInput, uv);

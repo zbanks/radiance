@@ -1,4 +1,4 @@
-// Composite the input image onto black
+#property description Composite the input image onto black
 
 void main(void) {
     fragColor = texture(iInput, uv);

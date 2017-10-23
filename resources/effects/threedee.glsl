@@ -1,4 +1,4 @@
-// Fake 3D-glasses effect
+#property description Fake 3D-glasses effect
 
 void main(void) {
     vec4 baseImage = texture(iInput, uv);

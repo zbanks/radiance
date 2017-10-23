@@ -1,4 +1,4 @@
-// Big purple soft circle 
+#property description Big purple soft circle 
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

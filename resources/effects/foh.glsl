@@ -1,4 +1,4 @@
-// First order (expontential) hold
+#property description First order (expontential) hold
 
 void main(void) {
     vec4 prev = texture(iChannel[0], uv);

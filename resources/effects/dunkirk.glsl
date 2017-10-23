@@ -1,4 +1,4 @@
-// Apply a Dunkirk-esque palette
+#property description Apply a Dunkirk-esque palette
 
 void main(void) {
     fragColor = texture(iInput, uv);

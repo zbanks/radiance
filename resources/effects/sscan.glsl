@@ -1,4 +1,4 @@
-// White slit for testing
+#property description White slit for testing
 
 void main(void) {
     vec2 onePixel = 1. / iResolution;

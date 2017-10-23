@@ -1,4 +1,4 @@
-// Pink polka dots
+#property description Pink polka dots
 
 void main(void) {
     fragColor = texture(iInput, uv);

@@ -1,4 +1,4 @@
-// Use .rg as .uv without crossfading
+#property description Use .rg as .uv without crossfading
 
 #property inputCount 2
 void main(void) {

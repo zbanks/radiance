@@ -1,4 +1,4 @@
-// Green and blue base pattern
+#property description Green and blue base pattern
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

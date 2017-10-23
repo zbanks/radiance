@@ -1,4 +1,4 @@
-// Rotate the 'object' in 3D, like a coin
+#property description Rotate the 'object' in 3D, like a coin
 
 #define WIDTH 0.1
 #define ITERS 64

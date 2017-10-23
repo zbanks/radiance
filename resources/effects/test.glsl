@@ -1,4 +1,4 @@
-// A green & red circle in the center
+#property description A green & red circle in the center
 
 void main(void) {
     fragColor = texture(iInput, uv);

@@ -72,6 +72,7 @@ QList<VideoNodeType> EffectNode::availableNodeTypes() {
         VideoNodeType nodeType = {
             .name = name,
             .description = effectName,
+            .author = QString(),
             .nInputs = 1,
         };
         QFileInfo check_file(filename);
@@ -115,6 +116,8 @@ QList<VideoNodeType> EffectNode::availableNodeTypes() {
             passes.back().append(next_line);
         }
         nodeType.nInputs = QVariant::fromValue(props["inputCount"]).value<int>();
+        nodeType.description = QVariant::fromValue(props["description"]).value<QString>();
+        nodeType.author = QVariant::fromValue(props["author"]).value<QString>();
 
         types.append(nodeType);
     }

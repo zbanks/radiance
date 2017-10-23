@@ -1,4 +1,4 @@
-// Full black strobe. Intensity increases frequency
+#property description Full black strobe. Intensity increases frequency
 
 void main(void) {
     fragColor = texture(iInput, uv);

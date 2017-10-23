@@ -1,4 +1,4 @@
-// Yellow blob that spins to the beat
+#property description Yellow blob that spins to the beat
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

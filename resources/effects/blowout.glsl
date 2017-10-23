@@ -1,4 +1,4 @@
-// Push colors towards extremes with smoothstep
+#property description Push colors towards extremes with smoothstep
 
 void main(void) {
     vec4 c = demultiply(texture(iInput, uv));

@@ -1,4 +1,4 @@
-// Shift the color in YUV space by rotating on the UV plane
+#property description Shift the color in YUV space by rotating on the UV plane
 
 void main(void) {
     fragColor = texture(iInput, uv);

@@ -1,4 +1,4 @@
-// Saturate colors in YUV space by making things more UV
+#property description Saturate colors in YUV space by making things more UV
 
 void main(void) {
     vec4 c = demultiply(texture(iInput, uv));

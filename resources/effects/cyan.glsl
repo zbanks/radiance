@@ -1,4 +1,4 @@
-// Cyan diagonal stripes
+#property description Cyan diagonal stripes
 
 void main(void) {
     fragColor = texture(iInput, uv);

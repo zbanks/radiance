@@ -60,6 +60,7 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
         entry.insert("name", vnt.name);
         entry.insert("className", vnt.className);
         entry.insert("description", vnt.description);
+        entry.insert("author", vnt.author);
         entry.insert("nInputs", vnt.nInputs);
         output.insert(vnt.name, entry);
     }

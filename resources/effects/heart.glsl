@@ -1,4 +1,4 @@
-// Pink heart
+#property description Pink heart
 
 void main(void) {
     fragColor = texture(iInput, uv);

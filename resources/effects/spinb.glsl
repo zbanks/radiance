@@ -1,4 +1,4 @@
-// Spins the pattern round to the beat
+#property description Spins the pattern round to the beat
 
 void main(void) {
     float r;

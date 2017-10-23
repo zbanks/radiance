@@ -1,4 +1,4 @@
-// Snowcrash: white static noise
+#property description Snowcrash: white static noise
 
 void main(void) {
     fragColor = texture(iInput, uv);

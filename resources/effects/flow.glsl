@@ -1,4 +1,4 @@
-// Radiate color from the center based on audio
+#property description Radiate color from the center based on audio
 void main(void) {
     fragColor = texture(iInput, uv);
     vec4 c = texture(iChannel[1], uv);

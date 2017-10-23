@@ -1,4 +1,4 @@
-// Strobe alpha to the beat
+#property description Strobe alpha to the beat
 
 void main(void) {
     fragColor = texture(iInput, uv);

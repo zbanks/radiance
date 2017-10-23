@@ -1,4 +1,4 @@
-// Wrap the parent texture on a spinning cylinder
+#property description Wrap the parent texture on a spinning cylinder
 
 void main(void) {
     float angle = iIntensityIntegral * 32.0;

@@ -1,4 +1,4 @@
-// Apply `uvmapself` repeatedly. Instant hellscape
+#property description Apply `uvmapself` repeatedly. Instant hellscape
 
 #define N 5
 

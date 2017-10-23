@@ -1,4 +1,4 @@
-// Convert vertical lines to polygon rings
+#property description Convert vertical lines to polygon rings
 
 void main(void) {
     vec2 xy_cent = 2. * uv - 1.;

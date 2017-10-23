@@ -1,4 +1,4 @@
-// CRT-style effect
+#property description CRT-style effect
 
 void main(void) {
     vec2 separate = iIntensity * vec2(0.005, 0.0);

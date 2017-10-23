@@ -1,4 +1,4 @@
-// Pixelate/quantize the output
+#property description Pixelate/quantize the output
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

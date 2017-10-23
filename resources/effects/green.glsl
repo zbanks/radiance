@@ -1,4 +1,4 @@
-// Zero out the everything but the green channel (green is not a creative color)
+#property description Zero out the everything but the green channel (green is not a creative color)
 
 void main(void) {
     fragColor = texture(iInput, uv);

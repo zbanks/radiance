@@ -1,4 +1,4 @@
-// Pixels radiating from the center
+#property description Pixels radiating from the center
 
 void main(void) {
     fragColor = texture(iInput, uv);

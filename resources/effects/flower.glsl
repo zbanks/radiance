@@ -1,4 +1,4 @@
-// Convert vertical lines to radial flower pattern
+#property description Convert vertical lines to radial flower pattern
 
 void main(void) {
     vec2 xy_cent = 2. * uv - 1.;

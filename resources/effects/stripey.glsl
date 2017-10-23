@@ -1,4 +1,4 @@
-// Vertical stripes with a twinkle effect
+#property description Vertical stripes with a twinkle effect
 
 void main(void) {
     float xv = round(uv.x * 20. * aspectCorrection.x); 

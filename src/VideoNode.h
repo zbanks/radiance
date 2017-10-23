@@ -12,6 +12,7 @@ class Model;
 struct VideoNodeType {
     QString name;
     QString description;
+    QString author;
     int nInputs;
     bool argRequired;
     QString className;

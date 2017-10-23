@@ -1,4 +1,4 @@
-// Perlin noise green smoke
+#property description Perlin noise green smoke
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

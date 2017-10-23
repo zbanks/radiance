@@ -50,6 +50,7 @@ QList<VideoNodeType> ImageNode::availableNodeTypes() {
         VideoNodeType nodeType = {
             .name = name,
             .description = imageName,
+            .author = QString(),
             .nInputs = 1,
         };
         types.append(nodeType);

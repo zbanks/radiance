@@ -1,4 +1,4 @@
-// Red / green / blue color channel separation
+#property description Red / green / blue color channel separation
 // AKA "Chromatic Aberration"
 
 void main(void) {

@@ -1,4 +1,4 @@
-// Horizontal blur of UV channels to give an old-timey effect
+#property description Horizontal blur of UV channels to give an old-timey effect
 // This effect isn't actually that good...
 
 #define MAX_DELTA 0.04

@@ -1,4 +1,4 @@
-// Reduce number of colors in YUV space
+#property description Reduce number of colors in YUV space
 
 void main(void) {
     //float bins = 256. * pow(2, -8. * iIntensity);

@@ -1,4 +1,5 @@
-// From https://www.shadertoy.com/view/4sXSzs
+#property description 3D tunnel
+#property author https://www.shadertoy.com/view/4sXSzs
 
 void main()
 {

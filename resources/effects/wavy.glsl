@@ -1,4 +1,4 @@
-// Distort the screen
+#property description Distort the screen
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;

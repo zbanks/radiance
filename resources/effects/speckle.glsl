@@ -1,4 +1,4 @@
-// Per-pixel twinkle effect
+#property description Per-pixel twinkle effect
 
 void main(void) {
     fragColor = texture(iChannel[0], uv);

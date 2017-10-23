@@ -1,3 +1,5 @@
+#property description 3D flying view
+#property author inigo quilez (iq/2013), modified by Eric Van Albert
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 // Modified for radiance by Eric Van Albert

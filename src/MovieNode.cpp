@@ -84,6 +84,7 @@ QList<VideoNodeType> MovieNode::availableNodeTypes() {
         VideoNodeType nodeType = {
             .name = name,
             .description = movieName,
+            .author = QString(),
             .nInputs = 1,
         };
         types.append(nodeType);
@@ -92,6 +93,7 @@ QList<VideoNodeType> MovieNode::availableNodeTypes() {
     types << (VideoNodeType) {
         .name = "youtube",
         .description = "Youtube Search",
+        .author = QString(),
         .nInputs = 1,
         .argRequired = true,
     };
@@ -99,6 +101,7 @@ QList<VideoNodeType> MovieNode::availableNodeTypes() {
     types << (VideoNodeType) {
         .name = "mpv",
         .description = "libmpv URI",
+        .author = QString(),
         .nInputs = 1,
         .argRequired = true,
     };

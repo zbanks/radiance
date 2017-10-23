@@ -1,4 +1,5 @@
-// From https://www.shadertoy.com/view/Xdl3D2
+#property description Lightspeed travel rays
+#property author https://www.shadertoy.com/view/Xdl3D2
 
 const float tau = 6.28318530717958647692;
 

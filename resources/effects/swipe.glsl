@@ -1,4 +1,4 @@
-// Only update a vertical slice that slides across
+#property description Only update a vertical slice that slides across
 
 void main(void) {
     vec4 prev = texture(iChannel[0], uv);

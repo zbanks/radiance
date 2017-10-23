@@ -1,4 +1,4 @@
-// Zoom in (bounce) to the beat & audio
+#property description Zoom in (bounce) to the beat & audio
 
 void main(void) {
     float factor = 1. - 3. * iIntensity * iAudioLevel * sawtooth(iTime, 0.1);

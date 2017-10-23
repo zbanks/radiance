@@ -1,4 +1,4 @@
-// From https://www.shadertoy.com/view/XssGD7
+#property description From https://www.shadertoy.com/view/XssGD7
 
 void main()
 {

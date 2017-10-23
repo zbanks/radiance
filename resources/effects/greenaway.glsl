@@ -1,4 +1,4 @@
-// Shift colors away from green (green is not a creative color)
+#property description Shift colors away from green (green is not a creative color)
 
 void main(void) {
     fragColor = texture(iInput, uv);

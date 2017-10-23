@@ -1,4 +1,4 @@
-// Fileball in the center
+#property description Fileball in the center
 
 void main(void) {
     fragColor = texture(iInput, uv);
