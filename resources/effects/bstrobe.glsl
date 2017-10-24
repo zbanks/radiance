@@ -16,8 +16,7 @@ void main(void) {
     else freq = 0.03125;
 
     if(freq > 0) {
-        c = vec4(0., 0., 0., 1. - mod(iTime, freq) / freq);
-        //c *= pow(iIntensity, 0.3);
+        c = vec4(0., 0., 0., 1.) * (1. - mod(iTime, freq) / freq);
         fragColor = composite(fragColor, c);
     }
 }
