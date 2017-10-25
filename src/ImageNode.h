@@ -87,4 +87,5 @@ protected:
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
     bool m_ready;
+    QTimer m_periodic; // XXX Do something better here
 };

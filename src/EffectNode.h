@@ -108,5 +108,6 @@ protected:
     qreal m_realTimeLast;
     QString m_name;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
+    QTimer m_periodic; // XXX do something better here
     bool m_ready;
 };

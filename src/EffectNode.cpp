@@ -19,6 +19,10 @@ EffectNode::EffectNode()
     , m_ready(false) {
 
     setInputCount(1);
+    m_periodic.setInterval(10);
+    m_periodic.start();
+    connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
+
     m_beatLast = timebase->beat();
     m_realTimeLast = timebase->wallTime();
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
@@ -311,7 +315,7 @@ void EffectNode::reload() {
 
 // Creates a copy of this node for rendering
 QSharedPointer<VideoNode> EffectNode::createCopyForRendering() {
-    periodic();
+    //periodic();
     {
         QMutexLocker locker(&m_stateLock);
         QSharedPointer<VideoNode> v(new EffectNode(*this));

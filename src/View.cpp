@@ -4,6 +4,7 @@
 #include <QQmlProperty>
 #include <QFileInfo>
 #include <QQueue>
+#include "Paths.h"
 
 View::View()
     : m_model(nullptr)
@@ -40,7 +41,7 @@ Child View::newChild(VideoNode *videoNode) {
             qFatal("Could not find a delegate for %s", videoNode->metaObject()->className());
         }
     }
-    auto qmlFileInfo = QFileInfo(QString("../resources/qml/%1.qml").arg(delegate));
+    auto qmlFileInfo = QFileInfo(Paths::qml() + QString("%1.qml").arg(delegate));
     QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
     QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
     if( component.status() != QQmlComponent::Ready )
@@ -140,7 +141,7 @@ static void setStackup(const QVector<QVector<int>> &inputs, const QVector<QVecto
 }
 
 QQuickItem *View::createDropArea() {
-    auto qmlFileInfo = QFileInfo(QString("../resources/qml/TileDropArea.qml"));
+    auto qmlFileInfo = QFileInfo(Paths::qml() + QString("TileDropArea.qml"));
     QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
     QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
     if( component.status() != QQmlComponent::Ready )

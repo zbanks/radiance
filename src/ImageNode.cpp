@@ -11,6 +11,9 @@ ImageNode::ImageNode()
     : m_openGLWorker(new ImageNodeOpenGLWorker(this))
     , m_ready(false) {
 
+    m_periodic.setInterval(10);
+    m_periodic.start();
+    connect(&m_periodic, &QTimer::timeout, this, &ImageNode::periodic);
     connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
 }
 
@@ -100,7 +103,6 @@ void ImageNode::setImagePath(QString imagePath) {
 
 // See comments in ImageNode.h about these 3 functions
 QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
-    periodic();
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 
