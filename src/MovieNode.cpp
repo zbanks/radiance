@@ -6,6 +6,7 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLVertexArrayObject>
 #include <locale.h>
+#include "Paths.h"
 #include "main.h"
 
 MovieNode::MovieNode()
@@ -64,7 +65,7 @@ bool MovieNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
     } else if (vnt.name == "mpv") {
         setVideoPath(arg);
     } else {
-        setVideoPath(QString("../resources/videos/%1").arg(vnt.name));
+        setVideoPath(Paths::library() + QString("videos/%1").arg(vnt.name));
     }
     setInputCount(vnt.nInputs);
     return true;
@@ -73,7 +74,7 @@ bool MovieNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
 QList<VideoNodeType> MovieNode::availableNodeTypes() {
     QList<VideoNodeType> types;
 
-    QDir movieDir("../resources/videos/");
+    QDir movieDir(Paths::library() + QString("videos/"));
     movieDir.setSorting(QDir::Name);
 
     for (auto movieName : movieDir.entryList()) {

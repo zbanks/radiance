@@ -7,9 +7,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native -DDEBUG_RESOURCES")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native -DDEBUG_RESOURCES")
 set(CMAKE_CXX_STANDARD 14)
 
 include(Doxygen)
@@ -24,8 +24,6 @@ find_package(SampleRate REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(RtMidi)
 find_package(MPV)
-
-qt5_add_resources(resources/resources.qrc)
 
 set(libradiance_SOURCES)
 list(APPEND libradiance_SOURCES
@@ -47,9 +45,9 @@ list(APPEND libradiance_SOURCES
     src/OutputImageSequence.cpp
     src/Controls.cpp
     src/BaseVideoNodeTile.cpp
+    src/Paths.cpp
     BTrack/src/BTrack.c
     BTrack/src/OnsetDetectionFunction.c
-    resources/resources.qrc
     )
 
 set(radiance_LIBRARIES)
@@ -89,8 +87,7 @@ add_library(libradiance ${libradiance_SOURCES})
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickOutputItem.cpp
-    src/QQuickOutputWindow.cpp
-    resources/resources.qrc)
+    src/QQuickOutputWindow.cpp)
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 

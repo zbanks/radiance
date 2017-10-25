@@ -10,6 +10,7 @@
 #include <utility>
 #include <functional>
 #include <algorithm>
+#include "Paths.h"
 #include "main.h"
 
 EffectNode::EffectNode()
@@ -61,14 +62,14 @@ QList<VideoNodeType> EffectNode::availableNodeTypes() {
     QList<VideoNodeType> types;
 
     auto filters = QStringList{} << QString{"*.glsl"};
-    QDir dir("../resources/effects/");
+    QDir dir(Paths::library() + QString("effects/"));
     dir.setNameFilters(filters);
     dir.setSorting(QDir::Name);
 
     for (auto effectName : dir.entryList()) {
         // TODO: Refactor the parsing logic so it's not duplicated
         auto name = effectName.replace(".glsl", "");
-        auto filename = QString("../resources/effects/%1.glsl").arg(name);
+        auto filename = Paths::library() + QString("effects/%1.glsl").arg(name);
         VideoNodeType nodeType = {
             .name = name,
             .description = effectName,
@@ -358,9 +359,10 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
 
     auto headerString = QString{};
     {
-        QFile header_file("../resources/glsl/effect_header.glsl");
+        auto effectHeaderFilename = Paths::glsl() + QString("effect_header.glsl");
+        QFile header_file(effectHeaderFilename);
         if(!header_file.open(QIODevice::ReadOnly)) {
-            emit fatal(("Could not open \"../resources/effect_header.glsl\""));
+            emit fatal(QString("Could not open \"%1\"").arg(effectHeaderFilename));
             return false;
         }
         QTextStream headerStream(&header_file);
@@ -376,7 +378,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         "    uv = 0.5 * (vertex + 1.);\n"
         "}"};
     auto programs = QVector<QSharedPointer<QOpenGLShaderProgram>>{};
-    auto filename = QString("../resources/effects/%1.glsl").arg(name);
+    auto filename = Paths::library() + QString("effects/%1.glsl").arg(name);
 
     QFileInfo check_file(filename);
     if(!(check_file.exists() && check_file.isFile())) {

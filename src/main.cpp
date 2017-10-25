@@ -16,6 +16,7 @@
 #include "VideoNode.h"
 #include "BaseVideoNodeTile.h"
 #include "View.h"
+#include "Paths.h"
 #include "main.h"
 
 #ifdef USE_RTMIDI
@@ -55,6 +56,12 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
     QCoreApplication::setOrganizationDomain("radiance.lighting");
     QCoreApplication::setApplicationName("Radiance");
+
+#ifdef DEBUG_RESOURCES
+    Paths::initialize(true);
+#else
+    Paths::initialize();
+#endif
 
     // Use OpenGL 3.2 core profile
     // (otherwise MacOS falls back to 2.1)

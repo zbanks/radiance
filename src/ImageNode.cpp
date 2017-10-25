@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
+#include "Paths.h"
 #include "main.h"
 
 ImageNode::ImageNode()
@@ -39,7 +40,8 @@ bool ImageNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
 QList<VideoNodeType> ImageNode::availableNodeTypes() {
     QList<VideoNodeType> types;
 
-    QDir imgDir("../resources/images/");
+    QStringList images;
+    QDir imgDir(Paths::library() + QString("images/"));
     imgDir.setSorting(QDir::Name);
 
     for (auto imageName : imgDir.entryList()) {
@@ -143,7 +145,7 @@ void ImageNodeOpenGLWorker::initialize() {
 // Call this to load an image into m_frameTextures
 // Returns true if the program was loaded successfully
 bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
-    QString filename = QString("../resources/images/%1").arg(imagePath);
+    QString filename = Paths::library() + QString("images/") + imagePath;
     QFile file(filename);
 
     QFileInfo check_file(filename);
