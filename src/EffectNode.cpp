@@ -209,6 +209,9 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             for (int k = 0; k < m_inputCount; k++) {
                 glActiveTexture(GL_TEXTURE0 + k);
                 glBindTexture(GL_TEXTURE_2D, inputTextures.at(k));
+                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+
             }
 
             glActiveTexture(GL_TEXTURE0 + m_inputCount);
@@ -216,6 +219,9 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             for(int k=0; k<m_programs.size(); k++) {
                 glActiveTexture(GL_TEXTURE1 + m_inputCount + k);
                 glBindTexture(GL_TEXTURE_2D, renderState->m_intermediate.at((renderState->m_textureIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
+                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+
                 //qDebug() << "Bind" << (renderState->m_textureIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
             }
             auto intense = qreal(intensity());

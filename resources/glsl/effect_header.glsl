@@ -218,6 +218,15 @@ float noise(vec4 p) {
     float z2 = mix(y3, y4, xyzw.z);
     return mix(z1, z2, xyzw.w);
 }
+float hmax(vec2 v) {
+    return max(v.r,v.g);
+}
+float hmax(vec3 v) {
+    return max(hmax(v.rg),v.b);
+}
+float hmax(vec4 v) {
+    return hmax(max(v.rg,v.ba));
+}
 
 float onePixel = 1. / min(iResolution.x, iResolution.y);
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);

@@ -293,6 +293,8 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         QMutexLocker locker(&m_openGLWorker->m_fboLocks.at(i));
         if (m_openGLWorker->m_fbos.at(i) == nullptr) return outTexture;
         glBindTexture(GL_TEXTURE_2D, m_openGLWorker->m_fbos.at(i)->texture());
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
         m_blitShader->setUniformValue("iVideoFrame", 0);
         m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
         m_blitShader->setUniformValue("iVideoResolution", GLfloat(m_videoSize.width()), GLfloat(m_videoSize.height()));
@@ -357,6 +359,8 @@ void MovieNodeOpenGLWorker::initialize() {
     //mpv_set_property_string(m_mpv, "display-fps", "60");
     //mpv_set_property_string(m_mpv, "hwdec", "auto");
     mpv_set_property_string(m_mpv, "loop", "inf");
+    mpv_set_property_string(m_mpv, "fbo-format", "rgba32f");
+    mpv_set_property_string(m_mpv, "opengl-fbo-format", "rgba32f");
 
     // Make use of the MPV_SUB_API_OPENGL_CB API.
     mpv::qt::set_option_variant(m_mpv, "vo", "opengl-cb");
