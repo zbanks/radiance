@@ -6,7 +6,11 @@ void main(void) {
     float deviation;
     deviation = mod(iIntensityIntegral * 0.5, 1.);
 
-    vec3 hsv = rgb2hsv(fragColor.rgb);
+    vec4 hsv = demultiply(fragColor);
+    hsv.rgb = rgb2hsv(hsv.rgb);
     hsv.r = mod(hsv.r + 1. + deviation, 1.);
-    fragColor.rgb = mix(fragColor.rgb, hsv2rgb(hsv), smoothstep(0, 0.2, iIntensity));
+    hsv.rgb = hsv2rgb(hsv.rgb);
+    hsv = premultiply(hsv);
+
+    fragColor.rgb = mix(fragColor.rgb, hsv.rgb, smoothstep(0, 0.2, iIntensity));
 }

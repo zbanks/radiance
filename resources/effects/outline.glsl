@@ -26,8 +26,8 @@ void main()
 	gy -= t;
 	vec4 grad = sqrt(gx * gx + gy * gy);
 
-    float black = 1.0 - length(grad) / 2.0;
-    black = pow(black, mix(1.0, 5.0, iIntensity));
+    float black = clamp(1.0 - length(grad) * 0.9, 0., 1.);
+    black = pow(black, mix(1.0, 2.0, iIntensity));
 
     vec4 newColor = texture(iInput, uv);
     newColor.rgb *= mix(1.0, black, smoothstep(0.0, 0.5, iIntensity));
