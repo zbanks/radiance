@@ -97,7 +97,6 @@ add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
-qt5_use_modules( radiance Widgets Quick )
 
 #--------------------------------------------------------------------------------
 # Now the installation stuff below
@@ -115,7 +114,8 @@ ENDIF(WIN32)
 #--------------------------------------------------------------------------------
 # Install the radiance application, on Apple, the bundle is at the root of the
 # install tree, and on other platforms it'll go into the bin directory.
-INSTALL(TARGETS radiance 
+#--------------------------------------------------------------------------------
+INSTALL(TARGETS radiance
     BUNDLE DESTINATION . COMPONENT Runtime
     RUNTIME DESTINATION bin COMPONENT Runtime
     )
@@ -124,20 +124,9 @@ INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
             DESTINATION
             "${resources_dest_dir}" COMPONENT Runtime)
 
-#INSTALL(CODE "
-#    MESSAGE(STATUS \"Running macdeployqt...\")
-#    execute_process( COMMAND \"${_qt5Gui_install_prefix}/bin/macdeployqt\"
-#                     \"${CMAKE_INSTALL_PREFIX}/radiance.app\"
-#                     \"-qmldir=${CMAKE_INSTALL_PREFIX}/${resources_dest_dir}/qml\")
-#    " COMPONENT Runtime)
-
 # To Create a package, one can run "cpack -G DragNDrop CPackConfig.cmake" on Mac OS X
 # where CPackConfig.cmake is created by including CPack
 # And then there's ways to customize this as well
+# Or just run make package
 set(CPACK_BINARY_DRAGNDROP ON)
 include(CPack)
-
-INSTALL(CODE "
-    MESSAGE(STATUS \"Run 'make package' to create packages!\")
-    " COMPONENT Runtime)
-
