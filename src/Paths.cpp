@@ -40,7 +40,6 @@ void Paths::initialize(bool debug) {
         }
     }
     Paths::m_initialized = true;
-    qDebug() << QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
     qDebug() << "Library path is:" << Paths::m_library;
     qDebug() << "QML path is:" << Paths::m_qml;
     qDebug() << "GLSL path is:" << Paths::m_glsl;

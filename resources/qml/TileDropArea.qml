@@ -31,23 +31,26 @@ DropArea {
     ShaderEffect {
         id: dropRectangle
         vertexShader: "
-            uniform highp mat4 qt_Matrix;
-            attribute highp vec4 qt_Vertex;
-            attribute highp vec2 qt_MultiTexCoord0;
-            varying highp vec2 coord;
+            #version 150
+            uniform mat4 qt_Matrix;
+            in vec4 qt_Vertex;
+            in vec2 qt_MultiTexCoord0;
+            out vec2 coord;
             void main() {
                 coord = qt_MultiTexCoord0;
                 gl_Position = qt_Matrix * qt_Vertex;
             }"
         fragmentShader: "
-            varying highp vec2 coord;
-            uniform lowp float qt_Opacity;
+            #version 150
+            in vec2 coord;
+            uniform float qt_Opacity;
+            out vec4 fragColor;
             void main() {
                 vec4 c = vec4(1., 1., 0., 1.);
                 float i = max(1. - length(2. * coord.xy - 1.), 0.);
                 i = pow(i, 3.);
                 c *= i;
-                gl_FragColor = c * qt_Opacity;
+                fragColor = c * qt_Opacity;
             }"
 
         visible: false

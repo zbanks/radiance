@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8.11)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
 
 project(radiance)
 
@@ -64,14 +65,20 @@ list(APPEND radiance_LIBRARIES
     ${OPENGL_LIBRARIES}
     )
 
+include_directories(${FFTW_INCLUDE_DIRS})
+include_directories(${SAMPLERATE_INCLUDE_DIRS})
+include_directories(${PORTAUDIO_INCLUDE_DIRS})
+
 if(RtMidi_FOUND AND NOT WITHOUT_RTMIDI)
     add_definitions( -DUSE_RTMIDI )
+    include_directories(${RTMIDI_INCLUDE_DIRS})
     list(APPEND libradiance_SOURCES src/MidiController.cpp)
     list(APPEND radiance_LIBRARIES ${RTMIDI_LIBRARIES} ${PORTAUDIO_LIBRARIES})
 endif()
 
 if(MPV_FOUND AND NOT WITHOUT_MPV)
     add_definitions( -DUSE_MPV )
+    include_directories(${MPV_INCLUDE_DIRS})
     list(APPEND libradiance_SOURCES src/MovieNode.cpp)
     list(APPEND radiance_LIBRARIES ${MPV_LIBRARY})
 endif()

@@ -538,7 +538,7 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "    vec2 factor = min(factorFit, 1.);\n"
         "    vec2 texUV = (uv - 0.5) * factor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
-        "    fragColor = texture2D(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
+        "    fragColor = texture(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
         "}\n"};
 
     m_p->m_blitShader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
