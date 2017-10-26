@@ -16,9 +16,11 @@ ApplicationWindow {
         previewWindow: window;
     }
 
+/*
     ControllerMapping {
         target: graph.view
     }
+*/
 
     Model {
         id: model;

@@ -54,15 +54,8 @@ QObject *nodeRegistryProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
 
 int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
-    QCoreApplication::setOrganizationDomain("radiance.lighting");
+    QCoreApplication::setOrganizationDomain("radiance.video");
     QCoreApplication::setApplicationName("Radiance");
-
-#ifdef DEBUG_RESOURCES
-    Paths::initialize(true);
-#else
-    Paths::initialize();
-#endif
-
     // Use OpenGL 3.2 core profile
     // (otherwise MacOS falls back to 2.1)
     {
@@ -73,6 +66,12 @@ int main(int argc, char *argv[]) {
     }
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication app(argc, argv);
+
+#ifdef DEBUG_RESOURCES
+    Paths::initialize(true);
+#else
+    Paths::initialize();
+#endif
 
     QThread::currentThread()->setObjectName("mainThread");
 

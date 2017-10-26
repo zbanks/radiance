@@ -15,8 +15,10 @@ set(CMAKE_CXX_STANDARD 14)
 include(Doxygen)
 include_directories(BTrack/src)
 
+find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 find_package(Qt5Quick REQUIRED)
+find_package(Qt5Qml REQUIRED)
 find_package(Qt5Gui REQUIRED)
 find_package(PortAudio REQUIRED)
 find_package(FFTW REQUIRED)
@@ -54,6 +56,7 @@ set(radiance_LIBRARIES)
 list(APPEND radiance_LIBRARIES
     Qt5::Widgets
     Qt5::Quick
+    Qt5::Qml
     Qt5::Gui
     ${FFTW_LIBRARIES}
     ${SAMPLERATE_LIBRARIES}
@@ -84,7 +87,7 @@ endif()
 
 add_library(libradiance ${libradiance_SOURCES})
 
-add_executable(radiance WIN32 src/main.cpp
+add_executable(radiance MACOSX_BUNDLE WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickOutputItem.cpp
     src/QQuickOutputWindow.cpp)
@@ -94,3 +97,47 @@ add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
+qt5_use_modules( radiance Widgets Quick )
+
+#--------------------------------------------------------------------------------
+# Now the installation stuff below
+#--------------------------------------------------------------------------------
+SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/radiance")
+IF(APPLE)
+  SET(CMAKE_INSTALL_PREFIX .)
+  SET(resources_dest_dir "radiance.app/Contents/Resources")
+  SET(APPS "\${CMAKE_INSTALL_PREFIX}/radiance.app")
+ENDIF(APPLE)
+IF(WIN32)
+  SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/radiance.exe")
+ENDIF(WIN32)
+
+#--------------------------------------------------------------------------------
+# Install the radiance application, on Apple, the bundle is at the root of the
+# install tree, and on other platforms it'll go into the bin directory.
+INSTALL(TARGETS radiance 
+    BUNDLE DESTINATION . COMPONENT Runtime
+    RUNTIME DESTINATION bin COMPONENT Runtime
+    )
+
+INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
+            DESTINATION
+            "${resources_dest_dir}" COMPONENT Runtime)
+
+#INSTALL(CODE "
+#    MESSAGE(STATUS \"Running macdeployqt...\")
+#    execute_process( COMMAND \"${_qt5Gui_install_prefix}/bin/macdeployqt\"
+#                     \"${CMAKE_INSTALL_PREFIX}/radiance.app\"
+#                     \"-qmldir=${CMAKE_INSTALL_PREFIX}/${resources_dest_dir}/qml\")
+#    " COMPONENT Runtime)
+
+# To Create a package, one can run "cpack -G DragNDrop CPackConfig.cmake" on Mac OS X
+# where CPackConfig.cmake is created by including CPack
+# And then there's ways to customize this as well
+set(CPACK_BINARY_DRAGNDROP ON)
+include(CPack)
+
+INSTALL(CODE "
+    MESSAGE(STATUS \"Run 'make package' to create packages!\")
+    " COMPONENT Runtime)
+
