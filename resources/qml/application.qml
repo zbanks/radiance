@@ -9,6 +9,8 @@ ApplicationWindow {
     id: window;
     visible: true;
     color: "#333";
+    width: 1200;
+    height: 800;
 
     Context {
         id: globalContext;
