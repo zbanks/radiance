@@ -11,7 +11,7 @@ QtObject {
 
     property variant mc: MidiController {
         id: controller
-        deviceName: "DJ Control Air"
+        deviceName: "DJControl Compact"
 
         property real scrollAccumulator;
 

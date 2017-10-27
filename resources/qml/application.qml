@@ -11,6 +11,7 @@ ApplicationWindow {
     color: "#333";
     width: 1200;
     height: 800;
+    property bool hasMidi: false
 
     Context {
         id: globalContext;
@@ -18,8 +19,11 @@ ApplicationWindow {
         previewWindow: window;
     }
 
-    ControllerMapping {
-        target: graph.view
+    Item {
+        Loader {
+            source: window.hasMidi ? "ControllerMapping.qml" : ""
+            onLoaded: item.target = graph.view
+        }
     }
 
     Model {

@@ -105,8 +105,11 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
     qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
+
+    bool hasMidi = false;
 #ifdef USE_RTMIDI
     qmlRegisterType<MidiController>("radiance", 1, 0, "MidiController");
+    hasMidi = true;
 #else
     qInfo() << "radiance compiled without midi support";
 #endif
@@ -128,10 +131,12 @@ int main(int argc, char *argv[]) {
     qRegisterMetaType<Controls::Control>("Controls::Control");
 
     QQmlApplicationEngine engine(QUrl(Paths::qml() + QString("application.qml")));
+
     if(engine.rootObjects().isEmpty()) {
         qFatal("Failed to load main QML application");
         return 1;
     }
+    engine.rootObjects().last()->setProperty("hasMidi", hasMidi);
 
     return app.exec();
 }
