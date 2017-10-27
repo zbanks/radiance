@@ -19,13 +19,6 @@ ApplicationWindow {
         previewWindow: window;
     }
 
-    Item {
-        Loader {
-            source: window.hasMidi ? "ControllerMapping.qml" : ""
-            onLoaded: item.target = graph.view
-        }
-    }
-
     Model {
         id: model;
         onGraphChanged: {
@@ -176,6 +169,13 @@ ApplicationWindow {
             ScreenWidget {
                 id: screenWidget
                 outputWindow: outputWindow
+            }
+
+            Loader {
+                source: window.hasMidi ? "MidiMappingSelector.qml" : ""
+                onLoaded: {
+                    item.target = graph.view;
+                }
             }
 
             ComboBox {

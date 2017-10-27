@@ -136,6 +136,8 @@ int main(int argc, char *argv[]) {
         qFatal("Failed to load main QML application");
         return 1;
     }
+
+    // TODO put these into a singleton
     engine.rootObjects().last()->setProperty("hasMidi", hasMidi);
 
     return app.exec();
