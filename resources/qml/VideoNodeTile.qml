@@ -246,6 +246,12 @@ BaseVideoNodeTile {
     KeyNavigation.tab: tab;
     KeyNavigation.backtab: backtab;
 
+    onActiveFocusChanged: {
+        if (activeFocus) {
+            selectMe();
+        }
+    }
+
     MouseArea {
         id: dragArea;
         z: -1;
@@ -254,7 +260,6 @@ BaseVideoNodeTile {
         onClicked: {
             if (mouse.button == Qt.LeftButton) {
                 tile.forceActiveFocus();
-                selectMe(mouse.modifiers);
             }
         }
 
@@ -382,11 +387,9 @@ BaseVideoNodeTile {
     Controls.onControlChangedRel: {
         if (control == Controls.Scroll) {
             if (value > 0) {
-                tab.focus = true;
-                tab.selectMe();
+                tab.forceActiveFocus();
             } else if (value < 0) {
-                backtab.focus = true;
-                backtab.selectMe();
+                backtab.forceActiveFocus();
             }
         }
     }

@@ -863,6 +863,12 @@ void View::onControlChangedRel(int bank, Controls::Control control, qreal value)
                 controls->changeControlRel(bank, control, value);
             }
         }
+    } else if (control == Controls::Scroll) {
+        auto tile = focusedChild();
+        if (tile != nullptr) {
+            auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
+            controls->changeControlRel(bank, control, value);
+        }
     } else {
         for (int i=0; i<m_children.count(); i++) {
             auto tile = m_children.at(i).item.data();
