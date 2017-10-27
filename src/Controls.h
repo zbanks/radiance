@@ -17,6 +17,16 @@ public:
         ScrollHorizontal,
         PrimaryParameter,
         SecondaryParameter,
+        Parameter0,
+        Parameter1,
+        Parameter2,
+        Parameter3,
+        Parameter4,
+        Parameter5,
+        Parameter6,
+        Parameter7,
+        Parameter8,
+        Parameter9,
     };
     Q_ENUM(Control)
 
@@ -35,6 +45,7 @@ public:
 public slots:
     void changeControlAbs(int bank, Controls::Control control, qreal value);
     void changeControlRel(int bank, Controls::Control control, qreal value);
+    int keyboardModifiers();
 
 signals:
     void controlChangedAbs(int bank, Controls::Control control, qreal value);

@@ -35,6 +35,16 @@ QtObject {
             } else if (control == 49) { // "B" jogwheel
                 var v = value << 25 >> 25;
                 target.Controls.changeControlRel(0, Controls.PrimaryParameter, v / 127);
+            } else if (control == 59) { // Left Medium
+                target.Controls.changeControlAbs(0, Controls.Parameter1, value / 127);
+            } else if (control == 63) { // Right Medium
+                target.Controls.changeControlAbs(0, Controls.Parameter2, value / 127);
+            } else if (control == 60) { // Left Bass
+                target.Controls.changeControlAbs(0, Controls.Parameter3, value / 127);
+            } else if (control == 64) { // Right Bass
+                target.Controls.changeControlAbs(0, Controls.Parameter4, value / 127);
+            } else if (control == 54) { // Crossfader
+                target.Controls.changeControlAbs(0, Controls.Parameter0, value / 127);
             }
         }
     }

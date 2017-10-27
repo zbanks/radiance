@@ -835,33 +835,41 @@ QVariant View::tileForVideoNode(VideoNode *videoNode) {
 }
 
 void View::onControlChangedAbs(int bank, Controls::Control control, qreal value) {
-    switch (control) {
-        // Optionally handle some control changes here
-        // instead of just passing them all to the focused node
-        default:
-        {
-            BaseVideoNodeTile *tile = focusedChild();
-            if (tile != nullptr) {
+    if (control >= Controls::Parameter0 && control <= Controls::Parameter9) {
+        for (int i=0; i<m_children.count(); i++) {
+            auto tile = m_children.at(i).item.data();
+            if (tile->property("bank").toInt() == bank) {
                 auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
                 controls->changeControlAbs(bank, control, value);
             }
-            break;
+        }
+    } else {
+        for (int i=0; i<m_children.count(); i++) {
+            auto tile = m_children.at(i).item.data();
+            if (m_selection.contains(tile)) {
+                auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
+                controls->changeControlAbs(bank, control, value);
+            }
         }
     }
 }
 
 void View::onControlChangedRel(int bank, Controls::Control control, qreal value) {
-    switch (control) {
-        // Optionally handle some control changes here
-        // instead of just passing them all to the focused node
-        default:
-        {
-            BaseVideoNodeTile *tile = focusedChild();
-            if (tile != nullptr) {
+    if (control >= Controls::Parameter0 && control <= Controls::Parameter9) {
+        for (int i=0; i<m_children.count(); i++) {
+            auto tile = m_children.at(i).item.data();
+            if (tile->property("bank").toInt() == bank) {
                 auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
                 controls->changeControlRel(bank, control, value);
             }
-            break;
+        }
+    } else {
+        for (int i=0; i<m_children.count(); i++) {
+            auto tile = m_children.at(i).item.data();
+            if (m_selection.contains(tile)) {
+                auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
+                controls->changeControlRel(bank, control, value);
+            }
         }
     }
 }

@@ -16,8 +16,10 @@ MidiController::MidiController(QObject* parent) :
 }
 
 MidiController::~MidiController() {
-    m_midiin.cancelCallback();
-    m_midiin.closePort();
+    if (m_midiin.isPortOpen()) {
+        m_midiin.cancelCallback();
+        m_midiin.closePort();
+    }
 }
 
 void MidiController::onRealtimeEvent(double ts, int status) {
@@ -51,8 +53,10 @@ QStringList MidiController::deviceList() {
 }
 
 void MidiController::reloadDevice() {
-    m_midiin.cancelCallback();
-    m_midiin.closePort();
+    if (m_midiin.isPortOpen()) {
+        m_midiin.cancelCallback();
+        m_midiin.closePort();
+    }
     m_inSysEx = false;
     reload();
 }
@@ -70,7 +74,6 @@ void MidiController::reload() {
             auto errorCbTrampoline = [](RtMidiError::Type type, const std::string &errorText, void *opaque) {
                 if (opaque != nullptr) static_cast<MidiController*>(opaque)->errorCallback(type, errorText);
             };
-            qDebug() << "Opening...";
             m_midiin.setCallback(static_cast<RtMidiIn::RtMidiCallback>(cbTrampoline), static_cast<void*>(this));
             m_midiin.setErrorCallback(static_cast<RtMidiErrorCallback>(errorCbTrampoline), static_cast<void*>(this));
             m_midiin.openPort(i, "Radiance Controller");

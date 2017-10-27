@@ -33,6 +33,8 @@ BaseVideoNodeTile {
     property var tab: null
     property var backtab: null
 
+    property int bank: 0
+
     function sum(l) {
         var result = 0;
         for(var i=0; i<l.length; i++) result += l[i];
@@ -224,6 +226,23 @@ BaseVideoNodeTile {
         model.flush();
     }
 
+    function selectMe() {
+        var modifiers = Controls.keyboardModifiers();
+        var tiles = [tile];
+        if (modifiers & Qt.ShiftModifier && view.parent.lastClickedTile) {
+            tiles = view.tilesBetween(view.parent.lastClickedTile, tile);
+            if (tiles.length == 0) tiles = [tile];
+        }
+        if (modifiers & Qt.ControlModifier) {
+            view.toggleSelection(tiles);
+        } else if (modifiers & Qt.AltModifier) {
+            view.removeFromSelection(tiles);
+        } else {
+            view.select(tiles);
+        }
+        view.parent.lastClickedTile = tile;
+    }
+
     KeyNavigation.tab: tab;
     KeyNavigation.backtab: backtab;
 
@@ -235,19 +254,7 @@ BaseVideoNodeTile {
         onClicked: {
             if (mouse.button == Qt.LeftButton) {
                 tile.forceActiveFocus();
-                var tiles = [tile];
-                if (mouse.modifiers & Qt.ShiftModifier && view.parent.lastClickedTile) {
-                    tiles = view.tilesBetween(view.parent.lastClickedTile, tile);
-                    if (tiles.length == 0) tiles = [tile];
-                }
-                if (mouse.modifiers & Qt.ControlModifier) {
-                    view.toggleSelection(tiles);
-                } else if (mouse.modifiers & Qt.AltModifier) {
-                    view.removeFromSelection(tiles);
-                } else {
-                    view.select(tiles);
-                }
-                view.parent.lastClickedTile = tile;
+                selectMe(mouse.modifiers);
             }
         }
 
@@ -376,8 +383,10 @@ BaseVideoNodeTile {
         if (control == Controls.Scroll) {
             if (value > 0) {
                 tab.focus = true;
+                tab.selectMe();
             } else if (value < 0) {
                 backtab.focus = true;
+                backtab.selectMe();
             }
         }
     }

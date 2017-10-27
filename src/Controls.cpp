@@ -1,4 +1,5 @@
 #include "Controls.h"
+#include <QGuiApplication>
 
 ControlsAttachedType::ControlsAttachedType(QObject *parent)
     : QObject(parent)
@@ -14,6 +15,10 @@ void ControlsAttachedType::changeControlAbs(int bank, Controls::Control control,
 
 void ControlsAttachedType::changeControlRel(int bank, Controls::Control control, qreal value) {
     emit controlChangedRel(bank, control, value);
+}
+
+int ControlsAttachedType::keyboardModifiers() {
+    return QGuiApplication::queryKeyboardModifiers();
 }
 
 ControlsAttachedType *Controls::qmlAttachedProperties(QObject *object) {
