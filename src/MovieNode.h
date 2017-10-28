@@ -36,6 +36,7 @@ signals:
     void initialized();
 
 public slots:
+    void onChainSizeChanged(QSize);
     void onVideoChanged();
     void command(const QVariant &params);
     void drawFrame();
@@ -51,9 +52,12 @@ protected:
     mpv::qt::Handle m_mpv;
     mpv_opengl_cb_context *m_mpv_gl;
     QSize m_size;
+    QSize m_videoSize;
+    QSize m_chainSize;
     QAtomicInt m_fboIndex;
 
 protected slots:
+    void updateSizes();
     void initialize();
     void onEvent();
 
@@ -112,6 +116,7 @@ protected slots:
 signals:
     void videoPathChanged(QString videoPath);
     void videoSizeChanged(QSize size);
+    void chainSizeChanged(QSize size);
     void positionChanged(qreal position);
     void durationChanged(qreal duration);
     void muteChanged(bool mute);
@@ -126,6 +131,7 @@ protected:
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
     OpenGLWorkerContext *m_openGLWorkerContext;
     QSize m_videoSize;
+    QSize m_chainSize;
 
     bool m_ready;
     qreal m_position;
