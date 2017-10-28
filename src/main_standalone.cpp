@@ -13,6 +13,7 @@
 #include "ImageNode.h"
 #include "MovieNode.h"
 #include "NodeRegistry.h"
+#include "Paths.h"
 #include "main.h"
 
 #define IMG_FORMAT ".gif"
@@ -65,6 +66,12 @@ int main(int argc, char *argv[]) {
     }
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QGuiApplication app(argc, argv); // TODO: how to avoid this?
+
+#ifdef DEBUG_RESOURCES
+    Paths::initialize(true);
+#else
+    Paths::initialize();
+#endif
 
     QCommandLineParser parser;
     parser.addHelpOption();
@@ -156,6 +163,7 @@ int main(int argc, char *argv[]) {
     Model model;
     model.setChains(chains);
     VideoNode *onblackEffect = model.createVideoNode("onblack:1.0");
+    VideoNode *highlightEffect = model.createVideoNode("afixhighlight:1.0");
 
     VideoNode *baseEffect = nullptr;
     if (parser.isSet(backgroundNodeOption)) {
@@ -189,7 +197,8 @@ int main(int argc, char *argv[]) {
             continue;
         EffectNode * effectNode = qobject_cast<EffectNode *>(effect);
 
-        model.addEdge(effect, onblackEffect, 0);
+        model.addEdge(effect, highlightEffect, 0);
+        model.addEdge(highlightEffect, onblackEffect, 0);
         model.addEdge(baseEffect, effect, 0);
         if (effect->inputCount() > 1)
             model.addEdge(crossEffect, effect, 1);
@@ -215,9 +224,13 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        QFile::remove(
+            outputDir.filePath(QString("_assets/%1_0.png").arg(nodeName)));
         QFile::copy(
             outputDir.filePath(QString("%1/%1_0.png").arg(nodeName)),
             outputDir.filePath(QString("_assets/%1_0.png").arg(nodeName)));
+        QFile::remove(
+            outputDir.filePath(QString("_assets/%1_51.png").arg(nodeName)));
         QFile::copy(
             outputDir.filePath(QString("%1/%1_51.png").arg(nodeName)),
             outputDir.filePath(QString("_assets/%1_51.png").arg(nodeName)));
