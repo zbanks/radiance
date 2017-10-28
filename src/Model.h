@@ -135,7 +135,7 @@ public slots:
     // TODO: This almost certainly should live elsewhere.
     void loadFile(QString filename);
     void saveFile(QString filename);
-    
+
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)
     // with the interim changes

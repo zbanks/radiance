@@ -2,6 +2,7 @@
 
 #include "OpenGLWorker.h"
 #include <QOpenGLTexture>
+#include <QOpenGLVertexArrayObject>
 #include <QSharedPointer>
 #include <QVector>
 #include <QMutex>
@@ -36,14 +37,16 @@ public:
     QSize size();
     GLuint noiseTexture();
     GLuint blankTexture();
-
+    QOpenGLVertexArrayObject &vao();
+    const QOpenGLVertexArrayObject &vao() const;
 protected slots:
     void onInitialized();
 
 protected:
     bool m_initialized;
-    QOpenGLTexture m_noiseTexture;
-    QOpenGLTexture m_blankTexture;
-    ChainOpenGLWorker m_openGLWorker;
+    QOpenGLTexture            m_noiseTexture;
+    QOpenGLTexture            m_blankTexture;
+    QOpenGLVertexArrayObject  m_vao;
+    ChainOpenGLWorker         m_openGLWorker;
     QSize m_size;
 };

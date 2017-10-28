@@ -15,8 +15,8 @@ QQuickVideoNodePreview::QQuickVideoNodePreview()
 }
 
 void QQuickVideoNodePreview::onWindowChanged(QQuickWindow *window) {
-    if(m_window != nullptr) disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
-    if(window != nullptr)   connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
+    if(m_window) disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
+    if(window)   connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
     m_window = window;
 }
 

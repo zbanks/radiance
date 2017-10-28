@@ -26,15 +26,23 @@ QSize Chain::size() {
 }
 
 GLuint Chain::noiseTexture() {
-    if (m_initialized) return m_noiseTexture.textureId();
+    if (m_initialized)
+        return m_noiseTexture.textureId();
     return 0;
 }
 
 GLuint Chain::blankTexture() {
-    if (m_initialized) return m_blankTexture.textureId();
+    if (m_initialized)
+        return m_blankTexture.textureId();
     return 0;
 }
 
+QOpenGLVertexArrayObject &Chain::vao() {
+    return m_vao;
+}
+const QOpenGLVertexArrayObject &Chain::vao() const {
+    return m_vao;
+}
 // ChainOpenGLWorker methods
 
 ChainOpenGLWorker::ChainOpenGLWorker(Chain *p)

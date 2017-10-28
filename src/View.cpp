@@ -54,12 +54,8 @@ Child View::newChild(VideoNode *videoNode) {
     QSharedPointer<BaseVideoNodeTile> item(qobject_cast<BaseVideoNodeTile *>(component.create()));
 
     item->setParentItem(this);
-    QVariant v;
-    v.setValue(videoNode);
-    item->setProperty("videoNode", v);
-    QVariant m;
-    m.setValue(m_model);
-    item->setProperty("model", m);
+    item->setProperty("videoNode", QVariant::fromValue(videoNode));
+    item->setProperty("model", QVariant::fromValue(m_model));
     c.item = item;
 
     return c;
@@ -103,7 +99,7 @@ static void setInputHeightRev(const QVector<QVector<int>> &inputs, QVector<QVect
             auto childInputHeights = inputHeight.at(attachedNode);
             qreal childHeight = 0;
             for(int j=0; j<childInputHeights.count(); j++) childHeight += childInputHeights.at(j);
-            if (childHeight < myInputHeight) { 
+            if (childHeight < myInputHeight) {
                 auto correctionFactor = myInputHeight / childHeight;
                 for(int j=0; j<childInputHeights.count(); j++) inputHeight[attachedNode][j] *= correctionFactor;
             }
@@ -164,7 +160,7 @@ void View::onGraphChanged() {
     QMap<VideoNode *, int> existingChildMap;
     for (int i=0; i<m_children.count(); i++) {
         existingChildMap.insert(m_children.at(i).videoNode, i);
-    } 
+    }
 
     QList<Child> newChildren;
     auto vertices = m_model->vertices();

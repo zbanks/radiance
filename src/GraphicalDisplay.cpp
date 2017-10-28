@@ -9,12 +9,13 @@
 
 class GraphicalDisplayRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
     QOpenGLShaderProgram *m_program;
-
+    QOpenGLVertexArrayObject m_vao;
 public:
     GraphicalDisplayRenderer()
         : m_program(0)
         , m_fragmentShader() {
         initializeOpenGLFunctions();
+        m_vao.create();
     }
 
     ~GraphicalDisplayRenderer() {
@@ -59,7 +60,7 @@ err:
     }
 
     void render() override {
-        if(m_program != 0) {
+        if(m_program) {
             audio->renderGraphics();
 
             glClearColor(0, 0, 0, 0);
@@ -78,11 +79,10 @@ err:
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
             m_program->setUniformValue("iTime", (GLfloat) timebase->beat());
-            QOpenGLVertexArrayObject vao;
-            vao.create();
-            vao.bind();
+            m_vao.bind();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_program->release();
+            m_vao.release();
             glActiveTexture(GL_TEXTURE0);
         }
         update();

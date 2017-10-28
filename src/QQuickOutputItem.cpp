@@ -33,11 +33,11 @@ QQuickOutputItem::~QQuickOutputItem() {
 }
 
 void QQuickOutputItem::onWindowChanged(QQuickWindow *window) {
-    if(m_window != nullptr) {
+    if(m_window ) {
         disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
         disconnect(m_window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender);
     }
-    if(window != nullptr) {
+    if(window ) {
         connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
         connect(window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender, Qt::DirectConnection);
     }

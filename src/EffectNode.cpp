@@ -241,9 +241,6 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
             p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
 
-            QOpenGLVertexArrayObject vao;
-            vao.create();
-            vao.bind();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             renderState->m_intermediate.at(fboIndex)->release();
             //renderState->m_intermediate.at(fboIndex)->toImage().save(QString("out_%1.png").arg(renderState->m_intermediate.at(fboIndex)->texture()));

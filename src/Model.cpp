@@ -466,6 +466,9 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     // corresponding vertex's inputs
     QVector<QVector<int>> inputs;
 
+    auto & vao = chain->vao();
+    if(!vao.isCreated())
+        vao.create();
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
         auto inputCount = vertices.at(i)->inputCount();
@@ -477,7 +480,8 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     for (int i = 0; i < toVertex.count(); i++) {
         auto to = toVertex.at(i);
         if (to >= 0) {
-            if (toInput.at(i) < inputs.at(to).count()) inputs[to][toInput.at(i)] = fromVertex.at(i);
+            if (toInput.at(i) < inputs.at(to).count())
+                inputs[to][toInput.at(i)] = fromVertex.at(i);
         }
     }
 
@@ -495,6 +499,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
                 }
             }
         }
+        vao.bind();
         resultTextures[i] = vertex->paint(chain, inputTextures);
         //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
@@ -505,6 +510,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
             result.insert(vertices.at(i)->id(), resultTextures.at(i));
         }
     }
+    vao.release();
     return result;
 }
 
