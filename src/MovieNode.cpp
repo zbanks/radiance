@@ -25,6 +25,7 @@ MovieNode::MovieNode()
 
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
     connect(this, &MovieNode::videoPathChanged, m_openGLWorker, &MovieNodeOpenGLWorker::onVideoChanged);
+    connect(this, &MovieNode::chainSizeChanged, m_openGLWorker, &MovieNodeOpenGLWorker::onChainSizeChanged);
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
     connect(m_openGLWorker, &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
@@ -43,7 +44,8 @@ MovieNode::MovieNode(const MovieNode &other)
     , m_ready(other.m_ready)
     , m_blitShader(other.m_blitShader)
     , m_renderFbos()
-    , m_videoSize(other.m_videoSize) {
+    , m_videoSize(other.m_videoSize)
+    , m_chainSize(other.m_chainSize) {
 
     auto k = other.m_renderFbos.keys();
     for (int i=0; i<k.count(); i++) {
@@ -121,6 +123,16 @@ void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPo
     }
     for (int i=0; i<removed.count(); i++) {
         m_renderFbos.remove(removed.at(i));
+    }
+    auto _size = QSize{};
+    for(auto && chain : m_renderFbos.keys()) {
+        auto _csize = chain->size();
+        _size.setWidth(std::max(_csize.width(),_size.width()));
+        _size.setHeight(std::max(_csize.height(),_size.height()));
+    }
+    if(_size != m_chainSize) {
+        m_chainSize = _size;
+        emit chainSizeChanged(_size);
     }
 }
 
@@ -293,13 +305,15 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     {
         int i = m_openGLWorker->lastIndex();
         QMutexLocker locker(&m_openGLWorker->m_fboLocks.at(i));
-        if (m_openGLWorker->m_fbos.at(i) == nullptr) return outTexture;
-        glBindTexture(GL_TEXTURE_2D, m_openGLWorker->m_fbos.at(i)->texture());
+        auto fboi = m_openGLWorker->m_fbos.at(i);
+        if (!fboi)
+            return outTexture;
+        glBindTexture(GL_TEXTURE_2D, fboi->texture());
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
         m_blitShader->setUniformValue("iVideoFrame", 0);
         m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
-        m_blitShader->setUniformValue("iVideoResolution", GLfloat(m_videoSize.width()), GLfloat(m_videoSize.height()));
+        m_blitShader->setUniformValue("iVideoResolution", GLfloat(fboi->width()), GLfloat(fboi->height()));
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     m_blitShader->release();
@@ -310,7 +324,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 }
 
 void MovieNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
-    QSharedPointer<MovieNode> c = qSharedPointerCast<MovieNode>(copy);
+    auto c = qSharedPointerCast<MovieNode>(copy);
     QMutexLocker locker(&m_stateLock);
     if (m_renderFbos.contains(chain)) {
         m_renderFbos[chain] = c->m_renderFbos.value(chain);
@@ -356,7 +370,8 @@ void MovieNodeOpenGLWorker::initialize() {
 
     //mpv_set_property_string(m_mpv, "video-sync", "display-resample");
     //mpv_set_property_string(m_mpv, "display-fps", "60");
-    //mpv_set_property_string(m_mpv, "hwdec", "auto");
+    mpv_set_property_string(m_mpv, "hwdec", "auto");
+    mpv_set_property_string(m_mpv, "scale", "spline36");
     mpv_set_property_string(m_mpv, "loop", "inf");
     mpv_set_property_string(m_mpv, "fbo-format", "rgba32f");
     mpv_set_property_string(m_mpv, "opengl-fbo-format", "rgba32f");
@@ -417,14 +432,16 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
         } else if (strcmp(prop->name, "video-params/w") == 0) {
             if (prop->format == MPV_FORMAT_INT64) {
                 qint64 d = *(qint64 *)prop->data;
-                m_size.setWidth(d);
-                emit videoSizeChanged(m_size);
+                m_videoSize.setWidth(d);
+                updateSizes();
+                emit videoSizeChanged(m_videoSize);
             }
         } else if (strcmp(prop->name, "video-params/h") == 0) {
             if (prop->format == MPV_FORMAT_INT64) {
                 qint64 d = *(qint64 *)prop->data;
-                m_size.setHeight(d);
-                emit videoSizeChanged(m_size);
+                m_videoSize.setHeight(d);
+                updateSizes();
+                emit videoSizeChanged(m_videoSize);
             }
         } else if (strcmp(prop->name, "mute") == 0) {
             if (prop->format == MPV_FORMAT_FLAG) {
@@ -442,6 +459,24 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
     default: ;
         // Ignore uninteresting or unknown events.
     }
+}
+void MovieNodeOpenGLWorker::onChainSizeChanged(QSize size)
+{
+    if(size != m_chainSize) {
+        m_chainSize = size;
+        updateSizes();
+    }
+}
+void MovieNodeOpenGLWorker::updateSizes()
+{
+    if(!m_videoSize.width() || !m_videoSize.height())
+        return;
+    auto _scale = std::max({
+        m_chainSize.width()/qreal(m_videoSize.width())
+       ,m_chainSize.height()/qreal(m_videoSize.height())
+       ,qreal(1)
+        });
+    m_size = m_videoSize * _scale;
 }
 
 void MovieNodeOpenGLWorker::drawFrame() {
@@ -528,7 +563,6 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "uniform sampler2D iVideoFrame;\n"
         "uniform vec2 iResolution;\n"
         "uniform vec2 iVideoResolution;\n"
-        "in vec4 gl_FragCoord;\n"
         "in vec2 uv;\n"
         "out vec4 fragColor;\n"
         "void main() {\n"
