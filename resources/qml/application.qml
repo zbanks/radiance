@@ -132,38 +132,10 @@ ApplicationWindow {
             Layout.fillWidth: true;
 
             // This is kind of crappy, but it was easy
-            ComboBox {
-                id: nodeSelector;
-                model: Object.keys(NodeRegistry.nodeTypes);
-                editable: true;
-                Layout.preferredWidth: 200;
-                onAccepted: nodeAddAction.trigger()
-            }
-            Action {
-                id: nodeAddAction
-                onTriggered: {
-                    var node = model.createVideoNode(nodeSelector.currentText);
-                    if (node && graph.lastClickedTile) {
-                        graph.lastClickedTile.insertAfter(node);
-                    }
-                    model.flush();
-                    // TODO: This doesn't work because the view hasn't reloaded the graph yet
-                    //var tile = graph.view.tileForVideoNode(node);
-                    //graph.lastClickedTile = tile;
-                    //console.log("last tile", tile, node);
-                }
-            }
-            Button {
-                id: nodeAddButton
-                text: "Add"
-                action: nodeAddAction
-            }
-            Button {
-                id: nodeRegistryReload
-                text: "Reload Registry"
-                onClicked: {
-                    NodeRegistry.reload();
-                }
+            LibraryWidget {
+                id: library
+                model: model
+                graph: graph
             }
 
             ScreenWidget {
