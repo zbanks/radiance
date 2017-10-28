@@ -287,6 +287,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
     renderFbo->bind();
+    glViewport(0, 0, renderFbo->width(),renderFbo->height());
     m_blitShader->bind();
     glActiveTexture(GL_TEXTURE0);
     {
