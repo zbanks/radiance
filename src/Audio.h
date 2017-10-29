@@ -32,7 +32,7 @@ public:
     QOpenGLTexture *m_spectrumTexture{};
 
 protected:
-    void run();
+    void run() override;
     QMutex m_audioLock;
 
 private:

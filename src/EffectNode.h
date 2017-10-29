@@ -67,8 +67,8 @@ public:
     EffectNode(const EffectNode &other);
     ~EffectNode();
 
-    QString serialize();
-    bool deserialize(const VideoNodeType &vnt, const QString &arg);
+    QString serialize() override;
+    bool deserialize(const VideoNodeType &vnt, const QString &arg) override;
     static QList<VideoNodeType> availableNodeTypes();
 
     static constexpr qreal MAX_INTEGRAL = 1024;

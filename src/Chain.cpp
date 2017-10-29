@@ -3,10 +3,10 @@
 #include <memory>
 
 Chain::Chain(QSize size)
-    : m_openGLWorker(this)
-    , m_initialized(false)
-    , m_blankTexture(QOpenGLTexture::Target2D)
+    : m_initialized(false)
     , m_noiseTexture(QOpenGLTexture::Target2D)
+    , m_blankTexture(QOpenGLTexture::Target2D)
+    , m_openGLWorker(this)
     , m_size(size) {
     connect(&m_openGLWorker, &ChainOpenGLWorker::initialized, this, &Chain::onInitialized);
 

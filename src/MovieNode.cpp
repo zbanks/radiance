@@ -10,13 +10,13 @@
 #include "main.h"
 
 MovieNode::MovieNode()
-    : m_ready(false)
-    , m_videoPath()
+    : m_videoPath()
     , m_renderFbos()
     , m_openGLWorkerContext(nullptr)
     , m_videoSize(0, 0)
-    , m_duration(0)
-    , m_position(0) {
+    , m_ready(false)
+    , m_position(0)
+    , m_duration(0) {
 
     m_openGLWorkerContext = new OpenGLWorkerContext();
     m_openGLWorkerContext->setParent(this);
@@ -41,11 +41,11 @@ MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
     , m_videoPath(other.m_videoPath)
     , m_openGLWorker(other.m_openGLWorker)
-    , m_ready(other.m_ready)
-    , m_blitShader(other.m_blitShader)
     , m_renderFbos()
+    , m_blitShader(other.m_blitShader)
     , m_videoSize(other.m_videoSize)
-    , m_chainSize(other.m_chainSize) {
+    , m_chainSize(other.m_chainSize)
+    , m_ready(other.m_ready) {
 
     auto k = other.m_renderFbos.keys();
     for (int i=0; i<k.count(); i++) {
@@ -336,12 +336,12 @@ void MovieNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<
 
 MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
     : OpenGLWorker(p->m_openGLWorkerContext)
-    , m_p(p)
     , m_fbos(BUFFER_COUNT)
     , m_fboLocks(BUFFER_COUNT)
-    , m_fboIndex(0)
+    , m_p(p)
     , m_mpv_gl(nullptr)
-    , m_size(0, 0) {
+    , m_size(0, 0)
+    , m_fboIndex(0) {
 
     connect(this, &MovieNodeOpenGLWorker::message, m_p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, m_p, &MovieNode::warning);

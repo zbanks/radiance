@@ -9,11 +9,11 @@ class OutputImageSequenceWorker : public OpenGLWorker {
 
 public:
     OutputImageSequenceWorker(OutputImageSequence *p, int frameDelay, QString filename, QSize size)
-        : m_p(p)
-        , m_size(size)
-        , OpenGLWorker(p->m_context)
+        : OpenGLWorker(p->m_context)
+        , m_p(p)
         , m_filename(filename)
-        , m_frameDelay(frameDelay) {
+        , m_frameDelay(frameDelay)
+        , m_size(size) {
     }
 
     void display(GLuint textureId) {
@@ -88,8 +88,8 @@ protected:
 };
 
 OutputImageSequence::OutputImageSequence()
-    : m_frameDelay(16)
-    , m_size(QSize(300, 300))
+    : m_size(QSize(300, 300))
+    , m_frameDelay(16)
     , m_filename("output_image_sequence")
     , m_enabled(false)
     , m_context(new OpenGLWorkerContext()) {

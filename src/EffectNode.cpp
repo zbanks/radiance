@@ -14,8 +14,8 @@
 #include "main.h"
 
 EffectNode::EffectNode()
-    : m_openGLWorker(new EffectNodeOpenGLWorker(this))
-    , m_intensity(0)
+    : m_intensity(0)
+    , m_openGLWorker(new EffectNodeOpenGLWorker(this))
     , m_ready(false) {
 
     setInputCount(1);
@@ -30,13 +30,13 @@ EffectNode::EffectNode()
 
 EffectNode::EffectNode(const EffectNode &other)
     : VideoNode(other)
-    , m_openGLWorker(other.m_openGLWorker)
+    , m_programs(other.m_programs)
     , m_intensity(other.m_intensity)
     , m_intensityIntegral(other.m_intensityIntegral)
     , m_beatLast(other.m_beatLast)
     , m_realTime(other.m_realTime)
     , m_realTimeLast(other.m_realTimeLast)
-    , m_programs(other.m_programs)
+    , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready) {
 
     auto k = other.m_renderStates.keys();

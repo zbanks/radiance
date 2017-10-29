@@ -4,8 +4,8 @@
 #include <QOpenGLFramebufferObject>
 
 FramebufferVideoNodeRender::FramebufferVideoNodeRender(QSize size)
-    : m_blitter()
-    , m_fbo(size) {
+    : m_fbo(size)
+    , m_blitter() {
     m_blitter.create();
 }
 

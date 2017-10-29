@@ -52,8 +52,8 @@ public:
     ImageNode(const ImageNode &other);
     ~ImageNode();
 
-    QString serialize();
-    bool deserialize(const VideoNodeType &vnt, const QString &arg);
+    QString serialize() override;
+    bool deserialize(const VideoNodeType &vnt, const QString &arg) override;
     static QList<VideoNodeType> availableNodeTypes();
 
     // We don't actually need to do anything in paint(), because

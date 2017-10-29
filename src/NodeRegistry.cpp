@@ -44,7 +44,7 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
     Q_ASSERT(m_videoNodeCreateFns.contains(vnt.className));
     VideoNode * node = m_videoNodeCreateFns.value(vnt.className)();
     bool rc = node->deserialize(vnt, arg);
-    // TODO: check rc
+    Q_UNUSED(rc); // TODO: check rc
     
     return node;
 }

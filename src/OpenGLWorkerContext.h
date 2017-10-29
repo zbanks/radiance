@@ -25,6 +25,4 @@ protected:
     QSurface *m_surface;
     QOpenGLContext *m_context;
     QThread *m_thread;
-private:
-    bool m_threaded;
 };

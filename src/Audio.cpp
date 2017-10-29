@@ -135,7 +135,7 @@ void Audio::run() {
         err = Pa_ReadStream(stream, &chunk[0], ChunkSize);
         if(err != paNoError) {
             qDebug() << "Could not read audio chunk";
-            goto err;
+            continue;
         }
         analyzeChunk();
         {

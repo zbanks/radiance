@@ -85,8 +85,8 @@ public:
     MovieNode(const MovieNode &other);
     ~MovieNode();
 
-    QString serialize();
-    bool deserialize(const VideoNodeType &vnt, const QString &arg);
+    QString serialize() override;
+    bool deserialize(const VideoNodeType &vnt, const QString &arg) override;
     static QList<VideoNodeType> availableNodeTypes();
 
     QSharedPointer<VideoNode> createCopyForRendering() override;

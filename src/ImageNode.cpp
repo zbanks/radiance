@@ -19,11 +19,11 @@ ImageNode::ImageNode()
 
 ImageNode::ImageNode(const ImageNode &other)
     : VideoNode(other)
-    , m_openGLWorker(other.m_openGLWorker)
     , m_frameTextures(other.m_frameTextures)
     , m_currentTexture(other.m_currentTexture)
     , m_currentTextureIdx(other.m_currentTextureIdx)
     , m_imagePath(other.m_imagePath)
+    , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready) {
 }
 
