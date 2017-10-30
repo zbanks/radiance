@@ -6,7 +6,7 @@
 #include <QByteArray>
 #include <QQuickItem>
 #include <QTimer>
-#include <rtmidi/RtMidi.h>
+#include <RtMidi.h>
 
 class MidiController : public QObject {
     Q_OBJECT
