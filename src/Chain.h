@@ -33,6 +33,9 @@ class Chain : public QObject {
 
     friend class ChainOpenGLWorker;
 
+    Q_PROPERTY(QSize size READ size CONSTANT);
+    Q_PROPERTY(int blankTexture READ blankTexture);
+    Q_PROPERTY(int noiseTexture READ noiseTexture);
 public:
     Chain(QSize size);
    ~Chain() override;

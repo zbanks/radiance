@@ -8,6 +8,7 @@
 
 class OpenGLWorkerContext : public QObject, protected QOpenGLFunctions {
 public:
+    OpenGLWorkerContext(QObject *p, bool threaded=true, QSurface *surface=nullptr);
     OpenGLWorkerContext(bool threaded=true, QSurface *surface=nullptr);
     ~OpenGLWorkerContext();
     QOpenGLContext *context();

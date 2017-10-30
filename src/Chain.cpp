@@ -48,7 +48,7 @@ const QOpenGLVertexArrayObject &Chain::vao() const {
 
 ChainOpenGLWorker::ChainOpenGLWorker(Chain *p)
     : OpenGLWorker(openGLWorkerContext)
-    , m_p(p) {
+{
 }
 
 void ChainOpenGLWorker::initialize(QSize size) {
@@ -59,8 +59,6 @@ void ChainOpenGLWorker::initialize(QSize size) {
 }
 
 void ChainOpenGLWorker::createNoiseTexture(QSize size) {
-    Q_ASSERT(!m_p->m_initialized); // Make sure we are not "live"
-
     m_noiseTexture.setSize(size.width(), size.height());
     m_noiseTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
     m_noiseTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
@@ -89,8 +87,6 @@ void ChainOpenGLWorker::createNoiseTexture(QSize size) {
 }
 
 void ChainOpenGLWorker::createBlankTexture(QSize size) {
-    Q_ASSERT(!m_p->m_initialized); // Make sure we are not "live"
-
     m_blankTexture.setSize(1, 1);
     m_blankTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
     m_blankTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);

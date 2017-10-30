@@ -3,8 +3,14 @@
 #include <QDebug>
 
 OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
-    : m_surface(surface)
-    , m_thread(nullptr) {
+: OpenGLWorkerContext(nullptr, threaded,surface)
+{
+}
+OpenGLWorkerContext::OpenGLWorkerContext(QObject *p, bool threaded, QSurface *surface)
+    : QObject(p)
+    , m_surface(surface)
+    , m_thread(nullptr)
+{
     if (threaded) {
         m_thread = new QThread();
         connect(m_thread, &QThread::started, this, &OpenGLWorkerContext::initialize, Qt::DirectConnection);
