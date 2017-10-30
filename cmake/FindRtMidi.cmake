@@ -4,7 +4,7 @@
 #  RTMIDI_INCLUDE_DIR - the RtMidi include directory
 #  RTMIDI_LIBRARIES - libraries to link against to use RtMidi
 
-find_path(RTMIDI_INCLUDE_DIR RtMidi.h HINTS ${RTMIDI_DIR})
+find_path(RTMIDI_INCLUDE_DIR RtMidi.h HINTS ${RTMIDI_DIR} PATH_SUFFIXES rtmidi)
 find_library(RTMIDI_LIBRARY NAMES librtmidi.a rtmidi HINTS ${RTMIDI_DIR})
 
 # On Mac OS we have to add framworks RtMidi depends on
@@ -16,7 +16,7 @@ if (RTMIDI_LIBRARY AND APPLE)
 endif (RTMIDI_LIBRARY AND APPLE)
 
 set(RTMIDI_LIBRARIES ${RTMIDI_LIBRARY} ${RTMIDI_DEPENDENCIES})
-
+list(APPEND RTMIDI_INCLUDE_DIRS ${RTMIDI_INCLUDE_DIR})
 include(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(RtMidi DEFAULT_MSG RTMIDI_LIBRARY RTMIDI_INCLUDE_DIR)
 
