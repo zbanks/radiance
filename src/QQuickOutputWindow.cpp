@@ -19,7 +19,7 @@ QQuickOutputWindow::QQuickOutputWindow()
 
     reload();
     connect(&m_reloader, &QTimer::timeout, this, &QQuickOutputWindow::reload);
-    m_reloader.setInterval(1000); // Reload MIDI every 1000 ms
+    m_reloader.setInterval(1000); // Reload screens every 1000 ms
     m_reloader.start();
 }
 
