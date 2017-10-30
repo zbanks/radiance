@@ -3,6 +3,15 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment ver
 
 project(radiance)
 
+set(APP_NAME Radiance)
+set(LIB_NAME radiance)
+
+IF(APPLE)
+    set(EXE_NAME Radiance)
+ELSE()
+    set(EXE_NAME radiance)
+ENDIF(APPLE)
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -101,6 +110,9 @@ add_executable(radiance MACOSX_BUNDLE WIN32 src/main.cpp
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 
+set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
+set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})
+
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
@@ -108,14 +120,14 @@ target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
 #--------------------------------------------------------------------------------
 # Now the installation stuff below
 #--------------------------------------------------------------------------------
-SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/radiance")
+SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/${EXE_NAME}")
 IF(APPLE)
-  SET(CMAKE_INSTALL_PREFIX .)
-  SET(resources_dest_dir "radiance.app/Contents/Resources")
-  SET(APPS "\${CMAKE_INSTALL_PREFIX}/radiance.app")
+    SET(CMAKE_INSTALL_PREFIX .)
+    SET(resources_dest_dir "${EXE_NAME}.app/Contents/Resources")
+    SET(APPS "\${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app")
 ENDIF(APPLE)
 IF(WIN32)
-  SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/radiance.exe")
+    SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/${EXE_NAME}.exe")
 ENDIF(WIN32)
 
 #--------------------------------------------------------------------------------
@@ -131,9 +143,18 @@ INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
             DESTINATION
             "${resources_dest_dir}" COMPONENT Runtime)
 
-# To Create a package, one can run "cpack -G DragNDrop CPackConfig.cmake" on Mac OS X
-# where CPackConfig.cmake is created by including CPack
-# And then there's ways to customize this as well
-# Or just run make package
+IF(APPLE)
+    INSTALL(
+        CODE
+        "
+        MESSAGE(STATUS \"Running MacOS deploy script...\")
+        EXECUTE_PROCESS(COMMAND \"${CMAKE_SOURCE_DIR}/deploy/mac.sh\"
+                                \"${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app\"
+                                \"${Qt5Core_DIR}/../../..\")
+        "
+    )
+ENDIF(APPLE)
+
+# make package
 set(CPACK_BINARY_DRAGNDROP ON)
 include(CPack)
