@@ -7,10 +7,11 @@ import "."
 
 ApplicationWindow {
     id: window;
-    visible: true;
-    color: "#333";
-    width: 1200;
-    height: 800;
+    visible: true
+    color: "#333"
+    width: 1200
+    height: 800
+    title: "Radiance"
     property bool hasMidi: false
 
     Context {
