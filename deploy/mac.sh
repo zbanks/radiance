@@ -1,7 +1,8 @@
 #!/bin/sh
 
-APP=$1
-QT=$2
+SOURCE_DIR=$1
+APP=$2
+QT=$3
 
 echo "Removing .qmlc files..."
 find "$APP/Contents/Resources/" -name "*.qmlc" -exec rm \{\} \;
@@ -24,3 +25,7 @@ function replace_dlybs() {
 for file in $(ls "$APP"/Contents/Frameworks/*.dylib); do 
     replace_dlybs "$file"
 done
+
+echo "Generating icon set..."
+"$SOURCE_DIR/deploy/png2icns.sh" "$SOURCE_DIR/deploy/icon.png"
+mv icon.icns "$APP/Contents/Resources/"

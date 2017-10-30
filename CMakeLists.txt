@@ -22,6 +22,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native -DDEBUG_RESOURCES")
 set(CMAKE_CXX_STANDARD 14)
 
+set(MACOSX_BUNDLE_ICON_FILE icon)
+
 include(Doxygen)
 include_directories(BTrack/src)
 
@@ -149,6 +151,7 @@ IF(APPLE)
         "
         MESSAGE(STATUS \"Running MacOS deploy script...\")
         EXECUTE_PROCESS(COMMAND \"${CMAKE_SOURCE_DIR}/deploy/mac.sh\"
+                                \"${CMAKE_SOURCE_DIR}\"
                                 \"${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app\"
                                 \"${Qt5Core_DIR}/../../..\")
         "
