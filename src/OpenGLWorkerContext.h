@@ -18,7 +18,7 @@ protected slots:
     void deinitialize();
 public slots:
     void makeCurrent();
-    void moveToThread(QObject *obj);
+    void takeObject(QObject *obj);
 protected slots:
     void onDestroyed();
 protected:

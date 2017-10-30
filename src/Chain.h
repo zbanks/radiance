@@ -15,13 +15,15 @@ class ChainOpenGLWorker : public OpenGLWorker {
 public:
     ChainOpenGLWorker(Chain* p);
 public slots:
-    void initialize();
+    void initialize(QSize);
 signals:
-    void initialized();
+    void initialized(int, int);
 protected:
-    void createBlankTexture();
-    void createNoiseTexture();
-    Chain *m_p;
+    void createBlankTexture(QSize);
+    void createNoiseTexture(QSize);
+    QOpenGLTexture m_noiseTexture{QOpenGLTexture::Target2D};
+    QOpenGLTexture m_blankTexture{QOpenGLTexture::Target2D};
+//    Chain *m_p;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -40,13 +42,13 @@ public:
     QOpenGLVertexArrayObject &vao();
     const QOpenGLVertexArrayObject &vao() const;
 protected slots:
-    void onInitialized();
+    void onInitialized(int, int);
 
 protected:
     bool m_initialized;
-    QOpenGLTexture            m_noiseTexture;
-    QOpenGLTexture            m_blankTexture;
+    GLuint m_noiseTextureId{};
+    GLuint m_blankTextureId{};
     QOpenGLVertexArrayObject  m_vao;
-    ChainOpenGLWorker         m_openGLWorker;
+    ChainOpenGLWorker        *m_openGLWorker;
     QSize m_size;
 };

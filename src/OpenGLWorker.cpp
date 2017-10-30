@@ -4,7 +4,7 @@
 OpenGLWorker::OpenGLWorker(OpenGLWorkerContext *context)
     : m_context(context)
 {
-    m_context->moveToThread(this);
+    m_context->takeObject(this);
 }
 
 OpenGLWorker::~OpenGLWorker() {

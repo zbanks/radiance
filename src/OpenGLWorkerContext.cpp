@@ -17,9 +17,11 @@ OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
 }
 
 void OpenGLWorkerContext::onDestroyed() {
-    if (m_thread != nullptr) {
+    if (m_thread) {
         m_thread->quit();
         m_thread->wait();
+        delete m_thread;
+        m_thread = nullptr;
     } else {
         deinitialize();
     }
@@ -27,8 +29,6 @@ void OpenGLWorkerContext::onDestroyed() {
 
 OpenGLWorkerContext::~OpenGLWorkerContext() {
     onDestroyed();
-    delete m_thread;
-    m_thread = nullptr;
 }
 
 void OpenGLWorkerContext::initialize() {
@@ -41,7 +41,7 @@ void OpenGLWorkerContext::initialize() {
 
     m_context->create();
 
-    if(m_surface == nullptr) {
+    if(!m_surface) {
         // Creating a QOffscreenSurface with no window
         // may fail on some platforms
         // (e.g. wayland)
@@ -69,8 +69,8 @@ void OpenGLWorkerContext::makeCurrent() {
     m_context->makeCurrent(m_surface);
 }
 
-void OpenGLWorkerContext::moveToThread(QObject *obj) {
-    if (m_thread != nullptr) {
+void OpenGLWorkerContext::takeObject(QObject *obj) {
+    if (m_thread) {
         obj->moveToThread(m_thread);
     }
 }

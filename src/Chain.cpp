@@ -4,20 +4,21 @@
 
 Chain::Chain(QSize size)
     : m_initialized(false)
-    , m_noiseTexture(QOpenGLTexture::Target2D)
-    , m_blankTexture(QOpenGLTexture::Target2D)
-    , m_openGLWorker(this)
+    , m_openGLWorker(new ChainOpenGLWorker(this))
     , m_size(size) {
-    connect(&m_openGLWorker, &ChainOpenGLWorker::initialized, this, &Chain::onInitialized);
+    connect(m_openGLWorker, &ChainOpenGLWorker::initialized, this, &Chain::onInitialized);
+    connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater);
 
-    if (!QMetaObject::invokeMethod(&m_openGLWorker, "initialize"))
+    if (!QMetaObject::invokeMethod(m_openGLWorker, "initialize", Q_ARG(QSize, m_size)))
         qFatal("Unable to initialize openGLWorker");
 }
 
 Chain::~Chain() {
 }
 
-void Chain::onInitialized() {
+void Chain::onInitialized(int n, int b) {
+    m_noiseTextureId = n;
+    m_blankTextureId = b;
     m_initialized = true;
 }
 
@@ -27,13 +28,13 @@ QSize Chain::size() {
 
 GLuint Chain::noiseTexture() {
     if (m_initialized)
-        return m_noiseTexture.textureId();
+        return m_noiseTextureId;//.textureId();
     return 0;
 }
 
 GLuint Chain::blankTexture() {
     if (m_initialized)
-        return m_blankTexture.textureId();
+        return m_blankTextureId;//.textureId();
     return 0;
 }
 
@@ -50,30 +51,30 @@ ChainOpenGLWorker::ChainOpenGLWorker(Chain *p)
     , m_p(p) {
 }
 
-void ChainOpenGLWorker::initialize() {
+void ChainOpenGLWorker::initialize(QSize size) {
     makeCurrent();
-    createBlankTexture();
-    createNoiseTexture();
-    emit initialized();
+    createBlankTexture(size);
+    createNoiseTexture(size);
+    emit initialized(m_noiseTexture.textureId(),m_blankTexture.textureId());
 }
 
-void ChainOpenGLWorker::createNoiseTexture() {
+void ChainOpenGLWorker::createNoiseTexture(QSize size) {
     Q_ASSERT(!m_p->m_initialized); // Make sure we are not "live"
 
-    m_p->m_noiseTexture.setSize(m_p->size().width(), m_p->size().height());
-    m_p->m_noiseTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
-    m_p->m_noiseTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
-    m_p->m_noiseTexture.setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
-    m_p->m_noiseTexture.setWrapMode(QOpenGLTexture::Repeat);
+    m_noiseTexture.setSize(size.width(), size.height());
+    m_noiseTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
+    m_noiseTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+    m_noiseTexture.setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+    m_noiseTexture.setWrapMode(QOpenGLTexture::Repeat);
 
-    auto byteCount = m_p->size().width() * m_p->size().height() * 4;
+    auto byteCount = size.width() * size.height() * 4;
     auto data = std::make_unique<uint8_t[]>(byteCount);
 
     qsrand(1);
-    for (int i=0; i<m_p->size().width(); i++) {
+    for (int i=0; i<size.width(); i++) {
         qsrand(i + qrand());
-        for(int j=0; j<m_p->size().height(); j++) {
-            auto k = i * m_p->size().height() + j;
+        for(int j=0; j<size.height(); j++) {
+            auto k = i * size.height() + j;
             data[4*k+0] = qrand();
             data[4*k+1] = qrand();
             data[4*k+2] = qrand();
@@ -82,20 +83,20 @@ void ChainOpenGLWorker::createNoiseTexture() {
     }
 
     //std::generate(&data[0], &data[0] + byteCount, qrand);
-    m_p->m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+    m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 
     glFlush();
 }
 
-void ChainOpenGLWorker::createBlankTexture() {
+void ChainOpenGLWorker::createBlankTexture(QSize size) {
     Q_ASSERT(!m_p->m_initialized); // Make sure we are not "live"
 
-    m_p->m_blankTexture.setSize(1, 1);
-    m_p->m_blankTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
-    m_p->m_blankTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
-    m_p->m_blankTexture.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
-    m_p->m_blankTexture.setWrapMode(QOpenGLTexture::Repeat);
+    m_blankTexture.setSize(1, 1);
+    m_blankTexture.setFormat(QOpenGLTexture::RGBA8_UNorm);
+    m_blankTexture.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+    m_blankTexture.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+    m_blankTexture.setWrapMode(QOpenGLTexture::Repeat);
 
     auto data = std::make_unique<uint8_t[]>(4);
-    m_p->m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+    m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 }
