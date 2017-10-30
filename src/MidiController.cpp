@@ -1,10 +1,7 @@
 #include "MidiController.h"
 
 MidiController::MidiController(QObject* parent) :
-    QObject(parent),
-    m_midiin(),
-    m_connected(false),
-    m_inSysEx(false)
+    QObject(parent)
 {
     connect(this, &MidiController::normalEvent, this, &MidiController::onNormalEvent, Qt::QueuedConnection);
     connect(this, &MidiController::realtimeEvent, this, &MidiController::onRealtimeEvent, Qt::QueuedConnection);

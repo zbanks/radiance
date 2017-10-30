@@ -1,7 +1,8 @@
 #include "Lux.h"
 #include "liblux/lux.h"
 #include <unistd.h>
-#include <math.h>
+#include <cmath>
+#include <initializer_list>
 
 // Lux helper functions
 static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
@@ -34,7 +35,7 @@ static int lux_strip_frame (int fd, uint32_t lux_id, QVector<QColor> data) {
     packet.index = 0;
     packet.payload_length = data.size() * 3;
     uint8_t * payload = packet.payload;
-    for (QColor c : data) {
+    for (auto c : data) {
         *payload++ = c.red();
         *payload++ = c.green();
         *payload++ = c.blue();
@@ -47,10 +48,9 @@ LuxDevice::LuxDevice(QQuickItem * parent) :
     QQuickItem(parent),
     m_state(State::Disconnected),
     m_type(Type::Strip),
-    m_length(0),
-    m_polygon(QVector<QPointF>{QPointF(0.,0.), QPointF(1.,1.)}), // kill once we actually have polys
-    m_color(QColor(255, 255, 0)),
-    m_id(0) {
+    m_color(255, 255, 0),
+    m_polygon(QVector<QPointF>{QPointF(0.,0.), QPointF(1.,1.)}) // kill once we actually have polys
+{
     arrangePixels();
 }
 LuxDevice::State LuxDevice::state() {
@@ -131,14 +131,14 @@ void LuxDevice::arrangePixels() {
     }
     // This only does Type::Strip for now
     qreal scale_sum = 0.;
-    for (size_t i = 1; i < m_polygon.size(); i++) {
+    for (auto i = 1; i < m_polygon.size(); i++) {
         QPointF delta = m_polygon.at(i-1) - m_polygon.at(i);
         scale_sum += hypot(delta.x(), delta.y());
     }
     qreal scale_per_pixel = scale_sum / (qreal) m_length;
     qreal cumulative_scale = 0.;
-    size_t pixel_idx = 0;
-    for (size_t i = 1; i < m_polygon.size(); i++) {
+    auto pixel_idx = 0;
+    for (auto i = 1; i < m_polygon.size(); i++) {
         QPointF delta = m_polygon.at(i-1) - m_polygon.at(i);
         qreal scale = hypot(delta.x(), delta.y());
         while (pixel_idx * scale_per_pixel <= cumulative_scale + scale) {

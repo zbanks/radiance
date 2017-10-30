@@ -38,10 +38,6 @@ void Timebase::update(enum Timebase::TimeSource source, enum Timebase::TimeSourc
     auto time_ns = m_timer.nsecsElapsed();
 
     QMutexLocker locker(&m_timeLock);
-    auto deltaTime_ns = time_ns - m_wall_ns;
-    if (m_wall_ns == 0)
-        deltaTime_ns = 0;
-
     switch (event) {
     case TimeSourceEventBar:
         break; //TODO
@@ -67,6 +63,7 @@ void Timebase::update(enum Timebase::TimeSource source, enum Timebase::TimeSourc
                     m_beatFrac = std::max<double>(m_beatFrac, 1.0 - nsUntilEvent * masterBeatPerNs);
                     status = '>';
                 }
+                Q_UNUSED(status);
             }
         }
         break;

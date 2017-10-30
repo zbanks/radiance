@@ -59,9 +59,9 @@ protected:
     double m_lastTime{};
     QStringList m_deviceList;
     RtMidiIn m_midiin;
-    bool     m_inSysEx;
+    bool     m_inSysEx{};
     QByteArray m_sysEx;
-    QString m_deviceName;
+    QString m_deviceName{};
     QTimer m_reloader;
-    bool m_connected;
+    bool m_connected{};
 };

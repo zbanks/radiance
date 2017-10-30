@@ -67,11 +67,11 @@ private:
 
     State m_state;
     Type m_type;
-    QString m_name;
-    QColor m_color;
-    QPolygonF m_polygon;
-    quint32 m_id;
-    int m_length;
+    QString m_name{};
+    QColor m_color{};
+    QPolygonF m_polygon{};
+    quint32 m_id{};
+    int m_length{};
 
     LuxBus * m_bus;
     QVector<QPointF> m_pixels;
