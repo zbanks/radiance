@@ -65,8 +65,7 @@ ApplicationWindow {
 
     OutputWindow {
         id: outputWindow
-        window.visible: screenWidget.outputVisibleChecked
-        screen: screenWidget.screenSelected
+        window.visible: found && screenWidget.outputVisibleChecked
         window.color: "black"
 
         OutputItem {

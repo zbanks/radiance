@@ -7,9 +7,9 @@
 // QQuickOutputWindow
 
 QQuickOutputWindow::QQuickOutputWindow()
-    : m_screen(nullptr) {
+    : m_screen("")
+    , m_found(false) {
     m_outputWindow = QSharedPointer<QQuickWindow>(new QQuickWindow());
-    m_screen = m_outputWindow->screen();
     connect(m_outputWindow.data(), &QWindow::screenChanged, this, &QQuickOutputWindow::onScreenChanged);
 
     m_outputWindow->setFlags(Qt::Dialog);
@@ -31,29 +31,18 @@ void QQuickOutputWindow::putOnScreen() {
 }
 
 QString QQuickOutputWindow::screen() {
-    return m_outputWindow->screen()->name();
+    return m_screen;
 }
 
 void QQuickOutputWindow::onScreenChanged(QScreen *screen) {
     reload();
-    if(screen != m_screen) {
-        if (m_screens.contains(screen)) {
-            m_outputWindow->setScreen(m_screen);
-        } else {
-            qDebug() << "Screen " << m_screen->name() << " disappeared!";
-        }
-    }
 }
 
-void QQuickOutputWindow::setScreen(QString screenName) {
-    reload();
-    foreach(QScreen *screen, m_screens) {
-        if(screen->name() == screenName) {
-            m_screen = screen;
-            m_outputWindow->setScreen(screen);
-            emit screenChanged(screen->name());
-            break;
-        }
+void QQuickOutputWindow::setScreen(QString screen) {
+    if (screen != m_screen) {
+        m_screen = screen;
+        emit screenChanged(m_screen);
+        reload();
     }
 }
 
@@ -79,4 +68,24 @@ void QQuickOutputWindow::reload() {
 
         emit availableScreensChanged(m_screenStrings);
     }
+
+    bool found = false;
+
+    foreach(QScreen *screen, m_screens) {
+        if (screen->name() == m_screen) {
+            if (m_outputWindow->screen() != screen) {
+                m_outputWindow->setScreen(screen);
+            }
+            found = true;
+        }
+    }
+
+    if (found != m_found) {
+        m_found = found;
+        emit foundChanged(found);
+    }
+}
+
+bool QQuickOutputWindow::found() {
+    return m_found;
 }

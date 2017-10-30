@@ -6,7 +6,6 @@ import radiance 1.0
 
 GroupBox {
     property alias outputVisibleChecked: outputVisible.checked;
-    property alias screenSelected: screenSelector.currentText;
     property var outputWindow;
 
     title: "Output to screen"
@@ -16,6 +15,11 @@ GroupBox {
         CheckBox {
             id: outputVisible;
             text: "Show output";
+            onCheckedChanged: {
+                if (checked) {
+                    outputWindow.screen = screenSelector.currentText;
+                }
+            }
         }
         ComboBox {
             id: screenSelector;
