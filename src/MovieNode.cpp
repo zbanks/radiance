@@ -471,6 +471,8 @@ void MovieNodeOpenGLWorker::updateSizes()
 {
     if(!m_videoSize.width() || !m_videoSize.height())
         return;
+    if(!m_chainSize.width() || !m_chainSize.height())
+        return;
     auto _scale = std::max({
         m_chainSize.width()/qreal(m_videoSize.width())
        ,m_chainSize.height()/qreal(m_videoSize.height())
