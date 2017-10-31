@@ -22,8 +22,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native -DDEBUG_RESOURCES")
 set(CMAKE_CXX_STANDARD 14)
 
-set(MACOSX_BUNDLE_ICON_FILE icon)
-
 include(Doxygen)
 include_directories(BTrack/src)
 
@@ -114,6 +112,7 @@ add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 
 set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
 set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})
+set_target_properties(radiance PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/deploy/Info.plist.in")
 
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
