@@ -5,7 +5,7 @@ Radiance is video art software for VJs. It supports beat detection, animated GIF
 
 [![Build Status](https://travis-ci.org/zbanks/radiance.svg?branch=master)](https://travis-ci.org/zbanks/radiance)
 
-You can download this software for MacOS from (https://radiance.video radiance.video). There are no prebuilt Linux packages, but you can build it yourself fairly easily.
+You can download this software for MacOS from [radiance.video](https://radiance.video). There are no prebuilt Linux packages, but you can build it yourself fairly easily.
 
 Screenshots
 -----------
