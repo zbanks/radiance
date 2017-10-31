@@ -16,7 +16,9 @@ MovieNode::MovieNode()
     , m_videoSize(0, 0)
     , m_ready(false)
     , m_position(0)
-    , m_duration(0) {
+    , m_duration(0)
+    , m_mute(false)
+    , m_pause(false) {
 
     m_openGLWorkerContext = new OpenGLWorkerContext();
     m_openGLWorkerContext->setParent(this);
@@ -45,7 +47,9 @@ MovieNode::MovieNode(const MovieNode &other)
     , m_blitShader(other.m_blitShader)
     , m_videoSize(other.m_videoSize)
     , m_chainSize(other.m_chainSize)
-    , m_ready(other.m_ready) {
+    , m_ready(other.m_ready)
+    , m_mute(other.m_mute)
+    , m_pause(other.m_pause) {
 
     auto k = other.m_renderFbos.keys();
     for (int i=0; i<k.count(); i++) {
