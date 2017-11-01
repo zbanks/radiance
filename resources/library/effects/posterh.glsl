@@ -5,7 +5,7 @@ void main(void) {
     
     vec4 hsv = demultiply(texture(iInput, uv));
     hsv.rgb = rgb2hsv(hsv.rgb);
-    hsv.r = round(hsv.r * bins) / bins;
+    hsv.r = mod(round(hsv.r * bins) / bins, 1.0);
     hsv.rgb = hsv2rgb(hsv.rgb);
 
     fragColor = premultiply(hsv);

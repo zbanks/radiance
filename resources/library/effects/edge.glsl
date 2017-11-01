@@ -1,5 +1,10 @@
 #property description From https://www.shadertoy.com/view/XssGD7
 
+vec4 get_texture(vec2 offset) {
+    //return demultiply(texture(iInput, uv + offset));
+    return texture(iInput, uv + offset);
+}
+
 void main()
 {
 	// Sobel operator
@@ -8,22 +13,23 @@ void main()
 	vec4 gx = vec4(0.0);
 	vec4 gy = vec4(0.0);
 	vec4 t;
-	gx += texture(iInput, uv + o.xz);
+	gx += get_texture(o.xz);
 	gy += gx;
-	gx += 2.0*texture(iInput, uv + o.xy);
-	t = texture(iInput, uv + o.xx);
+	gx += 2.0*get_texture(o.xy);
+	t = get_texture(o.xx);
 	gx += t;
 	gy -= t;
-	gy += 2.0*texture(iInput, uv + o.yz);
-	gy -= 2.0*texture(iInput, uv + o.yx);
-	t = texture(iInput, uv + o.zz);
+	gy += 2.0*get_texture(o.yz);
+	gy -= 2.0*get_texture(o.yx);
+	t = get_texture(o.zz);
 	gx -= t;
 	gy += t;
-	gx -= 2.0*texture(iInput, uv + o.zy);
-	t = texture(iInput, uv + o.zx);
+	gx -= 2.0*get_texture(o.zy);
+	t = get_texture(o.zx);
 	gx -= t;
 	gy -= t;
 	vec4 grad = sqrt(gx * gx + gy * gy);
+    grad.a = max(max(grad.r, grad.g), max(grad.b, grad.a));
 
     vec4 original = texture(iInput, uv);
     grad *= smoothstep(0., 0.5, iIntensity);

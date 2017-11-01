@@ -85,7 +85,7 @@ vec3 yuv2rgb(vec3 yuv) {
     rgb.r = yuv.x +                    yuv.z *  1.28033;
     rgb.g = yuv.x + yuv.y * -0.21482 + yuv.z * -0.38059;
     rgb.b = yuv.x + yuv.y *  2.12798;
-    return rgb;
+    return clamp(rgb, 0.0, 1.0);
 }
 
 // Turn non-premultipled alpha RGBA into premultipled alpha RGBA

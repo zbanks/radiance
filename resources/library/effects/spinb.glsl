@@ -31,7 +31,7 @@ void main(void) {
 
     vec4 oc = texture(iInput, uv);
     vec4 nc = texture(iInput, newUV);
-    nc.a *= box(newUV);
+    nc *= box(newUV);
 
     fragColor = mix(oc, nc, smoothstep(0, 0.2, iIntensity));
 }

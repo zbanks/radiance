@@ -6,6 +6,7 @@ void main(void) {
     vec3 yuv = vec3(0.5, scaledUV);
 
     vec4 base = texture(iInput, uv);
-    fragColor = mix(base, vec4(yuv2rgb(yuv), 1.0), iIntensity);
+    vec4 yuvColor = clamp(vec4(yuv2rgb(yuv), 1.0), 0.0, 1.0);
+    fragColor = mix(base, yuvColor, iIntensity);
 }
 

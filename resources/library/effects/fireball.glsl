@@ -13,6 +13,7 @@ void main(void) {
 
     normCoord = normCoord + shift;
     vec4 color = vec4(1., length(normCoord) * 2., 0., 1.0);
+    color.g = clamp(color.g, 0.0, 1.0);
     color *= smoothstep(0.4, 0.5, (1. - length(normCoord)));
     color *= smoothstep(0., 0.2, iIntensity);
 

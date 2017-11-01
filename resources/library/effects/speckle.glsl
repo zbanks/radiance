@@ -2,7 +2,7 @@
 
 void main(void) {
     fragColor = texture(iChannel[0], uv);
-    fragColor.a *= exp(-iIntensity / 20.);
+    fragColor *= exp(-iIntensity / 20.);
     if (rand(vec3(uv, iTime)) < exp(-iIntensity * 4.)) {
         fragColor = texture(iInput, uv);
     }

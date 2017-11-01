@@ -7,5 +7,6 @@ void main(void) {
     // bin in non-premultiplied space, then re-premultiply
     vec4 c = demultiply(texture(iInput, uv));
     c.rgb = round(c.rgb * bins) / bins;
+    c.rgb = clamp(c.rgb, 0.0, 1.0);
     fragColor = premultiply(c);
 }

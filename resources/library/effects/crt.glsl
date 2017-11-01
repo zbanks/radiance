@@ -16,5 +16,6 @@ void main(void) {
     rgb.r *= mix(1.0, 1.0 - pow(abs(sin(redOffset.x * 200.0)), 6.), iIntensity);
     rgb.g *= mix(1.0, 1.0 - pow(abs(sin(greenOffset.x * 200.0)), 6.), iIntensity);
     rgb.b *= mix(1.0, 1.0 - pow(abs(sin(blueOffset.x * 200.0)), 6.), iIntensity);
-    fragColor = vec4(rgb, greenImage.a);
+    float a_out = max(max(greenImage.a, rgb.r), max(rgb.g, rgb.b));
+    fragColor = vec4(rgb, a_out);
 }
