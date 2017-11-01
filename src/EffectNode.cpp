@@ -438,7 +438,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         }
         auto frag = headerString + "\n" + pass.join("\n");
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
-            emit fatal("Could not compile fragment shader");
+            emit fatal(QString("Could not compile fragment shader:\n") + program->log().trimmed());
             return false;
         }
         if(!program->link()) {

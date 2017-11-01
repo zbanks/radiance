@@ -30,13 +30,13 @@ ApplicationWindow {
         }
 
         onMessage: {
-            console.log("MESSAGE: ", str);
+            messages.text += "<font color=\"green\"><pre>" + str + "</pre></font>";
         }
         onWarning: {
-            console.log("WARNING: ", str);
+            messages.text += "<font color=\"gold\"><pre>" + str + "</pre></font>";
         }
         onFatal: {
-            console.log("FATAL: ", str);
+            messages.text += "<font color=\"red\"><pre>" + str + "</pre></font>";
         }
     }
 
@@ -217,6 +217,21 @@ ApplicationWindow {
                 Spectrum {
                     width: 500
                     opacity: .9
+                }
+            }
+
+            Label {
+                id: messages
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 10
+                color: "white"
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        messages.text = "";
+                    }
                 }
             }
         }
