@@ -14,7 +14,7 @@ Screenshots
 
 ![GIF Screencapture](https://i.imgur.com/I4qnMQo.gif)
 
-[Example effects](https://zbanks.github.io/radiance/)
+[Example effects](https://radiance.video/library/)
 
 Build
 -----
