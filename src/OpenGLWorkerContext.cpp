@@ -11,8 +11,32 @@ OpenGLWorkerContext::OpenGLWorkerContext(QObject *p, bool threaded, QSurface *su
     , m_surface(surface)
     , m_thread(nullptr)
 {
+    {
+        m_context = new QOpenGLContext();
+        auto scontext = QOpenGLContext::globalShareContext();
+        if(scontext) {
+            m_context->setFormat(scontext->format());
+            m_context->setShareContext(scontext);
+        }
+
+        m_context->create();
+
+        if(!m_surface) {
+            // Creating a QOffscreenSurface with no window
+            // may fail on some platforms
+            // (e.g. wayland)
+            // On these platforms, you must pass in
+            // a valid surface.
+            auto surface = new QOffscreenSurface();
+            surface->setFormat(m_context->format());
+            surface->create();
+            surface->setParent(m_context);
+            m_surface = surface;
+        }
+    }
     if (threaded) {
         m_thread = new QThread();
+        takeObject(m_context);
         connect(m_thread, &QThread::started, this, &OpenGLWorkerContext::initialize, Qt::DirectConnection);
         connect(m_thread, &QThread::finished, this, &OpenGLWorkerContext::deinitialize, Qt::DirectConnection);
         //connect(this, &QObject::destroyed, this, &OpenGLWorkerContext::onDestroyed);

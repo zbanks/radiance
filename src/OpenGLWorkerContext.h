@@ -23,7 +23,7 @@ public slots:
 protected slots:
     void onDestroyed();
 protected:
-    QSurface *m_surface;
-    QOpenGLContext *m_context;
-    QThread *m_thread;
+    QSurface       *m_surface{};
+    QOpenGLContext *m_context{};
+    QThread        *m_thread{};
 };

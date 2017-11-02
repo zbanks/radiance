@@ -20,8 +20,7 @@ MovieNode::MovieNode()
     , m_mute(false)
     , m_pause(false) {
 
-    m_openGLWorkerContext = new OpenGLWorkerContext();
-    m_openGLWorkerContext->setParent(this);
+    m_openGLWorkerContext = new OpenGLWorkerContext(this);
 
     m_openGLWorker = new MovieNodeOpenGLWorker(this);
 
