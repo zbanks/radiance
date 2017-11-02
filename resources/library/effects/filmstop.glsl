@@ -19,7 +19,7 @@ void main(void) {
 // (all pixels are the same color)
 
 void main(void) {
-    float v = mod(texture(iChannel[1], vec2(0.5, 0.5)).r + iIntensity, 1.);
+    float v = mod(texture(iChannel[1], vec2(0.5, 0.5)).r - iIntensity, 1.);
 
     // If intensity is low, decay to zero
     v *= 0.9 + 0.1 * step(0.05, iIntensity);
