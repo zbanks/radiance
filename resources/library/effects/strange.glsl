@@ -45,6 +45,8 @@ void main(void) {
     vec2 uvNew = uv;
     uvNew.x += cos(b) * c;
     uvNew.y += sin(b) * c;
+    uvNew = mix(uv, uvNew, iIntensity);
+    uvNew = clamp(uvNew, 0., 1.);
 
     // Make a black-ish/blue-ish color
     vec4 color = vec4(0.05, 0.4, 0.5, 1.);
@@ -52,6 +54,6 @@ void main(void) {
     color.rg *= mix(0.7, 1.0, c);
     color *= a * smoothstep(0., 0.2, iIntensity);
 
-    vec4 under = texture(iInput, mix(uv, uvNew, iIntensity));
+    vec4 under = texture(iInput, uvNew);
     fragColor = composite(under, color);
 }
