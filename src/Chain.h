@@ -36,22 +36,31 @@ class Chain : public QObject {
     Q_PROPERTY(QSize size READ size CONSTANT);
     Q_PROPERTY(int blankTexture READ blankTexture);
     Q_PROPERTY(int noiseTexture READ noiseTexture);
+    Q_PROPERTY(qreal realTime READ realTime);
+    Q_PROPERTY(qreal beatTime READ beatTime);
 public:
     Chain(QSize size);
    ~Chain() override;
     QSize size();
-    GLuint noiseTexture();
-    GLuint blankTexture();
+public slots:
+    GLuint noiseTexture() const;
+    GLuint blankTexture() const;
     QOpenGLVertexArrayObject &vao();
     const QOpenGLVertexArrayObject &vao() const;
+    qreal realTime() const;
+    qreal beatTime() const;
+    void setRealTime(qreal time);
+    void setBeatTime(qreal time);
 protected slots:
     void onInitialized(int, int);
 
 protected:
-    bool m_initialized;
+    bool m_initialized{false};
     GLuint m_noiseTextureId{};
     GLuint m_blankTextureId{};
+    qreal                     m_realTime{};
+    qreal                     m_beatTime{};
     QOpenGLVertexArrayObject  m_vao;
-    ChainOpenGLWorker        *m_openGLWorker;
+    ChainOpenGLWorker        *m_openGLWorker{};
     QSize m_size;
 };
