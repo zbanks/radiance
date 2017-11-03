@@ -12,7 +12,7 @@ void main(void) {
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
-    float bs = 1024. * pow(2, -5. * iIntensity);
+    float bs = 2048. * pow(2, -5. * iIntensity);
     vec2 bins = bs * aspectCorrection;
     vec2 db = 1. / (bins * aspectCorrection);
     normCoord = round(normCoord * bins) * db + 0.5;
@@ -31,9 +31,9 @@ void main(void) {
 
     // Use bright areas of the source image to help "birth" pixels (or kill)
     vec4 source = texture(iInput, normCoord);
-    float r = 20. * rand(vec3(normCoord, iTime));
+    float r = 20. * rand(vec3(normCoord, iTime)) + mix(4.0, 0, iIntensity);
     float bonus = step(20.5, r + max(max(source.r, source.g), source.b));
-    n += bonus;
+    n += bonus * 3;
 
     // if (s == 0) { alive = (n == 3) }
     // else { alive = (2 <= n <= 3) }
