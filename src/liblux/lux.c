@@ -1,5 +1,5 @@
 #include <errno.h>
-#include <fcntl.h> 
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -8,7 +8,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
-#include <sys/epoll.h>
+#include <poll.h>
 
 #include "crc.h"
 #include "lux.h"
@@ -38,7 +38,7 @@ static int serial_set_attribs(int fd) {
     struct termios tty;
 
     memset (&tty, 0, sizeof tty);
-    
+
     tcgetattr(fd, &tty);
 
     /*
@@ -89,7 +89,7 @@ int lux_network_open(const char * address, uint16_t port) {
     if (sock < 0) return -1;
     int rc = connect(sock, (struct sockaddr *) &addr, sizeof addr);
     if (rc < 0) return -1;
-    
+
     rc = lux_sync(sock, 10);
     if (rc != 0) {
         LUX_DEBUG("No response from %s:%d", address, port);
@@ -236,26 +236,15 @@ static int lowlevel_read(int fd, uint8_t data[static 2048]) {
     int n = 0;
     uint8_t * null;
     int rc = 0;
-    int epollfd = epoll_create(1);
-    if (epollfd < 0) {
-        LUX_DEBUG("Error creating epollfd: %s", strerror(errno));
-        return -1;
-    }
-
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = fd;
-    rc = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev);
-    if (rc < 0) {
-        LUX_DEBUG("Error adding fd to epollfd: %s", strerror(errno));
-        goto fail;
-    }
+    struct pollfd fds[1];
+    fds[0].fd = fd;
+    fds[0].events = POLLIN;
+    fds[0].revents= 0;
 
     do {
-        struct epoll_event event;
-        rc = epoll_wait(epollfd, &event, 1, lux_timeout_ms);
+        rc = poll( fds, sizeof(fds)/sizeof(fds[0]), lux_timeout_ms);
         if(rc < 0) {
-            LUX_DEBUG("Error in epoll_wait: %s", strerror(errno));
+            LUX_DEBUG("Error in poll_wait: %s", strerror(errno));
             goto fail;
         }
         if(rc == 0) { // Read timeout
@@ -264,22 +253,23 @@ static int lowlevel_read(int fd, uint8_t data[static 2048]) {
             rc = n;
             goto fail;
         }
+        if(fds[0].revents & POLLIN) {
+            fds[0].revents = 0;
+            rc = read(fd, rx_ptr, 2048 - n);
+            if(rc < 0) goto fail;
 
-        rc = read(fd, rx_ptr, 2048 - n);
-        if(rc < 0) goto fail;
+            n += rc;
+            rx_ptr += rc;
 
-        n += rc;
-        rx_ptr += rc;
-
-        if (n >= 2048) {
-            rc = n;
-            goto fail;
+            if (n >= 2048) {
+                rc = n;
+                goto fail;
+            }
         }
     } while((null = memchr(data, 0, n)) == NULL);
 
     rc = null - data;
 fail:
-    close(epollfd);
     return rc;
 }
 
@@ -305,11 +295,10 @@ static int clear_rx(int fd) {
     return 0;
     do
     {
-        n = read(fd, rx_buf, 2048);
-        if (n < 0) return n;
-    } while(n);
+        n = read(fd, rx_buf, sizeof(rx_buf));
+    } while(n > 0);
 
-    return 0; // Successfully flushed
+    return n; // Successfully flushed
 }
 
 static int lux_read(int fd, struct lux_packet * packet) {
@@ -363,7 +352,7 @@ int lux_command(int fd, struct lux_packet * packet, struct lux_packet * response
         if (flags & LUX_ACK) {
             if (response->payload_length < 5) continue;
             if (memcmp(&packet->crc, &response->payload[1], 4) != 0) continue;
-            
+
             return response->payload[0];
         }
 
