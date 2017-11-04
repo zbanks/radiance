@@ -3,9 +3,9 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QThread>
-#include "EffectNode.h"
+//#include "EffectNode.h"
 #include "GraphicalDisplay.h"
-#include "ImageNode.h"
+//#include "ImageNode.h"
 #include "Model.h"
 #include "NodeRegistry.h"
 #include "Output.h"
@@ -23,9 +23,9 @@
 #include "MidiController.h"
 #endif
 
-#ifdef USE_MPV
-#include "MovieNode.h"
-#endif
+//#ifdef USE_MPV
+//#include "MovieNode.h"
+//#endif
 
 #ifdef USE_LUX
 #include "Lux.h"
@@ -84,11 +84,7 @@ int main(int argc, char *argv[]) {
     audio = QSharedPointer<Audio>(new Audio());
 
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
-    qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
-    qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
-#ifdef USE_MPV
-    qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
-#else
+#ifndef USE_MPV
     qInfo() << "radiance compiled without mpv support";
 #endif
     nodeRegistry->reload();

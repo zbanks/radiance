@@ -74,7 +74,11 @@ QString EffectNode::serialize() {
 }
 
 namespace {
+std::once_flag reg_once{};
 TypeRegistry effect_registry{[](NodeRegistry *r) -> QList<NodeType*> {
+    std::call_once(reg_once,[](){
+        qmlRegisterType<EffectNode>("radiance",1,0,"EffectNode");
+    });
     auto res = QList<NodeType*>{};
 
     auto filters = QStringList{} << QString{"*.glsl"};

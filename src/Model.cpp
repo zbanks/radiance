@@ -1,5 +1,5 @@
 #include "Model.h"
-#include "EffectNode.h"
+#include "VideoNode.h"
 #include "main.h"
 #include <QByteArray>
 #include <QFile>

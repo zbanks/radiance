@@ -10,8 +10,8 @@
 #include "Model.h"
 #include "View.h"
 #include "EffectNode.h"
-#include "ImageNode.h"
-#include "MovieNode.h"
+//#include "ImageNode.h"
+//#include "MovieNode.h"
 #include "NodeRegistry.h"
 #include "Paths.h"
 #include "main.h"
@@ -94,25 +94,12 @@ int main(int argc, char *argv[]) {
 
     openGLWorkerContext = new OpenGLWorkerContext(&app, false);
     openGLWorkerContext->setObjectName("openGLWorkerContext");
-    openGLWorkerContext->thread()->start();
 
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());
     timebase = QSharedPointer<Timebase>(new Timebase());
 
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
-//    nodeRegistry->registerVideoNodeSubclass<EffectNode>();
-    qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
-//    nodeRegistry->registerVideoNodeSubclass<ImageNode>();
-    qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
-    /* Don't load MovieNodes, because they don't render well here
-#ifdef USE_MPV
-    nodeRegistry->registerVideoNodeSubclass<MovieNode>();
-    qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
-#else
-    qInfo() << "radiance compiled without mpv support";
-#endif
-    */
     nodeRegistry->reload();
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);

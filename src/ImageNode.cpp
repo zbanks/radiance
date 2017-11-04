@@ -51,7 +51,12 @@ QString ImageNode::serialize() {
 }
 
 namespace {
+std::once_flag reg_once{};
 TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
+    std::call_once(reg_once,[](){
+        qmlRegisterType<ImageNode>("radiance",1,0,"ImageNode");
+    });
+
     auto res = QList<NodeType*>{};
 
     QStringList images;

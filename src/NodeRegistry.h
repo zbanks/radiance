@@ -18,14 +18,6 @@ public:
     // Create node from string; resulting VideoNode is caller-owned
     VideoNode *createNode(const QString &name);
 
-/*    template <typename VN>
-    void registerVideoNodeSubclass() {
-        Q_ASSERT(VN::staticMetaObject.inherits(&VideoNode::staticMetaObject));
-        QString className = QString(VN::staticMetaObject.className());
-        m_videoNodeCreateFns.insert(className, &videoNodeCreate<VN>);
-        m_videoNodeListTypesFns.insert(className, &videoNodeListTypes<VN>);
-    }*/
-
 public slots:
     QMap<QString, NodeType *> nodeTypes();
     QVariantMap qmlNodeTypes();
@@ -37,18 +29,5 @@ signals:
 
 private:
     QMap<QString, NodeType*> m_nodeTypes;
-//    QMap<QString, VideoNodeType> m_nodeTypes;
-
-/*    QMap<QString, VideoNode* (*)()> m_videoNodeCreateFns;
-    template <typename VN>
-    static VideoNode* videoNodeCreate() {
-        return new VN();
-    }
-
-    QMap<QString, QList<VideoNodeType> (*)()> m_videoNodeListTypesFns;
-    template <typename VN>
-    static QList<VideoNodeType> videoNodeListTypes() {
-        return VN::availableNodeTypes();
-    }*/
 };
 

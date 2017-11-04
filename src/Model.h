@@ -2,6 +2,7 @@
 
 #include "VideoNode.h"
 #include <QObject>
+#include <QDebug>
 #include <QList>
 #include <QVector>
 #include <QVariantList>

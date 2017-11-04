@@ -92,7 +92,11 @@ QString MovieNode::serialize() {
 }
 
 namespace {
+std::once_flag reg_once{};
 TypeRegistry movie_registry{[](NodeRegistry *r) -> QList<NodeType*> {
+    std::call_once(reg_once,[](){
+        qmlRegisterType<MovieNode>("radiance",1,0,"MovieNode");
+    });
     auto res = QList<NodeType*>{};
 
     QStringList images;

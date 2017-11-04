@@ -1,11 +1,5 @@
 #include "NodeRegistry.h"
-//#include "EffectNode.h"
-//#include "ImageNode.h"
 #include "ProbeReg.h"
-
-//#ifdef USE_MPV
-//#include "MovieNode.h"
-//#endif
 
 #include <QDir>
 #include <QDebug>
@@ -40,16 +34,7 @@ VideoNode *NodeRegistry::createNode(const QString &nodeName) {
     if(!vnt)
         return nullptr;
 
-/*    if (!has_arg  && vnt.argRequired) {
-        qInfo() << "Node type requires arg:" << name;
-        return nullptr;
-    }*/
     auto node = vnt->create(arg);
-//    Q_ASSERT(m_videoNodeCreateFns.contains(vnt.className));
-//    VideoNode * node = m_videoNodeCreateFns.value(vnt.className)();
-//    bool rc = node->deserialize(vnt, arg);
-//    Q_UNUSED(rc); // TODO: check rc
-
     return node;
 }
 
@@ -62,13 +47,6 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
     for (auto vnt : m_nodeTypes) {
         if(vnt) {
             output.insert(vnt->name(),QVariant::fromValue(vnt));
-/*            auto entry = QVariantMap{};
-            entry.insert("name", vnt->name());
-    //        entry.insert("className", vnt.className);
-            entry.insert("description", vnt->description());
-            entry.insert("author", vnt->author());
-            entry.insert("nInputs", vnt->inputCount());
-            output.insert(vnt->name(), entry);*/
         }
     }
     return output;
@@ -82,6 +60,7 @@ void NodeRegistry::reload() {
 
     auto nodeTypesList = ProbeRegistry::probeAll(this);
     for(auto vnt : nodeTypesList) {
+        vnt->setParent(this);
         if(m_nodeTypes.contains(vnt->name()))
             delete vnt;
         else
