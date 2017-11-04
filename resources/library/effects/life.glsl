@@ -41,8 +41,7 @@ void main(void) {
     alive *= step(0.05, iIntensity); // to reset
 
     // Make there be life if there is sufficient input color
-    // (and dither)
-    float lifeFromInput = step(texture(iNoise, normCoord + iTime).r, smoothstep(0., 3., dot(vec3(1.), source.rgb)));
+    float lifeFromInput = step(0.5, smoothstep(0., 3., dot(vec3(1.), source.rgb)));
     alive = max(alive, lifeFromInput);
     alive *= step(0.1, texture(iChannel[2], normCoord).a); // Kill stable life if there is no color
 
