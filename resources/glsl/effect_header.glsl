@@ -37,7 +37,7 @@ uniform sampler2D iInputs[];
 uniform sampler2D iNoise;
 
 // Previous outputs of the other channels (e.g. foo.1.glsl)
-uniform sampler2D iChannel[3];
+uniform sampler2D iChannel[];
 
 #define M_PI 3.1415926535897932384626433832795
 
