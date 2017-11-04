@@ -24,7 +24,7 @@ QSharedPointer<Audio> audio;
 QSharedPointer<NodeRegistry> nodeRegistry;
 QSharedPointer<Timebase> timebase;
 
-void generateHtml(QDir outputDir, QList<VideoNodeType> nodeTypes) {
+void generateHtml(QDir outputDir, QList<NodeType*> nodeTypes) {
     QFile outputHtml(outputDir.filePath("index.html"));
     outputHtml.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream html(&outputHtml);
@@ -38,14 +38,14 @@ void generateHtml(QDir outputDir, QList<VideoNodeType> nodeTypes) {
     html << "<table><tr><th>name</th><th>0%</th><th>100%</th><th>gif</th><th>description</th><tr>\n";
 
     for (auto nodeType : nodeTypes) {
-        QString name = nodeType.name;
+        QString name = nodeType->name();
         html << "<tr><td>" << name << "</td>\n";
         html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
         html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
         html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
-        html << "    <td class='desc'>" << nodeType.description;
-        if (!nodeType.author.isNull()) {
-            html << "<p>[" << nodeType.author << "]</p>";
+        html << "    <td class='desc'>" << nodeType->description();
+        if (!nodeType->author().isNull()) {
+            html << "<p>[" << nodeType->author() << "]</p>";
         }
         html << "</td>\n";
     }
@@ -92,19 +92,18 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = new OpenGLWorkerContext(false);
+    openGLWorkerContext = new OpenGLWorkerContext(&app, false);
     openGLWorkerContext->setObjectName("openGLWorkerContext");
     openGLWorkerContext->thread()->start();
-    openGLWorkerContext->setParent(&app);
 
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());
     timebase = QSharedPointer<Timebase>(new Timebase());
 
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
-    nodeRegistry->registerVideoNodeSubclass<EffectNode>();
+//    nodeRegistry->registerVideoNodeSubclass<EffectNode>();
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
-    nodeRegistry->registerVideoNodeSubclass<ImageNode>();
+//    nodeRegistry->registerVideoNodeSubclass<ImageNode>();
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
     /* Don't load MovieNodes, because they don't render well here
 #ifdef USE_MPV
@@ -132,14 +131,17 @@ int main(int argc, char *argv[]) {
     //qInfo() << "Wiped" << outputDir.absolutePath();
 
     // Generate HTML page with previews
-    QList<VideoNodeType> nodeTypes = nodeRegistry->nodeTypes().values();
+    auto nodeTypes = nodeRegistry->nodeTypes().values();
     generateHtml(outputDir, nodeTypes);
 
     QList<QString> nodeNames;
     for (auto nodeType : nodeTypes) {
-        if (nodeType.nInputs > 2)
+        qDebug() << nodeType->name() << nodeType->inputCount() << nodeType->metaObject()->className();
+        if (nodeType->inputCount() > 2)
             continue;
-        nodeNames.append(nodeType.name);
+        if (nodeType->metaObject()->className() == QString("MovieType"))
+            continue;
+        nodeNames.append(nodeType->name());
     }
 
     // Set up output chain & FBO renderer

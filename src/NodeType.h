@@ -10,9 +10,9 @@
 #include <mutex>
 #include <thread>
 
-class VideoNode;
-class NodeType;
+//#include "NodeRegistry.h"
 class NodeRegistry;
+class VideoNode;
 
 class NodeType : public QObject {
     Q_OBJECT
@@ -21,8 +21,9 @@ class NodeType : public QObject {
     Q_PROPERTY(QString author READ author WRITE setAuthor NOTIFY authorChanged);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
     Q_PROPERTY(bool ready READ ready NOTIFY readyChanged);
+    Q_PROPERTY(NodeRegistry * registry READ registry);
 public:
-    NodeType(QObject *p = nullptr);
+    NodeType(NodeRegistry *r = nullptr, QObject *p = nullptr);
    ~NodeType() override;
 
 public slots:
@@ -31,12 +32,14 @@ public slots:
     QString author() const;
     int     inputCount() const;
     bool    ready() const;
+    NodeRegistry *registry() const;
 
     void setName(QString);
     void setDescription(QString);
     void setAuthor(QString);
     void setInputCount(int);
     void isReady();
+    void setReady(bool);
 
     virtual VideoNode* create(QString arg);
 signals:
@@ -44,11 +47,12 @@ signals:
     void descriptionChanged(QString);
     void authorChanged(QString);
     void inputCountChanged(int);
-    void readyChanged();
+    void readyChanged(bool);
 protected:
     QString m_name{};
     QString m_description{};
     QString m_author{};
     int     m_inputCount{0};
     bool    m_ready{false};
+    NodeRegistry *m_registry{};
 };

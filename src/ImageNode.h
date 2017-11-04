@@ -1,12 +1,21 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include <QOpenGLTexture>
 #include <QMutex>
 #include <QTimer>
 
 class ImageNode;
+class ImageType : public NodeType {
+    Q_OBJECT
+public:
+    ImageType(NodeRegistry *r = nullptr, QObject *p = nullptr);
+   ~ImageType() override;
+public slots:
+    VideoNode *create(QString) override;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -53,8 +62,6 @@ public:
     ~ImageNode();
 
     QString serialize() override;
-    bool deserialize(const VideoNodeType &vnt, const QString &arg) override;
-    static QList<VideoNodeType> availableNodeTypes();
 
     // We don't actually need to do anything in paint(), because
     // periodic() advances the frame when necessary.  As a result,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include <QOpenGLFramebufferObject>
 #include <QMutex>
@@ -11,7 +12,21 @@
 #include <vector>
 
 class MovieNode;
-
+class MovieType : public NodeType {
+    Q_OBJECT
+    Q_PROPERTY(QString pathFormat READ pathFormat WRITE setPathFormat NOTIFY pathFormatChanged)
+public:
+    MovieType(NodeRegistry *r = nullptr, QObject *p = nullptr);
+   ~MovieType() override;
+public slots:
+    QString pathFormat() const;
+    void setPathFormat(QString fmt);
+    VideoNode *create(QString) override;
+signals:
+    void pathFormatChanged(QString);
+protected:
+    QString m_pathFormat{};
+};
 ///////////////////////////////////////////////////////////////////////////////
 
 class MovieNodeOpenGLWorker : public OpenGLWorker {
@@ -86,8 +101,6 @@ public:
     ~MovieNode();
 
     QString serialize() override;
-    bool deserialize(const VideoNodeType &vnt, const QString &arg) override;
-    static QList<VideoNodeType> availableNodeTypes();
 
     QSharedPointer<VideoNode> createCopyForRendering() override;
     void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) override;

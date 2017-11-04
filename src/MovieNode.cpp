@@ -1,4 +1,5 @@
 #include "MovieNode.h"
+#include "ProbeReg.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -8,6 +9,32 @@
 #include <locale.h>
 #include "Paths.h"
 #include "main.h"
+
+MovieType::MovieType(NodeRegistry *r , QObject *p )
+: NodeType(r,p)
+{ }
+MovieType::~MovieType() = default;
+QString MovieType::pathFormat() const
+{
+    return m_pathFormat;
+}
+void MovieType::setPathFormat(QString fmt)
+{
+    if(fmt != pathFormat()) {
+        m_pathFormat = fmt;
+        emit pathFormatChanged(pathFormat());
+    }
+}
+VideoNode *MovieType::create(QString arg)
+{
+    auto pth = pathFormat().arg(arg);
+    auto node = new MovieNode();
+    if(node) {
+        node->setInputCount(inputCount());
+        node->setVideoPath(pth);
+    }
+    return node;
+}
 
 MovieNode::MovieNode()
     : m_videoPath()
@@ -64,55 +91,44 @@ QString MovieNode::serialize() {
     return QString("mpv:%1").arg(m_videoPath);
 }
 
-bool MovieNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
-    if (vnt.name == "youtube") {
-        setVideoPath(QString("ytdl://ytsearch:%1").arg(arg));
-    } else if (vnt.name == "mpv") {
-        setVideoPath(arg);
-    } else {
-        setVideoPath(Paths::library() + QString("videos/%1").arg(vnt.name));
-    }
-    setInputCount(vnt.nInputs);
-    return true;
-}
+namespace {
+TypeRegistry movie_registry{[](NodeRegistry *r) -> QList<NodeType*> {
+    auto res = QList<NodeType*>{};
 
-QList<VideoNodeType> MovieNode::availableNodeTypes() {
-    QList<VideoNodeType> types;
+    QStringList images;
+    QDir imgDir(Paths::library() + QString("videos/"));
+    imgDir.setSorting(QDir::Name);
 
-    QDir movieDir(Paths::library() + QString("videos/"));
-    movieDir.setSorting(QDir::Name);
-
-    for (auto movieName : movieDir.entryList()) {
+    for (auto movieName : imgDir.entryList()) {
         if (movieName[0] == '.')
             continue;
-
-        QString name = movieName;
-        VideoNodeType nodeType = {
-            .name = name,
-            .description = movieName,
-            .author = QString(),
-            .nInputs = 1,
-        };
-        types.append(nodeType);
+        auto t = new MovieType(r);
+        if(!t)
+            continue;
+        t->setName(movieName);
+        t->setDescription(movieName);
+        t->setInputCount(1);
+        t->setPathFormat(QString("videos/%1").arg(movieName));
+        res.append(t);
     }
-
-    types << (VideoNodeType) {
-        .name = "youtube",
-        .description = "Youtube Search",
-        .author = QString(),
-        .nInputs = 1,
-        .argRequired = true,
-    };
-
-    types << (VideoNodeType) {
-        .name = "mpv",
-        .description = "libmpv URI",
-        .author = QString(),
-        .nInputs = 1,
-        .argRequired = true,
-    };
-
-    return types;
+    {
+        auto t = new MovieType(r);
+        t->setName("youtube");
+        t->setDescription("Search the Tubes of You");
+        t->setInputCount(1);
+        t->setPathFormat("ytdl://ytsearch:%1");
+        res.append(t);
+    }
+    {
+        auto t = new MovieType(r);
+        t->setName("mpv");
+        t->setDescription("play URI with libmpv");
+        t->setInputCount(1);
+        t->setPathFormat("%1");
+        res.append(t);
+    }
+    return res;
+}};
 }
 
 void MovieNode::onInitialized() {

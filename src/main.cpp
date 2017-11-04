@@ -84,12 +84,9 @@ int main(int argc, char *argv[]) {
     audio = QSharedPointer<Audio>(new Audio());
 
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
-    nodeRegistry->registerVideoNodeSubclass<EffectNode>();
     qmlRegisterType<EffectNode>("radiance", 1, 0, "EffectNode");
-    nodeRegistry->registerVideoNodeSubclass<ImageNode>();
     qmlRegisterType<ImageNode>("radiance", 1, 0, "ImageNode");
 #ifdef USE_MPV
-    nodeRegistry->registerVideoNodeSubclass<MovieNode>();
     qmlRegisterType<MovieNode>("radiance", 1, 0, "MovieNode");
 #else
     qInfo() << "radiance compiled without mpv support";

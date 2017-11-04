@@ -43,6 +43,8 @@ list(APPEND libradiance_SOURCES
     src/Output.cpp
     src/Timebase.cpp
     src/NodeRegistry.cpp
+    src/NodeType.cpp
+    src/ProbeReg.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
     src/ImageNode.cpp

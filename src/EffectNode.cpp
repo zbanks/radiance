@@ -1,4 +1,5 @@
 #include "EffectNode.h"
+#include "ProbeReg.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -12,6 +13,25 @@
 #include <algorithm>
 #include "Paths.h"
 #include "main.h"
+
+EffectType::EffectType(NodeRegistry *r , QObject *p )
+: NodeType(r,p)
+{ }
+EffectType::~EffectType() = default;
+VideoNode *EffectType::create(QString arg)
+{
+    auto node = new EffectNode();
+    if(node) {
+        node->setInputCount(inputCount());
+        node->setName(name());
+        auto ok = false;
+        auto intensity = arg.toFloat(&ok);
+        if(ok) {
+            node->setIntensity(intensity);
+        }
+    }
+    return node;
+}
 
 EffectNode::EffectNode()
     : m_intensity(0)
@@ -53,17 +73,9 @@ QString EffectNode::serialize() {
     return QString("%1:%2").arg(m_name, QString::number(m_intensity));
 }
 
-bool EffectNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
-    setName(vnt.name);
-    setInputCount(vnt.nInputs);
-    if (!arg.isNull()) {
-        setIntensity(arg.toFloat());
-    }
-    return true;
-}
-
-QList<VideoNodeType> EffectNode::availableNodeTypes() {
-    QList<VideoNodeType> types;
+namespace {
+TypeRegistry effect_registry{[](NodeRegistry *r) -> QList<NodeType*> {
+    auto res = QList<NodeType*>{};
 
     auto filters = QStringList{} << QString{"*.glsl"};
     QDir dir(Paths::library() + QString("effects/"));
@@ -74,12 +86,7 @@ QList<VideoNodeType> EffectNode::availableNodeTypes() {
         // TODO: Refactor the parsing logic so it's not duplicated
         auto name = effectName.replace(".glsl", "");
         auto filename = Paths::library() + QString("effects/%1.glsl").arg(name);
-        VideoNodeType nodeType = {
-            .name = name,
-            .description = effectName,
-            .author = QString(),
-            .nInputs = 1,
-        };
+
         QFileInfo check_file(filename);
         if(!(check_file.exists() && check_file.isFile()))
             continue;
@@ -102,6 +109,10 @@ QList<VideoNodeType> EffectNode::availableNodeTypes() {
         auto passes = QVector<QStringList>{QStringList{"#line 0"}};
         auto props  = QMap<QString,QString>{{"inputCount","1"}};
         auto lineno = 0;
+        auto t = new EffectType(r);
+        t->setName(name);
+        t->setDescription(effectName);
+        t->setInputCount(1);
         for(auto next_line = QString{}; stream.readLineInto(&next_line);++lineno) {
             {
                 auto m = property_reg.match(next_line);
@@ -120,13 +131,14 @@ QList<VideoNodeType> EffectNode::availableNodeTypes() {
             }
             passes.back().append(next_line);
         }
-        nodeType.nInputs = QVariant::fromValue(props["inputCount"]).value<int>();
-        nodeType.description = QVariant::fromValue(props["description"]).value<QString>();
-        nodeType.author = QVariant::fromValue(props["author"]).value<QString>();
+        t->setInputCount(QVariant::fromValue(props["inputCount"]).value<int>());
+        t->setDescription(QVariant::fromValue(props["description"]).value<QString>());
+        t->setAuthor(QVariant::fromValue(props["author"]).value<QString>());
 
-        types.append(nodeType);
+        res.append(t);
     }
-    return types;
+    return res;
+}};
 }
 
 void EffectNode::onInitialized() {

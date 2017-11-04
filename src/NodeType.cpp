@@ -1,12 +1,18 @@
 #include "NodeType.h"
 #include "VideoNode.h"
+#include "NodeRegistry.h"
 
-NodeType::NodeType(QObject *p)
+NodeType::NodeType(NodeRegistry *r, QObject *p)
 : QObject(p)
+, m_registry(r)
 {
 }
 NodeType::~NodeType() = default;
 
+NodeRegistry *NodeType::registry() const
+{
+    return m_registry;
+}
 QString NodeType::name() const
 {
     return m_name;
@@ -50,11 +56,16 @@ void NodeType::setAuthor(QString n)
 }
 void NodeType::isReady()
 {
-    if(!ready()) {
-        m_ready = true;
-        emit readyChanged();
+    setReady(true);
+}
+void NodeType::setReady(bool r)
+{
+    if(r != ready()) {
+        m_ready = r;
+        emit readyChanged(r);
     }
 }
+
 void NodeType::setInputCount(int n)
 {
     if(n != inputCount()) {

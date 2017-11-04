@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
@@ -10,6 +11,14 @@
 #include <QOpenGLFramebufferObject>
 
 class EffectNode;
+class EffectType : public NodeType {
+    Q_OBJECT
+public:
+    EffectType(NodeRegistry *r = nullptr, QObject *p = nullptr);
+   ~EffectType() override;
+public slots:
+    VideoNode *create(QString) override;
+};
 
 // This struct extends the VideoNodeRenderState
 // to add additional state to each render pipeline.
@@ -68,8 +77,6 @@ public:
     ~EffectNode();
 
     QString serialize() override;
-    bool deserialize(const VideoNodeType &vnt, const QString &arg) override;
-    static QList<VideoNodeType> availableNodeTypes();
 
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;

@@ -1,4 +1,5 @@
 #include "ImageNode.h"
+#include "ProbeReg.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -6,6 +7,21 @@
 #include <QImageReader>
 #include "Paths.h"
 #include "main.h"
+
+
+ImageType::ImageType(NodeRegistry *r , QObject *p )
+: NodeType(r,p)
+{ }
+ImageType::~ImageType() = default;
+VideoNode *ImageType::create(QString arg)
+{
+    auto node = new ImageNode();
+    if(node) {
+        node->setInputCount(inputCount());
+        node->setImagePath(name());
+    }
+    return node;
+}
 
 ImageNode::ImageNode()
     : m_openGLWorker(new ImageNodeOpenGLWorker(this))
@@ -34,14 +50,9 @@ QString ImageNode::serialize() {
     return m_imagePath;
 }
 
-bool ImageNode::deserialize(const VideoNodeType &vnt, const QString & arg) {
-    setImagePath(vnt.name);
-    setInputCount(vnt.nInputs);
-    return true;
-}
-
-QList<VideoNodeType> ImageNode::availableNodeTypes() {
-    QList<VideoNodeType> types;
+namespace {
+TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
+    auto res = QList<NodeType*>{};
 
     QStringList images;
     QDir imgDir(Paths::library() + QString("images/"));
@@ -50,17 +61,16 @@ QList<VideoNodeType> ImageNode::availableNodeTypes() {
     for (auto imageName : imgDir.entryList()) {
         if (imageName[0] == '.')
             continue;
-
-        QString name = imageName;
-        VideoNodeType nodeType = {
-            .name = name,
-            .description = imageName,
-            .author = QString(),
-            .nInputs = 1,
-        };
-        types.append(nodeType);
+        auto t = new ImageType(r);
+        if(!t)
+            continue;
+        t->setName(imageName);
+        t->setDescription(imageName);
+        t->setInputCount(1);
+        res.append(t);
     }
-    return types;
+    return res;
+}};
 }
 
 void ImageNode::onInitialized() {
