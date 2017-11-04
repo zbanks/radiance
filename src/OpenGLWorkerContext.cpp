@@ -62,7 +62,7 @@ OpenGLWorkerContext::~OpenGLWorkerContext() {
 }
 
 void OpenGLWorkerContext::initialize() {
-    m_context = new QOpenGLContext();
+/*    m_context = new QOpenGLContext();
     auto scontext = QOpenGLContext::globalShareContext();
     if(scontext) {
         m_context->setFormat(scontext->format());
@@ -82,7 +82,7 @@ void OpenGLWorkerContext::initialize() {
         surface->create();
         surface->setParent(m_context);
         m_surface = surface;
-    }
+    }*/
     makeCurrent();
 }
 
