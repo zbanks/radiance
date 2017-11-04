@@ -10,6 +10,6 @@ void main(void) {
     else freq = 1.;
 
     if(freq > 0) {
-        fragColor *= 1. - ((1. - sawtooth(iTime / freq, 0.2)) * iIntensity* min(3. * iAudioLevel, 1.));
+        fragColor *= 1. - ((1. - sawtooth(iTime / freq, 0.2)) * smoothstep(0., 0.2, iIntensity) * min(3. * iAudioLevel, 1.));
     }
 }

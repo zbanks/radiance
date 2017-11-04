@@ -17,7 +17,7 @@ void main(void) {
         // Store a vec4 of parameters for each crack
         // .xy is the center point
         // .zw is the direction vector
-        vec4 crackParameters = texture(iNoise, vec2(i, floor(t)) * onePixel * aspectCorrection);
+        vec4 crackParameters = texture(iNoise, vec2(i + floor(t)) * onePixel * aspectCorrection);
         crackParameters.zw = crackParameters.zw - 0.5;
         crackParameters.zw /= length(crackParameters.zw);
 
@@ -42,7 +42,7 @@ void main(void) {
     perturb *= 1. - 2. * abs(uv - 0.5);
 
     // Perturb to the beat
-    perturb *= sawtooth(t, 0.01);
+    //perturb *= sawtooth(t, 0.01);
 
     // Perturb proprtional to intensity, but not on crack lines
     fragColor = texture(iInput, uv - perturb * 0.1 * (1.2 - iIntensity) * (1. - line));
