@@ -42,18 +42,16 @@ ApplicationWindow {
 
     Action {
         id: saveAction
-        shortcut: "C-s"
+        shortcut: "Ctrl+S"
         onTriggered: {
-            console.log("saving");
             model.saveFile("radiance_state.json");
         }
     }
 
     Action {
         id: loadAction
-        shortcut: "C-r"
+        shortcut: "Ctrl+R"
         onTriggered: {
-            console.log("loading");
             model.loadFile("radiance_state.json");
             model.flush();
         }
