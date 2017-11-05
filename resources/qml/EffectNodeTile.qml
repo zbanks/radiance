@@ -13,6 +13,7 @@ VideoNodeTile {
     property int attachedParameter: -1
 
     onVideoNodeChanged: {
+        tile.intensity = videoNode.intensity;
         videoNode.intensity = Qt.binding(function() { return slider.value });
     }
 

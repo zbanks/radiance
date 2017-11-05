@@ -26,6 +26,7 @@ VideoNode *EffectType::create(QString arg)
         node->setName(name());
         auto ok = false;
         auto intensity = arg.toFloat(&ok);
+        
         if(ok) {
             node->setIntensity(intensity);
         }

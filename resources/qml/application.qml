@@ -40,28 +40,44 @@ ApplicationWindow {
         }
     }
 
+    Action {
+        id: saveAction
+        shortcut: "C-s"
+        onTriggered: {
+            console.log("saving");
+            model.saveFile("radiance_state.json");
+        }
+    }
+
+    Action {
+        id: loadAction
+        shortcut: "C-r"
+        onTriggered: {
+            console.log("loading");
+            model.loadFile("radiance_state.json");
+            model.flush();
+        }
+    }
+
+    Timer {
+        repeat: true
+        running: true
+        interval: 10 * 1000
+        onTriggered: saveAction.trigger()
+    }
+
+    onClosing: {
+        saveAction.trigger();
+    }
+
+    /*
     // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
-    EffectNode {
-        id: en
-        name: "test"
-    }
-    EffectNode {
-        id: en2
-        name: "flow"
-    }
-    EffectNode {
-        id: en3
-        name: "tunnel"
-    }
-    EffectNode {
-        id: en4
-        name: "yellow"
-    }
     EffectNode {
         id: cross
         name: "crossfader"
         inputCount: 2
     }
+    */
 
     OutputWindow {
         id: outputWindow
@@ -100,29 +116,19 @@ ApplicationWindow {
     Component.onCompleted: {
         Globals.context = globalContext;
         globalContext.outputs = [outputItem.output, outputImageSequence];
-        model.addVideoNode(en);
-        model.addVideoNode(en2);
-        model.addVideoNode(en3);
-        model.addVideoNode(en4);
-        model.addVideoNode(cross);
 
-        model.addEdge(en, en2, 0);
-        model.addEdge(en2, en3, 0);
-        model.addEdge(en3, en4, 0);
-        model.addEdge(en4, cross, 0);
-
-        //var video = model.createVideoNode("youtube:zedd clarity");
-        var video = model.createVideoNode("nyancat.gif");
-        model.addEdge(video, en, 0);
-
-        var n1 = model.createVideoNode("test");
-        var n2 = model.createVideoNode("interstellar");
-        var n3 = model.createVideoNode("nogreen");
-        model.addEdge(n1, n2, 0);
-        model.addEdge(n2, n3, 0);
-        model.addEdge(n3, cross, 1);
-        model.flush();
-
+        loadAction.trigger();
+        if (model.vertices.length == 0) {
+            // If the state was empty, then open up a few nodes as a demo
+            var n1 = model.createVideoNode("nyancat.gif");
+            var n2 = model.createVideoNode("test:0.4");
+            var n3 = model.createVideoNode("interstellar:0.1");
+            var cross = model.createVideoNode("crossfader");
+            model.addEdge(n1, n2, 0);
+            model.addEdge(n2, n3, 0);
+            model.addEdge(n3, cross, 0);
+            model.flush();
+        }
     }
 
     ColumnLayout {
@@ -175,15 +181,11 @@ ApplicationWindow {
 
             Button {
                 text: "Save"
-                onClicked: {
-                    model.saveFile("radiance_state.json");
-                }
+                action: saveAction
             }
             Button {
                 text: "Load"
-                onClicked: {
-                    model.loadFile("radiance_state.json");
-                }
+                action: loadAction
             }
             Button {
                 text: "Clear"
