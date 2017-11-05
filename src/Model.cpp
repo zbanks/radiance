@@ -546,6 +546,12 @@ QJsonObject Model::serialize() {
     }
     jsonOutput["edges"] = jsonEdges;
 
+    QJsonObject jsonOutputConnections;
+    for (auto outputName : m_outputConnections.keys()) {
+        jsonOutputConnections[outputName] = QString::number(m_outputConnections[outputName]->id());
+    }
+    jsonOutput["outputConnections"] = jsonOutputConnections;
+
     return jsonOutput;
 }
 
@@ -567,6 +573,11 @@ void Model::deserialize(const QJsonObject &data) {
         VideoNode *toVertex = addedVertices.value(jsonEdge["toVertex"].toString());
         int toInput = jsonEdge["toInput"].toInt();
         addEdge(fromVertex, toVertex, toInput);
+    }
+
+    QJsonObject jsonOutputConnections = data["outputConnections"].toObject();
+    for (auto outputName : jsonOutputConnections.keys()) {
+        connectOutput(outputName, addedVertices.value(jsonOutputConnections[outputName].toString()));
     }
 }
 

@@ -55,14 +55,18 @@ BaseVideoNodeTile {
         var outputWidth = 300;
         var normalHeight = 170;
         var normalWidth = 150;
-        minInputHeight = outputName ? max(normalHeight, outputHeight / inputHeights.length) : normalHeight;
+        var blockHeight = normalHeight;
 
-        var shrinkageY = (inputHeights[0] - minInputHeight) / 2;
-        var shrinkageHeight = -(inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
+        if (inputHeights) {
+            minInputHeight = outputName ? max(normalHeight, outputHeight / inputHeights.length) : normalHeight;
 
-        // Y
+            var shrinkageY = (inputHeights[0] - minInputHeight) / 2;
+            var shrinkageHeight = -(inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
+            blockHeight = sum(inputHeights) + shrinkageHeight;
+        }
+
+        // Ys
         y = posY + padding + shrinkageY;
-        var blockHeight = sum(inputHeights) + shrinkageHeight;
         height = blockHeight - 2 * padding;
 
         // X

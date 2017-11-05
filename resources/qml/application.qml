@@ -240,7 +240,11 @@ ApplicationWindow {
     Action {
         id: quitAction
         text: "&Quit"
-        onTriggered: Qt.quit()
+        shortcut: "Ctrl+Q"
+        onTriggered: {
+            saveAction.trigger()
+            Qt.quit()
+        }
     }
 
     Action {
