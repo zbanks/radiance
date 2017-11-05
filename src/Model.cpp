@@ -111,6 +111,10 @@ void Model::addVideoNode(VideoNode *videoNode) {
     if (!m_vertices.contains(videoNode)) {
         prepareNode(videoNode);
         m_vertices.append(videoNode);
+        m_actionStack << ModelAction {
+            ModelAction::ADD_VIDEONODE,
+            videoNode,
+        };
     }
 }
 
@@ -122,14 +126,24 @@ void Model::removeVideoNode(VideoNode *videoNode) {
         auto edgeCopy = i.next();
         if (edgeCopy.fromVertex == videoNode || edgeCopy.toVertex == videoNode) {
             i.remove();
+            m_actionStack << ModelAction {
+                ModelAction::REMOVE_EDGE,
+                edgeCopy.fromVertex,
+                edgeCopy.toVertex,
+                edgeCopy.toInput,
+            };
         }
     }
 
     disownNode(videoNode);
     m_vertices.removeAll(videoNode);
+    m_actionStack << ModelAction {
+        ModelAction::REMOVE_VIDEONODE,
+        videoNode,
+    };
 
     if (videoNode->parent() == this) {
-        videoNode->deleteLater();
+        //videoNode->deleteLater(); // XXX yell at @zbanks if this is committed
     }
 }
 
@@ -171,6 +185,12 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
         qWarning() << "Not adding edge because it would create a cycle: " << fromVertex << toVertex << toInput;
         return;
     }
+    m_actionStack << ModelAction {
+        ModelAction::ADD_EDGE,
+        fromVertex,
+        toVertex,
+        toInput,
+    };
 }
 
 void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
@@ -191,6 +211,12 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
          && edgeCopy.toVertex == toVertex
          && edgeCopy.toInput == toInput) {
             i.remove();
+            m_actionStack << ModelAction {
+                ModelAction::REMOVE_EDGE,
+                edgeCopy.fromVertex,
+                edgeCopy.toVertex,
+                edgeCopy.toInput,
+            };
             break;
         }
     }
@@ -403,6 +429,8 @@ void Model::flush() {
         m_edgesForRendering = m_edges;
         m_verticesSortedForRendering = topoSort();
         m_outputConnectionsForRendering = m_outputConnections;
+        m_actionStack << ModelAction { ModelAction::FLUSH };
+        debugActionStack();
     }
 
     // Convert the changeset to VariantLists for QML
@@ -591,3 +619,49 @@ void Model::saveFile(QString filename) {
     QJsonDocument doc(serialize());
     file.write(doc.toJson());
 }
+
+void Model::debugActionStack() {
+    qInfo() << "Model Action Stack:";
+    const char * names[] = {
+        "FLUSH", "ADD_VIDEONODE", "REMOVE_VIDEONODE", "ADD_EDGE", "REMOVE_EDGE", "CONNECT_OUTPUT",
+    };
+    for (auto action : m_actionStack) {
+        qInfo() << names[action.action] << action.videoNode << action.toVideoNode << action.toInput << action.outputName;
+    }
+}
+
+void Model::undo() {
+    bool doneAnything = false;
+    const char * names[] = {
+        "FLUSH", "ADD_VIDEONODE", "REMOVE_VIDEONODE", "ADD_EDGE", "REMOVE_EDGE", "CONNECT_OUTPUT",
+    };
+    const auto actionStackCopy = m_actionStack;
+    for (auto i = actionStackCopy.crbegin(); i != actionStackCopy.crend(); ++i) {
+        ModelAction action = *i;
+        qInfo() << "UNDO:" << names[action.action] << action.videoNode << action.toVideoNode << action.toInput << action.outputName;
+
+        switch (action.action) {
+        case ModelAction::FLUSH:
+            break;
+        case ModelAction::ADD_VIDEONODE:
+            removeVideoNode(action.videoNode);
+            break;
+        case ModelAction::REMOVE_VIDEONODE:
+            addVideoNode(action.videoNode);
+            break;
+        case ModelAction::ADD_EDGE:
+            removeEdge(action.videoNode, action.toVideoNode, action.toInput);
+            break;
+        case ModelAction::REMOVE_EDGE:
+            addEdge(action.videoNode, action.toVideoNode, action.toInput);
+            break;
+        }
+        if (action.action == ModelAction::FLUSH && doneAnything)
+            break;
+        if (action.action != ModelAction::FLUSH)
+            doneAnything = true;
+    }
+    if (doneAnything)
+        flush();
+}
+

@@ -240,7 +240,20 @@ ApplicationWindow {
     Action {
         id: quitAction
         text: "&Quit"
-        onTriggered: Qt.quit()
+        shortcut: "Ctrl+Q"
+        onTriggered: {
+            saveAction.trigger()
+            Qt.quit()
+        }
+    }
+
+    Action {
+        id: undoAction
+        text: "&Undo"
+        shortcut: "Ctrl+Z"
+        onTriggered: {
+            model.undo();
+        }
     }
 
     Action {

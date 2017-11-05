@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QDebug>
 #include <QList>
-#include <QVector>
 #include <QVariantList>
 #include <QJsonObject>
 
@@ -16,6 +15,28 @@ struct Edge {
 public:
     QVariantMap toVariantMap() const;
     bool operator==(const Edge &other) const;
+};
+
+// For action/undo stack 
+struct ModelAction {
+    enum {
+        FLUSH,
+        ADD_VIDEONODE,
+        REMOVE_VIDEONODE,
+        ADD_EDGE,
+        REMOVE_EDGE,
+        //CONNECT_OUTPUT, probably needs two?
+    } action;
+    // The following fields are union-like, not all are used for all action types:
+    
+    // ADD_VIDEONODE, REMOVE_VIDEONODE, ADD_EDGE, REMOVE_EDGE, CONNECT_OUTPUT
+    VideoNode * videoNode; //QSharedPointer<VideoNode> videoNode;
+    // ADD_EDGE, REMOVE_EDGE, (CONNECT_OUTPUT?)
+    VideoNode * toVideoNode; //QSharedPointer<VideoNode> toVideoNode;
+    // ADD_EDGE, REMOVE_EDGE
+    int toInput;
+    // CONNECT_OUTPUT
+    QString outputName;
 };
 
 // Return type of graphCopy
@@ -137,6 +158,9 @@ public slots:
     void loadFile(QString filename);
     void saveFile(QString filename);
 
+    void debugActionStack();
+    void undo();
+
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)
     // with the interim changes
@@ -167,6 +191,7 @@ private:
     QVector<VideoNode *> m_verticesSortedForRendering;
     QMap<QString, VideoNode *> m_outputConnections;
     QMap<QString, VideoNode *> m_outputConnectionsForRendering;
+    QList<ModelAction> m_actionStack;
 
     // m_vertices and m_edges can be
     // read from or written to by the render thread.
