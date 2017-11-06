@@ -83,4 +83,37 @@ Keyboard Shortcuts
 - `q` - Close output window
 - `:` - Load node
 
+Shader Effects
+--------------
+
+Radiance generates video from a set of connected "VideoNodes." Most commonly, these nodes are based on OpenGL fragment shaders, but can also be static images, GIFs, or videos. Each node takes one or more inputs and produces exactly one output.
+
+Each OpenGL fragment shader node is described by a single `.glsl` file in [`resources/library/effects`](https://github.com/zbanks/radiance/tree/master/resources/library/effects).
+
+For the most part, these files are plain GLSL describing the fragment shader. This is similar to setups on shadertoy.com or glslsandbox.com . Each shader defines a function `void main(void)` which sets a pixel color `vec4 fragColor` for a given coordinate `vec2 uv`. `fragColor` is an RGBA color with pre-multiplied alpha: so white with 40% opacity is encoded as `vec4(0.4, 0.4, 0.4, 0.4)`. The coodinate `uv` has `x` and `y` values in the range `[0.0, 1.0]` with `vec2(0., 0.)` corresponding to the lower-left corner.
+
+The shader also has access to its input(s) as textures through the `iInput` (or `iInputs[]`) uniforms.
+
+In addition, each shader has access to additional uniforms which are documented in [`resources/effects/*.glsl`](https://github.com/zbanks/radiance/tree/master/resources/library/effects). The most important is `iIntensity`, which is a value in the range `[0.0, 1.0]` which is mapped to a slider in the UI that the user controls. There is a limitation of having *exactly one* input slider per effect: this is intentional to reduce the cognitive overhead on the end user. Other variables include information about the current audio or time.
+
+### Invariants
+
+Each shader must follow these properties:
+
+* The `fragColor` set by each shader must be a valid, pre-multiplied alpha, RGBA tuple. Each component of the `vec4` must be in the range `[0.0, 1.0]`, and the RGB components must be less than or equal to the A component. (See `afixhighlight` for a shader that will highlight errors here in pink)
+* Identity: the shader must pass through its first input completely unchanged when `iIntensity == 0.` This means that inserting a new shader should not effect the output until it's intensity is increased.
+
+
+### Multi-buffer Shader Effects
+
+Some effects cannot be accomplished with a single fragment shader pass. An effect can consist of a series of shaders, separated by `#buffershader`. Each shader renders to a texture in `iChannels[]` (e.g. the first renders to `iChannels[0]`). The shaders are rendered in backwards-order, so the last shader is rendered first. Only the output of the first shader is displayed -- the other buffers persist between frames but are not exposed to other nodes.
+
+An example that uses this feature is [`foh.glsl`](https://github.com/zbanks/radiance/blob/master/resources/library/effects/foh.glsl). This implements an (exponential) "first-order hold" - it samples the input texture on a multiple of the beat and stores it in `iChannel[1]`.
+
+
+
+Copyright & License
+-------------------
+
 Released under the MIT/X11 License. Copyright 2016 Zach Banks and Eric Van Albert.
+

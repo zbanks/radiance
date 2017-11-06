@@ -11,10 +11,10 @@ Additionally, please file an issue if you have any issues building or running ra
 ## Writing GLSL effects
 
 Currently, radiance has about 80 GLSL effects which live in 
-[`resources/effects/*.glsl`](https://github.com/zbanks/radiance/tree/master/resources/effects)
+[`resources/effects/*.glsl`](https://github.com/zbanks/radiance/tree/master/resources/library/effects)
 files.
 
-A good example is [`vu.glsl`](https://github.com/zbanks/radiance/blob/master/resources/effects/vu.glsl).
+A good example is [`vu.glsl`](https://github.com/zbanks/radiance/blob/master/resources/library/effects/vu.glsl).
 
 Also see [`effect_header.glsl`](https://github.com/zbanks/radiance/blob/master/resources/glsl/effect_header.glsl)
 to see what uniforms and functions are available to use.
