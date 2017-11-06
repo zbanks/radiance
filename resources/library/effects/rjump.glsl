@@ -11,7 +11,7 @@ void main(void) {
     else
         t = iTime;
 
-    float deviation = mod(3. * floor(t), 8.) / 8.;
+    float deviation = mod(2. * floor(t), 8.) / 8.;
     deviation *= clamp(iIntensity / 0.8, 0., 1.);
 
     vec3 hsv = rgb2hsv(fragColor.rgb);

@@ -41,7 +41,8 @@ void main(void) {
     alive *= step(0.05, iIntensity); // to reset
 
     // Make there be life if there is sufficient input color
-    float lifeFromInput = step(0.5, smoothstep(0., 3., dot(vec3(1.), source.rgb)));
+    //float lifeFromInput = step(0.5, smoothstep(0., 3., dot(vec3(1.), source.rgb)));
+    float lifeFromInput = step(0.9, max(source.r, max(source.g, source.b)));
     alive = max(alive, lifeFromInput);
     alive *= step(0.1, texture(iChannel[2], normCoord).a); // Kill stable life if there is no color
 
@@ -55,5 +56,5 @@ void main(void) {
 // outside of what currently has color
 
 void main(void) {
-    fragColor = composite(texture(iChannel[2], uv) * 0.95, texture(iInput, uv));
+    fragColor = composite(texture(iChannel[2], uv) * mix(0.95, 0.995, iIntensity), texture(iInput, uv));
 }
