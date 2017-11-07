@@ -15,19 +15,18 @@
 #include "main.h"
 
 EffectType::EffectType(NodeRegistry *r , QObject *p )
-: NodeType(r,p)
-{ }
+    : NodeType(r,p) {
+
 EffectType::~EffectType() = default;
-VideoNode *EffectType::create(QString arg)
-{
+VideoNode *EffectType::create(QString arg) {
     auto node = new EffectNode();
-    if(node) {
+    if ( node ) {
         node->setInputCount(inputCount());
         node->setName(name());
         auto ok = false;
         auto intensity = arg.toFloat(&ok);
-        
-        if(ok) {
+
+        if ( ok ) {
             node->setIntensity(intensity);
         }
     }
@@ -467,29 +466,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         emit fatal(QString("No shaders found for \"%1\"").arg(name));
         return false;
     }
-/*    auto mo = m_p->metaObject();
-    if(!props.isEmpty()) {
-        for(auto i = props.cbegin(),e = props.cend(); i!= e; ++i) {
-            auto prop_name = i.key().trimmed().toLocal8Bit();
-            auto mpi = mo->indexOfProperty(prop_name.constData());
-            if(mpi < 0) {
-                qDebug() << "couldn't find property" << prop_name.constData();
-                continue;
-            }
-            auto mp  = mo->property(mpi);
-            if(!mp.isValid()) {
-                qDebug() << "not a valid property" << prop_name.constData();
-                continue;
-            }
-            auto success = mp.write(m_p, i.value());
-            if(success) {
-                qDebug() << "wrote " << mp.name() << " to value " << i.value();
-            }else{
-                qDebug() << "failed to write " << mp.name() << " to value " << i.value();
 
-            }
-        }
-    }*/
     {
         QMutexLocker locker(&m_p->m_stateLock);
         m_p->m_programs = programs;

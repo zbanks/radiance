@@ -26,11 +26,10 @@ class TypeRegistry : public ProbeRegistry {
 public:
     template<class F>
     TypeRegistry(F && f)
-    : ProbeRegistry()
-    , m_f(std::forward<F>(f))
-    { }
-    QList<NodeType*> probe(NodeRegistry * nr) const override
-    {
+        : ProbeRegistry()
+        , m_f(std::forward<F>(f)) {
+    }
+    QList<NodeType*> probe(NodeRegistry * nr) const override {
         return m_f(nr);
     }
 };

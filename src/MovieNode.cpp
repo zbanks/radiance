@@ -11,16 +11,15 @@
 #include "main.h"
 
 MovieType::MovieType(NodeRegistry *r , QObject *p )
-: NodeType(r,p)
-{ }
+    : NodeType(r,p) {
+}
 MovieType::~MovieType() = default;
-QString MovieType::pathFormat() const
-{
+QString MovieType::pathFormat() const {
     return m_pathFormat;
 }
 void MovieType::setPathFormat(QString fmt)
 {
-    if(fmt != pathFormat()) {
+    if (fmt != pathFormat()) {
         m_pathFormat = fmt;
         emit pathFormatChanged(pathFormat());
     }
@@ -29,7 +28,7 @@ VideoNode *MovieType::create(QString arg)
 {
     auto pth = pathFormat().arg(arg);
     auto node = new MovieNode();
-    if(node) {
+    if (node) {
         node->setInputCount(inputCount());
         node->setVideoPath(pth);
     }
@@ -599,15 +598,15 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "}\n"};
 
     m_p->m_blitShader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
-    if(!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
+    if (!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
         emit fatal("Could not compile vertex shader");
         return false;
     }
-    if(!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
+    if (!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
         emit fatal("Could not compile fragment shader");
         return false;
     }
-    if(!m_p->m_blitShader->link()) {
+    if (!m_p->m_blitShader->link()) {
         emit fatal("Could not link shader program");
         return false;
     }

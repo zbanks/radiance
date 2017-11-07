@@ -6,8 +6,7 @@
 #include <QRegularExpression>
 
 NodeRegistry::NodeRegistry(QObject *p)
-: QObject(p)
-{
+    : QObject(p) {
 }
 NodeRegistry::~NodeRegistry() = default;
 
@@ -53,13 +52,13 @@ QVariantMap NodeRegistry::qmlNodeTypes() {
 }
 
 void NodeRegistry::reload() {
-    for(auto && vnt : m_nodeTypes.values()) {
+    for (auto && vnt : m_nodeTypes.values()) {
         delete vnt;
     }
     m_nodeTypes.clear();
 
     auto nodeTypesList = ProbeRegistry::probeAll(this);
-    for(auto vnt : nodeTypesList) {
+    for (auto vnt : nodeTypesList) {
         vnt->setParent(this);
         if(m_nodeTypes.contains(vnt->name()))
             delete vnt;

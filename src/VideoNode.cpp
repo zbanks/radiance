@@ -3,18 +3,15 @@
 #include <QDebug>
 
 VideoNode::VideoNode()
-    : m_inputCount(0)
-{
+    : m_inputCount(0) {
 }
 
 VideoNode::VideoNode(const VideoNode &other)
     : m_inputCount(other.m_inputCount)
-    , m_id(other.m_id)
-{
+    , m_id(other.m_id) {
 }
 
-VideoNode::~VideoNode() {
-}
+VideoNode::~VideoNode() = default;
 
 int VideoNode::inputCount() {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -24,7 +21,7 @@ int VideoNode::inputCount() {
 void VideoNode::setInputCount(int value) {
     Q_ASSERT(QThread::currentThread() == thread());
 
-    if(value != m_inputCount) {
+    if (value != m_inputCount) {
         {
             QMutexLocker locker(&m_stateLock);
             m_inputCount = value;

@@ -10,13 +10,12 @@
 
 
 ImageType::ImageType(NodeRegistry *r , QObject *p )
-: NodeType(r,p)
-{ }
+    : NodeType(r,p) {
+}
 ImageType::~ImageType() = default;
-VideoNode *ImageType::create(QString arg)
-{
+VideoNode *ImageType::create(QString arg) {
     auto node = new ImageNode();
-    if(node) {
+    if (node) {
         node->setInputCount(inputCount());
         node->setImagePath(name());
     }
@@ -43,8 +42,7 @@ ImageNode::ImageNode(const ImageNode &other)
     , m_ready(other.m_ready) {
 }
 
-ImageNode::~ImageNode() {
-}
+ImageNode::~ImageNode() = default;
 
 QString ImageNode::serialize() {
     return m_imagePath;
@@ -90,7 +88,7 @@ void ImageNode::periodic() {
 
     // Lock this because we need to use m_frameTextures
     QMutexLocker locker(&m_stateLock);
-    if(!m_frameTextures.size())
+    if (!m_frameTextures.size())
         return;
     // TODO: actually use m_frameDelays, also this has a discontinuity at MAX_BEAT
     m_currentTextureIdx = (int) (6.0 * timebase->beat()) % m_frameTextures.size();
@@ -166,7 +164,7 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
     QFile file(filename);
 
     QFileInfo check_file(filename);
-    if(!(check_file.exists() && check_file.isFile())) {
+    if (!(check_file.exists() && check_file.isFile())) {
         qWarning() << "Could not find" << filename;
         return false;
     }
