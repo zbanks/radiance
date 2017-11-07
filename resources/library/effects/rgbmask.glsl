@@ -1,4 +1,5 @@
 #property description Use the R, G, B channels of the first input to mask the other 3 inputs
+#property inputCount 4
 
 void main() {
     vec4 m = texture(iInputs[0], uv);
