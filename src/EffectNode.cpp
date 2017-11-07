@@ -16,7 +16,7 @@
 
 EffectType::EffectType(NodeRegistry *r , QObject *p )
     : NodeType(r,p) {
-
+}
 EffectType::~EffectType() = default;
 VideoNode *EffectType::create(QString arg) {
     auto node = new EffectNode();
