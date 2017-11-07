@@ -532,7 +532,18 @@ void MovieNodeOpenGLWorker::onVideoChanged() {
         QMutexLocker locker(&m_p->m_stateLock);
         if (m_p->m_videoPath.isEmpty()) return;
         //filename = QString("../resources/videos/%1").arg(m_p->m_videoPath);
-        filename = QString("%1").arg(m_p->m_videoPath);
+        if (m_p->m_videoPath.contains("|")) {
+            auto parts = m_p->m_videoPath.split("|");
+            filename = QString("%1").arg(parts.at(0));
+            for (int i = 1; i + 1 < parts.count(); i += 2) {
+                auto k = parts.at(i);
+                auto v = parts.at(i + 1);
+                // This is a bit of hack, if the videoPath is changed the properties will not be cleared
+                mpv_set_property_string(m_mpv, k.toLatin1().data(), v.toLatin1().data());
+            }
+        } else {
+            filename = QString("%1").arg(m_p->m_videoPath);
+        }
     }
 
     QFileInfo check_file(filename);
