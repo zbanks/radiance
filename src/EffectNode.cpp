@@ -421,7 +421,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         );
     auto passes = QVector<QStringList>{QStringList{"#line 0"}};
     auto props  = QMap<QString,QString>{{"inputCount","1"}};
-    auto lineno = 0;
+    auto lineno = 1;
     for(auto next_line = QString{}; stream.readLineInto(&next_line);++lineno) {
         {
             auto m = property_reg.match(next_line);
