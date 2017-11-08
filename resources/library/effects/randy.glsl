@@ -1,4 +1,4 @@
-#property description Obnoxiously zoom and rotate
+#property description Obnoxiously zoom and rotate ( in honor of  Raaaaandy Seidman )
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
