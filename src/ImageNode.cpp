@@ -116,6 +116,7 @@ void ImageNode::setImagePath(QString imagePath) {
 
 // See comments in ImageNode.h about these 3 functions
 QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
+    //periodic();
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 
