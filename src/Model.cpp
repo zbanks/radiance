@@ -494,6 +494,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
         }
     }
     vao.release();
+    vao.destroy();
     return result;
 }
 

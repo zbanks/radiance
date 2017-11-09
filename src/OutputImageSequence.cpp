@@ -61,10 +61,10 @@ public slots:
     }
 
     void stop() {
+        m_timer->stop();
         m_timer = QSharedPointer<QTimer>(nullptr);
         m_fbo = QSharedPointer<QOpenGLFramebufferObject>(nullptr);
         m_blitter = QSharedPointer<QOpenGLTextureBlitter>(nullptr);
-        emit stopped();
     }
 
 protected slots:
@@ -72,9 +72,6 @@ protected slots:
         makeCurrent();
         m_p->requestRender();
     }
-
-signals:
-    void stopped();
 
 protected:
     OutputImageSequence *m_p;
@@ -96,11 +93,11 @@ OutputImageSequence::OutputImageSequence()
     m_context->thread()->start();
     m_context->thread()->setObjectName("OutputImageSequenceOpenGLWorkerContextThread");
 
-    connect(this, &QObject::destroyed, this, &OutputImageSequence::onDestroyed);
     setChain(QSharedPointer<Chain>(new Chain(m_size)));
 }
 
 OutputImageSequence::~OutputImageSequence() {
+    join();
     m_context->deleteLater();
 //    m_context->thread()->quit();
 //    m_context->thread()->wait();
@@ -112,7 +109,7 @@ void OutputImageSequence::setEnabled(bool enabled) {
         if (m_chain->size() != m_size) {
             setChain(QSharedPointer<Chain>(new Chain(m_size)));
         }
-        m_worker = QSharedPointer<OutputImageSequenceWorker>(new OutputImageSequenceWorker(this, m_frameDelay, m_filename, m_size));
+        m_worker = QSharedPointer<OutputImageSequenceWorker>(new OutputImageSequenceWorker(this, m_frameDelay, m_filename, m_size),&QObject::deleteLater);
         bool result = QMetaObject::invokeMethod(m_worker.data(), "start");
         Q_ASSERT(result);
 
@@ -128,21 +125,15 @@ void OutputImageSequence::setEnabled(bool enabled) {
 }
 
 void OutputImageSequence::join() {
-    if (!m_worker.isNull()) {
-        QEventLoop loop;
-        connect(m_worker.data(), &OutputImageSequenceWorker::stopped, &loop, &QEventLoop::quit);
-        bool result = QMetaObject::invokeMethod(m_worker.data(), "stop");
+    if (m_worker) {
+        bool result = QMetaObject::invokeMethod(m_worker.data(), "stop", Qt::BlockingQueuedConnection);
         Q_ASSERT(result);
-        loop.exec();
+        m_worker.reset();
     }
 }
 
 bool OutputImageSequence::enabled() {
     return m_enabled;
-}
-
-void OutputImageSequence::onDestroyed() {
-    join();
 }
 
 QSize OutputImageSequence::size() {

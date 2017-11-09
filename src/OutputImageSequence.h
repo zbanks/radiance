@@ -44,7 +44,4 @@ protected:
     OpenGLWorkerContext *m_context;
 
     void join();
-
-protected slots:
-    void onDestroyed();
 };
