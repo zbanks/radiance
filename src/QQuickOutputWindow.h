@@ -8,7 +8,7 @@ class QQuickOutputWindow : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(QString screen READ screen WRITE setScreen NOTIFY screenChanged)
     Q_PROPERTY(QStringList availableScreens READ availableScreens NOTIFY availableScreensChanged)
-    Q_PROPERTY(QQuickWindow *window READ window CONSTANT)
+    Q_PROPERTY(QQuickWindow *outputWindow READ outputWindow CONSTANT)
     Q_PROPERTY(bool found READ found NOTIFY foundChanged)
 
 protected:
@@ -33,7 +33,7 @@ public slots:
     void setScreen(QString screen);
     QString screen();
     QStringList availableScreens();
-    QQuickWindow *window();
+    QQuickWindow *outputWindow();
     bool found();
 
 signals:

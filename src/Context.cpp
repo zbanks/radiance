@@ -3,7 +3,7 @@
 #include "Model.h"
 #include <memory>
 
-Context::Context(bool hasPreview) 
+Context::Context(bool hasPreview)
     : m_hasPreview(hasPreview)
     , m_previewSize(QSize(300, 300))
     , m_previewWindow(nullptr) {
@@ -58,9 +58,11 @@ void Context::setPreviewWindow(QQuickWindow *window) {
     Q_ASSERT(QThread::currentThread() == thread());
     {
         QMutexLocker locker(&m_previewLock);
-        if (m_previewWindow != nullptr) disconnect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing);
+        if (m_previewWindow )
+            disconnect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing);
         m_previewWindow = window;
-        if (m_previewWindow != nullptr) connect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing, Qt::DirectConnection);
+        if (m_previewWindow )
+            connect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &Context::onBeforeSynchronizing, Qt::DirectConnection);
     }
     emit previewWindowChanged(window);
 }

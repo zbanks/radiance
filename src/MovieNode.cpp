@@ -320,7 +320,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     // Textures are, however, so in the future maybe we can move
     // texture creation to initialize()
     // and leave lightweight FBO creation here
-    if(renderFbo.isNull() || renderFbo->size() != chain->size()) {
+    if(!renderFbo || renderFbo->size() != chain->size()) {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
         renderFbo = renderState->m_pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);

@@ -32,16 +32,16 @@ QQuickOutputItem::QQuickOutputItem()
 QQuickOutputItem::~QQuickOutputItem() {
 }
 
-void QQuickOutputItem::onWindowChanged(QQuickWindow *window) {
+void QQuickOutputItem::onWindowChanged(QQuickWindow *myWindow) {
     if(m_window ) {
         disconnect(m_window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
         disconnect(m_window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender);
     }
-    if(window ) {
-        connect(window, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
-        connect(window, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender, Qt::DirectConnection);
+    if(myWindow ) {
+        connect(myWindow, &QQuickWindow::frameSwapped, this, &QQuickItem::update);
+        connect(myWindow, &QQuickWindow::beforeSynchronizing, m_output.data(), &Output::requestRender, Qt::DirectConnection);
     }
-    m_window = window;
+    m_window = myWindow;
 }
 
 void QQuickOutputItem::updateChain() {
@@ -82,9 +82,14 @@ QSGNode *QQuickOutputItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData
     }
 
     if (m_textureId != 0) {
-        // TODO repeatedly creating the QSGTexture is probably not the most efficient
-        node->setTexture(window()->createTextureFromId(m_textureId, m_size, QQuickWindow::TextureHasAlphaChannel));
-        node->setRect(boundingRect());
+        auto tex = node->texture();
+        if(!tex || tex->textureId() != (int)m_textureId) {
+            tex = window()->createTextureFromId(m_textureId, m_size, QQuickWindow::TextureHasAlphaChannel);
+            tex->setFiltering(QSGTexture::Linear);
+            node->setTexture(tex);
+            // TODO repeatedly creating the QSGTexture is probably not the most efficient
+            node->setRect(boundingRect());
+        }
     }
     node->markDirty(QSGNode::DirtyMaterial); // Notifies all connected renderers that the node has dirty bits ;)
     return node;
