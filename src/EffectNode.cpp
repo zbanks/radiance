@@ -50,7 +50,7 @@ EffectNode::EffectNode()
 
 EffectNode::EffectNode(const EffectNode &other)
     : VideoNode(other)
-    , m_programs(other.m_programs)
+//    , m_programs(other.m_programs)
     , m_intensity(other.m_intensity)
     , m_intensityIntegral(other.m_intensityIntegral)
     , m_beatLast(other.m_beatLast)
@@ -58,12 +58,12 @@ EffectNode::EffectNode(const EffectNode &other)
     , m_realTimeLast(other.m_realTimeLast)
     , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready) {
-
+/*
     auto k = other.m_renderStates.keys();
     for (int i=0; i<k.count(); i++) {
         auto otherRenderState = other.m_renderStates.value(k.at(i));
         m_renderStates.insert(k.at(i), QSharedPointer<EffectNodeRenderState>(new EffectNodeRenderState(*otherRenderState)));
-    }
+    }*/
 }
 
 EffectNode::~EffectNode() {
@@ -146,13 +146,23 @@ TypeRegistry effect_registry{[](NodeRegistry *r) -> QList<NodeType*> {
 }
 
 void EffectNode::onInitialized() {
+    {
+        QMutexLocker locker(&m_stateLock);
+        for (auto key : m_renderStates.keys()) {
+            auto state = QSharedPointer<EffectNodeRenderState>::create();
+            m_openGLWorker->prepareState(state);
+            m_renderStates[key].swap(state);
+        }
+    }
     m_ready = true;
 }
 
 void EffectNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     QMutexLocker locker(&m_stateLock);
     for (int i=0; i<added.count(); i++) {
-        m_renderStates.insert(added.at(i), QSharedPointer<EffectNodeRenderState>(new EffectNodeRenderState()));
+        auto state = QSharedPointer<EffectNodeRenderState>::create();
+        m_openGLWorker->prepareState(state);
+        m_renderStates.insert(added.at(i), state);
     }
     for (int i=0; i<removed.count(); i++) {
         m_renderStates.remove(removed.at(i));
@@ -183,17 +193,23 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
     }
     auto renderState = m_renderStates[chain];
 
+    if(!renderState->ready())
+        return inputTextures.at(0);
     // FBO creation must happen here, and not in initialize,
     // because FBOs are not shared among contexts.
     // Textures are, however, so in the future maybe we can move
     // texture creation to initialize()
     // and leave lightweight FBO creation here
-    if(renderState->m_intermediate.isEmpty()) {
+    {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
-        for(int i = 0; i < m_programs.count() + 1; i++) {
-            auto fbo = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
-            renderState->m_intermediate.append(fbo);
+        for(auto & pass : renderState->m_passes) {
+            if(!pass.m_output) {
+                pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
+            }
+        }
+        if(!renderState->m_extra) {
+            renderState->m_extra = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
         }
     }
 
@@ -202,8 +218,9 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
     glDisable(GL_BLEND);
 
     {
-        auto chanTex = std::make_unique<GLuint[]>(m_programs.size());
-        std::iota(&chanTex[0], &chanTex[0] + m_programs.size(), 1 + m_inputCount);
+        auto chanTex = std::make_unique<GLuint[]>(renderState->size());
+        std::iota(&chanTex[0], &chanTex[0] + renderState->size(), 1 + m_inputCount);
+        std::reverse(&chanTex[0],&chanTex[0] + renderState->size());
         auto inputTex = std::make_unique<GLuint[]>(m_inputCount);
         std::iota(&inputTex[0], &inputTex[0] + m_inputCount, 0);
         auto   time = timebase->beat();
@@ -219,31 +236,28 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
         auto size = chain->size();
         glViewport(0, 0, size.width(), size.height());
 
-        for(int j = m_programs.count() - 1; j >= 0; j--) {
+        for(auto & pass : renderState->m_passes) {
             //qDebug() << "Rendering shader" << j << "onto" << (renderState->m_textureIndex + j + 1) % (m_programs.count() + 1);
-            auto fboIndex = (renderState->m_textureIndex + j + 1) % (m_programs.size() + 1);
-            auto & p = m_programs.at(j);
-
+            auto && p = pass.m_shader;
+            renderState->m_extra->bind();
             p->bind();
-            renderState->m_intermediate.at(fboIndex)->bind();
 
+            auto texCount = GL_TEXTURE0;
             for (int k = 0; k < m_inputCount; k++) {
-                glActiveTexture(GL_TEXTURE0 + k);
+                glActiveTexture(texCount++);
                 glBindTexture(GL_TEXTURE_2D, inputTextures.at(k));
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 
             }
 
-            glActiveTexture(GL_TEXTURE0 + m_inputCount);
+            glActiveTexture(texCount++);
             glBindTexture(GL_TEXTURE_2D, chain->noiseTexture());
-            for(int k=0; k<m_programs.size(); k++) {
-                glActiveTexture(GL_TEXTURE1 + m_inputCount + k);
-                glBindTexture(GL_TEXTURE_2D, renderState->m_intermediate.at((renderState->m_textureIndex + k + (j < k)) % (m_programs.size() + 1))->texture());
+            for(auto && op : renderState->m_passes) {
+                glActiveTexture(texCount++);
+                glBindTexture(GL_TEXTURE_2D, op.m_output->texture());
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-
-                //qDebug() << "Bind" << (renderState->m_textureIndex + k + (j < k)) % (m_programs.count() + 1) << "as chan" << k;
             }
             auto intense = qreal(intensity());
             p->setUniformValue("iIntensity", GLfloat(intense));
@@ -255,19 +269,19 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             p->setUniformValueArray("iInputs", &inputTex[0], m_inputCount);
             p->setUniformValue("iNoise", m_inputCount);
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
-            p->setUniformValueArray("iChannel", &chanTex[0], m_programs.size());
+            p->setUniformValueArray("iChannel", &chanTex[0], renderState->size());
 
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            renderState->m_intermediate.at(fboIndex)->release();
+            renderState->m_extra->release();
+            outTexture = renderState->m_extra->texture();
+            using std::swap;
+            swap(renderState->m_extra, pass.m_output);
             //renderState->m_intermediate.at(fboIndex)->toImage().save(QString("out_%1.png").arg(renderState->m_intermediate.at(fboIndex)->texture()));
             p->release();
             glActiveTexture(GL_TEXTURE0); // Very important to reset OpenGL state for scene graph rendering
         }
-
-        outTexture = renderState->m_intermediate.at((renderState->m_textureIndex + 1) % (m_programs.size() + 1))->texture();
         //qDebug() << this << "Output texture ID is" << outTexture << renderState;
         //qDebug() << "Output is" << ((renderState->m_textureIndex + 1) % (m_programs.count() + 1));
-        renderState->m_textureIndex = (renderState->m_textureIndex + 1) % (m_programs.size() + 1);
     }
     return outTexture;
 }
@@ -327,24 +341,16 @@ void EffectNode::reload() {
 }
 
 // Creates a copy of this node for rendering
-QSharedPointer<VideoNode> EffectNode::createCopyForRendering() {
+QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chain> chain) {
     //periodic();
     {
         QMutexLocker locker(&m_stateLock);
-        QSharedPointer<VideoNode> v(new EffectNode(*this));
-        v->moveToThread(QThread::currentThread()); // Move it to the thread that rendering will take place in
+        auto v = QSharedPointer<EffectNode>::create(*this);
+        auto tmpStates = decltype(m_renderStates){};
+        tmpStates.insert(chain,m_renderStates.value(chain));
+        v->m_renderStates.swap(tmpStates);
+        // it's in the creating thread, since no owner.
         return v;
-    }
-}
-
-// Reads back the new render state
-void EffectNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
-    QSharedPointer<EffectNode> c = qSharedPointerCast<EffectNode>(copy);
-    QMutexLocker locker(&m_stateLock);
-    if (m_renderStates.contains(chain)) {
-        *m_renderStates[chain] = *(c->m_renderStates.value(chain));
-    } else {
-        qDebug() << "Chain was deleted during rendering";
     }
 }
 
@@ -353,6 +359,8 @@ void EffectNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
     : OpenGLWorker(openGLWorkerContext)
     , m_p(p) {
+    qRegisterMetaType<QSharedPointer<EffectNodeRenderState>>();
+    connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState);
     connect(this, &EffectNodeOpenGLWorker::message, m_p, &EffectNode::message);
     connect(this, &EffectNodeOpenGLWorker::warning, m_p, &EffectNode::warning);
     connect(this, &EffectNodeOpenGLWorker::fatal,   m_p, &EffectNode::fatal);
@@ -367,6 +375,20 @@ void EffectNodeOpenGLWorker::initialize() {
     }
     glFlush();
     emit initialized();
+}
+void EffectNodeOpenGLWorker::onPrepareState(QSharedPointer<EffectNodeRenderState> state) {
+    if(!state || !m_state || state->m_ready.load())
+        return;
+    for(auto && pass : m_state->m_passes) {
+        auto dprogram = QSharedPointer<QOpenGLShaderProgram>::create();
+        for(auto && shader : pass.m_shader->shaders())
+            dprogram->addShader(shader);
+        if(!dprogram->link())
+            return;
+        state->m_passes.emplace_back();
+        state->m_passes.back().m_shader =  dprogram;
+    }
+    state->m_ready.exchange(true);
 }
 
 // Call this to load shader code into this Effect.
@@ -394,7 +416,6 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         "    gl_Position = vec4(vertex,0.,1.);\n"
         "    uv = 0.5 * (vertex + 1.);\n"
         "}"};
-    auto programs = QVector<QSharedPointer<QOpenGLShaderProgram>>{};
     auto filename = Paths::library() + QString("effects/%1.glsl").arg(name);
 
     QFileInfo check_file(filename);
@@ -419,6 +440,9 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         "^\\s*#property\\s+(?<name>\\w+)\\s+(?<value>.*)$"
       , QRegularExpression::CaseInsensitiveOption
         );
+    auto state = QSharedPointer<EffectNodeRenderState>::create();
+    auto &programs = state->m_passes;
+
     auto passes = QVector<QStringList>{QStringList{"#line 0"}};
     auto props  = QMap<QString,QString>{{"inputCount","1"}};
     auto lineno = 1;
@@ -443,8 +467,9 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
     }
 
     for(auto pass : passes) {
-        programs.append(QSharedPointer<QOpenGLShaderProgram>::create());
-        auto && program = programs.back();
+        programs.emplace_back();
+        programs.back().m_shader = QSharedPointer<QOpenGLShaderProgram>::create();
+        auto && program = programs.back().m_shader;
         if(!program->addShaderFromSourceCode(
             QOpenGLShader::Vertex
           , vertexString
@@ -466,11 +491,12 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         emit fatal(QString("No shaders found for \"%1\"").arg(name));
         return false;
     }
-
-    {
-        QMutexLocker locker(&m_p->m_stateLock);
-        m_p->m_programs = programs;
-    }
+    std::reverse(state->m_passes.begin(),state->m_passes.end());
+    state->m_ready.exchange(true);
+    m_state = state;
+//    {
+//        QMutexLocker locker(&m_p->m_stateLock);
+//    }
     return true;
 }
 

@@ -76,16 +76,7 @@ public slots:
     // and their connections.
     // This copy is necessary because
     // sometimes nodes are deleted or edited during rendering.
-    ModelCopyForRendering createCopyForRendering();
-
-    // This function is called after rendering
-    // from the render thread
-    // to put the rendered textures and updated states
-    // back into the graph.
-    // Sometimes nodes are deleted during rendering,
-    // these nodes are not updated
-    // because they no longer exist.
-    void copyBackRenderStates(QSharedPointer<Chain> chain, const ModelCopyForRendering *modelCopy);
+    ModelCopyForRendering createCopyForRendering(QSharedPointer<Chain> chain);
 
     // Returns a list of vertices
     // in the order they were added

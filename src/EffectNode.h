@@ -24,11 +24,29 @@ public slots:
 // to add additional state to each render pipeline.
 // It adds some intermediate framebuffers
 // and an index into them.
-struct EffectNodeRenderState {
+class EffectNodeRenderState {
+    Q_GADGET
 public:
-    QVector<QSharedPointer<QOpenGLFramebufferObject>> m_intermediate;
-    int m_textureIndex;
+    std::atomic<bool>                             m_ready{false};
+    struct Pass {
+        QSharedPointer<QOpenGLFramebufferObject> m_output;
+        QSharedPointer<QOpenGLShaderProgram>     m_shader;
+    };
+    using size_type = std::vector<Pass>::size_type;
+    using reference = std::vector<Pass>::reference;
+    using const_reference = std::vector<Pass>::const_reference;
+    using difference_type = std::vector<Pass>::difference_type;
+
+    std::vector<Pass> m_passes;
+    QSharedPointer<QOpenGLFramebufferObject> m_extra;
+
+    bool ready() const { return m_ready.load();}
+    size_type size() const { return m_passes.size();}
+    const_reference at(difference_type x) const { return m_passes.at(x);}
+    const_reference operator[](difference_type x) const { return m_passes[x];}
+    reference operator[](difference_type x) { return m_passes[x];}
 };
+Q_DECLARE_METATYPE(QSharedPointer<EffectNodeRenderState>);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -45,16 +63,18 @@ public slots:
     // Call this after changing
     // "name"
     void initialize();
+    void onPrepareState(QSharedPointer<EffectNodeRenderState> state);
 signals:
     // This is emitted when it is done
     void initialized();
+    void prepareState(QSharedPointer<EffectNodeRenderState> state);
 
     void message(QString str);
     void warning(QString str);
     void fatal(QString str);
 protected:
     bool loadProgram(QString name);
-    QList<QStringList> m_passes;
+    QSharedPointer<EffectNodeRenderState> m_state;
     EffectNode *m_p;
 };
 
@@ -84,10 +104,7 @@ public:
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
     // Creates a copy of this node
-    QSharedPointer<VideoNode> createCopyForRendering() override;
-
-    // Reads back the new render state
-    void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) override;
+    QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain> chain) override;
 
 public slots:
     qreal intensity();
@@ -107,7 +124,6 @@ signals:
 
 protected:
     QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
-    QVector<QSharedPointer<QOpenGLShaderProgram>> m_programs;
     qreal m_intensity;
     qreal m_intensityIntegral;
     qreal m_beatLast;

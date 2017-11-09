@@ -50,9 +50,13 @@ public:
     // and the ability to run this function from any thread
     // is why any state mutation
     // needs to take the stateLock.
+    //
+    // This should be a soft copy / propagate changes back to
+    // the original.
+    //
     // The new object will be assigned to the thread
     // that createCopyForRendering is called in.
-    virtual QSharedPointer<VideoNode> createCopyForRendering() = 0;
+    virtual QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain> chain) = 0;
 
     // Paint is run from a valid OpenGL context.
     // It should return the OpenGL texture ID
@@ -72,18 +76,8 @@ public:
     // a copy of the VideoNode object must be created.
     // paint() may mutate the RenderState
     // for the chain that it was called on.
-    // The new RenderState can be propogated back
-    // to the original VideoNode object
-    // using the thread-safe method copyBackRenderState.
     // Returns 0 if the chain does not exist or is not ready.
     virtual GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) = 0;
-
-    // Copies back the new render state into the original object
-    // This function is thread safe.
-    // Since only a single RenderState entry is copied back,
-    // only operations that access (or mutate) the RenderState
-    // need to take the stateLock.
-    virtual void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) = 0;
 
 public slots:
     // Number of inputs

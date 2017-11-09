@@ -196,7 +196,7 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
     }
 }
 
-ModelCopyForRendering Model::createCopyForRendering() {
+ModelCopyForRendering Model::createCopyForRendering(QSharedPointer<Chain> chain) {
     QMutexLocker locker(&m_graphLock);
     ModelCopyForRendering out;
 
@@ -213,7 +213,7 @@ ModelCopyForRendering Model::createCopyForRendering() {
     }
 
     for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
-        out.vertices.append(m_verticesSortedForRendering.at(i)->createCopyForRendering());
+        out.vertices.append(m_verticesSortedForRendering.at(i)->createCopyForRendering(chain));
     }
 
     auto o = m_outputConnectionsForRendering.keys();
@@ -221,23 +221,6 @@ ModelCopyForRendering Model::createCopyForRendering() {
         out.outputs.insert(o.at(i), m_outputConnectionsForRendering.value(o.at(i))->id());
     }
     return out;
-}
-
-void Model::copyBackRenderStates(QSharedPointer<Chain> chain, const ModelCopyForRendering *modelCopy) {
-    QMutexLocker locker(&m_graphLock);
-    QMap<int, QSharedPointer<VideoNode>> m;
-    for (int i=0; i<modelCopy->vertices.count(); i++) {
-        auto vnId = modelCopy->vertices.at(i)->id();
-        if (vnId != 0) {
-            m.insert(vnId, modelCopy->vertices.at(i));
-        }
-    }
-    for (int i=0; i<m_vertices.count(); i++) {
-        auto videoNodeCopy = m.value(m_vertices.at(i)->id());
-        if (!videoNodeCopy.isNull()) {
-            m_vertices[i]->copyBackRenderState(chain, videoNodeCopy);
-        }
-    }
 }
 
 QVector<VideoNode *> Model::topoSort() {

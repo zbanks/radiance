@@ -67,9 +67,9 @@ void Context::setPreviewWindow(QQuickWindow *window) {
 
 void Context::onBeforeSynchronizing() {
     Q_ASSERT(m_hasPreview);
-    auto modelCopy = m_model->createCopyForRendering();
+    auto modelCopy = m_model->createCopyForRendering(m_previewChain);
     m_lastPreviewRender = modelCopy.render(m_previewChain);
-    m_model->copyBackRenderStates(m_previewChain, &modelCopy);
+//    m_model->copyBackRenderStates(m_previewChain, &modelCopy);
 }
 
 GLuint Context::previewTexture(int videoNodeId) {
@@ -79,15 +79,14 @@ GLuint Context::previewTexture(int videoNodeId) {
 
 void Context::onRenderRequested(Output *output) {
     auto name = output->name();
-    auto modelCopy = m_model->createCopyForRendering();
+    auto chain = output->chain();
+    auto modelCopy = m_model->createCopyForRendering(chain);
     auto vnId = modelCopy.outputs.value(name, 0);
     GLuint textureId = 0;
     if (vnId != 0) { // Don't bother rendering this chain
         // if it is not connected
-        auto chain = output->chain();
         auto result = modelCopy.render(chain);
         textureId = result.value(vnId, 0);
-        m_model->copyBackRenderStates(chain, &modelCopy);
     }
     output->renderReady(textureId);
 }

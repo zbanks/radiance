@@ -102,8 +102,7 @@ public:
 
     QString serialize() override;
 
-    QSharedPointer<VideoNode> createCopyForRendering() override;
-    void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) override;
+    QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
 public slots:

@@ -274,7 +274,8 @@ void MovieNode::setPause(bool pause) {
 }
 
 // See comments in MovieNode.h about these 3 functions
-QSharedPointer<VideoNode> MovieNode::createCopyForRendering() {
+QSharedPointer<VideoNode> MovieNode::createCopyForRendering(QSharedPointer<Chain> chain) {
+    Q_UNUSED(chain);
     return QSharedPointer<VideoNode>(new MovieNode(*this));
 }
 
@@ -343,15 +344,6 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     outTexture = renderFbo->texture();
 
     return outTexture;
-}
-
-void MovieNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
-    auto c = qSharedPointerCast<MovieNode>(copy);
-    QMutexLocker locker(&m_stateLock);
-    if (m_renderFbos.contains(chain)) {
-        m_renderFbos[chain] = c->m_renderFbos.value(chain);
-    } else {
-    }
 }
 
 // MovieNodeOpenGLWorker methods

@@ -67,8 +67,7 @@ public:
     // periodic() advances the frame when necessary.  As a result,
     // there's no point in making a copy of the ImageNode before
     // paint() and copying it back afterwards.
-    QSharedPointer<VideoNode> createCopyForRendering() override;
-    void copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) override;
+    QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
 public slots:

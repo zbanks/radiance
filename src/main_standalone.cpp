@@ -201,9 +201,9 @@ int main(int argc, char *argv[]) {
                 effectNode->setIntensity(i / 50.);
             timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
 
-            auto modelCopy = model.createCopyForRendering();
+            auto modelCopy = model.createCopyForRendering(chain);
             auto rendering = modelCopy.render(chain);
-            model.copyBackRenderStates(chain, &modelCopy);
+//            model.copyBackRenderStates(chain, &modelCopy);
 
             auto outputTextureId = rendering.value(onblackEffect->id(), 0);
             if (outputTextureId != 0) {

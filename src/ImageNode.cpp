@@ -115,7 +115,8 @@ void ImageNode::setImagePath(QString imagePath) {
 }
 
 // See comments in ImageNode.h about these 3 functions
-QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
+QSharedPointer<VideoNode> ImageNode::createCopyForRendering(QSharedPointer<Chain> chain) {
+    Q_UNUSED(chain);
     //periodic();
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
@@ -123,9 +124,6 @@ QSharedPointer<VideoNode> ImageNode::createCopyForRendering() {
 GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     if (!m_ready || !m_currentTexture) return 0;
     return m_currentTexture->textureId();
-}
-
-void ImageNode::copyBackRenderState(QSharedPointer<Chain> chain, QSharedPointer<VideoNode> copy) {
 }
 
 // ImageNodeOpenGLWorker methods
