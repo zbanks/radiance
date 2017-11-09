@@ -61,7 +61,6 @@ public slots:
     }
 
     void stop() {
-        m_timer->stop();
         m_timer = QSharedPointer<QTimer>(nullptr);
         m_fbo = QSharedPointer<QOpenGLFramebufferObject>(nullptr);
         m_blitter = QSharedPointer<QOpenGLTextureBlitter>(nullptr);
@@ -116,7 +115,7 @@ void OutputImageSequence::setEnabled(bool enabled) {
         m_enabled = enabled;
         emit enabledChanged(enabled);
     } else if (!enabled && m_enabled) {
-        bool result = QMetaObject::invokeMethod(m_worker.data(), "stop");
+        bool result = QMetaObject::invokeMethod(m_worker.data(), "stop", Qt::BlockingQueuedConnection);
         Q_ASSERT(result);
 
         m_enabled = enabled;
