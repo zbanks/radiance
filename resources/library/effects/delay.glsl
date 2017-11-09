@@ -3,7 +3,8 @@
 #define SZ 6    // Delay of SZ*SZ frames (36)
 void main(void) {
     vec4 original = texture(iInput, uv);
-    vec4 delayed = texture(iChannel[1], uv / SZ);
+    vec2 uvNew = mix(uv / SZ, uv, smoothstep(0.8, 0.9, iIntensity));
+    vec4 delayed = texture(iChannel[1], uvNew);
     fragColor = mix(original, delayed, smoothstep(0., 0.2, iIntensity));
 }
 
