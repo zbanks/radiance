@@ -1,4 +1,4 @@
-import QtQuick 2.3
+import QtQuick 2.7
 import QtQuick.Window 2.2
 import radiance 1.0
 

@@ -1,4 +1,4 @@
-import QtQuick 2.3
+import QtQuick 2.7
 import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import Qt.labs.folderlistmodel 2.1
