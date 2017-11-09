@@ -1,16 +1,21 @@
 #include "VideoNode.h"
+#include "NodeType.h"
 #include "Model.h"
 #include <QDebug>
 
-VideoNode::VideoNode()
-    : m_inputCount(0) {
+VideoNode::VideoNode(NodeType *nr)
+    : m_inputCount{0}
+    , m_proto{nr}{
 }
 
 VideoNode::VideoNode(const VideoNode &other)
     : m_inputCount(other.m_inputCount)
-    , m_id(other.m_id) {
+    , m_id(other.m_id)
+    , m_proto(other.m_proto) {
 }
-
+NodeType *VideoNode::proto() const {
+    return m_proto;
+}
 VideoNode::~VideoNode() = default;
 
 int VideoNode::inputCount() {

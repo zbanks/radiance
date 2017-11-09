@@ -12,15 +12,13 @@ QSharedPointer<Chain> Output::chain() {
 }
 
 void Output::setChain(QSharedPointer<Chain> chain) {
-    bool changed = false;
     {
         QMutexLocker locker(&m_renderLock);
-        if (m_chain != chain) {
-            m_chain = chain;
-            changed = true;
-        }
+        if (m_chain == chain)
+            return;
+        m_chain = chain;
     }
-    if (changed) emit chainChanged(chain);
+    emit chainChanged(chain);
 }
 
 // This method is thread-safe
@@ -31,15 +29,13 @@ QString Output::name() {
 
 // This method is thread-safe
 void Output::setName(QString name) {
-    bool changed = false;
     {
         QMutexLocker locker(&m_renderLock);
-        if (m_name != name) {
-            m_name = name;
-            changed = true;
-        }
+        if (m_name == name)
+            return;
+        m_name = name;
     }
-    if (changed) emit nameChanged(name);
+    emit nameChanged(name);
 }
 
 void Output::requestRender() {

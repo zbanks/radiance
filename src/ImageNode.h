@@ -57,7 +57,7 @@ class ImageNode
     friend class ImageNodeOpenGLWorker;
 
 public:
-    ImageNode();
+    ImageNode(NodeType *nr);
     ImageNode(const ImageNode &other);
     ~ImageNode();
 

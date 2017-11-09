@@ -2,12 +2,12 @@
 #include <QOffscreenSurface>
 #include <QDebug>
 
-OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
-: OpenGLWorkerContext(nullptr, threaded,surface)
-{
+
+QSharedPointer<OpenGLWorkerContext> OpenGLWorkerContext::create(bool t, QSurface *s) {
+    return QSharedPointer<OpenGLWorkerContext>(new OpenGLWorkerContext(t,s), &QObject::deleteLater);
 }
-OpenGLWorkerContext::OpenGLWorkerContext(QObject *p, bool threaded, QSurface *surface)
-    : QObject(p)
+OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
+    : QObject()
     , m_surface(surface)
     , m_thread(nullptr)
 {

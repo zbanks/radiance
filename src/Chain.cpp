@@ -58,8 +58,7 @@ const QOpenGLVertexArrayObject &Chain::vao() const {
 // ChainOpenGLWorker methods
 
 ChainOpenGLWorker::ChainOpenGLWorker(Chain *p)
-    : OpenGLWorker(openGLWorkerContext)
-{
+    : OpenGLWorker(openGLWorkerContext) {
 }
 
 void ChainOpenGLWorker::initialize(QSize size) {

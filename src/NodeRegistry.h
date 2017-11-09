@@ -2,6 +2,7 @@
 
 #include "VideoNode.h"
 #include "NodeType.h"
+#include "OpenGLWorkerContext.h"
 #include <QHash>
 #include <QObject>
 #include <QString>
@@ -13,6 +14,7 @@ class NodeRegistry : public QObject {
     Q_PROPERTY(QVariantMap nodeTypes READ qmlNodeTypes NOTIFY nodeTypesChanged)
 public:
     NodeRegistry( QObject *p = nullptr);
+    NodeRegistry( bool threaded, QObject *p = nullptr);
     ~NodeRegistry() override;
 
     // Create node from string; resulting VideoNode is caller-owned
@@ -21,13 +23,15 @@ public:
 public slots:
     QMap<QString, NodeType *> nodeTypes();
     QVariantMap qmlNodeTypes();
+    OpenGLWorkerContextPointer workerContext() const;
 
     void reload();
 
 signals:
     void nodeTypesChanged();
 
-private:
+protected:
     QMap<QString, NodeType*> m_nodeTypes;
+    OpenGLWorkerContextPointer m_workerContext;
 };
 

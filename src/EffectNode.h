@@ -3,6 +3,7 @@
 #include "VideoNode.h"
 #include "NodeType.h"
 #include "OpenGLWorker.h"
+#include "OpenGLUtils.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
@@ -28,10 +29,6 @@ class EffectNodeRenderState {
     Q_GADGET
 public:
     std::atomic<bool>                             m_ready{false};
-    struct Pass {
-        QSharedPointer<QOpenGLFramebufferObject> m_output;
-        QSharedPointer<QOpenGLShaderProgram>     m_shader;
-    };
     using size_type = std::vector<Pass>::size_type;
     using reference = std::vector<Pass>::reference;
     using const_reference = std::vector<Pass>::const_reference;
@@ -92,7 +89,7 @@ class EffectNode
     friend class EffectNodeOpenGLWorker;
 
 public:
-    EffectNode();
+    EffectNode(NodeType *nr);
     EffectNode(const EffectNode &other);
     ~EffectNode();
 

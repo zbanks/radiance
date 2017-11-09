@@ -2,6 +2,9 @@
 #include "main.h"
 
 OpenGLWorker::OpenGLWorker(OpenGLWorkerContext *context)
+    : OpenGLWorker(context->sharedFromThis())
+{ }
+OpenGLWorker::OpenGLWorker(QSharedPointer<OpenGLWorkerContext> context)
     : m_context(context)
 {
     m_context->takeObject(this);

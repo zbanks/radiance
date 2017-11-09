@@ -53,6 +53,6 @@ protected:
     QString m_description{};
     QString m_author{};
     int     m_inputCount{0};
-    bool    m_ready{false};
+    std::atomic<bool> m_ready{false};
     NodeRegistry *m_registry{};
 };

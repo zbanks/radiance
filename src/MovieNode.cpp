@@ -27,7 +27,7 @@ void MovieType::setPathFormat(QString fmt)
 VideoNode *MovieType::create(QString arg)
 {
     auto pth = pathFormat().arg(arg);
-    auto node = new MovieNode();
+    auto node = new MovieNode(this);
     if (node) {
         node->setInputCount(inputCount());
         node->setVideoPath(pth);
@@ -35,8 +35,9 @@ VideoNode *MovieType::create(QString arg)
     return node;
 }
 
-MovieNode::MovieNode()
-    : m_videoPath()
+MovieNode::MovieNode(NodeType *nr)
+    : VideoNode(nr)
+    , m_videoPath()
     , m_renderFbos()
     , m_openGLWorkerContext(nullptr)
     , m_videoSize(0, 0)
@@ -46,21 +47,21 @@ MovieNode::MovieNode()
     , m_mute(false)
     , m_pause(false) {
 
-    m_openGLWorkerContext = new OpenGLWorkerContext(this);
+    m_openGLWorkerContext = OpenGLWorkerContext::create();
 
-    m_openGLWorker = new MovieNodeOpenGLWorker(this);
+    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(this),&QObject::deleteLater);
 
-    connect(m_openGLWorker, &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
-    connect(this, &MovieNode::videoPathChanged, m_openGLWorker, &MovieNodeOpenGLWorker::onVideoChanged);
-    connect(this, &MovieNode::chainSizeChanged, m_openGLWorker, &MovieNodeOpenGLWorker::onChainSizeChanged);
-    connect(m_openGLWorker, &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
-    connect(m_openGLWorker, &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
-    connect(m_openGLWorker, &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
-    connect(m_openGLWorker, &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
-    connect(m_openGLWorker, &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
-    connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater, Qt::DirectConnection);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
+    connect(this, &MovieNode::videoPathChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
+    connect(this, &MovieNode::chainSizeChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onChainSizeChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
+//    connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater, Qt::DirectConnection);
 
-    bool result = QMetaObject::invokeMethod(m_openGLWorker, "initialize");
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
     Q_ASSERT(result);
 }
 
@@ -94,7 +95,7 @@ namespace {
 std::once_flag reg_once{};
 TypeRegistry movie_registry{[](NodeRegistry *r) -> QList<NodeType*> {
     std::call_once(reg_once,[](){
-        qmlRegisterType<MovieNode>("radiance",1,0,"MovieNode");
+        qmlRegisterUncreatableType<MovieNode>("radiance",1,0,"MovieNode","MovieNode must be created through the registry");
     });
     auto res = QList<NodeType*>{};
 
@@ -260,17 +261,17 @@ void MovieNode::setVideoPath(QString videoPath) {
 
 void MovieNode::setPosition(qreal position) {
     Q_ASSERT(QThread::currentThread() == thread());
-    QMetaObject::invokeMethod(m_openGLWorker, "setPosition", Qt::QueuedConnection, Q_ARG(qreal, position));
+    QMetaObject::invokeMethod(m_openGLWorker.data(), "setPosition", Qt::QueuedConnection, Q_ARG(qreal, position));
 }
 
 void MovieNode::setMute(bool mute) {
     Q_ASSERT(QThread::currentThread() == thread());
-    QMetaObject::invokeMethod(m_openGLWorker, "setMute", Qt::QueuedConnection, Q_ARG(bool, mute));
+    QMetaObject::invokeMethod(m_openGLWorker.data(), "setMute", Qt::QueuedConnection, Q_ARG(bool, mute));
 }
 
 void MovieNode::setPause(bool pause) {
     Q_ASSERT(QThread::currentThread() == thread());
-    QMetaObject::invokeMethod(m_openGLWorker, "setPause", Qt::QueuedConnection, Q_ARG(bool, pause));
+    QMetaObject::invokeMethod(m_openGLWorker.data(), "setPause", Qt::QueuedConnection, Q_ARG(bool, pause));
 }
 
 // See comments in MovieNode.h about these 3 functions
@@ -349,7 +350,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 // MovieNodeOpenGLWorker methods
 
 MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
-    : OpenGLWorker(p->m_openGLWorkerContext)
+    : OpenGLWorker(p->m_openGLWorkerContext.data())
     , m_fbos(BUFFER_COUNT)
     , m_fboLocks(BUFFER_COUNT)
     , m_p(p)

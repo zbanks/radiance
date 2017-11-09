@@ -19,7 +19,7 @@ EffectType::EffectType(NodeRegistry *r , QObject *p )
 }
 EffectType::~EffectType() = default;
 VideoNode *EffectType::create(QString arg) {
-    auto node = new EffectNode();
+    auto node = new EffectNode(this);
     if ( node ) {
         node->setInputCount(inputCount());
         node->setName(name());
@@ -33,8 +33,9 @@ VideoNode *EffectType::create(QString arg) {
     return node;
 }
 
-EffectNode::EffectNode()
-    : m_intensity(0)
+EffectNode::EffectNode(NodeType *nr)
+    : VideoNode(nr)
+    , m_intensity(0)
     , m_openGLWorker(new EffectNodeOpenGLWorker(this))
     , m_ready(false) {
 
@@ -77,7 +78,7 @@ namespace {
 std::once_flag reg_once{};
 TypeRegistry effect_registry{[](NodeRegistry *r) -> QList<NodeType*> {
     std::call_once(reg_once,[](){
-        qmlRegisterType<EffectNode>("radiance",1,0,"EffectNode");
+        qmlRegisterUncreatableType<EffectNode>("radiance",1,0,"EffectNode","EffectNode must be created through the registry");
     });
     auto res = QList<NodeType*>{};
 
@@ -357,7 +358,7 @@ QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chai
 // EffectNodeOpenGLWorker methods
 
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
-    : OpenGLWorker(openGLWorkerContext)
+    : OpenGLWorker(p->proto()->registry()->workerContext())
     , m_p(p) {
     qRegisterMetaType<QSharedPointer<EffectNodeRenderState>>();
     connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState);

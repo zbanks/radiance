@@ -4,12 +4,19 @@
 #include <QDir>
 #include <QDebug>
 #include <QRegularExpression>
+NodeRegistry::NodeRegistry(bool threaded, QObject *p)
+    : QObject(p)
+    , m_workerContext(OpenGLWorkerContext::create(threaded)) {
+}
 
 NodeRegistry::NodeRegistry(QObject *p)
-    : QObject(p) {
+    : QObject(p)
+    , m_workerContext(OpenGLWorkerContext::create()) {
 }
 NodeRegistry::~NodeRegistry() = default;
-
+OpenGLWorkerContextPointer NodeRegistry::workerContext() const {
+    return m_workerContext;
+}
 VideoNode *NodeRegistry::createNode(const QString &nodeName) {
     auto arg = QString{};
     auto name = QString{};

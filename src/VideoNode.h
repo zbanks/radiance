@@ -8,6 +8,7 @@
 #include <QMutex>
 
 class Model;
+class NodeType;
 
 // This is an abstract base class
 // for nodes in the DAG.
@@ -29,7 +30,7 @@ public:
     // before initialize() has been run.
     // Constructor may be called without a valid
     // OpenGL context.
-    VideoNode();
+    VideoNode(NodeType *nt);
 
     // VideoNodes must be copyable
     VideoNode(const VideoNode &other);
@@ -102,7 +103,7 @@ public slots:
     // which ones that changed through the function chainsEdited.
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
-
+    NodeType  *proto() const;
 protected slots:
     virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
 
@@ -113,6 +114,7 @@ protected:
     QList<QSharedPointer<Chain>> m_chains;
     QMutex m_idLock;
 
+    NodeType *m_proto{};
 signals:
     // Emitted when the object wishes to be deleted
     // e.g. due to an error

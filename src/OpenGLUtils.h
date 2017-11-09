@@ -2,6 +2,10 @@
 
 #include <QObject>
 #include <QOpenGLContext>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLFramebufferObject>
+#include <QSharedPointer>
+
 #include "OpenGLWorkerContext.h"
 
 class OpenGLSampler {
@@ -31,3 +35,9 @@ public:
 protected:
     GLuint m_id{0u};
 };
+
+struct Pass {
+    QSharedPointer<QOpenGLFramebufferObject> m_output;
+    QSharedPointer<QOpenGLShaderProgram>     m_shader;
+};
+

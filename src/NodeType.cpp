@@ -24,7 +24,7 @@ int NodeType::inputCount() const {
     return m_inputCount;
 }
 bool NodeType::ready() const {
-    return m_ready;
+    return m_ready.load();
 }
 void NodeType::setName(QString n) {
     if (n != name()) {
@@ -48,17 +48,14 @@ void NodeType::isReady()
 {
     setReady(true);
 }
-void NodeType::setReady(bool r)
-{
-    if(r != ready()) {
-        m_ready = r;
+void NodeType::setReady(bool r) {
+    if (m_ready.exchange(r) != r) {
         emit readyChanged(r);
     }
 }
 
-void NodeType::setInputCount(int n)
-{
-    if(n != inputCount()) {
+void NodeType::setInputCount(int n) {
+    if (n != inputCount()) {
         m_inputCount = n;
         emit inputCountChanged(n);
     }

@@ -18,7 +18,7 @@
 
 #define IMG_FORMAT ".gif"
 
-OpenGLWorkerContext *openGLWorkerContext;
+QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<Audio> audio;
 QSharedPointer<NodeRegistry> nodeRegistry;
@@ -92,14 +92,14 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = new OpenGLWorkerContext(&app, false);
+    openGLWorkerContext = OpenGLWorkerContext::create(false);
     openGLWorkerContext->setObjectName("openGLWorkerContext");
 
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());
     timebase = QSharedPointer<Timebase>(new Timebase());
 
-    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
+    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry(false));
     nodeRegistry->reload();
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
@@ -241,5 +241,6 @@ int main(int argc, char *argv[]) {
     qInfo() << "Done.";
 
     app.quit();
+    openGLWorkerContext.reset();
     return 0;
 }

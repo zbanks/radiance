@@ -31,7 +31,7 @@
 #include "Lux.h"
 #endif
 
-OpenGLWorkerContext *openGLWorkerContext;
+QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
 QSharedPointer<QSettings> settings;
 QSharedPointer<QSettings> outputSettings;
 QSharedPointer<Audio> audio;
@@ -75,8 +75,8 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = new OpenGLWorkerContext();
-    openGLWorkerContext->setParent(&app);
+    openGLWorkerContext = OpenGLWorkerContext::create();
+//    openGLWorkerContext->setParent(&app);
 
     settings = QSharedPointer<QSettings>(new QSettings());
     outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));
@@ -133,5 +133,5 @@ int main(int argc, char *argv[]) {
     // TODO put these into a singleton
     engine.rootObjects().last()->setProperty("hasMidi", hasMidi);
 
-    return app.exec();
+    app.exec();
 }

@@ -44,8 +44,9 @@ QMap<QString, VideoNode *> Model::outputConnections() const {
 }
 
 void Model::connectOutput(QString outputName, VideoNode *videoNode) {
-    if (outputName.isEmpty()) return;
-    if (videoNode == nullptr) {
+    if (outputName.isEmpty())
+        return;
+    if (!videoNode) {
         m_outputConnections.remove(outputName);
     } else if (m_vertices.contains(videoNode)) {
         m_outputConnections.insert(outputName, videoNode);
@@ -55,6 +56,12 @@ void Model::connectOutput(QString outputName, VideoNode *videoNode) {
 }
 
 void Model::prepareNode(VideoNode *videoNode) {
+    if(!videoNode)
+        return;
+
+    if(videoNode->parent() != this)
+        videoNode->setParent(this);
+
     videoNode->setChains(m_chains);
     videoNode->setId(m_vnId++);
 
@@ -65,6 +72,9 @@ void Model::prepareNode(VideoNode *videoNode) {
 }
 
 void Model::disownNode(VideoNode *videoNode) {
+    if(!videoNode)
+        return;
+
     auto outputNames = m_outputConnections.keys();
     for (int i=0; i<outputNames.count(); i++) {
         auto outputName = outputNames.at(i);
@@ -102,12 +112,13 @@ VideoNode *Model::createVideoNode(const QString &name) {
         return nullptr;
     }
 
-    videoNode->setParent(this);
     addVideoNode(videoNode);
     return videoNode;
 }
 
 void Model::addVideoNode(VideoNode *videoNode) {
+    if(!videoNode)
+        return;
     if (!m_vertices.contains(videoNode)) {
         prepareNode(videoNode);
         m_vertices.append(videoNode);

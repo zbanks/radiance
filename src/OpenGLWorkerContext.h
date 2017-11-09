@@ -6,14 +6,13 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 
-class OpenGLWorkerContext : public QObject, protected QOpenGLFunctions {
+class OpenGLWorkerContext : public QObject, public QEnableSharedFromThis<OpenGLWorkerContext>, protected QOpenGLFunctions {
 public:
-    OpenGLWorkerContext(QObject *p, bool threaded=true, QSurface *surface=nullptr);
     OpenGLWorkerContext(bool threaded=true, QSurface *surface=nullptr);
-    ~OpenGLWorkerContext();
+   ~OpenGLWorkerContext() override;
     QOpenGLContext *context();
     QOpenGLFunctions *glFuncs();
-
+    static QSharedPointer<OpenGLWorkerContext> create(bool threaded = true, QSurface *surface = nullptr);
 protected slots:
     void initialize();
     void deinitialize();
@@ -27,3 +26,5 @@ protected:
     QOpenGLContext *m_context{};
     QThread        *m_thread{};
 };
+
+using OpenGLWorkerContextPointer = QSharedPointer<OpenGLWorkerContext>;

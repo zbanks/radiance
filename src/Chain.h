@@ -23,7 +23,6 @@ protected:
     void createNoiseTexture(QSize);
     QOpenGLTexture m_noiseTexture{QOpenGLTexture::Target2D};
     QOpenGLTexture m_blankTexture{QOpenGLTexture::Target2D};
-//    Chain *m_p;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

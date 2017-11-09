@@ -89,7 +89,7 @@ OutputImageSequence::OutputImageSequence()
     , m_frameDelay(16)
     , m_filename("output_image_sequence")
     , m_enabled(false)
-    , m_context(new OpenGLWorkerContext()) {
+    , m_context(OpenGLWorkerContext::create()) {
     m_context->thread()->start();
     m_context->thread()->setObjectName("OutputImageSequenceOpenGLWorkerContextThread");
 
@@ -98,7 +98,7 @@ OutputImageSequence::OutputImageSequence()
 
 OutputImageSequence::~OutputImageSequence() {
     join();
-    m_context->deleteLater();
+//    m_context->deleteLater();
 //    m_context->thread()->quit();
 //    m_context->thread()->wait();
 }

@@ -14,7 +14,7 @@ ImageType::ImageType(NodeRegistry *r , QObject *p )
 }
 ImageType::~ImageType() = default;
 VideoNode *ImageType::create(QString arg) {
-    auto node = new ImageNode();
+    auto node = new ImageNode(this);
     if (node) {
         node->setInputCount(inputCount());
         node->setImagePath(name());
@@ -22,8 +22,9 @@ VideoNode *ImageType::create(QString arg) {
     return node;
 }
 
-ImageNode::ImageNode()
-    : m_openGLWorker(new ImageNodeOpenGLWorker(this))
+ImageNode::ImageNode(NodeType *nr)
+    : VideoNode(nr)
+    , m_openGLWorker(new ImageNodeOpenGLWorker(this))
     , m_ready(false) {
 
     m_periodic.setInterval(10);
@@ -52,7 +53,7 @@ namespace {
 std::once_flag reg_once{};
 TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
     std::call_once(reg_once,[](){
-        qmlRegisterType<ImageNode>("radiance",1,0,"ImageNode");
+        qmlRegisterUncreatableType<ImageNode>("radiance",1,0,"ImageNode","ImageNode must be created through the registry");
     });
 
     auto res = QList<NodeType*>{};
@@ -129,7 +130,7 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 // ImageNodeOpenGLWorker methods
 
 ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode *p)
-    : OpenGLWorker(openGLWorkerContext)
+    : OpenGLWorker(p->proto()->registry()->workerContext())
     , m_p(p) {
     connect(this, &ImageNodeOpenGLWorker::message, m_p, &ImageNode::message);
     connect(this, &ImageNodeOpenGLWorker::warning, m_p, &ImageNode::warning);

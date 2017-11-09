@@ -96,7 +96,7 @@ class MovieNode
     friend class MovieNodeOpenGLWorker;
 
 public:
-    MovieNode();
+    MovieNode(NodeType *nr);
     MovieNode(const MovieNode &other);
     ~MovieNode();
 
@@ -138,10 +138,10 @@ protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
     QString m_videoPath;
-    MovieNodeOpenGLWorker *m_openGLWorker;
+    QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
     QMap<QSharedPointer<Chain>, QSharedPointer<QOpenGLFramebufferObject>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
-    OpenGLWorkerContext *m_openGLWorkerContext;
+    QSharedPointer<OpenGLWorkerContext> m_openGLWorkerContext;
     QSize m_videoSize;
     QSize m_chainSize;
 
