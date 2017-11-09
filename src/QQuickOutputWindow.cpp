@@ -50,7 +50,7 @@ QStringList QQuickOutputWindow::availableScreens() {
     return m_screenStrings;
 }
 
-QQuickWindow *QQuickOutputWindow::window() {
+QQuickWindow *QQuickOutputWindow::outputWindow() {
     return m_outputWindow.data();
 }
 
