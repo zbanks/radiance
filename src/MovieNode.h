@@ -3,8 +3,10 @@
 #include "VideoNode.h"
 #include "NodeType.h"
 #include "OpenGLWorker.h"
+#include "OpenGLUtils.h"
 #include <QOpenGLFramebufferObject>
 #include <QMutex>
+#include <QReadWriteLock>
 #include <QOpenGLShaderProgram>
 #include <mpv/client.h>
 #include <mpv/opengl_cb.h>
@@ -12,6 +14,14 @@
 #include <vector>
 
 class MovieNode;
+
+class MovieNodeRenderState {
+public:
+    std::atomic<bool> m_ready{false};
+    Pass              m_pass {};
+};
+Q_DECLARE_METATYPE(QSharedPointer<MovieNodeRenderState>);
+
 class MovieType : public NodeType {
     Q_OBJECT
     Q_PROPERTY(QString pathFormat READ pathFormat WRITE setPathFormat NOTIFY pathFormatChanged)
@@ -35,9 +45,9 @@ class MovieNodeOpenGLWorker : public OpenGLWorker {
 public:
     MovieNodeOpenGLWorker(MovieNode *p);
     ~MovieNodeOpenGLWorker() override;
-    QVector<QOpenGLFramebufferObject *> m_fbos;
-    std::vector<QMutex> m_fboLocks;
-    int lastIndex();
+    QSharedPointer<QOpenGLFramebufferObject> m_lastFrame;
+    QSharedPointer<QOpenGLFramebufferObject> m_nextFrame;
+    QReadWriteLock                           m_rwLock;
 
 signals:
     void message(QString str);
@@ -49,6 +59,7 @@ signals:
     void muteChanged(bool mute);
     void pauseChanged(bool pause);
     void initialized();
+    void prepareState(QSharedPointer<MovieNodeRenderState> state);
 
 public slots:
     void onChainSizeChanged(QSize);
@@ -59,6 +70,7 @@ public slots:
     void setMute(bool mute);
     void setPause(bool pause);
 
+    void onPrepareState(QSharedPointer<MovieNodeRenderState> state);
 protected:
     void handleEvent(mpv_event *event);
 
@@ -69,8 +81,7 @@ protected:
     QSize m_size;
     QSize m_videoSize;
     QSize m_chainSize;
-    QAtomicInt m_fboIndex;
-
+    QSharedPointer<MovieNodeRenderState> m_state;
 protected slots:
     void updateSizes();
     void initialize();
@@ -139,7 +150,7 @@ protected:
 
     QString m_videoPath;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
-    QMap<QSharedPointer<Chain>, QSharedPointer<QOpenGLFramebufferObject>> m_renderFbos;
+    QMap<QSharedPointer<Chain>, QSharedPointer<MovieNodeRenderState>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
     QSharedPointer<OpenGLWorkerContext> m_openGLWorkerContext;
     QSize m_videoSize;

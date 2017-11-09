@@ -28,12 +28,12 @@ public slots:
 class EffectNodeRenderState {
     Q_GADGET
 public:
-    std::atomic<bool>                             m_ready{false};
     using size_type = std::vector<Pass>::size_type;
     using reference = std::vector<Pass>::reference;
     using const_reference = std::vector<Pass>::const_reference;
     using difference_type = std::vector<Pass>::difference_type;
 
+    std::atomic<bool> m_ready{false};
     std::vector<Pass> m_passes;
     QSharedPointer<QOpenGLFramebufferObject> m_extra;
 

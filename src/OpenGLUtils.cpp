@@ -25,9 +25,10 @@ void OpenGLSampler::destroy()
     if(!isCreated())
         return;
     if(auto ctx = QOpenGLContext::currentContext()) {
-        if(auto fns = ctx->extraFunctions())
+        if(auto fns = ctx->extraFunctions()) {
             fns->glDeleteSamplers(1,&m_id);
             m_id = 0u;
+        }
     }
 }
 void OpenGLSampler::bind(GLuint unit)
@@ -56,4 +57,18 @@ void OpenGLSampler::setParameter(GLenum pname, GLfloat param)
         if(auto fns = ctx->extraFunctions())
             fns->glSamplerParameterf(samplerId(), pname, param);
     }
+}
+
+QSharedPointer<QOpenGLShaderProgram> copyProgram(QSharedPointer<QOpenGLShaderProgram> program) {
+    if(!program || !program->isLinked())
+        return {};
+
+    auto nprogram = QSharedPointer<QOpenGLShaderProgram>::create();
+    for(auto shader : program->shaders())
+        nprogram->addShader(shader);
+
+    if(!nprogram->link())
+        nprogram.reset();
+
+    return nprogram;
 }

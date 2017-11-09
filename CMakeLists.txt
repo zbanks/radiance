@@ -53,6 +53,7 @@ list(APPEND libradiance_SOURCES
     src/Model.cpp
     src/OpenGLWorkerContext.cpp
     src/OpenGLWorker.cpp
+    src/OpenGLUtils.cpp
     src/View.cpp
     src/Chain.cpp
     src/Context.cpp

@@ -1,6 +1,7 @@
 #include "MovieNode.h"
 #include "ProbeReg.h"
 #include <QDebug>
+#include <QReadWriteLock>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -59,7 +60,6 @@ MovieNode::MovieNode(NodeType *nr)
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
-//    connect(this, &QObject::destroyed, m_openGLWorker, &QObject::deleteLater, Qt::DirectConnection);
 
     bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
     Q_ASSERT(result);
@@ -69,19 +69,13 @@ MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
     , m_videoPath(other.m_videoPath)
     , m_openGLWorker(other.m_openGLWorker)
-    , m_renderFbos()
+    , m_renderFbos(other.m_renderFbos)
     , m_blitShader(other.m_blitShader)
     , m_videoSize(other.m_videoSize)
     , m_chainSize(other.m_chainSize)
     , m_ready(other.m_ready)
     , m_mute(other.m_mute)
     , m_pause(other.m_pause) {
-
-    auto k = other.m_renderFbos.keys();
-    for (int i=0; i<k.count(); i++) {
-        auto otherRenderFbo = other.m_renderFbos.value(k.at(i));
-        m_renderFbos.insert(k.at(i), QSharedPointer<QOpenGLFramebufferObject>(otherRenderFbo));
-    }
 }
 
 MovieNode::~MovieNode() {
@@ -136,13 +130,23 @@ TypeRegistry movie_registry{[](NodeRegistry *r) -> QList<NodeType*> {
 }
 
 void MovieNode::onInitialized() {
-    m_ready = true;
+    {
+        QMutexLocker locker(&m_stateLock);
+        for (auto key : m_renderFbos.keys()) {
+            auto state = QSharedPointer<MovieNodeRenderState>::create();
+            m_openGLWorker->prepareState(state);
+            m_renderFbos[key].swap(state);
+        }
+    }
+   m_ready = true;
 }
 
 void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     QMutexLocker locker(&m_stateLock);
     for (int i=0; i<added.count(); i++) {
-        m_renderFbos.insert(added.at(i), QSharedPointer<QOpenGLFramebufferObject>());
+        auto state = QSharedPointer<MovieNodeRenderState>::create();
+        m_openGLWorker->prepareState(state);
+        m_renderFbos.insert(added.at(i), state);
     }
     for (int i=0; i<removed.count(); i++) {
         m_renderFbos.remove(removed.at(i));
@@ -305,18 +309,21 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         qDebug() << this << "does not have chain" << chain;
         return outTexture;
     }
-    auto renderFbo = m_renderFbos.value(chain);
+    auto renderState = m_renderFbos.value(chain);
 
+    if(!renderState|| !renderState->m_ready.load())
+        return outTexture;
+
+    auto renderFbo = renderState->m_pass.m_output;
     // FBO creation must happen here, and not in initialize,
     // because FBOs are not shared among contexts.
     // Textures are, however, so in the future maybe we can move
     // texture creation to initialize()
     // and leave lightweight FBO creation here
-    if(renderFbo.isNull()) {
+    if(renderFbo.isNull() || renderFbo->size() != chain->size()) {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
-        m_renderFbos[chain] = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
-        renderFbo = m_renderFbos.value(chain);
+        renderFbo = renderState->m_pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
     }
 
     glClearColor(0, 0, 0, 0);
@@ -324,25 +331,26 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     glDisable(GL_BLEND);
     renderFbo->bind();
     glViewport(0, 0, renderFbo->width(),renderFbo->height());
-    m_blitShader->bind();
+    auto blitShader = renderState->m_pass.m_shader;
+    blitShader->bind();
     glActiveTexture(GL_TEXTURE0);
+    blitShader->setUniformValue("iVideoFrame", 0);
+    blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
     {
-        int i = m_openGLWorker->lastIndex();
-        QMutexLocker locker(&m_openGLWorker->m_fboLocks.at(i));
-        auto fboi = m_openGLWorker->m_fbos.at(i);
-        if (!fboi)
-            return outTexture;
-        glBindTexture(GL_TEXTURE_2D, fboi->texture());
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-        m_blitShader->setUniformValue("iVideoFrame", 0);
-        m_blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
-        m_blitShader->setUniformValue("iVideoResolution", GLfloat(fboi->width()), GLfloat(fboi->height()));
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        QReadLocker locker(&m_openGLWorker->m_rwLock);
+        auto fboi = m_openGLWorker->m_lastFrame;
+        if (fboi) {
+            glBindTexture(GL_TEXTURE_2D, fboi->texture());
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+            blitShader->setUniformValue("iVideoResolution", GLfloat(fboi->width()), GLfloat(fboi->height()));
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
     }
-    m_blitShader->release();
     renderFbo->release();
     outTexture = renderFbo->texture();
+
+    blitShader->release();
 
     return outTexture;
 }
@@ -351,13 +359,13 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 
 MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode *p)
     : OpenGLWorker(p->m_openGLWorkerContext.data())
-    , m_fbos(BUFFER_COUNT)
-    , m_fboLocks(BUFFER_COUNT)
     , m_p(p)
     , m_mpv_gl(nullptr)
     , m_size(0, 0)
-    , m_fboIndex(0) {
+{
 
+    qRegisterMetaType<QSharedPointer<MovieNodeRenderState>>();
+    connect(this, &MovieNodeOpenGLWorker::prepareState, this, &MovieNodeOpenGLWorker::onPrepareState);
     connect(this, &MovieNodeOpenGLWorker::message, m_p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, m_p, &MovieNode::warning);
     connect(this, &MovieNodeOpenGLWorker::fatal,   m_p, &MovieNode::fatal);
@@ -385,7 +393,7 @@ void MovieNodeOpenGLWorker::initialize() {
 
     //mpv_set_property_string(m_mpv, "video-sync", "display-resample");
     //mpv_set_property_string(m_mpv, "display-fps", "60");
-    mpv_set_property_string(m_mpv, "hwdec", "auto");
+    mpv_set_property_string(m_mpv, "hwdec", "yes");
     mpv_set_property_string(m_mpv, "scale", "spline36");
     mpv_set_property_string(m_mpv, "loop", "inf");
     mpv_set_property_string(m_mpv, "fbo-format", "rgba32f");
@@ -491,30 +499,25 @@ void MovieNodeOpenGLWorker::updateSizes()
     auto _scale = std::max({
         m_chainSize.width()/qreal(m_videoSize.width())
        ,m_chainSize.height()/qreal(m_videoSize.height())
-       ,qreal(1)
+//       ,qreal(1)
         });
     m_size = m_videoSize * _scale;
 }
 
 void MovieNodeOpenGLWorker::drawFrame() {
-    {
-        QMutexLocker locker(&m_fboLocks.at(m_fboIndex));
-        if (m_fbos.at(m_fboIndex) == nullptr || m_fbos.at(m_fboIndex)->size() != m_size) {
-            delete m_fbos.at(m_fboIndex);
-            auto fmt = QOpenGLFramebufferObjectFormat{};
-            fmt.setInternalTextureFormat(GL_RGBA);
-            m_fbos[m_fboIndex] = new QOpenGLFramebufferObject(m_size,fmt);
-        }
-        auto fbo = m_fbos.at(m_fboIndex);
-
-        mpv_opengl_cb_draw(m_mpv_gl, fbo->handle(), fbo->width(), -fbo->height());
-        glFlush();
-        m_fboIndex = (m_fboIndex + 1) % BUFFER_COUNT;
+    if (!m_nextFrame|| m_nextFrame->size() != m_size) {
+        auto fmt = QOpenGLFramebufferObjectFormat{};
+        fmt.setInternalTextureFormat(GL_RGBA);
+        m_nextFrame = QSharedPointer<QOpenGLFramebufferObject>::create(m_size,fmt);
     }
-}
-
-int MovieNodeOpenGLWorker::lastIndex() {
-    return (m_fboIndex + BUFFER_COUNT - 1) % BUFFER_COUNT;
+    auto fbo = m_nextFrame;
+    mpv_opengl_cb_draw(m_mpv_gl, fbo->handle(), fbo->width(), -fbo->height());
+    glFlush();
+    {
+        QWriteLocker locker(&m_rwLock);
+        using std::swap;
+        swap(m_lastFrame,m_nextFrame);
+    }
 }
 
 void MovieNodeOpenGLWorker::onVideoChanged() {
@@ -568,12 +571,11 @@ void MovieNodeOpenGLWorker::setPause(bool pause) {
 
 MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
     if (m_mpv_gl)
-        mpv_opengl_cb_set_update_callback(m_mpv_gl, NULL, NULL);
+        mpv_opengl_cb_set_update_callback(m_mpv_gl, nullptr, nullptr);
     // Until this call is done, we need to make sure the player remains
     // alive. This is done implicitly with the mpv::qt::Handle instance
     // in this class.
     mpv_opengl_cb_uninit_gl(m_mpv_gl);
-    qDeleteAll(m_fbos.begin(), m_fbos.end());
 }
 
 bool MovieNodeOpenGLWorker::loadBlitShader() {
@@ -601,18 +603,28 @@ bool MovieNodeOpenGLWorker::loadBlitShader() {
         "    fragColor = texture(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
         "}\n"};
 
-    m_p->m_blitShader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
-    if (!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
+    m_state = QSharedPointer<MovieNodeRenderState>::create();
+    auto bs = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
+
+    if (!bs->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
         emit fatal("Could not compile vertex shader");
         return false;
     }
-    if (!m_p->m_blitShader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
+    if (!bs->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
         emit fatal("Could not compile fragment shader");
         return false;
     }
-    if (!m_p->m_blitShader->link()) {
+    if (!bs->link()) {
         emit fatal("Could not link shader program");
         return false;
     }
+    m_state->m_pass.m_shader = bs;
+    m_state->m_ready.store(true);
     return true;
+}
+void MovieNodeOpenGLWorker::onPrepareState(QSharedPointer<MovieNodeRenderState> state) {
+    if(!state || !m_state || state->m_ready.load())
+        return;
+    state->m_pass.m_shader = copyProgram(m_state->m_pass.m_shader);
+    state->m_ready.exchange(true);
 }

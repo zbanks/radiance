@@ -41,3 +41,4 @@ struct Pass {
     QSharedPointer<QOpenGLShaderProgram>     m_shader;
 };
 
+QSharedPointer<QOpenGLShaderProgram> copyProgram(QSharedPointer<QOpenGLShaderProgram> program);
