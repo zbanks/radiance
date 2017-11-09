@@ -79,12 +79,12 @@ ApplicationWindow {
 
     OutputWindow {
         id: outputWindow
-        window.visible: found && screenWidget.outputVisibleChecked
-        window.color: "black"
+        outputWindow.visible: found && screenWidget.outputVisibleChecked
+        outputWindow.color: "black"
 
         OutputItem {
             id: outputItem
-            parent: outputWindow.window.contentItem
+            parent: outputWindow.outputWindow.contentItem
             size: "1024x768"
             anchors.fill: parent
 
