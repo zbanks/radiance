@@ -326,31 +326,35 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
         renderFbo = renderState->m_pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
     }
 
-    glClearColor(0, 0, 0, 0);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    renderFbo->bind();
-    glViewport(0, 0, renderFbo->width(),renderFbo->height());
-    auto blitShader = renderState->m_pass.m_shader;
-    blitShader->bind();
-    glActiveTexture(GL_TEXTURE0);
-    blitShader->setUniformValue("iVideoFrame", 0);
-    blitShader->setUniformValue("iResolution", GLfloat(chain->size().width()), GLfloat(chain->size().height()));
     {
         QReadLocker locker(&m_openGLWorker->m_rwLock);
         auto fboi = m_openGLWorker->m_lastFrame;
         if (fboi) {
+            glClearColor(0, 0, 0, 0);
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_BLEND);
+
+            renderFbo->bind();
+            glViewport(0, 0, renderFbo->width(),renderFbo->height());
+
+            auto blitShader = renderState->m_pass.m_shader;
+            blitShader->bind();
+            glActiveTexture(GL_TEXTURE0);
+            blitShader->setUniformValue("iVideoFrame", 0);
+            blitShader->setUniformValue("iResolution", GLfloat(renderFbo->width()), GLfloat(renderFbo->height()));
+
             glBindTexture(GL_TEXTURE_2D, fboi->texture());
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
             blitShader->setUniformValue("iVideoResolution", GLfloat(fboi->width()), GLfloat(fboi->height()));
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            renderFbo->release();
+            outTexture = renderFbo->texture();
+
+            blitShader->release();
+
         }
     }
-    renderFbo->release();
-    outTexture = renderFbo->texture();
-
-    blitShader->release();
 
     return outTexture;
 }
