@@ -12,6 +12,7 @@
 #include <mpv/opengl_cb.h>
 #include <mpv/qthelper.hpp>
 #include <vector>
+#include <array>
 
 class MovieNode;
 
@@ -45,8 +46,9 @@ class MovieNodeOpenGLWorker : public OpenGLWorker {
 public:
     MovieNodeOpenGLWorker(MovieNode *p);
     ~MovieNodeOpenGLWorker() override;
-    QSharedPointer<QOpenGLFramebufferObject> m_lastFrame;
-    QSharedPointer<QOpenGLFramebufferObject> m_nextFrame;
+    std::array<QSharedPointer<QOpenGLFramebufferObject>,3> m_frames;
+//    QSharedPointer<QOpenGLFramebufferObject> m_lastFrame;
+//    QSharedPointer<QOpenGLFramebufferObject> m_nextFrame;
     QReadWriteLock                           m_rwLock;
 
 signals:

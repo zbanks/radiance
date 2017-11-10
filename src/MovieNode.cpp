@@ -8,6 +8,7 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLVertexArrayObject>
 #include <locale.h>
+#include <array>
 #include "Paths.h"
 #include "main.h"
 
@@ -328,7 +329,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 
     {
         QReadLocker locker(&m_openGLWorker->m_rwLock);
-        auto fboi = m_openGLWorker->m_lastFrame;
+        auto fboi = m_openGLWorker->m_frames.front();
         if (fboi) {
             glClearColor(0, 0, 0, 0);
             glDisable(GL_DEPTH_TEST);
@@ -510,18 +511,17 @@ void MovieNodeOpenGLWorker::updateSizes()
 }
 
 void MovieNodeOpenGLWorker::drawFrame() {
-    if (!m_nextFrame|| m_nextFrame->size() != m_size) {
+    if (!m_frames.back()|| m_frames.back()->size() != m_size) {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
-        m_nextFrame = QSharedPointer<QOpenGLFramebufferObject>::create(m_size,fmt);
+        m_frames.back() = QSharedPointer<QOpenGLFramebufferObject>::create(m_size,fmt);
     }
-    auto fbo = m_nextFrame;
+    auto fbo = m_frames.back();
     mpv_opengl_cb_draw(m_mpv_gl, fbo->handle(), fbo->width(), -fbo->height());
     glFlush();
     {
         QWriteLocker locker(&m_rwLock);
-        using std::swap;
-        swap(m_lastFrame,m_nextFrame);
+        std::rotate(m_frames.begin(),m_frames.begin() + 1,m_frames.end());
     }
 }
 
