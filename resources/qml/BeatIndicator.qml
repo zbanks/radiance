@@ -53,7 +53,7 @@ GraphicalDisplay {
             vec3 v = normalize(viewer - pt);
             vec3 h = normalize(l + v); // Halfway vector
             float hit = length(n);
-            float spec = pow(dot(n, h), shininess) * k_spec; // Specular component
+            float spec = pow(max(dot(n, h), 0.), shininess) * k_spec; // Specular component
             float diff = max(dot(n, l), 0.) * k_diff; // Diffuse component
 
             // Compute the shaded color of this pixel
