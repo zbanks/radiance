@@ -328,7 +328,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     }
 
     {
-        QReadLocker locker(&m_openGLWorker->m_rwLock);
+        QMutexLocker locker(&m_openGLWorker->m_rwLock);
         auto fboi = m_openGLWorker->m_frames.front();
         if (fboi) {
             glClearColor(0, 0, 0, 0);
@@ -520,8 +520,8 @@ void MovieNodeOpenGLWorker::drawFrame() {
     mpv_opengl_cb_draw(m_mpv_gl, fbo->handle(), fbo->width(), -fbo->height());
     glFlush();
     {
-        QWriteLocker locker(&m_rwLock);
-        std::rotate(m_frames.begin(),m_frames.begin() + 1,m_frames.end());
+        QMutexLocker locker(&m_rwLock);
+        std::rotate(m_frames.begin(),m_frames.end() - 1,m_frames.end());
     }
 }
 

@@ -49,7 +49,7 @@ public:
     std::array<QSharedPointer<QOpenGLFramebufferObject>,3> m_frames;
 //    QSharedPointer<QOpenGLFramebufferObject> m_lastFrame;
 //    QSharedPointer<QOpenGLFramebufferObject> m_nextFrame;
-    QReadWriteLock                           m_rwLock;
+    QMutex m_rwLock;
 
 signals:
     void message(QString str);
