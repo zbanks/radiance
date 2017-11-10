@@ -15,7 +15,7 @@ constexpr T rotl(T t)
     using U = std::make_unsigned_t<T>;
     return T((U(t)<<k)|(U(t)>>(std::numeric_limits<U>::digits-k)));
 }
-constexpr decltype(auto) splitmix_64(uint64_t seed)
+/*constexpr decltype(auto) splitmix_64(uint64_t seed)
 {
     return [x=seed]()mutable {
         auto z = (x += UINT64_C(0x9E3779B97F4A7C15));
@@ -23,7 +23,7 @@ constexpr decltype(auto) splitmix_64(uint64_t seed)
         z = (z ^ (z >> 27)) * UINT64_C(0x94D049BB133111EB);
         return z ^ (z >> 31);
     };
-}
+}*/
 constexpr decltype(auto) splitmix_64_single(uint64_t x)
 {
     auto z = (x += UINT64_C(0x9E3779B97F4A7C15));
