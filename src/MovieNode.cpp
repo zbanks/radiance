@@ -327,7 +327,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     }
 
     {
-        QWriteLocker locker(&m_openGLWorker->m_rwLock);
+        QReadLocker locker(&m_openGLWorker->m_rwLock);
         auto fboi = m_openGLWorker->m_lastFrame;
         if (fboi) {
             glClearColor(0, 0, 0, 0);
