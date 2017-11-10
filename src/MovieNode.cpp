@@ -327,7 +327,7 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     }
 
     {
-        QReadLocker locker(&m_openGLWorker->m_rwLock);
+        QWriteLocker locker(&m_openGLWorker->m_rwLock);
         auto fboi = m_openGLWorker->m_lastFrame;
         if (fboi) {
             glClearColor(0, 0, 0, 0);
@@ -340,12 +340,13 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
             auto blitShader = renderState->m_pass.m_shader;
             blitShader->bind();
             glActiveTexture(GL_TEXTURE0);
-            blitShader->setUniformValue("iVideoFrame", 0);
-            blitShader->setUniformValue("iResolution", GLfloat(renderFbo->width()), GLfloat(renderFbo->height()));
-
             glBindTexture(GL_TEXTURE_2D, fboi->texture());
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+
+            blitShader->setUniformValue("iVideoFrame", 0);
+            blitShader->setUniformValue("iResolution", GLfloat(renderFbo->width()), GLfloat(renderFbo->height()));
+
             blitShader->setUniformValue("iVideoResolution", GLfloat(fboi->width()), GLfloat(fboi->height()));
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             renderFbo->release();

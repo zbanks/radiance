@@ -61,13 +61,10 @@ QSGNode *QQuickVideoNodePreview::updatePaintNode(QSGNode *oldNode, UpdatePaintNo
     if (m_context && m_videoNodeId) {
         auto textureId = m_context->previewTexture(m_videoNodeId);
         if (textureId) {
-            auto tex = node->texture();
-            if(int(textureId) != int(tex->textureId())) {
-                // TODO repeatedly creating the QSGTexture is probably not the most efficient
-                auto size = m_context->previewSize();
-                node->setTexture(window()->createTextureFromId(textureId, size, QQuickWindow::TextureHasAlphaChannel));
-                node->setRect(boundingRect());
-            }
+            // TODO repeatedly creating the QSGTexture is probably not the most efficient
+            auto size = m_context->previewSize();
+            node->setTexture(window()->createTextureFromId(textureId, size, QQuickWindow::TextureHasAlphaChannel));
+            node->setRect(boundingRect());
         }
     }
     node->markDirty(QSGNode::DirtyMaterial); // Notifies all connected renderers that the node has dirty bits ;)
