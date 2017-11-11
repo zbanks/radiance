@@ -24,20 +24,25 @@ VideoNode *ImageType::create(QString arg) {
 
 ImageNode::ImageNode(NodeType *nr)
     : VideoNode(nr)
-    , m_openGLWorker(new ImageNodeOpenGLWorker(this))
     , m_ready(false) {
-
-    m_periodic.setInterval(10);
-    m_periodic.start();
-    connect(&m_periodic, &QTimer::timeout, this, &ImageNode::periodic);
-    connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
+    if(auto it = qobject_cast<ImageType*>(nr)) {
+        m_openGLWorker = it->m_openGLWorker;
+        if(m_openGLWorker) {
+            if(m_openGLWorker->ready())
+                m_ready = true;
+            connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
+        }
+    }
+//    m_periodic.setInterval(10);
+//    m_periodic.start();
+//    connect(&m_periodic, &QTimer::timeout, this, &ImageNode::periodic);
 }
 
 ImageNode::ImageNode(const ImageNode &other)
     : VideoNode(other)
-    , m_frameTextures(other.m_frameTextures)
-    , m_currentTexture(other.m_currentTexture)
-    , m_currentTextureIdx(other.m_currentTextureIdx)
+//    , m_frameTextures(other.m_frameTextures)
+//    , m_currentTexture(other.m_currentTexture)
+//    , m_currentTextureIdx(other.m_currentTextureIdx)
     , m_imagePath(other.m_imagePath)
     , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready) {
@@ -71,6 +76,10 @@ TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
         t->setName(imageName);
         t->setDescription(imageName);
         t->setInputCount(1);
+        t->m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(t, t->name()),&QObject::deleteLater);
+        bool result = QMetaObject::invokeMethod(t->m_openGLWorker.data(), "initialize");
+        Q_ASSERT(result);
+
         res.append(t);
     }
     return res;
@@ -83,19 +92,6 @@ void ImageNode::onInitialized() {
 
 void ImageNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
 }
-
-void ImageNode::periodic() {
-    Q_ASSERT(QThread::currentThread() == thread());
-
-    // Lock this because we need to use m_frameTextures
-    QMutexLocker locker(&m_stateLock);
-    if (!m_frameTextures.size())
-        return;
-    // TODO: actually use m_frameDelays, also this has a discontinuity at MAX_BEAT
-    m_currentTextureIdx = (int) (6.0 * timebase->beat()) % m_frameTextures.size();
-    m_currentTexture = m_frameTextures.at(m_currentTextureIdx);
-}
-
 QString ImageNode::imagePath() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_imagePath;
@@ -104,13 +100,10 @@ QString ImageNode::imagePath() {
 void ImageNode::setImagePath(QString imagePath) {
     Q_ASSERT(QThread::currentThread() == thread());
     if(imagePath != m_imagePath) {
-        m_ready = false;
         {
             QMutexLocker locker(&m_stateLock);
             m_imagePath = imagePath;
         }
-        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
-        Q_ASSERT(result);
         emit imagePathChanged(imagePath);
     }
 }
@@ -123,44 +116,58 @@ QSharedPointer<VideoNode> ImageNode::createCopyForRendering(QSharedPointer<Chain
 }
 
 GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
-    if (!m_ready || !m_currentTexture) return 0;
-    return m_currentTexture->textureId();
+    if (!m_openGLWorker || !m_openGLWorker->m_ready.load() || !m_openGLWorker->m_frameTextures.size())
+        return 0;
+
+    auto currentMs = int64_t(chain->realTime() *  1e3);
+    auto extraMs   = currentMs;
+    if(m_openGLWorker->m_totalDelay) {
+        extraMs   = currentMs % (m_openGLWorker->m_totalDelay);
+        if(!m_openGLWorker->m_frameDelays.empty()) {
+            for(auto i = size_t{}; i < m_openGLWorker->m_frameDelays.size(); ++i) {
+                if(m_openGLWorker->m_frameDelays.at(i) >= extraMs)
+                    return m_openGLWorker->m_frameTextures.at(i)->textureId();
+            }
+        } else {
+            auto perFrame = m_openGLWorker->m_totalDelay / m_openGLWorker->m_frameTextures.size();;
+            auto idx = std::min(extraMs/perFrame, m_openGLWorker->m_frameTextures.size() - 1);
+            return m_openGLWorker->m_frameTextures.at(idx)->textureId();
+        }
+    }
+    return 0;
 }
 
 // ImageNodeOpenGLWorker methods
 
-ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode *p)
-    : OpenGLWorker(p->proto()->registry()->workerContext())
-    , m_p(p) {
-    connect(this, &ImageNodeOpenGLWorker::message, m_p, &ImageNode::message);
-    connect(this, &ImageNodeOpenGLWorker::warning, m_p, &ImageNode::warning);
-    connect(this, &ImageNodeOpenGLWorker::fatal,   m_p, &ImageNode::fatal);
+ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageType *p, QString imagePath)
+    : OpenGLWorker(p->registry()->workerContext())
+    , m_imagePath(imagePath) {
+//    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
+//    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
+//    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
     connect(this, &QObject::destroyed, this, &ImageNodeOpenGLWorker::onDestroyed);
 }
 
+bool ImageNodeOpenGLWorker::ready() const {
+    return m_ready.load();
+}
 void ImageNodeOpenGLWorker::initialize() {
     // Lock this because we need to use m_frameTextures
-    QMutexLocker locker(&m_p->m_stateLock);
-
-    m_p->m_currentTexture = nullptr;
-
     makeCurrent();
-    bool result = loadImage(m_p->m_imagePath);
+    auto result = loadImage(m_imagePath);
     if (!result) {
-        qWarning() << "Can't load image!" << m_p->m_imagePath;
+        qWarning() << "Can't load image!" << m_imagePath;
         return;
     }
-
+    m_ready.store(true);
     // Set the current frame to 0
-    m_p->m_currentTextureIdx = 0;
-    m_p->m_currentTexture = m_p->m_frameTextures.at(0);
     emit initialized();
 }
 
 // Call this to load an image into m_frameTextures
 // Returns true if the program was loaded successfully
 bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
-    QString filename = Paths::library() + QString("images/") + imagePath;
+    auto filename = Paths::library() + QString("images/") + imagePath;
     QFile file(filename);
 
     QFileInfo check_file(filename);
@@ -174,24 +181,26 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
     if (nFrames == 0)
         nFrames = 1; // Returns 0 if animation isn't supported
 
-    qDeleteAll(m_p->m_frameTextures.begin(), m_p->m_frameTextures.end());
-
-    m_p->m_frameTextures = QVector<QOpenGLTexture *>(nFrames);
-    m_p->m_frameDelays = QVector<int>(nFrames);
+    m_frameTextures.clear();
+    m_frameTextures.resize(nFrames);
+    m_frameDelays.resize(nFrames);
 
     for (int i = 0; i < nFrames; i++) {
-        QImage frame = imageReader.read();
+        auto frame = imageReader.read();
         if (frame.isNull()) {
             qWarning() << "Unable to read frame" << i << "of image:" << imageReader.errorString();
             return false;
         }
 
-        m_p->m_frameDelays[i] = imageReader.nextImageDelay();
-        m_p->m_frameTextures[i] = new QOpenGLTexture(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps);
+        m_frameDelays[i] = imageReader.nextImageDelay();
+        if(!m_frameDelays[i])
+            m_frameDelays[i] = 10;
+        m_frameTextures[i] = QSharedPointer<QOpenGLTexture>::create(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps);
     }
-
+    std::partial_sum(m_frameDelays.begin(),m_frameDelays.end(),m_frameDelays.begin());
+    m_totalDelay = m_frameDelays.back();
     glFlush();
-    qDebug() << "Successfully loaded image" << filename << "with" << nFrames << "frames";
+    qDebug() << "Successfully loaded image " << filename << " with " << nFrames << "frames, and a total delay of " << m_totalDelay << "ms";
 
     return true;
 }
@@ -199,5 +208,7 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
 void ImageNodeOpenGLWorker::onDestroyed() {
     // For some reason, QOpenGLTexture does not have setParent
     // and so we cannot use Qt object tree deletion semantics
-    qDeleteAll(m_p->m_frameTextures.begin(), m_p->m_frameTextures.end());
+    makeCurrent();
+    m_frameTextures.clear();
+    m_frameDelays.clear();
 }

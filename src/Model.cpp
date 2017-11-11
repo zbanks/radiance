@@ -463,6 +463,8 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     auto & vao = chain->vao();
     if(!vao.isCreated())
         vao.create();
+    chain->setRealTime(timebase->wallTime());
+    chain->setBeatTime(timebase->beat());
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
         auto inputCount = vertices.at(i)->inputCount();

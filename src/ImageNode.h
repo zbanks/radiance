@@ -6,16 +6,11 @@
 #include <QOpenGLTexture>
 #include <QMutex>
 #include <QTimer>
+#include <vector>
 
 class ImageNode;
-class ImageType : public NodeType {
-    Q_OBJECT
-public:
-    ImageType(NodeRegistry *r = nullptr, QObject *p = nullptr);
-   ~ImageType() override;
-public slots:
-    VideoNode *create(QString) override;
-};
+class ImageType;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -27,11 +22,11 @@ class ImageNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    ImageNodeOpenGLWorker(ImageNode *p);
+    ImageNodeOpenGLWorker(ImageType *p, QString imagePath);
 
 public slots:
     void initialize();
-
+    bool ready() const;
 signals:
     // This is emitted when it is done
     void initialized();
@@ -44,6 +39,23 @@ protected:
     ImageNode *m_p;
 protected slots:
     void onDestroyed();
+public:
+    std::atomic<bool> m_ready{false};
+    QString      m_imagePath;
+    int          m_totalDelay{};
+    std::vector<int> m_frameDelays{}; // milliseconds
+    std::vector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
+};
+
+class ImageType : public NodeType {
+    Q_OBJECT
+public:
+    ImageType(NodeRegistry *r = nullptr, QObject *p = nullptr);
+   ~ImageType() override;
+public slots:
+    VideoNode *create(QString) override;
+public:
+    QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,7 +88,6 @@ public slots:
 
 protected slots:
     void onInitialized();
-    void periodic();
 
 signals:
     void imagePathChanged(QString imagePath);
@@ -84,14 +95,9 @@ signals:
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
-    QVector<int> m_frameDelays; // milliseconds
-    QVector<QOpenGLTexture *> m_frameTextures;
-    QOpenGLTexture *m_currentTexture;
-    int m_currentTextureIdx;
 
     QString m_imagePath;
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
     bool m_ready;
-    QTimer m_periodic; // XXX Do something better here
 };
