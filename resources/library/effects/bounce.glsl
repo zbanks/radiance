@@ -2,7 +2,7 @@
 
 void main(void) {
     float factor = 1. - 3. * iIntensity * iAudioLevel * sawtooth(iTime, 0.1);
-    factor = clamp(0.05, 2., factor);
+    factor = clamp(factor, 0.05, 2.);
 
     fragColor = texture(iInput, (uv - 0.5) * factor + 0.5);
 }
