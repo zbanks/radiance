@@ -41,10 +41,10 @@ void main(void) {
     float k_spec = iIntensity * 0.5;
 
     // Diffuse amount
-    float k_diff = 0.8;
+    float k_diff = 1.3;
 
     // Ambient amount
-    float k_amb = 0.1;
+    float k_amb = 0.3;
 
     // Image is in the Z-plane spanning 0,0 to 1,1
     vec3 pt = vec3(uv, 0.);
