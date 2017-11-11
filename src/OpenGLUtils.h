@@ -2,11 +2,18 @@
 
 #include <QObject>
 #include <QOpenGLContext>
+#include <QOpenGLBuffer>
+#include <QOpenGLTexture>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFramebufferObject>
 #include <QSharedPointer>
 
 #include "OpenGLWorkerContext.h"
+
+using QOGLShaderProgramPointer = QSharedPointer<QOpenGLShaderProgram>;
+using QOGLFramebufferObjectPointer = QSharedPointer<QOpenGLFramebufferObject>;
+using QOGLTexturePointer = QSharedPointer<QOpenGLTexture>;
+using QOGLBufferPointer = QSharedPointer<QOpenGLBuffer>;
 
 class OpenGLSampler {
     Q_GADGET
@@ -37,8 +44,8 @@ protected:
 };
 
 struct Pass {
-    QSharedPointer<QOpenGLFramebufferObject> m_output;
-    QSharedPointer<QOpenGLShaderProgram>     m_shader;
+    QOGLFramebufferObjectPointer m_output;
+    QOGLShaderProgramPointer     m_shader;
 };
 
-QSharedPointer<QOpenGLShaderProgram> copyProgram(QSharedPointer<QOpenGLShaderProgram> program);
+QOGLShaderProgramPointer copyProgram(QOGLShaderProgramPointer program);

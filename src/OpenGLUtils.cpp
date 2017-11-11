@@ -59,11 +59,11 @@ void OpenGLSampler::setParameter(GLenum pname, GLfloat param)
     }
 }
 
-QSharedPointer<QOpenGLShaderProgram> copyProgram(QSharedPointer<QOpenGLShaderProgram> program) {
+QOGLShaderProgramPointer copyProgram(QOGLShaderProgramPointer program) {
     if(!program || !program->isLinked())
         return {};
 
-    auto nprogram = QSharedPointer<QOpenGLShaderProgram>::create();
+    auto nprogram = QOGLShaderProgramPointer::create();
     for(auto shader : program->shaders())
         nprogram->addShader(shader);
 
