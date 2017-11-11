@@ -12,7 +12,7 @@ Item {
     Layout.fillWidth: true;
     Layout.fillHeight: true;
 
-    Flickable {
+    ScrollView {
         id: flickable
         anchors.fill: parent
         contentWidth: view.width + 600;
@@ -36,8 +36,7 @@ Item {
                     "MovieNode": "MovieNodeTile",
                     "": "VideoNodeTile"
                 }
-                x: (parent.width - width) / 2
-                y: (parent.height - height) / 2
+                anchors.centerIn: parent
 
                 Behavior on x { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
                 Behavior on y { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
@@ -48,15 +47,9 @@ Item {
                         view.Controls.changeControlRel(0, Controls.Enter, 1);
                     }
                 }
-
-                /*
-                Rectangle {
-                    opacity: 0.5
-                    color: "red"
-                    anchors.fill: parent
-                }
-                //*/
             }
         }
+        ScrollBar.horizontal.policy: ScrollBar.AsNeeded
+        ScrollBar.vertical.policy:   ScrollBar.AsNeeded
     }
 }

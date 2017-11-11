@@ -23,7 +23,7 @@ ApplicationWindow {
 
     Shortcut {
         id: saveAction
-        sequence: StandaradKey.Save
+        sequence: StandardKey.Save
         onActivated : {
             model.saveFile("radiance_state.json");
         }
