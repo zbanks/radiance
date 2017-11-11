@@ -1,6 +1,7 @@
 import QtQuick 2.7
+import QtQuick.Dialogs 1.2
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.2
 import QtGraphicalEffects 1.0
 import radiance 1.0
 import "."
@@ -20,6 +21,91 @@ ApplicationWindow {
         previewWindow: window;
     }
 
+    Shortcut {
+        id: saveAction
+        sequence: StandaradKey.Save
+        onActivated : {
+            model.saveFile("radiance_state.json");
+        }
+    }
+    Shortcut {
+        id: loadAction
+        sequence: StandardKey.Open
+        onActivated: {
+            model.loadFile("radiance_state.json");
+            model.flush();
+        }
+    }
+    Shortcut {
+        sequence: StandardKey.Quit
+        onActivated: Qt.quit();
+    }
+    header: ToolBar {
+        leftPadding: 8
+        Flow {
+//            Layout.fillWidth: true;
+            // This is kind of crappy, but it was easy
+            LibraryWidget {
+                id: library
+                model: model
+                graph: graph
+            }
+            ScreenWidget {
+                id: screenWidget
+                outputWindow: outputWindow
+            }
+            Loader {
+                source: window.hasMidi ? "MidiMappingSelector.qml" : ""
+                onLoaded: item.target = graph.view;
+            }
+            RowLayout {
+                id: outputRow
+                ComboBox {
+                    id: outputSelector;
+                    function outputNames() {
+                        var o = globalContext.outputs;
+                        var a = [];
+                        for (var i=0; i<o.length; i++) {
+                            a.push(o[i].name);
+                        }
+                        return a;
+                    }
+                    model: outputNames()
+                }
+                CheckBox {
+                    id: outputImageSequenceCheckbox
+                    text: "Save to disk"
+                }
+                ToolButton {
+                    text: "Stop saving to disk"
+                    onClicked: {
+                        outputImageSequence.stop();
+                    }
+                }
+            }
+            RowLayout {
+                id: loadSaveRow
+                ToolButton {
+                    text: "Save"
+                    onClicked: model.saveFile("radiance_state.json");
+                }
+                ToolButton {
+                    text: "Load"
+                    onClicked: {
+                        model.loadFile("radiance_state.json");
+                        model.flush();
+                    }
+                }
+                ToolButton {
+                    text: "Clear"
+                    onClicked: {
+                        model.clear();
+                        model.flush();
+                    }
+                }
+            }
+        }
+    }
     Model {
         id: model;
         onGraphChanged: {
@@ -40,42 +126,17 @@ ApplicationWindow {
         }
     }
 
-    Action {
-        id: saveAction
-        shortcut: "Ctrl+S"
-        onTriggered: {
-            model.saveFile("radiance_state.json");
-        }
-    }
-
-    Action {
-        id: loadAction
-        shortcut: "Ctrl+R"
-        onTriggered: {
-            model.loadFile("radiance_state.json");
-            model.flush();
-        }
-    }
 
     Timer {
         repeat: true
         running: true
         interval: 10 * 1000
-        onTriggered: saveAction.trigger()
+        onTriggered: model.saveFile("radiance_state.json");
     }
 
     onClosing: {
-        saveAction.trigger();
+        model.saveFile("radiance_state.json");
     }
-
-    /*
-    // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
-    EffectNode {
-        id: cross
-        name: "crossfader"
-        inputCount: 2
-    }
-    */
 
     OutputWindow {
         id: outputWindow
@@ -92,9 +153,9 @@ ApplicationWindow {
                 output.name = "Screen"
             }
 
-            Action {
-                shortcut: "Esc"
-                onTriggered: function() {
+            Shortcut {
+                sequence: StandardKey.Cancel
+                onActivated : function() {
                     console.log("try to hide");
                     screenWidget.outputVisibleChecked = false;
                 }
@@ -114,8 +175,9 @@ ApplicationWindow {
     Component.onCompleted: {
         Globals.context = globalContext;
         globalContext.outputs = [outputItem.output, outputImageSequence];
+        model.loadFile("radiance_state.json");
+        model.flush();
 
-        loadAction.trigger();
         if (model.vertices.length == 0) {
             // If the state was empty, then open up a few nodes as a demo
             var n1 = model.createVideoNode("nyancat.gif");
@@ -133,64 +195,20 @@ ApplicationWindow {
         anchors.fill: parent;
 
         RowLayout {
-            Layout.fillWidth: true;
-
-            // This is kind of crappy, but it was easy
-            LibraryWidget {
-                id: library
-                model: model
-                graph: graph
+            Layout.fillWidth: true
+            BeatIndicator {
+                width: 25
+                opacity: .9
             }
-
-            ScreenWidget {
-                id: screenWidget
-                outputWindow: outputWindow
+            Waveform {
+                Layout.minimumWidth: 50
+                Layout.fillWidth: true;
+                opacity: .9
             }
-
-            Loader {
-                source: window.hasMidi ? "MidiMappingSelector.qml" : ""
-                onLoaded: {
-                    item.target = graph.view;
-                }
-            }
-
-            ComboBox {
-                id: outputSelector;
-                function outputNames() {
-                    var o = globalContext.outputs;
-                    var a = [];
-                    for (var i=0; i<o.length; i++) {
-                        a.push(o[i].name);
-                    }
-                    return a;
-                }
-                model: outputNames()
-            }
-            CheckBox {
-                id: outputImageSequenceCheckbox
-                text: "Save to disk"
-            }
-            Button {
-                text: "Stop saving to disk"
-                onClicked: {
-                    outputImageSequence.stop();
-                }
-            }
-
-            Button {
-                text: "Save"
-                action: saveAction
-            }
-            Button {
-                text: "Load"
-                action: loadAction
-            }
-            Button {
-                text: "Clear"
-                onClicked: {
-                    model.clear();
-                    model.flush();
-                }
+            Spectrum {
+                Layout.minimumWidth: 50
+                Layout.fillWidth: true;
+                opacity: .9
             }
         }
 
@@ -205,20 +223,6 @@ ApplicationWindow {
                 anchors.fill: parent
             }
 
-            RowLayout {
-                BeatIndicator {
-                    width: 25
-                    opacity: .9
-                }
-                Waveform {
-                    width: 500
-                    opacity: .9
-                }
-                Spectrum {
-                    width: 500
-                    opacity: .9
-                }
-            }
 
             Label {
                 id: messages
@@ -237,20 +241,4 @@ ApplicationWindow {
         }
     }
 
-    Action {
-        id: quitAction
-        text: "&Quit"
-        shortcut: "Ctrl+Q"
-        onTriggered: {
-            saveAction.trigger()
-            Qt.quit()
-        }
-    }
-
-    Action {
-        id: newNodeAction
-        text: "&New Node"
-        shortcut: ":"
-        onTriggered: nodeSelector.forceActiveFocus()
-    }
 }

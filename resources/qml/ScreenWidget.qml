@@ -1,29 +1,26 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.2
 import QtGraphicalEffects 1.0
 import radiance 1.0
 
-GroupBox {
+RowLayout {
     property alias outputVisibleChecked: outputVisible.checked;
     property var outputWindow;
 
-    title: "Output to screen"
-    Layout.preferredWidth: 300;
-    RowLayout {
-        anchors.fill: parent;
-        CheckBox {
-            id: outputVisible;
-            text: "Show output";
-            onCheckedChanged: {
-                if (checked) {
-                    outputWindow.screen = screenSelector.currentText;
-                }
+//    title: "Output to screen"
+//    Layout.preferredWidth: 300;
+    CheckBox {
+        id: outputVisible;
+        text: "Show output";
+        onCheckedChanged: {
+            if (checked) {
+                outputWindow.screen = screenSelector.currentText;
             }
         }
-        ComboBox {
-            id: screenSelector;
-            model: outputWindow.availableScreens;
-        }
+    }
+    ComboBox {
+        id: screenSelector;
+        model: outputWindow.availableScreens;
     }
 }

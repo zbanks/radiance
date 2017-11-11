@@ -1,6 +1,6 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.2
 import QtQuick.Controls.Styles 1.4
 import radiance 1.0
 import "."
@@ -28,21 +28,12 @@ VideoNodeTile {
                 color: "#ddd";
                 elide: Text.ElideMiddle;
             }
-        
+
             Label {
                 text: attachedParameter >= 0 ? "#" + attachedParameter : "";
                 color: "#ddd";
             }
         }
-
-        /*
-        ComboBox {
-            Layout.fillWidth: true;
-            model: NodeList.effectNames();
-            editable: true;
-        }
-        */
-
         Item {
             Layout.preferredHeight: width;
             Layout.fillWidth: true;
@@ -62,31 +53,10 @@ VideoNodeTile {
         Slider {
             id: slider;
             Layout.fillWidth: true;
-            minimumValue: 0;
-            maximumValue: 1;
+            from: 0;
+            to: 1;
+            stepSize: 0.01
         }
-
-        /*
-        ProgressBar {
-            id: sliderGhost;
-            Layout.fillWidth: true;
-            minimumValue: 0;
-            maximumValue: 1;
-        }
-        */
-
-        /* No MIDI indicator until we actually need it
-        Slider {
-            // TODO: How do we make this indicator-only?
-            id: sliderGhost;
-            Layout.fillWidth: true;
-            minimumValue: 0;
-            maximumValue: 1;
-            style: SliderStyle {
-                handle: Rectangle {}
-            }
-        }
-        */
     }
 
     Keys.onPressed: {
