@@ -121,45 +121,25 @@ target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
 
-#--------------------------------------------------------------------------------
-# Now the installation stuff below
-#--------------------------------------------------------------------------------
-SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/${EXE_NAME}")
-IF(APPLE)
-    SET(CMAKE_INSTALL_PREFIX .)
-    SET(resources_dest_dir "${EXE_NAME}.app/Contents/Resources")
-    SET(APPS "\${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app")
-ENDIF(APPLE)
-IF(WIN32)
-    SET(APPS "\${CMAKE_INSTALL_PREFIX}/bin/${EXE_NAME}.exe")
-ENDIF(WIN32)
-
-#--------------------------------------------------------------------------------
-# Install the radiance application, on Apple, the bundle is at the root of the
-# install tree, and on other platforms it'll go into the bin directory.
-#--------------------------------------------------------------------------------
 INSTALL(TARGETS radiance
-    BUNDLE DESTINATION . COMPONENT Runtime
-    RUNTIME DESTINATION bin COMPONENT Runtime
-    )
+        RUNTIME DESTINATION bin
+)
 
 INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
-            DESTINATION
-            "${resources_dest_dir}" COMPONENT Runtime)
+        RUNTIME DESTINATION
+        "share/${PROJECT_NAME}"
+)
 
 IF(APPLE)
-    INSTALL(
-        CODE
-        "
-        MESSAGE(STATUS \"Running MacOS deploy script...\")
-        EXECUTE_PROCESS(COMMAND \"${CMAKE_SOURCE_DIR}/deploy/mac.sh\"
-                                \"${CMAKE_SOURCE_DIR}\"
-                                \"${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app\"
-                                \"${Qt5Core_DIR}/../../..\")
-        "
+    ADD_CUSTOM_TARGET(bundle
+        "${CMAKE_SOURCE_DIR}/deploy/mac.sh"
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app"
+        "${Qt5Core_DIR}/../../.."
+        DEPENDS radiance
     )
 ENDIF(APPLE)
 
 # make package
-set(CPACK_BINARY_DRAGNDROP ON)
-include(CPack)
+#set(CPACK_BINARY_DRAGNDROP ON)
+#include(CPack)

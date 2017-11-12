@@ -4,6 +4,10 @@ SOURCE_DIR=$1
 APP=$2
 QT=$3
 
+echo "Copying resources..."
+mkdir -p "$APP/Contents/Resources"
+cp -r "$SOURCE_DIR/resources"/* "$APP/Contents/Resources/"
+
 echo "Removing .qmlc files..."
 find "$APP/Contents/Resources/" -name "*.qmlc" -exec rm \{\} \;
 

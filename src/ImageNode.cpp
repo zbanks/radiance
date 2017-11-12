@@ -130,7 +130,7 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
             }
         } else {
             auto perFrame = m_openGLWorker->m_totalDelay / m_openGLWorker->m_frameTextures.size();;
-            auto idx = std::min(extraMs/perFrame, m_openGLWorker->m_frameTextures.size() - 1);
+            auto idx = std::min((unsigned long)(extraMs / perFrame), (unsigned long)(m_openGLWorker->m_frameTextures.size() - 1));
             return m_openGLWorker->m_frameTextures.at(idx)->textureId();
         }
     }
