@@ -3,7 +3,7 @@
 
 class Paths {
 public:
-    static void initialize(bool debug=false);
+    static void initialize();
     static QString library();
     static QString qml();
     static QString glsl();

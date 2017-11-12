@@ -5,21 +5,16 @@ project(radiance)
 
 set(APP_NAME Radiance)
 set(LIB_NAME radiance)
-
-IF(APPLE)
-    set(EXE_NAME Radiance)
-ELSE()
-    set(EXE_NAME radiance)
-ENDIF(APPLE)
+set(EXE_NAME radiance)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -Werror")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O2 -ffast-math -march=native -DDEBUG_RESOURCES")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O2 -ffast-math -march=native")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native -DDEBUG_RESOURCES")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -march=native")
 set(CMAKE_CXX_STANDARD 14)
 
 include(Doxygen)
@@ -106,7 +101,7 @@ endif()
 
 add_library(libradiance ${libradiance_SOURCES})
 
-add_executable(radiance MACOSX_BUNDLE WIN32 src/main.cpp
+add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickOutputItem.cpp
     src/QQuickOutputWindow.cpp)
@@ -122,11 +117,11 @@ target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
 
 INSTALL(TARGETS radiance
-        RUNTIME DESTINATION bin
+        DESTINATION bin
 )
 
 INSTALL(DIRECTORY "${CMAKE_SOURCE_DIR}/resources/"
-        RUNTIME DESTINATION
+        DESTINATION
         "share/${PROJECT_NAME}"
 )
 
@@ -134,7 +129,9 @@ IF(APPLE)
     ADD_CUSTOM_TARGET(bundle
         "${CMAKE_SOURCE_DIR}/deploy/mac.sh"
         "${CMAKE_SOURCE_DIR}"
-        "${CMAKE_INSTALL_PREFIX}/${EXE_NAME}.app"
+        "${CMAKE_BINARY_DIR}/${EXE_NAME}"
+        "${CMAKE_BINARY_DIR}/Radiance.app"
+        "${CMAKE_BINARY_DIR}/Radiance.dmg"
         "${Qt5Core_DIR}/../../.."
         DEPENDS radiance
     )

@@ -1,8 +1,23 @@
 #!/bin/sh
 
 SOURCE_DIR=$1
-APP=$2
-QT=$3
+BINARY=$2
+APP=$3
+DMG=$4
+QT=$5
+
+echo "Source dir: $SOURCE_DIR"
+echo "Binary: $BINARY"
+echo "App: $APP"
+echo "DMG: $DMG"
+echo "Qt: $QT"
+
+echo "Create bundle directory..."
+mkdir -p "$APP/Contents/MacOS"
+
+echo "Copying executable and Info.plist..."
+cp -r "$BINARY" "$APP/Contents/MacOS/radiance"
+cp -r "$SOURCE_DIR/deploy/Info.plist" "$APP/Contents/Info.plist"
 
 echo "Copying resources..."
 mkdir -p "$APP/Contents/Resources"
@@ -33,3 +48,13 @@ done
 echo "Generating icon set..."
 "$SOURCE_DIR/deploy/png2icns.sh" "$SOURCE_DIR/deploy/icon.png"
 mv icon.icns "$APP/Contents/Resources/"
+
+echo "Bundle is done."
+
+# Create DMG
+echo "Creating DMG..."
+mkdir -p tmp
+cp -r "$APP" tmp
+ln -s /Applications tmp/Applications
+hdiutil create -volname "Radiance" -srcfolder tmp -ov -format UDZO "$DMG"
+rm -rf tmp

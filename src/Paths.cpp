@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QStandardPaths>
 #include <QCoreApplication>
+#include <QDir>
 
 bool Paths::m_initialized = false;
 QString Paths::m_library;
@@ -23,21 +24,22 @@ QString Paths::glsl() {
     return Paths::m_glsl;
 }
 
-void Paths::initialize(bool debug) {
-    if (debug) {
+void Paths::initialize() {
+    if (QDir(QCoreApplication::applicationDirPath() + "/../Resources/").exists()) {
+        // MacOS Bundle
+        Paths::m_library = QCoreApplication::applicationDirPath() + "/../Resources/library/";
+        Paths::m_qml = QCoreApplication::applicationDirPath() + "/../Resources/qml/";
+        Paths::m_glsl = QCoreApplication::applicationDirPath() + "/../Resources/glsl/";
+    } else if (QDir("../resources/").exists()) {
+        // Debug build
         Paths::m_library = "../resources/library/";
         Paths::m_qml = "../resources/qml/";
         Paths::m_glsl = "../resources/glsl/";
     } else {
+        // Anything else
         Paths::m_library = QStandardPaths::locate(QStandardPaths::AppDataLocation, "library", QStandardPaths::LocateDirectory);
         Paths::m_qml = QStandardPaths::locate(QStandardPaths::AppDataLocation, "qml", QStandardPaths::LocateDirectory);
         Paths::m_glsl = QStandardPaths::locate(QStandardPaths::AppDataLocation, "glsl", QStandardPaths::LocateDirectory);
-        if (m_library.isEmpty() && m_qml.isEmpty() && m_glsl.isEmpty()) {
-            // XXX Quick hack to fix QTBUG-61159
-            m_library = QCoreApplication::applicationDirPath() + "/../Resources/library/";
-            m_qml = QCoreApplication::applicationDirPath() + "/../Resources/qml/";
-            m_glsl = QCoreApplication::applicationDirPath() + "/../Resources/glsl/";
-        }
     }
     Paths::m_initialized = true;
     qDebug() << "Library path is:" << Paths::m_library;
