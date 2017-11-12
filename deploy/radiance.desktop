@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Radiance
+Exec=radiance
+Icon=radiance
+Comment=Video art software
+Terminal=false
+Categories=AudioVideo;Audio;Video;Graphics;

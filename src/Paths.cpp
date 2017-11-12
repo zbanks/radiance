@@ -30,6 +30,11 @@ void Paths::initialize() {
         Paths::m_library = QCoreApplication::applicationDirPath() + "/../Resources/library/";
         Paths::m_qml = QCoreApplication::applicationDirPath() + "/../Resources/qml/";
         Paths::m_glsl = QCoreApplication::applicationDirPath() + "/../Resources/glsl/";
+    } else if (QDir(QCoreApplication::applicationDirPath() + "/resources/").exists()) {
+        // Linux Bundle
+        Paths::m_library = QCoreApplication::applicationDirPath() + "/resources/library/";
+        Paths::m_qml = QCoreApplication::applicationDirPath() + "/resources/qml/";
+        Paths::m_glsl = QCoreApplication::applicationDirPath() + "/resources/glsl/";
     } else if (QDir("../resources/").exists()) {
         // Debug build
         Paths::m_library = "../resources/library/";

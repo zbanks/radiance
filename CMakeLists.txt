@@ -135,7 +135,16 @@ IF(APPLE)
         "${Qt5Core_DIR}/../../.."
         DEPENDS radiance
     )
-ENDIF(APPLE)
+ELSEIF(UNIX)
+    ADD_CUSTOM_TARGET(bundle
+        "${CMAKE_SOURCE_DIR}/deploy/linux.sh"
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}/${EXE_NAME}"
+        "${CMAKE_BINARY_DIR}/Radiance.AppDir"
+        "${CMAKE_BINARY_DIR}/Radiance.AppDir.tar.gz"
+        DEPENDS radiance
+    )
+ENDIF()
 
 # make package
 #set(CPACK_BINARY_DRAGNDROP ON)
