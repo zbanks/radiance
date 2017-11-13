@@ -22,17 +22,17 @@ public:
     OpenGLSampler(OpenGLSampler && o) noexcept = default;
     OpenGLSampler &operator=(OpenGLSampler && o) noexcept = default;
    ~OpenGLSampler();
-    constexpr operator const GLuint& () const
+    operator const GLuint& () const
     {
         return m_id;
     }
-    constexpr bool isCreated() const
+    bool isCreated() const
     {
         return m_id != 0u;
     }
     bool create();
     void destroy();
-    constexpr GLuint samplerId() const
+    GLuint samplerId() const
     {
         return m_id;
     };
