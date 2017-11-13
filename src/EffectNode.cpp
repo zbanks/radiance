@@ -360,7 +360,7 @@ QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chai
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
     : OpenGLWorker(p->workerContext()) {
     qRegisterMetaType<QSharedPointer<EffectNodeRenderState>>();
-    connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState);
+    connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState, Qt::QueuedConnection);
     connect(this, &EffectNodeOpenGLWorker::message, p, &EffectNode::message);
     connect(this, &EffectNodeOpenGLWorker::warning, p, &EffectNode::warning);
     connect(this, &EffectNodeOpenGLWorker::fatal,   p, &EffectNode::fatal);
@@ -377,16 +377,12 @@ void EffectNodeOpenGLWorker::initialize(QString name) {
     emit initialized();
 }
 void EffectNodeOpenGLWorker::onPrepareState(QSharedPointer<EffectNodeRenderState> state) {
-    if(!state || !m_state || state->m_ready.load())
+    makeCurrent();
+    if(!state || !m_state || state->m_ready.load() || !m_state->m_ready.load())
         return;
     for(auto && pass : m_state->m_passes) {
-        auto dprogram = QSharedPointer<QOpenGLShaderProgram>::create();
-        for(auto && shader : pass.m_shader->shaders())
-            dprogram->addShader(shader);
-        if(!dprogram->link())
-            return;
         state->m_passes.emplace_back();
-        state->m_passes.back().m_shader =  dprogram;
+        state->m_passes.back().m_shader = copyProgram(pass.m_shader);
     }
     state->m_ready.exchange(true);
 }

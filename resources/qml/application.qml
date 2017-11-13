@@ -44,7 +44,9 @@ ApplicationWindow {
         id: saveAction
         shortcut: "Ctrl+S"
         onTriggered: {
-            model.saveFile("radiance_state.json");
+            if (model.vertices.length >= 0) {
+                model.saveFile("radiance_state.json");
+            }
         }
     }
 
