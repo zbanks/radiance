@@ -14,7 +14,7 @@ void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
     //float bs = 2048. * pow(2, -5. * iIntensity);
-    float bs = (1. - iIntensity) / onePixel;
+    float bs = max((1. - iIntensity) / (1.3 * onePixel), 5.);
     vec2 bins = bs * aspectCorrection;
     vec2 db = 1. / (bins * aspectCorrection);
     normCoord = round(normCoord * bins) * db + 0.5;
