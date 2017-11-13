@@ -6,18 +6,13 @@
 
 VideoNode::VideoNode(NodeType *nr)
     : m_inputCount{0}
-    , m_proto{nr}
     , m_workerContext(nr?nr->registry()->workerContext() : nullptr) {
 }
 
 VideoNode::VideoNode(const VideoNode &other)
     : m_inputCount(other.m_inputCount)
     , m_id(other.m_id)
-    , m_proto(other.m_proto)
     , m_workerContext(other.m_workerContext) {
-}
-NodeType *VideoNode::proto() const {
-    return m_proto;
 }
 QSharedPointer<OpenGLWorkerContext> VideoNode::workerContext() const {
     return m_workerContext;
