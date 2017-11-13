@@ -42,7 +42,7 @@ vec2 droste(vec2 z) {
     float angle = atan(scale/(2.0*M_PI));
     z = cdiv(z, cexp(vec2(0,angle))*cos(angle)); 
     // 2. Tile the strips
-    z.x += iTime / 4.;
+    z.x -= iTime / 4.;
     z.x = mod(z.x,scale);
     // 1. Take the annulus to a strip
     z = cexp(z)*r1;
