@@ -329,7 +329,7 @@ void EffectNode::setName(QString name) {
             QMutexLocker locker(&m_stateLock);
             m_name = name;
         }
-        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, name));
         Q_ASSERT(result);
         emit nameChanged(name);
     }
@@ -337,7 +337,7 @@ void EffectNode::setName(QString name) {
 
 void EffectNode::reload() {
     m_ready = false;
-    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, m_name));
     Q_ASSERT(result);
 }
 
@@ -358,20 +358,19 @@ QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chai
 // EffectNodeOpenGLWorker methods
 
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
-    : OpenGLWorker(p->workerContext())
-    , m_p(p) {
+    : OpenGLWorker(p->workerContext()) {
     qRegisterMetaType<QSharedPointer<EffectNodeRenderState>>();
     connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState);
-    connect(this, &EffectNodeOpenGLWorker::message, m_p, &EffectNode::message);
-    connect(this, &EffectNodeOpenGLWorker::warning, m_p, &EffectNode::warning);
-    connect(this, &EffectNodeOpenGLWorker::fatal,   m_p, &EffectNode::fatal);
+    connect(this, &EffectNodeOpenGLWorker::message, p, &EffectNode::message);
+    connect(this, &EffectNodeOpenGLWorker::warning, p, &EffectNode::warning);
+    connect(this, &EffectNodeOpenGLWorker::fatal,   p, &EffectNode::fatal);
 }
 
-void EffectNodeOpenGLWorker::initialize() {
+void EffectNodeOpenGLWorker::initialize(QString name) {
     makeCurrent();
-    bool result = loadProgram(m_p->m_name);
+    bool result = loadProgram(name);
     if(!result) {
-        qDebug() << m_p << "Load program failed :(";
+        qDebug() << name << "Load program failed :(";
         return;
     }
     glFlush();
@@ -395,7 +394,6 @@ void EffectNodeOpenGLWorker::onPrepareState(QSharedPointer<EffectNodeRenderState
 // Call this to load shader code into this Effect.
 // Returns true if the program was loaded successfully
 bool EffectNodeOpenGLWorker::loadProgram(QString name) {
-    Q_ASSERT(!m_p->m_ready); // Must have been marked unready
 
     auto headerString = QString{};
     {

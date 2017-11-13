@@ -137,7 +137,11 @@ ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString imagePath)
 //    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
     connect(this, &QObject::destroyed, this, &ImageNodeOpenGLWorker::onDestroyed);
 }
-
+ImageNodeOpenGLWorker::~ImageNodeOpenGLWorker() {
+    makeCurrent();
+//    m_frameTextures.clear();
+//    m_frameDelays.clear();
+}
 bool ImageNodeOpenGLWorker::ready() const {
     return m_ready.load();
 }
@@ -198,7 +202,4 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
 void ImageNodeOpenGLWorker::onDestroyed() {
     // For some reason, QOpenGLTexture does not have setParent
     // and so we cannot use Qt object tree deletion semantics
-    makeCurrent();
-    m_frameTextures.clear();
-    m_frameDelays.clear();
 }

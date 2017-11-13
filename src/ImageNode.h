@@ -23,6 +23,7 @@ class ImageNodeOpenGLWorker : public OpenGLWorker {
 
 public:
     ImageNodeOpenGLWorker(ImageNode *p, QString imagePath);
+    ~ImageNodeOpenGLWorker() override;
 
 public slots:
     void initialize();

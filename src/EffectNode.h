@@ -59,7 +59,7 @@ public:
 public slots:
     // Call this after changing
     // "name"
-    void initialize();
+    void initialize(QString);
     void onPrepareState(QSharedPointer<EffectNodeRenderState> state);
 signals:
     // This is emitted when it is done
@@ -72,7 +72,6 @@ signals:
 protected:
     bool loadProgram(QString name);
     QSharedPointer<EffectNodeRenderState> m_state;
-    EffectNode *m_p;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
