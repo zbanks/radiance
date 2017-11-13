@@ -104,6 +104,7 @@ public slots:
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
     NodeType  *proto() const;
+    QSharedPointer<OpenGLWorkerContext> workerContext() const;
 protected slots:
     virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
 
@@ -114,7 +115,8 @@ protected:
     QList<QSharedPointer<Chain>> m_chains;
     QMutex m_idLock;
 
-    NodeType *m_proto{};
+    NodeType* m_proto{};
+    QSharedPointer<OpenGLWorkerContext> m_workerContext{};
 signals:
     // Emitted when the object wishes to be deleted
     // e.g. due to an error

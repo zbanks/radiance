@@ -22,7 +22,7 @@ class ImageNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    ImageNodeOpenGLWorker(ImageType *p, QString imagePath);
+    ImageNodeOpenGLWorker(ImageNode *p, QString imagePath);
 
 public slots:
     void initialize();
@@ -54,8 +54,6 @@ public:
    ~ImageType() override;
 public slots:
     VideoNode *create(QString) override;
-public:
-    QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -25,17 +25,6 @@ VideoNode *ImageType::create(QString arg) {
 ImageNode::ImageNode(NodeType *nr)
     : VideoNode(nr)
     , m_ready(false) {
-    if(auto it = qobject_cast<ImageType*>(nr)) {
-        m_openGLWorker = it->m_openGLWorker;
-        if(m_openGLWorker) {
-            if(m_openGLWorker->ready())
-                m_ready = true;
-            connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
-        }
-    }
-//    m_periodic.setInterval(10);
-//    m_periodic.start();
-//    connect(&m_periodic, &QTimer::timeout, this, &ImageNode::periodic);
 }
 
 ImageNode::ImageNode(const ImageNode &other)
@@ -76,10 +65,6 @@ TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
         t->setName(imageName);
         t->setDescription(imageName);
         t->setInputCount(1);
-        t->m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(t, t->name()),&QObject::deleteLater);
-        bool result = QMetaObject::invokeMethod(t->m_openGLWorker.data(), "initialize");
-        Q_ASSERT(result);
-
         res.append(t);
     }
     return res;
@@ -103,6 +88,11 @@ void ImageNode::setImagePath(QString imagePath) {
         {
             QMutexLocker locker(&m_stateLock);
             m_imagePath = imagePath;
+            m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(this, m_imagePath),&QObject::deleteLater);
+            connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
+            bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+            Q_ASSERT(result);
+
         }
         emit imagePathChanged(imagePath);
     }
@@ -139,8 +129,8 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 
 // ImageNodeOpenGLWorker methods
 
-ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageType *p, QString imagePath)
-    : OpenGLWorker(p->registry()->workerContext())
+ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString imagePath)
+    : OpenGLWorker(p->m_workerContext)
     , m_imagePath(imagePath) {
 //    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
 //    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
