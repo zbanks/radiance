@@ -4,7 +4,8 @@ void main(void) {
     float alive = texture(iChannel[1], uv).r;
     vec4 under = texture(iInput, uv);
     vec4 over = alive * texture(iChannel[2], uv);
-    fragColor = mix(under, over, smoothstep(0., 0.2, iIntensity));
+    over *= smoothstep(0., 0.2, iIntensity);
+    fragColor = composite(under, over);
 }
 
 #buffershader
@@ -12,7 +13,8 @@ void main(void) {
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
-    float bs = 2048. * pow(2, -5. * iIntensity);
+    //float bs = 2048. * pow(2, -5. * iIntensity);
+    float bs = (1. - iIntensity) / onePixel;
     vec2 bins = bs * aspectCorrection;
     vec2 db = 1. / (bins * aspectCorrection);
     normCoord = round(normCoord * bins) * db + 0.5;
@@ -42,9 +44,9 @@ void main(void) {
 
     // Make there be life if there is sufficient input color
     //float lifeFromInput = step(0.5, smoothstep(0., 3., dot(vec3(1.), source.rgb)));
-    float lifeFromInput = step(0.9, max(source.r, max(source.g, source.b)));
+    float lifeFromInput = step(0.8, max(source.r, max(source.g, source.b)));
     alive = max(alive, lifeFromInput);
-    alive *= step(0.1, texture(iChannel[2], normCoord).a); // Kill stable life if there is no color
+    alive *= step(0.01, texture(iChannel[2], normCoord).a); // Kill stable life if there is no color
 
     fragColor.gba = vec3(1.0);
     fragColor.r = alive;
@@ -56,5 +58,9 @@ void main(void) {
 // outside of what currently has color
 
 void main(void) {
-    fragColor = composite(texture(iChannel[2], uv) * mix(0.95, 0.995, iIntensity), texture(iInput, uv));
+    vec4 oldC = texture(iChannel[2], uv);
+    float d = mix(0.01, 0.001, iIntensity);
+    oldC = max(oldC - d, vec4(0.));
+    vec4 newC = texture(iInput, uv);
+    fragColor = max(oldC, newC);
 }
