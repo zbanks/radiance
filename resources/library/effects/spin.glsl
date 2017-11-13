@@ -9,7 +9,7 @@ void main(void) {
     mat2 rot = mat2(c, -s, s, c);
 
     vec2 newUV = normCoord * rot / aspectCorrection;
-    newUV *= min(iResolution.x, iResolution.y) / max(iResolution.x, iResolution.y) * sqrt(0.5);
+    //newUV *= min(iResolution.x, iResolution.y) / max(iResolution.x, iResolution.y) * sqrt(0.5);
     newUV += 0.5;
 
     vec4 oc = texture(iInput, uv);
