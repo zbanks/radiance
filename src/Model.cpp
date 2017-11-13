@@ -113,6 +113,7 @@ VideoNode *Model::createVideoNode(const QString &name) {
     }
 
     addVideoNode(videoNode);
+    QQmlEngine::setObjectOwnership(videoNode,QQmlEngine::CppOwnership);
     return videoNode;
 }
 

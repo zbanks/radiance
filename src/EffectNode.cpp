@@ -36,7 +36,7 @@ VideoNode *EffectType::create(QString arg) {
 EffectNode::EffectNode(NodeType *nr)
     : VideoNode(nr)
     , m_intensity(0)
-    , m_openGLWorker(new EffectNodeOpenGLWorker(this))
+    , m_openGLWorker(new EffectNodeOpenGLWorker(this), &QObject::deleteLater)
     , m_ready(false) {
 
     setInputCount(1);

@@ -14,7 +14,7 @@
 class NodeRegistry;
 class VideoNode;
 
-class NodeType : public QObject, public QEnableSharedFromThis<NodeType> {
+class NodeType : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged);
     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged);

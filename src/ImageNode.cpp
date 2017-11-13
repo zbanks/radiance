@@ -88,7 +88,7 @@ void ImageNode::setImagePath(QString imagePath) {
         {
             QMutexLocker locker(&m_stateLock);
             m_imagePath = imagePath;
-            m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(this, m_imagePath),&QObject::deleteLater);
+            m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(this, m_imagePath), &QObject::deleteLater);
             connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
             bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
             Q_ASSERT(result);
