@@ -1,9 +1,13 @@
 #property description Convert vertical lines to polygon rings
 
 void main(void) {
+    float n_sides = clamp(2.4 / (1. - iIntensity), 3., 10000.);
+    float whole_sides = 0;
+    n_sides = modf(n_sides, whole_sides);
+    n_sides = whole_sides + smoothstep(0.2, 0.8, n_sides);
+
     vec2 xy_cent = 2. * uv - 1.;
     float angle = abs(atan(xy_cent.y, xy_cent.x));
-    float n_sides = clamp(2.4 / (1. - iIntensity), 3., 10000.);
     float arc = 2. * M_PI / n_sides;
     float a1 = mod(angle, arc);
     //float lengthFactor = sqrt(2.);

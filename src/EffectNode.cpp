@@ -7,6 +7,7 @@
 #include <QOpenGLFramebufferObjectFormat>
 #include <QRegularExpression>
 #include <QOpenGLVertexArrayObject>
+#include <QtQml>
 #include <memory>
 #include <utility>
 #include <functional>

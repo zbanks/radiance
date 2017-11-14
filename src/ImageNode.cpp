@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
+#include <QtQml>
 #include "Paths.h"
 #include "main.h"
 

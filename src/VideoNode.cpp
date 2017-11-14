@@ -3,10 +3,11 @@
 #include "NodeType.h"
 #include "Model.h"
 #include <QDebug>
+#include <QtQml>
 
 VideoNode::VideoNode(NodeType *nr)
     : m_inputCount{0}
-    , m_workerContext(nr?nr->registry()->workerContext() : nullptr) {
+    , m_workerContext(nr?nr->registry()->workerContext() : OpenGLWorkerContextPointer(nullptr)) {
 }
 
 VideoNode::VideoNode(const VideoNode &other)
