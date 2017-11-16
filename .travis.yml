@@ -26,18 +26,20 @@ install:
       && make
       && sudo make install
       && popd;
+    - curl https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage > /usr/local/bin/linuxdeployqt
     - sudo ldconfig
 
 before_script:
     - mkdir -p build
     - cd build
-    - cmake -DCMAKE_PREFIX_PATH=/opt/qt59/ -DCMAKE_BUILD_TYPE=Debug ..
+    - cmake -DCMAKE_PREFIX_PATH=/opt/qt59/ -DCMAKE_BUILD_TYPE=Release ..
 
 script: make
 
 after_success: 
     - mkdir -p render_output
     - ./radiance_cli -b nyancat.gif -o render_output
+    - make bundle
 
 deploy:
     provider: pages
