@@ -361,7 +361,7 @@ QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chai
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
     : OpenGLWorker(p->workerContext()) {
     qRegisterMetaType<QSharedPointer<EffectNodeRenderState>>();
-    connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState, Qt::QueuedConnection);
+    connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState, Qt::AutoConnection);
     connect(this, &EffectNodeOpenGLWorker::message, p, &EffectNode::message);
     connect(this, &EffectNodeOpenGLWorker::warning, p, &EffectNode::warning);
     connect(this, &EffectNodeOpenGLWorker::fatal,   p, &EffectNode::fatal);
