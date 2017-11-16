@@ -44,7 +44,7 @@ after_success:
     - make bundle
 
 deploy:
-    - provider: pages
+  - provider: pages
     skip_cleanup: true
     github_token: $GITHUB_TOKEN
     target_branch: gh-pages-travis
@@ -52,7 +52,7 @@ deploy:
     on:
         branch: modelview
 
-    - provider: releases
+  - provider: releases
     skip_cleanup: true
     api_key: $GITHUB_TOKEN
     file: "build/Radiance.AppDir.tar.gz"
