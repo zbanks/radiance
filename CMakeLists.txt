@@ -144,6 +144,7 @@ ELSEIF(UNIX)
         "${CMAKE_BINARY_DIR}/${EXE_NAME}"
         "${CMAKE_BINARY_DIR}/Radiance.AppDir"
         "${CMAKE_BINARY_DIR}/Radiance.AppDir.tar.gz"
+        "${Qt5Core_DIR}/../../.."
         DEPENDS radiance
     )
 ENDIF()

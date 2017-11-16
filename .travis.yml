@@ -41,7 +41,6 @@ script: make
 after_success: 
     - mkdir -p render_output
     - ./radiance_cli -b nyancat.gif -o render_output
-    - unset QTDIR; unset QT_PLUGIN_PATH; unset LD_LIBRARY_PATH
     - make bundle
 
 deploy:

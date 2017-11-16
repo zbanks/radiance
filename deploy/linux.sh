@@ -4,11 +4,13 @@ SOURCE_DIR=$1
 BINARY=$2
 APP=$3
 TARGZ=$4
+QT=$5
 
 echo "Source dir: $SOURCE_DIR"
 echo "Binary: $BINARY"
 echo "App: $APP"
 echo "TARGZ: $TARGZ"
+echo "Qt: $QT"
 
 echo "Create AppDir directory..."
 mkdir -p "$APP"
@@ -26,10 +28,10 @@ echo "Removing .qmlc files..."
 find "$APP/resources/" -name "*.qmlc" -exec rm \{\} \;
 
 echo "Running linuxdeployqt..."
-"linuxdeployqt" "$APP/radiance.desktop" "-bundle-non-qt-libs" "-qmldir=$APP/resources/qml"
+"linuxdeployqt" "$APP/radiance.desktop" "-bundle-non-qt-libs" "-qmldir=$APP/resources/qml" "-qmake=$QT/bin/qmake"
 
 echo "Running linuxdeployqt again..."
-"linuxdeployqt" "$APP/radiance.desktop" "-bundle-non-qt-libs" "-qmldir=$APP/resources/qml"
+"linuxdeployqt" "$APP/radiance.desktop" "-bundle-non-qt-libs" "-qmldir=$APP/resources/qml" "-qmake=$QT/bin/qmake"
 
 echo "AppDir is done."
 
