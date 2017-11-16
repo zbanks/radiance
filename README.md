@@ -1,27 +1,36 @@
 Radiance
 ========
 
-Radiance is video art software for VJs. It supports beat detection, animated GIFs, YouTube video, and OpenGL shader effects.
+Radiance is video art software for VJs. It supports beat detection, animated GIFs, YouTube video, OpenGL shader effects. It is designed for live performance and runs on Linux and MacOS.
 
 [![Build Status](https://travis-ci.org/zbanks/radiance.svg?branch=master)](https://travis-ci.org/zbanks/radiance)
 
-You can download this software for MacOS from [radiance.video](https://radiance.video). There are no prebuilt Linux packages, but you can build it yourself fairly easily.
+Artwork
+-------
 
-Screenshots
------------
+![Simple screencapture](https://i.imgur.com/I4qnMQo.gif)
 
-![screenshot](https://i.imgur.com/hgdTxPU.png)
+[Sample Artwork 1](https://i.imgur.com/R4tsFfG.gifv)
 
-![GIF Screencapture](https://i.imgur.com/I4qnMQo.gif)
+[Sample Artwork 2](https://i.imgur.com/B0QMoXT.gifv)
+
+[Sample Artwork 3](https://i.imgur.com/4FON4vY.gifv)
+
+[Screencapture from this artwork](https://i.imgur.com/Vb1yPZl.gifv)
 
 [Example effects](https://radiance.video/library/)
+
+Download
+--------
+
+You can download this software for MacOS from [radiance.video](https://radiance.video). There are no prebuilt Linux packages, but you can build it yourself fairly easily.
 
 Build
 -----
 
 ### Dependencies
 
-- `Qt 5.6`
+- `Qt 5.9`
 - `SDL2-TTF`
 - `PortAudio`
 - `FFTW3`
@@ -51,7 +60,7 @@ Note: you may need to install portaudio & rtmidi from git as above
     cmake .. # -DCMAKE_PREFIX_PATH=/opt/qt59/ -DCMAKE_BUILD_TYPE=Debug
     make
     ./radiance          # Qt UI
-    ./radiance_cli      # Command line GIF generator
+    ./radiance_cli      # Command line  GIF generator
 
 If you `git pull` changes, make sure you also do `git submodule update` to pull in changes to `BTrack/`.
 
@@ -106,7 +115,7 @@ Each shader must follow these properties:
 
 ### Multi-buffer Shader Effects
 
-Some effects cannot be accomplished with a single fragment shader pass. An effect can consist of a series of shaders, separated by `#buffershader`. Each shader renders to a texture in `iChannels[]` (e.g. the first renders to `iChannels[0]`). The shaders are rendered in backwards-order, so the last shader is rendered first. Only the output of the first shader is displayed -- the other buffers persist between frames but are not exposed to other nodes.
+Some effects cannot be accomplished with a single fragment shader pass. An effect can consist of a series of shaders, separated by `#buffershader`. Each shader renders to a texture in `iChannels[]` (e.g. the first renders to `iChannels[0]`). The shaders are rendered in backwards-order, so the last shader in the file is rendered first. Only the output of the first shader in the file is displayed -- the other buffers persist between frames but are not exposed to other nodes.
 
 An example that uses this feature is [`foh.glsl`](https://github.com/zbanks/radiance/blob/master/resources/library/effects/foh.glsl). This implements an (exponential) "first-order hold" - it samples the input texture on a multiple of the beat and stores it in `iChannel[1]`.
 
