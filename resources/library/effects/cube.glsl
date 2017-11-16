@@ -16,6 +16,8 @@ mat4 viewMatrix(vec3 eye, vec3 dir, vec3 up) {
 
 // Draw a copy of the input filling the given quad
 vec4 draw(vec2 bottomLeft, vec2 bottomRight, vec2 topLeft, vec2 topRight) {
+    float ssi = smoothstep(0., 0.2, iIntensity);
+
     // Four-point projection taken from https://math.stackexchange.com/a/339033
     // Step 1: Compute b in a * e = d
     mat3 a = mat3(vec3(bottomLeft, 1.),
@@ -41,7 +43,7 @@ vec4 draw(vec2 bottomLeft, vec2 bottomRight, vec2 topLeft, vec2 topRight) {
     mat3 c = b * inverse(a);
 
     // Step 6: Project the point uv using transform c
-    vec3 h = c * vec3((uv - 0.5) * aspectCorrection, 1.);
+    vec3 h = c * vec3((uv - 0.5) * mix(vec2(1.), aspectCorrection, ssi), 1.);
 
     // Step 7: De-homogenize
     vec2 newUV = h.xy / h.z;
@@ -49,7 +51,7 @@ vec4 draw(vec2 bottomLeft, vec2 bottomRight, vec2 topLeft, vec2 topRight) {
     // Crop the output square if its not
     vec2 squareUV = (newUV - 0.5) / aspectCorrection + 0.5;
 
-    return texture(iInput, squareUV) * box(newUV);
+    return texture(iInput, mix(newUV, squareUV, ssi)) * box(newUV);
 }
 
 void main() {
@@ -122,6 +124,7 @@ void main() {
 
     for(int i=0; i<6; i++) {
         ivec4 face = faces[i];
-        fragColor = composite(fragColor, draw(cubePoints[face.x].xy, cubePoints[face.y].xy, cubePoints[face.z].xy, cubePoints[face.w].xy));
+        float adj = i == 0 ? smoothstep(0., 0.1, iIntensity) : 1.;
+        fragColor = composite(fragColor, draw(cubePoints[face.x].xy, cubePoints[face.y].xy, cubePoints[face.z].xy, cubePoints[face.w].xy) * adj);
     }
 }
