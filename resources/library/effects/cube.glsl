@@ -41,12 +41,15 @@ vec4 draw(vec2 bottomLeft, vec2 bottomRight, vec2 topLeft, vec2 topRight) {
     mat3 c = b * inverse(a);
 
     // Step 6: Project the point uv using transform c
-    vec3 h = c * vec3(uv, 1.);
+    vec3 h = c * vec3((uv - 0.5) * aspectCorrection, 1.);
 
     // Step 7: De-homogenize
     vec2 newUV = h.xy / h.z;
 
-    return texture(iInput, newUV) * box(newUV);
+    // Crop the output square if its not
+    vec2 squareUV = newUV / aspectCorrection;
+
+    return texture(iInput, squareUV) * box(newUV);
 }
 
 void main() {
@@ -80,10 +83,10 @@ void main() {
     // Zoom
     float z = mix(0.5, 0.2, sqrt(ssi));
 
-    mat4 xf = mat4(z, 0.,  0.,  0.,
-                   0.,  z, 0.,  0.,
-                   0.5 * p,  0.5 * p,  z, p,
-                   0.5, 0.5, 0.,  1.);
+    mat4 xf = mat4(z,  0., 0., 0.,
+                   0., z,  0., 0.,
+                   0., 0., z,  p,
+                   0., 0., 0., 1.);
 
     float t = iIntensityIntegral * 2.;
     vec3 eye = vec3(sin(t), sin(0.5 * t), cos(t));
