@@ -92,8 +92,6 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
-    openGLWorkerContext = OpenGLWorkerContext::create(false);
-    openGLWorkerContext->setObjectName("openGLWorkerContext");
 
     settings = QSharedPointer<QSettings>(new QSettings());
     audio = QSharedPointer<Audio>(new Audio());
@@ -101,6 +99,9 @@ int main(int argc, char *argv[]) {
 
     nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry(false));
     nodeRegistry->reload();
+
+    openGLWorkerContext = nodeRegistry->workerContext();//OpenGLWorkerContext::create(false);
+    openGLWorkerContext->setObjectName("openGLWorkerContext");
 
     timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
@@ -142,6 +143,7 @@ int main(int argc, char *argv[]) {
         }
         //TODO: handle failure
     }
+    Model model;
     QList<QSharedPointer<Chain>> chains;
     QSharedPointer<Chain> chain(new Chain(renderSize));
     chains.append(chain);
@@ -149,7 +151,6 @@ int main(int argc, char *argv[]) {
     FramebufferVideoNodeRender imgRender(renderSize);
 
     // Set up Model & common effects
-    Model model;
     model.setChains(chains);
     VideoNode *onblackEffect = model.createVideoNode("onblack:1.0");
     VideoNode *highlightEffect = model.createVideoNode("afixhighlight:1.0");
