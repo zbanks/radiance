@@ -12,7 +12,7 @@ before_install:
 install:
     - sudo apt-get install -qq g++-6
     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 90
-    - sudo apt-get -qy install doxygen graphviz qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev libmpv-dev qt59tools
+    - sudo apt-get -qy install doxygen graphviz qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev libmpv-dev
     - git clone --quiet --depth=100 "https://github.com/EddieRingle/portaudio" ~/builds/portaudio
       && pushd ~/builds/portaudio
       && ./configure
@@ -41,6 +41,7 @@ script: make
 after_success: 
     - mkdir -p render_output
     - ./radiance_cli -b nyancat.gif -o render_output
+    - unset QTDIR; unset QT_PLUGIN_PATH; unset LD_LIBRARY_PATH
     - make bundle
 
 deploy:
@@ -55,7 +56,7 @@ deploy:
   - provider: releases
     skip_cleanup: true
     api_key: $GITHUB_TOKEN
-    file: "build/Radiance.AppDir.tar.gz"
+    file: "Radiance.AppDir.tar.gz"
     on:
         tags: true
         all_branches: true
