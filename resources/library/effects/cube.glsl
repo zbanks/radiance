@@ -47,7 +47,7 @@ vec4 draw(vec2 bottomLeft, vec2 bottomRight, vec2 topLeft, vec2 topRight) {
     vec2 newUV = h.xy / h.z;
 
     // Crop the output square if its not
-    vec2 squareUV = newUV / aspectCorrection;
+    vec2 squareUV = (newUV - 0.5) / aspectCorrection + 0.5;
 
     return texture(iInput, squareUV) * box(newUV);
 }
