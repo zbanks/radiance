@@ -31,13 +31,13 @@ echo "Running linuxdeployqt..."
 "linuxdeployqt" "$APP/radiance.desktop" "-bundle-non-qt-libs" "-qmldir=$APP/resources/qml" "-qmake=$QT/bin/qmake"
 
 echo "Copying in some extra libraries..."
-if [[ -e "$QT/plugins" && -e "$QT/qml" ]]
+if [ -e "$QT/lib/qt" ]
 then
-    cp "$QT/plugins/platforms/libqxcb.so" "$APP/plugins/platforms/"
-    cp "$QT/qml/QtQuick/Window.2/qmldir" "$APP/qml/QtQuick/Window.2/"
-else
     cp "$QT/lib/qt/plugins/platforms/libqxcb.so" "$APP/plugins/platforms/"
     cp "$QT/lib/qt/qml/QtQuick/Window.2/qmldir" "$APP/qml/QtQuick/Window.2/"
+else
+    cp "$QT/plugins/platforms/libqxcb.so" "$APP/plugins/platforms/"
+    cp "$QT/qml/QtQuick/Window.2/qmldir" "$APP/qml/QtQuick/Window.2/"
 fi
 
 echo "Running linuxdeployqt again..."
