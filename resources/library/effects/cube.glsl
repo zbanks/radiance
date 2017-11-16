@@ -88,7 +88,7 @@ void main() {
                    0., 0., z,  p,
                    0., 0., 0., 1.);
 
-    float t = iIntensityIntegral * 2.;
+    float t = iIntensityIntegral * 1.;
     vec3 eye = vec3(sin(t), sin(0.5 * t), cos(t));
     eye = mix(vec3(0., 0., 1.), eye, ssi);
     // TODO inverse can be replaced with adjugate
