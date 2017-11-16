@@ -26,7 +26,7 @@ install:
       && make
       && sudo make install
       && popd;
-    - curl https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage > linuxdeployqt
+    - curl -L https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage > linuxdeployqt
       && chmod +x linuxdeployqt
       && sudo mv linuxdeployqt /usr/local/bin
     - sudo ldconfig
