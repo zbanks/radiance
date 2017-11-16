@@ -26,7 +26,9 @@ install:
       && make
       && sudo make install
       && popd;
-    - curl https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage > /usr/local/bin/linuxdeployqt
+    - curl https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage > linuxdeployqt
+      && chmod +x linuxdeployqt
+      && sudo mv linuxdeployqt /usr/local/bin
     - sudo ldconfig
 
 before_script:
@@ -42,7 +44,7 @@ after_success:
     - make bundle
 
 deploy:
-    provider: pages
+    - provider: pages
     skip_cleanup: true
     github_token: $GITHUB_TOKEN
     target_branch: gh-pages-travis
@@ -50,4 +52,10 @@ deploy:
     on:
         branch: modelview
 
+    - provider: releases
+    skip_cleanup: true
+    api_key: $GITHUB_TOKEN
+    file: "build/Radiance.AppDir.tar.gz"
+    on:
+        tags: true
 
