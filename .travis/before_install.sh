@@ -2,7 +2,7 @@
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]
 then
-
+    echo "osx before_install"
 elif [[ $TRAVIS_OS_NAME == 'linux' ]]
 then
     sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test

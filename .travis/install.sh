@@ -2,7 +2,7 @@
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]
 then
-
+    echo "osx install"
 elif [[ $TRAVIS_OS_NAME == 'linux' ]]
 then
     sudo apt-get install -qq g++-6
