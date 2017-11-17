@@ -2,7 +2,13 @@
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]
 then
-    echo "osx install"
+    brew install cmake
+    brew install qt5
+    brew install fftw
+    brew install libsamplerate
+    brew install mpv
+    brew install portaudio
+    brew install rtmidi
 elif [[ $TRAVIS_OS_NAME == 'linux' ]]
 then
     sudo apt-get install -qq g++-6

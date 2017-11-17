@@ -1,7 +1,7 @@
 os:
     - linux
     - osx
-language: c
+language: c++
 dist: trusty
 sudo: required
 
