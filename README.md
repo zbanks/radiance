@@ -23,7 +23,7 @@ Artwork
 Download
 --------
 
-You can download this software for MacOS from [radiance.video](https://radiance.video). There are no prebuilt Linux packages, but you can build it yourself fairly easily.
+You can download Radiance for Linux or MacOS from the [releases](https://github.com/zbanks/radiance/releases) page.
 
 Build
 -----
@@ -31,7 +31,6 @@ Build
 ### Dependencies
 
 - `Qt 5.9`
-- `SDL2-TTF`
 - `PortAudio`
 - `FFTW3`
 - `libsamplerate`
