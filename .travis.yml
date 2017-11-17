@@ -20,8 +20,8 @@ script: make
 
 after_success: 
     - mkdir -p render_output
-    - ./radiance_cli -b nyancat.gif -o render_output
     - make bundle
+    #- ./radiance_cli -b nyancat.gif -o render_output
 
 deploy:
   - provider: pages
