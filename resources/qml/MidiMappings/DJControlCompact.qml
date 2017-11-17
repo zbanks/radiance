@@ -22,7 +22,7 @@ QtObject {
         onControlChange: {
             //console.log(control + " " + value);
             if (control == 48) { // "A" jogwheel
-                var N = 4;
+                var N = 12;
                 var v = value << 25 >> 25;
                 scrollAccumulator += v;
                 if (scrollAccumulator > N / 2) {
@@ -34,7 +34,7 @@ QtObject {
                 }
             } else if (control == 49) { // "B" jogwheel
                 var v = value << 25 >> 25;
-                target.Controls.changeControlRel(0, Controls.PrimaryParameter, v / 127);
+                target.Controls.changeControlRel(0, Controls.PrimaryParameter, v / 400);
             } else if (control == 59) { // Left Medium
                 target.Controls.changeControlAbs(0, Controls.Parameter1, value / 127);
             } else if (control == 63) { // Right Medium
