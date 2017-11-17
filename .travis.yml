@@ -39,4 +39,15 @@ deploy:
     on:
         tags: true
         all_branches: true
+        condition: "$TRAVIS_OS_NAME == linux"
+    overwrite: true
+
+  - provider: releases
+    skip_cleanup: true
+    api_key: $GITHUB_TOKEN
+    file: "Radiance.dmg"
+    on:
+        condition: "$TRAVIS_OS_NAME == osx"
+        tags: true
+        all_branches: true
     overwrite: true
