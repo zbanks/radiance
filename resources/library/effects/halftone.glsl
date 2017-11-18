@@ -25,7 +25,7 @@ vec3 grid(mat2 basis, vec4 cmykMask, vec2 offset) {
     vec4 cmyk = rgb2cmyk(c);
     cmyk *= cmykMask;
     float cmykValue = dot(cmyk, vec4(1.));
-    r *= cmykValue;
+    r *= sqrt(cmykValue);
     cmyk /= max(cmykValue, 0.001);
     c = mix(vec3(1.), cmyk2rgb(cmyk), 1. - smoothstep(r * 0.8, r, length(pt - colorCoord)));
     return c;
