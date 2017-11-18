@@ -10,7 +10,7 @@ vec4 triGrid(mat2 basis) {
 
     vec2 newCoord = round(pt * points * invBasis);
     vec2 colorCoord = newCoord / points * basis;
-    vec4 c = texture(iInput, (colorCoord + 0.5) / aspectCorrection);
+    vec4 c = texture(iInput, colorCoord / aspectCorrection + 0.5);
     c *= 1. - step(r, length(pt - colorCoord));
     return c;
 }
