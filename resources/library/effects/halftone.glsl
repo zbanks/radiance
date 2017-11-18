@@ -13,7 +13,7 @@ vec3 cmyk2rgb(vec4 cmyk) {
 
 vec3 grid(mat2 basis, vec4 cmykMask, vec2 offset) {
     float points = 300. * pow(2, -9. * iIntensity) + 5.;
-    float r = 0.7 / points;
+    float r = 0.5 / points;
 
     mat2 invBasis = inverse(basis);
 
@@ -27,7 +27,7 @@ vec3 grid(mat2 basis, vec4 cmykMask, vec2 offset) {
     float cmykValue = dot(cmyk, vec4(1.));
     r *= cmykValue;
     cmyk /= max(cmykValue, 0.001);
-    c = mix(vec3(1.), cmyk2rgb(cmyk), 1. - smoothstep(r * 0.5, r, length(pt - colorCoord)));
+    c = mix(vec3(1.), cmyk2rgb(cmyk), 1. - smoothstep(r * 0.8, r, length(pt - colorCoord)));
     return c;
 }
 
