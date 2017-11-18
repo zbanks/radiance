@@ -64,6 +64,6 @@ void main(void) {
     vec4 final = vec4(total, 1.);
 
     fragColor = texture(iInput, uv);
-    final.a = fragColor.a;
+    final.a = max(fragColor.a, max(total.r, max(total.g, total.b)));
     fragColor = mix(fragColor, final, smoothstep(0., 0.1, iIntensity));
 }
