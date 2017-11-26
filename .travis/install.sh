@@ -3,7 +3,7 @@
 if [[ $TRAVIS_OS_NAME == 'osx' ]]
 then
     brew install cmake
-    brew install qt5
+    brew install qt5@5.9.1
     brew install fftw
     brew install libsamplerate
     brew install mpv
