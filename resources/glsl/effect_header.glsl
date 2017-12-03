@@ -1,8 +1,17 @@
 #version 150
 
+#ifdef GL_ES
+precision mediump float;
+varying highp vec2 uv;
+#define fragColor gl_FragColor
+#define _FLEXARRAY 8
+#define texture texture2D
+#else
 in vec4 gl_FragCoord;
 in vec2 uv;
 out vec4 fragColor;
+#define _FLEXARRAY
+#endif
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform highp float iStep;
@@ -28,7 +37,7 @@ uniform float iIntensityIntegral;
 uniform float iFPS;
 
 // Outputs of previous patterns
-uniform sampler2D iInputs[];
+uniform sampler2D iInputs[_FLEXARRAY];
 
 // Output of the previous pattern.  Alias to iInputs[0]
 #define iInput iInputs[0]
@@ -37,7 +46,7 @@ uniform sampler2D iInputs[];
 uniform sampler2D iNoise;
 
 // Previous outputs of the other channels (e.g. foo.1.glsl)
-uniform sampler2D iChannel[];
+uniform sampler2D iChannel[_FLEXARRAY];
 
 #define M_PI 3.1415926535897932384626433832795
 
@@ -108,7 +117,7 @@ vec4 composite(vec4 under, vec4 over) {
 float sawtooth(float x, float t_up) {
     x = mod(x + t_up, 1.);
     return x / t_up * step(x, t_up) +
-           (1. - x) / (1 - t_up) * (1. - step(x, t_up));
+           (1. - x) / (1. - t_up) * (1. - step(x, t_up));
 }
 
 // Box from [0, 0] to (1, 1)
@@ -228,5 +237,11 @@ float hmax(vec4 v) {
     return hmax(max(v.rg,v.ba));
 }
 
-float onePixel = 1. / min(iResolution.x, iResolution.y);
+// FIXME
+#ifdef GL_ES
+#define onePixel (1.0 / min(iResolution.x, iResolution.y))
+#define aspectCorrection (iResolution / min(iResolution.x, iResolution.y))
+#else
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
+float onePixel = 1. / min(iResolution.x, iResolution.y);
+#endif
