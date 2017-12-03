@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+
         <script type="text/javascript" src="radiance.js"></script>
-        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script type="text/javascript" src="glsl.js"></script>
         <script type="text/javascript">
             console.log(Radiance);
         </script>
@@ -11,12 +14,18 @@
                 width: 100%;
                 height: 100%;
                 background-color: #EEE;
+                font-family: Monospace;
+            }
+            .main-canvas {
+                width: 400px;
+                height: 400px;
             }
         </style>
     </head>
     <body>
         <div class="main">
-            <h1>Radiance.js</h1>
+            <h1>radiance.js</h1>
+            <canvas class="main-canvas">Canvas tag not supported :(</canvas>
         </div>
     </body>
 </html>

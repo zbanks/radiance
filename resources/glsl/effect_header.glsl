@@ -1,4 +1,4 @@
-#version 120
+precision mediump float;
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform highp float iStep;
@@ -28,13 +28,14 @@ uniform float iIntensityIntegral;
 uniform float iFPS;
 
 // Output of the previous pattern
-uniform sampler2D iFrame;
+uniform sampler2D iInputs[4];
+#define iInput iInputs[0]
 
 // Full frame RGBA noise
 uniform sampler2D iNoise;
 
-// Previous outputs of the other channels (e.g. foo.1.glsl)
-uniform sampler2D iChannel[3];
+// Previous outputs of the other buffershaders
+uniform sampler2D iChannel[4];
 
 #define M_PI 3.1415926535897932384626433832795
 
@@ -71,7 +72,7 @@ vec4 composite(vec4 under, vec4 over) {
 float sawtooth(float x, float t_up) {
     x = mod(x + t_up, 1.);
     return x / t_up * step(x, t_up) +
-           (1. - x) / (1 - t_up) * (1. - step(x, t_up));
+           (1. - x) / (1. - t_up) * (1. - step(x, t_up));
 }
 
 // Box from [0, 0] to (1, 1)
@@ -184,6 +185,8 @@ float noise(vec4 p) {
 
 float onePixel = 1. / min(iResolution.x, iResolution.y);
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
-vec2 uv = gl_FragCoord.xy / iResolution;
+//vec2 uv = gl_FragCoord.xy / iResolution;
+//#define uv (gl_FragCoord.xy / iResolution)
+varying highp vec2 uv;
 
 #line 0
