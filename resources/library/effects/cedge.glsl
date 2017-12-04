@@ -7,7 +7,7 @@ vec4 get_texture(vec2 off, vec2 cor) {
 void main()
 {
 	// Sobel operator
-    float off = 8 * iIntensity;
+    float off = 8. * iIntensity;
     vec2  cor = 1. / iResolution.xy;
 	vec3 o = vec3(-off, 0.0, off);
 	vec4 gx = vec4(0.0);
@@ -33,7 +33,7 @@ void main()
     grad.a = max(max(grad.r, grad.g), max(grad.b, grad.a));
 
     vec4 original = texture(iInput, uv);
-    if(iIntensity > 0) {
+    if(iIntensity > 0.) {
         fragColor = grad;
     }else{
         fragColor = original;

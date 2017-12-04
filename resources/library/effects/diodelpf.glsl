@@ -10,6 +10,6 @@ void main(void) {
         prev *= pow(iIntensity, 0.1);
         fragColor = composite(next, prev);
     }
-    fragColor.a = clamp(fragColor.a, 0, 1);
+    fragColor.a = clamp(fragColor.a, 0., 1.);
     
 }

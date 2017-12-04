@@ -12,7 +12,7 @@ void main(void) {
     else if(iIntensity < 0.85) freq = 0.5;
     else freq = 0.25;
 
-    if(freq > 0) {
+    if(freq > 0.) {
         vec3 hsv = rgb2hsv(demultiply(fragColor).rgb);
         hsv.y = hsv.y * (1. - sawtooth(iTime / freq, 0.1));
         fragColor.rgb = hsv2rgb(hsv);

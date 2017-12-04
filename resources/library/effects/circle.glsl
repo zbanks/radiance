@@ -8,8 +8,8 @@ void main(void) {
     center *= iAudioLevel * 0.9 + 0.1;
 
     vec4 c = vec4(1., 1., 0., 1.);
-    c.a = clamp(length(center - normCoord), 0, 1);
-    c.a = pow(c.a, iAudioHi * 3 + 0.1);
+    c.a = clamp(length(center - normCoord), 0., 1.);
+    c.a = pow(c.a, iAudioHi * 3. + 0.1);
     c.a = 1.0 - c.a;
     c.a *= iIntensity;
 

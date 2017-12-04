@@ -1,6 +1,6 @@
 #property description Introduce a delay (and make things blurry)
 
-#define SZ 6    // Delay of SZ*SZ frames (36)
+#define SZ 6.    // Delay of SZ*SZ frames (36)
 void main(void) {
     vec4 original = texture(iInput, uv);
     vec2 uvNew = mix(uv / SZ, uv, smoothstep(0.8, 0.9, iIntensity));
@@ -10,7 +10,7 @@ void main(void) {
 
 #buffershader
 
-#define SZ 6
+#define SZ 6.
 void main(void) {
     vec2 uvNext = uv + vec2(1., 0.) / SZ;
     float i;

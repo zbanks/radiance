@@ -57,7 +57,7 @@ void main()
 	vec4 fc;
     fc.rgb = ToGamma(col);
     fc.a = max(max(fc.r, fc.g), fc.b);
-    fc *= smoothstep(0, 0.2, iIntensity);
+    fc *= smoothstep(0., 0.2, iIntensity);
 
     vec4 c = texture(iInput, uv);
     fragColor = composite(c, fc);

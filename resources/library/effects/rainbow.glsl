@@ -12,5 +12,5 @@ void main(void) {
     hsv.rgb = hsv2rgb(hsv.rgb);
     hsv = premultiply(hsv);
 
-    fragColor.rgb = mix(fragColor.rgb, hsv.rgb, smoothstep(0, 0.2, iIntensity));
+    fragColor.rgb = mix(fragColor.rgb, hsv.rgb, smoothstep(0., 0.2, iIntensity));
 }

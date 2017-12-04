@@ -1,8 +1,9 @@
 #property description And the cracks begin to show
 
+#define MAX_CRACKS 15
 void main(void) {
     // Number of cracks dependent on intensity
-    int numCracks = int(iIntensity * 15.);
+    int numCracks = int(iIntensity * float(MAX_CRACKS));
 
     // Timebase for time-dependent cracking
     float t = iTime * 0.5;
@@ -13,11 +14,14 @@ void main(void) {
     // Becomes 1 when we are close to a crack line
     float line = 0.;
 
-    for (int i=0; i<numCracks; i++) {
+    for (int i=0; i<MAX_CRACKS; i++) {
+        if (i >= numCracks)
+            break;
+
         // Store a vec4 of parameters for each crack
         // .xy is the center point
         // .zw is the direction vector
-        vec4 crackParameters = texture(iNoise, vec2(i + floor(t)) * onePixel * aspectCorrection);
+        vec4 crackParameters = texture(iNoise, vec2(float(i) + floor(t)) * onePixel * aspectCorrection);
         crackParameters.zw = crackParameters.zw - 0.5;
         crackParameters.zw /= length(crackParameters.zw);
 

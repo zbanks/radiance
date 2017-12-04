@@ -15,7 +15,7 @@ void main() {
     for( int i=0; i<DEPTH; i++ )
     {
         w *= 0.98;
-        vec2 s = (normCoord - source) / (i / float(DEPTH)) + source;
+        vec2 s = (normCoord - source) / (float(i) / float(DEPTH)) + source;
         vec4 res = lookup(s);
         res *= max(res.r, max(res.g, res.b));
         res *= w;

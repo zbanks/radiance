@@ -4,8 +4,7 @@ void main(void) {
     vec4 c = texture(iInputs[0], uv);
 
     const int N_PARTITIONS = 3;
-
-    vec2 blockSizes[N_PARTITIONS] = vec2[](vec2(0.3, 0.5), vec2(1., 0.15), vec2(1., 1.));
+    const vec2 blockSizes[N_PARTITIONS] = vec2[](vec2(0.3, 0.5), vec2(1., 0.15), vec2(1., 1.));
 
     // Partition image into blocks a few different ways
     vec4 n1 = vec4(1.);
@@ -28,7 +27,7 @@ void main(void) {
 
     // Invert colors
     float invert_glitch = step(1. - 0.2 * iIntensity, n1.y);
-    c.rgb = invert_glitch - 2 * (invert_glitch - 0.5) * c.rgb;
+    c.rgb = invert_glitch - 2. * (invert_glitch - 0.5) * c.rgb;
 
     // Solid color glitch
     float solid_glitch = step(1. - 0.2 * iIntensity, n1.z);

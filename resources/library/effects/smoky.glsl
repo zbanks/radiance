@@ -32,7 +32,7 @@ vec2 vectorField() {
 
     // Combine three calls to circulate()
     for (int i=0; i<3; i++) {
-        vec4 n = texture2D(iNoise, vec2(0.5 + i / 20., 0.5 + iIntensityIntegral * 0.00006));
+        vec4 n = texture2D(iNoise, vec2(0.5 + float(i) / 20., 0.5 + iIntensityIntegral * 0.00006));
 
         // Random xy scaling
         float sx = 5. * (n.b - 0.5) * iIntensity;

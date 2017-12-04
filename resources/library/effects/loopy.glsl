@@ -20,7 +20,7 @@ void main(void) {
     // Compute distance from circle, including bulge & standing wave
     float CIRCLE_R = mix(0.10, 0.40, iIntensity); //0.33
     float WAVE_COUNT = 16.;
-    float WAVE_SPEED = 1 / 4.0;
+    float WAVE_SPEED = 1. / 4.0;
     float d = abs(r - CIRCLE_R - bulge * sin(angle * WAVE_COUNT - iTime * M_PI * WAVE_SPEED));
 
     // Turn distance into alpha 

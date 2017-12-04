@@ -237,6 +237,27 @@ float hmax(vec4 v) {
     return hmax(max(v.rg,v.ba));
 }
 
+#ifdef GL_ES
+// Shim functions for ES
+float round(float x) {
+    return floor(x + 0.5);
+}
+vec2 round(vec2 x) {
+    return floor(x + 0.5);
+}
+vec3 round(vec3 x) {
+    return floor(x + 0.5);
+}
+vec4 round(vec4 x) {
+    return floor(x + 0.5);
+}
+float modf(float x, out float integralPart) {
+    integralPart = floor(x);
+    return x - integralPart;
+}
+// TODO: Provide a shim for `mat2 inverse(mat2 x)`
+#endif
+
 // FIXME
 #ifdef GL_ES
 #define onePixel (1.0 / min(iResolution.x, iResolution.y))

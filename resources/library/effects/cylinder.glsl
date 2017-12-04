@@ -2,7 +2,7 @@
 
 void main(void) {
     float angle = iIntensityIntegral * 8.0;
-    angle += 2 * asin(2 * (uv.x - 0.5));
+    angle += 2. * asin(2. * (uv.x - 0.5));
 
     float x = mod(angle / (M_PI), 2.0);
     x -= 1.0;

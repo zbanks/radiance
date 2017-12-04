@@ -12,7 +12,7 @@ void main() {
     float w = iIntensity * 4. / float(DEPTH);
     vec2  s = normCoord;
     vec4 col = lookup(s);
-    float deltaHue = 1. / DEPTH;
+    float deltaHue = 1. / float(DEPTH);
     for( int i=0; i<DEPTH; i++ )
     {
         w *= .9;
@@ -22,7 +22,7 @@ void main() {
         res *= max(res.r, max(res.g, res.b));
         res *= w;
         res.xyz = rgb2hsv(res.rgb); // TODO this would probably be made much faster using a buffershader of the input converted to HSV
-        res.x = mod(res.x + i * deltaHue - 0.5 * iIntensityIntegral, 1.);
+        res.x = mod(res.x + float(i) * deltaHue - 0.5 * iIntensityIntegral, 1.);
         res.rgb = hsv2rgb(res.xyz);
         col = composite(col, res);
     }

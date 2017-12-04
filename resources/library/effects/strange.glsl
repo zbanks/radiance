@@ -5,8 +5,8 @@ void main(void) {
 
     // Build a vector to use to sample perlin noise from
     // .xy ~ coordinate, .z ~ time + audio, .w ~ fixed integer per call to noise()
-    vec4 noise_input = vec4(0);
-    noise_input.xy = 5 * normCoord * smoothstep(0., 0.4, iIntensity);
+    vec4 noise_input = vec4(0.);
+    noise_input.xy = 5. * normCoord * smoothstep(0., 0.4, iIntensity);
     noise_input.z = iIntensityIntegral * 0.4 + iAudioLevel * mix(0.2, 0.7, iIntensity);
 
     float n;

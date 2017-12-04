@@ -22,7 +22,7 @@ bool in_bucket(vec2 uv, vec2 xy, float n_buckets) {
 }
 
 void main(void) {
-    float n_buckets = 10;
+    float n_buckets = 10.;
 
     vec2 left = vec2(rand(vec2(iTime, 0.)), rand(vec2(iTime, 1.)));
     left = pixelate(left, n_buckets);
