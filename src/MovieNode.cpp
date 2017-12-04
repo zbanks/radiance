@@ -399,7 +399,7 @@ void MovieNodeOpenGLWorker::initialize() {
 
     //mpv_set_property_string(m_mpv, "video-sync", "display-resample");
     //mpv_set_property_string(m_mpv, "display-fps", "60");
-    mpv_set_property_string(m_mpv, "hwdec", "yes");
+    mpv_set_property_string(m_mpv, "hwdec", "auto");
     mpv_set_property_string(m_mpv, "scale", "spline36");
     mpv_set_property_string(m_mpv, "loop", "inf");
     mpv_set_property_string(m_mpv, "fbo-format", "rgba32f");
