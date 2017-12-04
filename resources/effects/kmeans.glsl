@@ -20,7 +20,7 @@ float distFn(vec4 x, vec4 y) {
 
 void main(void) {
     //float q = pow(2.0, floor(rand(vec3(uv, iTime)) * 4));
-    float q = 1;
+    float q = 1.;
     vec2 a = uv;
     vec2 b = texture(iChannel[1], uv).xy;
     //vec2 a = texture(iChannel[1], uv + onePixel * vec2( 5,  5)).xy;

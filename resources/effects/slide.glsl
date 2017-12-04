@@ -10,7 +10,7 @@ void main(void) {
     vec4 c = texture(iInput, uv2);
 
     oc *= (1. - smoothstep(0.1, 0.2, iIntensity));
-    c *= smoothstep(0, 0.1, iIntensity);
+    c *= smoothstep(0., 0.1, iIntensity);
 
     fragColor = composite(oc, c);
 }

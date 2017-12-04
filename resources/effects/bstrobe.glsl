@@ -15,7 +15,7 @@ void main(void) {
     else if(iIntensity < 0.75) freq = 0.0625;
     else freq = 0.03125;
 
-    if(freq > 0) {
+    if(freq > 0.) {
         c = vec4(0., 0., 0., 1.) * (1. - mod(iTime, freq) / freq);
         fragColor = composite(fragColor, c);
     }

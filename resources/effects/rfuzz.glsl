@@ -6,7 +6,7 @@ void main(void) {
     float a = atan(normCoord.y, normCoord.x);
     float l = length(normCoord);
 
-    float wave = 0;
+    float wave = 0.;
     // As long as all of the multiplicitive factors on "a"
     // are integers, there will be no discontinuities
     wave += 0.24 * sin(a * 5. + iTime * 1.) * iAudioLow;

@@ -13,10 +13,10 @@ void main(void) {
     else if(iIntensity < 0.85) freq = 0.5;
     else freq = 0.25;
 
-    if(freq > 0) {
+    if(freq > 0.) {
         r = mod(iTime, freq) / freq;
     } else {
-        r = 0; 
+        r = 0.; 
     }
 
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
@@ -33,5 +33,5 @@ void main(void) {
     vec4 nc = texture(iInput, newUV);
     nc *= box(newUV);
 
-    fragColor = mix(oc, nc, smoothstep(0, 0.2, iIntensity));
+    fragColor = mix(oc, nc, smoothstep(0., 0.2, iIntensity));
 }

@@ -11,14 +11,14 @@ vec4 lookup(vec2 coord) {
 
 void main() {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
-    vec2  d = vec2(WIDTH, 0.) / ITERS.;
+    vec2  d = vec2(WIDTH, 0.) / float(ITERS);
     vec2  s = normCoord;
     //float phi = iIntensityIntegral * 4;
     float phi = iTime * 1.0;
     s.x /= sin(phi);
 
     // This isn't quite right, but it's super easy compared to real geometry
-    d *= abs(cos(phi)) * sign(sin(phi * 2));
+    d *= abs(cos(phi)) * sign(sin(phi * 2.));
 
     vec4 col = lookup(s);
     for( int i=0; i<ITERS; i++ )

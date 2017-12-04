@@ -1,7 +1,7 @@
 #property description Zoom in and pan across the surface
 
 void main(void) {
-    float t = iTime * 2 *  M_PI / 64.;
+    float t = iTime * 2. *  M_PI / 64.;
     vec2 sweep = vec2(cos(3. * t), sin(2. * t));
 
     float amount = iIntensity * 0.5;

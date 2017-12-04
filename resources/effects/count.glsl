@@ -1,5 +1,5 @@
 #property description Count out the beats
-// This looks really dumb if BTrack doesn't do a good job :\
+// This looks really dumb if BTrack doesn't do a good job :/
 
 float dist(vec2 point, vec2 xbound, float y) {
     // L1 distance function from a point to a X axis-aligned line segment
@@ -49,9 +49,9 @@ void main(void) {
     // Cycle through 4 digits based on beat counter, slight fade between #s
     float t = mod(iTime, 4.0);
     float tOff = mod(iTime + 2.0, 4.0);
-    float totalDist = one   * bound(2.0, 3.0, 0.10, tOff) \
-                    + two   * bound(1.0, 2.0, 0.10, t) \
-                    + three * bound(2.0, 3.0, 0.10, t) \
+    float totalDist = one   * bound(2.0, 3.0, 0.10, tOff) 
+                    + two   * bound(1.0, 2.0, 0.10, t) 
+                    + three * bound(2.0, 3.0, 0.10, t)
                     + four  * bound(1.0, 2.0, 0.10, tOff);
 
     float alpha = 1.0 - smoothstep(0.02, 0.04, totalDist);

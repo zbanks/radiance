@@ -20,7 +20,7 @@ const float EPSILON = 0.001;
 // Displacement based on a single parameter
 float disp(float x) {
     x *= 0.3;
-    float wave = 0;
+    float wave = 0.;
     wave += 1.8 * sin(x * 10. + iTime * 0.1) * iAudioLow;
     wave += 1.2 * sin(x * 20. + iTime * 0.1) * iAudioMid;
     wave += 0.6 * sin(x * 70. + iTime * 0.1) * iAudioHi;

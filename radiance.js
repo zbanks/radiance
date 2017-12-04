@@ -1,6 +1,5 @@
 var Radiance = (function(window, $, _) {
     'use strict';
-
     var R = new (function() {
         var R = this;
         R.gls = {};
@@ -29,8 +28,8 @@ var Radiance = (function(window, $, _) {
             gl.attachShader(program, fragment_shader);
             gl.linkProgram(program);
             if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                console.error("unable to link shader: " + gl.getProgramInfoLog(program));
-                throw "fixme";
+                console.error("unable to link shader: ", gl.getProgramInfoLog(program));
+                throw gl.getProgramInfoLog(program);
             }
 
             var vertBuffer = gl.createBuffer();
@@ -75,9 +74,9 @@ var Radiance = (function(window, $, _) {
             gl.shaderSource(shader, glslSource);
             gl.compileShader(shader);
             if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                console.log(glslSource);
-                console.error("unable to compile shader: " + gl.getShaderInfoLog(shader));
-                return null;
+                //console.log(glslSource);
+                console.error("unable to compile shader: ", gl.getShaderInfoLog(shader));
+                throw gl.getShaderInfoLog(shader);
             }
             return shader;
         };
@@ -111,7 +110,7 @@ var Radiance = (function(window, $, _) {
                     .tail()
                     .join("\n"); // This is a gross hack to strip "#version 150\n" from the header
 
-            var s = headerSource + "\n#line 0\n";
+            var s = headerSource + "\n#line 1\n";
             _(glslSource)
                 .split("\n")
                 .forEach(function(line, i) {
@@ -120,7 +119,7 @@ var Radiance = (function(window, $, _) {
                         effect.properties[terms[1]] = _(terms).drop(2).join(" ");
                     } else if (terms[0] == "#buffershader") {
                         effect.bufferShaders.push(s);
-                        s = headerSource + "\n#line " + (i+1);
+                        s = headerSource + "\n#line " + (i+2);
                     } else {
                         s += line;
                     }
@@ -141,6 +140,13 @@ var Radiance = (function(window, $, _) {
                 return ((new Date()) - msStart) / 1000. * (140 / 60);
                 return t % this.MAX_BEAT;
             };
+        });
+        R.audio = new (function() {
+            this.low = 0.3;
+            this.mid = 0.2;
+            this.high = 0.1;
+            this.level = 0.2;
+
         });
         R.Node = function(context, nodeName) {
             var node = this;
@@ -199,10 +205,14 @@ var Radiance = (function(window, $, _) {
 
                 fbo.bind = function() {
                     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.framebuffer);
-                }
+                };
                 fbo.release = function() {
                     gl.releaseFramebuffer(gl.FRAMEBUFFER, fbo.framebuffer);
-                }
+                };
+                fbo.destroy = function() {
+                    gl.deleteTexture(fbo.texture);
+                    gl.deleteFramebuffer(fbo.framebuffer);
+                };
 
                 return fbo;
             };
@@ -237,8 +247,21 @@ var Radiance = (function(window, $, _) {
                 this.lastIntegrateTime = now;
             };
 
+            node.destroyed = false;
+            this.destroy = function() {
+                node.destroyed = true;
+                extraFbo.destroy();
+                _(passes).forEach(function(pass) {
+                    pass.fbo.destroy();
+                    gl.deleteProgram(pass.program);
+                    gl.deleteBuffer(vertBuffer);
+                    gl.deleteTexture(noiseTexture);
+                });
+            };
+
             this.paint = function(inputTextures) {
-                
+                if (node.destroyed) throw "cannot paint destroyed node";
+
                 gl.clearColor(0, 0, 0, 0);
                 gl.disable(gl.DEPTH_TEST);
                 gl.disable(gl.BLEND);
@@ -260,7 +283,8 @@ var Radiance = (function(window, $, _) {
                     var program = pass.program;
                     gl.useProgram(program);
 
-                    //TODO: noise texture
+                    //TODO: Actually popoulate the noise texture
+                    //...although it's actually some pretty good noise by default on my machine
                     gl.activeTexture(gl.TEXTURE0 + noiseTex);
                     gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
                     var iNoiseLoc = gl.getUniformLocation(program, "iNoise");
@@ -291,13 +315,13 @@ var Radiance = (function(window, $, _) {
                     var iIntensityIntegralLoc = gl.getUniformLocation(program, "iIntensityIntegral");
                     gl.uniform1f(iIntensityIntegralLoc, node.intensityIntegral);
                     var iStepLoc = gl.getUniformLocation(program, "iStep");
-                    gl.uniform1f(iStepLoc, 1.0);
+                    gl.uniform1f(iStepLoc, R.time.wallTime());
                     var iTimeLoc = gl.getUniformLocation(program, "iTime");
                     gl.uniform1f(iTimeLoc, R.time.beatTime());
                     var iFPSLoc = gl.getUniformLocation(program, "iFPS");
-                    gl.uniform1f(iFPSLoc, 1.0);
+                    gl.uniform1f(iFPSLoc, 60.);
                     var iAudioLoc = gl.getUniformLocation(program, "iAudio");
-                    gl.uniform4f(iAudioLoc, 0.3, 0.2, 0.1, 0.2);
+                    gl.uniform4f(iAudioLoc, R.audio.low, R.audio.mid, R.audio.high, R.audio.level);
                     var iResolutionLoc = gl.getUniformLocation(program, "iResolution");
                     gl.uniform2f(iResolutionLoc, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
@@ -329,12 +353,16 @@ var Radiance = (function(window, $, _) {
             // For now, a model is a linear list of nodes with 1 input connected in series
             this.nodes = [];
             this.createAndAppendNode = function(nodeName, intensity) {
+                var node = this.createNode(nodeName, intensity);
+                this.nodes.push(node);
+                return node;
+            };
+            this.createNode = function(nodeName, intensity) {
                 var node = new R.Node(context, nodeName);
                 var inputCount = node.effect.properties.inputCount;
                 if (inputCount != 1)
                     console.warn("Warn: node has input count > 1", nodeName, inputCount);
                 node.intensity = intensity;
-                this.nodes.push(node);
                 return node;
             };
             this.paint = function() {
@@ -344,12 +372,12 @@ var Radiance = (function(window, $, _) {
                     t = node.paint([t]);
                 });
                 return t;
-            }
+            };
         };
         R.View = function(model, $el) {
             var view = this; 
             this.$el = $el;
-            this.render = function() {
+            this.update = function() {
                 var $list = $("<table>");
                 $list.append($("<tr>")
                     .append($("<th>").text("#"))
@@ -377,13 +405,14 @@ var Radiance = (function(window, $, _) {
             window.gl = gl; // XXX for debugging
 
             var model = R.model = new R.Model("main");
-            model.createAndAppendNode("purple", 1.0);
+            model.createAndAppendNode("random", 1.0);
             model.createAndAppendNode("vu", 0.7);
             model.createAndAppendNode("rainbow", 0.4);
-            model.createAndAppendNode("test", 0.7);
+            model.createAndAppendNode("solitaire", 0.7);
+            model.createAndAppendNode("uvmapself", 0.7);
 
             var view = R.view = new R.View(model, $(".control"));
-            view.render();
+            view.update();
 
             var paint = function(timestamp) {
                 var t = model.paint();
@@ -392,6 +421,18 @@ var Radiance = (function(window, $, _) {
             };
             window.requestAnimationFrame(paint);
         };
+        R.testShadersCompile = function() {
+            $("body").append($("<hr>"));
+            _(R.library).forOwn(function(_value, name) {
+                try {
+                    var node = new R.Node("main", name);
+                } catch (e) {
+                    $("body")
+                        .append($("<h3>").text(name))
+                        .append($("<div>").html(e.replace("\n", "<br>")));
+                }
+            });
+        }
     });
     $(R.setup);
     window.loadGlsl = R.loadGlsl; // glsl.js is a JSON blob wrapped in `loadGlsl(...)`

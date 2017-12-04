@@ -2,7 +2,7 @@
 float squared(float x) { return x * x;}
 float gaussian(float x, float sigma)
 {
-    return ((sigma!=0) ? exp(-0.5*squared(x/sigma)) : ((x==0) ? 1.0 : 0.0));
+    return ((sigma!=0.) ? exp(-0.5*squared(x/sigma)) : ((x==0.) ? 1.0 : 0.0));
 }
 
 void main()
@@ -25,7 +25,7 @@ void main()
 float squared(float x) { return x * x;}
 float gaussian(float x, float sigma)
 {
-    return ((sigma!=0) ? exp(-0.5*squared(x/sigma)) : ((x==0) ? 1.0 : 0.0));
+    return ((sigma!=0.) ? exp(-0.5*squared(x/sigma)) : ((x==0.) ? 1.0 : 0.0));
 }
 
 void main()

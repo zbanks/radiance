@@ -2,7 +2,7 @@
 
 void main(void) {
     float n_sides = (iIntensity * 7.) + 2.5;
-    float whole_sides = 0;
+    float whole_sides = 0.;
     n_sides = modf(n_sides, whole_sides);
     n_sides = whole_sides + smoothstep(0.2, 0.8, n_sides);
 

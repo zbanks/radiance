@@ -43,5 +43,5 @@ void main(void) {
     fragColor = max(fragColor - fadeAmount, vec4(0.));
 
     // Clear back buffer when intensity is low
-    fragColor *= smoothstep(0, 0.1, iIntensity);
+    fragColor *= smoothstep(0., 0.1, iIntensity);
 }

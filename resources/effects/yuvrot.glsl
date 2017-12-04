@@ -4,7 +4,7 @@ void main(void) {
     fragColor = texture(iInput, uv);
     vec3 yuv = rgb2yuv(demultiply(fragColor).rgb);
 
-    float t = iIntensity * 2 * M_PI;
+    float t = iIntensity * 2. * M_PI;
     yuv.gb *= 2.;
     yuv.gb -= 1.;
     yuv.gb = vec2(yuv.g * cos(t) - yuv.b * sin(t),

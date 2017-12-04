@@ -5,7 +5,7 @@ void main(void) {
     normCoord.xy = (uv - 0.5) * aspectCorrection;
     normCoord.z = normCoord.x + normCoord.y;
 
-    float bs = 256. * pow(2, -9. * iIntensity);
+    float bs = 256. * pow(2., -9. * iIntensity);
     vec3 bins = vec3(0.0);
     //bins.xy = bs * aspectCorrection;
     bins.xy = vec2(bs);

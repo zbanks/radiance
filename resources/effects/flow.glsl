@@ -9,7 +9,7 @@ void main(void) {
 void main(void) {
 
     fragColor = texture(iChannel[1], (uv - 0.5) * 0.98 + 0.5);
-    fragColor *= exp((iIntensity - 2.) / 50.) * smoothstep(0, 0.01, length((uv - 0.5) * aspectCorrection));
+    fragColor *= exp((iIntensity - 2.) / 50.) * smoothstep(0., 0.01, length((uv - 0.5) * aspectCorrection));
 
     vec4 c = texture(iInput, uv);
     float s = smoothstep(0.90, 1., 1. - mod(iTime, 1.)) * mix(0.01, 1.0, iAudioLevel);

@@ -9,14 +9,16 @@ vec4 lookup(vec2 coord) {
 }
 
 void main() {
-    float depth = iIntensity * MAX_DEPTH;
+    float depth = iIntensity * float(MAX_DEPTH);
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec2  d = -normCoord / depth;
     float w = 3. / depth;
     vec2  s = normCoord;
     vec4 col = lookup(s);
-    for( int i=0; i<int(depth); i++ )
-    {
+    for( int i=0; i<MAX_DEPTH; i++ ) {
+        if (float(i) >= depth)
+            break;
+
         w *= .99;
         s += d;
         vec4 res = lookup(s);
