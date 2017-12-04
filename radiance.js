@@ -5,6 +5,7 @@ var Radiance = (function(window, $, _) {
         var R = this;
         R.gls = {};
         R.glslSources = {};
+        R.MAX_INTENSITY_INTEGRAL = 1024.;
         R.setupWebGLCanvas = function(name, canvas) {
             var scale = 1.0;
             canvas.width = canvas.clientWidth / scale;
@@ -13,8 +14,7 @@ var Radiance = (function(window, $, _) {
             var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
             if (!gl) {
                 console.error("Unable to initialize webgl");
-                // TODO;
-                return;
+                throw "Unable to initialize webgl";
             }
             R.gls[name] = gl;
 
@@ -105,7 +105,11 @@ var Radiance = (function(window, $, _) {
                 bufferShaders: [],
             };
 
-            var headerSource = R.glslSources["resources/glsl/effect_header.glsl"];
+            var headerSource = 
+                _(R.glslSources["resources/glsl/effect_header.glsl"])
+                    .split("\n")
+                    .tail()
+                    .join("\n"); // This is a gross hack to strip "#version 150\n" from the header
 
             var s = headerSource + "\n#line 0\n";
             _(glslSource)
@@ -128,17 +132,25 @@ var Radiance = (function(window, $, _) {
         };
         R.time = new (function() {
             var msStart = +(new Date());
+            this.MAX_BEAT = this.MAX_WALL = 16.;
             this.wallTime = function() {
-                return ((new Date()) - msStart) / 1000.;
+                var t = ((new Date()) - msStart) / 1000.;
+                return t % this.MAX_WALL;
             };
             this.beatTime = function() {
                 return ((new Date()) - msStart) / 1000. * (140 / 60);
+                return t % this.MAX_BEAT;
             };
         });
         R.Node = function(context, nodeName) {
-            var effect = R.library[nodeName];
+            var node = this;
+            var effect = this.effect = R.library[nodeName];
             if (effect.type != "effect")
                 return;
+
+            this.intensity = 0.7;
+            this.intensityIntegral = 0.;
+            this.lastIntegrateTime = R.time.beatTime();
 
             var gl = R.gls[context];
             var makeShaderProgram = function(glslSource) {
@@ -162,12 +174,12 @@ var Radiance = (function(window, $, _) {
                 gl.bindTexture(gl.TEXTURE_2D, texture);
                 gl.texImage2D(
                     gl.TEXTURE_2D,
-                    0,                  // level
-                    gl.RGBA,            // internal format
-                    gl.canvas.width,    // width
-                    gl.canvas.height,   // height
-                    0,                  // border
-                    gl.RGBA,            // format
+                    0,                      // level
+                    gl.RGBA,                // internal format
+                    gl.drawingBufferWidth,  // width
+                    gl.drawingBufferHeight, // height
+                    0,                      // border
+                    gl.RGBA,                // format
                     gl.UNSIGNED_BYTE, null);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -216,7 +228,17 @@ var Radiance = (function(window, $, _) {
 
             var noiseTexture = makeTexture();
 
+            this.update = function() {
+                var now = R.time.beatTime();
+                var tDiff = (now - this.lastIntegrateTime);
+                if (tDiff < 0)
+                    tDiff += R.time.MAX_BEAT;
+                this.intensityIntegral = (this.intensityIntegral + this.intensity * tDiff) % R.MAX_INTENSITY_INTEGRAL;
+                this.lastIntegrateTime = now;
+            };
+
             this.paint = function(inputTextures) {
+                
                 gl.clearColor(0, 0, 0, 0);
                 gl.disable(gl.DEPTH_TEST);
                 gl.disable(gl.BLEND);
@@ -265,9 +287,9 @@ var Radiance = (function(window, $, _) {
                     gl.uniform1iv(iChannelsLoc, new Int32Array(channelTexs));
 
                     var iIntensityLoc = gl.getUniformLocation(program, "iIntensity");
-                    gl.uniform1f(iIntensityLoc, 1.0);
+                    gl.uniform1f(iIntensityLoc, node.intensity);
                     var iIntensityIntegralLoc = gl.getUniformLocation(program, "iIntensityIntegral");
-                    gl.uniform1f(iIntensityLoc, 1.0);
+                    gl.uniform1f(iIntensityIntegralLoc, node.intensityIntegral);
                     var iStepLoc = gl.getUniformLocation(program, "iStep");
                     gl.uniform1f(iStepLoc, 1.0);
                     var iTimeLoc = gl.getUniformLocation(program, "iTime");
@@ -275,9 +297,9 @@ var Radiance = (function(window, $, _) {
                     var iFPSLoc = gl.getUniformLocation(program, "iFPS");
                     gl.uniform1f(iFPSLoc, 1.0);
                     var iAudioLoc = gl.getUniformLocation(program, "iAudio");
-                    gl.uniform4f(iAudioLoc, 0.2, 0.3, 0.4, 0.5);
+                    gl.uniform4f(iAudioLoc, 0.3, 0.2, 0.1, 0.2);
                     var iResolutionLoc = gl.getUniformLocation(program, "iResolution");
-                    gl.uniform2f(iResolutionLoc, gl.canvas.width, gl.canvas.height);
+                    gl.uniform2f(iResolutionLoc, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
                     var vPositionAttribute = gl.getAttribLocation(program, "vPosition");
                     gl.enableVertexAttribArray(vPositionAttribute);
@@ -302,6 +324,50 @@ var Radiance = (function(window, $, _) {
                 return outputTexture;
             };
         };
+        R.Model = function(context) {
+            var model = this;
+            // For now, a model is a linear list of nodes with 1 input connected in series
+            this.nodes = [];
+            this.createAndAppendNode = function(nodeName, intensity) {
+                var node = new R.Node(context, nodeName);
+                var inputCount = node.effect.properties.inputCount;
+                if (inputCount != 1)
+                    console.warn("Warn: node has input count > 1", nodeName, inputCount);
+                node.intensity = intensity;
+                this.nodes.push(node);
+                return node;
+            };
+            this.paint = function() {
+                var t = null;
+                _(this.nodes).forEach(function(node) {
+                    node.update();
+                    t = node.paint([t]);
+                });
+                return t;
+            }
+        };
+        R.View = function(model, $el) {
+            var view = this; 
+            this.$el = $el;
+            this.render = function() {
+                var $list = $("<table>");
+                $list.append($("<tr>")
+                    .append($("<th>").text("#"))
+                    .append($("<th>").text("name"))
+                    .append($("<th>").text("intensity"))
+                    .append($("<th>").text("description"))
+                );
+                _(model.nodes).forEach(function(node, i) {
+                    $list.append($("<tr>")
+                        .append($("<td>").text(i + 1))
+                        .append($("<td>").text(node.effect.name))
+                        .append($("<td>").text(node.intensity))
+                        .append($("<td>").text(node.effect.properties.description))
+                    );
+                });
+                this.$el.html($list);
+            };
+        };
         R.setup = function() {
             var canvas = $(".main-canvas");
             var gl = R.setupWebGLCanvas("main", canvas[0]);
@@ -310,13 +376,17 @@ var Radiance = (function(window, $, _) {
             }
             window.gl = gl; // XXX for debugging
 
-            var testNode = new R.Node("main", "test");
-            var purpleNode = R.purple = new R.Node("main", "purple");
+            var model = R.model = new R.Model("main");
+            model.createAndAppendNode("purple", 1.0);
+            model.createAndAppendNode("vu", 0.7);
+            model.createAndAppendNode("rainbow", 0.4);
+            model.createAndAppendNode("test", 0.7);
+
+            var view = R.view = new R.View(model, $(".control"));
+            view.render();
 
             var paint = function(timestamp) {
-                var t = null;
-                t = purpleNode.paint([t]);
-                t = testNode.paint([t]);
+                var t = model.paint();
                 gl.renderTextureToCanvas(t);
                 window.requestAnimationFrame(paint);
             };

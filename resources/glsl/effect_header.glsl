@@ -1,4 +1,17 @@
+#version 150
+
+#ifdef GL_ES
 precision mediump float;
+varying highp vec2 uv;
+#define fragColor gl_FragColor
+#define _FLEXARRAY 8
+#define texture texture2D
+#else
+in vec4 gl_FragCoord;
+in vec2 uv;
+out vec4 fragColor;
+#define _FLEXARRAY
+#endif
 
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform highp float iStep;
@@ -10,10 +23,6 @@ uniform vec4  iAudio;
 #define iAudioMid   iAudio.y
 #define iAudioHi    iAudio.z
 #define iAudioLevel iAudio.w
-//uniform float iAudioHi;
-//uniform float iAudioLow;
-//uniform float iAudioMid;
-//uniform float iAudioLevel;
 
 // Resolution of the output pattern
 uniform vec2 iResolution;
@@ -27,15 +36,17 @@ uniform float iIntensityIntegral;
 // (Ideal) output rate in frames per second
 uniform float iFPS;
 
-// Output of the previous pattern
-uniform sampler2D iInputs[4];
+// Outputs of previous patterns
+uniform sampler2D iInputs[_FLEXARRAY];
+
+// Output of the previous pattern.  Alias to iInputs[0]
 #define iInput iInputs[0]
 
 // Full frame RGBA noise
 uniform sampler2D iNoise;
 
-// Previous outputs of the other buffershaders
-uniform sampler2D iChannel[4];
+// Previous outputs of the other channels (e.g. foo.1.glsl)
+uniform sampler2D iChannel[_FLEXARRAY];
 
 #define M_PI 3.1415926535897932384626433832795
 
@@ -46,6 +57,7 @@ float exp_step(float v) {
     return pow(v, iStep * iFPS);
 }
 // Utilities to convert from an RGB vec3 to an HSV vec3
+// 0 <= H, S, V <= 1
 vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
     vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
@@ -62,10 +74,43 @@ vec3 hsv2rgb(vec3 c) {
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
-// Alpha-compsite two colors, putting one on top of the other
+// Utilities to convert from an RGB vec3 to a YUV vec3
+// 0 <= Y, U, V <= 1 (*not* -1 <= U, V <= 1)
+// U is greenish<->bluish; V is bluish<->redish
+// https://en.wikipedia.org/wiki/YUV#Full_swing_for_BT.601
+vec3 rgb2yuv(vec3 rgb) {
+    vec3 yuv = vec3(0.);
+    yuv.x = rgb.r *  0.2126  + rgb.g *  0.7152  + rgb.b *  0.0722;
+    yuv.y = rgb.r * -0.09991 + rgb.g * -0.33609 + rgb.b *  0.436;
+    yuv.z = rgb.r *  0.615   + rgb.g * -0.55861 + rgb.b * -0.05639;
+    yuv.yz += 1.0;
+    yuv.yz *= 0.5;
+    return yuv;
+}
+vec3 yuv2rgb(vec3 yuv) {
+    yuv.yz /= 0.5;
+    yuv.yz -= 1.0;
+    vec3 rgb = vec3(0.);
+    rgb.r = yuv.x +                    yuv.z *  1.28033;
+    rgb.g = yuv.x + yuv.y * -0.21482 + yuv.z * -0.38059;
+    rgb.b = yuv.x + yuv.y *  2.12798;
+    return clamp(rgb, 0.0, 1.0);
+}
+
+// Turn non-premultipled alpha RGBA into premultipled alpha RGBA
+vec4 premultiply(vec4 c) {
+    return vec4(c.rgb * c.a, c.a);
+}
+
+// Turn premultipled alpha RGBA into non-premultipled alpha RGBA
+vec4 demultiply(vec4 c) {
+    return clamp(vec4(c.rgb / c.a, c.a), vec4(0.), vec4(1.));
+}
+
+// Alpha-compsite two colors, putting one on top of the other. Everything is premultipled
 vec4 composite(vec4 under, vec4 over) {
     float a_out = 1. - (1. - over.a) * (1. - under.a);
-    return clamp(vec4((over.rgb * over.a  + under.rgb * under.a * (1. - over.a)) / a_out, a_out), vec4(0.), vec4(1.));
+    return clamp(vec4((over.rgb + under.rgb * (1. - over.a)), a_out), vec4(0.), vec4(1.));
 }
 
 // Sawtooth wave
@@ -182,11 +227,21 @@ float noise(vec4 p) {
     float z2 = mix(y3, y4, xyzw.z);
     return mix(z1, z2, xyzw.w);
 }
+float hmax(vec2 v) {
+    return max(v.r,v.g);
+}
+float hmax(vec3 v) {
+    return max(hmax(v.rg),v.b);
+}
+float hmax(vec4 v) {
+    return hmax(max(v.rg,v.ba));
+}
 
-float onePixel = 1. / min(iResolution.x, iResolution.y);
+// FIXME
+#ifdef GL_ES
+#define onePixel (1.0 / min(iResolution.x, iResolution.y))
+#define aspectCorrection (iResolution / min(iResolution.x, iResolution.y))
+#else
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
-//vec2 uv = gl_FragCoord.xy / iResolution;
-//#define uv (gl_FragCoord.xy / iResolution)
-varying highp vec2 uv;
-
-#line 0
+float onePixel = 1. / min(iResolution.x, iResolution.y);
+#endif
