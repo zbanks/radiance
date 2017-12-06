@@ -158,7 +158,7 @@ var Radiance = (function(window, $, _) {
             this.intensityIntegral = 0.;
             this.lastIntegrateTime = R.time.beatTime();
 
-            var gl = R.gls[context];
+            var gl = this.gl = R.gls[context];
             var makeShaderProgram = function(glslSource) {
                 var vertex_shader = R.compileGlsl(context, R.glslSources["resources/glsl/plain_vertex.glsl"], gl.VERTEX_SHADER);
                 var fragment_shader = R.compileGlsl(context, glslSource, gl.FRAGMENT_SHADER);
@@ -274,7 +274,7 @@ var Radiance = (function(window, $, _) {
                 // fooTexture is the texture reference that can be bound
                 var textureIdx = 0;
                 var noiseTex = textureIdx++;
-                var inputTexs = _.range(effect.properties.inputCount).map(function() { return textureIdx++; });
+                var inputTexs = _.map(_.range(effect.properties.inputCount), function() { return textureIdx++; });
                 var channelTexs = _.map(passes, function () { return textureIdx++; });
 
                 var outputTexture;
@@ -351,32 +351,63 @@ var Radiance = (function(window, $, _) {
         R.Model = function(context) {
             var model = this;
             // For now, a model is a linear list of nodes with 1 input connected in series
-            this.nodes = [];
-            this.createAndAppendNode = function(nodeName, intensity) {
-                var node = this.createNode(nodeName, intensity);
-                this.nodes.push(node);
-                return node;
-            };
-            this.createNode = function(nodeName, intensity) {
+            this.verticies = {};
+
+            this.nextVertexId = 1;
+            this.makeVertexId = function() { return this.nextVertexId++; }; // 0 is 'unconnected'
+
+            this.createVertex = function(nodeName, intensity) {
                 var node = new R.Node(context, nodeName);
-                var inputCount = node.effect.properties.inputCount;
-                if (inputCount != 1)
-                    console.warn("Warn: node has input count > 1", nodeName, inputCount);
                 node.intensity = intensity;
-                return node;
+
+                var vertex = {};
+                vertex.node = node;
+                vertex.id = this.makeVertexId();
+                vertex.inEdges = {};
+                for (var i = 0; i < node.effect.properties.inputCount; i++) { vertex.inEdges[i] = 0; }
+                vertex.texture = null;
+                vertex.destroy = function() {
+                    _(model.verticies).forEach(function(v) {
+                        _(v.inEdges).forEach(function(id, idx) {
+                            if (id == vertex.id)
+                                v.inEdges[idx] = 0;
+                        });
+                    });
+                    model.verticies.pop(vertex.id); 
+                    vertex.node.destroy();
+                };
+                vertex.connect = function(inputNumber, fromVertex) {
+                    vertex.inEdges[inputNumber] = fromVertex.id;
+                };
+                vertex.createChain = function(_nodeName, _intensity) {
+                    var next = model.createVertex(_nodeName, _intensity);
+                    next.connect(0, vertex);
+                    return next;
+                };
+                vertex.renderToCanvas = function() {
+                    // TODO: this smells bad
+                    vertex.node.gl.renderTextureToCanvas(vertex.texture);
+                };
+
+                this.verticies[vertex.id] = vertex;
+                return vertex;
             };
+
             this.paint = function() {
-                var t = null;
-                _(this.nodes).forEach(function(node) {
-                    node.update();
-                    t = node.paint([t]);
+                _(this.verticies).forEach(function(vertex) { // TODO: needs to be toposorted
+                    vertex.node.update();
+                    var inputTextures = [];
+                    _(vertex.inEdges).forEach(function (v) {
+                        inputTextures.push(v ? model.verticies[v].texture : null);
+                    });
+                    vertex.texture = vertex.node.paint(inputTextures);
                 });
-                return t;
             };
         };
         R.View = function(model, $el) {
             var view = this; 
             this.$el = $el;
+            this.activeVertex = null;
             this.update = function() {
                 var $list = $("<table>");
                 $list.append($("<tr>")
@@ -385,15 +416,23 @@ var Radiance = (function(window, $, _) {
                     .append($("<th>").text("intensity"))
                     .append($("<th>").text("description"))
                 );
-                _(model.nodes).forEach(function(node, i) {
+                _(model.verticies).forEach(function(vertex, id) {
                     $list.append($("<tr>")
-                        .append($("<td>").text(i + 1))
-                        .append($("<td>").text(node.effect.name))
-                        .append($("<td>").text(node.intensity))
-                        .append($("<td>").text(node.effect.properties.description))
+                        .append($("<td>").text(id))
+                        .append($("<td>").text(vertex.node.effect.name))
+                        .append($("<td>").text(vertex.node.intensity))
+                        .append($("<td>").text(vertex.node.effect.properties.description))
+                        .mouseover(function() {
+                            view.activeVertex = vertex;
+                        })
                     );
+                    view.activeVertex = vertex;
                 });
                 this.$el.html($list);
+            };
+            this.render = function() {
+                if (this.activeVertex)
+                    this.activeVertex.renderToCanvas();
             };
         };
         R.setup = function() {
@@ -402,21 +441,23 @@ var Radiance = (function(window, $, _) {
             if (!gl) {
                 return;
             }
-            window.gl = gl; // XXX for debugging
 
             var model = R.model = new R.Model("main");
-            model.createAndAppendNode("random", 1.0);
-            model.createAndAppendNode("vu", 0.7);
-            model.createAndAppendNode("rainbow", 0.4);
-            model.createAndAppendNode("solitaire", 0.7);
-            model.createAndAppendNode("uvmapself", 0.7);
+            model
+                .createVertex("purple", 1.0)
+                .createChain( "resat", 1.0)
+                .createChain( "jet", 0.7)
+                .createChain( "solitaire", 0.7)
+                .createChain( "life", 0.6)
+                .createChain( "melt", 0.4)
+                ;
 
             var view = R.view = new R.View(model, $(".control"));
             view.update();
 
             var paint = function(timestamp) {
-                var t = model.paint();
-                gl.renderTextureToCanvas(t);
+                model.paint();
+                view.render();
                 window.requestAnimationFrame(paint);
             };
             window.requestAnimationFrame(paint);
