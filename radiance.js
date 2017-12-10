@@ -6,9 +6,12 @@ var Radiance = (function(window, $, _) {
         R.glslSources = {};
         R.MAX_INTENSITY_INTEGRAL = 1024.;
         R.setupWebGLCanvas = function(name, canvas) {
-            var scale = 1.0;
+            canvas.width = canvas.height = 256; // Power of 2
+            /*
+            var scale = 2.5;
             canvas.width = canvas.clientWidth / scale;
             canvas.height = canvas.clientHeight / scale;
+            */
 
             var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
             if (!gl) {
@@ -17,8 +20,9 @@ var Radiance = (function(window, $, _) {
             }
             R.gls[name] = gl;
 
-            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearColor(0.0, 0.0, 0.0, 0.0);
             gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.disable(gl.BLEND);
 
             var vertex_shader = R.compileGlsl(name, R.glslSources["resources/glsl/plain_vertex.glsl"], gl.VERTEX_SHADER);
             var fragment_shader = R.compileGlsl(name, R.glslSources["resources/glsl/plain_fragment.glsl"], gl.FRAGMENT_SHADER);
@@ -43,11 +47,15 @@ var Radiance = (function(window, $, _) {
             ];
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticies), gl.STATIC_DRAW);
 
+            // TODO: It's bad form to attach additional properties to the `gl` instance
+            // The things below here should be moved into a different object
             gl.renderTextureToCanvas = function(texture) {
-                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.disable(gl.BLEND);
+                gl.disable(gl.DEPTH_TEST);
+                gl.clearColor(0.0, 0.0, 0.0, 0.0);
                 gl.clear(gl.COLOR_BUFFER_BIT);
 
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -58,12 +66,53 @@ var Radiance = (function(window, $, _) {
                 var vPositionAttribute = gl.getAttribLocation(program, "vPosition");
                 gl.enableVertexAttribArray(vPositionAttribute);
 
-                gl.clear(gl.COLOR_BUFFER_BIT);
                 gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
                 gl.vertexAttribPointer(vPositionAttribute, 4, gl.FLOAT, false, 0, 0);
 
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                gl.useProgram(null);
+                gl.activeTexture(gl.TEXTURE0);
             }
+
+            var blankTextureData = new Uint8Array([0, 0, 0, 0]);
+            gl.blankTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, gl.blankTexture);
+            gl.texImage2D(
+                gl.TEXTURE_2D,
+                0,                      // level
+                gl.RGBA,                // internal format
+                1,                      // width
+                1,                      // height
+                0,                      // border
+                gl.RGBA,                // format
+                gl.UNSIGNED_BYTE,
+                blankTextureData);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+            var noiseTextureArray = [];
+            for (var i = 0; i < gl.drawingBufferWidth * gl.drawingBufferHeight * 4; i++) {
+                noiseTextureArray.push(Math.floor(Math.random() * 256));
+            }
+            var noiseTextureData = new Uint8Array(noiseTextureArray);
+            gl.noiseTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, gl.noiseTexture);
+            gl.texImage2D(
+                gl.TEXTURE_2D,
+                0,                      // level
+                gl.RGBA,                // internal format
+                gl.drawingBufferWidth,  // width
+                gl.drawingBufferHeight, // height
+                0,                      // border
+                gl.RGBA,                // format
+                gl.UNSIGNED_BYTE,
+                noiseTextureData);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
             return gl;
         };
@@ -142,11 +191,41 @@ var Radiance = (function(window, $, _) {
             };
         });
         R.audio = new (function() {
+            var audio = this;
+
             this.low = 0.3;
             this.mid = 0.2;
             this.high = 0.1;
             this.level = 0.2;
+            this.update = function() {
+                // Fake VU
+                var t = R.time.beatTime();
+                var v = (t % 1.0) * 0.9 + 0.1;
+                this.low = v * 0.4;
+                this.mid = v * 0.3;
+                this.high= v * 0.2;
+                this.level= v * 0.2 + 0.2;
+            };
 
+            return; // TODO: Don't bother grabbing the mic until we actually do something with it
+            navigator.mediaDevices
+                .getUserMedia({ audio: true, video: false })
+                .then(function(stream) {
+                    var audioContext = new AudioContext();
+                    var source = audioContext.createMediaStreamSource(stream);
+
+                    var analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 1024;
+                    var freqArray = new Uint8Array(analyser.frequencyBinCount);
+                    source.connect(analyser);
+                    var binSize = audioContext.sampleRate / analyser.fftSize; // in Hz
+                    console.log("Sample rate:", audioContext.sampleRate, "FFT size:", analyser.fftSize, "Bin size:", binSize);
+
+                    audio.update = function() {
+                        analyser.getByteFrequencyData(freqArray);
+                        // TODO: Analyze audio
+                    }
+                });
         });
         R.Node = function(context, nodeName) {
             var node = this;
@@ -218,6 +297,7 @@ var Radiance = (function(window, $, _) {
             };
 
             var passes = _.map(effect.bufferShaders, function(glslSource) {
+                // TODO: Here would be a decent place to cache the getUniformLocation results
                 return {
                     program: makeShaderProgram(glslSource),
                     fbo: makeFbo(),
@@ -236,8 +316,6 @@ var Radiance = (function(window, $, _) {
             ];
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticies), gl.STATIC_DRAW);
 
-            var noiseTexture = makeTexture();
-
             this.update = function() {
                 var now = R.time.beatTime();
                 var tDiff = (now - this.lastIntegrateTime);
@@ -255,16 +333,15 @@ var Radiance = (function(window, $, _) {
                     pass.fbo.destroy();
                     gl.deleteProgram(pass.program);
                     gl.deleteBuffer(vertBuffer);
-                    gl.deleteTexture(noiseTexture);
                 });
             };
 
             this.paint = function(inputTextures) {
                 if (node.destroyed) throw "cannot paint destroyed node";
 
-                gl.clearColor(0, 0, 0, 0);
+                gl.clearColor(0, 0, 0, 0.0);
                 gl.disable(gl.DEPTH_TEST);
-                gl.disable(gl.BLEND);
+                //gl.disable(gl.BLEND);
 
                 // Textures:
                 //     iNoise
@@ -279,6 +356,11 @@ var Radiance = (function(window, $, _) {
 
                 var outputTexture;
                 _(passes).forEachRight(function(pass, i) {
+                    gl.disable(gl.BLEND);
+                    gl.disable(gl.DEPTH_TEST);
+                    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+
                     extraFbo.bind();
                     var program = pass.program;
                     gl.useProgram(program);
@@ -286,7 +368,7 @@ var Radiance = (function(window, $, _) {
                     //TODO: Actually popoulate the noise texture
                     //...although it's actually some pretty good noise by default on my machine
                     gl.activeTexture(gl.TEXTURE0 + noiseTex);
-                    gl.bindTexture(gl.TEXTURE_2D, noiseTexture);
+                    gl.bindTexture(gl.TEXTURE_2D, gl.noiseTexture);
                     var iNoiseLoc = gl.getUniformLocation(program, "iNoise");
                     gl.uniform1i(iNoiseLoc, noiseTex);
 
@@ -328,7 +410,6 @@ var Radiance = (function(window, $, _) {
                     var vPositionAttribute = gl.getAttribLocation(program, "vPosition");
                     gl.enableVertexAttribArray(vPositionAttribute);
 
-                    gl.clear(gl.COLOR_BUFFER_BIT);
                     gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
                     gl.vertexAttribPointer(vPositionAttribute, 4, gl.FLOAT, false, 0, 0);
 
@@ -394,14 +475,44 @@ var Radiance = (function(window, $, _) {
             };
 
             this.paint = function() {
-                _(this.verticies).forEach(function(vertex) { // TODO: needs to be toposorted
+                _(this.orderedVerticies()).forEach(function(vertex) {
                     vertex.node.update();
                     var inputTextures = [];
                     _(vertex.inEdges).forEach(function (v) {
-                        inputTextures.push(v ? model.verticies[v].texture : null);
+                        inputTextures.push(v ? model.verticies[v].texture : vertex.node.gl.blankTexture);
                     });
                     vertex.texture = vertex.node.paint(inputTextures);
                 });
+            };
+
+            this.orderedVerticies = function() {
+                // Toposorted `this.verticies`
+                // Based on Kahn's algorithm from Wikipedia, but poorly, for brevity
+                var output = [];
+                var pending = [];
+                var marks = {0: true};
+                var isMarked = function(id) { return _(marks).get(id, false); };
+                while (true) {
+                    _(this.verticies).forEach(function(vertex, id) {
+                        if (_(marks).has(id))
+                            return;
+                        if (!_(vertex.inEdges).every(isMarked))
+                            return;
+                        pending.push(vertex);
+                        marks[id] = false;
+                    });
+
+                    if (_(pending).isEmpty())
+                        break;
+
+                    var v = pending.pop();
+                    output.push(v);
+                    marks[v.id] = true;
+                }
+                if (!_(this.verticies).keys().every(isMarked)) {
+                    console.log("Cycle detected!"); // oops
+                }
+                return output;
             };
         };
         R.View = function(model, $el) {
@@ -412,13 +523,15 @@ var Radiance = (function(window, $, _) {
                 var $list = $("<table>");
                 $list.append($("<tr>")
                     .append($("<th>").text("#"))
+                    .append($("<th>").text("inputs"))
                     .append($("<th>").text("name"))
                     .append($("<th>").text("intensity"))
                     .append($("<th>").text("description"))
                 );
-                _(model.verticies).forEach(function(vertex, id) {
+                _(model.orderedVerticies()).forEach(function(vertex) {
                     $list.append($("<tr>")
-                        .append($("<td>").text(id))
+                        .append($("<td>").text(vertex.id))
+                        .append($("<td>").text(_(vertex.inEdges).values().join(", ")))
                         .append($("<td>").text(vertex.node.effect.name))
                         .append($("<td>").text(vertex.node.intensity))
                         .append($("<td>").text(vertex.node.effect.properties.description))
@@ -445,9 +558,9 @@ var Radiance = (function(window, $, _) {
             var model = R.model = new R.Model("main");
             model
                 .createVertex("purple", 1.0)
-                .createChain( "resat", 1.0)
-                .createChain( "jet", 0.7)
-                .createChain( "solitaire", 0.7)
+                .createChain( "fireball", 0.4)
+                .createChain( "vu", 0.7)
+                //.createChain( "solitaire", 0.7)
                 .createChain( "life", 0.6)
                 .createChain( "melt", 0.4)
                 ;
@@ -456,8 +569,9 @@ var Radiance = (function(window, $, _) {
             view.update();
 
             var paint = function(timestamp) {
-                model.paint();
-                view.render();
+                R.audio.update();
+                R.model.paint();
+                R.view.render();
                 window.requestAnimationFrame(paint);
             };
             window.requestAnimationFrame(paint);
