@@ -5,7 +5,7 @@ void main()
 {
 	vec2 q = (uv - vec2(0.5, 0.5)) * aspectCorrection;
 
-    float t2 = iTime * 0.2;
+    float t2 = iTime * (M_PI / 16.);
     vec2 offset = vec2(sin(t2), cos(t2)) * 0.2;
     q -= offset;
 
