@@ -19,8 +19,14 @@ BaseVideoNodeTile {
     property real posX: -1
     property real posY: -1
 
-    property int blockWidth: 100
+    property var outputHeight: 400;
+    property var outputWidth: 300;
+    property var normalHeight: 170;
+    property var normalWidth: 150;
     property var minInputHeight: 170
+
+    property int blockWidth: normalWidth
+    property var blockHeight: normalHeight;
 
     property bool selected: false
     property int padding: 2
@@ -51,11 +57,6 @@ BaseVideoNodeTile {
 
     function regrid() {
         // Size
-        var outputHeight = 400;
-        var outputWidth = 300;
-        var normalHeight = 170;
-        var normalWidth = 150;
-        var blockHeight = normalHeight;
 
         if (inputHeights) {
             minInputHeight = outputName ? max(normalHeight, outputHeight / inputHeights.length) : normalHeight;
