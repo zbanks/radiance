@@ -5,7 +5,7 @@
 #include <QList>
 #include <QQuickWindow>
 
-class Context : public QObject {
+class QQuickPreviewAdapter : public QObject {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QVariantList outputs READ outputsQml WRITE setOutputsQml NOTIFY outputsChanged)
@@ -13,8 +13,8 @@ class Context : public QObject {
     Q_PROPERTY(QQuickWindow *previewWindow READ previewWindow WRITE setPreviewWindow NOTIFY previewWindowChanged)
 
 public:
-    Context(bool hasPreview=true);
-   ~Context() override;
+    QQuickPreviewAdapter(bool hasPreview=true);
+   ~QQuickPreviewAdapter() override;
 
 public slots:
     Model *model();

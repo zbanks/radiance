@@ -53,7 +53,6 @@ list(APPEND libradiance_SOURCES
     src/OpenGLUtils.cpp
     src/View.cpp
     src/Chain.cpp
-    src/Context.cpp
     src/OutputImageSequence.cpp
     src/Controls.cpp
     src/BaseVideoNodeTile.cpp
@@ -107,6 +106,7 @@ add_library(libradiance ${libradiance_SOURCES})
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickOutputItem.cpp
+    src/QQuickPreviewAdapter.cpp
     src/QQuickOutputWindow.cpp)
 
 add_executable(radiance_cli WIN32 src/main_standalone.cpp)

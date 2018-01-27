@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
     nodeRegistry->reload();
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
-    qmlRegisterType<Context>("radiance", 1, 0, "Context");
+    qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<View>("radiance", 1, 0, "View");
 

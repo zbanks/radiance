@@ -1,5 +1,5 @@
 pragma Singleton
 import QtQuick 2.7
 QtObject {
-    property var context;
+    property var previewAdapter;
 }

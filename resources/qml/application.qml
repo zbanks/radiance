@@ -13,8 +13,8 @@ ApplicationWindow {
     title: "Radiance"
     property bool hasMidi: false
 
-    Context {
-        id: globalContext;
+    PreviewAdapter {
+        id: previewAdapter;
         model: model;
         previewWindow: window;
     }
@@ -113,8 +113,7 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
-        Globals.context = globalContext;
-        globalContext.outputs = [outputItem.output, outputImageSequence];
+        Globals.previewAdapter = previewAdapter;
 
         loadAction.trigger();
         if (model.vertices.length == 0) {

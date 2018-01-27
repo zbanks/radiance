@@ -1,14 +1,14 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "Context.h"
+#include "QQuickPreviewAdapter.h"
 #include <QQuickItem>
 #include <QOpenGLTexture>
 #include <QSGTexture>
 
 class QQuickVideoNodePreview : public QQuickItem {
     Q_OBJECT
-    Q_PROPERTY(Context *context READ context WRITE setContext NOTIFY contextChanged)
+    Q_PROPERTY(QQuickPreviewAdapter *previewAdapter READ previewAdapter WRITE setPreviewAdapter NOTIFY previewAdapterChanged)
     Q_PROPERTY(int videoNodeId READ videoNodeId WRITE setVideoNodeId NOTIFY videoNodeIdChanged)
 
 public:
@@ -18,19 +18,19 @@ public:
     int videoNodeId();
     void setVideoNodeId(int value);
 
-    Context *context();
-    void setContext(Context *context);
+    QQuickPreviewAdapter *previewAdapter();
+    void setPreviewAdapter(QQuickPreviewAdapter *previewAdapter);
 
 signals:
     void videoNodeIdChanged(int videoNodeId);
-    void contextChanged(Context *context);
+    void previewAdapterChanged(QQuickPreviewAdapter *previewAdapter);
 
 protected slots:
     void onWindowChanged(QQuickWindow *window);
 
 protected:
     int m_videoNodeId;
-    Context *m_context;
+    QQuickPreviewAdapter *m_previewAdapter;
     QQuickWindow *m_window;
     QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
 };
