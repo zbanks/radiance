@@ -107,7 +107,8 @@ add_executable(radiance WIN32 src/main.cpp
     src/QQuickPreviewAdapter.cpp
     src/QQuickOutputWindow.cpp)
 
-add_executable(radiance_cli WIN32 src/main_standalone.cpp)
+#XXX TEMP
+#add_executable(radiance_cli WIN32 src/main_standalone.cpp)
 
 set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
 set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})
@@ -115,7 +116,7 @@ set_target_properties(radiance PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOUR
 
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
-target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
+#target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
 
 INSTALL(TARGETS radiance
         DESTINATION bin

@@ -8,6 +8,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <locale.h>
 #include <array>
+#include <QJsonObject>
 #include "Paths.h"
 
 MovieNode::MovieNode(const MovieNode &other)
@@ -26,8 +27,10 @@ MovieNode::MovieNode(const MovieNode &other)
 MovieNode::~MovieNode() {
 }
 
-QString MovieNode::serialize() {
-    return QString("mpv:%1").arg(m_videoPath);
+QJsonObject MovieNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    o.insert("videoPath", m_videoPath);
+    return o;
 }
 
 void MovieNode::onInitialized() {

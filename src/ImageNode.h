@@ -56,11 +56,11 @@ class ImageNode
     friend class ImageNodeOpenGLWorker;
 
 public:
-    ImageNode(NodeType *nr);
+    ImageNode(Context *context, QString imagePath);
     ImageNode(const ImageNode &other);
     ~ImageNode();
 
-    QString serialize() override;
+    QJsonObject serialize() override;
 
     // We don't actually need to do anything in paint(), because
     // periodic() advances the frame when necessary.  As a result,

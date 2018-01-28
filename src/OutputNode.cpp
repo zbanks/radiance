@@ -1,8 +1,9 @@
 #include "OutputNode.h"
 #include <QDebug>
+#include <QJsonObject>
 
-OutputNode::OutputNode(NodeType *nr)
-    : VideoNode(nr) {
+OutputNode::OutputNode(Context *context)
+    : VideoNode(context) {
 }
 
 OutputNode::OutputNode(const OutputNode &other)
@@ -11,8 +12,10 @@ OutputNode::OutputNode(const OutputNode &other)
 
 OutputNode::~OutputNode() = default;
 
-QString OutputNode::serialize() {
-    return "its_an_output";
+QJsonObject OutputNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    // TODO add things here
+    return o;
 }
 
 void OutputNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {

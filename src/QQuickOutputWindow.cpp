@@ -1,5 +1,4 @@
 #include "QQuickOutputWindow.h"
-#include "main.h"
 
 #include <QScreen>
 #include <QGuiApplication>

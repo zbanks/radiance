@@ -28,11 +28,8 @@ public slots:
     qreal beatTime() const;
     void setRealTime(qreal time);
     void setBeatTime(qreal time);
-protected slots:
-    void onInitialized(int, int);
 
 protected:
-    bool m_initialized{false};
     QOpenGLTexture m_noiseTexture;
     QOpenGLTexture m_blankTexture;
     qreal                     m_realTime{};

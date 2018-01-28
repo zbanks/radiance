@@ -7,7 +7,6 @@
 #include "GraphicalDisplay.h"
 //#include "ImageNode.h"
 #include "Model.h"
-#include "NodeRegistry.h"
 #include "Output.h"
 #include "QQuickVideoNodePreview.h"
 #include "QQuickOutputItem.h"
@@ -17,7 +16,6 @@
 #include "BaseVideoNodeTile.h"
 #include "View.h"
 #include "Paths.h"
-#include "main.h"
 
 #ifdef USE_RTMIDI
 #include "MidiController.h"
@@ -30,27 +28,6 @@
 #ifdef USE_LUX
 #include "Lux.h"
 #endif
-
-QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
-QSharedPointer<QSettings> settings;
-QSharedPointer<QSettings> outputSettings;
-QSharedPointer<Audio> audio;
-QSharedPointer<NodeRegistry> nodeRegistry;
-QSharedPointer<Timebase> timebase;
-
-QObject *audioProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    QQmlEngine::setObjectOwnership(audio.data(), QQmlEngine::CppOwnership);
-    return audio.data();
-}
-
-QObject *nodeRegistryProvider(QQmlEngine *engine, QJSEngine *scriptEngine) {
-    Q_UNUSED(engine)
-    Q_UNUSED(scriptEngine)
-    QQmlEngine::setObjectOwnership(nodeRegistry.data(), QQmlEngine::CppOwnership);
-    return nodeRegistry.data();
-}
 
 int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
@@ -76,6 +53,7 @@ int main(int argc, char *argv[]) {
     QThread::currentThread()->setObjectName("mainThread");
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterType<Context>("radiance", 1, 0, "Context");
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<View>("radiance", 1, 0, "View");
@@ -93,9 +71,6 @@ int main(int argc, char *argv[]) {
     qInfo() << "radiance compiled without midi support";
 #endif
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
-
-    qmlRegisterSingletonType<Audio>("radiance", 1, 0, "Audio", audioProvider);
-    qmlRegisterSingletonType<NodeRegistry>("radiance", 1, 0, "NodeRegistry", nodeRegistryProvider);
 
 #ifdef USE_LUX
     qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");

@@ -7,9 +7,10 @@
 #include <QtQml>
 #include "Paths.h"
 
-ImageNode::ImageNode(NodeType *nr)
-    : VideoNode(nr)
+ImageNode::ImageNode(Context *context, QString imagePath)
+    : VideoNode(context)
     , m_ready(false) {
+    setImagePath(imagePath);
 }
 
 ImageNode::ImageNode(const ImageNode &other)
@@ -24,8 +25,10 @@ ImageNode::ImageNode(const ImageNode &other)
 
 ImageNode::~ImageNode() = default;
 
-QString ImageNode::serialize() {
-    return m_imagePath;
+QJsonObject ImageNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    o.insert("imagePath", m_imagePath);
+    return o;
 }
 
 void ImageNode::onInitialized() {
@@ -87,7 +90,7 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 // ImageNodeOpenGLWorker methods
 
 ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString imagePath)
-    : OpenGLWorker(p->m_workerContext)
+    : OpenGLWorker(p->context()->openGLWorkerContext())
     , m_imagePath(imagePath) {
 //    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
 //    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);

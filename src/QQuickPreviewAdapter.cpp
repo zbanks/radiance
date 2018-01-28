@@ -1,4 +1,3 @@
-#include "main.h"
 #include "QQuickPreviewAdapter.h"
 #include "Model.h"
 #include <memory>

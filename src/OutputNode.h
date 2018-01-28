@@ -16,11 +16,11 @@ class OutputNode
     friend class OutputNodeOpenGLWorker;
 
 public:
-    OutputNode(NodeType *nr);
+    OutputNode(Context *context);
     OutputNode(const OutputNode &other);
     ~OutputNode();
 
-    QString serialize() override;
+    QJsonObject serialize() override;
 
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;

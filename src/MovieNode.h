@@ -96,7 +96,7 @@ public:
     MovieNode(const MovieNode &other);
     ~MovieNode();
 
-    QString serialize() override;
+    QJsonObject serialize() override;
 
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;

@@ -3,7 +3,6 @@
 #include <QQuickWindow>
 #include <QOpenGLTexture>
 #include <QOpenGLFramebufferObject>
-#include "main.h"
 
 QQuickVideoNodePreview::QQuickVideoNodePreview()
     : m_videoNodeId(0)
