@@ -3,14 +3,14 @@
 #include <QDebug>
 #include <QtQml>
 
+VideoNode::VideoNode(Context *context)
+    : m_context(context) {
+}
+
 VideoNode::VideoNode(const VideoNode &other)
     : m_inputCount(other.m_inputCount)
     , m_id(other.m_id)
-    , m_context(other.m_context)
-    , m_workerContext(other.m_workerContext) {
-}
-QSharedPointer<OpenGLWorkerContext> VideoNode::workerContext() const {
-    return m_workerContext;
+    , m_context(other.m_context) {
 }
 
 VideoNode::~VideoNode() = default;
@@ -68,4 +68,10 @@ void VideoNode::setChains(QList<QSharedPointer<Chain>> chains) {
 
 Context *VideoNode::context() {
     return m_context;
+}
+
+QJsonObject VideoNode::serialize() {
+    QJsonObject o;
+    o.insert("node_type", metaObject()->className());
+    return o;
 }

@@ -1,6 +1,7 @@
 #include "EffectNode.h"
 #include "Timebase.h"
 #include "Audio.h"
+#include "VideoNodeFactory.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -15,8 +16,8 @@
 #include <algorithm>
 #include "Paths.h"
 
-EffectNode::EffectNode(NodeType *nr)
-    : VideoNode(nr)
+EffectNode::EffectNode(Context *c, QString name)
+    : VideoNode(c)
     , m_intensity(0)
     , m_openGLWorker(new EffectNodeOpenGLWorker(this), &QObject::deleteLater)
     , m_ready(false) {
@@ -29,6 +30,8 @@ EffectNode::EffectNode(NodeType *nr)
     m_beatLast = context()->timebase()->beat();
     m_realTimeLast = context()->timebase()->wallTime();
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
+
+    if (!name.isEmpty()) setName(name);
 }
 
 EffectNode::EffectNode(const EffectNode &other)
@@ -52,8 +55,11 @@ EffectNode::EffectNode(const EffectNode &other)
 EffectNode::~EffectNode() {
 }
 
-QString EffectNode::serialize() {
-    return QString("%1:%2").arg(m_name, QString::number(m_intensity));
+QJsonObject EffectNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    o.insert("name", m_name);
+    o.insert("intensity", m_intensity);
+    return o;
 }
 
 void EffectNode::onInitialized() {
@@ -268,7 +274,7 @@ QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chai
 // EffectNodeOpenGLWorker methods
 
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
-    : OpenGLWorker(p->workerContext()) {
+    : OpenGLWorker(p->context()->openGLWorkerContext()) {
     qRegisterMetaType<QSharedPointer<EffectNodeRenderState>>();
     connect(this, &EffectNodeOpenGLWorker::prepareState, this, &EffectNodeOpenGLWorker::onPrepareState, Qt::AutoConnection);
     connect(this, &EffectNodeOpenGLWorker::message, p, &EffectNode::message);
@@ -405,3 +411,31 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
     return true;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
+QString EffectNodeFactory::typeName() {
+    return "EffectNode";
+}
+
+VideoNode *EffectNodeFactory::deserialize(Context *context, QJsonObject obj) {
+    QString name = obj.value("name").toString();
+    if (obj.isEmpty()) {
+        return nullptr;
+    }
+    EffectNode *e = new EffectNode(context, name);
+    double intensity = obj.value("intensity").toDouble();
+    e->setIntensity(intensity);
+    return e;
+}
+
+bool EffectNodeFactory::canCreateFromFile(QString filename) {
+    return filename.endsWith(".glsl", Qt::CaseInsensitive);
+}
+
+VideoNode *EffectNodeFactory::fromFile(Context *context, QString filename) {
+    if (filename.endsWith(".glsl", Qt::CaseInsensitive)) {
+        filename = filename.left(filename.length() - 5);
+    }
+    EffectNode *e = new EffectNode(context, filename);
+    return e;
+}

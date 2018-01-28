@@ -8,9 +8,6 @@
 #include <QMutex>
 #include "Context.h"
 
-class Model;
-class NodeType;
-
 // This is an abstract base class
 // for nodes in the DAG.
 // VideoNodes have 0 or more inputs, and one output.
@@ -28,11 +25,7 @@ class VideoNode : public QObject {
     Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged);
 
 public:
-    // Calls to paint() may return 0
-    // before initialize() has been run.
-    // Constructor may be called without a valid
-    // OpenGL context.
-    VideoNode(NodeType *nt);
+    VideoNode(Context *context);
 
     // VideoNodes must be copyable
     VideoNode(const VideoNode &other);
@@ -40,11 +33,7 @@ public:
    ~VideoNode() override;
 
     // Methods for de/serializing VideoNodes
-    // All 3 methods need to be implemented for each subclass of VideoNode
-    // TODO: is it awkward that serialize returns 1 string; but deserialize takes 2?
-    // TODO: How can we ensure deserialize & availableNodeTypes are impl'd at compile time?
-    // TODO: Classes still need to be registered in main.cpp
-    virtual QString serialize() = 0;
+    virtual QJsonObject serialize();
 
     // Methods for rendering
 
@@ -108,7 +97,6 @@ public slots:
     // which ones that changed through the function chainsEdited.
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
-    QSharedPointer<OpenGLWorkerContext> workerContext() const;
 protected slots:
     virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
 
@@ -120,7 +108,6 @@ protected:
     QMutex m_idLock;
     Context *m_context;
 
-    QSharedPointer<OpenGLWorkerContext> m_workerContext{};
 signals:
     // Emitted when the object wishes to be deleted
     // e.g. due to an error

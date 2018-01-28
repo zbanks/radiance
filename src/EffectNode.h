@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "VideoNodeFactory.h"
 #include "OpenGLWorker.h"
 #include "OpenGLUtils.h"
 #include "Context.h"
@@ -80,11 +81,11 @@ class EffectNode
     friend class EffectNodeOpenGLWorker;
 
 public:
-    EffectNode(NodeType *nr);
+    EffectNode(Context *context, QString name);
     EffectNode(const EffectNode &other);
     ~EffectNode();
 
-    QString serialize() override;
+    QJsonObject serialize() override;
 
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
@@ -121,4 +122,15 @@ protected:
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
     QTimer m_periodic; // XXX do something better here
     bool m_ready;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+class EffectNodeFactory : public VideoNodeFactory {
+
+public:
+    QString typeName() override;
+    VideoNode *deserialize(Context *context, QJsonObject obj) override;
+    bool canCreateFromFile(QString filename) override;
+    VideoNode *fromFile(Context *context, QString filename) override;
 };
