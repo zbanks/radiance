@@ -12,17 +12,10 @@
 #include "EffectNode.h"
 //#include "ImageNode.h"
 //#include "MovieNode.h"
-#include "NodeRegistry.h"
+#include "Timebase.h"
 #include "Paths.h"
-#include "main.h"
 
 #define IMG_FORMAT ".gif"
-
-QSharedPointer<OpenGLWorkerContext> openGLWorkerContext;
-QSharedPointer<QSettings> settings;
-QSharedPointer<Audio> audio;
-QSharedPointer<NodeRegistry> nodeRegistry;
-QSharedPointer<Timebase> timebase;
 
 void generateHtml(QDir outputDir, QList<NodeType*> nodeTypes) {
     QFile outputHtml(outputDir.filePath("index.html"));
@@ -37,18 +30,18 @@ void generateHtml(QDir outputDir, QList<NodeType*> nodeTypes) {
     html << "<h1>radiance library</h1>\n";
     html << "<table><tr><th>name</th><th>0%</th><th>100%</th><th>gif</th><th>description</th><tr>\n";
 
-    for (auto nodeType : nodeTypes) {
-        QString name = nodeType->name();
-        html << "<tr><td>" << name << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
-        html << "    <td class='desc'>" << nodeType->description();
-        if (!nodeType->author().isNull()) {
-            html << "<p>[" << nodeType->author() << "]</p>";
-        }
-        html << "</td>\n";
-    }
+    //for (auto nodeType : nodeTypes) {
+    //    QString name = nodeType->name();
+    //    html << "<tr><td>" << name << "</td>\n";
+    //    html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
+    //    html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
+    //    html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
+    //    html << "    <td class='desc'>" << nodeType->description();
+    //    if (!nodeType->author().isNull()) {
+    //        html << "<p>[" << nodeType->author() << "]</p>";
+    //    }
+    //    html << "</td>\n";
+    //}
 
     html << "</table>\n";
     html << "</body></html>\n";
@@ -92,18 +85,9 @@ int main(int argc, char *argv[]) {
 
     QThread::currentThread()->setObjectName("mainThread");
 
+    Context context;
 
-    settings = QSharedPointer<QSettings>(new QSettings());
-    audio = QSharedPointer<Audio>(new Audio());
-    timebase = QSharedPointer<Timebase>(new Timebase());
-
-    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry(false));
-    nodeRegistry->reload();
-
-    openGLWorkerContext = nodeRegistry->workerContext();//OpenGLWorkerContext::create(false);
-    openGLWorkerContext->setObjectName("openGLWorkerContext");
-
-    timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
+    context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
     // Set up output directory
     QString outputDirString("render_output");
@@ -119,18 +103,17 @@ int main(int argc, char *argv[]) {
     //qInfo() << "Wiped" << outputDir.absolutePath();
 
     // Generate HTML page with previews
-    auto nodeTypes = nodeRegistry->nodeTypes().values();
-    generateHtml(outputDir, nodeTypes);
+    //generateHtml(outputDir, nodeTypes);
 
     QList<QString> nodeNames;
-    for (auto nodeType : nodeTypes) {
-        qDebug() << nodeType->name() << nodeType->inputCount() << nodeType->metaObject()->className();
-        if (nodeType->inputCount() > 2)
-            continue;
-        if (nodeType->metaObject()->className() == QString("MovieType"))
-            continue;
-        nodeNames.append(nodeType->name());
-    }
+    //for (auto nodeType : nodeTypes) {
+    //    qDebug() << nodeType->name() << nodeType->inputCount() << nodeType->metaObject()->className();
+    //    if (nodeType->inputCount() > 2)
+    //        continue;
+    //    if (nodeType->metaObject()->className() == QString("MovieType"))
+    //        continue;
+    //    nodeNames.append(nodeType->name());
+    //}
 
     // Set up output chain & FBO renderer
     QSize renderSize(128, 128);
@@ -200,7 +183,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i <= 100; i++) {
             if (effectNode)
                 effectNode->setIntensity(i / 50.);
-            timebase->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
+            context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
 
             auto modelCopy = model.createCopyForRendering(chain);
             auto rendering = modelCopy.render(chain);
@@ -242,6 +225,6 @@ int main(int argc, char *argv[]) {
     qInfo() << "Done.";
 
     app.quit();
-    openGLWorkerContext.reset();
+    //openGLWorkerContext.reset();
     return 0;
 }

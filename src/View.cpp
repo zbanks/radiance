@@ -1,5 +1,4 @@
 #include "View.h"
-#include "main.h"
 #include <QQmlContext>
 #include <QQmlProperty>
 #include <QFileInfo>

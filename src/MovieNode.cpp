@@ -1,5 +1,4 @@
 #include "MovieNode.h"
-#include "ProbeReg.h"
 #include <QDebug>
 #include <QReadWriteLock>
 #include <QDir>
@@ -10,61 +9,6 @@
 #include <locale.h>
 #include <array>
 #include "Paths.h"
-#include "main.h"
-
-MovieType::MovieType(NodeRegistry *r , QObject *p )
-    : NodeType(r,p) {
-}
-MovieType::~MovieType() = default;
-QString MovieType::pathFormat() const {
-    return m_pathFormat;
-}
-void MovieType::setPathFormat(QString fmt)
-{
-    if (fmt != pathFormat()) {
-        m_pathFormat = fmt;
-        emit pathFormatChanged(pathFormat());
-    }
-}
-VideoNode *MovieType::create(QString arg)
-{
-    auto pth = pathFormat().arg(arg);
-    auto node = new MovieNode(this);
-    if (node) {
-        node->setInputCount(inputCount());
-        node->setVideoPath(pth);
-    }
-    return node;
-}
-
-MovieNode::MovieNode(NodeType *nr)
-    : VideoNode(nr)
-    , m_videoPath()
-    , m_renderFbos()
-    , m_openGLWorkerContext(nullptr)
-    , m_videoSize(0, 0)
-    , m_ready(false)
-    , m_position(0)
-    , m_duration(0)
-    , m_mute(false)
-    , m_pause(false) {
-
-    m_openGLWorkerContext = OpenGLWorkerContext::create();
-
-    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(this),&QObject::deleteLater);
-
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
-    connect(this, &MovieNode::videoPathChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
-    connect(this, &MovieNode::chainSizeChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onChainSizeChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
-    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
-
-    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
-    Q_ASSERT(result);
-}
 
 MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
@@ -84,50 +28,6 @@ MovieNode::~MovieNode() {
 
 QString MovieNode::serialize() {
     return QString("mpv:%1").arg(m_videoPath);
-}
-
-namespace {
-std::once_flag reg_once{};
-TypeRegistry movie_registry{[](NodeRegistry *r) -> QList<NodeType*> {
-    std::call_once(reg_once,[](){
-        qmlRegisterUncreatableType<MovieNode>("radiance",1,0,"MovieNode","MovieNode must be created through the registry");
-    });
-    auto res = QList<NodeType*>{};
-
-    QStringList images;
-    QDir imgDir(Paths::library() + QString("videos/"));
-    imgDir.setSorting(QDir::Name);
-
-    for (auto movieName : imgDir.entryList()) {
-        if (movieName[0] == '.')
-            continue;
-        auto t = new MovieType(r);
-        if(!t)
-            continue;
-        t->setName(movieName);
-        t->setDescription(movieName);
-        t->setInputCount(1);
-        t->setPathFormat(QString("videos/%1").arg(movieName));
-        res.append(t);
-    }
-    {
-        auto t = new MovieType(r);
-        t->setName("youtube");
-        t->setDescription("Search the Tubes of You");
-        t->setInputCount(1);
-        t->setPathFormat("ytdl://ytsearch:%1");
-        res.append(t);
-    }
-    {
-        auto t = new MovieType(r);
-        t->setName("mpv");
-        t->setDescription("play URI with libmpv");
-        t->setInputCount(1);
-        t->setPathFormat("%1");
-        res.append(t);
-    }
-    return res;
-}};
 }
 
 void MovieNode::onInitialized() {

@@ -7,30 +7,8 @@
 #include <QVector>
 #include <QMutex>
 
-class Chain;
-
-class ChainOpenGLWorker : public OpenGLWorker {
-    Q_OBJECT
-
-public:
-    ChainOpenGLWorker(Chain* p);
-public slots:
-    void initialize(QSize);
-signals:
-    void initialized(int, int);
-protected:
-    void createBlankTexture(QSize);
-    void createNoiseTexture(QSize);
-    QOpenGLTexture m_noiseTexture{QOpenGLTexture::Target2D};
-    QOpenGLTexture m_blankTexture{QOpenGLTexture::Target2D};
-};
-
-///////////////////////////////////////////////////////////////////////////////
-
 class Chain : public QObject {
     Q_OBJECT
-
-    friend class ChainOpenGLWorker;
 
     Q_PROPERTY(QSize size READ size CONSTANT);
     Q_PROPERTY(int blankTexture READ blankTexture);
@@ -42,8 +20,8 @@ public:
    ~Chain() override;
     QSize size();
 public slots:
-    GLuint noiseTexture() const;
-    GLuint blankTexture() const;
+    GLuint noiseTexture();
+    GLuint blankTexture();
     QOpenGLVertexArrayObject &vao();
     const QOpenGLVertexArrayObject &vao() const;
     qreal realTime() const;
@@ -55,11 +33,10 @@ protected slots:
 
 protected:
     bool m_initialized{false};
-    GLuint m_noiseTextureId{};
-    GLuint m_blankTextureId{};
+    QOpenGLTexture m_noiseTexture;
+    QOpenGLTexture m_blankTexture;
     qreal                     m_realTime{};
     qreal                     m_beatTime{};
     QOpenGLVertexArrayObject  m_vao;
-    ChainOpenGLWorker        *m_openGLWorker{};
     QSize m_size;
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include <QOpenGLTexture>
 #include <QMutex>
@@ -9,8 +8,6 @@
 #include <vector>
 
 class ImageNode;
-class ImageType;
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -46,15 +43,6 @@ public:
     int          m_totalDelay{};
     std::vector<int> m_frameDelays{}; // milliseconds
     std::vector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
-};
-
-class ImageType : public NodeType {
-    Q_OBJECT
-public:
-    ImageType(NodeRegistry *r = nullptr, QObject *p = nullptr);
-   ~ImageType() override;
-public slots:
-    VideoNode *create(QString) override;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

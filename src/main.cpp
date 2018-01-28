@@ -69,21 +69,11 @@ int main(int argc, char *argv[]) {
 
     Paths::initialize();
 
-    QThread::currentThread()->setObjectName("mainThread");
-
-    openGLWorkerContext = OpenGLWorkerContext::create();
-//    openGLWorkerContext->setParent(&app);
-
-    settings = QSharedPointer<QSettings>(new QSettings());
-    outputSettings = QSharedPointer<QSettings>(new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output"));
-    timebase = QSharedPointer<Timebase>(new Timebase());
-    audio = QSharedPointer<Audio>(new Audio());
-
-    nodeRegistry = QSharedPointer<NodeRegistry>(new NodeRegistry());
 #ifndef USE_MPV
     qInfo() << "radiance compiled without mpv support";
 #endif
-    nodeRegistry->reload();
+
+    QThread::currentThread()->setObjectName("mainThread");
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");

@@ -6,6 +6,7 @@
 #include <QSharedPointer>
 #include <QOpenGLFunctions>
 #include <QMutex>
+#include "Context.h"
 
 class Model;
 class NodeType;
@@ -22,6 +23,7 @@ class NodeType;
 
 class VideoNode : public QObject {
     Q_OBJECT
+    Q_PROPERTY(Context *context READ context CONSTANT);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
     Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged);
 
@@ -85,6 +87,9 @@ public slots:
     int inputCount();
     void setInputCount(int value);
 
+    // Context
+    Context *context();
+
     // Returns a unique identifier
     // within the context
     // Anything that references this node in the main thread
@@ -113,6 +118,7 @@ protected:
     int m_id;
     QList<QSharedPointer<Chain>> m_chains;
     QMutex m_idLock;
+    Context *m_context;
 
     QSharedPointer<OpenGLWorkerContext> m_workerContext{};
 signals:

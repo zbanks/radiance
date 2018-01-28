@@ -1,5 +1,7 @@
 #include "GraphicalDisplay.h"
-#include "main.h"
+
+#include "Audio.h"
+#include "Timebase.h"
 
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFramebufferObjectFormat>
@@ -8,11 +10,13 @@
 #include <QOpenGLVertexArrayObject>
 
 class GraphicalDisplayRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions {
+    Context * const *m_context;
     QOpenGLShaderProgram *m_program;
     QOpenGLVertexArrayObject m_vao;
 public:
-    GraphicalDisplayRenderer()
-        : m_program(0)
+    GraphicalDisplayRenderer(Context * const *context)
+        : m_context(context)
+        , m_program(0)
         , m_fragmentShader() {
         initializeOpenGLFunctions();
         m_vao.create();
@@ -59,9 +63,13 @@ err:
         if(fs != m_fragmentShader) changeProgram(fs);
     }
 
+    Context *context() {
+        return *m_context;
+    }
+
     void render() override {
         if(m_program) {
-            audio->renderGraphics();
+            context()->audio()->renderGraphics();
 
             glClearColor(0, 0, 0, 0);
             glDisable(GL_DEPTH_TEST);
@@ -69,16 +77,16 @@ err:
 
             m_program->bind();
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_1D, audio->m_waveformTexture->textureId());
+            glBindTexture(GL_TEXTURE_1D, context()->audio()->m_waveformTexture->textureId());
             glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_1D, audio->m_waveformBeatsTexture->textureId());
+            glBindTexture(GL_TEXTURE_1D, context()->audio()->m_waveformBeatsTexture->textureId());
             glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_1D, audio->m_spectrumTexture->textureId());
+            glBindTexture(GL_TEXTURE_1D, context()->audio()->m_spectrumTexture->textureId());
             m_program->setUniformValue("iResolution", framebufferObject()->size());
             m_program->setUniformValue("iWaveform", 0);
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
-            m_program->setUniformValue("iTime", (GLfloat) timebase->beat());
+            m_program->setUniformValue("iTime", (GLfloat) context()->timebase()->beat());
             m_vao.bind();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_program->release();
@@ -105,5 +113,16 @@ void GraphicalDisplay::setFragmentShader(QString fragmentShader) {
 }
 
 QQuickFramebufferObject::Renderer *GraphicalDisplay::createRenderer() const {
-    return new GraphicalDisplayRenderer();
+    return new GraphicalDisplayRenderer(&m_context);
+}
+
+Context *GraphicalDisplay::context() {
+    return m_context;
+}
+
+void GraphicalDisplay::setContext(Context *context) {
+    if (context != m_context) {
+        m_context = context;
+        emit contextChanged(context);
+    }
 }

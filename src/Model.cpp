@@ -1,6 +1,5 @@
 #include "Model.h"
 #include "VideoNode.h"
-#include "main.h"
 #include <QByteArray>
 #include <QFile>
 #include <QJsonArray>
@@ -103,18 +102,6 @@ void Model::onFatal(QString str) {
     emit fatal(vn, str);
     removeVideoNode(vn);
     flush();
-}
-
-VideoNode *Model::createVideoNode(const QString &name) {
-    VideoNode *videoNode = nodeRegistry->createNode(name);
-    if (!videoNode) {
-        qInfo() << "Failed to create videoNode:" << name;
-        return nullptr;
-    }
-
-    addVideoNode(videoNode);
-    QQmlEngine::setObjectOwnership(videoNode,QQmlEngine::CppOwnership);
-    return videoNode;
 }
 
 void Model::addVideoNode(VideoNode *videoNode) {
@@ -464,8 +451,14 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     auto & vao = chain->vao();
     if(!vao.isCreated())
         vao.create();
-    chain->setRealTime(timebase->wallTime());
-    chain->setBeatTime(timebase->beat());
+
+    // XXX
+    // This is the only place that model uses context
+    // so rather than give model a context
+    // I have commented it out
+    //chain->setRealTime(timebase->wallTime());
+    //chain->setBeatTime(timebase->beat());
+
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
         auto inputCount = vertices.at(i)->inputCount();
@@ -559,9 +552,10 @@ void Model::deserialize(const QJsonObject &data) {
     QMap<QString, VideoNode *> addedVertices;
     QJsonObject jsonVertices = data["vertices"].toObject();
     for (auto vertexName : jsonVertices.keys()) {
-        VideoNode *vertex = createVideoNode(jsonVertices[vertexName].toString());
-        qInfo() << vertex << jsonVertices[vertexName];
-        addedVertices.insert(vertexName, vertex);
+        // XXX
+        //VideoNode *vertex = createVideoNode(jsonVertices[vertexName].toString());
+        //qInfo() << vertex << jsonVertices[vertexName];
+        //addedVertices.insert(vertexName, vertex);
     }
 
     QJsonArray jsonEdges = data["edges"].toArray();

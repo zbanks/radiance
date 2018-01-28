@@ -1,5 +1,6 @@
 #include "EffectNode.h"
-#include "ProbeReg.h"
+#include "Timebase.h"
+#include "Audio.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -13,26 +14,6 @@
 #include <functional>
 #include <algorithm>
 #include "Paths.h"
-#include "main.h"
-
-EffectType::EffectType(NodeRegistry *r , QObject *p )
-    : NodeType(r,p) {
-}
-EffectType::~EffectType() = default;
-VideoNode *EffectType::create(QString arg) {
-    auto node = new EffectNode(this);
-    if ( node ) {
-        node->setInputCount(inputCount());
-        node->setName(name());
-        auto ok = false;
-        auto intensity = arg.toFloat(&ok);
-
-        if ( ok ) {
-            node->setIntensity(intensity);
-        }
-    }
-    return node;
-}
 
 EffectNode::EffectNode(NodeType *nr)
     : VideoNode(nr)
@@ -45,8 +26,8 @@ EffectNode::EffectNode(NodeType *nr)
     m_periodic.start();
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
 
-    m_beatLast = timebase->beat();
-    m_realTimeLast = timebase->wallTime();
+    m_beatLast = context()->timebase()->beat();
+    m_realTimeLast = context()->timebase()->wallTime();
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
 }
 
@@ -73,78 +54,6 @@ EffectNode::~EffectNode() {
 
 QString EffectNode::serialize() {
     return QString("%1:%2").arg(m_name, QString::number(m_intensity));
-}
-
-namespace {
-std::once_flag reg_once{};
-TypeRegistry effect_registry{[](NodeRegistry *r) -> QList<NodeType*> {
-    std::call_once(reg_once,[](){
-        qmlRegisterUncreatableType<EffectNode>("radiance",1,0,"EffectNode","EffectNode must be created through the registry");
-    });
-    auto res = QList<NodeType*>{};
-
-    auto filters = QStringList{} << QString{"*.glsl"};
-    QDir dir(Paths::library() + QString("effects/"));
-    dir.setNameFilters(filters);
-    dir.setSorting(QDir::Name);
-
-    for (auto effectName : dir.entryList()) {
-        // TODO: Refactor the parsing logic so it's not duplicated
-        auto name = effectName.replace(".glsl", "");
-        auto filename = Paths::library() + QString("effects/%1.glsl").arg(name);
-
-        QFileInfo check_file(filename);
-        if(!(check_file.exists() && check_file.isFile()))
-            continue;
-
-        QFile file(filename);
-        if(!file.open(QIODevice::ReadOnly)) {
-            continue;
-        }
-
-        QTextStream stream(&file);
-
-        auto buffershader_reg = QRegularExpression(
-            "^\\s*#buffershader\\s*$"
-        , QRegularExpression::CaseInsensitiveOption
-            );
-        auto property_reg = QRegularExpression(
-            "^\\s*#property\\s+(?<name>\\w+)\\s+(?<value>.*)$"
-        , QRegularExpression::CaseInsensitiveOption
-            );
-        auto passes = QVector<QStringList>{QStringList{"#line 0"}};
-        auto props  = QMap<QString,QString>{{"inputCount","1"}};
-        auto lineno = 0;
-        auto t = new EffectType(r);
-        t->setName(name);
-        t->setDescription(effectName);
-        t->setInputCount(1);
-        for(auto next_line = QString{}; stream.readLineInto(&next_line);++lineno) {
-            {
-                auto m = property_reg.match(next_line);
-                if(m.hasMatch()) {
-                    props.insert(m.captured("name"),m.captured("value"));
-                    passes.back().append(QString{"#line %1"}.arg(lineno));
-                    continue;
-                }
-            }
-            {
-                auto m = buffershader_reg.match(next_line);
-                if(m.hasMatch()) {
-                    passes.append({QString{"#line %1"}.arg(lineno)});
-                    continue;
-                }
-            }
-            passes.back().append(next_line);
-        }
-        t->setInputCount(QVariant::fromValue(props["inputCount"]).value<int>());
-        t->setDescription(QVariant::fromValue(props["description"]).value<QString>());
-        t->setAuthor(QVariant::fromValue(props["author"]).value<QString>());
-
-        res.append(t);
-    }
-    return res;
-}};
 }
 
 void EffectNode::onInitialized() {
@@ -225,15 +134,15 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
         std::reverse(&chanTex[0],&chanTex[0] + renderState->size());
         auto inputTex = std::make_unique<GLuint[]>(m_inputCount);
         std::iota(&inputTex[0], &inputTex[0] + m_inputCount, 0);
-        auto   time = timebase->beat();
+        auto   time = context()->timebase()->beat();
         m_realTimeLast = m_realTime;
-        m_realTime     = timebase->wallTime();
+        m_realTime     = context()->timebase()->wallTime();
         auto   step = m_realTime - m_realTimeLast;
         double audioHi = 0;
         double audioMid = 0;
         double audioLow = 0;
         double audioLevel = 0;
-        audio->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
+        context()->audio()->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
 
         auto size = chain->size();
         glViewport(0, 0, size.width(), size.height());
@@ -292,7 +201,7 @@ void EffectNode::periodic() {
     Q_ASSERT(QThread::currentThread() == thread());
 
     QMutexLocker locker(&m_stateLock);
-    qreal beatNow = timebase->beat();
+    qreal beatNow = context()->timebase()->beat();
     qreal beatDiff = beatNow - m_beatLast;
     if (beatDiff < 0)
         beatDiff += Timebase::MAX_BEAT;

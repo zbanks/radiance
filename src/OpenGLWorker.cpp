@@ -1,5 +1,4 @@
 #include "OpenGLWorker.h"
-#include "main.h"
 
 OpenGLWorker::OpenGLWorker(OpenGLWorkerContext *context)
     : OpenGLWorker(context->sharedFromThis())

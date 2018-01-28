@@ -10,6 +10,7 @@
 #include <fftw3.h>
 #include <QOpenGLFunctions>
 #include <QOpenGLTexture>
+#include "Timebase.h"
 #include "BTrack.h"
 struct fftwf_mem_dtor {
     void operator () ( void *ptr) const {
@@ -22,7 +23,7 @@ class Audio : public QThread {
 public:
     using size_type = std::vector<float>::size_type;
     using difference_type = std::vector<float>::difference_type;
-    Audio(QObject *p = nullptr);
+    Audio(Timebase *timebase);
    ~Audio() override;
     double time();
     void levels(double *audioHi, double *audioMid, double *audioLow, double *audioLevel);
@@ -38,6 +39,7 @@ protected:
 private:
     std::atomic<bool> m_run{true};
     double m_time{};
+    Timebase *m_timebase;
 
     size_type m_size{2048};
     size_type m_coef{m_size ? (m_size/2 + 1) : 0};

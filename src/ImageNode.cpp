@@ -1,5 +1,4 @@
 #include "ImageNode.h"
-#include "ProbeReg.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -7,21 +6,6 @@
 #include <QImageReader>
 #include <QtQml>
 #include "Paths.h"
-#include "main.h"
-
-
-ImageType::ImageType(NodeRegistry *r , QObject *p )
-    : NodeType(r,p) {
-}
-ImageType::~ImageType() = default;
-VideoNode *ImageType::create(QString arg) {
-    auto node = new ImageNode(this);
-    if (node) {
-        node->setInputCount(inputCount());
-        node->setImagePath(name());
-    }
-    return node;
-}
 
 ImageNode::ImageNode(NodeType *nr)
     : VideoNode(nr)
@@ -42,34 +26,6 @@ ImageNode::~ImageNode() = default;
 
 QString ImageNode::serialize() {
     return m_imagePath;
-}
-
-namespace {
-std::once_flag reg_once{};
-TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
-    std::call_once(reg_once,[](){
-        qmlRegisterUncreatableType<ImageNode>("radiance",1,0,"ImageNode","ImageNode must be created through the registry");
-    });
-
-    auto res = QList<NodeType*>{};
-
-    QStringList images;
-    QDir imgDir(Paths::library() + QString("images/"));
-    imgDir.setSorting(QDir::Name);
-
-    for (auto imageName : imgDir.entryList()) {
-        if (imageName[0] == '.')
-            continue;
-        auto t = new ImageType(r);
-        if(!t)
-            continue;
-        t->setName(imageName);
-        t->setDescription(imageName);
-        t->setInputCount(1);
-        res.append(t);
-    }
-    return res;
-}};
 }
 
 void ImageNode::onInitialized() {

@@ -59,9 +59,6 @@ public slots:
     // Call connectOutput with videoNode = nullptr to disconnect an output
     void connectOutput(QString outputName, VideoNode *videoNode);
 
-    // Creates a Model-owned VideoNode & adds it to the graph
-    VideoNode *createVideoNode(const QString &name);
-
     // Delete all nodes & edges (still need to call flush())
     void clear();
 

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include "OpenGLUtils.h"
+#include "Context.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
@@ -12,14 +12,6 @@
 #include <QOpenGLFramebufferObject>
 
 class EffectNode;
-class EffectType : public NodeType {
-    Q_OBJECT
-public:
-    EffectType(NodeRegistry *r = nullptr, QObject *p = nullptr);
-   ~EffectType() override;
-public slots:
-    VideoNode *create(QString) override;
-};
 
 // This struct extends the VideoNodeRenderState
 // to add additional state to each render pipeline.
