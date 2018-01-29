@@ -61,7 +61,8 @@ ApplicationWindow {
         id: loadAction
         shortcut: "Ctrl+R"
         onTriggered: {
-            model.loadFile("radiance_state.json");
+            console.log("Loading state from file...");
+            model.loadFile(context, registry, "radiance_state.json");
             model.flush();
         }
     }

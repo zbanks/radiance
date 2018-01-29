@@ -72,6 +72,6 @@ Context *VideoNode::context() {
 
 QJsonObject VideoNode::serialize() {
     QJsonObject o;
-    o.insert("node_type", metaObject()->className());
+    o.insert("type", metaObject()->className());
     return o;
 }

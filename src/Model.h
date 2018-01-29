@@ -1,6 +1,8 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "Context.h"
+#include "Registry.h"
 #include <QObject>
 #include <QDebug>
 #include <QList>
@@ -118,11 +120,11 @@ public slots:
     void setChains(QList<QSharedPointer<Chain>> chains);
 
     QJsonObject serialize();
-    void deserialize(const QJsonObject &data);
+    void deserialize(Context *context, Registry *registry, const QJsonObject &data);
 
     // These are to wrap serialize/deserialize for the UI
     // TODO: This almost certainly should live elsewhere.
-    void loadFile(QString filename);
+    void loadFile(Context *context, Registry *registry, QString filename);
     void saveFile(QString filename);
 
 signals:

@@ -546,16 +546,17 @@ QJsonObject Model::serialize() {
     return jsonOutput;
 }
 
-void Model::deserialize(const QJsonObject &data) {
+void Model::deserialize(Context *context, Registry *registry, const QJsonObject &data) {
     //TODO: needs error handling
 
     QMap<QString, VideoNode *> addedVertices;
     QJsonObject jsonVertices = data["vertices"].toObject();
     for (auto vertexName : jsonVertices.keys()) {
-        // XXX
-        //VideoNode *vertex = createVideoNode(jsonVertices[vertexName].toString());
-        //qInfo() << vertex << jsonVertices[vertexName];
-        //addedVertices.insert(vertexName, vertex);
+        VideoNode *vertex = registry->deserialize(context, jsonVertices.value(vertexName).toObject());
+        if (vertex != nullptr) {
+            addVideoNode(vertex);
+            addedVertices.insert(vertexName, vertex);
+        }
     }
 
     QJsonArray jsonEdges = data["edges"].toArray();
@@ -573,7 +574,7 @@ void Model::deserialize(const QJsonObject &data) {
     }
 }
 
-void Model::loadFile(QString filename) {
+void Model::loadFile(Context *context, Registry *registry, QString filename) {
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Unable to open file for reading:" << filename;
@@ -581,7 +582,7 @@ void Model::loadFile(QString filename) {
     }
     QByteArray data = file.readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    deserialize(doc.object());
+    deserialize(context, registry, doc.object());
     flush();
 }
 
