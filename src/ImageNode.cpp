@@ -11,6 +11,7 @@
 ImageNode::ImageNode(Context *context, QString imagePath)
     : VideoNode(context)
     , m_ready(false) {
+    setInputCount(1);
     setImagePath(imagePath);
 }
 
@@ -164,3 +165,28 @@ void ImageNodeOpenGLWorker::onDestroyed() {
     // For some reason, QOpenGLTexture does not have setParent
     // and so we cannot use Qt object tree deletion semantics
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+QString ImageNodeFactory::typeName() {
+    return "ImageNode";
+}
+
+VideoNode *ImageNodeFactory::deserialize(Context *context, QJsonObject obj) {
+    QString name = obj.value("imagePath").toString();
+    if (obj.isEmpty()) {
+        return nullptr;
+    }
+    ImageNode *e = new ImageNode(context, name);
+    return e;
+}
+
+bool ImageNodeFactory::canCreateFromFile(QString filename) {
+    return filename.endsWith(".gif", Qt::CaseInsensitive);
+}
+
+VideoNode *ImageNodeFactory::fromFile(Context *context, QString filename) {
+    ImageNode *e = new ImageNode(context, filename);
+    return e;
+}
+

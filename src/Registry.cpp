@@ -1,11 +1,15 @@
 #include "Registry.h"
-#include "EffectNode.h"
 #include <QDebug>
 #include <QJsonObject>
 #include <QJsonDocument>
 
+#include "EffectNode.h"
+#include "ImageNode.h"
+
 Registry::Registry() {
+    // This can be done with some black magic fuckery in the future
     m_factories.append(new EffectNodeFactory());
+    m_factories.append(new ImageNodeFactory());
 }
 
 Registry::~Registry() {

@@ -102,7 +102,7 @@ protected slots:
     virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
 
 protected:
-    int m_inputCount;
+    int m_inputCount{};
     QMutex m_stateLock;
     int m_id;
     QList<QSharedPointer<Chain>> m_chains;

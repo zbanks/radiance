@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "VideoNodeFactory.h"
 #include "OpenGLWorker.h"
 #include <QOpenGLTexture>
 #include <QMutex>
@@ -8,8 +9,6 @@
 #include <vector>
 
 class ImageNode;
-
-///////////////////////////////////////////////////////////////////////////////
 
 // This class extends OpenGLWorker
 // to enable shader compilation
@@ -87,4 +86,15 @@ protected:
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
     bool m_ready;
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+class ImageNodeFactory : public VideoNodeFactory {
+
+public:
+    QString typeName() override;
+    VideoNode *deserialize(Context *context, QJsonObject obj) override;
+    bool canCreateFromFile(QString filename) override;
+    VideoNode *fromFile(Context *context, QString filename) override;
 };
