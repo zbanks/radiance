@@ -126,10 +126,14 @@ ApplicationWindow {
         loadAction.trigger();
         if (model.vertices.length == 0) {
             // If the state was empty, then open up a few nodes as a demo
-            var n1 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"nyancat.gif\"}");
+            var n1 = registry.deserialize(context, "{\"type\": \"ImageNode\", \"imagePath\": \"nyancat.gif\"}");
+            model.addVideoNode(n1);
             var n2 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"test\"}");
+            model.addVideoNode(n2);
             var n3 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"interstellar\"}");
+            model.addVideoNode(n3);
             var cross = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"crossfader\"}");
+            model.addVideoNode(cross);
             model.addEdge(n1, n2, 0);
             model.addEdge(n2, n3, 0);
             model.addEdge(n3, cross, 0);
