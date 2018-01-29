@@ -16,6 +16,7 @@
 #include "BaseVideoNodeTile.h"
 #include "View.h"
 #include "Paths.h"
+#include "Registry.h"
 
 #ifdef USE_RTMIDI
 #include "MidiController.h"
@@ -54,6 +55,7 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterType<Context>("radiance", 1, 0, "Context");
+    qmlRegisterType<Registry>("radiance", 1, 0, "Registry");
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<View>("radiance", 1, 0, "View");

@@ -68,7 +68,7 @@ err:
     }
 
     void render() override {
-        if(m_program) {
+        if(m_program && context() != nullptr) {
             context()->audio()->renderGraphics();
 
             glClearColor(0, 0, 0, 0);

@@ -23,6 +23,10 @@ ApplicationWindow {
         id: context;
     }
 
+    Registry {
+        id: registry;
+    }
+
     Model {
         id: model;
         onGraphChanged: {
@@ -122,10 +126,10 @@ ApplicationWindow {
         loadAction.trigger();
         if (model.vertices.length == 0) {
             // If the state was empty, then open up a few nodes as a demo
-            var n1 = model.createVideoNode("nyancat.gif");
-            var n2 = model.createVideoNode("test:0.4");
-            var n3 = model.createVideoNode("interstellar:0.1");
-            var cross = model.createVideoNode("crossfader");
+            var n1 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"nyancat.gif\"}");
+            var n2 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"test\"}");
+            var n3 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"interstellar\"}");
+            var cross = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"crossfader\"}");
             model.addEdge(n1, n2, 0);
             model.addEdge(n2, n3, 0);
             model.addEdge(n3, cross, 0);
@@ -161,7 +165,7 @@ ApplicationWindow {
             ComboBox {
                 id: outputSelector;
                 function outputNames() {
-                    var o = globalContext.outputs;
+                    var o = []; // XXX
                     var a = [];
                     for (var i=0; i<o.length; i++) {
                         a.push(o[i].name);
@@ -213,14 +217,17 @@ ApplicationWindow {
                 BeatIndicator {
                     width: 25
                     opacity: .9
+                    context: context
                 }
                 Waveform {
                     width: 500
                     opacity: .9
+                    context: context
                 }
                 Spectrum {
                     width: 500
                     opacity: .9
+                    context: context
                 }
             }
 
