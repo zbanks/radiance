@@ -8,6 +8,15 @@
 // * Timebase
 // * A worker OpenGL context
 
+// It also includes some wrapper methods
+// e.g.
+// context->registry()->deserialize(context, json)
+// becomes
+// context->deserialize(json)
+
+
+#include "VideoNode.h"
+
 #include <QObject>
 
 class QSettings;
@@ -16,6 +25,8 @@ class Timebase;
 class OpenGLWorkerContext;
 
 class Context : public QObject {
+    Q_OBJECT
+
 public:
     Context();
    ~Context();

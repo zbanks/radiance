@@ -6,7 +6,6 @@
 #include <QSharedPointer>
 #include <QOpenGLFunctions>
 #include <QMutex>
-#include "Context.h"
 
 // This is an abstract base class
 // for nodes in the DAG.
@@ -17,6 +16,8 @@
 // or through queued signals and slots.
 // The few exceptions to this
 // are methods relating to rendering.
+
+class Context;
 
 class VideoNode : public QObject {
     Q_OBJECT

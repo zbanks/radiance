@@ -19,6 +19,10 @@ ApplicationWindow {
         previewWindow: window;
     }
 
+    Context {
+        id: context;
+    }
+
     Model {
         id: model;
         onGraphChanged: {

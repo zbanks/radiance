@@ -1,4 +1,5 @@
 #include "ImageNode.h"
+#include "Context.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>

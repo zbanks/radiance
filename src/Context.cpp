@@ -3,6 +3,7 @@
 #include "Audio.h"
 #include "Timebase.h"
 #include "OpenGLWorkerContext.h"
+#include "Registry.h"
 
 #include <QSettings>
 
