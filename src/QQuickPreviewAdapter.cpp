@@ -3,7 +3,8 @@
 #include <memory>
 
 QQuickPreviewAdapter::QQuickPreviewAdapter(bool hasPreview)
-    : m_hasPreview(hasPreview)
+    : m_model(nullptr)
+    , m_hasPreview(hasPreview)
     , m_previewSize(QSize(300, 300))
     , m_previewWindow(nullptr) {
 
@@ -13,6 +14,9 @@ QQuickPreviewAdapter::QQuickPreviewAdapter(bool hasPreview)
 }
 
 QQuickPreviewAdapter::~QQuickPreviewAdapter() {
+    if (m_model != nullptr && m_hasPreview) {
+        m_model->removeChain(m_previewChain);
+    }
 }
 
 Model *QQuickPreviewAdapter::model() {
@@ -22,9 +26,16 @@ Model *QQuickPreviewAdapter::model() {
 
 void QQuickPreviewAdapter::setModel(Model *model) {
     Q_ASSERT(QThread::currentThread() == thread());
-    m_model = model;
-    chainsChanged();
-    emit modelChanged(model);
+    if (m_model != model) {
+        if (m_model != nullptr && m_hasPreview) {
+            m_model->removeChain(m_previewChain);
+        }
+        m_model = model;
+        if (m_model != nullptr && m_hasPreview) {
+            m_model->addChain(m_previewChain);
+        }
+        emit modelChanged(model);
+    }
 }
 
 QSize QQuickPreviewAdapter::previewSize() {
@@ -41,9 +52,12 @@ void QQuickPreviewAdapter::setPreviewSize(QSize size) {
             QMutexLocker locker(&m_previewLock);
             m_previewSize = size;
             QSharedPointer<Chain> previewChain(new Chain(size));
+            if (m_model != nullptr) {
+                m_model->removeChain(m_previewChain);
+                m_model->addChain(previewChain);
+            }
             m_previewChain = previewChain;
         }
-        chainsChanged();
         emit previewSizeChanged(size);
     }
 }
@@ -78,74 +92,16 @@ GLuint QQuickPreviewAdapter::previewTexture(int videoNodeId) {
     return m_lastPreviewRender.value(videoNodeId, 0);
 }
 
-void QQuickPreviewAdapter::onRenderRequested(Output *output) {
-    auto name = output->name();
-    auto chain = output->chain();
-    auto modelCopy = m_model->createCopyForRendering(chain);
-    auto vnId = modelCopy.outputs.value(name, 0);
-    GLuint textureId = 0;
-    if (vnId != 0) { // Don't bother rendering this chain
-        // if it is not connected
-        auto result = modelCopy.render(chain);
-        textureId = result.value(vnId, 0);
-    }
-    output->renderReady(textureId);
-}
-
-QList<QSharedPointer<Chain>> QQuickPreviewAdapter::chains() {
-    auto o = outputs();
-    QList<QSharedPointer<Chain>> chains;
-    if (m_hasPreview) {
-        chains.append(m_previewChain);
-    }
-    for (int i=0; i<o.count(); i++) {
-        chains.append(o.at(i)->chain());
-    }
-    return chains;
-}
-
-void QQuickPreviewAdapter::chainsChanged() {
-    m_model->setChains(chains());
-}
-
-QList<Output *> QQuickPreviewAdapter::outputs() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    return m_outputs;
-}
-
-QVariantList QQuickPreviewAdapter::outputsQml() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    QVariantList outputsVL;
-    for (int i=0; i<m_outputs.count(); i++) outputsVL.append(QVariant::fromValue(m_outputs.at(i)));
-    return outputsVL;
-}
-
-void QQuickPreviewAdapter::setOutputsQml(QVariantList outputsVL) {
-    QList<Output *> outputs;
-    for (int i=0; i<outputsVL.count(); i++) {
-        if (outputsVL.at(i).canConvert<Output *>()) {
-            outputs.append(outputsVL.at(i).value<Output *>());
-        } else {
-            qWarning() << "Bad entry in output list:" << outputsVL.at(i);
-        }
-    }
-    setOutputs(outputs); // TODO this emits a non-QML compatible signal
-}
-
-void QQuickPreviewAdapter::setOutputs(QList<Output *> outputs) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    if (m_outputs != outputs) {
-        // TODO I am lazy
-        for (int i=0; i<m_outputs.count(); i++) {
-            disconnect(m_outputs.at(i), &Output::renderRequested, this, &QQuickPreviewAdapter::onRenderRequested);
-            disconnect(m_outputs.at(i), &Output::chainChanged, this, &QQuickPreviewAdapter::chainsChanged);
-        }
-        m_outputs = outputs;
-        for (int i=0; i<outputs.count(); i++) {
-            connect(outputs.at(i), &Output::renderRequested, this, &QQuickPreviewAdapter::onRenderRequested, Qt::DirectConnection);
-            connect(outputs.at(i), &Output::chainChanged, this, &QQuickPreviewAdapter::chainsChanged);
-        }
-        chainsChanged();
-        emit outputsChanged(outputs);
-    }
-}
+//void QQuickPreviewAdapter::onRenderRequested(Output *output) {
+//    auto name = output->name();
+//    auto chain = output->chain();
+//    auto modelCopy = m_model->createCopyForRendering(chain);
+//    auto vnId = modelCopy.outputs.value(name, 0);
+//    GLuint textureId = 0;
+//    if (vnId != 0) { // Don't bother rendering this chain
+//        // if it is not connected
+//        auto result = modelCopy.render(chain);
+//        textureId = result.value(vnId, 0);
+//    }
+//    output->renderReady(textureId);
+//}

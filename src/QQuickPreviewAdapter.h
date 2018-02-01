@@ -8,7 +8,6 @@
 class QQuickPreviewAdapter : public QObject {
     Q_OBJECT
     Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
-    Q_PROPERTY(QVariantList outputs READ outputsQml WRITE setOutputsQml NOTIFY outputsChanged)
     Q_PROPERTY(QSize previewSize READ previewSize WRITE setPreviewSize NOTIFY previewSizeChanged)
     Q_PROPERTY(QQuickWindow *previewWindow READ previewWindow WRITE setPreviewWindow NOTIFY previewWindowChanged)
 
@@ -24,17 +23,11 @@ public slots:
     QQuickWindow *previewWindow(); // thread-safe
     void setPreviewWindow(QQuickWindow *window);
 
-    QList<Output *> outputs();
-    void setOutputs(QList<Output *> outputs);
-    QVariantList outputsQml();
-    void setOutputsQml(QVariantList outputs);
-
     // Use this method to retrieve
     // rendered preview textures
     GLuint previewTexture(int videoNodeId);
 
 protected slots:
-    void onRenderRequested(Output *output);
     void onBeforeSynchronizing();
 
 signals:
@@ -44,9 +37,6 @@ signals:
     void previewWindowChanged(QQuickWindow *window);
 
 protected:
-    void chainsChanged();
-    QList<QSharedPointer<Chain>> chains();
-
     Model *m_model;
     QList<Output *> m_outputs;
     bool m_hasPreview;

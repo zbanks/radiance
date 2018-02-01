@@ -26,12 +26,18 @@ Model::Model()
 Model::~Model() {
 }
 
-void Model::setChains(QList<QSharedPointer<Chain>> chains) {
-    m_chains = chains;
-    for (int i=0; i<m_vertices.count(); i++) {
-        m_vertices.at(i)->setChains(chains);
+void Model::addChain(QSharedPointer<Chain> chain) {
+    if (!m_chains.contains(chain)) {
+        m_chains.append(chain);
+        emit chainsChanged(m_chains);
     }
-    emit chainsChanged(chains);
+}
+
+void Model::removeChain(QSharedPointer<Chain> chain) {
+    if (m_chains.contains(chain)) {
+        m_chains.removeAll(chain);
+        emit chainsChanged(m_chains);
+    }
 }
 
 QList<QSharedPointer<Chain>> Model::chains() {
@@ -61,6 +67,17 @@ void Model::prepareNode(VideoNode *videoNode) {
     if(videoNode->parent() != this)
         videoNode->setParent(this);
 
+    // See if this VideoNode requests any chains
+    auto requestedChains = videoNode->requestedChains();
+    for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
+        if (!m_chains.contains(*c)) {
+            m_chains.append(*c);
+        }
+    }
+    // and be notified of changes
+    connect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
+    connect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
+
     videoNode->setChains(m_chains);
     videoNode->setId(m_vnId++);
 
@@ -81,6 +98,14 @@ void Model::disownNode(VideoNode *videoNode) {
             m_outputConnections.remove(outputName);
         }
     }
+
+    auto requestedChains = videoNode->requestedChains();
+    for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
+        m_chains.removeAll(*c);
+    }
+    disconnect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
+    disconnect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
+
     disconnect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
     disconnect(videoNode, &VideoNode::message, this, &Model::onMessage);
     disconnect(videoNode, &VideoNode::warning, this, &Model::onWarning);

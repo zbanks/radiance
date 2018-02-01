@@ -117,7 +117,8 @@ public slots:
     // When requesting a render of the model,
     // you must use one of its chains.
     QList<QSharedPointer<Chain>> chains();
-    void setChains(QList<QSharedPointer<Chain>> chains);
+    void addChain(QSharedPointer<Chain> chain);
+    void removeChain(QSharedPointer<Chain> chain);
 
     QJsonObject serialize();
     void deserialize(Context *context, Registry *registry, const QJsonObject &data);

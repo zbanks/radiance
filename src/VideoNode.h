@@ -98,6 +98,17 @@ public slots:
     // which ones that changed through the function chainsEdited.
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
+
+    // A VideoNode may request of the model
+    // that certain chains exist.
+    // By default, no chains are requested.
+    // You only need to implement this method if you are
+    // writing an output. 
+    // You must also emit the signals
+    // requestedChainAdded and requestedChainRemoved.
+    // The Model will add these through setChains.
+    virtual QList<QSharedPointer<Chain>> requestedChains();
+
 protected slots:
     virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
 
@@ -121,4 +132,8 @@ signals:
 
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
     void idChanged(int id);
+
+    // Emitted when requestedChains changes
+    void requestedChainAdded(QSharedPointer<Chain> chain);
+    void requestedChainRemoved(QSharedPointer<Chain> chain);
 };

@@ -75,3 +75,7 @@ QJsonObject VideoNode::serialize() {
     o.insert("type", metaObject()->className());
     return o;
 }
+
+QList<QSharedPointer<Chain>> VideoNode::requestedChains() {
+    return QList<QSharedPointer<Chain>>();
+}
