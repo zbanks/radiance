@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "Model.h"
 #include <QOpenGLTexture>
 #include <QMutex>
 #include <QTimer>
@@ -16,15 +17,15 @@ class OutputNode
     friend class OutputNodeOpenGLWorker;
 
 public:
-    OutputNode(Context *context);
+    OutputNode(Context *context, QSize chainSize);
     OutputNode(const OutputNode &other);
     ~OutputNode();
 
-    QJsonObject serialize() override;
-
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
+    GLuint render(Model *model);
 
 protected:
-    void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
+    virtual QList<QSharedPointer<Chain>> requestedChains();
+    QSharedPointer<Chain> m_chain;
 };

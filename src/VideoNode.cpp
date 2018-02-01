@@ -79,3 +79,6 @@ QJsonObject VideoNode::serialize() {
 QList<QSharedPointer<Chain>> VideoNode::requestedChains() {
     return QList<QSharedPointer<Chain>>();
 }
+
+void VideoNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+}

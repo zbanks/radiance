@@ -110,7 +110,9 @@ public slots:
     virtual QList<QSharedPointer<Chain>> requestedChains();
 
 protected slots:
-    virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
+    // If your node does anything at all, you will need to override this method
+    // and take appropriate action when the set of render chains changes.
+    virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed);
 
 protected:
     int m_inputCount{};
