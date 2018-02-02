@@ -5,10 +5,12 @@
 OutputNode::OutputNode(Context *context, QSize chainSize)
     : VideoNode(context)
     , m_chain(QSharedPointer<Chain>(new Chain(chainSize))) {
+    m_inputCount = 1;
 }
 
 OutputNode::OutputNode(const OutputNode &other)
     : VideoNode(other) {
+    m_inputCount = other.m_inputCount;
 }
 
 OutputNode::~OutputNode() = default;

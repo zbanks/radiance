@@ -33,7 +33,7 @@ Item {
                     "EffectNode": "EffectNodeTile",
                     "ImageNode": "ImageNodeTile",
                     "MovieNode": "MovieNodeTile",
-                    "OutputNode": "OutputNodeTile",
+                    "ScreenOutputNode": "ScreenOutputNodeTile",
                     "": "VideoNodeTile"
                 }
                 x: (parent.width - width) / 2

@@ -14,8 +14,6 @@ class OutputNode
     : public VideoNode {
     Q_OBJECT
 
-    friend class OutputNodeOpenGLWorker;
-
 public:
     OutputNode(Context *context, QSize chainSize);
     OutputNode(const OutputNode &other);

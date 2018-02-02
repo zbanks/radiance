@@ -5,11 +5,13 @@
 
 #include "EffectNode.h"
 #include "ImageNode.h"
+#include "ScreenOutputNode.h"
 
 Registry::Registry() {
     // This can be done with some black magic fuckery in the future
     m_factories.append(new EffectNodeFactory());
     m_factories.append(new ImageNodeFactory());
+    m_factories.append(new ScreenOutputNodeFactory());
 }
 
 Registry::~Registry() {
