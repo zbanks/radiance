@@ -10,7 +10,6 @@
 #include "Output.h"
 #include "QQuickVideoNodePreview.h"
 #include "QQuickOutputItem.h"
-#include "QQuickOutputWindow.h"
 #include "OutputImageSequence.h"
 #include "VideoNode.h"
 #include "BaseVideoNodeTile.h"
@@ -62,7 +61,6 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
     qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
-    qmlRegisterType<QQuickOutputWindow>("radiance", 1, 0, "OutputWindow");
     qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
 
     bool hasMidi = false;

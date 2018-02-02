@@ -59,6 +59,7 @@ list(APPEND libradiance_SOURCES
     src/Registry.cpp
     src/VideoNodeFactory.cpp
     src/ScreenOutputNode.cpp
+    src/OutputWindow.cpp
     BTrack/src/BTrack.c
     BTrack/src/OnsetDetectionFunction.c
     )
@@ -107,8 +108,7 @@ add_library(libradiance ${libradiance_SOURCES})
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickOutputItem.cpp
-    src/QQuickPreviewAdapter.cpp
-    src/QQuickOutputWindow.cpp)
+    src/QQuickPreviewAdapter.cpp)
 
 add_executable(radiance_cli WIN32 src/main_testing.cpp)
 

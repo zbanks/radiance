@@ -45,6 +45,11 @@ VideoNodeTile {
             }
         }
 
+        ComboBox {
+            id: screenSelector;
+            model: tile.videoNode.availableScreens;
+        }
+
         RowLayout {
             Layout.fillWidth: true
             CheckBox {

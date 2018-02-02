@@ -87,32 +87,6 @@ ApplicationWindow {
     }
     */
 
-    OutputWindow {
-        id: outputWindow
-        outputWindow.visible: found && screenWidget.outputVisibleChecked
-        outputWindow.color: "black"
-
-        OutputItem {
-            id: outputItem
-            parent: outputWindow.outputWindow.contentItem
-            size: "1024x768"
-            anchors.fill: parent
-
-            Component.onCompleted: {
-                output.name = "Screen"
-            }
-
-            Action {
-                shortcut: "Esc"
-                onTriggered: function() {
-                    console.log("try to hide");
-                    screenWidget.outputVisibleChecked = false;
-                }
-            }
-        }
-
-    }
-
     OutputImageSequence {
         id: outputImageSequence
         name: "ImageSequence"

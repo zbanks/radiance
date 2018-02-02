@@ -1,13 +1,17 @@
 #include "ScreenOutputNode.h"
 #include <QDebug>
 #include <QJsonObject>
+#include <QGuiApplication>
 
 ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
     : OutputNode(context, chainSize)
     , m_outputWindow(nullptr) {
-    m_outputWindow = new QWindow();
-    m_outputWindow->setGeometry(100, 100, 500, 500);
-    m_outputWindow->hide();
+    m_outputWindow = new OutputWindow();
+
+    reload();
+    connect(&m_reloader, &QTimer::timeout, this, &ScreenOutputNode::reload);
+    m_reloader.setInterval(1000); // Reload screens every 1000 ms
+    m_reloader.start();
 }
 
 ScreenOutputNode::ScreenOutputNode(const ScreenOutputNode &other)
@@ -25,6 +29,27 @@ void ScreenOutputNode::setVisible(bool visible) {
 
 bool ScreenOutputNode::visible() {
     return m_outputWindow->isVisible();
+}
+
+void ScreenOutputNode::reload() {
+    auto screens = QGuiApplication::screens();
+
+    if (screens != m_screens) {
+        m_screens = screens;
+
+        m_screenNameStrings.clear();
+
+        foreach(QScreen *screen, m_screens) {
+            m_screenNameStrings << screen->name();
+        }
+
+        emit availableScreensChanged(m_screenNameStrings);
+    }
+}
+
+QStringList ScreenOutputNode::availableScreens() {
+    qDebug() << m_screenNameStrings;
+    return m_screenNameStrings;
 }
 
 //////////////////////////////////////////////////////////////////////////////
