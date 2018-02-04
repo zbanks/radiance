@@ -41,6 +41,9 @@ GLuint OutputNode::render(Model *model) {
     }
     auto modelCopy = model->createCopyForRendering(m_chain);
     auto result = modelCopy.render(m_chain);
+    // XXX
+    // Don't we need to copy back the render state here?
+    // Where did that function go?
     return result.value(id(), 0);
 }
 
