@@ -52,6 +52,7 @@ void Model::prepareNode(VideoNode *videoNode) {
         videoNode->setParent(this);
 
     videoNode->setId(m_vnId++);
+    videoNode->setChains(m_chains);
 
     connect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
     connect(videoNode, &VideoNode::message, this, &Model::onMessage);

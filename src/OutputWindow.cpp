@@ -94,7 +94,6 @@ void OutputWindow::initializeGL()
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString);
     m_program->link();
-    m_vao.create();
 }
 
 void OutputWindow::resizeGL(int w, int h) {
@@ -111,9 +110,9 @@ void OutputWindow::paintGL() {
     m_program->bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    m_vao.bind();
+    m_videoNode->chain()->vao().bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    m_vao.release();
+    m_videoNode->chain()->vao().release();
     m_program->release();
     update();
 }

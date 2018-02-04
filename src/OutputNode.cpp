@@ -43,3 +43,7 @@ GLuint OutputNode::render(Model *model) {
     auto result = modelCopy.render(m_chain);
     return result.value(id(), 0);
 }
+
+QSharedPointer<Chain> OutputNode::chain() {
+    return m_chain;
+}

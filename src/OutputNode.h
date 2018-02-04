@@ -23,6 +23,8 @@ public:
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
     GLuint render(Model *model = nullptr);
 
+    QSharedPointer<Chain> chain();
+
 protected:
     virtual QList<QSharedPointer<Chain>> requestedChains();
     QSharedPointer<Chain> m_chain;

@@ -19,18 +19,6 @@ QSize Chain::size() {
     return m_size;
 }
 
-qreal Chain::beatTime() const {
-    return m_beatTime;
-};
-qreal Chain::realTime() const {
-    return m_realTime;
-};
-void Chain::setBeatTime(qreal _time) {
-    m_beatTime = _time;
-}
-void Chain::setRealTime(qreal _time) {
-    m_realTime = _time;
-}
 GLuint Chain::noiseTexture() {
     if (!m_noiseTexture.isCreated()) {
         m_noiseTexture.setSize(m_size.width(), m_size.height());
@@ -71,8 +59,8 @@ GLuint Chain::blankTexture() {
 }
 
 QOpenGLVertexArrayObject &Chain::vao() {
-    return m_vao;
-}
-const QOpenGLVertexArrayObject &Chain::vao() const {
+    if (!m_vao.isCreated()) {
+        m_vao.create();
+    }
     return m_vao;
 }

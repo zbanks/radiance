@@ -1,5 +1,6 @@
 #include "ImageNode.h"
 #include "Context.h"
+#include "Audio.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -71,7 +72,7 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     if (!m_openGLWorker || !m_openGLWorker->m_ready.load() || !m_openGLWorker->m_frameTextures.size())
         return 0;
 
-    auto currentMs = int64_t(chain->beatTime() *  1e3 / 2.);
+    auto currentMs = int64_t(context()->audio()->time() *  5e3); // XXX IDK wtf time() is, but this speed factor makes the nyancat look good
     auto extraMs   = currentMs;
     if(m_openGLWorker->m_totalDelay) {
         extraMs   = currentMs % (m_openGLWorker->m_totalDelay);
