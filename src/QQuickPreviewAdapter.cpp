@@ -84,24 +84,10 @@ void QQuickPreviewAdapter::onBeforeSynchronizing() {
     Q_ASSERT(m_hasPreview);
     auto modelCopy = m_model->createCopyForRendering(m_previewChain);
     m_lastPreviewRender = modelCopy.render(m_previewChain);
-//    m_model->copyBackRenderStates(m_previewChain, &modelCopy);
+    //m_model->copyBackRenderStates(m_previewChain, &modelCopy); XXX??
 }
 
 GLuint QQuickPreviewAdapter::previewTexture(int videoNodeId) {
     Q_ASSERT(m_hasPreview);
     return m_lastPreviewRender.value(videoNodeId, 0);
 }
-
-//void QQuickPreviewAdapter::onRenderRequested(Output *output) {
-//    auto name = output->name();
-//    auto chain = output->chain();
-//    auto modelCopy = m_model->createCopyForRendering(chain);
-//    auto vnId = modelCopy.outputs.value(name, 0);
-//    GLuint textureId = 0;
-//    if (vnId != 0) { // Don't bother rendering this chain
-//        // if it is not connected
-//        auto result = modelCopy.render(chain);
-//        textureId = result.value(vnId, 0);
-//    }
-//    output->renderReady(textureId);
-//}

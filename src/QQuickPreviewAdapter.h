@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Output.h"
 #include "Model.h"
 #include <QList>
 #include <QQuickWindow>
@@ -32,13 +31,11 @@ protected slots:
 
 signals:
     void previewSizeChanged(QSize size);
-    void outputsChanged(QList<Output *> outputs);
     void modelChanged(Model *model);
     void previewWindowChanged(QQuickWindow *window);
 
 protected:
     Model *m_model;
-    QList<Output *> m_outputs;
     bool m_hasPreview;
     QSize m_previewSize;
     QSharedPointer<Chain> m_previewChain;

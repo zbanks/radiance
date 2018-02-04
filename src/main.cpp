@@ -3,14 +3,9 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QThread>
-//#include "EffectNode.h"
 #include "GraphicalDisplay.h"
-//#include "ImageNode.h"
 #include "Model.h"
-#include "Output.h"
 #include "QQuickVideoNodePreview.h"
-#include "QQuickOutputItem.h"
-#include "OutputImageSequence.h"
 #include "VideoNode.h"
 #include "BaseVideoNodeTile.h"
 #include "View.h"
@@ -60,8 +55,6 @@ int main(int argc, char *argv[]) {
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
-    qmlRegisterType<QQuickOutputItem>("radiance", 1, 0, "OutputItem");
-    qmlRegisterType<OutputImageSequence>("radiance", 1, 0, "OutputImageSequence");
 
     bool hasMidi = false;
 #ifdef USE_RTMIDI

@@ -37,7 +37,6 @@ find_package(MPV)
 set(libradiance_SOURCES)
 list(APPEND libradiance_SOURCES
     src/Audio.cpp
-    src/Output.cpp
     src/Timebase.cpp
     src/VideoNode.cpp
     src/EffectNode.cpp
@@ -50,7 +49,6 @@ list(APPEND libradiance_SOURCES
     src/OpenGLUtils.cpp
     src/View.cpp
     src/Chain.cpp
-    src/OutputImageSequence.cpp
     src/Controls.cpp
     src/BaseVideoNodeTile.cpp
     src/Paths.cpp
@@ -107,7 +105,6 @@ add_library(libradiance ${libradiance_SOURCES})
 
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
-    src/QQuickOutputItem.cpp
     src/QQuickPreviewAdapter.cpp)
 
 add_executable(radiance_cli WIN32 src/main_testing.cpp)

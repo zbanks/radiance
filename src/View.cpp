@@ -176,19 +176,6 @@ void View::onGraphChanged() {
 
     m_children = newChildren;
 
-    // First we assign outputs,
-    // in case height / width is affected by
-    // whether a node is an output.
-    QMap<VideoNode *, QString> outputConnectionsReversed;
-    auto outputConnections = m_model->outputConnections();
-    auto outputConnectionsKeys = outputConnections.keys();
-    for (int i=0; i<outputConnectionsKeys.count(); i++) {
-        outputConnectionsReversed.insert(outputConnections.value(outputConnectionsKeys.at(i)), outputConnectionsKeys.at(i));
-    }
-    for (int i=0; i<m_children.count(); i++) {
-        m_children[i].item->setProperty("outputName", outputConnectionsReversed.value(m_children.at(i).videoNode));
-    }
-
     // Create a map from VideoNodes to indices
     QMap<VideoNode *, int> map;
     for (int i=0; i<vertices.count(); i++) {

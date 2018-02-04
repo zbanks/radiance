@@ -31,8 +31,7 @@ ApplicationWindow {
         id: model;
         onGraphChanged: {
             var changeset = "+" + verticesAdded.length + " -" + verticesRemoved.length + " vertices, ";
-            changeset += "+" + edgesAdded.length + " -" + edgesRemoved.length + " edges, ";
-            changeset += "+" + Object.keys(outputsAdded).length + " -" + Object.keys(outputsRemoved).length + " outputs";
+            changeset += "+" + edgesAdded.length + " -" + edgesRemoved.length + " edges";
             console.log("Graph changed!", changeset);
         }
 
@@ -87,14 +86,6 @@ ApplicationWindow {
     }
     */
 
-    OutputImageSequence {
-        id: outputImageSequence
-        name: "ImageSequence"
-        size: "500x500"
-        fps: 60;
-        enabled: outputImageSequenceCheckbox.checked;
-    }
-
     Component.onCompleted: {
         Globals.previewAdapter = previewAdapter;
 
@@ -129,38 +120,10 @@ ApplicationWindow {
                 graph: graph
             }
 
-            ScreenWidget {
-                id: screenWidget
-                outputWindow: outputWindow
-            }
-
             Loader {
                 source: window.hasMidi ? "MidiMappingSelector.qml" : ""
                 onLoaded: {
                     item.target = graph.view;
-                }
-            }
-
-            ComboBox {
-                id: outputSelector;
-                function outputNames() {
-                    var o = []; // XXX
-                    var a = [];
-                    for (var i=0; i<o.length; i++) {
-                        a.push(o[i].name);
-                    }
-                    return a;
-                }
-                model: outputNames()
-            }
-            CheckBox {
-                id: outputImageSequenceCheckbox
-                text: "Save to disk"
-            }
-            Button {
-                text: "Stop saving to disk"
-                onClicked: {
-                    outputImageSequence.stop();
                 }
             }
 

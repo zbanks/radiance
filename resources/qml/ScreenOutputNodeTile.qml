@@ -18,7 +18,7 @@ VideoNodeTile {
         RowLayout {
             Label {
                 Layout.fillWidth: true;
-                text: "its an output";
+                text: "Screen Output";
                 color: "#ddd";
                 elide: Text.ElideMiddle;
             }

@@ -102,7 +102,8 @@ void OutputWindow::resizeGL(int w, int h) {
 
 void OutputWindow::paintGL() {
     GLuint texture = m_videoNode->render();
-    glViewport(0, 0, width(), height());
+    auto dpr = devicePixelRatio();
+    glViewport(0, 0, width() * dpr, height() * dpr);
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);

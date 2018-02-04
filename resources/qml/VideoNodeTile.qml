@@ -15,12 +15,9 @@ BaseVideoNodeTile {
     property int gridX
     property int gridY
     property var inputHeights
-    property string outputName
     property real posX: -1
     property real posY: -1
 
-    property var outputHeight: 400;
-    property var outputWidth: 300;
     property var normalHeight: 170;
     property var normalWidth: 150;
     property var minInputHeight: 170
@@ -59,7 +56,7 @@ BaseVideoNodeTile {
         // Size
 
         if (inputHeights) {
-            minInputHeight = outputName ? max(normalHeight, outputHeight / inputHeights.length) : normalHeight;
+            minInputHeight = normalHeight;
 
             var shrinkageY = (inputHeights[0] - minInputHeight) / 2;
             var shrinkageHeight = -(inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
@@ -72,12 +69,8 @@ BaseVideoNodeTile {
 
         // X
         x = posX + padding;
-        blockWidth = outputName ? outputWidth : min(blockHeight * 0.6, normalWidth);
+        blockWidth = min(blockHeight * 0.6, normalWidth);
         width = blockWidth - 2 * padding
-    }
-
-    onOutputNameChanged: {
-        if (!dragging) regrid();
     }
 
     onPosYChanged: {
@@ -222,12 +215,6 @@ BaseVideoNodeTile {
             }
         }
         model.addEdge(videoNode, other, 0);
-        model.flush();
-    }
-
-    function setSelectedAsOutput() {
-        var output = view.parent.currentOutputName;
-        model.connectOutput(output, tile.videoNode);
         model.flush();
     }
 
@@ -382,8 +369,6 @@ BaseVideoNodeTile {
     Keys.onPressed: {
         if (event.key == Qt.Key_Delete) {
             deleteSelected();
-        } else if (event.key == Qt.Key_Return) {
-            setSelectedAsOutput();
         } else if (event.key == Qt.Key_Slash) {
             detachOutput();
         }

@@ -44,22 +44,6 @@ QList<QSharedPointer<Chain>> Model::chains() {
     return m_chains;
 }
 
-QMap<QString, VideoNode *> Model::outputConnections() const {
-    return m_outputConnections;
-}
-
-void Model::connectOutput(QString outputName, VideoNode *videoNode) {
-    if (outputName.isEmpty())
-        return;
-    if (!videoNode) {
-        m_outputConnections.remove(outputName);
-    } else if (m_vertices.contains(videoNode)) {
-        m_outputConnections.insert(outputName, videoNode);
-    } else {
-        qWarning() << "Attempt to connect non-existant videoNode to output";
-    }
-}
-
 void Model::prepareNode(VideoNode *videoNode) {
     if(!videoNode)
         return;
@@ -90,14 +74,6 @@ void Model::prepareNode(VideoNode *videoNode) {
 void Model::disownNode(VideoNode *videoNode) {
     if(!videoNode)
         return;
-
-    auto outputNames = m_outputConnections.keys();
-    for (int i=0; i<outputNames.count(); i++) {
-        auto outputName = outputNames.at(i);
-        if (m_outputConnections.value(outputName, nullptr) == videoNode) {
-            m_outputConnections.remove(outputName);
-        }
-    }
 
     auto requestedChains = videoNode->requestedChains();
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
@@ -241,10 +217,6 @@ ModelCopyForRendering Model::createCopyForRendering(QSharedPointer<Chain> chain)
         out.vertices.append(m_verticesSortedForRendering.at(i)->createCopyForRendering(chain));
     }
 
-    auto o = m_outputConnectionsForRendering.keys();
-    for (int i=0; i<o.count(); i++) {
-        out.outputs.insert(o.at(i), m_outputConnectionsForRendering.value(o.at(i))->id());
-    }
     return out;
 }
 
@@ -333,16 +305,6 @@ QVariantList Model::qmlEdges() const {
     return edges;
 }
 
-QVariantMap Model::qmlOutputConnections() const {
-    QVariantMap outputConnections;
-
-    auto o = m_outputConnections.keys();
-    for (int i=0; i<o.count(); i++) {
-        outputConnections.insert(o.at(i), QVariant::fromValue(m_outputConnections.value(o.at(i))));
-    }
-    return outputConnections;
-}
-
 void Model::clear() {
     while (!m_vertices.empty()) {
         removeVideoNode(m_vertices[0]);
@@ -354,8 +316,6 @@ void Model::flush() {
     QList<VideoNode *> verticesRemoved;
     QList<Edge> edgesAdded;
     QList<Edge> edgesRemoved;
-    QMap<QString, VideoNode *> outputsAdded;
-    QMap<QString, VideoNode *> outputsRemoved;
 
     // Prune invalid edges
     QMutableListIterator<Edge> i(m_edges);
@@ -377,9 +337,6 @@ void Model::flush() {
         auto e = m_edges;
         auto e4r = m_edgesForRendering;
 
-        auto o = m_outputConnections.keys();
-        auto o4r = m_outputConnectionsForRendering.keys();
-
         for (int i=0; i<m_vertices.count(); i++) {
             if (!v4r.contains(m_vertices.at(i))) verticesAdded.append(m_vertices.at(i));
         }
@@ -392,16 +349,6 @@ void Model::flush() {
         for (int i=0; i<m_edgesForRendering.count(); i++) {
             if (!e.contains(m_edgesForRendering.at(i))) edgesRemoved.append(m_edgesForRendering.at(i));
         }
-        for (int i=0; i<o.count(); i++) {
-            if (m_outputConnectionsForRendering.value(o.at(i), nullptr) != m_outputConnections.value(o.at(i))) {
-                outputsAdded.insert(o.at(i), m_outputConnections.value(o.at(i)));
-            }
-        }
-        for (int i=0; i<o4r.count(); i++) {
-            if (m_outputConnections.value(o4r.at(i), nullptr) != m_outputConnectionsForRendering.value(o4r.at(i))) {
-                outputsRemoved.insert(o4r.at(i), m_outputConnectionsForRendering.value(o4r.at(i)));
-            }
-        }
     }
 
     // Swap
@@ -410,7 +357,6 @@ void Model::flush() {
         m_verticesForRendering = m_vertices;
         m_edgesForRendering = m_edges;
         m_verticesSortedForRendering = topoSort();
-        m_outputConnectionsForRendering = m_outputConnections;
     }
 
     // Convert the changeset to VariantLists for QML
@@ -426,15 +372,7 @@ void Model::flush() {
     QVariantList edgesRemovedVL;
     for (int i=0; i<edgesRemoved.count(); i++) edgesRemovedVL.append(edgesRemoved.at(i).toVariantMap());
 
-    QVariantMap outputsAddedVM;
-    auto o_a = outputsAdded.keys();
-    for (int i=0; i<o_a.count(); i++) outputsAddedVM.insert(o_a.at(i), QVariant::fromValue(outputsAdded.value(o_a.at(i))));
-
-    QVariantMap outputsRemovedVM;
-    auto o_r = outputsRemoved.keys();
-    for (int i=0; i<o_r.count(); i++) outputsRemovedVM.insert(o_r.at(i), QVariant::fromValue(outputsRemoved.value(o_r.at(i))));
-
-    emit graphChanged(verticesAddedVL, verticesRemovedVL, edgesAddedVL, edgesRemovedVL, outputsAddedVM, outputsRemovedVM);
+    emit graphChanged(verticesAddedVL, verticesRemovedVL, edgesAddedVL, edgesRemovedVL);
 }
 
 QList<VideoNode *> Model::ancestors(VideoNode *node) {
@@ -563,12 +501,6 @@ QJsonObject Model::serialize() {
     }
     jsonOutput["edges"] = jsonEdges;
 
-    QJsonObject jsonOutputConnections;
-    for (auto outputName : m_outputConnections.keys()) {
-        jsonOutputConnections[outputName] = QString::number(m_outputConnections[outputName]->id());
-    }
-    jsonOutput["outputConnections"] = jsonOutputConnections;
-
     return jsonOutput;
 }
 
@@ -592,11 +524,6 @@ void Model::deserialize(Context *context, Registry *registry, const QJsonObject 
         VideoNode *toVertex = addedVertices.value(jsonEdge["toVertex"].toString());
         int toInput = jsonEdge["toInput"].toInt();
         addEdge(fromVertex, toVertex, toInput);
-    }
-
-    QJsonObject jsonOutputConnections = data["outputConnections"].toObject();
-    for (auto outputName : jsonOutputConnections.keys()) {
-        connectOutput(outputName, addedVertices.value(jsonOutputConnections[outputName].toString()));
     }
 }
 
