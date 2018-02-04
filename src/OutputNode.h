@@ -21,7 +21,7 @@ public:
 
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
-    GLuint render(Model *model);
+    GLuint render(Model *model = nullptr);
 
 protected:
     virtual QList<QSharedPointer<Chain>> requestedChains();

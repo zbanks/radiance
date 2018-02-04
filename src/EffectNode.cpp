@@ -104,11 +104,12 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
         //qDebug() << this << "is not ready";
         return inputTextures.at(0); // Pass-through
     }
+    //qDebug() << "Looking up" << chain << "in" << m_renderStates << "of" << this;
     if (!m_renderStates.contains(chain)) {
         qDebug() << this << "does not have chain" << chain;
         return inputTextures.at(0);
     }
-    auto renderState = m_renderStates[chain];
+    auto renderState = m_renderStates.value(chain);
 
     if(!renderState->ready())
         return inputTextures.at(0);

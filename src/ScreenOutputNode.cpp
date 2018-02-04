@@ -6,7 +6,7 @@
 ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
     : OutputNode(context, chainSize)
     , m_outputWindow(nullptr) {
-    m_outputWindow = new OutputWindow();
+    m_outputWindow = new OutputWindow(this);
 
     reload();
     connect(&m_reloader, &QTimer::timeout, this, &ScreenOutputNode::reload);

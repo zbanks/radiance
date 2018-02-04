@@ -32,6 +32,13 @@ GLuint OutputNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
 }
 
 GLuint OutputNode::render(Model *model) {
+    if (model == nullptr) {
+        // This is a little bit of a hack,
+        model = qobject_cast<Model*>(parent());
+        if (model == nullptr) {
+            return 0;
+        }
+    }
     auto modelCopy = model->createCopyForRendering(m_chain);
     auto result = modelCopy.render(m_chain);
     return result.value(id(), 0);

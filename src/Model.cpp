@@ -67,24 +67,24 @@ void Model::prepareNode(VideoNode *videoNode) {
     if(videoNode->parent() != this)
         videoNode->setParent(this);
 
-    // See if this VideoNode requests any chains
-    auto requestedChains = videoNode->requestedChains();
-    for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
-        if (!m_chains.contains(*c)) {
-            m_chains.append(*c);
-        }
-    }
-    // and be notified of changes
-    connect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
-    connect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
-
-    videoNode->setChains(m_chains);
     videoNode->setId(m_vnId++);
 
     connect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
     connect(videoNode, &VideoNode::message, this, &Model::onMessage);
     connect(videoNode, &VideoNode::warning, this, &Model::onWarning);
     connect(videoNode, &VideoNode::fatal, this, &Model::onFatal);
+    connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
+
+    // See if this VideoNode requests any chains
+    auto requestedChains = videoNode->requestedChains();
+    for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
+        if (!m_chains.contains(*c)) {
+            addChain(*c);
+        }
+    }
+    // and be notified of changes
+    connect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
+    connect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 }
 
 void Model::disownNode(VideoNode *videoNode) {
@@ -103,6 +103,7 @@ void Model::disownNode(VideoNode *videoNode) {
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
         m_chains.removeAll(*c);
     }
+    disconnect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
     disconnect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
     disconnect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 
