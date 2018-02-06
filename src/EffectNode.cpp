@@ -327,7 +327,8 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         "    gl_Position = vec4(vertex,0.,1.);\n"
         "    uv = 0.5 * (vertex + 1.);\n"
         "}"};
-    auto filename = Paths::library() + QString("effects/%1.glsl").arg(name);
+
+    auto filename = name;
 
     QFileInfo check_file(filename);
     if(!(check_file.exists() && check_file.isFile())) {
@@ -431,9 +432,6 @@ bool EffectNode::canCreateFromFile(QString filename) {
 }
 
 VideoNode *EffectNode::fromFile(Context *context, QString filename) {
-    if (filename.endsWith(".glsl", Qt::CaseInsensitive)) {
-        filename = filename.left(filename.length() - 5);
-    }
     EffectNode *e = new EffectNode(context, filename);
     return e;
 }

@@ -9,12 +9,15 @@
 #include "ScreenOutputNode.h"
 
 Registry::Registry()
-    : m_library(new Library(this)) {
+    : m_library(nullptr) {
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
     registerType<MovieNode>();
     registerType<ScreenOutputNode>();
+
+    m_library = new Library(this);
+    m_library->setParent(this);
 }
 
 Registry::~Registry() {
@@ -49,6 +52,15 @@ VideoNode *Registry::deserialize(Context *context, QJsonObject object) {
     }
     qDebug() << "Type" << type << "deserializer not found";
     return nullptr;
+}
+
+bool Registry::canCreateFromFile(QString filename) {
+    for (auto f = m_factories.begin(); f != m_factories.end(); f++) {
+        if (f->canCreateFromFile(filename)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 VideoNode *Registry::createFromFile(Context *context, QString filename) {

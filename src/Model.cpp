@@ -1,5 +1,7 @@
 #include "Model.h"
 #include "VideoNode.h"
+#include "Context.h"
+#include "Registry.h"
 #include <QByteArray>
 #include <QFile>
 #include <QJsonArray>

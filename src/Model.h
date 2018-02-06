@@ -1,14 +1,15 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "Context.h"
-#include "Registry.h"
 #include <QObject>
 #include <QDebug>
 #include <QList>
 #include <QVector>
 #include <QVariantList>
 #include <QJsonObject>
+
+class Registry;
+class Context;
 
 struct Edge {
     VideoNode *fromVertex;

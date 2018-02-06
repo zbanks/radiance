@@ -170,6 +170,7 @@ ApplicationWindow {
                     LibraryWidget {
                         id: libraryWidget
                         registry: registry
+                        context: context
                         model: model
                         width: 500
                         Layout.fillHeight: true

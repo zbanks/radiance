@@ -5,6 +5,7 @@ import QtQuick.Controls.Styles 1.4
 import radiance 1.0
 
 Item {
+    id: libraryWidget
     property var registry
     property var model
     property var context
@@ -21,8 +22,7 @@ Item {
             alternatingRowColors: false
 
             TableViewColumn {
-                role: "display"
-                title: "Name"
+                role: "name"
             }
             style: TreeViewStyle {
                 indentation: 30;
@@ -44,7 +44,14 @@ Item {
             }
             rowDelegate: Item {
                 height: 30;
-                
+            }
+            onDoubleClicked: {
+                var filename = model.data(index, Library.FileRole);
+                var vn = registry.createFromFile(context, filename);
+                if (vn) {
+                    libraryWidget.model.addVideoNode(vn);
+                    libraryWidget.model.flush();
+                }
             }
         }
         // pass

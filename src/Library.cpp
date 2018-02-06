@@ -1,11 +1,14 @@
 #include "Library.h"
 #include "Paths.h"
+#include "Registry.h"
 #include <QDir>
+#include <QDebug>
 
-LibraryItem::LibraryItem(const QString &name, LibraryItem *parent)
+LibraryItem::LibraryItem(const QString &name, const QString &fileToInstantiate, LibraryItem *parent)
 {
     m_parentItem = parent;
     m_name = name;
+    m_file = fileToInstantiate;
 }
 
 LibraryItem::~LibraryItem()
@@ -42,14 +45,20 @@ QString LibraryItem::name() const
     return m_name;
 }
 
+QString LibraryItem::file() const
+{
+    return m_file;
+}
+
 LibraryItem *LibraryItem::parentItem()
 {
     return m_parentItem;
 }
 
-Library::Library(QObject *parent)
-    : QAbstractItemModel(parent)
-    , m_rootItem(nullptr) {
+Library::Library(Registry *registry)
+    : QAbstractItemModel()
+    , m_rootItem(nullptr)
+    , m_registry(registry) {
 
     rebuild();
 }
@@ -59,22 +68,34 @@ Library::~Library()
     delete m_rootItem;
 }
 
-static void populate(LibraryItem *item, QString currentDirectory) {
+LibraryItem *Library::itemFromFile(QString filename, LibraryItem *parent) {
+    if (!m_registry->canCreateFromFile(filename)) return nullptr;
+    return new LibraryItem(QFileInfo(filename).baseName(), filename, parent);
+}
+
+void Library::populate(LibraryItem *item, QString currentDirectory) {
     QDir d(currentDirectory);
+    qDebug() << d;
     auto ls = d.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    qDebug() << ls;
     for (auto f = ls.begin(); f != ls.end(); f++) {
-        auto newItem = new LibraryItem(*f, item);
-        item->appendChild(newItem);
         auto fullPath = currentDirectory + "/" + *f;
         if (QDir(fullPath).exists()) {
+            auto newItem = new LibraryItem(*f, "", item);
+            item->appendChild(newItem);
             populate(newItem, fullPath);
+        } else {
+            auto newItem = itemFromFile(fullPath, item);
+            if (newItem != nullptr) {
+                item->appendChild(newItem);
+            }
         }
     }
 }
 
 void Library::rebuild() {
     delete m_rootItem;
-    m_rootItem = new LibraryItem("");
+    m_rootItem = new LibraryItem("", "");
     populate(m_rootItem, Paths::library());
 }
 
@@ -82,12 +103,16 @@ QVariant Library::data(const QModelIndex &index, int role) const {
     if (!index.isValid())
         return QVariant();
 
-    if (role != Qt::DisplayRole)
-        return QVariant();
-
     LibraryItem *item = static_cast<LibraryItem*>(index.internalPointer());
 
-    return item->name();
+    if (role == Qt::DisplayRole) {
+        return item->name();
+    } else if (role == Library::FileRole) {
+        return item->file();
+    } else {
+        return QVariant();
+    }
+
 }
 
 QModelIndex Library::index(int row, int column, const QModelIndex &parent) const {
@@ -144,4 +169,11 @@ Qt::ItemFlags Library::flags(const QModelIndex &index) const
         return 0;
 
     return QAbstractItemModel::flags(index);
+}
+
+QHash<int, QByteArray> Library::roleNames() const {
+    QHash<int, QByteArray> roles;
+    roles[Qt::DisplayRole] = "name";
+    roles[FileRole] = "file";
+    return roles;
 }

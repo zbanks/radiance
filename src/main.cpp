@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
     QThread::currentThread()->setObjectName("mainThread");
 
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterUncreatableType<Library>("radiance", 1, 0, "Library", "Library should be accessed through the Registry");
     qmlRegisterType<Context>("radiance", 1, 0, "Context");
     qmlRegisterType<Registry>("radiance", 1, 0, "Registry");
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
