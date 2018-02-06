@@ -1,7 +1,6 @@
 #include "EffectNode.h"
 #include "Timebase.h"
 #include "Audio.h"
-#include "VideoNodeFactory.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -412,13 +411,11 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
     return true;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-QString EffectNodeFactory::typeName() {
+QString EffectNode::typeName() {
     return "EffectNode";
 }
 
-VideoNode *EffectNodeFactory::deserialize(Context *context, QJsonObject obj) {
+VideoNode *EffectNode::deserialize(Context *context, QJsonObject obj) {
     QString name = obj.value("name").toString();
     if (obj.isEmpty()) {
         return nullptr;
@@ -429,11 +426,11 @@ VideoNode *EffectNodeFactory::deserialize(Context *context, QJsonObject obj) {
     return e;
 }
 
-bool EffectNodeFactory::canCreateFromFile(QString filename) {
+bool EffectNode::canCreateFromFile(QString filename) {
     return filename.endsWith(".glsl", Qt::CaseInsensitive);
 }
 
-VideoNode *EffectNodeFactory::fromFile(Context *context, QString filename) {
+VideoNode *EffectNode::fromFile(Context *context, QString filename) {
     if (filename.endsWith(".glsl", Qt::CaseInsensitive)) {
         filename = filename.left(filename.length() - 5);
     }

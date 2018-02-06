@@ -11,6 +11,19 @@
 #include <QJsonObject>
 #include "Paths.h"
 
+MovieNode::MovieNode(Context *context, QString videoPath)
+    : VideoNode(context)
+    , m_videoPath(videoPath)
+    , m_openGLWorker()
+    , m_renderFbos()
+    , m_blitShader()
+    , m_videoSize()
+    , m_chainSize()
+    , m_ready()
+    , m_mute(true)
+    , m_pause() {
+}
+
 MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
     , m_videoPath(other.m_videoPath)
@@ -536,3 +549,26 @@ void MovieNodeOpenGLWorker::onPrepareState(QSharedPointer<MovieNodeRenderState> 
     state->m_pass.m_shader = copyProgram(m_state->m_pass.m_shader);
     state->m_ready.exchange(true);
 }
+
+QString MovieNode::typeName() {
+    return "MovieNode";
+}
+
+VideoNode *MovieNode::deserialize(Context *context, QJsonObject obj) {
+    QString name = obj.value("videoPath").toString();
+    if (obj.isEmpty()) {
+        return nullptr;
+    }
+    MovieNode *e = new MovieNode(context, name);
+    return e;
+}
+
+bool MovieNode::canCreateFromFile(QString filename) {
+    return filename.endsWith(".mp4", Qt::CaseInsensitive);
+}
+
+VideoNode *MovieNode::fromFile(Context *context, QString filename) {
+    MovieNode *e = new MovieNode(context, filename);
+    return e;
+}
+

@@ -55,7 +55,6 @@ list(APPEND libradiance_SOURCES
     src/OutputNode.cpp
     src/Context.cpp
     src/Registry.cpp
-    src/VideoNodeFactory.cpp
     src/ScreenOutputNode.cpp
     src/OutputWindow.cpp
     BTrack/src/BTrack.c

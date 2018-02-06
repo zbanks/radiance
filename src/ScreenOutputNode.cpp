@@ -52,13 +52,19 @@ QStringList ScreenOutputNode::availableScreens() {
     return m_screenNameStrings;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-QString ScreenOutputNodeFactory::typeName() {
+QString ScreenOutputNode::typeName() {
     return "ScreenOutputNode";
 }
 
-VideoNode *ScreenOutputNodeFactory::deserialize(Context *context, QJsonObject obj) {
+VideoNode *ScreenOutputNode::deserialize(Context *context, QJsonObject obj) {
     ScreenOutputNode *e = new ScreenOutputNode(context, QSize(500, 500));
     return e;
+}
+
+bool ScreenOutputNode::canCreateFromFile(QString filename) {
+    return false;
+}
+
+VideoNode *ScreenOutputNode::fromFile(Context *context, QString filename) {
+    return nullptr;
 }

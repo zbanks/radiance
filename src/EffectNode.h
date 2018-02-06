@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "VideoNodeFactory.h"
 #include "OpenGLWorker.h"
 #include "OpenGLUtils.h"
 #include "Context.h"
@@ -95,6 +94,25 @@ public:
     // Creates a copy of this node
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain> chain) override;
 
+    // These static methods are required for VideoNode creation
+    // through the registry
+
+    // A string representation of this VideoNode type
+    static QString typeName();
+
+    // Create a VideoNode from a JSON description of one
+    // Returns nullptr if the description is invalid
+    static VideoNode *deserialize(Context *context, QJsonObject obj);
+
+    // Return true if a VideoNode could be created from
+    // the given filename
+    // This check should be very quick.
+    static bool canCreateFromFile(QString filename);
+
+    // Create a VideoNode from a filename
+    // Returns nullptr if a VideoNode cannot be create from the given filename
+    static VideoNode *fromFile(Context *context, QString filename);
+
 public slots:
     qreal intensity();
     QString name();
@@ -122,15 +140,4 @@ protected:
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
     QTimer m_periodic; // XXX do something better here
     bool m_ready;
-};
-
-//////////////////////////////////////////////////////////////////////////////
-
-class EffectNodeFactory : public VideoNodeFactory {
-
-public:
-    QString typeName() override;
-    VideoNode *deserialize(Context *context, QJsonObject obj) override;
-    bool canCreateFromFile(QString filename) override;
-    VideoNode *fromFile(Context *context, QString filename) override;
 };

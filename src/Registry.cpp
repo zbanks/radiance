@@ -5,17 +5,28 @@
 
 #include "EffectNode.h"
 #include "ImageNode.h"
+#include "MovieNode.h"
 #include "ScreenOutputNode.h"
 
 Registry::Registry() {
     // This can be done with some black magic fuckery in the future
-    m_factories.append(new EffectNodeFactory());
-    m_factories.append(new ImageNodeFactory());
-    m_factories.append(new ScreenOutputNodeFactory());
+    registerType<EffectNode>();
+    registerType<ImageNode>();
+    registerType<MovieNode>();
+    registerType<ScreenOutputNode>();
 }
 
 Registry::~Registry() {
-    qDeleteAll(m_factories);
+}
+
+template <class T> void Registry::registerType() {
+    struct TypeFactory f{
+        .typeName = T::typeName,
+        .deserialize = T::deserialize,
+        .canCreateFromFile = T::canCreateFromFile,
+        .fromFile = T::fromFile,
+    };
+    m_factories.append(f);
 }
 
 VideoNode *Registry::deserialize(Context *context, QString json) {
@@ -31,8 +42,8 @@ VideoNode *Registry::deserialize(Context *context, QJsonObject object) {
         return nullptr;
     }
     for (auto f = m_factories.begin(); f != m_factories.end(); f++) {
-        if ((*f)->typeName() == type) {
-            return (*f)->deserialize(context, object);
+        if (f->typeName() == type) {
+            return f->deserialize(context, object);
         }
     }
     qDebug() << "Type" << type << "deserializer not found";
@@ -41,8 +52,8 @@ VideoNode *Registry::deserialize(Context *context, QJsonObject object) {
 
 VideoNode *Registry::createFromFile(Context *context, QString filename) {
     for (auto f = m_factories.begin(); f != m_factories.end(); f++) {
-        if ((*f)->canCreateFromFile(filename)) {
-            return (*f)->fromFile(context, filename);
+        if (f->canCreateFromFile(filename)) {
+            return f->fromFile(context, filename);
         }
     }
     qDebug() << "File handler not found";

@@ -167,13 +167,11 @@ void ImageNodeOpenGLWorker::onDestroyed() {
     // and so we cannot use Qt object tree deletion semantics
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-QString ImageNodeFactory::typeName() {
+QString ImageNode::typeName() {
     return "ImageNode";
 }
 
-VideoNode *ImageNodeFactory::deserialize(Context *context, QJsonObject obj) {
+VideoNode *ImageNode::deserialize(Context *context, QJsonObject obj) {
     QString name = obj.value("imagePath").toString();
     if (obj.isEmpty()) {
         return nullptr;
@@ -182,11 +180,11 @@ VideoNode *ImageNodeFactory::deserialize(Context *context, QJsonObject obj) {
     return e;
 }
 
-bool ImageNodeFactory::canCreateFromFile(QString filename) {
+bool ImageNode::canCreateFromFile(QString filename) {
     return filename.endsWith(".gif", Qt::CaseInsensitive);
 }
 
-VideoNode *ImageNodeFactory::fromFile(Context *context, QString filename) {
+VideoNode *ImageNode::fromFile(Context *context, QString filename) {
     ImageNode *e = new ImageNode(context, filename);
     return e;
 }
