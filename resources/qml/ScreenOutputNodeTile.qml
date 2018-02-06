@@ -22,11 +22,6 @@ VideoNodeTile {
                 color: "#ddd";
                 elide: Text.ElideMiddle;
             }
-        
-            Label {
-                text: attachedParameter >= 0 ? "#" + attachedParameter : "";
-                color: "#ddd";
-            }
         }
 
         Item {
@@ -47,7 +42,7 @@ VideoNodeTile {
 
         ComboBox {
             id: screenSelector;
-            model: tile.videoNode.availableScreens;
+            model: tile.videoNode ? tile.videoNode.availableScreens : null;
         }
 
         RowLayout {
@@ -56,7 +51,7 @@ VideoNodeTile {
                 id: visibleCheck
                 checked: tile.videoNode ? tile.videoNode.visible : false;
                 Binding {
-                    target: tile.videoNode
+                    target: tile.videoNode ? tile.videoNode: null
                     property: "visible"
                     value: visibleCheck.checked
                 }

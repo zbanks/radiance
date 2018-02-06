@@ -57,6 +57,7 @@ list(APPEND libradiance_SOURCES
     src/Registry.cpp
     src/ScreenOutputNode.cpp
     src/OutputWindow.cpp
+    src/Library.cpp
     BTrack/src/BTrack.c
     BTrack/src/OnsetDetectionFunction.c
     )

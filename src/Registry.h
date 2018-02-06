@@ -1,6 +1,8 @@
 #pragma once
 
 #include "VideoNode.h"
+#include "Library.h"
+#include <QAbstractItemModel>
 
 struct TypeFactory {
     // What type of VideoNode this VideoNodeFactory represents
@@ -28,11 +30,16 @@ public:
    ~Registry() override;
     template <class T> void registerType();
 
+    Q_PROPERTY(Library *library READ library CONSTANT);
+
 public slots:
     VideoNode *deserialize(Context *context, QString json);
     VideoNode *deserialize(Context *context, QJsonObject object);
     VideoNode *createFromFile(Context *context, QString filename);
 
+    Library *library();
+
 protected:
     QList<TypeFactory> m_factories;
+    Library *m_library;
 };

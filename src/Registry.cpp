@@ -8,7 +8,8 @@
 #include "MovieNode.h"
 #include "ScreenOutputNode.h"
 
-Registry::Registry() {
+Registry::Registry()
+    : m_library(new Library(this)) {
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
@@ -58,4 +59,8 @@ VideoNode *Registry::createFromFile(Context *context, QString filename) {
     }
     qDebug() << "File handler not found";
     return nullptr;
+}
+
+Library *Registry::library() {
+    return m_library;
 }

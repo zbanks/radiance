@@ -113,13 +113,6 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true;
 
-            // This is kind of crappy, but it was easy
-            LibraryWidget {
-                id: library
-                model: model
-                graph: graph
-            }
-
             Loader {
                 source: window.hasMidi ? "MidiMappingSelector.qml" : ""
                 onLoaded: {
@@ -151,25 +144,36 @@ ApplicationWindow {
             Graph {
                 id: graph
                 model: model
-                currentOutputName: outputSelector.currentText
                 anchors.fill: parent
             }
 
-            RowLayout {
-                BeatIndicator {
-                    width: 25
-                    opacity: .9
-                    context: context
+            ColumnLayout {
+                anchors.fill: parent
+                RowLayout {
+                    BeatIndicator {
+                        width: 25
+                        opacity: .9
+                        context: context
+                    }
+                    Waveform {
+                        width: 500
+                        opacity: .9
+                        context: context
+                    }
+                    Spectrum {
+                        width: 500
+                        opacity: .9
+                        context: context
+                    }
                 }
-                Waveform {
-                    width: 500
-                    opacity: .9
-                    context: context
-                }
-                Spectrum {
-                    width: 500
-                    opacity: .9
-                    context: context
+                RowLayout {
+                    LibraryWidget {
+                        id: libraryWidget
+                        registry: registry
+                        model: model
+                        width: 500
+                        Layout.fillHeight: true
+                    }
                 }
             }
 
