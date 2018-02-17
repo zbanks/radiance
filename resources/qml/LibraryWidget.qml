@@ -2,6 +2,7 @@ import QtQuick 2.7
 import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
+import QtQml.Models 2.2
 import radiance 1.0
 
 Item {
@@ -14,6 +15,21 @@ Item {
         anchors.fill: parent
 
         TreeView {
+            id: librarytree
+
+            /* Workaround for QTBUG-47243,
+               which seems to still be present in
+               Qt 5.10 */
+            selection: ItemSelectionModel {
+                id: selModel
+                    model: librarytree.model
+            }
+            onClicked: {
+                selModel.clearCurrentIndex();
+                selModel.setCurrentIndex(index, 0x0002 | 0x0010);
+            }
+            /* End workaround */
+
             Layout.fillHeight: true;
             Layout.fillWidth: true;
             model: registry.library;
@@ -39,15 +55,17 @@ Item {
                     }
                     width: tm.width
                     text: styleData.isExpanded ? "▼" : "▶"
+                    color: "#aaa"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    color: "white"
                 }
                 frame: Item {}
             }
             itemDelegate: Item {
+                id: container
                 Text {
-                    color: "white"
+                    color: styleData.selected ? "white" : "#aaa"
+                    font.bold: styleData.selected
                     text: styleData.value
                     verticalAlignment: Text.AlignVCenter
                 }
