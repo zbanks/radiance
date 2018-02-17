@@ -20,6 +20,8 @@ Item {
             backgroundVisible: false;
             headerVisible: false;
             alternatingRowColors: false
+            horizontalScrollBarPolicy: Qt.ScrollBarAlwaysOff;
+            verticalScrollBarPolicy: Qt.ScrollBarAlwaysOff;
 
             TableViewColumn {
                 role: "name"
@@ -28,7 +30,6 @@ Item {
                 indentation: 30;
                 branchDelegate: Text {
                     width: 30
-                    height: 30
                     text: styleData.isExpanded ? "▼" : "▶"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -40,14 +41,13 @@ Item {
                 Text {
                     color: "white"
                     text: styleData.value
+                    verticalAlignment: Text.AlignVCenter
                 }
             }
             rowDelegate: Item {
-                height: 30;
             }
             onDoubleClicked: {
                 var filename = model.data(index, Library.FileRole);
-                console.log("DBL-click " + filename);
                 var vn = registry.createFromFile(context, filename);
                 if (vn) {
                     libraryWidget.model.addVideoNode(vn);

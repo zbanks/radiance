@@ -172,8 +172,17 @@ ApplicationWindow {
                         registry: registry
                         context: context
                         model: model
-                        width: 500
+                        width: 200
+                        
                         Layout.fillHeight: true
+                    }
+                    Rectangle {
+                        width: 1
+                        Layout.fillHeight: true
+                        Layout.topMargin: 30
+                        Layout.bottomMargin: 30
+                        color: "#eee"
+                        opacity: 0.1
                     }
                 }
             }
