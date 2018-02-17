@@ -50,7 +50,7 @@ public:
     EffectNodeOpenGLWorker(EffectNode *p);
 public slots:
     // Call this after changing
-    // "name"
+    // "file"
     void initialize(QString);
     void onPrepareState(QSharedPointer<EffectNodeRenderState> state);
 signals:
@@ -62,7 +62,7 @@ signals:
     void warning(QString str);
     void fatal(QString str);
 protected:
-    bool loadProgram(QString name);
+    bool loadProgram(QString file);
     QSharedPointer<EffectNodeRenderState> m_state;
 };
 
@@ -75,7 +75,8 @@ class EffectNode
     : public VideoNode {
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
-    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
+    Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
     friend class EffectNodeOpenGLWorker;
 
@@ -116,8 +117,9 @@ public:
 public slots:
     qreal intensity();
     QString name();
+    QString file();
     void setIntensity(qreal value);
-    void setName(QString name);
+    void setFile(QString file);
     void reload();
 
 protected slots:
@@ -128,6 +130,7 @@ protected slots:
 signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);
+    void fileChanged(QString file);
 
 protected:
     QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
@@ -136,7 +139,7 @@ protected:
     qreal m_beatLast;
     qreal m_realTime;
     qreal m_realTimeLast;
-    QString m_name;
+    QString m_file;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
     QTimer m_periodic; // XXX do something better here
     bool m_ready;

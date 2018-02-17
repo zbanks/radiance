@@ -27,27 +27,47 @@ QString Paths::glsl() {
 void Paths::initialize() {
     if (QDir(QCoreApplication::applicationDirPath() + "/../Resources/").exists()) {
         // MacOS Bundle
-        Paths::m_library = QCoreApplication::applicationDirPath() + "/../Resources/library/";
-        Paths::m_qml = QCoreApplication::applicationDirPath() + "/../Resources/qml/";
-        Paths::m_glsl = QCoreApplication::applicationDirPath() + "/../Resources/glsl/";
+        Paths::m_library = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/library/").absolutePath();
+        Paths::m_qml = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/qml/").absolutePath();
+        Paths::m_glsl = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/glsl/").absolutePath();
     } else if (QDir(QCoreApplication::applicationDirPath() + "/resources/").exists()) {
         // Linux Bundle
-        Paths::m_library = QCoreApplication::applicationDirPath() + "/resources/library/";
-        Paths::m_qml = QCoreApplication::applicationDirPath() + "/resources/qml/";
-        Paths::m_glsl = QCoreApplication::applicationDirPath() + "/resources/glsl/";
+        Paths::m_library = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/library/").absolutePath();
+        Paths::m_qml = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/qml/").absolutePath();
+        Paths::m_glsl = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/glsl/").absolutePath();
     } else if (QDir("../resources/").exists()) {
         // Debug build
-        Paths::m_library = "../resources/library/";
-        Paths::m_qml = "../resources/qml/";
-        Paths::m_glsl = "../resources/glsl/";
+        Paths::m_library = QFileInfo("../resources/library/").absolutePath();
+        Paths::m_qml = QFileInfo("../resources/qml/").absolutePath();
+        Paths::m_glsl = QFileInfo("../resources/glsl/").absolutePath();
     } else {
         // Anything else
-        Paths::m_library = QStandardPaths::locate(QStandardPaths::AppDataLocation, "library", QStandardPaths::LocateDirectory);
-        Paths::m_qml = QStandardPaths::locate(QStandardPaths::AppDataLocation, "qml", QStandardPaths::LocateDirectory);
-        Paths::m_glsl = QStandardPaths::locate(QStandardPaths::AppDataLocation, "glsl", QStandardPaths::LocateDirectory);
+        Paths::m_library = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "library", QStandardPaths::LocateDirectory)).absolutePath();
+        Paths::m_qml = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "qml", QStandardPaths::LocateDirectory)).absolutePath();
+        Paths::m_glsl = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "glsl", QStandardPaths::LocateDirectory)).absolutePath();
     }
     Paths::m_initialized = true;
     qDebug() << "Library path is:" << Paths::m_library;
     qDebug() << "QML path is:" << Paths::m_qml;
     qDebug() << "GLSL path is:" << Paths::m_glsl;
+}
+
+QString Paths::expandLibraryPath(QString filename) {
+    Q_ASSERT(m_initialized);
+    if (QFileInfo(filename).isAbsolute()) {
+        return filename;
+    }
+    auto fullPath = QDir::cleanPath(library() + "/" + filename);
+    return fullPath;
+}
+
+QString Paths::contractLibraryPath(QString filename) {
+    Q_ASSERT(m_initialized);
+    auto lib = QDir(library());
+    auto shortPath = lib.relativeFilePath(filename);
+    if (shortPath.contains("..")) {
+        return filename;
+    } else {
+        return shortPath;
+    }
 }

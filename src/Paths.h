@@ -7,6 +7,10 @@ public:
     static QString library();
     static QString qml();
     static QString glsl();
+
+    static QString expandLibraryPath(QString filename);
+    static QString contractLibraryPath(QString filename);
+
 private:
     static QString m_library;
     static QString m_qml;

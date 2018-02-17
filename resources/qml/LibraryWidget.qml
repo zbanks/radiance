@@ -47,6 +47,7 @@ Item {
             }
             onDoubleClicked: {
                 var filename = model.data(index, Library.FileRole);
+                console.log("DBL-click " + filename);
                 var vn = registry.createFromFile(context, filename);
                 if (vn) {
                     libraryWidget.model.addVideoNode(vn);

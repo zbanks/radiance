@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
     qmlRegisterUncreatableType<Controls>("radiance", 1, 0, "Controls", "Controls cannot be instantiated");
     qRegisterMetaType<Controls::Control>("Controls::Control");
 
-    QQmlApplicationEngine engine(QUrl(Paths::qml() + QString("application.qml")));
+    QQmlApplicationEngine engine(QUrl(Paths::qml() + "/application.qml"));
 
     if(engine.rootObjects().isEmpty()) {
         qFatal("Failed to load main QML application");

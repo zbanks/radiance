@@ -15,7 +15,7 @@
 #include <algorithm>
 #include "Paths.h"
 
-EffectNode::EffectNode(Context *c, QString name)
+EffectNode::EffectNode(Context *c, QString file)
     : VideoNode(c)
     , m_intensity(0)
     , m_openGLWorker(new EffectNodeOpenGLWorker(this), &QObject::deleteLater)
@@ -30,7 +30,7 @@ EffectNode::EffectNode(Context *c, QString name)
     m_realTimeLast = context()->timebase()->wallTime();
     connect(m_openGLWorker.data(), &EffectNodeOpenGLWorker::initialized, this, &EffectNode::onInitialized);
 
-    if (!name.isEmpty()) setName(name);
+    if (!file.isEmpty()) setFile(file);
 }
 
 EffectNode::EffectNode(const EffectNode &other)
@@ -56,7 +56,7 @@ EffectNode::~EffectNode() {
 
 QJsonObject EffectNode::serialize() {
     QJsonObject o = VideoNode::serialize();
-    o.insert("name", m_name);
+    o.insert("file", m_file);
     o.insert("intensity", m_intensity);
     return o;
 }
@@ -232,28 +232,36 @@ void EffectNode::setIntensity(qreal value) {
     emit intensityChanged(value);
 }
 
-QString EffectNode::name() {
+QString EffectNode::file() {
     Q_ASSERT(QThread::currentThread() == thread());
-    return m_name;
+    return m_file;
 }
 
-void EffectNode::setName(QString name) {
+QString EffectNode::name() {
     Q_ASSERT(QThread::currentThread() == thread());
-    if(name != m_name) {
+    return QFileInfo(m_file).baseName();
+}
+
+void EffectNode::setFile(QString file) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    file = Paths::contractLibraryPath(file);
+    if(file != m_file) {
+        auto oldName = name();
         m_ready = false;
         {
             QMutexLocker locker(&m_stateLock);
-            m_name = name;
+            m_file = file;
         }
-        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, name));
+        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
         Q_ASSERT(result);
-        emit nameChanged(name);
+        emit fileChanged(file);
+        if (name() != oldName) emit nameChanged(name());
     }
 }
 
 void EffectNode::reload() {
     m_ready = false;
-    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, m_name));
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, m_file));
     Q_ASSERT(result);
 }
 
@@ -282,11 +290,11 @@ EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode *p)
     connect(this, &EffectNodeOpenGLWorker::fatal,   p, &EffectNode::fatal);
 }
 
-void EffectNodeOpenGLWorker::initialize(QString name) {
+void EffectNodeOpenGLWorker::initialize(QString file) {
     makeCurrent();
-    bool result = loadProgram(name);
+    bool result = loadProgram(file);
     if(!result) {
-        qDebug() << name << "Load program failed :(";
+        qDebug() << file << "Load program failed :(";
         return;
     }
     glFlush();
@@ -305,14 +313,14 @@ void EffectNodeOpenGLWorker::onPrepareState(QSharedPointer<EffectNodeRenderState
 
 // Call this to load shader code into this Effect.
 // Returns true if the program was loaded successfully
-bool EffectNodeOpenGLWorker::loadProgram(QString name) {
+bool EffectNodeOpenGLWorker::loadProgram(QString filename) {
 
     auto headerString = QString{};
     {
-        auto effectHeaderFilename = Paths::glsl() + QString("effect_header.glsl");
-        QFile header_file(effectHeaderFilename);
+        auto effectHeaderFilefile = Paths::glsl() + "/effect_header.glsl";
+        QFile header_file(effectHeaderFilefile);
         if(!header_file.open(QIODevice::ReadOnly)) {
-            emit fatal(QString("Could not open \"%1\"").arg(effectHeaderFilename));
+            emit fatal(QString("Could not open \"%1\"").arg(effectHeaderFilefile));
             return false;
         }
         QTextStream headerStream(&header_file);
@@ -328,7 +336,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         "    uv = 0.5 * (vertex + 1.);\n"
         "}"};
 
-    auto filename = name;
+    filename = Paths::expandLibraryPath(filename);
 
     QFileInfo check_file(filename);
     if(!(check_file.exists() && check_file.isFile())) {
@@ -349,7 +357,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
       , QRegularExpression::CaseInsensitiveOption
         );
     auto property_reg = QRegularExpression(
-        "^\\s*#property\\s+(?<name>\\w+)\\s+(?<value>.*)$"
+        "^\\s*#property\\s+(?<file>\\w+)\\s+(?<value>.*)$"
       , QRegularExpression::CaseInsensitiveOption
         );
     auto state = QSharedPointer<EffectNodeRenderState>::create();
@@ -362,9 +370,9 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         {
             auto m = property_reg.match(next_line);
             if(m.hasMatch()) {
-                props.insert(m.captured("name"),m.captured("value"));
+                props.insert(m.captured("file"),m.captured("value"));
                 passes.back().append(QString{"#line %1"}.arg(lineno));
-                //qDebug() << "setting property " << m.captured("name") << " to value " << m.captured("value");
+                //qDebug() << "setting property " << m.captured("file") << " to value " << m.captured("value");
                 continue;
             }
         }
@@ -400,7 +408,7 @@ bool EffectNodeOpenGLWorker::loadProgram(QString name) {
         }
     }
     if(programs.empty()) {
-        emit fatal(QString("No shaders found for \"%1\"").arg(name));
+        emit fatal(QString("No shaders found for \"%1\"").arg(filename));
         return false;
     }
     std::reverse(state->m_passes.begin(),state->m_passes.end());
@@ -417,21 +425,21 @@ QString EffectNode::typeName() {
 }
 
 VideoNode *EffectNode::deserialize(Context *context, QJsonObject obj) {
-    QString name = obj.value("name").toString();
+    QString file = obj.value("file").toString();
     if (obj.isEmpty()) {
         return nullptr;
     }
-    EffectNode *e = new EffectNode(context, name);
+    EffectNode *e = new EffectNode(context, file);
     double intensity = obj.value("intensity").toDouble();
     e->setIntensity(intensity);
     return e;
 }
 
-bool EffectNode::canCreateFromFile(QString filename) {
-    return filename.endsWith(".glsl", Qt::CaseInsensitive);
+bool EffectNode::canCreateFromFile(QString file) {
+    return file.endsWith(".glsl", Qt::CaseInsensitive);
 }
 
-VideoNode *EffectNode::fromFile(Context *context, QString filename) {
-    EffectNode *e = new EffectNode(context, filename);
+VideoNode *EffectNode::fromFile(Context *context, QString file) {
+    EffectNode *e = new EffectNode(context, file);
     return e;
 }
