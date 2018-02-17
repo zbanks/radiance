@@ -17,7 +17,7 @@ class ImageNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    ImageNodeOpenGLWorker(ImageNode *p, QString imagePath);
+    ImageNodeOpenGLWorker(ImageNode *p, QString file);
     ~ImageNodeOpenGLWorker() override;
 
 public slots:
@@ -31,13 +31,13 @@ signals:
     void warning(QString str);
     void fatal(QString str);
 protected:
-    bool loadImage(QString imagePath);
+    bool loadImage(QString file);
     ImageNode *m_p;
 protected slots:
     void onDestroyed();
 public:
     std::atomic<bool> m_ready{false};
-    QString      m_imagePath;
+    QString      m_file;
     int          m_totalDelay{};
     std::vector<int> m_frameDelays{}; // milliseconds
     std::vector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
@@ -49,12 +49,13 @@ public:
 class ImageNode
     : public VideoNode {
     Q_OBJECT
-    Q_PROPERTY(QString imagePath READ imagePath WRITE setImagePath NOTIFY imagePathChanged)
+    Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
+    Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
     friend class ImageNodeOpenGLWorker;
 
 public:
-    ImageNode(Context *context, QString imagePath);
+    ImageNode(Context *context, QString file);
     ImageNode(const ImageNode &other);
     ~ImageNode();
 
@@ -87,20 +88,21 @@ public:
     static VideoNode *fromFile(Context *context, QString filename);
 
 public slots:
-    QString imagePath();
-    void setImagePath(QString imagePath);
+    QString file();
+    QString name();
+    void setFile(QString file);
 
 protected slots:
     void onInitialized();
 
 signals:
-    void imagePathChanged(QString imagePath);
+    void fileChanged(QString file);
+    void nameChanged(QString name);
 
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
-
-    QString m_imagePath;
+    QString m_file;
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
 
     bool m_ready;

@@ -27,9 +27,17 @@ Item {
                 role: "name"
             }
             style: TreeViewStyle {
-                indentation: 30;
+                TextMetrics {
+                    id: tm
+                    text: "MM"
+                }
+                indentation: tm.width;
                 branchDelegate: Text {
-                    width: 30
+                    TextMetrics {
+                        id: tm
+                        text: "M"
+                    }
+                    width: tm.width
                     text: styleData.isExpanded ? "▼" : "▶"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -45,6 +53,11 @@ Item {
                 }
             }
             rowDelegate: Item {
+                height: tm.height;
+                TextMetrics {
+                    id: tm
+                    text: " "
+                }
             }
             onDoubleClicked: {
                 var filename = model.data(index, Library.FileRole);
