@@ -28,6 +28,7 @@ private:
 
 class Library : public QAbstractItemModel {
     Q_OBJECT
+    Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged);
 
 public:
     Library(Registry *registry);
@@ -47,10 +48,20 @@ public:
     Qt::ItemFlags flags(const QModelIndex &index) const override;
     QHash<int, QByteArray> roleNames() const override;
 
+    bool checkAgainstFilter(QString name);
+
+public slots:
+    QString filter();
+    void setFilter(QString filter);
+
+signals:
+    void filterChanged(QString filter);
+
 protected:
     void rebuild();
     void populate(LibraryItem *item, QString currentDirectory);
     LibraryItem *itemFromFile(QString filename, LibraryItem *parent);
     LibraryItem *m_rootItem;
     Registry *m_registry;
+    QString m_filter;
 };

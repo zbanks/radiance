@@ -213,11 +213,4 @@ ApplicationWindow {
             Qt.quit()
         }
     }
-
-    Action {
-        id: newNodeAction
-        text: "&New Node"
-        shortcut: ":"
-        onTriggered: nodeSelector.forceActiveFocus()
-    }
 }

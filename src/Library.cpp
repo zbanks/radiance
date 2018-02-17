@@ -58,32 +58,57 @@ LibraryItem *LibraryItem::parentItem()
 Library::Library(Registry *registry)
     : QAbstractItemModel()
     , m_rootItem(nullptr)
-    , m_registry(registry) {
+    , m_registry(registry)
+    , m_filter("") {
 
     rebuild();
 }
 
-Library::~Library()
-{
+Library::~Library() {
     delete m_rootItem;
+}
+
+QString Library::filter() {
+    return m_filter;
+}
+
+void Library::setFilter(QString filter) {
+    if (m_filter != filter) {
+        m_filter = filter;
+        rebuild();
+        emit filterChanged(filter);
+    }
+}
+
+bool Library::checkAgainstFilter(QString name) {
+    if (m_filter.isEmpty()) return true;
+    if (name.startsWith(m_filter)) return true;
+    return false;
 }
 
 LibraryItem *Library::itemFromFile(QString filename, LibraryItem *parent) {
     if (!m_registry->canCreateFromFile(filename)) return nullptr;
-    return new LibraryItem(QFileInfo(filename).baseName(), filename, parent);
+    auto baseName = QFileInfo(filename).baseName();
+    if (!checkAgainstFilter(baseName)) return nullptr;
+    return new LibraryItem(baseName, filename, parent);
 }
 
 void Library::populate(LibraryItem *item, QString currentDirectory) {
     QDir d(currentDirectory);
-    qDebug() << d;
     auto ls = d.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
-    qDebug() << ls;
     for (auto f = ls.begin(); f != ls.end(); f++) {
         auto fullPath = currentDirectory + "/" + *f;
         if (QDir(fullPath).exists()) {
             auto newItem = new LibraryItem(*f, "", item);
-            item->appendChild(newItem);
             populate(newItem, fullPath);
+            // Add directories only if
+            // they have contents,
+            // or there is no filter set
+            if (newItem->childCount() || m_filter.isEmpty()) {
+                item->appendChild(newItem);
+            } else {
+                delete newItem;
+            }
         } else {
             auto newItem = itemFromFile(fullPath, item);
             if (newItem != nullptr) {
@@ -94,9 +119,11 @@ void Library::populate(LibraryItem *item, QString currentDirectory) {
 }
 
 void Library::rebuild() {
+    beginResetModel();
     delete m_rootItem;
     m_rootItem = new LibraryItem("", "");
     populate(m_rootItem, Paths::library());
+    endResetModel();
 }
 
 QVariant Library::data(const QModelIndex &index, int role) const {

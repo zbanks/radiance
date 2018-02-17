@@ -78,27 +78,53 @@ Item {
                 }
             }
             onDoubleClicked: {
-                var filename = model.data(index, Library.FileRole);
-                var vn = registry.createFromFile(context, filename);
-                if (vn) {
-                    libraryWidget.model.addVideoNode(vn);
-                    libraryWidget.model.flush();
+                addSelected();
+            }
+
+            Connections {
+                target: librarytree.model
+
+                onFilterChanged: {
+                    if (!filter) return;
+                    selModel.clearCurrentIndex();
+                    function selectOrExpand(index) {
+                        if (librarytree.model.hasChildren(index)) {
+                            librarytree.expand(index);
+                            selectOrExpand(librarytree.model.index(0, 0, index));
+                        } else {
+                            selModel.setCurrentIndex(index, 0x0002 | 0x0010);
+                        }
+                    }
+                    selectOrExpand(librarytree.model.index(0, 0));
+                }
+            }
+
+            TextField {
+                id: searchBox
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                visible: false
+                onAccepted: {
+                    addSelected();
+                    stopSearching();
+                }
+                Keys.onPressed: {
+                    if (event.key == Qt.Key_Escape) {
+                        stopSearching();
+                    }
+                }
+                Component.onCompleted: {
+                    registry.library.filter = Qt.binding(function() { return text; });
                 }
             }
         }
+
         // pass
         Action {
             id: nodeAddAction
             onTriggered: {
-                var node = model.createVideoNode(nodeSelector.currentText);
-                if (node && graph.lastClickedTile) {
-                    graph.lastClickedTile.insertAfter(node);
-                }
-                model.flush();
-                // TODO: This doesn't work because the view hasn't reloaded the graph yet
-                //var tile = graph.view.tileForVideoNode(node);
-                //graph.lastClickedTile = tile;
-                //console.log("last tile", tile, node);
+                addSelected();
             }
         }
         Button {
@@ -114,4 +140,52 @@ Item {
             //text: NodeRegistry.nodeTypes[nodeSelector.currentText].description;
         }
     }
+
+    function search() {
+        searchBox.visible = true;
+        searchBox.focus = true;
+        searchBox.forceActiveFocus();
+    }
+
+    function stopSearching() {
+        searchBox.text = "";
+        searchBox.visible = false;
+        searchBox.focus = false;
+    }
+
+    function addSelected() {
+        var filename = librarytree.model.data(librarytree.selection.currentIndex, Library.FileRole);
+        var vn = registry.createFromFile(context, filename);
+        if (vn) {
+            libraryWidget.model.addVideoNode(vn);
+            libraryWidget.model.flush();
+        }
+
+        //var node = model.createVideoNode(nodeSelector.currentText);
+        //if (node && graph.lastClickedTile) {
+        //    graph.lastClickedTile.insertAfter(node);
+        //}
+        //model.flush();
+
+        // TODO: This doesn't work because the view hasn't reloaded the graph yet
+        //var tile = graph.view.tileForVideoNode(node);
+        //graph.lastClickedTile = tile;
+        //console.log("last tile", tile, node);
+    }
+
+    Action {
+        id: searchAction
+        shortcut: ":"
+        onTriggered: search()
+    }
+
+    //Keys.onPressed: {
+    //    if (event.key == Qt.Key_Colon) {
+    //        search();
+    //    } else if (event.key == Qt.Key_Escape) {
+    //        stopSearching();
+    //    } else if (event.key == Qt.Key_Enter) {
+    //        addSelected();
+    //    }
+    //}
 }
