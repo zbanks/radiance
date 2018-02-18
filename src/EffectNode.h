@@ -51,7 +51,7 @@ public:
 public slots:
     // Call this after changing
     // "file"
-    void initialize(QString);
+    void initialize(QVector<QStringList> passes);
     void onPrepareState(QSharedPointer<EffectNodeRenderState> state);
 signals:
     // This is emitted when it is done
