@@ -188,7 +188,7 @@ VideoNode *ImageNode::deserialize(Context *context, QJsonObject obj) {
 }
 
 bool ImageNode::canCreateFromFile(QString filename) {
-    return filename.endsWith(".gif", Qt::CaseInsensitive);
+    return QImageReader(filename).canRead();
 }
 
 VideoNode *ImageNode::fromFile(Context *context, QString filename) {

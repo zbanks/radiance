@@ -116,3 +116,9 @@ void OutputWindow::paintGL() {
     m_program->release();
     update();
 }
+
+void OutputWindow::keyPressEvent(QKeyEvent *ev) {
+    if (ev->key() == Qt::Key_Escape) {
+        setVisible(false);
+    }
+}
