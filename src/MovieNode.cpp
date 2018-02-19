@@ -629,5 +629,6 @@ VideoNode *MovieNode::fromFile(Context *context, QString filename) {
 QMap<QString, QString> MovieNode::customInstantiators() {
     auto m = QMap<QString, QString>();
     m.insert("Youtube", "YoutubeInstantiator.qml");
+    m.insert("MPV", "MPVInstantiator.qml");
     return m;
 }

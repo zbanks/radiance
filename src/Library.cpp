@@ -82,7 +82,7 @@ void Library::setFilter(QString filter) {
 
 bool Library::checkAgainstFilter(QString name) {
     if (m_filter.isEmpty()) return true;
-    if (name.startsWith(m_filter)) return true;
+    if (name.toLower().startsWith(m_filter.toLower())) return true;
     return false;
 }
 
@@ -121,8 +121,10 @@ void Library::populate(LibraryItem *item, QString currentDirectory) {
 void Library::addCustomInstantiators(LibraryItem *item, QMap<QString, QString> instantiators) {
     auto customItem = new LibraryItem("Custom", "", item);
     for (auto e = instantiators.begin(); e != instantiators.end(); e++) {
-        auto newItem = new LibraryItem(e.key(), e.value(), customItem);
-        customItem->appendChild(newItem);
+        if (checkAgainstFilter(e.key())) {
+            auto newItem = new LibraryItem(e.key(), e.value(), customItem);
+            customItem->appendChild(newItem);
+        }
     }
     if (customItem->childCount() || m_filter.isEmpty()) {
         item->appendChild(customItem);
