@@ -160,7 +160,7 @@ Item {
         var filename = librarytree.model.data(librarytree.selection.currentIndex, Library.FileRole);
 
         if (filename.substr(-4) == ".qml") {
-            var comp = Qt.createComponent(filename);
+            var comp = Qt.createComponent("Instantiators/" + filename);
 
             function finishCreation() {
                 if (comp.status == Component.Ready) {

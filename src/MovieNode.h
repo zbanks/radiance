@@ -83,7 +83,8 @@ private:
 class MovieNode
     : public VideoNode {
     Q_OBJECT
-    Q_PROPERTY(QString videoPath READ videoPath WRITE setVideoPath NOTIFY videoPathChanged)
+    Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QSize videoSize READ videoSize NOTIFY videoSizeChanged)
     Q_PROPERTY(qreal duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(qreal position READ position NOTIFY positionChanged WRITE setPosition)
@@ -93,7 +94,7 @@ class MovieNode
     friend class MovieNodeOpenGLWorker;
 
 public:
-    MovieNode(Context *context, QString videoPath);
+    MovieNode(Context *context, QString file, QString name=QString(""));
     MovieNode(const MovieNode &other);
     ~MovieNode();
 
@@ -127,13 +128,15 @@ public:
 
 public slots:
     QSize videoSize();
-    QString videoPath();
+    QString file();
+    QString name();
     qreal position();
     qreal duration();
     bool mute();
     bool pause();
-    void setVideoPath(QString videoPath);
+    void setFile(QString file);
     void setPosition(qreal position);
+    void setName(QString name);
     void setMute(bool mute);
     void setPause(bool pause);
 
@@ -146,7 +149,8 @@ protected slots:
     void onPauseChanged(bool pause);
 
 signals:
-    void videoPathChanged(QString videoPath);
+    void fileChanged(QString file);
+    void nameChanged(QString name);
     void videoSizeChanged(QSize size);
     void chainSizeChanged(QSize size);
     void positionChanged(qreal position);
@@ -157,7 +161,8 @@ signals:
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
-    QString m_videoPath;
+    QString m_file;
+    QString m_name;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
     QMap<QSharedPointer<Chain>, QSharedPointer<MovieNodeRenderState>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;

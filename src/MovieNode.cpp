@@ -11,9 +11,9 @@
 #include <QJsonObject>
 #include "Paths.h"
 
-MovieNode::MovieNode(Context *context, QString videoPath)
+MovieNode::MovieNode(Context *context, QString file, QString name)
     : VideoNode(context)
-    , m_videoPath(videoPath)
+    , m_name(name)
     , m_openGLWorker()
     , m_renderFbos()
     , m_blitShader()
@@ -22,11 +22,13 @@ MovieNode::MovieNode(Context *context, QString videoPath)
     , m_ready()
     , m_mute(true)
     , m_pause() {
+    setFile(file);
 }
 
 MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
-    , m_videoPath(other.m_videoPath)
+    , m_file(other.m_file)
+    , m_name(other.m_name)
     , m_openGLWorker(other.m_openGLWorker)
     , m_renderFbos(other.m_renderFbos)
     , m_blitShader(other.m_blitShader)
@@ -42,7 +44,8 @@ MovieNode::~MovieNode() {
 
 QJsonObject MovieNode::serialize() {
     QJsonObject o = VideoNode::serialize();
-    o.insert("videoPath", m_videoPath);
+    o.insert("file", m_file);
+    o.insert("name", m_name);
     return o;
 }
 
@@ -80,9 +83,14 @@ void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPo
     }
 }
 
-QString MovieNode::videoPath() {
+QString MovieNode::file() {
     Q_ASSERT(QThread::currentThread() == thread());
-    return m_videoPath;
+    return m_file;
+}
+
+QString MovieNode::name() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_name;
 }
 
 qreal MovieNode::position() {
@@ -168,15 +176,30 @@ void MovieNode::onPauseChanged(bool pause) {
     }
 }
 
-void MovieNode::setVideoPath(QString videoPath) {
+void MovieNode::setFile(QString file) {
     Q_ASSERT(QThread::currentThread() == thread());
-    if(videoPath != m_videoPath) {
+    if (!file.contains("://")) {
+        file = Paths::contractLibraryPath(file);
+    }
+    if(file != m_file) {
         {
             QMutexLocker locker(&m_stateLock);
-            m_videoPath = videoPath;
+            m_file = file;
         }
 
-        emit videoPathChanged(videoPath);
+        emit fileChanged(file);
+    }
+}
+
+void MovieNode::setName(QString name) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if(name != m_name) {
+        {
+            QMutexLocker locker(&m_stateLock);
+            m_name = name;
+        }
+
+        emit nameChanged(name);
     }
 }
 
@@ -442,29 +465,31 @@ void MovieNodeOpenGLWorker::drawFrame() {
 }
 
 void MovieNodeOpenGLWorker::onVideoChanged() {
-    qDebug() << "LOAD" << m_p->m_videoPath;
+    qDebug() << "LOAD" << m_p->m_file;
     if (!m_mpv_gl) return; // Wait for initialization
     QString filename;
     {
         QMutexLocker locker(&m_p->m_stateLock);
-        if (m_p->m_videoPath.isEmpty()) return;
-        //filename = QString("../resources/videos/%1").arg(m_p->m_videoPath);
-        if (m_p->m_videoPath.contains("|")) {
-            auto parts = m_p->m_videoPath.split("|");
-            filename = QString("%1").arg(parts.at(0));
+        filename = m_p->m_file;
+        if (filename.isEmpty()) return;
+        if (!filename.contains("://")) {
+            filename = Paths::expandLibraryPath(m_p->m_file);
+        }
+        //filename = QString("../resources/videos/%1").arg(m_p->m_file);
+        if (filename.contains("|")) {
+            auto parts = filename.split("|");
+            filename = parts.at(0);
             for (int i = 1; i + 1 < parts.count(); i += 2) {
                 auto k = parts.at(i);
                 auto v = parts.at(i + 1);
-                // This is a bit of hack, if the videoPath is changed the properties will not be cleared
+                // This is a bit of hack, if the file is changed the properties will not be cleared
                 mpv_set_property_string(m_mpv, k.toLatin1().data(), v.toLatin1().data());
             }
-        } else {
-            filename = QString("%1").arg(m_p->m_videoPath);
         }
     }
 
     QFileInfo check_file(filename);
-    if(!(check_file.exists() && check_file.isFile())) {
+    if(!filename.contains("://") && !(check_file.exists() && check_file.isFile())) {
         qWarning() << "Could not find" << filename;
         emit warning(QString("Could not find %1").arg(filename));
     }
@@ -555,23 +580,36 @@ QString MovieNode::typeName() {
 }
 
 VideoNode *MovieNode::deserialize(Context *context, QJsonObject obj) {
-    QString name = obj.value("videoPath").toString();
+    QString file = obj.value("file").toString();
     if (obj.isEmpty()) {
         return nullptr;
     }
-    MovieNode *e = new MovieNode(context, name);
+    MovieNode *e = new MovieNode(context, file);
+    auto name = obj.value("name").toString();
+    if (!name.isEmpty()) {
+        e->setName(name);
+    }
     return e;
 }
 
 bool MovieNode::canCreateFromFile(QString filename) {
-    return filename.endsWith(".mp4", Qt::CaseInsensitive);
+    QStringList extensions({".mp4", ".mkv"});
+    for (auto extension = extensions.begin(); extension != extensions.end(); extension++) {
+        if (filename.endsWith(*extension, Qt::CaseInsensitive)) return true;
+    }
+    return false;
 }
 
 VideoNode *MovieNode::fromFile(Context *context, QString filename) {
     MovieNode *e = new MovieNode(context, filename);
+    if (e != nullptr) {
+        e->setName(QFileInfo(e->file()).baseName());
+    }
     return e;
 }
 
 QMap<QString, QString> MovieNode::customInstantiators() {
-    return QMap<QString, QString>();
+    auto m = QMap<QString, QString>();
+    m.insert("Youtube", "YoutubeInstantiator.qml");
+    return m;
 }
