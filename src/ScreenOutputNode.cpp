@@ -8,6 +8,8 @@ ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
     , m_outputWindow(nullptr) {
     m_outputWindow = new OutputWindow(this);
 
+    connect(m_outputWindow, &OutputWindow::screenNameChanged, this, &ScreenOutputNode::screenNameChanged);
+
     reload();
     connect(&m_reloader, &QTimer::timeout, this, &ScreenOutputNode::reload);
     m_reloader.setInterval(1000); // Reload screens every 1000 ms
@@ -48,8 +50,15 @@ void ScreenOutputNode::reload() {
 }
 
 QStringList ScreenOutputNode::availableScreens() {
-    qDebug() << m_screenNameStrings;
     return m_screenNameStrings;
+}
+
+QString ScreenOutputNode::screenName() {
+    return m_outputWindow->screenName();
+}
+
+void ScreenOutputNode::setScreenName(QString screenName) {
+    m_outputWindow->setScreenName(screenName);
 }
 
 QString ScreenOutputNode::typeName() {

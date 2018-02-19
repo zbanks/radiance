@@ -43,6 +43,12 @@ VideoNodeTile {
         ComboBox {
             id: screenSelector;
             model: tile.videoNode ? tile.videoNode.availableScreens : null;
+            onModelChanged: {
+                var i = model.indexOf(tile.videoNode.screenName);
+                if (i >= 0) {
+                    screenSelector.currentIndex = i;
+                }
+            }
         }
 
         RowLayout {
@@ -50,11 +56,14 @@ VideoNodeTile {
             CheckBox {
                 id: visibleCheck
                 checked: tile.videoNode ? tile.videoNode.visible : false;
-                Binding {
-                    target: tile.videoNode ? tile.videoNode: null
-                    property: "visible"
-                    value: visibleCheck.checked
+
+                onCheckedChanged: {
+                    if (checked) {
+                        tile.videoNode.screenName = screenSelector.currentText;
+                    }
+                    tile.videoNode.visible = checked;
                 }
+
                 style: CheckBoxStyle {
                     label: Text {
                         color: "#ddd"

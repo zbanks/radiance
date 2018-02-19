@@ -7,8 +7,6 @@
 
 class OutputWindow : public QOpenGLWindow {
     Q_OBJECT
-    Q_PROPERTY(QString screenName READ screenName WRITE setScreenName NOTIFY screenNameChanged)
-    Q_PROPERTY(bool found READ found NOTIFY foundChanged)
 
 protected:
     QString m_screenName;

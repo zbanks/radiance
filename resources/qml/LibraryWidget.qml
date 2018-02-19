@@ -188,6 +188,7 @@ Item {
                 graph.insertVideoNode(vn);
             }
         }
+        stopSearching();
     }
 
     Action {
@@ -195,14 +196,4 @@ Item {
         shortcut: ":"
         onTriggered: search()
     }
-
-    //Keys.onPressed: {
-    //    if (event.key == Qt.Key_Colon) {
-    //        search();
-    //    } else if (event.key == Qt.Key_Escape) {
-    //        stopSearching();
-    //    } else if (event.key == Qt.Key_Enter) {
-    //        addSelected();
-    //    }
-    //}
 }

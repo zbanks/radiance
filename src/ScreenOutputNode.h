@@ -9,6 +9,7 @@ class ScreenOutputNode
     Q_OBJECT
     Q_PROPERTY(bool visible READ visible WRITE setVisible NOTIFY visibleChanged);
     Q_PROPERTY(QStringList availableScreens READ availableScreens NOTIFY availableScreensChanged);
+    Q_PROPERTY(QString screenName READ screenName WRITE setScreenName NOTIFY screenNameChanged);
 
 public:
     ScreenOutputNode(Context *context, QSize chainSize);
@@ -42,10 +43,13 @@ public slots:
     bool visible();
     void setVisible(bool visible);
     QStringList availableScreens();
+    QString screenName();
+    void setScreenName(QString screenName);
 
 signals:
     void visibleChanged(bool visible);
     void availableScreensChanged(QStringList availableScreens);
+    void screenNameChanged();
 
 protected:
     OutputWindow *m_outputWindow;

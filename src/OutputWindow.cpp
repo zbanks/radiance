@@ -59,6 +59,8 @@ void OutputWindow::reload() {
         }
     }
 
+    setVisible(found);
+
     if (found != m_found) {
         m_found = found;
         emit foundChanged(found);
