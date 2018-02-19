@@ -169,9 +169,9 @@ ApplicationWindow {
                 RowLayout {
                     LibraryWidget {
                         id: libraryWidget
+                        graph: graph;
                         registry: registry
                         context: context
-                        model: model
                         width: 200
                         
                         Layout.fillHeight: true

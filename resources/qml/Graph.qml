@@ -11,6 +11,21 @@ Item {
     Layout.fillWidth: true;
     Layout.fillHeight: true;
 
+    function insertVideoNode(videoNode) {
+        model.addVideoNode(videoNode);
+        if (lastClickedTile) {
+            var edges = model.edges;
+            for (var i=0; i<edges.length; i++) {
+                if (edges[i].fromVertex == lastClickedTile.videoNode) {
+                    model.addEdge(videoNode, edges[i].toVertex, edges[i].toInput);
+                }
+            }
+            model.addEdge(lastClickedTile.videoNode, videoNode, 0);
+        }
+        model.flush();
+        view.tileForVideoNode(videoNode).forceActiveFocus();
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent

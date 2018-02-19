@@ -7,8 +7,8 @@ import radiance 1.0
 
 Item {
     id: libraryWidget
+    property var graph
     property var registry
-    property var model
     property var context
 
     ColumnLayout {
@@ -164,7 +164,7 @@ Item {
 
             function finishCreation() {
                 if (comp.status == Component.Ready) {
-                    var obj = comp.createObject(libraryWidget, {"model": model, "registry": registry, "context": context});
+                    var obj = comp.createObject(libraryWidget, {"graph": graph, "registry": registry, "context": context});
                     if (obj == null) {
                         // Error Handling
                         console.log("Error creating object");
@@ -185,15 +185,9 @@ Item {
         } else {
             var vn = registry.createFromFile(context, filename);
             if (vn) {
-                libraryWidget.model.addVideoNode(vn);
-                libraryWidget.model.flush();
+                graph.insertVideoNode(vn);
             }
         }
-
-        // TODO: This doesn't work because the view hasn't reloaded the graph yet
-        //var tile = graph.view.tileForVideoNode(node);
-        //graph.lastClickedTile = tile;
-        //console.log("last tile", tile, node);
     }
 
     Action {
