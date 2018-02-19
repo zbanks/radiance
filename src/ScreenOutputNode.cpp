@@ -68,3 +68,9 @@ bool ScreenOutputNode::canCreateFromFile(QString filename) {
 VideoNode *ScreenOutputNode::fromFile(Context *context, QString filename) {
     return nullptr;
 }
+
+QMap<QString, QString> ScreenOutputNode::customInstantiators() {
+    auto m = QMap<QString, QString>();
+    m.insert("ScreenOutput", "ScreenOutputInstantiator.qml");
+    return m;
+}

@@ -153,19 +153,42 @@ Item {
         searchBox.focus = false;
     }
 
+    function finishCreation() {
+    }
+
     function addSelected() {
         var filename = librarytree.model.data(librarytree.selection.currentIndex, Library.FileRole);
-        var vn = registry.createFromFile(context, filename);
-        if (vn) {
-            libraryWidget.model.addVideoNode(vn);
-            libraryWidget.model.flush();
-        }
 
-        //var node = model.createVideoNode(nodeSelector.currentText);
-        //if (node && graph.lastClickedTile) {
-        //    graph.lastClickedTile.insertAfter(node);
-        //}
-        //model.flush();
+        if (filename.substr(-4) == ".qml") {
+            var comp = Qt.createComponent(filename);
+
+            function finishCreation() {
+                if (comp.status == Component.Ready) {
+                    var obj = comp.createObject(libraryWidget, {"model": model, "registry": registry, "context": context});
+                    if (obj == null) {
+                        // Error Handling
+                        console.log("Error creating object");
+                    }
+                } else if (comp.status == Component.Error) {
+                    // Error Handling
+                    console.log("Error loading component:", comp.errorString());
+                }
+            }
+
+            if (comp.status == Component.Ready) {
+                finishCreation();
+            } else if (comp.status == Component.Loading) {
+                comp.statusChanged.connect(finishCreation);
+            } else if (comp.status == Component.Error) {
+                console.log("Error loading component:", comp.errorString());
+            }
+        } else {
+            var vn = registry.createFromFile(context, filename);
+            if (vn) {
+                libraryWidget.model.addVideoNode(vn);
+                libraryWidget.model.flush();
+            }
+        }
 
         // TODO: This doesn't work because the view hasn't reloaded the graph yet
         //var tile = graph.view.tileForVideoNode(node);

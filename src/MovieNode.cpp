@@ -572,3 +572,6 @@ VideoNode *MovieNode::fromFile(Context *context, QString filename) {
     return e;
 }
 
+QMap<QString, QString> MovieNode::customInstantiators() {
+    return QMap<QString, QString>();
+}

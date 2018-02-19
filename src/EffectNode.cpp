@@ -439,3 +439,7 @@ VideoNode *EffectNode::fromFile(Context *context, QString file) {
     EffectNode *e = new EffectNode(context, file);
     return e;
 }
+
+QMap<QString, QString> EffectNode::customInstantiators() {
+    return QMap<QString, QString>();
+}

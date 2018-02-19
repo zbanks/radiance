@@ -121,6 +121,10 @@ public:
     // Returns nullptr if a VideoNode cannot be create from the given filename
     static VideoNode *fromFile(Context *context, QString filename);
 
+    // Returns QML filenames that can be loaded
+    // to instantiate custom instances of this VideoNode
+    static QMap<QString, QString> customInstantiators();
+
 public slots:
     QSize videoSize();
     QString videoPath();

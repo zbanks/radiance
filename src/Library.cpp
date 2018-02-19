@@ -118,11 +118,25 @@ void Library::populate(LibraryItem *item, QString currentDirectory) {
     }
 }
 
+void Library::addCustomInstantiators(LibraryItem *item, QMap<QString, QString> instantiators) {
+    auto customItem = new LibraryItem("Custom", "", item);
+    for (auto e = instantiators.begin(); e != instantiators.end(); e++) {
+        auto newItem = new LibraryItem(e.key(), e.value(), customItem);
+        customItem->appendChild(newItem);
+    }
+    if (customItem->childCount() || m_filter.isEmpty()) {
+        item->appendChild(customItem);
+    } else {
+        delete customItem;
+    }
+}
+
 void Library::rebuild() {
     beginResetModel();
     delete m_rootItem;
     m_rootItem = new LibraryItem("", "");
     populate(m_rootItem, Paths::library());
+    addCustomInstantiators(m_rootItem, m_registry->instantiators());
     endResetModel();
 }
 

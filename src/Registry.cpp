@@ -31,6 +31,11 @@ template <class T> void Registry::registerType() {
         .fromFile = T::fromFile,
     };
     m_factories.append(f);
+
+    auto instantiators = T::customInstantiators();
+    for (auto e = instantiators.begin(); e != instantiators.end(); e++) {
+        m_instantiators.insert(e.key(), e.value());
+    }
 }
 
 VideoNode *Registry::deserialize(Context *context, QString json) {
@@ -75,4 +80,8 @@ VideoNode *Registry::createFromFile(Context *context, QString filename) {
 
 Library *Registry::library() {
     return m_library;
+}
+
+const QMap<QString, QString> Registry::instantiators() const {
+    return m_instantiators;
 }

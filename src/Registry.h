@@ -37,10 +37,12 @@ public slots:
     VideoNode *deserialize(Context *context, QJsonObject object);
     bool canCreateFromFile(QString filename);
     VideoNode *createFromFile(Context *context, QString filename);
+    const QMap<QString, QString> instantiators() const;
 
     Library *library();
 
 protected:
     QList<TypeFactory> m_factories;
     Library *m_library;
+    QMap<QString, QString> m_instantiators;
 };

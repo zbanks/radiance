@@ -60,6 +60,7 @@ signals:
 protected:
     void rebuild();
     void populate(LibraryItem *item, QString currentDirectory);
+    void addCustomInstantiators(LibraryItem *item, QMap<QString, QString> instantiators);
     LibraryItem *itemFromFile(QString filename, LibraryItem *parent);
     LibraryItem *m_rootItem;
     Registry *m_registry;

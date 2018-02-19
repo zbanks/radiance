@@ -196,3 +196,6 @@ VideoNode *ImageNode::fromFile(Context *context, QString filename) {
     return e;
 }
 
+QMap<QString, QString> ImageNode::customInstantiators() {
+    return QMap<QString, QString>();
+}
