@@ -15,8 +15,7 @@ Dialog {
             name: textbox.text
         }));
         if (vn) {
-            libraryWidget.model.addVideoNode(vn);
-            libraryWidget.model.flush();
+            graph.insertVideoNode(vn);
         } else {
             console.log("Could not instantiate MovieNode");
         }
