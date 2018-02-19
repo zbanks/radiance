@@ -22,7 +22,24 @@ MovieNode::MovieNode(Context *context, QString file, QString name)
     , m_ready()
     , m_mute(true)
     , m_pause() {
+
+    m_openGLWorkerContext = OpenGLWorkerContext::create();
+
+    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(this),&QObject::deleteLater);
+
     setFile(file);
+
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
+    connect(this, &MovieNode::fileChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
+    connect(this, &MovieNode::chainSizeChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onChainSizeChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
+
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
+    Q_ASSERT(result);
 }
 
 MovieNode::MovieNode(const MovieNode &other)
@@ -64,6 +81,7 @@ void MovieNode::onInitialized() {
 void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     QMutexLocker locker(&m_stateLock);
     for (int i=0; i<added.count(); i++) {
+        // WTF is going on here
         auto state = QSharedPointer<MovieNodeRenderState>::create();
         m_openGLWorker->prepareState(state);
         m_renderFbos.insert(added.at(i), state);

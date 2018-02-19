@@ -11,7 +11,8 @@ Dialog {
     onAccepted: {
         var vn = registry.deserialize(context, JSON.stringify({
             type: "MovieNode",
-            file: "ytdl://ytsearch:" + textbox.text
+            file: "ytdl://ytsearch:" + textbox.text,
+            name: textbox.text
         }));
         if (vn) {
             libraryWidget.model.addVideoNode(vn);
