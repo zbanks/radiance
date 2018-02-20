@@ -421,9 +421,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     // corresponding vertex's inputs
     QVector<QVector<int>> inputs;
 
-    auto & vao = chain->vao();
-    if(!vao.isCreated())
-        vao.create();
+    auto vao = chain->vao();
 
     // XXX
     // This is the only place that model uses context
@@ -462,7 +460,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
                 }
             }
         }
-        vao.bind();
+        vao->bind();
         resultTextures[i] = vertex->paint(chain, inputTextures);
         //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
@@ -473,8 +471,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
             result.insert(vertices.at(i)->id(), resultTextures.at(i));
         }
     }
-    vao.release();
-    vao.destroy();
+    vao->release();
     return result;
 }
 

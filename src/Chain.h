@@ -48,11 +48,11 @@ public:
 public slots:
     GLuint noiseTexture();
     GLuint blankTexture();
-    QOpenGLVertexArrayObject &vao();
+    QOpenGLVertexArrayObject *vao();
 
 protected:
-    QOpenGLTexture m_noiseTexture;
-    QOpenGLTexture m_blankTexture;
-    QOpenGLVertexArrayObject  m_vao;
+    QOpenGLTexture *m_noiseTexture;
+    QOpenGLTexture *m_blankTexture;
+    QOpenGLVertexArrayObject  *m_vao;
     QSize m_size;
 };
