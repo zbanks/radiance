@@ -9,6 +9,7 @@ ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
     m_outputWindow = new OutputWindow(this);
 
     connect(m_outputWindow, &OutputWindow::screenNameChanged, this, &ScreenOutputNode::screenNameChanged);
+    connect(m_outputWindow, &OutputWindow::shownChanged, this, &ScreenOutputNode::shownChanged);
 
     reload();
     connect(&m_reloader, &QTimer::timeout, this, &ScreenOutputNode::reload);
@@ -24,13 +25,12 @@ ScreenOutputNode::~ScreenOutputNode() {
     delete m_outputWindow;
 }
 
-void ScreenOutputNode::setVisible(bool visible) {
-    m_outputWindow->setVisible(visible);
-    emit visibleChanged(visible);
+void ScreenOutputNode::setShown(bool shown) {
+    m_outputWindow->setShown(shown);
 }
 
-bool ScreenOutputNode::visible() {
-    return m_outputWindow->isVisible();
+bool ScreenOutputNode::shown() {
+    return m_outputWindow->shown();
 }
 
 void ScreenOutputNode::reload() {

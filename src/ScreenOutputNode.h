@@ -7,7 +7,7 @@
 class ScreenOutputNode
     : public OutputNode {
     Q_OBJECT
-    Q_PROPERTY(bool visible READ visible WRITE setVisible NOTIFY visibleChanged);
+    Q_PROPERTY(bool shown READ shown WRITE setShown NOTIFY shownChanged);
     Q_PROPERTY(QStringList availableScreens READ availableScreens NOTIFY availableScreensChanged);
     Q_PROPERTY(QString screenName READ screenName WRITE setScreenName NOTIFY screenNameChanged);
 
@@ -40,14 +40,14 @@ public:
     static QMap<QString, QString> customInstantiators();
 
 public slots:
-    bool visible();
-    void setVisible(bool visible);
+    bool shown();
+    void setShown(bool shown);
     QStringList availableScreens();
     QString screenName();
     void setScreenName(QString screenName);
 
 signals:
-    void visibleChanged(bool visible);
+    void shownChanged(bool shown);
     void availableScreensChanged(QStringList availableScreens);
     void screenNameChanged();
 

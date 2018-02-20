@@ -8,7 +8,9 @@
 OutputWindow::OutputWindow(OutputNode *videoNode)
     : m_screenName("")
     , m_found(false)
-    , m_videoNode(videoNode) {
+    , m_videoNode(videoNode)
+    , m_shown(false) {
+
     connect(this, &QWindow::screenChanged, this, &OutputWindow::onScreenChanged);
 
     setFlags(Qt::Dialog);
@@ -59,16 +61,29 @@ void OutputWindow::reload() {
         }
     }
 
-    setVisible(found);
-
     if (found != m_found) {
         m_found = found;
+        setVisible(m_shown && m_found);
         emit foundChanged(found);
     }
 }
 
 bool OutputWindow::found() {
     return m_found;
+}
+
+bool OutputWindow::shown() {
+    return m_shown;
+}
+
+void OutputWindow::setShown(bool shown) {
+    if (shown != m_shown) {
+        m_shown = shown;
+
+        setVisible(m_shown && m_found);
+
+        emit shownChanged(shown);
+    }
 }
 
 void OutputWindow::initializeGL()
@@ -121,6 +136,13 @@ void OutputWindow::paintGL() {
 
 void OutputWindow::keyPressEvent(QKeyEvent *ev) {
     if (ev->key() == Qt::Key_Escape) {
-        setVisible(false);
+        setShown(false);
     }
+}
+
+bool OutputWindow::event(QEvent *e) {
+    if (e->type() == QEvent::Close) {
+        setShown(false);
+    }
+    return QOpenGLWindow::event(e);
 }

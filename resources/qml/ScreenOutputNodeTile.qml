@@ -56,13 +56,20 @@ VideoNodeTile {
             Layout.fillWidth: true
             CheckBox {
                 id: visibleCheck
-                checked: tile.videoNode ? tile.videoNode.visible : false;
+                checked: tile.videoNode ? tile.videoNode.shown : false;
+
+                Connections {
+                    target: tile.videoNode
+                    onShownChanged: {
+                        visibleCheck.checked = shown;
+                    }
+                }
 
                 onCheckedChanged: {
                     if (checked) {
                         tile.videoNode.screenName = screenSelector.currentText;
                     }
-                    tile.videoNode.visible = checked;
+                    tile.videoNode.shown = checked;
                 }
 
                 style: CheckBoxStyle {
