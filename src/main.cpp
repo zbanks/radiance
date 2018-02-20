@@ -1,17 +1,23 @@
-#include <QGuiApplication>
+#include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QDir>
+#include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQuickWindow>
-#include <QThread>
 #include <QQmlContext>
+#include <QQuickWindow>
+#include <QSize>
+#include <QThread>
+#include "BaseVideoNodeTile.h"
+#include "EffectNode.h"
+#include "FramebufferVideoNodeRender.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
-#include "QQuickVideoNodePreview.h"
-#include "VideoNode.h"
-#include "BaseVideoNodeTile.h"
-#include "View.h"
 #include "Paths.h"
+#include "QQuickVideoNodePreview.h"
 #include "Registry.h"
+#include "Timebase.h"
+#include "VideoNode.h"
+#include "View.h"
 
 #ifdef USE_RTMIDI
 #include "MidiController.h"
@@ -25,29 +31,11 @@
 #include "Lux.h"
 #endif
 
-int main(int argc, char *argv[]) {
-    QCoreApplication::setOrganizationName("Radiance");
-    QCoreApplication::setOrganizationDomain("radiance.video");
-    QCoreApplication::setApplicationName("Radiance");
-    // Use OpenGL 3.2 core profile
-    // (otherwise MacOS falls back to 2.1)
-    {
-        auto format = QSurfaceFormat::defaultFormat();
-        format.setVersion(3, 2);
-        format.setProfile(QSurfaceFormat::CoreProfile);
-        QSurfaceFormat::setDefaultFormat(format);
-    }
-    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-    QGuiApplication app(argc, argv);
+#define IMG_FORMAT ".gif"
 
-    Paths::initialize();
-
-#ifndef USE_MPV
-    qInfo() << "radiance compiled without mpv support";
-#endif
-
-    QThread::currentThread()->setObjectName("mainThread");
-
+static int
+runRadianceGui(QGuiApplication *app) {
+    // Set up QML types
     qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterUncreatableType<Library>("radiance", 1, 0, "Library", "Library should be accessed through the Registry");
     qmlRegisterType<Context>("radiance", 1, 0, "Context");
@@ -58,12 +46,12 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
 
-    bool hasMidi = false;
 #ifdef USE_RTMIDI
     qmlRegisterType<MidiController>("radiance", 1, 0, "MidiController");
-    hasMidi = true;
+    bool hasMidi = true;
 #else
     qInfo() << "radiance compiled without midi support";
+    bool hasMidi = false;
 #endif
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
 
@@ -87,7 +75,7 @@ int main(int argc, char *argv[]) {
     Context context;
     {
         QQmlEngine engine;
-        QObject::connect(&engine, &QQmlEngine::quit, &app, &QGuiApplication::quit);
+        QObject::connect(&engine, &QQmlEngine::quit, app, &QGuiApplication::quit);
         engine.rootContext()->setContextProperty("defaultContext", &context);
         QQmlComponent component(&engine, QUrl(Paths::qml() + "/application.qml"));
         auto c = component.create();
@@ -100,6 +88,168 @@ int main(int argc, char *argv[]) {
         // TODO put this into a singleton
         c->setProperty("hasMidi", hasMidi);
 
-        app.exec();
+        app->exec();
+    }
+    return 0;
+}
+
+static void
+generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
+    QFile outputHtml(outputDir.filePath("index.html"));
+    outputHtml.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream html(&outputHtml);
+    html << "<!doctype html>\n";
+    html << "<html><body>\n";
+    html << "<style>\n";
+    html << "body { color: #FFF; background-color: #111; font-family: Monospace; width: 640px; margin: auto; }\n";
+    html << "h1, td, th { padding: 5px; }\n";
+    html << "</style>\n";
+    html << "<h1>radiance library</h1>\n";
+    html << "<table><tr><th>name</th><th>0%</th><th>100%</th><th>gif</th><th>description</th><tr>\n";
+
+    for (auto videoNode : videoNodes) {
+        QString name = videoNode->property("name").toString();
+        QString description = videoNode->property("description").toString();
+        QString author = videoNode->property("author").toString();
+
+        html << "<tr><td>" << name << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
+        html << "    <td class='desc'>" << description;
+        if (!author.isNull()) {
+            html << "<p>[" << author << "]</p>";
+        }
+        html << "</td>\n";
+    }
+
+    html << "</table>\n";
+    html << "</body></html>\n";
+}
+
+static int
+runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirString, QSize renderSize) {
+    QDir outputDir;
+    outputDir.mkpath(outputDirString);
+
+    Registry registry;
+
+    Context context;
+    context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
+
+    QSharedPointer<Chain> chain(new Chain(renderSize));
+
+    Model model;
+    //model.loadFile(&context, &registry, stateFilename);
+    model.addChain(chain);
+
+    VideoNode *onblackEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/onblack.glsl\", \"intensity\": 1.0}");
+    VideoNode *highlightEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/afixhighlight.glsl\", \"intensity\": 1.0}");
+    VideoNode *baseEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/test.glsl\", \"intensity\": 0.7}");
+    if (!onblackEffect || !highlightEffect || !baseEffect) {
+        qInfo() << "Unable to set up nodes";
+        return EXIT_FAILURE;
+    }
+
+    VideoNode *renderNode = registry.createFromFile(&context, nodeFilename);
+    EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
+    if (!renderNode) {
+        qInfo() << "Unable to open:" << nodeFilename;
+        return EXIT_FAILURE;
+    }
+
+    // Build up model
+    model.addVideoNode(onblackEffect);
+    model.addVideoNode(highlightEffect);
+    model.addVideoNode(baseEffect);
+    model.addVideoNode(renderNode);
+    model.addEdge(baseEffect, renderNode, 0);
+    model.addEdge(renderNode, highlightEffect, 0);
+    model.addEdge(highlightEffect, onblackEffect, 0);
+    model.flush();
+    qInfo() << model.serialize();
+
+    // Render
+    FramebufferVideoNodeRender imgRender(renderSize);
+    for (int i = 0; i <= 100; i++) {
+        if (effectNode != nullptr)
+            effectNode->setIntensity(i / 50.);
+
+        context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
+
+        auto modelCopy = model.createCopyForRendering(chain);
+        auto rendering = modelCopy.render(chain);
+
+        auto outputTextureId = rendering.value(onblackEffect->id(), 0);
+        if (outputTextureId != 0) {
+            QImage img = imgRender.render(outputTextureId);
+            QString filename = outputDir.filePath(QString("%1.png").arg(QString::number(i)));
+            img.save(filename);
+        }
+    }
+
+    generateHtml(outputDir, {renderNode});
+
+    return 0;
+}
+
+int
+main(int argc, char *argv[]) {
+    QCoreApplication::setOrganizationName("Radiance");
+    QCoreApplication::setOrganizationDomain("radiance.video");
+    QCoreApplication::setApplicationName("Radiance");
+    // Use OpenGL 3.2 core profile
+    // (otherwise MacOS falls back to 2.1)
+    {
+        auto format = QSurfaceFormat::defaultFormat();
+        format.setVersion(3, 2);
+        format.setProfile(QSurfaceFormat::CoreProfile);
+        QSurfaceFormat::setDefaultFormat(format);
+    }
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+    QGuiApplication app(argc, argv);
+
+    Paths::initialize();
+
+#ifndef USE_MPV
+    qInfo() << "radiance compiled without mpv support";
+#endif
+
+    QThread::currentThread()->setObjectName("mainThread");
+
+    QCommandLineParser parser;
+    parser.addHelpOption();
+
+    const QCommandLineOption outputDirOption(QStringList() << "o" << "output", "Output Directory", "path");
+    parser.addOption(outputDirOption);
+    //const QCommandLineOption stateOption(QStringList() << "s" << "state", "Load this state.json file", "json");
+    //parser.addOption(stateOption);
+    const QCommandLineOption nodeFilenameOption(QStringList() << "n" << "node", "Render this file", "file");
+    parser.addOption(nodeFilenameOption);
+    const QCommandLineOption sizeOption(QStringList() << "s" << "size", "Render using this size [128x128]", "wxh");
+    parser.addOption(sizeOption);
+
+    parser.process(app);
+
+    QString outputDirString("render_output");
+    if (parser.isSet(outputDirOption)) {
+        outputDirString = parser.value(outputDirOption);
+    }
+
+    QSize renderSize(128, 128);
+    if (parser.isSet(sizeOption)) {
+        QString rawSize = parser.value(sizeOption);
+        int x = rawSize.indexOf('x');
+        if (x >= 0) {
+            renderSize.rwidth() = rawSize.mid(x + 1).toInt();
+            renderSize.rheight() = rawSize.left(x).toInt();
+        }
+        //TODO: handle failure
+    }
+
+    if (parser.isSet(nodeFilenameOption)) {
+        return runRadianceCli(&app, parser.value(nodeFilenameOption), outputDirString, renderSize);
+    } else {
+        return runRadianceGui(&app);
     }
 }
