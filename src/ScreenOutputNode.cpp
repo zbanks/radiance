@@ -66,7 +66,7 @@ QString ScreenOutputNode::typeName() {
 }
 
 VideoNode *ScreenOutputNode::deserialize(Context *context, QJsonObject obj) {
-    ScreenOutputNode *e = new ScreenOutputNode(context, QSize(500, 500));
+    ScreenOutputNode *e = new ScreenOutputNode(context, QSize(640,480));
     return e;
 }
 

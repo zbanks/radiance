@@ -44,6 +44,7 @@ VideoNodeTile {
             id: screenSelector;
             model: tile.videoNode ? tile.videoNode.availableScreens : null;
             onModelChanged: {
+                if (!tile.videoNode) return;
                 var i = model.indexOf(tile.videoNode.screenName);
                 if (i >= 0) {
                     screenSelector.currentIndex = i;

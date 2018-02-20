@@ -78,10 +78,6 @@ void Model::disownNode(VideoNode *videoNode) {
     if(!videoNode)
         return;
 
-    auto requestedChains = videoNode->requestedChains();
-    for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
-        m_chains.removeAll(*c);
-    }
     disconnect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
     disconnect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
     disconnect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
@@ -90,6 +86,16 @@ void Model::disownNode(VideoNode *videoNode) {
     disconnect(videoNode, &VideoNode::message, this, &Model::onMessage);
     disconnect(videoNode, &VideoNode::warning, this, &Model::onWarning);
     disconnect(videoNode, &VideoNode::fatal, this, &Model::onFatal);
+
+    auto requestedChains = videoNode->requestedChains();
+    auto chains = m_chains;
+    for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
+        m_chains.removeAll(*c);
+    }
+
+    if (chains != m_chains) {
+        emit chainsChanged(m_chains);
+    }
 }
 
 void Model::onMessage(QString str) {
