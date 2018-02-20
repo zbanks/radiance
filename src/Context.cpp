@@ -39,7 +39,7 @@ OpenGLWorkerContext *Context::openGLWorkerContext() {
 
 Context::~Context() {
     delete m_settings;
-    //delete m_outputSettings;
-    delete m_timebase;
     delete m_audio;
+    delete m_timebase;
+    //delete m_outputSettings;
 }

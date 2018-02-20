@@ -3,6 +3,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QThread>
+#include <QQmlContext>
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "QQuickVideoNodePreview.h"
@@ -78,15 +79,27 @@ int main(int argc, char *argv[]) {
     qmlRegisterUncreatableType<Controls>("radiance", 1, 0, "Controls", "Controls cannot be instantiated");
     qRegisterMetaType<Controls::Control>("Controls::Control");
 
-    QQmlApplicationEngine engine(QUrl(Paths::qml() + "/application.qml"));
+    // We have to create the context here
+    // (as opposed to in QML)
+    // because we need to guarantee its life
+    // beyond that of the Model / VideoNodes that reference it
+    // and there is no way to e.g. parent it like that in QML
+    Context context;
+    {
+        QQmlEngine engine;
+        QObject::connect(&engine, &QQmlEngine::quit, &app, &QGuiApplication::quit);
+        engine.rootContext()->setContextProperty("defaultContext", &context);
+        QQmlComponent component(&engine, QUrl(Paths::qml() + "/application.qml"));
+        auto c = component.create();
+        if(c == nullptr) {
+            qFatal("Failed to load main QML application");
+            return 1;
+        }
+        engine.setObjectOwnership(c, QQmlEngine::JavaScriptOwnership);
 
-    if(engine.rootObjects().isEmpty()) {
-        qFatal("Failed to load main QML application");
-        return 1;
+        // TODO put this into a singleton
+        c->setProperty("hasMidi", hasMidi);
+
+        app.exec();
     }
-
-    // TODO put these into a singleton
-    engine.rootObjects().last()->setProperty("hasMidi", hasMidi);
-
-    app.exec();
 }

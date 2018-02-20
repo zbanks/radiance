@@ -19,10 +19,6 @@ ApplicationWindow {
         previewWindow: window;
     }
 
-    Context {
-        id: context;
-    }
-
     Registry {
         id: registry;
     }
@@ -61,7 +57,7 @@ ApplicationWindow {
         shortcut: "Ctrl+R"
         onTriggered: {
             console.log("Loading state from file...");
-            model.loadFile(context, registry, "radiance_state.json");
+            model.loadFile(defaultContext, registry, "radiance_state.json");
             model.flush();
         }
     }
@@ -88,13 +84,13 @@ ApplicationWindow {
         loadAction.trigger();
         if (model.vertices.length == 0) {
             // If the state was empty, then open up a few nodes as a demo
-            var n1 = registry.deserialize(context, "{\"type\": \"ImageNode\", \"imagePath\": \"nyancat.gif\"}");
+            var n1 = registry.deserialize(defaultContext, JSON.stringify({type: "ImageNode", file: "images/nyancat.gif"}));
             model.addVideoNode(n1);
-            var n2 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"test\"}");
+            var n2 = registry.deserialize(defaultContext, JSON.stringify({type: "EffectNode", file: "effects/test.glsl"}));
             model.addVideoNode(n2);
-            var n3 = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"interstellar\"}");
+            var n3 = registry.deserialize(defaultContext, JSON.stringify({type: "EffectNode", file: "effects/interstellar.glsl"}));
             model.addVideoNode(n3);
-            var cross = registry.deserialize(context, "{\"type\": \"EffectNode\", \"name\": \"crossfader\"}");
+            var cross = registry.deserialize(defaultContext, JSON.stringify({type: "EffectNode", file: "effects/crossfader.glsl"}));
             model.addVideoNode(cross);
             model.addEdge(n1, n2, 0);
             model.addEdge(n2, n3, 0);
@@ -136,7 +132,6 @@ ApplicationWindow {
         Item {
             Layout.fillWidth: true;
             Layout.fillHeight: true;
-
             Graph {
                 id: graph
                 model: model
@@ -149,17 +144,17 @@ ApplicationWindow {
                     BeatIndicator {
                         width: 25
                         opacity: .9
-                        context: context
+                        context: defaultContext
                     }
                     Waveform {
                         width: 500
                         opacity: .9
-                        context: context
+                        context: defaultContext
                     }
                     Spectrum {
                         width: 500
                         opacity: .9
-                        context: context
+                        context: defaultContext
                     }
                 }
                 RowLayout {
@@ -167,7 +162,7 @@ ApplicationWindow {
                         id: libraryWidget
                         graph: graph;
                         registry: registry
-                        context: context
+                        context: defaultContext
                         width: 200
                         
                         Layout.fillHeight: true
