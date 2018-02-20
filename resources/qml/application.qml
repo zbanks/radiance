@@ -73,10 +73,6 @@ ApplicationWindow {
         onTriggered: saveAction.trigger()
     }
 
-    onClosing: {
-        saveAction.trigger();
-    }
-
     /*
     // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
     EffectNode {
@@ -212,5 +208,9 @@ ApplicationWindow {
             saveAction.trigger()
             Qt.quit()
         }
+    }
+
+    onClosing: {
+        quitAction.trigger();
     }
 }
