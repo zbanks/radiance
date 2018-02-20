@@ -26,6 +26,6 @@ public:
     QSharedPointer<Chain> chain();
 
 protected:
-    virtual QList<QSharedPointer<Chain>> requestedChains();
+    virtual QList<QSharedPointer<Chain>> requestedChains() override;
     QSharedPointer<Chain> m_chain;
 };

@@ -20,7 +20,7 @@ signals:
     void contextChanged(Context *context);
 
 protected:
-    QQuickFramebufferObject::Renderer *createRenderer() const;
+    QQuickFramebufferObject::Renderer *createRenderer() const override;
     QString m_fragmentShader;
     QMutex m_fragmentShaderLock;
     Context *m_context;
