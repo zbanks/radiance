@@ -22,6 +22,9 @@ View::~View() {
 }
 
 void View::rebuild() {
+    for (auto c = m_children.begin(); c != m_children.end(); c++) {
+        c->item->deleteLater();
+    }
     m_children.clear();
     m_selection.clear();
     onGraphChanged();
