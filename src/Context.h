@@ -28,7 +28,7 @@ class Context : public QObject {
     Q_OBJECT
 
 public:
-    Context();
+    Context(bool threaded=true);
    ~Context();
 
     QSettings *settings();

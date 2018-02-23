@@ -7,13 +7,13 @@
 
 #include <QSettings>
 
-Context::Context() 
+Context::Context(bool threaded) 
     : m_settings(nullptr)
     , m_audio(nullptr)
     , m_timebase(nullptr)
     , m_openGLWorkerContext(nullptr)
 {
-    m_openGLWorkerContext = new OpenGLWorkerContext();
+    m_openGLWorkerContext = new OpenGLWorkerContext(threaded);
 
     m_settings = new QSettings();
     //m_outputSettings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "Radiance", "Radiance Output");

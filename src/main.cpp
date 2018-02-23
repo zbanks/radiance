@@ -12,6 +12,7 @@
 #include "FramebufferVideoNodeRender.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
+#include "OpenGLWorkerContext.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
@@ -131,10 +132,11 @@ static int
 runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirString, QSize renderSize) {
     QDir outputDir;
     outputDir.mkpath(outputDirString);
+    outputDir.cd(outputDirString);
 
     Registry registry;
 
-    Context context;
+    Context context(false);
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
     QSharedPointer<Chain> chain(new Chain(renderSize));
