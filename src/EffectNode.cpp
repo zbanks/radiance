@@ -257,7 +257,6 @@ void EffectNode::setFrequency(double frequency) {
             QMutexLocker locker(&m_stateLock);
             m_frequency = frequency;
         }
-        qDebug() << "Frequency changed:" << frequency;
         emit frequencyChanged(frequency);
     }
 }
