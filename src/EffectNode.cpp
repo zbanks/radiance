@@ -22,6 +22,7 @@ EffectNode::EffectNode(Context *c, QString file)
     , m_ready(false) {
 
     setInputCount(1);
+    setFrequency(0);
     m_periodic.setInterval(10);
     m_periodic.start();
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::periodic);
@@ -42,7 +43,8 @@ EffectNode::EffectNode(const EffectNode &other)
     , m_realTime(other.m_realTime)
     , m_realTimeLast(other.m_realTimeLast)
     , m_openGLWorker(other.m_openGLWorker)
-    , m_ready(other.m_ready) {
+    , m_ready(other.m_ready)
+    , m_frequency(other.m_frequency) {
 /*
     auto k = other.m_renderStates.keys();
     for (int i=0; i<k.count(); i++) {
@@ -181,6 +183,7 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             p->setUniformValue("iIntensityIntegral", GLfloat(m_intensityIntegral));
             p->setUniformValue("iStep", GLfloat(step));
             p->setUniformValue("iTime", GLfloat(time));
+            p->setUniformValue("iFrequency", GLfloat(m_frequency));
             p->setUniformValue("iFPS",  GLfloat(FPS));
             p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
             p->setUniformValueArray("iInputs", &inputTex[0], m_inputCount);
@@ -240,6 +243,23 @@ QString EffectNode::file() {
 QString EffectNode::name() {
     Q_ASSERT(QThread::currentThread() == thread());
     return QFileInfo(m_file).baseName();
+}
+
+double EffectNode::frequency() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_frequency;
+}
+
+void EffectNode::setFrequency(double frequency) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (frequency != m_frequency) {
+        {
+            QMutexLocker locker(&m_stateLock);
+            m_frequency = frequency;
+        }
+        qDebug() << "Frequency changed:" << frequency;
+        emit frequencyChanged(frequency);
+    }
 }
 
 void EffectNode::setFile(QString file) {

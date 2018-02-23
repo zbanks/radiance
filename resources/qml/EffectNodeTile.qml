@@ -14,7 +14,19 @@ VideoNodeTile {
 
     onVideoNodeChanged: {
         tile.intensity = videoNode.intensity;
+        frequency.currentIndex = frequency.find(videoNode.frequency + "");
         videoNode.intensity = Qt.binding(function() { return slider.value });
+        videoNode.frequency = Qt.binding(function() { return frequency.currentText });
+    }
+
+    Connections {
+        target: videoNode
+        onIntensityChanged: {
+            slider.value = intensity;
+        }
+        onFrequencyChanged: {
+            frequency.currentIndex = frequency.find(frequency + "");
+        }
     }
 
     ColumnLayout {
@@ -64,6 +76,28 @@ VideoNodeTile {
             Layout.fillWidth: true;
             minimumValue: 0;
             maximumValue: 1;
+        }
+
+        ComboBox {
+            id: frequency;
+            Layout.fillWidth: true;
+            model: [0, 0.25, 0.5, 1, 2, 4, 8, 16, 32]
+            style: ComboBoxStyle {
+                id: comboBox
+                background: Rectangle {
+                    id: rectCategory
+                    color: "transparent"
+                    border.width: 1
+                    border.color: "white"
+                    radius: 15
+                }
+                label: Text {
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    color: "white"
+                    text: control.currentText
+                }
+            }
         }
 
         /*

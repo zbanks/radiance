@@ -6,11 +6,13 @@ void main(void) {
 
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;
 
-    c = vec4(1.) * (1. - smoothstep(iIntensity - 0.1, iIntensity, length(normCoord)));
+    float r = iIntensity * (1. - mod(iTime * iFrequency, 1.));
+
+    c = vec4(1.) * (1. - smoothstep(r - 0.1, r, length(normCoord)));
     fragColor = composite(fragColor, c);
 
-    c = texture(iChannel[1], (uv - 0.5) / iIntensity + 0.5);
-    c *= 1. - smoothstep(iIntensity - 0.2, iIntensity - 0.1, length(normCoord));
+    c = texture(iChannel[1], (uv - 0.5) / r + 0.5);
+    c *= 1. - smoothstep(r - 0.2, r - 0.1, length(normCoord));
     fragColor = composite(fragColor, c);
 
 }
