@@ -7,6 +7,7 @@
 #include "ImageNode.h"
 #include "MovieNode.h"
 #include "ScreenOutputNode.h"
+#include "FfmpegOutputNode.h"
 
 Registry::Registry()
     : m_library(nullptr) {
@@ -15,6 +16,7 @@ Registry::Registry()
     registerType<ImageNode>();
     registerType<MovieNode>();
     registerType<ScreenOutputNode>();
+    registerType<FfmpegOutputNode>();
 
     m_library = new Library(this);
     m_library->setParent(this);

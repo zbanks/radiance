@@ -14,6 +14,7 @@
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
+#include "FfmpegOutputNode.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
@@ -193,6 +194,10 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
     model.addVideoNode(baseEffect);
     model.addEdge(highlightEffect, onblackEffect, 0);
 
+    FfmpegOutputNode ffmpegNode(&context, renderSize);
+    model.addVideoNode(&ffmpegNode);
+    model.addEdge(onblackEffect, &ffmpegNode, 0);
+
     // Render
     for (VideoNode *renderNode : renderNodes) {
         QString name = renderNode->property("name").toString();
@@ -207,6 +212,10 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
             model.addEdge(baseEffect, renderNode, i);
         }
         model.flush();
+
+        QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
+        ffmpegNode.setFfmpegArguments({outputDir.filePath(gifFilename)});
+        ffmpegNode.setRecording(true);
 
         // Render 101 frames
         EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
@@ -229,20 +238,13 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
                             assetsDir.filePath(QString("%1_%2.png").arg(name, QString::number(i))));
                 }
             }
+            ffmpegNode.recordFrame();
         }
 
-        // ffmpeg: Easiest way to convert images into a GIF other format
-        QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
-        QProcess ffmpeg;
-        ffmpeg.start("ffmpeg",
-            QStringList()
-                << "-y" << "-i"
-                << outputDir.filePath(QString("%d.png"))
-                << outputDir.filePath(gifFilename));
-        ffmpeg.waitForFinished();
+        // Reset state
+        ffmpegNode.setRecording(false);
         QFile::copy(outputDir.filePath(gifFilename), assetsDir.filePath(gifFilename));
 
-        // Reset state
         outputDir.cdUp();
         model.removeVideoNode(renderNode);
     }
