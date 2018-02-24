@@ -1,4 +1,6 @@
 #property description Fake waveform visualizer that looks like an oscilloscope
+#property frequency 1
+
 void main(void) {
     fragColor = texture(iInput, uv);
 
@@ -15,11 +17,13 @@ void main(void) {
     wave += 0.1 * sin(x * 180. + iTime * -10.) * iAudioHi;
     wave *= iAudioLevel;
     wave *= smoothstep(0., 0.3, iIntensity);
+    wave *= 0.5 + 0.5 * pow(defaultPulse, 2.);
 
     float d = abs(normCoord.y - wave);
 
     float glow = 1. - smoothstep(0., (0.02 + iAudioHi * 0.3) * smoothstep(0., 0.5, iIntensity), d);
     glow += 0.5 * (1. - smoothstep(0., (0.3 + iAudioHi * 0.3) * iIntensity, d));
+    glow *= 0.7 + 0.3 * pow(defaultPulse, 0.5);
     vec4 c = vec4(0., 1., 0., 1.) * glow;
     fragColor = composite(fragColor, c);
 }

@@ -9,7 +9,7 @@ vec4 lookup(vec2 coord) {
 }
 
 void main() {
-    float depth = iIntensity * float(MAX_DEPTH);
+    float depth = iIntensity * float(MAX_DEPTH) * (0.5 + 0.5 * pow(defaultPulse, 2.));
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec2  d = -normCoord / depth;
     float w = 3. / depth;

@@ -16,7 +16,7 @@ void main(void) {
     vec3 srb = vec3(10., 28., 8. / 3.); // sigma, rho, beta paramaters
 
     // Initial coordinate
-    vec3 xyz = vec3(uv - 0.5, sin(iTime));
+    vec3 xyz = vec3(uv - 0.5, sin(iTime * iFrequency));
     xyz *= mix(vec3(1.), vec3(90., 120., 20), smoothstep(0., 0.7, iIntensity));
     xyz += vec3(10., 0., 30.);
 

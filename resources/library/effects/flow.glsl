@@ -1,4 +1,6 @@
 #property description Radiate color from the center based on audio
+#property frequency 1
+
 void main(void) {
     fragColor = texture(iInput, uv);
     vec4 c = texture(iChannel[1], uv);
@@ -9,10 +11,9 @@ void main(void) {
 void main(void) {
 
     fragColor = texture(iChannel[1], (uv - 0.5) * 0.98 + 0.5);
-    fragColor *= exp((iIntensity - 2.) / 50.) * smoothstep(0., 0.01, length((uv - 0.5) * aspectCorrection));
+    fragColor *= exp((iIntensity - 2.) / 50.);
+    fragColor = max(fragColor - 0.00001, vec4(0.));
 
-    vec4 c = texture(iInput, uv);
-    float s = smoothstep(0.90, 1., 1. - mod(iTime, 1.)) * mix(0.01, 1.0, iAudioLevel);
-    c *=  min(3. * s, 1.);
-    fragColor = composite(fragColor, c);
+    vec4 c = texture(iInput, uv) * pow(defaultPulse, 2.);
+    fragColor = max(fragColor, c);
 }

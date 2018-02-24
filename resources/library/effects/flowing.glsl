@@ -1,10 +1,11 @@
 #property description Sort of like rainbow but for lightness, avoiding the edges
+#property frequency 1
 
 void main(void) {
     fragColor = texture(iInput, uv);
     vec3 hsv = rgb2hsv(fragColor.rgb);
 
-    float deviation = mod(iTime * 0.5, 1.);
+    float deviation = mod(iTime * iFrequency * 0.25, 1.);
     float spatialFrequency = 8.;
     float newLightness = hsv.z * mod(spatialFrequency * hsv.z + deviation, 1.);
 

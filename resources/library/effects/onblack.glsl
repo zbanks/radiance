@@ -2,5 +2,5 @@
 
 void main(void) {
     fragColor = texture(iInput, uv);
-    fragColor.a = mix(fragColor.a, 1.0, iIntensity);
+    fragColor.a = mix(fragColor.a, 1.0, iIntensity * pow(defaultPulse, 2.));
 }

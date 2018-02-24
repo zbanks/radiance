@@ -3,7 +3,8 @@
 void main(void) {
     fragColor = texture(iInput, uv);
     vec3 hsv = rgb2hsv(fragColor.rgb);
-    hsv.x = mix(hsv.x, hsv.z, smoothstep(0., 0.5, iIntensity));
-    hsv.y = mix(hsv.y, hsv.z, smoothstep(0.5, 1.0, iIntensity));
+    float parameter = iIntensity * pow(defaultPulse, 0.5);
+    hsv.x = mix(hsv.x, hsv.z, smoothstep(0., 0.5, parameter));
+    hsv.y = mix(hsv.y, hsv.z, smoothstep(0.5, 1.0, parameter));
     fragColor.rgb = hsv2rgb(hsv);
 }

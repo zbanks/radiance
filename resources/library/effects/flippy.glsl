@@ -1,7 +1,8 @@
 #property description Turns the image into tiles and flips each one along a diagonal
 
 void main(void) {
-    vec2 timeOffset = vec2(iIntensityIntegral * 0.06) * sign(uv.x + uv.y - 1.);
+    vec2 timeOffset = vec2(iTime * iFrequency * 0.06) * sign(uv.x + uv.y - 1.);
+    timeOffset = mod(timeOffset + 1., 2.) - 1.;
     vec2 newPt = (uv - 0.5 - timeOffset) * aspectCorrection;
 
     float bins = mix(50., 3., iIntensity);

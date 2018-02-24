@@ -9,7 +9,7 @@ void main(void) {
     vec2 shift = (vec2(noise(noise_input), noise(noise_input + 100.)) - 0.5);
     shift += (vec2(noise(2. * noise_input), noise(2. * noise_input + 100.)) - 0.5) * 0.5;
     shift += (vec2(noise(4. * noise_input), noise(4. * noise_input + 100.)) - 0.5) * 0.25;
-    shift = (iIntensity * 0.5 + 0.5) * shift + vec2(0., 0.5 - 0.5 * iIntensity);
+    shift = (iIntensity * 0.5 + 0.5) * (0.7 * pow(defaultPulse, 2.) + 0.3) * shift + vec2(0., 0.5 - 0.5 * iIntensity);
     shift /= aspectCorrection;
 
     vec2 uv2 = uv + shift;
