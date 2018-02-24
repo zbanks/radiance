@@ -7,6 +7,7 @@
 #include <QQuickWindow>
 #include <QSize>
 #include <QThread>
+#include <QProcess>
 #include "BaseVideoNodeTile.h"
 #include "EffectNode.h"
 #include "FramebufferVideoNodeRender.h"
@@ -133,6 +134,9 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
     QDir outputDir;
     outputDir.mkpath(outputDirString);
     outputDir.cd(outputDirString);
+    QDir assetsDir(outputDir);
+    assetsDir.mkdir("_assets");
+    assetsDir.cd("_assets");
 
     Registry registry;
 
@@ -140,6 +144,7 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
     QSharedPointer<Chain> chain(new Chain(renderSize));
+    FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
     //model.loadFile(&context, &registry, stateFilename);
@@ -153,44 +158,94 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
         return EXIT_FAILURE;
     }
 
-    VideoNode *renderNode = registry.createFromFile(&context, nodeFilename);
-    EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
-    if (!renderNode) {
-        qInfo() << "Unable to open:" << nodeFilename;
-        return EXIT_FAILURE;
+    QList<VideoNode *> renderNodes;
+    if (nodeFilename.isNull()) {
+        QDir libraryDir(Paths::library());
+        libraryDir.cd("effects");
+
+        for (QString entry : libraryDir.entryList()) {
+            if (entry.startsWith(".")) {
+                continue;
+            }
+            QString entryPath = libraryDir.filePath(entry);
+            VideoNode *renderNode = registry.createFromFile(&context, entryPath);
+            if (!renderNode) {
+                qInfo() << "Unable to open:" << entry << entryPath;
+            } else {
+                renderNodes << renderNode;
+            }
+        }
+
+        // Generate HTML page w/ all nodes
+        generateHtml(outputDir, renderNodes);
+    } else {
+        VideoNode *renderNode = registry.createFromFile(&context, nodeFilename);
+        if (!renderNode) {
+            qInfo() << "Unable to open:" << nodeFilename;
+            return EXIT_FAILURE;
+        }
+        renderNodes << renderNode;
     }
 
     // Build up model
     model.addVideoNode(onblackEffect);
     model.addVideoNode(highlightEffect);
     model.addVideoNode(baseEffect);
-    model.addVideoNode(renderNode);
-    model.addEdge(baseEffect, renderNode, 0);
-    model.addEdge(renderNode, highlightEffect, 0);
     model.addEdge(highlightEffect, onblackEffect, 0);
-    model.flush();
-    qInfo() << model.serialize();
 
     // Render
-    FramebufferVideoNodeRender imgRender(renderSize);
-    for (int i = 0; i <= 100; i++) {
-        if (effectNode != nullptr)
-            effectNode->setIntensity(i / 50.);
+    for (VideoNode *renderNode : renderNodes) {
+        QString name = renderNode->property("name").toString();
+        qInfo() << "Rendering:" << name;
 
-        context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
+        outputDir.mkdir(name);
+        outputDir.cd(name);
 
-        auto modelCopy = model.createCopyForRendering(chain);
-        auto rendering = modelCopy.render(chain);
-
-        auto outputTextureId = rendering.value(onblackEffect->id(), 0);
-        if (outputTextureId != 0) {
-            QImage img = imgRender.render(outputTextureId);
-            QString filename = outputDir.filePath(QString("%1.png").arg(QString::number(i)));
-            img.save(filename);
+        model.addVideoNode(renderNode);
+        model.addEdge(renderNode, highlightEffect, 0);
+        for (int i = 0; i < renderNode->inputCount(); i++) {
+            model.addEdge(baseEffect, renderNode, i);
         }
-    }
+        model.flush();
 
-    generateHtml(outputDir, {renderNode});
+        // Render 101 frames
+        EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
+        for (int i = 0; i <= 100; i++) {
+            if (effectNode != nullptr)
+                effectNode->setIntensity(i / 50.);
+
+            context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
+
+            auto modelCopy = model.createCopyForRendering(chain);
+            auto rendering = modelCopy.render(chain);
+
+            auto outputTextureId = rendering.value(onblackEffect->id(), 0);
+            if (outputTextureId != 0) {
+                QImage img = imgRender.render(outputTextureId);
+                QString filename = outputDir.filePath(QString("%1.png").arg(QString::number(i)));
+                img.save(filename);
+                if (i == 0 || i == 51) {
+                    QFile::copy(filename,
+                            assetsDir.filePath(QString("%1_%2.png").arg(name, QString::number(i))));
+                }
+            }
+        }
+
+        // ffmpeg: Easiest way to convert images into a GIF other format
+        QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
+        QProcess ffmpeg;
+        ffmpeg.start("ffmpeg",
+            QStringList()
+                << "-y" << "-i"
+                << outputDir.filePath(QString("%d.png"))
+                << outputDir.filePath(gifFilename));
+        ffmpeg.waitForFinished();
+        QFile::copy(outputDir.filePath(gifFilename), assetsDir.filePath(gifFilename));
+
+        // Reset state
+        outputDir.cdUp();
+        model.removeVideoNode(renderNode);
+    }
 
     return 0;
 }
@@ -228,6 +283,8 @@ main(int argc, char *argv[]) {
     //parser.addOption(stateOption);
     const QCommandLineOption nodeFilenameOption(QStringList() << "n" << "node", "Render this file", "file");
     parser.addOption(nodeFilenameOption);
+    const QCommandLineOption renderAllOption(QStringList() << "a" << "all", "Render all effects in the library");
+    parser.addOption(renderAllOption);
     const QCommandLineOption sizeOption(QStringList() << "s" << "size", "Render using this size [128x128]", "wxh");
     parser.addOption(sizeOption);
 
@@ -249,7 +306,7 @@ main(int argc, char *argv[]) {
         //TODO: handle failure
     }
 
-    if (parser.isSet(nodeFilenameOption)) {
+    if (parser.isSet(nodeFilenameOption) || parser.isSet(renderAllOption)) {
         return runRadianceCli(&app, parser.value(nodeFilenameOption), outputDirString, renderSize);
     } else {
         return runRadianceGui(&app);
