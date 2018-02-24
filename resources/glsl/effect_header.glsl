@@ -267,3 +267,5 @@ float modf(float x, out float integralPart) {
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
 float onePixel = 1. / min(iResolution.x, iResolution.y);
 #endif
+
+float defaultPulse = sawtooth(iTime * iFrequency, 0.1);

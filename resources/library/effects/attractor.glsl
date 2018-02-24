@@ -38,6 +38,9 @@ void main(void) {
     // Blend between the current frame and a slightly shifted down version of it using the max function
     fragColor = max(c1, c2);
 
+    // Fade out according to the beat
+    fragColor *= pow(defaultPulse, 0.3);
+
     // Fade out slowly
     float fadeAmount = 0.01 + 0.2 * (1. - iIntensity);
     fragColor = max(fragColor - fadeAmount, vec4(0.));

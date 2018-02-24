@@ -8,7 +8,7 @@ void main(void) {
 
     // Even when halfWidth = 0.5, smoothstep is not the identity
     // so we mix here to preserve keep the identity
-    color.rgb = mix(color.rgb, targetColor, iIntensity);
+    color.rgb = mix(color.rgb, targetColor, iIntensity * pow(defaultPulse, 2.));
 
     fragColor = premultiply(color);
 }

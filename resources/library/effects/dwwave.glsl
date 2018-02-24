@@ -1,8 +1,9 @@
 #property description Diagonal white wave
+#property frequency 0.5
 
 void main(void) {
-    float xpos = iIntensityIntegral * 1.5;
-    float xfreq = (iIntensity + 0.5) * 2.;
+    float xpos = iTime * iFrequency;
+    float xfreq = (iIntensity + 0.5) * 4.;
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     float x = mod((normCoord.x + normCoord.y) * 0.5 * xfreq + xpos, 1.);
     fragColor = texture(iInput, uv);

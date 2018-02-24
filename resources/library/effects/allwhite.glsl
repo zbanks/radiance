@@ -1,6 +1,7 @@
-#property description Basic white fill
+#property description Basic white fill or strobe
 
 void main(void) {
-    vec4 white = vec4(1.) * iIntensity;
+    float pulse = pow(defaultPulse, 2.);
+    vec4 white = vec4(1.) * iIntensity * pulse;
     fragColor = composite(texture(iInput, uv), white);
 }

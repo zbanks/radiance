@@ -1,8 +1,9 @@
 #property description Yellow blob that spins to the beat
+#property frequency 1
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
-    float t = iTime / 4.0;
+    float t = iFrequency * iTime / 4.0;
     vec2 center = vec2(sin(t), cos(t));
     //center *= 0.5;
     center *= iAudioLevel * 0.9 + 0.1;

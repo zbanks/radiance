@@ -1,7 +1,8 @@
 #property description Wrap the parent texture on a spinning cylinder
+#property frequency 1
 
 void main(void) {
-    float angle = iIntensityIntegral * 8.0;
+    float angle = (iTime * iFrequency - 0.5) * M_PI;
     angle += 2. * asin(2. * (uv.x - 0.5));
 
     float x = mod(angle / (M_PI), 2.0);
@@ -9,6 +10,6 @@ void main(void) {
     x = abs(x);
 
     vec2 new_uv = vec2(x, uv.y);
-    new_uv = mix(uv, new_uv, smoothstep(0., 0.15, iIntensity));
+    new_uv = mix(uv, new_uv, iIntensity);
     fragColor = texture(iInput, new_uv);
 }

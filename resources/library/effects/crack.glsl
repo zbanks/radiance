@@ -1,4 +1,5 @@
 #property description And the cracks begin to show
+#property frequency 0.5
 
 #define MAX_CRACKS 15
 void main(void) {
@@ -6,7 +7,7 @@ void main(void) {
     int numCracks = int(iIntensity * float(MAX_CRACKS));
 
     // Timebase for time-dependent cracking
-    float t = iTime * 0.5;
+    float t = iTime * iFrequency;
 
     // Amount to perturb the input
     vec2 perturb = vec2(0.);

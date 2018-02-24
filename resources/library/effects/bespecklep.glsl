@@ -4,7 +4,7 @@ void main(void) {
     vec4 old = texture(iChannel[0], uv);
     vec4 new = texture(iInput, uv);
 
-    float r = noise(vec3(uv * 16., iTime * 16.));
+    float r = noise(vec3(uv * 16., iTime * iFrequency));
     float k = pow(mix(1.0, r, iIntensity), 2.0);
     fragColor = mix(old, new, k);
 

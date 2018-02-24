@@ -20,6 +20,6 @@ void main(void) {
         c = vec3(0., 0., 0.);
     }
 
-    fragColor.rgb = mix(oc.rgb, c, iIntensity);
+    fragColor.rgb = mix(oc.rgb, c, iIntensity * pow(defaultPulse, 2.));
     fragColor.a = oc.a;
 }
