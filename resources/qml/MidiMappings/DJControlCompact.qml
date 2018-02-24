@@ -47,5 +47,28 @@ QtObject {
                 target.Controls.changeControlAbs(0, Controls.Parameter0, value / 127);
             }
         }
+
+        onNoteOn: {
+            if (velocity == 0) return;
+            console.log(note + " " + velocity);
+            // Connect the left "Loop" buttons to speed settings
+            if (note == 25) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 0.)
+            } else if (note == 26) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 0.25)
+            } else if (note == 27) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 0.5)
+            } else if (note == 28) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 1.)
+            } else if (note == 9) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 0.)
+            } else if (note == 10) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 1.)
+            } else if (note == 11) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 2.)
+            } else if (note == 12) {
+                target.Controls.changeControlAbs(0, Controls.Frequency, 4.)
+            }
+        }
     }
 }

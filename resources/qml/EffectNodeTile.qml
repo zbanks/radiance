@@ -221,6 +221,9 @@ VideoNodeTile {
          && control - Controls.Parameter0 == attachedParameter) {
             intensity = value;
         }
+        if (control == Controls.Frequency) {
+            videoNode.frequency = value;
+        }
     }
 
     Controls.onControlChangedRel: {
