@@ -15,6 +15,7 @@
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
 #include "FfmpegOutputNode.h"
+#include "PlaceholderNode.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
@@ -116,9 +117,9 @@ generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
         QString author = videoNode->property("author").toString();
 
         html << "<tr><td>" << name << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << name << "_0.png'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << name << "_51.png'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./" << name << IMG_FORMAT "'>" << "</td>\n";
         html << "    <td class='desc'>" << description;
         if (!author.isNull()) {
             html << "<p>[" << author << "]</p>";
@@ -131,13 +132,10 @@ generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
 }
 
 static int
-runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirString, QSize renderSize) {
+runRadianceCli(QGuiApplication *app, QString stateFilename, QString nodeFilename, QString outputDirString, QSize renderSize) {
     QDir outputDir;
     outputDir.mkpath(outputDirString);
     outputDir.cd(outputDirString);
-    QDir assetsDir(outputDir);
-    assetsDir.mkdir("_assets");
-    assetsDir.cd("_assets");
 
     Registry registry;
 
@@ -148,17 +146,31 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
     FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
-    //model.loadFile(&context, &registry, stateFilename);
+    model.loadFile(&context, &registry, stateFilename);
     model.addChain(chain);
 
-    VideoNode *onblackEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/onblack.glsl\", \"intensity\": 1.0}");
-    VideoNode *highlightEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/afixhighlight.glsl\", \"intensity\": 1.0}");
-    VideoNode *baseEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/test.glsl\", \"intensity\": 0.7}");
-    if (!onblackEffect || !highlightEffect || !baseEffect) {
-        qInfo() << "Unable to set up nodes";
+    FfmpegOutputNode *ffmpegNode = nullptr;
+    PlaceholderNode *placeholderNode = nullptr;
+    for (VideoNode *node : model.vertices()) {
+        if (ffmpegNode == nullptr) {
+            ffmpegNode = qobject_cast<FfmpegOutputNode *>(node);
+        }
+        if (placeholderNode == nullptr) {
+            placeholderNode = qobject_cast<PlaceholderNode *>(node);
+        }
+    }
+    if (ffmpegNode == nullptr) {
+        qCritical() << "Unable to find FfmpegOutputNode in" << stateFilename;
         return EXIT_FAILURE;
     }
+    if (placeholderNode == nullptr) {
+        qCritical() << "Unable to find PlaceholderNode in" << stateFilename;
+        return EXIT_FAILURE;
+    }
+    qInfo() << "Loaded state:" << stateFilename;
+    qInfo() << model.serialize();
 
+    qInfo() << "Scanning for effects in path:" << Paths::library();
     QList<VideoNode *> renderNodes;
     if (nodeFilename.isNull()) {
         QDir libraryDir(Paths::library());
@@ -188,34 +200,16 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
         renderNodes << renderNode;
     }
 
-    // Build up model
-    model.addVideoNode(onblackEffect);
-    model.addVideoNode(highlightEffect);
-    model.addVideoNode(baseEffect);
-    model.addEdge(highlightEffect, onblackEffect, 0);
-
-    FfmpegOutputNode ffmpegNode(&context, renderSize);
-    model.addVideoNode(&ffmpegNode);
-    model.addEdge(onblackEffect, &ffmpegNode, 0);
-
     // Render
     for (VideoNode *renderNode : renderNodes) {
         QString name = renderNode->property("name").toString();
         qInfo() << "Rendering:" << name;
 
-        outputDir.mkdir(name);
-        outputDir.cd(name);
-
-        model.addVideoNode(renderNode);
-        model.addEdge(renderNode, highlightEffect, 0);
-        for (int i = 0; i < renderNode->inputCount(); i++) {
-            model.addEdge(baseEffect, renderNode, i);
-        }
-        model.flush();
+        placeholderNode->setWrappedVideoNode(renderNode);
 
         QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
-        ffmpegNode.setFfmpegArguments({outputDir.filePath(gifFilename)});
-        ffmpegNode.setRecording(true);
+        ffmpegNode->setFfmpegArguments({outputDir.filePath(gifFilename)});
+        ffmpegNode->setRecording(true);
 
         // Render 101 frames
         EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
@@ -228,25 +222,19 @@ runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirStri
             auto modelCopy = model.createCopyForRendering(chain);
             auto rendering = modelCopy.render(chain);
 
-            auto outputTextureId = rendering.value(onblackEffect->id(), 0);
+            auto outputTextureId = rendering.value(ffmpegNode->id(), 0);
             if (outputTextureId != 0) {
-                QImage img = imgRender.render(outputTextureId);
-                QString filename = outputDir.filePath(QString("%1.png").arg(QString::number(i)));
-                img.save(filename);
                 if (i == 0 || i == 51) {
-                    QFile::copy(filename,
-                            assetsDir.filePath(QString("%1_%2.png").arg(name, QString::number(i))));
+                    QImage img = imgRender.render(outputTextureId);
+                    QString filename = outputDir.filePath(QString("%1_%2.png").arg(name, QString::number(i)));
+                    img.save(filename);
                 }
             }
-            ffmpegNode.recordFrame();
+            ffmpegNode->recordFrame();
         }
 
         // Reset state
-        ffmpegNode.setRecording(false);
-        QFile::copy(outputDir.filePath(gifFilename), assetsDir.filePath(gifFilename));
-
-        outputDir.cdUp();
-        model.removeVideoNode(renderNode);
+        ffmpegNode->setRecording(false);
     }
 
     return 0;
@@ -281,13 +269,13 @@ main(int argc, char *argv[]) {
 
     const QCommandLineOption outputDirOption(QStringList() << "o" << "output", "Output Directory", "path");
     parser.addOption(outputDirOption);
-    //const QCommandLineOption stateOption(QStringList() << "s" << "state", "Load this state.json file", "json");
-    //parser.addOption(stateOption);
+    const QCommandLineOption stateOption(QStringList() << "s" << "state", "Load this state.json file", "json");
+    parser.addOption(stateOption);
     const QCommandLineOption nodeFilenameOption(QStringList() << "n" << "node", "Render this file", "file");
     parser.addOption(nodeFilenameOption);
     const QCommandLineOption renderAllOption(QStringList() << "a" << "all", "Render all effects in the library");
     parser.addOption(renderAllOption);
-    const QCommandLineOption sizeOption(QStringList() << "s" << "size", "Render using this size [128x128]", "wxh");
+    const QCommandLineOption sizeOption(QStringList() << "z" << "size", "Render using this size [128x128]", "wxh");
     parser.addOption(sizeOption);
 
     parser.process(app);
@@ -295,6 +283,11 @@ main(int argc, char *argv[]) {
     QString outputDirString("render_output");
     if (parser.isSet(outputDirOption)) {
         outputDirString = parser.value(outputDirOption);
+    }
+
+    QString stateFilename("radiance_state.json");
+    if (parser.isSet(stateOption)) {
+        stateFilename = parser.value(stateOption);
     }
 
     QSize renderSize(128, 128);
@@ -309,7 +302,7 @@ main(int argc, char *argv[]) {
     }
 
     if (parser.isSet(nodeFilenameOption) || parser.isSet(renderAllOption)) {
-        return runRadianceCli(&app, parser.value(nodeFilenameOption), outputDirString, renderSize);
+        return runRadianceCli(&app, stateFilename, parser.value(nodeFilenameOption), outputDirString, renderSize);
     } else {
         return runRadianceGui(&app);
     }

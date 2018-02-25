@@ -44,8 +44,8 @@ void FfmpegOutputNode::setRecording(bool recording) {
     } else {
         m_ffmpeg.closeWriteChannel();
         m_ffmpeg.waitForFinished();
-        qInfo() << m_ffmpeg.readAllStandardOutput();
-        qInfo() << m_ffmpeg.readAllStandardError();
+        //qInfo() << m_ffmpeg.readAllStandardOutput();
+        //qInfo() << m_ffmpeg.readAllStandardError();
     }
     emit recordingChanged(m_recording);
 }
@@ -68,7 +68,7 @@ QString FfmpegOutputNode::typeName() {
 }
 
 VideoNode *FfmpegOutputNode::deserialize(Context *context, QJsonObject obj) {
-    FfmpegOutputNode *e = new FfmpegOutputNode(context, QSize(640,480));
+    FfmpegOutputNode *e = new FfmpegOutputNode(context, QSize(128, 128));
     return e;
 }
 

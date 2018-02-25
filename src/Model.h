@@ -90,7 +90,7 @@ public slots:
     // suitable for QML / Javascript
     QVariantList qmlEdges() const;
 
-    // Returns a list of verticies that
+    // Returns a list of vertices that
     // are ancestors of the given node
     QList<VideoNode *> ancestors(VideoNode *node);
 
