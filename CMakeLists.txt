@@ -37,29 +37,29 @@ find_package(MPV)
 set(libradiance_SOURCES)
 list(APPEND libradiance_SOURCES
     src/Audio.cpp
-    src/Timebase.cpp
-    src/VideoNode.cpp
+    src/BaseVideoNodeTile.cpp
+    src/Chain.cpp
+    src/Context.cpp
+    src/Controls.cpp
     src/EffectNode.cpp
-    src/ImageNode.cpp
+    src/FfmpegOutputNode.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
-    src/Model.cpp
-    src/OpenGLWorkerContext.cpp
-    src/OpenGLWorker.cpp
-    src/OpenGLUtils.cpp
-    src/View.cpp
-    src/Chain.cpp
-    src/Controls.cpp
-    src/BaseVideoNodeTile.cpp
-    src/Paths.cpp
-    src/OutputNode.cpp
-    src/Context.cpp
-    src/Registry.cpp
-    src/PlaceholderNode.cpp
-    src/FfmpegOutputNode.cpp
-    src/ScreenOutputNode.cpp
-    src/OutputWindow.cpp
+    src/ImageNode.cpp
     src/Library.cpp
+    src/Model.cpp
+    src/OpenGLUtils.cpp
+    src/OpenGLWorker.cpp
+    src/OpenGLWorkerContext.cpp
+    src/OutputNode.cpp
+    src/OutputWindow.cpp
+    src/Paths.cpp
+    src/PlaceholderNode.cpp
+    src/Registry.cpp
+    src/ScreenOutputNode.cpp
+    src/Timebase.cpp
+    src/VideoNode.cpp
+    src/View.cpp
     BTrack/src/BTrack.c
     BTrack/src/OnsetDetectionFunction.c
     )
@@ -108,8 +108,6 @@ add_library(libradiance ${libradiance_SOURCES})
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickPreviewAdapter.cpp)
-
-add_executable(radiance_cli WIN32 src/main_testing.cpp)
 
 set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
 set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})
