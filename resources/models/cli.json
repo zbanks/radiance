@@ -42,7 +42,7 @@
             "type": "EffectNode"
         },
         "7": {
-            "type": "FfmpegOutputNode"
+            "type": "FFmpegOutputNode"
         },
         "8": {
             "inputCount": 2,

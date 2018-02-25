@@ -14,7 +14,7 @@
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
-#include "FfmpegOutputNode.h"
+#include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
@@ -149,18 +149,18 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     model.load(&context, &registry, modelName);
     model.addChain(chain);
 
-    FfmpegOutputNode *ffmpegNode = nullptr;
+    FFmpegOutputNode *ffmpegNode = nullptr;
     PlaceholderNode *placeholderNode = nullptr;
     for (VideoNode *node : model.vertices()) {
         if (ffmpegNode == nullptr) {
-            ffmpegNode = qobject_cast<FfmpegOutputNode *>(node);
+            ffmpegNode = qobject_cast<FFmpegOutputNode *>(node);
         }
         if (placeholderNode == nullptr) {
             placeholderNode = qobject_cast<PlaceholderNode *>(node);
         }
     }
     if (ffmpegNode == nullptr) {
-        qCritical() << "Unable to find FfmpegOutputNode in" << modelName;
+        qCritical() << "Unable to find FFmpegOutputNode in" << modelName;
         qCritical() << model.serialize();
         return EXIT_FAILURE;
     }
@@ -210,7 +210,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
         placeholderNode->setWrappedVideoNode(renderNode);
 
         QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
-        ffmpegNode->setFfmpegArguments({outputDir.filePath(gifFilename)});
+        ffmpegNode->setFFmpegArguments({outputDir.filePath(gifFilename)});
         ffmpegNode->setRecording(true);
 
         // Render 101 frames

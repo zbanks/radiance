@@ -49,7 +49,7 @@ Item {
                     "ImageNode": "ImageNodeTile",
                     "MovieNode": "MovieNodeTile",
                     "ScreenOutputNode": "ScreenOutputNodeTile",
-                    "FfmpegOutputNode": "FfmpegOutputNodeTile",
+                    "FFmpegOutputNode": "FFmpegOutputNodeTile",
                     "PlaceholderNode": "PlaceholderNodeTile",
                     "": "VideoNodeTile"
                 }

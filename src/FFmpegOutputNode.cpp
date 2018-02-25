@@ -1,9 +1,9 @@
-#include "FfmpegOutputNode.h"
+#include "FFmpegOutputNode.h"
 #include <QDebug>
 #include <QJsonObject>
 #include <QGuiApplication>
 
-FfmpegOutputNode::FfmpegOutputNode(Context *context, QSize chainSize)
+FFmpegOutputNode::FFmpegOutputNode(Context *context, QSize chainSize)
     : OutputNode(context, chainSize)
     , m_recording(false)
     , m_ffmpegArguments({"-vcodec", "h264", "output.mp4"})
@@ -11,15 +11,15 @@ FfmpegOutputNode::FfmpegOutputNode(Context *context, QSize chainSize)
 
 }
 
-FfmpegOutputNode::FfmpegOutputNode(const FfmpegOutputNode &other)
+FFmpegOutputNode::FFmpegOutputNode(const FFmpegOutputNode &other)
     : OutputNode(other) {
 }
 
-FfmpegOutputNode::~FfmpegOutputNode() {
+FFmpegOutputNode::~FFmpegOutputNode() {
     setRecording(false);
 }
 
-void FfmpegOutputNode::setRecording(bool recording) {
+void FFmpegOutputNode::setRecording(bool recording) {
     if (m_recording == recording)
         return;
 
@@ -50,45 +50,45 @@ void FfmpegOutputNode::setRecording(bool recording) {
     emit recordingChanged(m_recording);
 }
 
-bool FfmpegOutputNode::recording() {
+bool FFmpegOutputNode::recording() {
     return m_recording;
 }
 
-QStringList FfmpegOutputNode::ffmpegArguments() {
+QStringList FFmpegOutputNode::ffmpegArguments() {
     return m_ffmpegArguments;
 }
 
-void FfmpegOutputNode::setFfmpegArguments(QStringList ffmpegArguments) {
+void FFmpegOutputNode::setFFmpegArguments(QStringList ffmpegArguments) {
     m_ffmpegArguments = ffmpegArguments;
     emit ffmpegArgumentsChanged(m_ffmpegArguments);
 }
 
-QString FfmpegOutputNode::typeName() {
-    return "FfmpegOutputNode";
+QString FFmpegOutputNode::typeName() {
+    return "FFmpegOutputNode";
 }
 
-VideoNode *FfmpegOutputNode::deserialize(Context *context, QJsonObject obj) {
+VideoNode *FFmpegOutputNode::deserialize(Context *context, QJsonObject obj) {
     // TODO: You should be able to change the size of an OutputNode after
     // it has been created. For now this is hard-coded
-    FfmpegOutputNode *e = new FfmpegOutputNode(context, QSize(128, 128));
+    FFmpegOutputNode *e = new FFmpegOutputNode(context, QSize(128, 128));
     return e;
 }
 
-bool FfmpegOutputNode::canCreateFromFile(QString filename) {
+bool FFmpegOutputNode::canCreateFromFile(QString filename) {
     return false;
 }
 
-VideoNode *FfmpegOutputNode::fromFile(Context *context, QString filename) {
+VideoNode *FFmpegOutputNode::fromFile(Context *context, QString filename) {
     return nullptr;
 }
 
-QMap<QString, QString> FfmpegOutputNode::customInstantiators() {
+QMap<QString, QString> FFmpegOutputNode::customInstantiators() {
     auto m = QMap<QString, QString>();
-    m.insert("FfmpegOutput", "FfmpegOutputInstantiator.qml");
+    m.insert("FFmpegOutput", "FFmpegOutputInstantiator.qml");
     return m;
 }
 
-void FfmpegOutputNode::recordFrame() {
+void FFmpegOutputNode::recordFrame() {
     if (!m_recording)
         return;
 

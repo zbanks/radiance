@@ -4,16 +4,16 @@
 #include "OutputWindow.h"
 #include <QProcess>
 
-class FfmpegOutputNode
+class FFmpegOutputNode
     : public OutputNode {
     Q_OBJECT
     Q_PROPERTY(bool recording READ recording WRITE setRecording NOTIFY recordingChanged);
-    Q_PROPERTY(QStringList ffmpegArguments READ ffmpegArguments WRITE setFfmpegArguments NOTIFY ffmpegArgumentsChanged);
+    Q_PROPERTY(QStringList ffmpegArguments READ ffmpegArguments WRITE setFFmpegArguments NOTIFY ffmpegArgumentsChanged);
 
 public:
-    FfmpegOutputNode(Context *context, QSize chainSize);
-    FfmpegOutputNode(const FfmpegOutputNode &other);
-    ~FfmpegOutputNode();
+    FFmpegOutputNode(Context *context, QSize chainSize);
+    FFmpegOutputNode(const FFmpegOutputNode &other);
+    ~FFmpegOutputNode();
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -44,7 +44,7 @@ public slots:
     bool recording();
     void setRecording(bool recording);
     QStringList ffmpegArguments();
-    void setFfmpegArguments(QStringList ffmpegArguments);
+    void setFFmpegArguments(QStringList ffmpegArguments);
 
 signals:
     void recordingChanged(bool recording);

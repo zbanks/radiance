@@ -42,7 +42,7 @@ list(APPEND libradiance_SOURCES
     src/Context.cpp
     src/Controls.cpp
     src/EffectNode.cpp
-    src/FfmpegOutputNode.cpp
+    src/FFmpegOutputNode.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/ImageNode.cpp
@@ -115,7 +115,6 @@ set_target_properties(radiance PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOUR
 
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
-target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
 
 INSTALL(TARGETS radiance
         DESTINATION bin
