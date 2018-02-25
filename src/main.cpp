@@ -132,7 +132,7 @@ generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
 }
 
 static int
-runRadianceCli(QGuiApplication *app, QString stateFilename, QString nodeFilename, QString outputDirString, QSize renderSize) {
+runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QString outputDirString, QSize renderSize) {
     QDir outputDir;
     outputDir.mkpath(outputDirString);
     outputDir.cd(outputDirString);
@@ -146,7 +146,7 @@ runRadianceCli(QGuiApplication *app, QString stateFilename, QString nodeFilename
     FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
-    model.loadFile(&context, &registry, stateFilename);
+    model.load(&context, &registry, modelName);
     model.addChain(chain);
 
     FfmpegOutputNode *ffmpegNode = nullptr;
@@ -160,14 +160,16 @@ runRadianceCli(QGuiApplication *app, QString stateFilename, QString nodeFilename
         }
     }
     if (ffmpegNode == nullptr) {
-        qCritical() << "Unable to find FfmpegOutputNode in" << stateFilename;
+        qCritical() << "Unable to find FfmpegOutputNode in" << modelName;
+        qCritical() << model.serialize();
         return EXIT_FAILURE;
     }
     if (placeholderNode == nullptr) {
-        qCritical() << "Unable to find PlaceholderNode in" << stateFilename;
+        qCritical() << "Unable to find PlaceholderNode in" << modelName;
+        qCritical() << model.serialize();
         return EXIT_FAILURE;
     }
-    qInfo() << "Loaded state:" << stateFilename;
+    qInfo() << "Loaded model:" << modelName;
     qInfo() << model.serialize();
 
     qInfo() << "Scanning for effects in path:" << Paths::library();
@@ -269,13 +271,13 @@ main(int argc, char *argv[]) {
 
     const QCommandLineOption outputDirOption(QStringList() << "o" << "output", "Output Directory", "path");
     parser.addOption(outputDirOption);
-    const QCommandLineOption stateOption(QStringList() << "s" << "state", "Load this state.json file", "json");
-    parser.addOption(stateOption);
+    const QCommandLineOption modelOption(QStringList() << "m" << "model", "Load this Model file", "json");
+    parser.addOption(modelOption);
     const QCommandLineOption nodeFilenameOption(QStringList() << "n" << "node", "Render this file", "file");
     parser.addOption(nodeFilenameOption);
     const QCommandLineOption renderAllOption(QStringList() << "a" << "all", "Render all effects in the library");
     parser.addOption(renderAllOption);
-    const QCommandLineOption sizeOption(QStringList() << "z" << "size", "Render using this size [128x128]", "wxh");
+    const QCommandLineOption sizeOption(QStringList() << "s" << "size", "Render using this size [128x128]", "wxh");
     parser.addOption(sizeOption);
 
     parser.process(app);
@@ -285,9 +287,9 @@ main(int argc, char *argv[]) {
         outputDirString = parser.value(outputDirOption);
     }
 
-    QString stateFilename("radiance_state.json");
-    if (parser.isSet(stateOption)) {
-        stateFilename = parser.value(stateOption);
+    QString modelName("cli");
+    if (parser.isSet(modelOption)) {
+        modelName = parser.value(modelOption);
     }
 
     QSize renderSize(128, 128);
@@ -302,7 +304,7 @@ main(int argc, char *argv[]) {
     }
 
     if (parser.isSet(nodeFilenameOption) || parser.isSet(renderAllOption)) {
-        return runRadianceCli(&app, stateFilename, parser.value(nodeFilenameOption), outputDirString, renderSize);
+        return runRadianceCli(&app, modelName, parser.value(nodeFilenameOption), outputDirString, renderSize);
     } else {
         return runRadianceGui(&app);
     }

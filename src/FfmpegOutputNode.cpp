@@ -68,6 +68,8 @@ QString FfmpegOutputNode::typeName() {
 }
 
 VideoNode *FfmpegOutputNode::deserialize(Context *context, QJsonObject obj) {
+    // TODO: You should be able to change the size of an OutputNode after
+    // it has been created. For now this is hard-coded
     FfmpegOutputNode *e = new FfmpegOutputNode(context, QSize(128, 128));
     return e;
 }

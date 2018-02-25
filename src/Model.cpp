@@ -1,8 +1,10 @@
 #include "Model.h"
-#include "VideoNode.h"
 #include "Context.h"
+#include "Paths.h"
 #include "Registry.h"
+#include "VideoNode.h"
 #include <QByteArray>
+#include <QDir>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -533,7 +535,8 @@ void Model::deserialize(Context *context, Registry *registry, const QJsonObject 
     }
 }
 
-void Model::loadFile(Context *context, Registry *registry, QString filename) {
+void Model::load(Context *context, Registry *registry, QString name) {
+    QString filename(QDir(Paths::models()).filePath(QString("%1.json").arg(name)));
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Unable to open file for reading:" << filename;
@@ -545,7 +548,8 @@ void Model::loadFile(Context *context, Registry *registry, QString filename) {
     flush();
 }
 
-void Model::saveFile(QString filename) {
+void Model::save(QString name) {
+    QString filename(QDir(Paths::models()).filePath(QString("%1.json").arg(name)));
     QFile file(filename);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Unable to open file for writing:" << filename;

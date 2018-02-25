@@ -1,0 +1,57 @@
+{
+    "edges": [
+        {
+            "fromVertex": "5",
+            "toInput": 0,
+            "toVertex": "8"
+        },
+        {
+            "fromVertex": "6",
+            "toInput": 1,
+            "toVertex": "8"
+        },
+        {
+            "fromVertex": "9",
+            "toInput": 0,
+            "toVertex": "7"
+        },
+        {
+            "fromVertex": "8",
+            "toInput": 0,
+            "toVertex": "10"
+        },
+        {
+            "fromVertex": "10",
+            "toInput": 0,
+            "toVertex": "9"
+        }
+    ],
+    "vertices": {
+        "10": {
+            "file": "effects/afixhighlight.glsl",
+            "intensity": 1,
+            "type": "EffectNode"
+        },
+        "5": {
+            "file": "images/nyancat.gif",
+            "type": "ImageNode"
+        },
+        "6": {
+            "file": "effects/test.glsl",
+            "intensity": 0.7,
+            "type": "EffectNode"
+        },
+        "7": {
+            "type": "FfmpegOutputNode"
+        },
+        "8": {
+            "inputCount": 2,
+            "type": "PlaceholderNode"
+        },
+        "9": {
+            "file": "effects/onblack.glsl",
+            "intensity": 1,
+            "type": "EffectNode"
+        }
+    }
+}
