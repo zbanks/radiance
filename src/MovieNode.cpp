@@ -1,5 +1,4 @@
 #include "MovieNode.h"
-#include "ProbeReg.h"
 #include <QDebug>
 #include <QReadWriteLock>
 #include <QDir>
@@ -9,52 +8,29 @@
 #include <QOpenGLVertexArrayObject>
 #include <locale.h>
 #include <array>
+#include <QJsonObject>
 #include "Paths.h"
-#include "main.h"
 
-MovieType::MovieType(NodeRegistry *r , QObject *p )
-    : NodeType(r,p) {
-}
-MovieType::~MovieType() = default;
-QString MovieType::pathFormat() const {
-    return m_pathFormat;
-}
-void MovieType::setPathFormat(QString fmt)
-{
-    if (fmt != pathFormat()) {
-        m_pathFormat = fmt;
-        emit pathFormatChanged(pathFormat());
-    }
-}
-VideoNode *MovieType::create(QString arg)
-{
-    auto pth = pathFormat().arg(arg);
-    auto node = new MovieNode(this);
-    if (node) {
-        node->setInputCount(inputCount());
-        node->setVideoPath(pth);
-    }
-    return node;
-}
-
-MovieNode::MovieNode(NodeType *nr)
-    : VideoNode(nr)
-    , m_videoPath()
+MovieNode::MovieNode(Context *context, QString file, QString name)
+    : VideoNode(context)
+    , m_name(name)
+    , m_openGLWorker()
     , m_renderFbos()
-    , m_openGLWorkerContext(nullptr)
-    , m_videoSize(0, 0)
-    , m_ready(false)
-    , m_position(0)
-    , m_duration(0)
-    , m_mute(false)
-    , m_pause(false) {
+    , m_blitShader()
+    , m_videoSize()
+    , m_chainSize()
+    , m_ready()
+    , m_mute(true)
+    , m_pause() {
 
     m_openGLWorkerContext = OpenGLWorkerContext::create();
 
     m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(this),&QObject::deleteLater);
 
+    setFile(file);
+
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::initialized, this, &MovieNode::onInitialized);
-    connect(this, &MovieNode::videoPathChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
+    connect(this, &MovieNode::fileChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onVideoChanged);
     connect(this, &MovieNode::chainSizeChanged, m_openGLWorker.data(), &MovieNodeOpenGLWorker::onChainSizeChanged);
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
@@ -68,7 +44,8 @@ MovieNode::MovieNode(NodeType *nr)
 
 MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
-    , m_videoPath(other.m_videoPath)
+    , m_file(other.m_file)
+    , m_name(other.m_name)
     , m_openGLWorker(other.m_openGLWorker)
     , m_renderFbos(other.m_renderFbos)
     , m_blitShader(other.m_blitShader)
@@ -82,52 +59,11 @@ MovieNode::MovieNode(const MovieNode &other)
 MovieNode::~MovieNode() {
 }
 
-QString MovieNode::serialize() {
-    return QString("mpv:%1").arg(m_videoPath);
-}
-
-namespace {
-std::once_flag reg_once{};
-TypeRegistry movie_registry{[](NodeRegistry *r) -> QList<NodeType*> {
-    std::call_once(reg_once,[](){
-        qmlRegisterUncreatableType<MovieNode>("radiance",1,0,"MovieNode","MovieNode must be created through the registry");
-    });
-    auto res = QList<NodeType*>{};
-
-    QStringList images;
-    QDir imgDir(Paths::library() + QString("videos/"));
-    imgDir.setSorting(QDir::Name);
-
-    for (auto movieName : imgDir.entryList()) {
-        if (movieName[0] == '.')
-            continue;
-        auto t = new MovieType(r);
-        if(!t)
-            continue;
-        t->setName(movieName);
-        t->setDescription(movieName);
-        t->setInputCount(1);
-        t->setPathFormat(QString("videos/%1").arg(movieName));
-        res.append(t);
-    }
-    {
-        auto t = new MovieType(r);
-        t->setName("youtube");
-        t->setDescription("Search the Tubes of You");
-        t->setInputCount(1);
-        t->setPathFormat("ytdl://ytsearch:%1");
-        res.append(t);
-    }
-    {
-        auto t = new MovieType(r);
-        t->setName("mpv");
-        t->setDescription("play URI with libmpv");
-        t->setInputCount(1);
-        t->setPathFormat("%1");
-        res.append(t);
-    }
-    return res;
-}};
+QJsonObject MovieNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    o.insert("file", m_file);
+    o.insert("name", m_name);
+    return o;
 }
 
 void MovieNode::onInitialized() {
@@ -145,6 +81,7 @@ void MovieNode::onInitialized() {
 void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     QMutexLocker locker(&m_stateLock);
     for (int i=0; i<added.count(); i++) {
+        // WTF is going on here
         auto state = QSharedPointer<MovieNodeRenderState>::create();
         m_openGLWorker->prepareState(state);
         m_renderFbos.insert(added.at(i), state);
@@ -164,9 +101,14 @@ void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPo
     }
 }
 
-QString MovieNode::videoPath() {
+QString MovieNode::file() {
     Q_ASSERT(QThread::currentThread() == thread());
-    return m_videoPath;
+    return m_file;
+}
+
+QString MovieNode::name() {
+    Q_ASSERT(QThread::currentThread() == thread());
+    return m_name;
 }
 
 qreal MovieNode::position() {
@@ -252,15 +194,30 @@ void MovieNode::onPauseChanged(bool pause) {
     }
 }
 
-void MovieNode::setVideoPath(QString videoPath) {
+void MovieNode::setFile(QString file) {
     Q_ASSERT(QThread::currentThread() == thread());
-    if(videoPath != m_videoPath) {
+    if (!file.contains("://")) {
+        file = Paths::contractLibraryPath(file);
+    }
+    if(file != m_file) {
         {
             QMutexLocker locker(&m_stateLock);
-            m_videoPath = videoPath;
+            m_file = file;
         }
 
-        emit videoPathChanged(videoPath);
+        emit fileChanged(file);
+    }
+}
+
+void MovieNode::setName(QString name) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    if(name != m_name) {
+        {
+            QMutexLocker locker(&m_stateLock);
+            m_name = name;
+        }
+
+        emit nameChanged(name);
     }
 }
 
@@ -526,29 +483,31 @@ void MovieNodeOpenGLWorker::drawFrame() {
 }
 
 void MovieNodeOpenGLWorker::onVideoChanged() {
-    qDebug() << "LOAD" << m_p->m_videoPath;
+    qDebug() << "LOAD" << m_p->m_file;
     if (!m_mpv_gl) return; // Wait for initialization
     QString filename;
     {
         QMutexLocker locker(&m_p->m_stateLock);
-        if (m_p->m_videoPath.isEmpty()) return;
-        //filename = QString("../resources/videos/%1").arg(m_p->m_videoPath);
-        if (m_p->m_videoPath.contains("|")) {
-            auto parts = m_p->m_videoPath.split("|");
-            filename = QString("%1").arg(parts.at(0));
+        filename = m_p->m_file;
+        if (filename.isEmpty()) return;
+        if (!filename.contains("://")) {
+            filename = Paths::expandLibraryPath(m_p->m_file);
+        }
+        //filename = QString("../resources/videos/%1").arg(m_p->m_file);
+        if (filename.contains("|")) {
+            auto parts = filename.split("|");
+            filename = parts.at(0);
             for (int i = 1; i + 1 < parts.count(); i += 2) {
                 auto k = parts.at(i);
                 auto v = parts.at(i + 1);
-                // This is a bit of hack, if the videoPath is changed the properties will not be cleared
+                // This is a bit of hack, if the file is changed the properties will not be cleared
                 mpv_set_property_string(m_mpv, k.toLatin1().data(), v.toLatin1().data());
             }
-        } else {
-            filename = QString("%1").arg(m_p->m_videoPath);
         }
     }
 
     QFileInfo check_file(filename);
-    if(!(check_file.exists() && check_file.isFile())) {
+    if(!filename.contains("://") && !(check_file.exists() && check_file.isFile())) {
         qWarning() << "Could not find" << filename;
         emit warning(QString("Could not find %1").arg(filename));
     }
@@ -632,4 +591,44 @@ void MovieNodeOpenGLWorker::onPrepareState(QSharedPointer<MovieNodeRenderState> 
         return;
     state->m_pass.m_shader = copyProgram(m_state->m_pass.m_shader);
     state->m_ready.exchange(true);
+}
+
+QString MovieNode::typeName() {
+    return "MovieNode";
+}
+
+VideoNode *MovieNode::deserialize(Context *context, QJsonObject obj) {
+    QString file = obj.value("file").toString();
+    if (obj.isEmpty()) {
+        return nullptr;
+    }
+    MovieNode *e = new MovieNode(context, file);
+    auto name = obj.value("name").toString();
+    if (!name.isEmpty()) {
+        e->setName(name);
+    }
+    return e;
+}
+
+bool MovieNode::canCreateFromFile(QString filename) {
+    QStringList extensions({".mp4", ".mkv"});
+    for (auto extension = extensions.begin(); extension != extensions.end(); extension++) {
+        if (filename.endsWith(*extension, Qt::CaseInsensitive)) return true;
+    }
+    return false;
+}
+
+VideoNode *MovieNode::fromFile(Context *context, QString filename) {
+    MovieNode *e = new MovieNode(context, filename);
+    if (e != nullptr) {
+        e->setName(QFileInfo(e->file()).baseName());
+    }
+    return e;
+}
+
+QMap<QString, QString> MovieNode::customInstantiators() {
+    auto m = QMap<QString, QString>();
+    m.insert("Youtube", "YoutubeInstantiator.qml");
+    m.insert("MPV", "MPVInstantiator.qml");
+    return m;
 }

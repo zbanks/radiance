@@ -1,0 +1,40 @@
+{
+    "edges": [
+        {
+            "fromVertex": "1",
+            "toInput": 0,
+            "toVertex": "2"
+        },
+        {
+            "fromVertex": "2",
+            "toInput": 0,
+            "toVertex": "3"
+        },
+        {
+            "fromVertex": "3",
+            "toInput": 0,
+            "toVertex": "4"
+        }
+    ],
+    "vertices": {
+        "1": {
+            "file": "images/nyancat.gif",
+            "type": "ImageNode"
+        },
+        "2": {
+            "file": "effects/test.glsl",
+            "intensity": 0,
+            "type": "EffectNode"
+        },
+        "3": {
+            "file": "effects/interstellar.glsl",
+            "intensity": 0,
+            "type": "EffectNode"
+        },
+        "4": {
+            "file": "effects/crossfader.glsl",
+            "intensity": 0,
+            "type": "EffectNode"
+        }
+    }
+}

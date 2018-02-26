@@ -8,6 +8,9 @@
 #include <QVariantList>
 #include <QJsonObject>
 
+class Registry;
+class Context;
+
 struct Edge {
     VideoNode *fromVertex;
     VideoNode *toVertex;
@@ -28,9 +31,6 @@ struct ModelCopyForRendering {
     QVector<int> toVertex;
     QVector<int> toInput;
 
-    // Map of output name to VideoNode ID
-    QMap<QString, int> outputs;
-
     // Render this model
     // The return value is a mapping of VideoNode IDs to OpenGL textures
     // that were rendered into
@@ -41,7 +41,6 @@ class Model : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList vertices READ qmlVertices)
     Q_PROPERTY(QVariantList edges READ qmlEdges)
-    Q_PROPERTY(QVariantMap outputConnections READ qmlOutputConnections)
 
 public:
     Model();
@@ -56,18 +55,13 @@ public slots:
     void removeVideoNode(VideoNode *videoNode);
     void addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
     void removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput);
-    // Call connectOutput with videoNode = nullptr to disconnect an output
-    void connectOutput(QString outputName, VideoNode *videoNode);
-
-    // Creates a Model-owned VideoNode & adds it to the graph
-    VideoNode *createVideoNode(const QString &name);
 
     // Delete all nodes & edges (still need to call flush())
     void clear();
 
     // Atomically update the graph used for rendering
     // and emit signals describing how the graph was changed.
-    // Call this after adding or removing nodes edges, or outputs.
+    // Call this after adding or removing nodes or edges.
     void flush();
 
     // This function is called before rendering
@@ -86,9 +80,6 @@ public slots:
     // in the order they were added
     QList<Edge> edges() const;
 
-    // Returns a map of output names to VideoNodes
-    QMap<QString, VideoNode *> outputConnections() const;
-
     // Returns a list of vertices
     // in the order they were added
     // suitable for QML / Javascript
@@ -99,11 +90,7 @@ public slots:
     // suitable for QML / Javascript
     QVariantList qmlEdges() const;
 
-    // Returns a map of output names to VideoNodes
-    // suitable for QML / Javascript
-    QVariantMap qmlOutputConnections() const;
-
-    // Returns a list of verticies that
+    // Returns a list of vertices that
     // are ancestors of the given node
     QList<VideoNode *> ancestors(VideoNode *node);
 
@@ -118,20 +105,21 @@ public slots:
     // When requesting a render of the model,
     // you must use one of its chains.
     QList<QSharedPointer<Chain>> chains();
-    void setChains(QList<QSharedPointer<Chain>> chains);
+    void addChain(QSharedPointer<Chain> chain);
+    void removeChain(QSharedPointer<Chain> chain);
 
     QJsonObject serialize();
-    void deserialize(const QJsonObject &data);
+    void deserialize(Context *context, Registry *registry, const QJsonObject &data);
 
     // These are to wrap serialize/deserialize for the UI
     // TODO: This almost certainly should live elsewhere.
-    void loadFile(QString filename);
-    void saveFile(QString filename);
+    void load(Context *context, Registry *registry, QString name);
+    void save(QString name);
 
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)
     // with the interim changes
-    void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved, QVariantMap outputsAdded, QVariantMap outputsRemoved);
+    void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
 
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
 
@@ -156,8 +144,6 @@ private:
     QList<VideoNode *> m_verticesForRendering;
     QList<Edge> m_edgesForRendering;
     QVector<VideoNode *> m_verticesSortedForRendering;
-    QMap<QString, VideoNode *> m_outputConnections;
-    QMap<QString, VideoNode *> m_outputConnectionsForRendering;
 
     // m_vertices and m_edges can be
     // read from or written to by the render thread.

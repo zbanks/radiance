@@ -1,5 +1,4 @@
 #include "View.h"
-#include "main.h"
 #include <QQmlContext>
 #include <QQmlProperty>
 #include <QFileInfo>
@@ -23,13 +22,15 @@ View::~View() {
 }
 
 void View::rebuild() {
+    for (auto c = m_children.begin(); c != m_children.end(); c++) {
+        c->item->deleteLater();
+    }
     m_children.clear();
     m_selection.clear();
     onGraphChanged();
 }
 
 Child View::newChild(VideoNode *videoNode) {
-    qInfo() << "adding child" << videoNode;
     Child c;
     c.videoNode = videoNode;
     c.item = nullptr;
@@ -41,7 +42,7 @@ Child View::newChild(VideoNode *videoNode) {
             qFatal("Could not find a delegate for %s", videoNode->metaObject()->className());
         }
     }
-    auto qmlFileInfo = QFileInfo(Paths::qml() + QString("%1.qml").arg(delegate));
+    auto qmlFileInfo = QFileInfo(Paths::qml() + QString("/%1.qml").arg(delegate));
     QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
     QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
     if( component.status() != QQmlComponent::Ready )
@@ -51,7 +52,7 @@ Child View::newChild(VideoNode *videoNode) {
             qFatal("Could not construct delegate");
         }
     }
-    QSharedPointer<BaseVideoNodeTile> item(qobject_cast<BaseVideoNodeTile *>(component.create()));
+    auto item = qobject_cast<BaseVideoNodeTile *>(component.create());
 
     item->setParentItem(this);
     item->setProperty("videoNode", QVariant::fromValue(videoNode));
@@ -137,7 +138,7 @@ static void setStackup(const QVector<QVector<int>> &inputs, const QVector<QVecto
 }
 
 QQuickItem *View::createDropArea() {
-    auto qmlFileInfo = QFileInfo(Paths::qml() + QString("TileDropArea.qml"));
+    auto qmlFileInfo = QFileInfo(Paths::qml() + "/TileDropArea.qml");
     QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
     QQmlComponent component(engine, QUrl::fromLocalFile(qmlFileInfo.absoluteFilePath()));
     if( component.status() != QQmlComponent::Ready )
@@ -175,26 +176,20 @@ void View::onGraphChanged() {
         }
     }
 
-    m_children = newChildren;
-
-    // First we assign outputs,
-    // in case height / width is affected by
-    // whether a node is an output.
-    QMap<VideoNode *, QString> outputConnectionsReversed;
-    auto outputConnections = m_model->outputConnections();
-    auto outputConnectionsKeys = outputConnections.keys();
-    for (int i=0; i<outputConnectionsKeys.count(); i++) {
-        outputConnectionsReversed.insert(outputConnections.value(outputConnectionsKeys.at(i)), outputConnectionsKeys.at(i));
-    }
-    for (int i=0; i<m_children.count(); i++) {
-        m_children[i].item->setProperty("outputName", outputConnectionsReversed.value(m_children.at(i).videoNode));
-    }
-
     // Create a map from VideoNodes to indices
     QMap<VideoNode *, int> map;
     for (int i=0; i<vertices.count(); i++) {
         map.insert(vertices.at(i), i);
     }
+
+    // Delete children that were removed
+    for (auto c = m_children.begin(); c != m_children.end(); c++) {
+        if (!map.contains(c->videoNode)) {
+            c->item->deleteLater();
+        }
+    }
+
+    m_children = newChildren;
 
     // Create a list of heights parallel to vertices
     QVector<QVector<qreal>> minHeights(m_children.count());
@@ -366,8 +361,8 @@ void View::onGraphChanged() {
         auto next = sortedNodes.at((i + 1) % sortedNodes.count());
         auto prev = sortedNodes.at((i + sortedNodes.count() - 1) % sortedNodes.count());
 
-        m_children[cur].item->setProperty("tab", QVariant::fromValue(m_children[prev].item.data()));
-        m_children[cur].item->setProperty("backtab", QVariant::fromValue(m_children[next].item.data()));
+        m_children[cur].item->setProperty("tab", QVariant::fromValue(m_children[prev].item));
+        m_children[cur].item->setProperty("backtab", QVariant::fromValue(m_children[next].item));
     }
 
     QList<QQuickItem *> dropAreas;
@@ -453,9 +448,9 @@ void View::onGraphChanged() {
 void View::selectionChanged() {
     QSet<BaseVideoNodeTile *> found;
     for (int i=0; i<m_children.count(); i++) {
-        auto selected = m_selection.contains(m_children.at(i).item.data());
+        auto selected = m_selection.contains(m_children.at(i).item);
         m_children[i].item->setProperty("selected", selected);
-        if (selected) found.insert(m_children.at(i).item.data());
+        if (selected) found.insert(m_children.at(i).item);
     }
     m_selection = found;
 }
@@ -468,9 +463,7 @@ void View::setModel(Model *model) {
     if(m_model != nullptr) disconnect(model, nullptr, this, nullptr);
     m_model = model;
     if(m_model != nullptr) {
-        // It is important that this connection is queued
-        // so we don't delete any tiles while their signal handlers are still running
-        connect(model, &Model::graphChanged, this, &View::onGraphChanged, Qt::QueuedConnection);
+        connect(model, &Model::graphChanged, this, &View::onGraphChanged);
     }
     rebuild();
     emit modelChanged(model);
@@ -557,8 +550,8 @@ void View::ensureSelected(BaseVideoNodeTile *tile) {
 QVariantList View::selection() {
     QVariantList selection;
     for (int i=0; i<m_children.count(); i++) {
-        if (m_selection.contains(m_children.at(i).item.data())) {
-            selection.append(QVariant::fromValue(m_children.at(i).item.data()));
+        if (m_selection.contains(m_children.at(i).item)) {
+            selection.append(QVariant::fromValue(m_children.at(i).item));
         }
     }
     return selection;
@@ -567,7 +560,7 @@ QVariantList View::selection() {
 BaseVideoNodeTile *View::focusedChild() {
     for (int i=0; i<m_children.count(); i++) {
         if (m_children.at(i).item->hasActiveFocus()) {
-            return m_children.at(i).item.data();
+            return m_children.at(i).item;
         }
     }
     return nullptr;
@@ -622,7 +615,7 @@ QVariantList View::selectedConnectedComponents() {
     {
         auto vSet = QSet<VideoNode *>::fromList(vertices);
         for (int i=0; i<m_children.count(); i++) {
-            if (m_selection.contains(m_children.at(i).item.data())
+            if (m_selection.contains(m_children.at(i).item)
              && vSet.contains(m_children.at(i).videoNode)) {
                 selectedVertices.append(m_children.at(i).videoNode);
                 selectedVerticesSet.insert(m_children.at(i).videoNode);
@@ -686,7 +679,7 @@ QVariantList View::selectedConnectedComponents() {
         for (int i=0; i<m_children.count(); i++) {
             auto tileIndex = map.value(m_children.at(i).videoNode, -1);
             if (tileIndex >= 0 && colors.at(tileIndex) == c) {
-                tiles.append(QVariant::fromValue(m_children.at(i).item.data()));
+                tiles.append(QVariant::fromValue(m_children.at(i).item));
                 coloredVerticesSet.insert(m_children.at(i).videoNode);
             }
         }
@@ -783,8 +776,8 @@ QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *til
     int n1 = -1;
     int n2 = -1;
     for (int i=0; i<m_children.count(); i++) {
-        if (tile1 == m_children.at(i).item.data()) n1 = map.value(m_children.at(i).videoNode, -1);
-        if (tile2 == m_children.at(i).item.data()) n2 = map.value(m_children.at(i).videoNode, -1);
+        if (tile1 == m_children.at(i).item) n1 = map.value(m_children.at(i).videoNode, -1);
+        if (tile2 == m_children.at(i).item) n2 = map.value(m_children.at(i).videoNode, -1);
     }
 
     if (n1 < 0 || n2 < 0) {
@@ -814,26 +807,24 @@ QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *til
 
     for (int i=0; i<m_children.count(); i++) {
         if (result.contains(map.value(m_children.at(i).videoNode, -1))) {
-            tilesBetween.append(QVariant::fromValue(m_children.at(i).item.data()));
+            tilesBetween.append(QVariant::fromValue(m_children.at(i).item));
         }
     }
     return tilesBetween;
 }
 
-// Shouldn't this return a BaseVideoNodeTile *
-QVariant View::tileForVideoNode(VideoNode *videoNode) {
-    qInfo() << "Looking up" << videoNode;
+BaseVideoNodeTile *View::tileForVideoNode(VideoNode *videoNode) {
     for (auto child : m_children) {
         if (child.videoNode == videoNode)
-            return QVariant::fromValue(child.item.data());
+            return child.item;
     }
-    return QVariant();
+    return nullptr;
 }
 
 void View::onControlChangedAbs(int bank, Controls::Control control, qreal value) {
     if (control >= Controls::Parameter0 && control <= Controls::Parameter9) {
         for (int i=0; i<m_children.count(); i++) {
-            auto tile = m_children.at(i).item.data();
+            auto tile = m_children.at(i).item;
             if (tile->property("bank").toInt() == bank) {
                 auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
                 controls->changeControlAbs(bank, control, value);
@@ -841,7 +832,7 @@ void View::onControlChangedAbs(int bank, Controls::Control control, qreal value)
         }
     } else {
         for (int i=0; i<m_children.count(); i++) {
-            auto tile = m_children.at(i).item.data();
+            auto tile = m_children.at(i).item;
             if (m_selection.contains(tile)) {
                 auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
                 controls->changeControlAbs(bank, control, value);
@@ -853,7 +844,7 @@ void View::onControlChangedAbs(int bank, Controls::Control control, qreal value)
 void View::onControlChangedRel(int bank, Controls::Control control, qreal value) {
     if (control >= Controls::Parameter0 && control <= Controls::Parameter9) {
         for (int i=0; i<m_children.count(); i++) {
-            auto tile = m_children.at(i).item.data();
+            auto tile = m_children.at(i).item;
             if (tile->property("bank").toInt() == bank) {
                 auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
                 controls->changeControlRel(bank, control, value);
@@ -867,7 +858,7 @@ void View::onControlChangedRel(int bank, Controls::Control control, qreal value)
         }
     } else {
         for (int i=0; i<m_children.count(); i++) {
-            auto tile = m_children.at(i).item.data();
+            auto tile = m_children.at(i).item;
             if (m_selection.contains(tile)) {
                 auto controls = qobject_cast<ControlsAttachedType *>(qmlAttachedPropertiesObject<Controls>(tile));
                 controls->changeControlRel(bank, control, value);

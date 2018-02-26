@@ -37,27 +37,29 @@ find_package(MPV)
 set(libradiance_SOURCES)
 list(APPEND libradiance_SOURCES
     src/Audio.cpp
-    src/Output.cpp
-    src/Timebase.cpp
-    src/NodeRegistry.cpp
-    src/NodeType.cpp
-    src/ProbeReg.cpp
-    src/VideoNode.cpp
-    src/EffectNode.cpp
-    src/ImageNode.cpp
-    src/FramebufferVideoNodeRender.cpp
-    src/GraphicalDisplay.cpp
-    src/Model.cpp
-    src/OpenGLWorkerContext.cpp
-    src/OpenGLWorker.cpp
-    src/OpenGLUtils.cpp
-    src/View.cpp
+    src/BaseVideoNodeTile.cpp
     src/Chain.cpp
     src/Context.cpp
-    src/OutputImageSequence.cpp
     src/Controls.cpp
-    src/BaseVideoNodeTile.cpp
+    src/EffectNode.cpp
+    src/FFmpegOutputNode.cpp
+    src/FramebufferVideoNodeRender.cpp
+    src/GraphicalDisplay.cpp
+    src/ImageNode.cpp
+    src/Library.cpp
+    src/Model.cpp
+    src/OpenGLUtils.cpp
+    src/OpenGLWorker.cpp
+    src/OpenGLWorkerContext.cpp
+    src/OutputNode.cpp
+    src/OutputWindow.cpp
     src/Paths.cpp
+    src/PlaceholderNode.cpp
+    src/Registry.cpp
+    src/ScreenOutputNode.cpp
+    src/Timebase.cpp
+    src/VideoNode.cpp
+    src/View.cpp
     BTrack/src/BTrack.c
     BTrack/src/OnsetDetectionFunction.c
     )
@@ -105,10 +107,7 @@ add_library(libradiance ${libradiance_SOURCES})
 
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
-    src/QQuickOutputItem.cpp
-    src/QQuickOutputWindow.cpp)
-
-add_executable(radiance_cli WIN32 src/main_standalone.cpp)
+    src/QQuickPreviewAdapter.cpp)
 
 set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
 set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})
@@ -116,7 +115,6 @@ set_target_properties(radiance PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOUR
 
 target_link_libraries(libradiance ${radiance_LIBRARIES})
 target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
-target_link_libraries(radiance_cli libradiance ${radiance_LIBRARIES})
 
 INSTALL(TARGETS radiance
         DESTINATION bin

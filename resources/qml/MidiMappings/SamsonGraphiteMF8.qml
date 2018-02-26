@@ -29,7 +29,7 @@ QtObject {
 
         onControlChange: {
             console.log("cc ", channel, control, value, 123);
-            if (control == 60) { // "A" jogwheel
+            if (control == 49) { // "A" jogwheel
                 var N = 4;
                 var v = value;
                 if (v > 64) {
@@ -45,8 +45,9 @@ QtObject {
                     target.Controls.changeControlRel(0, Controls.Scroll, -1);
                     scrollAccumulator += N;
                 }
-            } else if (control == 49) { // "B" jogwheel
-                var v = value << 25 >> 25;
+            } else if (control == 60) { // "B" jogwheel
+                var v = value;
+                if (v > 64) v = 64 - v;
                 target.Controls.changeControlRel(0, Controls.PrimaryParameter, v / 127);
             }
         }
