@@ -3,6 +3,7 @@
 #include "OutputNode.h"
 #include "OutputWindow.h"
 #include <QProcess>
+#include <QImage>
 
 class FFmpegOutputNode
     : public OutputNode {
@@ -38,13 +39,13 @@ public:
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
 
-    void recordFrame();
-
 public slots:
     bool recording();
     void setRecording(bool recording);
     QStringList ffmpegArguments();
     void setFFmpegArguments(QStringList ffmpegArguments);
+    void recordFrame();
+    QImage grabImage();
 
 signals:
     void recordingChanged(bool recording);

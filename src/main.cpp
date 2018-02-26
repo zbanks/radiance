@@ -10,7 +10,6 @@
 #include <QProcess>
 #include "BaseVideoNodeTile.h"
 #include "EffectNode.h"
-#include "FramebufferVideoNodeRender.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
@@ -143,7 +142,6 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
     QSharedPointer<Chain> chain(new Chain(renderSize));
-    FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
     model.load(&context, &registry, modelName);
@@ -220,19 +218,14 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                 effectNode->setIntensity(i / 50.);
 
             context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
-
-            auto modelCopy = model.createCopyForRendering(chain);
-            auto rendering = modelCopy.render(chain);
-
-            auto outputTextureId = rendering.value(ffmpegNode->id(), 0);
-            if (outputTextureId != 0) {
-                if (i == 0 || i == 51) {
-                    QImage img = imgRender.render(outputTextureId);
-                    QString filename = outputDir.filePath(QString("%1_%2.png").arg(name, QString::number(i)));
-                    img.save(filename);
-                }
-            }
             ffmpegNode->recordFrame();
+
+            if (i == 0 || i == 51) {
+                // `grabImage` causes an extra render to happen
+                QImage img = ffmpegNode->grabImage();
+                QString filename = outputDir.filePath(QString("%1_%2.png").arg(name, QString::number(i)));
+                img.save(filename);
+            }
         }
 
         // Reset state

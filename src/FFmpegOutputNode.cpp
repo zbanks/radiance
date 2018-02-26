@@ -98,3 +98,13 @@ void FFmpegOutputNode::recordFrame() {
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, m_pixelBuffer.data());
     m_ffmpeg.write(m_pixelBuffer);
 }
+
+QImage FFmpegOutputNode::grabImage() {
+    QImage outputImage(chain()->size(), QImage::Format_RGBA8888_Premultiplied);
+
+    GLuint texture = render();
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, outputImage.bits());
+
+    return outputImage.mirrored(false, true); // vertical flip
+}
