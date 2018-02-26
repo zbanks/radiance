@@ -159,7 +159,7 @@ Item {
     function addSelected() {
         var filename = librarytree.model.data(librarytree.selection.currentIndex, Library.FileRole);
 
-        if (filename.substr(-4) == ".qml") {
+        if (filename && filename.substr(-4) == ".qml") {
             var comp = Qt.createComponent("Instantiators/" + filename);
 
             function finishCreation() {
