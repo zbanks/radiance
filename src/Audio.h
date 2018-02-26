@@ -38,7 +38,6 @@ protected:
 
 private:
     std::atomic<bool> m_run{true};
-    double m_time{};
     Timebase *m_timebase;
 
     size_type m_size{2048};

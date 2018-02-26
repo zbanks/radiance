@@ -59,6 +59,7 @@ QStringList FFmpegOutputNode::ffmpegArguments() {
 }
 
 void FFmpegOutputNode::setFFmpegArguments(QStringList ffmpegArguments) {
+    setRecording(false);
     m_ffmpegArguments = ffmpegArguments;
     emit ffmpegArgumentsChanged(m_ffmpegArguments);
 }

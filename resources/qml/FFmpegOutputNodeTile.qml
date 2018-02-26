@@ -48,20 +48,10 @@ VideoNodeTile {
         }
             
         CheckBox {
-            id: visibleCheck
+            id: recordingCheck
             checked: tile.videoNode ? tile.videoNode.recording : false;
 
-            Connections {
-                target: tile.videoNode
-                onShownChanged: {
-                    visibleCheck.checked = recording;
-                }
-            }
-
             onCheckedChanged: {
-                if (checked) {
-                    tile.videoNode.screenName = screenSelector.currentText;
-                }
                 tile.videoNode.recording = checked;
             }
 

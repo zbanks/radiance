@@ -39,8 +39,8 @@ public:
     std::atomic<bool> m_ready{false};
     QString      m_file;
     int          m_totalDelay{};
-    std::vector<int> m_frameDelays{}; // milliseconds
-    std::vector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
+    QVector<int> m_frameDelays{}; // milliseconds
+    QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
 };
 
 ///////////////////////////////////////////////////////////////////////////////

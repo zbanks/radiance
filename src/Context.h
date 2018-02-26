@@ -20,13 +20,11 @@ public:
     Context(bool threaded=true);
    ~Context();
 
-    QSettings *settings();
     Audio *audio();
     Timebase *timebase();
     OpenGLWorkerContext *openGLWorkerContext();
 
 protected:
-    QSettings *m_settings;
     Audio *m_audio;
     Timebase *m_timebase;
     OpenGLWorkerContext *m_openGLWorkerContext;
