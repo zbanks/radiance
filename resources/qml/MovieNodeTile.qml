@@ -13,7 +13,7 @@ VideoNodeTile {
 
         Label {
             Layout.fillWidth: true;
-            text: videoNode ? videoNode.videoPath : "";
+            text: videoNode ? videoNode.name : "";
             color: "#ddd";
             elide: Text.ElideMiddle;
         }
@@ -30,7 +30,7 @@ VideoNodeTile {
             VideoNodePreview {
                 anchors.fill: parent;
                 id: vnr;
-                context: Globals.context;
+                previewAdapter: Globals.previewAdapter;
                 videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
             }
         }

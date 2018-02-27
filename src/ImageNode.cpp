@@ -1,5 +1,6 @@
 #include "ImageNode.h"
-#include "ProbeReg.h"
+#include "Context.h"
+#include "Audio.h"
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -7,69 +8,27 @@
 #include <QImageReader>
 #include <QtQml>
 #include "Paths.h"
-#include "main.h"
 
-
-ImageType::ImageType(NodeRegistry *r , QObject *p )
-    : NodeType(r,p) {
-}
-ImageType::~ImageType() = default;
-VideoNode *ImageType::create(QString arg) {
-    auto node = new ImageNode(this);
-    if (node) {
-        node->setInputCount(inputCount());
-        node->setImagePath(name());
-    }
-    return node;
-}
-
-ImageNode::ImageNode(NodeType *nr)
-    : VideoNode(nr)
+ImageNode::ImageNode(Context *context, QString file)
+    : VideoNode(context)
     , m_ready(false) {
+    setInputCount(1);
+    setFile(file);
 }
 
 ImageNode::ImageNode(const ImageNode &other)
     : VideoNode(other)
-//    , m_frameTextures(other.m_frameTextures)
-//    , m_currentTexture(other.m_currentTexture)
-//    , m_currentTextureIdx(other.m_currentTextureIdx)
-    , m_imagePath(other.m_imagePath)
+    , m_file(other.m_file)
     , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready) {
 }
 
 ImageNode::~ImageNode() = default;
 
-QString ImageNode::serialize() {
-    return m_imagePath;
-}
-
-namespace {
-std::once_flag reg_once{};
-TypeRegistry image_registry{[](NodeRegistry *r) -> QList<NodeType*> {
-    std::call_once(reg_once,[](){
-        qmlRegisterUncreatableType<ImageNode>("radiance",1,0,"ImageNode","ImageNode must be created through the registry");
-    });
-
-    auto res = QList<NodeType*>{};
-
-    QStringList images;
-    QDir imgDir(Paths::library() + QString("images/"));
-    imgDir.setSorting(QDir::Name);
-
-    for (auto imageName : imgDir.entryList()) {
-        if (imageName[0] == '.')
-            continue;
-        auto t = new ImageType(r);
-        if(!t)
-            continue;
-        t->setName(imageName);
-        t->setDescription(imageName);
-        t->setInputCount(1);
-        res.append(t);
-    }
-    return res;
-}};
+QJsonObject ImageNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    o.insert("file", m_file);
+    return o;
 }
 
 void ImageNode::onInitialized() {
@@ -78,24 +37,31 @@ void ImageNode::onInitialized() {
 
 void ImageNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
 }
-QString ImageNode::imagePath() {
+QString ImageNode::file() {
     Q_ASSERT(QThread::currentThread() == thread());
-    return m_imagePath;
+    return m_file;
 }
 
-void ImageNode::setImagePath(QString imagePath) {
+QString ImageNode::name() {
     Q_ASSERT(QThread::currentThread() == thread());
-    if(imagePath != m_imagePath) {
+    return QFileInfo(m_file).baseName();
+}
+
+void ImageNode::setFile(QString file) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    file = Paths::contractLibraryPath(file);
+    if(file != m_file) {
+        auto oldName = name();
         {
             QMutexLocker locker(&m_stateLock);
-            m_imagePath = imagePath;
-            m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(this, m_imagePath), &QObject::deleteLater);
+            m_file = file;
+            m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(this, m_file), &QObject::deleteLater);
             connect(m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
             bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize");
             Q_ASSERT(result);
-
         }
-        emit imagePathChanged(imagePath);
+        emit fileChanged(file);
+        if (name() != oldName) emit nameChanged(name());
     }
 }
 
@@ -110,12 +76,12 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     if (!m_openGLWorker || !m_openGLWorker->m_ready.load() || !m_openGLWorker->m_frameTextures.size())
         return 0;
 
-    auto currentMs = int64_t(chain->beatTime() *  1e3 / 2.);
+    auto currentMs = int64_t(context()->timebase()->beat() *  500);
     auto extraMs   = currentMs;
     if(m_openGLWorker->m_totalDelay) {
         extraMs   = currentMs % (m_openGLWorker->m_totalDelay);
         if(!m_openGLWorker->m_frameDelays.empty()) {
-            for(auto i = size_t{}; i < m_openGLWorker->m_frameDelays.size(); ++i) {
+            for(auto i = 0; i < m_openGLWorker->m_frameDelays.size(); ++i) {
                 if(m_openGLWorker->m_frameDelays.at(i) >= extraMs)
                     return m_openGLWorker->m_frameTextures.at(i)->textureId();
             }
@@ -130,28 +96,29 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 
 // ImageNodeOpenGLWorker methods
 
-ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString imagePath)
-    : OpenGLWorker(p->m_workerContext)
-    , m_imagePath(imagePath) {
-//    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
-//    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
-//    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
+ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString file)
+    : OpenGLWorker(p->context()->openGLWorkerContext())
+    , m_file(file) {
+    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
+    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
+    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
     connect(this, &QObject::destroyed, this, &ImageNodeOpenGLWorker::onDestroyed);
 }
+
 ImageNodeOpenGLWorker::~ImageNodeOpenGLWorker() {
     makeCurrent();
-//    m_frameTextures.clear();
-//    m_frameDelays.clear();
 }
+
 bool ImageNodeOpenGLWorker::ready() const {
     return m_ready.load();
 }
+
 void ImageNodeOpenGLWorker::initialize() {
     // Lock this because we need to use m_frameTextures
     makeCurrent();
-    auto result = loadImage(m_imagePath);
+    auto result = loadImage(m_file);
     if (!result) {
-        qWarning() << "Can't load image!" << m_imagePath;
+        qWarning() << "Can't load image!" << m_file;
         return;
     }
     m_ready.store(true);
@@ -161,8 +128,8 @@ void ImageNodeOpenGLWorker::initialize() {
 
 // Call this to load an image into m_frameTextures
 // Returns true if the program was loaded successfully
-bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
-    auto filename = Paths::library() + QString("images/") + imagePath;
+bool ImageNodeOpenGLWorker::loadImage(QString filename) {
+    filename = Paths::expandLibraryPath(filename);
     QFile file(filename);
 
     QFileInfo check_file(filename);
@@ -203,4 +170,30 @@ bool ImageNodeOpenGLWorker::loadImage(QString imagePath) {
 void ImageNodeOpenGLWorker::onDestroyed() {
     // For some reason, QOpenGLTexture does not have setParent
     // and so we cannot use Qt object tree deletion semantics
+}
+
+QString ImageNode::typeName() {
+    return "ImageNode";
+}
+
+VideoNode *ImageNode::deserialize(Context *context, QJsonObject obj) {
+    QString name = obj.value("file").toString();
+    if (obj.isEmpty()) {
+        return nullptr;
+    }
+    ImageNode *e = new ImageNode(context, name);
+    return e;
+}
+
+bool ImageNode::canCreateFromFile(QString filename) {
+    return QImageReader(filename).canRead();
+}
+
+VideoNode *ImageNode::fromFile(Context *context, QString filename) {
+    ImageNode *e = new ImageNode(context, filename);
+    return e;
+}
+
+QMap<QString, QString> ImageNode::customInstantiators() {
+    return QMap<QString, QString>();
 }

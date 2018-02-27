@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include "OpenGLUtils.h"
 #include <QOpenGLFramebufferObject>
@@ -23,21 +22,6 @@ public:
 };
 Q_DECLARE_METATYPE(QSharedPointer<MovieNodeRenderState>);
 
-class MovieType : public NodeType {
-    Q_OBJECT
-    Q_PROPERTY(QString pathFormat READ pathFormat WRITE setPathFormat NOTIFY pathFormatChanged)
-public:
-    MovieType(NodeRegistry *r = nullptr, QObject *p = nullptr);
-   ~MovieType() override;
-public slots:
-    QString pathFormat() const;
-    void setPathFormat(QString fmt);
-    VideoNode *create(QString) override;
-signals:
-    void pathFormatChanged(QString);
-protected:
-    QString m_pathFormat{};
-};
 ///////////////////////////////////////////////////////////////////////////////
 
 class MovieNodeOpenGLWorker : public OpenGLWorker {
@@ -99,7 +83,8 @@ private:
 class MovieNode
     : public VideoNode {
     Q_OBJECT
-    Q_PROPERTY(QString videoPath READ videoPath WRITE setVideoPath NOTIFY videoPathChanged)
+    Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QSize videoSize READ videoSize NOTIFY videoSizeChanged)
     Q_PROPERTY(qreal duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(qreal position READ position NOTIFY positionChanged WRITE setPosition)
@@ -109,24 +94,49 @@ class MovieNode
     friend class MovieNodeOpenGLWorker;
 
 public:
-    MovieNode(NodeType *nr);
+    MovieNode(Context *context, QString file, QString name=QString(""));
     MovieNode(const MovieNode &other);
     ~MovieNode();
 
-    QString serialize() override;
+    QJsonObject serialize() override;
 
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
+    // These static methods are required for VideoNode creation
+    // through the registry
+
+    // A string representation of this VideoNode type
+    static QString typeName();
+
+    // Create a VideoNode from a JSON description of one
+    // Returns nullptr if the description is invalid
+    static VideoNode *deserialize(Context *context, QJsonObject obj);
+
+    // Return true if a VideoNode could be created from
+    // the given filename
+    // This check should be very quick.
+    static bool canCreateFromFile(QString filename);
+
+    // Create a VideoNode from a filename
+    // Returns nullptr if a VideoNode cannot be create from the given filename
+    static VideoNode *fromFile(Context *context, QString filename);
+
+    // Returns QML filenames that can be loaded
+    // to instantiate custom instances of this VideoNode
+    static QMap<QString, QString> customInstantiators();
+
 public slots:
     QSize videoSize();
-    QString videoPath();
+    QString file();
+    QString name();
     qreal position();
     qreal duration();
     bool mute();
     bool pause();
-    void setVideoPath(QString videoPath);
+    void setFile(QString file);
     void setPosition(qreal position);
+    void setName(QString name);
     void setMute(bool mute);
     void setPause(bool pause);
 
@@ -139,7 +149,8 @@ protected slots:
     void onPauseChanged(bool pause);
 
 signals:
-    void videoPathChanged(QString videoPath);
+    void fileChanged(QString file);
+    void nameChanged(QString name);
     void videoSizeChanged(QSize size);
     void chainSizeChanged(QSize size);
     void positionChanged(qreal position);
@@ -150,7 +161,8 @@ signals:
 protected:
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
-    QString m_videoPath;
+    QString m_file;
+    QString m_name;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
     QMap<QSharedPointer<Chain>, QSharedPointer<MovieNodeRenderState>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;

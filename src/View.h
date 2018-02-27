@@ -5,7 +5,7 @@
 
 struct Child {
     VideoNode *videoNode;
-    QSharedPointer<BaseVideoNodeTile> item;
+    BaseVideoNodeTile *item;
     QVector<int> inputHeights;
 };
 
@@ -55,7 +55,7 @@ public slots:
     QVariantList tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *tile2);
 
     // Returns the tile for the given VideoNode instance
-    QVariant tileForVideoNode(VideoNode *videoNode);
+    BaseVideoNodeTile *tileForVideoNode(VideoNode *videoNode);
 
     // The tile that has focus,
     // or nullptr if no tile has focus

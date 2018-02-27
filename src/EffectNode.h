@@ -1,9 +1,9 @@
 #pragma once
 
 #include "VideoNode.h"
-#include "NodeType.h"
 #include "OpenGLWorker.h"
 #include "OpenGLUtils.h"
+#include "Context.h"
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
@@ -12,14 +12,6 @@
 #include <QOpenGLFramebufferObject>
 
 class EffectNode;
-class EffectType : public NodeType {
-    Q_OBJECT
-public:
-    EffectType(NodeRegistry *r = nullptr, QObject *p = nullptr);
-   ~EffectType() override;
-public slots:
-    VideoNode *create(QString) override;
-};
 
 // This struct extends the VideoNodeRenderState
 // to add additional state to each render pipeline.
@@ -58,8 +50,8 @@ public:
     EffectNodeOpenGLWorker(EffectNode *p);
 public slots:
     // Call this after changing
-    // "name"
-    void initialize(QString);
+    // "file"
+    void initialize(QVector<QStringList> passes);
     void onPrepareState(QSharedPointer<EffectNodeRenderState> state);
 signals:
     // This is emitted when it is done
@@ -70,7 +62,7 @@ signals:
     void warning(QString str);
     void fatal(QString str);
 protected:
-    bool loadProgram(QString name);
+    bool loadProgram(QString file);
     QSharedPointer<EffectNodeRenderState> m_state;
 };
 
@@ -83,16 +75,17 @@ class EffectNode
     : public VideoNode {
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
-    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
+    Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
     friend class EffectNodeOpenGLWorker;
 
 public:
-    EffectNode(NodeType *nr);
+    EffectNode(Context *context, QString name);
     EffectNode(const EffectNode &other);
     ~EffectNode();
 
-    QString serialize() override;
+    QJsonObject serialize() override;
 
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
@@ -102,11 +95,35 @@ public:
     // Creates a copy of this node
     QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain> chain) override;
 
+    // These static methods are required for VideoNode creation
+    // through the registry
+
+    // A string representation of this VideoNode type
+    static QString typeName();
+
+    // Create a VideoNode from a JSON description of one
+    // Returns nullptr if the description is invalid
+    static VideoNode *deserialize(Context *context, QJsonObject obj);
+
+    // Return true if a VideoNode could be created from
+    // the given filename
+    // This check should be very quick.
+    static bool canCreateFromFile(QString filename);
+
+    // Create a VideoNode from a filename
+    // Returns nullptr if a VideoNode cannot be create from the given filename
+    static VideoNode *fromFile(Context *context, QString filename);
+
+    // Returns QML filenames that can be loaded
+    // to instantiate custom instances of this VideoNode
+    static QMap<QString, QString> customInstantiators();
+
 public slots:
     qreal intensity();
     QString name();
+    QString file();
     void setIntensity(qreal value);
-    void setName(QString name);
+    void setFile(QString file);
     void reload();
 
 protected slots:
@@ -117,6 +134,7 @@ protected slots:
 signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);
+    void fileChanged(QString file);
 
 protected:
     QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
@@ -125,7 +143,7 @@ protected:
     qreal m_beatLast;
     qreal m_realTime;
     qreal m_realTimeLast;
-    QString m_name;
+    QString m_file;
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
     QTimer m_periodic; // XXX do something better here
     bool m_ready;

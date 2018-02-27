@@ -7,3 +7,6 @@ src/doxygen.cfg
 src/moc_*.cpp
 src/CMake*
 .DS_Store
+resources/models/*.json
+!resources/models/cli.json
+!resources/models/gui_default.json

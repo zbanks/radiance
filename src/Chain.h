@@ -7,59 +7,52 @@
 #include <QVector>
 #include <QMutex>
 
-class Chain;
+/*
+    Chains are instances of the
+    model render pipeline
+    You need a different chain for a different size / shape output,
+    or a different thead.
+    When requesting a render of the model,
+    you must use one of its chains.
 
-class ChainOpenGLWorker : public OpenGLWorker {
-    Q_OBJECT
+    All VideoNode renders happen against a chain.
+    A Chain is lightweight object that stores a particular resolution
+    at which the render is to be done.
+    A Chain also stores state that does not belong to any particular VideoNode
+    for the render, i.e. a blank texture and noise texture
+    which is available to all.
 
-public:
-    ChainOpenGLWorker(Chain* p);
-public slots:
-    void initialize(QSize);
-signals:
-    void initialized(int, int);
-protected:
-    void createBlankTexture(QSize);
-    void createNoiseTexture(QSize);
-    QOpenGLTexture m_noiseTexture{QOpenGLTexture::Target2D};
-    QOpenGLTexture m_blankTexture{QOpenGLTexture::Target2D};
-};
+    Chains are immutable once created,
+    that is, you cannot change the size.
+    Chains should always be passed around as Shared Pointers.
+    This is because they cannot be copied due to having some OpenGL baggage,
+    yet they may be referenced by VideoNodes that have been
+    copied for rendering.
 
-///////////////////////////////////////////////////////////////////////////////
+    Chains are owned by Outputs or Output-like things
+    (such as the preview adapter.)
+*/
 
 class Chain : public QObject {
     Q_OBJECT
 
-    friend class ChainOpenGLWorker;
-
     Q_PROPERTY(QSize size READ size CONSTANT);
     Q_PROPERTY(int blankTexture READ blankTexture);
     Q_PROPERTY(int noiseTexture READ noiseTexture);
-    Q_PROPERTY(qreal realTime READ realTime);
-    Q_PROPERTY(qreal beatTime READ beatTime);
+
 public:
     Chain(QSize size);
    ~Chain() override;
     QSize size();
+
 public slots:
-    GLuint noiseTexture() const;
-    GLuint blankTexture() const;
-    QOpenGLVertexArrayObject &vao();
-    const QOpenGLVertexArrayObject &vao() const;
-    qreal realTime() const;
-    qreal beatTime() const;
-    void setRealTime(qreal time);
-    void setBeatTime(qreal time);
-protected slots:
-    void onInitialized(int, int);
+    GLuint noiseTexture();
+    GLuint blankTexture();
+    QOpenGLVertexArrayObject *vao();
 
 protected:
-    bool m_initialized{false};
-    GLuint m_noiseTextureId{};
-    GLuint m_blankTextureId{};
-    qreal                     m_realTime{};
-    qreal                     m_beatTime{};
-    QOpenGLVertexArrayObject  m_vao;
-    ChainOpenGLWorker        *m_openGLWorker{};
+    QOpenGLTexture *m_noiseTexture;
+    QOpenGLTexture *m_blankTexture;
+    QOpenGLVertexArrayObject  *m_vao;
     QSize m_size;
 };

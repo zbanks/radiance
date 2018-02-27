@@ -9,7 +9,7 @@ class OutputImageSequenceWorker : public OpenGLWorker {
 
 public:
     OutputImageSequenceWorker(OutputImageSequence *p, int frameDelay, QString filename, QSize size)
-        : OpenGLWorker(p->m_context)
+        : OpenGLWorker(p->m_context.data())
         , m_p(p)
         , m_filename(filename)
         , m_frameDelay(frameDelay)

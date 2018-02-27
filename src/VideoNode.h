@@ -7,9 +7,6 @@
 #include <QOpenGLFunctions>
 #include <QMutex>
 
-class Model;
-class NodeType;
-
 // This is an abstract base class
 // for nodes in the DAG.
 // VideoNodes have 0 or more inputs, and one output.
@@ -20,17 +17,16 @@ class NodeType;
 // The few exceptions to this
 // are methods relating to rendering.
 
+class Context;
+
 class VideoNode : public QObject {
     Q_OBJECT
+    Q_PROPERTY(Context *context READ context CONSTANT);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
     Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged);
 
 public:
-    // Calls to paint() may return 0
-    // before initialize() has been run.
-    // Constructor may be called without a valid
-    // OpenGL context.
-    VideoNode(NodeType *nt);
+    VideoNode(Context *context);
 
     // VideoNodes must be copyable
     VideoNode(const VideoNode &other);
@@ -38,11 +34,7 @@ public:
    ~VideoNode() override;
 
     // Methods for de/serializing VideoNodes
-    // All 3 methods need to be implemented for each subclass of VideoNode
-    // TODO: is it awkward that serialize returns 1 string; but deserialize takes 2?
-    // TODO: How can we ensure deserialize & availableNodeTypes are impl'd at compile time?
-    // TODO: Classes still need to be registered in main.cpp
-    virtual QString serialize() = 0;
+    virtual QJsonObject serialize();
 
     // Methods for rendering
 
@@ -85,6 +77,9 @@ public slots:
     int inputCount();
     void setInputCount(int value);
 
+    // Context
+    Context *context();
+
     // Returns a unique identifier
     // within the context
     // Anything that references this node in the main thread
@@ -103,18 +98,30 @@ public slots:
     // which ones that changed through the function chainsEdited.
     QList<QSharedPointer<Chain>> chains();
     void setChains(QList<QSharedPointer<Chain>> chains);
-    QSharedPointer<OpenGLWorkerContext> workerContext() const;
+
+    // A VideoNode may request of the model
+    // that certain chains exist.
+    // By default, no chains are requested.
+    // You only need to implement this method if you are
+    // writing an output. 
+    // You must also emit the signals
+    // requestedChainAdded and requestedChainRemoved.
+    // The Model will add these through setChains.
+    virtual QList<QSharedPointer<Chain>> requestedChains();
+
 protected slots:
-    virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) = 0;
+    // If your node does anything at all, you will need to override this method
+    // and take appropriate action when the set of render chains changes.
+    virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed);
 
 protected:
-    int m_inputCount;
+    int m_inputCount{};
     QMutex m_stateLock;
     int m_id;
     QList<QSharedPointer<Chain>> m_chains;
     QMutex m_idLock;
+    Context *m_context;
 
-    QSharedPointer<OpenGLWorkerContext> m_workerContext{};
 signals:
     // Emitted when the object wishes to be deleted
     // e.g. due to an error
@@ -127,4 +134,8 @@ signals:
 
     void chainsChanged(QList<QSharedPointer<Chain>> chains);
     void idChanged(int id);
+
+    // Emitted when requestedChains changes
+    void requestedChainAdded(QSharedPointer<Chain> chain);
+    void requestedChainRemoved(QSharedPointer<Chain> chain);
 };

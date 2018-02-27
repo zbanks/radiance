@@ -7,7 +7,6 @@
 #include <portaudio.h>
 #include <cmath>
 
-#include "main.h"
 #include "Timebase.h"
 
 const int FrameRate = 44100;
@@ -25,8 +24,8 @@ const float WaveformGain = 0.005;
 const float LevelUpAlpha = 0.9;
 const float LevelDownAlpha = 0.01;
 
-Audio::Audio(QObject *p)
-    : QThread(p)
+Audio::Audio(Timebase *timebase)
+    : m_timebase(timebase)
 {
     setObjectName("AudioThread");
 
@@ -85,9 +84,6 @@ void Audio::quit()
 }
 
 void Audio::run() {
-    // TODO: This is a hack to keep the pointer alive while we're still running
-    QSharedPointer<Timebase> timebaseRef = timebase;
-
     PaError err = Pa_Initialize();
     PaStream *stream = NULL;
 
@@ -100,11 +96,7 @@ void Audio::run() {
     inputParameters.device = Pa_GetDefaultInputDevice();
     if (inputParameters.device < 0) {
         qWarning() << "Could not find input device, running without";
-        while(m_run.load()) {
-            // i'm so sorry
-            QMutexLocker locker(&m_audioLock);
-            m_time = fmod((m_time + 0.003), 128.);
-        }
+        while(m_run.load());
         goto err;
     }
     inputParameters.channelCount = 1;
@@ -138,21 +130,12 @@ void Audio::run() {
             continue;
         }
         analyzeChunk();
-        {
-            QMutexLocker locker(&m_audioLock);
-            m_time = fmod((m_time + 0.003), 128.);
-        }
         //qDebug() << "read chunk" << m_chunk;
     }
 
 err:
     err = Pa_Terminate();
     if(err != paNoError) qDebug() << "Could not cleanly terminate PortAudio";
-}
-
-double Audio::time() {
-    QMutexLocker locker(&m_audioLock);
-    return m_time;
 }
 
 double Audio::hannWindow(int n) {
@@ -221,13 +204,13 @@ void Audio::analyzeChunk() {
     btrack_process_audio_frame(&btrack, chunk.data());
 
     auto btrackBPM = btrack_get_bpm(&btrack);
-    timebase->update(Timebase::TimeSourceAudio, Timebase::TimeSourceEventBPM, btrackBPM);
+    m_timebase->update(Timebase::TimeSourceAudio, Timebase::TimeSourceEventBPM, btrackBPM);
     auto msUntilBeat = btrack_get_time_until_beat(&btrack) * 1000.;
-    timebase->update(Timebase::TimeSourceAudio, Timebase::TimeSourceEventBeat, msUntilBeat);
+    m_timebase->update(Timebase::TimeSourceAudio, Timebase::TimeSourceEventBeat, msUntilBeat);
 
     if (btrack_beat_due_in_current_frame(&btrack)) {
         //INFO("Beat; BPM=%lf", btrack_get_bpm(&btrack));
-        if (timebase->beatIndex() % 4 == 0)
+        if (m_timebase->beatIndex() % 4 == 0)
             beatLPF = 1.0;
         else
             beatLPF = 0.6;

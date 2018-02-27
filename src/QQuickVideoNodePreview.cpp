@@ -3,11 +3,10 @@
 #include <QQuickWindow>
 #include <QOpenGLTexture>
 #include <QOpenGLFramebufferObject>
-#include "main.h"
 
 QQuickVideoNodePreview::QQuickVideoNodePreview()
     : m_videoNodeId(0)
-    , m_context(nullptr)
+    , m_previewAdapter(nullptr)
     , m_window(nullptr) {
     setFlags(QQuickItem::ItemHasContents);
     connect(this, &QQuickItem::windowChanged, this, &QQuickVideoNodePreview::onWindowChanged);
@@ -32,13 +31,13 @@ void QQuickVideoNodePreview::setVideoNodeId(int videoNodeId) {
     emit videoNodeIdChanged(videoNodeId);
 }
 
-Context *QQuickVideoNodePreview::context() {
-    return m_context;
+QQuickPreviewAdapter *QQuickVideoNodePreview::previewAdapter() {
+    return m_previewAdapter;
 }
 
-void QQuickVideoNodePreview::setContext(Context *context) {
-    m_context = context;
-    emit contextChanged(context);
+void QQuickVideoNodePreview::setPreviewAdapter(QQuickPreviewAdapter *previewAdapter) {
+    m_previewAdapter = previewAdapter;
+    emit previewAdapterChanged(previewAdapter);
 }
 
 QSGNode *QQuickVideoNodePreview::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) {
@@ -58,11 +57,11 @@ QSGNode *QQuickVideoNodePreview::updatePaintNode(QSGNode *oldNode, UpdatePaintNo
         // this function will never get called again
     }
 
-    if (m_context && m_videoNodeId) {
-        auto textureId = m_context->previewTexture(m_videoNodeId);
+    if (m_previewAdapter && m_videoNodeId) {
+        auto textureId = m_previewAdapter->previewTexture(m_videoNodeId);
         if (textureId) {
             // TODO repeatedly creating the QSGTexture is probably not the most efficient
-            auto size = m_context->previewSize();
+            auto size = m_previewAdapter->previewSize();
             node->setTexture(window()->createTextureFromId(textureId, size, QQuickWindow::TextureHasAlphaChannel));
             node->setRect(boundingRect());
         }
