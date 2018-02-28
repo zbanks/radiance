@@ -99,10 +99,11 @@ void OpenGLWorkerContext::makeCurrent() {
     m_context->makeCurrent(m_surface);
 }
 
-void OpenGLWorkerContext::takeObject(QObject *obj) {
+void OpenGLWorkerContext::takeObject(QObject *obj, bool parent) {
     if (m_thread) {
         obj->moveToThread(m_thread);
     }
+    obj->setParent(m_context);
 }
 
 QOpenGLContext *OpenGLWorkerContext::context() {

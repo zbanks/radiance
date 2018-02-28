@@ -41,6 +41,7 @@ list(APPEND libradiance_SOURCES
     src/Chain.cpp
     src/Context.cpp
     src/Controls.cpp
+    src/ConsoleOutputNode.cpp
     src/EffectNode.cpp
     src/FFmpegOutputNode.cpp
     src/FramebufferVideoNodeRender.cpp
@@ -57,6 +58,7 @@ list(APPEND libradiance_SOURCES
     src/PlaceholderNode.cpp
     src/Registry.cpp
     src/ScreenOutputNode.cpp
+    src/SelfTimedReadBackOutputNode.cpp
     src/Timebase.cpp
     src/VideoNode.cpp
     src/View.cpp

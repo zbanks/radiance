@@ -18,13 +18,15 @@ protected slots:
     void deinitialize();
 public slots:
     void makeCurrent();
-    void takeObject(QObject *obj);
+    void takeObject(QObject *obj, bool parent=false);
 protected slots:
     void onDestroyed();
 protected:
     QSurface       *m_surface{};
     QOpenGLContext *m_context{};
     QThread        *m_thread{};
+signals:
+    void initialized();
 };
 
 using OpenGLWorkerContextPointer = QSharedPointer<OpenGLWorkerContext>;
