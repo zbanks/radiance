@@ -2,6 +2,7 @@
 // Credit for most of this goes to Jamie Wong
 
 #property description Wobbly drippy sphere that responds to audio
+#property frequency 1
 
 const int MAX_MARCHING_STEPS = 255;
 const float STEP_SIZE = 0.7;
@@ -21,16 +22,16 @@ const float EPSILON = 0.001;
 float disp(float x) {
     x *= 0.3;
     float wave = 0.;
-    wave += 1.8 * sin(x * 10. + iTime * 0.1) * iAudioLow;
-    wave += 1.2 * sin(x * 20. + iTime * 0.1) * iAudioMid;
-    wave += 0.6 * sin(x * 70. + iTime * 0.1) * iAudioHi;
+    wave += 1.8 * sin(x * 10. + iTime * iFrequency * 0.1) * iAudioLow;
+    wave += 1.2 * sin(x * 20. + iTime * iFrequency * 0.1) * iAudioMid;
+    wave += 0.6 * sin(x * 70. + iTime * iFrequency * 0.1) * iAudioHi;
     wave *= iIntensity;
     return wave;
 }
 
 // Displacement of the sphere at a point p
 float dispP(vec3 p) {
-    return disp(p.x) * disp(p.y + iTime) * disp(p.z) * clamp(1. - p.y, 0., 1.);
+    return disp(p.x) * disp(p.y + iTime * iFrequency) * disp(p.z) * clamp(1. - p.y, 0., 1.);
 }
 
 // The complete SDF

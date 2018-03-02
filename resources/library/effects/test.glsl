@@ -6,7 +6,7 @@ void main(void) {
 
     vec2 normCoord = 2. * (uv - 0.5) * aspectCorrection;
 
-    float r = iIntensity * defaultPulse;
+    float r = iIntensity * (0.7 + 0.3 * pow(defaultPulse, 2.));
 
     c = vec4(1.) * (1. - smoothstep(r - 0.1, r, length(normCoord)));
     fragColor = composite(fragColor, c);

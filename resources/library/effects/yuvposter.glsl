@@ -5,9 +5,10 @@ void main(void) {
     float bins = min(256., 1. / iIntensity);
     
     // bin in non-premultiplied space, then re-premultiply
-    vec4 c = demultiply(texture(iInput, uv));
+    fragColor = demultiply(texture(iInput, uv));
+    vec4 c = fragColor;
     c.rgb = rgb2yuv(c.rgb);
     c.gb = clamp(round(c.gb * bins) / bins, 0.0, 1.0);
     c.rgb = yuv2rgb(c.rgb);
-    fragColor = premultiply(c);
+    fragColor = mix(fragColor, premultiply(c), pow(defaultPulse, 2.));
 }

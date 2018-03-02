@@ -2,7 +2,7 @@
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
-    float xpos = iIntensityIntegral * 1.;
+    float xpos = iFrequency * iTime;
     float xfreq = (iIntensity + 0.2) * 30.;
     float x = mod((normCoord.x + normCoord.y) * xfreq + xpos, 1.);
     fragColor = texture(iInput, uv);

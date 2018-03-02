@@ -4,6 +4,7 @@ void main(void) {
     vec2 pt = (uv - 0.5) * aspectCorrection;
     float op = onePixel * 0.3;
     float factor = exp(-6. * iIntensity);
+    factor /= 0.7 + 0.3 * pow(defaultPulse, 2.);
 
     vec2 coord = floor(pt * factor / op) * op;
     vec2 f = fract(pt * factor / op);

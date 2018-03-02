@@ -11,7 +11,7 @@ void main(void) {
 #buffershader
 void main(void) {
     vec4 transVec = texture(iChannel[2], vec2(0.));
-    float trans = sign(transVec.r - transVec.g) * 0.5 + 0.5;
+    float trans = step(0.5, transVec.r - transVec.g) + step(0., -iFrequency);
     float a = 1. - (1. - trans) * smoothstep(0., 0.2, iIntensity);
     fragColor = mix(texture(iChannel[1], uv), texture(iInput, uv), a);
 }

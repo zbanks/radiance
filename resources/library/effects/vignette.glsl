@@ -8,9 +8,11 @@ void main(void) {
     fragColor = texture(iInput, uv);
     vec2 coord = (uv - 0.5);
 
-    float f = 3. / iIntensity;
+    float parameter = iIntensity * pow(defaultPulse, 2.);
+
+    float f = 3. / parameter;
     float edge1 = 2. * hyper_length(coord, f);
     float edge2 = 0.5 * length(coord / max(abs(coord.x), abs(coord.y)));
 
-    fragColor *= 1. - smoothstep(1. - 0.5 * iIntensity, 1., edge1);
+    fragColor *= 1. - smoothstep(1. - 0.5 * parameter, 1., edge1);
 }

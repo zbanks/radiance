@@ -1,4 +1,5 @@
 #property description Rainbow radial blur
+#property frequency 1
 
 #define DEPTH 16
 
@@ -22,7 +23,7 @@ void main() {
         res *= max(res.r, max(res.g, res.b));
         res *= w;
         res.xyz = rgb2hsv(res.rgb); // TODO this would probably be made much faster using a buffershader of the input converted to HSV
-        res.x = mod(res.x + float(i) * deltaHue - 0.5 * iIntensityIntegral, 1.);
+        res.x = mod(res.x + float(i) * deltaHue - 0.5 * iTime * iFrequency, 1.);
         res.rgb = hsv2rgb(res.xyz);
         col = composite(col, res);
     }
@@ -30,7 +31,7 @@ void main() {
     // This composition results in some saturation loss,
     // so resaturate
     vec3 hsv = rgb2hsv(col.rgb);
-    hsv.y = pow(hsv.y, (2. - iIntensity) / 2.);
+    hsv.y = pow(hsv.y, (1.5 - pow(iIntensity, 0.5)) / 1.5);
     col.rgb = hsv2rgb(hsv);
 
 	fragColor = col;

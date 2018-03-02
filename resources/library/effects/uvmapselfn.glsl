@@ -9,7 +9,7 @@ void main(void) {
     vec2 newUV = uv;
     for (int i = 0; i < N; i++) {
         vec4 map = texture(iInput, newUV);
-        newUV = mix(newUV, map.rg, intensity * map.a);
+        newUV = mix(newUV, map.rg, intensity * map.a * pow(defaultPulse, 2.));
     }
     fragColor = texture(iInput, newUV);
 }
