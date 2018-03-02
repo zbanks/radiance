@@ -1,7 +1,8 @@
 #include "ConsoleOutputNode.h"
 
 ConsoleOutputNode::ConsoleOutputNode(Context *context, QSize chainSize)
-    : SelfTimedReadBackOutputNode(context, chainSize) {
+    : SelfTimedReadBackOutputNode(context, chainSize, 10) {
+    start();
 }
 
 ConsoleOutputNode::ConsoleOutputNode(const ConsoleOutputNode &other)
@@ -11,8 +12,8 @@ ConsoleOutputNode::ConsoleOutputNode(const ConsoleOutputNode &other)
 ConsoleOutputNode::~ConsoleOutputNode() {
 }
 
-void ConsoleOutputNode::frame(QSize size, QByteArray *frame) {
-    qDebug() << size << *frame;
+void ConsoleOutputNode::frame(QSize size, QByteArray frame) {
+    qDebug() << size << frame;
 }
 
 QString ConsoleOutputNode::typeName() {
@@ -20,7 +21,7 @@ QString ConsoleOutputNode::typeName() {
 }
 
 VideoNode *ConsoleOutputNode::deserialize(Context *context, QJsonObject obj) {
-    ConsoleOutputNode *e = new ConsoleOutputNode(context, QSize(3, 3));
+    ConsoleOutputNode *e = new ConsoleOutputNode(context, QSize(4, 4));
     return e;
 }
 
