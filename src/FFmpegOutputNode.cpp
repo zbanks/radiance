@@ -1,4 +1,5 @@
 #include "FFmpegOutputNode.h"
+#include "Context.h"
 #include <QDebug>
 #include <QJsonObject>
 #include <QGuiApplication>
@@ -8,11 +9,13 @@ FFmpegOutputNode::FFmpegOutputNode(Context *context, QSize chainSize)
     , m_recording(false)
     , m_ffmpegArguments({"-vcodec", "h264", "output.mp4"})
 {
-
+    m_worker = QSharedPointer<FFmpegOutputWorker>::create(this, 30.);
 }
 
 FFmpegOutputNode::FFmpegOutputNode(const FFmpegOutputNode &other)
-    : OutputNode(other) {
+    : OutputNode(other)
+    , m_worker(other.m_worker)
+    , m_recording(other.m_recording) {
 }
 
 FFmpegOutputNode::~FFmpegOutputNode() {
@@ -107,4 +110,29 @@ QImage FFmpegOutputNode::grabImage() {
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, outputImage.bits());
 
     return outputImage.mirrored(false, true); // vertical flip
+}
+
+//
+// FFmpegOutputWorker class
+//
+
+FFmpegOutputWorker::FFmpegOutputWorker(FFmpegOutputNode *p, double fps)
+    : OpenGLWorker(p->context()->openGLWorkerContext()) {
+    m_timer.setInterval(1000. / fps);
+    if (p->recording())
+        m_timer.start();
+
+    connect(&m_timer, &QTimer::timeout, p, &FFmpegOutputNode::recordFrame, Qt::DirectConnection);
+    connect(p, &FFmpegOutputNode::recordingChanged, this, &FFmpegOutputWorker::onRecordingChanged, Qt::QueuedConnection);
+}
+
+FFmpegOutputWorker::~FFmpegOutputWorker() {
+    m_timer.stop();
+}
+
+void FFmpegOutputWorker::onRecordingChanged(bool recording) {
+    if (recording)
+        m_timer.start();
+    else
+        m_timer.stop();
 }

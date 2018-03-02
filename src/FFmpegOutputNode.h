@@ -1,9 +1,28 @@
 #pragma once
 
+#include "OpenGLWorker.h"
 #include "OutputNode.h"
 #include "OutputWindow.h"
-#include <QProcess>
 #include <QImage>
+#include <QProcess>
+#include <QTimer>
+
+class FFmpegOutputNode;
+
+class FFmpegOutputWorker
+    : public OpenGLWorker {
+    Q_OBJECT
+
+public:
+    FFmpegOutputWorker(FFmpegOutputNode *p, double fps);
+    ~FFmpegOutputWorker();
+
+public slots:
+    void onRecordingChanged(bool recording);
+
+private:
+    QTimer m_timer;
+};
 
 class FFmpegOutputNode
     : public OutputNode {
@@ -52,6 +71,7 @@ signals:
     void ffmpegArgumentsChanged(QStringList ffmpegArguments);
 
 private:
+    QSharedPointer<FFmpegOutputWorker> m_worker;
     bool m_recording;
     QStringList m_ffmpegArguments;
     QProcess m_ffmpeg;
