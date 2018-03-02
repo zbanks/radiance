@@ -13,18 +13,18 @@ class SelfTimedReadBackOutputNode
     friend class STRBONOpenGLWorker;
 
 public:
-    SelfTimedReadBackOutputNode(Context *context, QSize chainSize);
+    SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec=0);
     SelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other);
     ~SelfTimedReadBackOutputNode();
 
 public slots:
-    virtual void frame(QSize size, QByteArray *frame) = 0;
+    void start();
+    void stop();
+    void setInterval(long msec);
 
-signals:
-
-protected:
-
-protected slots:
+    // Reimplement these!
+    virtual void frame(QSize size, QByteArray frame) = 0;
+    virtual void initialize();
 
 private:
     OpenGLWorkerContext *m_workerContext{};
@@ -39,9 +39,9 @@ public:
    ~STRBONOpenGLWorker();
 public slots:
     void initialize();
-signals:
-    // This is emitted when it is done
-    void initialized();
+    void start();
+    void stop();
+    void setInterval(long msec);
 protected slots:
     void onTimeout();
 protected:

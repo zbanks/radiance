@@ -10,7 +10,7 @@ public:
     ConsoleOutputNode(Context *context, QSize chainSize);
     ConsoleOutputNode(const ConsoleOutputNode &other);
     ~ConsoleOutputNode();
-    void frame(QSize size, QByteArray *frame) override;
+    void frame(QSize size, QByteArray frame) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
