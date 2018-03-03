@@ -78,7 +78,7 @@ void MovieNode::onInitialized() {
    m_ready = true;
 }
 
-void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+void MovieNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
     QMutexLocker locker(&m_stateLock);
     for (int i=0; i<added.count(); i++) {
         // WTF is going on here
@@ -91,7 +91,7 @@ void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPo
     }
     auto _size = QSize{};
     for(auto && chain : m_renderFbos.keys()) {
-        auto _csize = chain->size();
+        auto _csize = chain.size();
         _size.setWidth(std::max(_csize.width(),_size.width()));
         _size.setHeight(std::max(_csize.height(),_size.height()));
     }
@@ -237,7 +237,7 @@ void MovieNode::setPause(bool pause) {
 }
 
 // See comments in MovieNode.h about these 3 functions
-QSharedPointer<VideoNode> MovieNode::createCopyForRendering(QSharedPointer<Chain> chain) {
+QSharedPointer<VideoNode> MovieNode::createCopyForRendering(Chain chain) {
     Q_UNUSED(chain);
     return QSharedPointer<VideoNode>(new MovieNode(*this));
 }
@@ -250,7 +250,7 @@ static void *get_proc_address(void *ctx, const char *name) {
     return (void *)glctx->getProcAddress(QByteArray(name));
 }
 
-GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
+GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     // Hitting this assert means
     // that you failed to make a copy
     // of the VideoNode
@@ -278,10 +278,10 @@ GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     // Textures are, however, so in the future maybe we can move
     // texture creation to initialize()
     // and leave lightweight FBO creation here
-    if(!renderFbo || renderFbo->size() != chain->size()) {
+    if(!renderFbo || renderFbo->size() != chain.size()) {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
-        renderFbo = renderState->m_pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
+        renderFbo = renderState->m_pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain.size(),fmt);
     }
 
     {

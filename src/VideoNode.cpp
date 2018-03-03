@@ -10,18 +10,21 @@ VideoNode::VideoNode(Context *context)
 VideoNode::VideoNode(const VideoNode &other)
     : m_inputCount(other.m_inputCount)
     , m_id(other.m_id)
-    , m_context(other.m_context) {
+    , m_context(other.m_context)
+    , m_copy(true) {
 }
 
 VideoNode::~VideoNode() = default;
 
 int VideoNode::inputCount() {
     Q_ASSERT(QThread::currentThread() == thread());
+    QMutexLocker locker(&m_stateLock);
     return m_inputCount;
 }
 
 void VideoNode::setInputCount(int value) {
     Q_ASSERT(QThread::currentThread() == thread());
+    Q_ASSERT(!m_copy);
 
     if (value != m_inputCount) {
         {
@@ -33,25 +36,28 @@ void VideoNode::setInputCount(int value) {
 }
 
 int VideoNode::id() {
-    QMutexLocker locker(&m_idLock);
+    QMutexLocker locker(&m_stateLock);
     return m_id;
 }
 
 void VideoNode::setId(int id) {
+    Q_ASSERT(QThread::currentThread() == thread());
+    Q_ASSERT(!m_copy);
     {
-        QMutexLocker locker(&m_idLock);
+        QMutexLocker locker(&m_stateLock);
         m_id = id;
     }
     emit idChanged(id);
 }
 
-QList<QSharedPointer<Chain>> VideoNode::chains() {
+QList<Chain> VideoNode::chains() {
+    QMutexLocker locker(&m_stateLock);
     return m_chains;
 }
 
-void VideoNode::setChains(QList<QSharedPointer<Chain>> chains) {
-    QList<QSharedPointer<Chain>> toRemove = m_chains;
-    QList<QSharedPointer<Chain>> toAdd;
+void VideoNode::setChains(QList<Chain> chains) {
+    QList<Chain> toRemove = m_chains;
+    QList<Chain> toAdd;
     for (int i=0; i<chains.count(); i++) {
         if (m_chains.contains(chains.at(i))) {
             // If it exists already, don't remove it
@@ -76,9 +82,9 @@ QJsonObject VideoNode::serialize() {
     return o;
 }
 
-QList<QSharedPointer<Chain>> VideoNode::requestedChains() {
-    return QList<QSharedPointer<Chain>>();
+QList<Chain> VideoNode::requestedChains() {
+    return QList<Chain>();
 }
 
-void VideoNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+void VideoNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
 }

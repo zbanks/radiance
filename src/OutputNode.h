@@ -19,13 +19,13 @@ public:
     OutputNode(const OutputNode &other);
     ~OutputNode();
 
-    QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
-    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
+    QSharedPointer<VideoNode> createCopyForRendering(Chain chain) override;
+    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
     GLuint render(Model *model = nullptr);
 
-    QSharedPointer<Chain> chain();
+    Chain chain();
 
 protected:
-    virtual QList<QSharedPointer<Chain>> requestedChains() override;
-    QSharedPointer<Chain> m_chain;
+    virtual QList<Chain> requestedChains() override;
+    Chain m_chain;
 };

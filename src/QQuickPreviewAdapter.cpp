@@ -2,19 +2,14 @@
 #include "Model.h"
 #include <memory>
 
-QQuickPreviewAdapter::QQuickPreviewAdapter(bool hasPreview)
-    : m_model(nullptr)
-    , m_hasPreview(hasPreview)
-    , m_previewSize(QSize(300, 300))
-    , m_previewWindow(nullptr) {
-
-    if (m_hasPreview) {
-        m_previewChain = QSharedPointer<Chain>(new Chain(m_previewSize));
-    }
+QQuickPreviewAdapter::QQuickPreviewAdapter(QSize size)
+    : m_previewSize(size)
+    , m_previewChain(size)
+{
 }
 
 QQuickPreviewAdapter::~QQuickPreviewAdapter() {
-    if (m_model != nullptr && m_hasPreview) {
+    if (m_model != nullptr) {
         m_model->removeChain(m_previewChain);
     }
 }
@@ -27,11 +22,11 @@ Model *QQuickPreviewAdapter::model() {
 void QQuickPreviewAdapter::setModel(Model *model) {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_model != model) {
-        if (m_model != nullptr && m_hasPreview) {
+        if (m_model != nullptr) {
             m_model->removeChain(m_previewChain);
         }
         m_model = model;
-        if (m_model != nullptr && m_hasPreview) {
+        if (m_model != nullptr) {
             m_model->addChain(m_previewChain);
         }
         emit modelChanged(model);
@@ -39,19 +34,17 @@ void QQuickPreviewAdapter::setModel(Model *model) {
 }
 
 QSize QQuickPreviewAdapter::previewSize() {
-    Q_ASSERT(m_hasPreview);
     QMutexLocker locker(&m_previewLock);
     return m_previewSize;
 }
 
 void QQuickPreviewAdapter::setPreviewSize(QSize size) {
-    Q_ASSERT(m_hasPreview);
     Q_ASSERT(QThread::currentThread() == thread());
     if (size != m_previewSize) {
         {
             QMutexLocker locker(&m_previewLock);
             m_previewSize = size;
-            QSharedPointer<Chain> previewChain(new Chain(size));
+            Chain previewChain(size);
             if (m_model != nullptr) {
                 m_model->removeChain(m_previewChain);
                 m_model->addChain(previewChain);
@@ -67,7 +60,6 @@ QQuickWindow *QQuickPreviewAdapter::previewWindow() {
 }
 
 void QQuickPreviewAdapter::setPreviewWindow(QQuickWindow *window) {
-    Q_ASSERT(m_hasPreview);
     Q_ASSERT(QThread::currentThread() == thread());
     {
         QMutexLocker locker(&m_previewLock);
@@ -81,13 +73,11 @@ void QQuickPreviewAdapter::setPreviewWindow(QQuickWindow *window) {
 }
 
 void QQuickPreviewAdapter::onBeforeSynchronizing() {
-    Q_ASSERT(m_hasPreview);
     auto modelCopy = m_model->createCopyForRendering(m_previewChain);
     m_lastPreviewRender = modelCopy.render(m_previewChain);
     //m_model->copyBackRenderStates(m_previewChain, &modelCopy); XXX??
 }
 
 GLuint QQuickPreviewAdapter::previewTexture(int videoNodeId) {
-    Q_ASSERT(m_hasPreview);
     return m_lastPreviewRender.value(videoNodeId, 0);
 }

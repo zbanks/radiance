@@ -29,7 +29,7 @@ void PlaceholderNode::setWrappedVideoNode(VideoNode *wrapped) {
 }
 
 // See comments in PlaceholderNode.h about these 3 functions
-QSharedPointer<VideoNode> PlaceholderNode::createCopyForRendering(QSharedPointer<Chain> chain) {
+QSharedPointer<VideoNode> PlaceholderNode::createCopyForRendering(Chain chain) {
     if (m_wrappedVideoNode == nullptr) {
         return QSharedPointer<VideoNode>(new PlaceholderNode(*this));
     }
@@ -37,23 +37,23 @@ QSharedPointer<VideoNode> PlaceholderNode::createCopyForRendering(QSharedPointer
     return QSharedPointer<VideoNode>(new PlaceholderNode(*this, wrappedCopy));
 }
 
-GLuint PlaceholderNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
+GLuint PlaceholderNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     if (m_wrappedVideoNode == nullptr) {
         if (inputTextures.size() >= 1) {
             return inputTextures.at(0);
         }
-        return chain->blankTexture();
+        return chain.blankTexture();
     }
     if (inputTextures.size() > m_wrappedVideoNode->inputCount()) {
         inputTextures.resize(m_wrappedVideoNode->inputCount());
     }
     while (inputTextures.size() < m_wrappedVideoNode->inputCount()) {
-        inputTextures.append(chain->blankTexture());
+        inputTextures.append(chain.blankTexture());
     }
     return m_wrappedVideoNode->paint(chain, inputTextures);
 }
 
-void PlaceholderNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+void PlaceholderNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
     if (m_wrappedVideoNode == nullptr) {
         return;
     }

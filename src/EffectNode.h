@@ -91,10 +91,10 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
-    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
 
     // Creates a copy of this node
-    QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain> chain) override;
+    QSharedPointer<VideoNode> createCopyForRendering(Chain chain) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -132,7 +132,7 @@ public slots:
 protected slots:
     void onInitialized();
     void periodic();
-    void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
+    void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
 signals:
     void intensityChanged(qreal value);
@@ -141,7 +141,7 @@ signals:
     void frequencyChanged(double frequency);
 
 protected:
-    QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
+    QMap<Chain, QSharedPointer<EffectNodeRenderState>> m_renderStates;
     qreal m_intensity;
     qreal m_intensityIntegral;
     qreal m_beatLast;

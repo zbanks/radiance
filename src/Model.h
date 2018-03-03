@@ -34,7 +34,7 @@ struct ModelCopyForRendering {
     // Render this model
     // The return value is a mapping of VideoNode IDs to OpenGL textures
     // that were rendered into
-    QMap<int, GLuint> render(QSharedPointer<Chain> chain);
+    QMap<int, GLuint> render(Chain chain);
 };
 
 class Model : public QObject {
@@ -70,7 +70,7 @@ public slots:
     // and their connections.
     // This copy is necessary because
     // sometimes nodes are deleted or edited during rendering.
-    ModelCopyForRendering createCopyForRendering(QSharedPointer<Chain> chain);
+    ModelCopyForRendering createCopyForRendering(Chain chain);
 
     // Returns a list of vertices
     // in the order they were added
@@ -104,9 +104,9 @@ public slots:
     // or a different thead.
     // When requesting a render of the model,
     // you must use one of its chains.
-    QList<QSharedPointer<Chain>> chains();
-    void addChain(QSharedPointer<Chain> chain);
-    void removeChain(QSharedPointer<Chain> chain);
+    QList<Chain> chains();
+    void addChain(Chain chain);
+    void removeChain(Chain chain);
 
     QJsonObject serialize();
     void deserialize(Context *context, Registry *registry, const QJsonObject &data);
@@ -121,7 +121,7 @@ signals:
     // with the interim changes
     void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
 
-    void chainsChanged(QList<QSharedPointer<Chain>> chains);
+    void chainsChanged(QList<Chain> chains);
 
     void message(VideoNode *videoNode, QString str);
     void warning(VideoNode *videoNode, QString str);
@@ -153,7 +153,7 @@ private:
     QMutex m_graphLock;
 
     // Chains used for rendering this model
-    QList<QSharedPointer<Chain>> m_chains;
+    QList<Chain> m_chains;
 
     // Counter to give VideoNodes unique IDs
     int m_vnId;

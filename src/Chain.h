@@ -16,7 +16,7 @@
     you must use one of its chains.
 
     All VideoNode renders happen against a chain.
-    A Chain is lightweight object that stores a particular resolution
+    A Chain stores a particular resolution
     at which the render is to be done.
     A Chain also stores state that does not belong to any particular VideoNode
     for the render, i.e. a blank texture and noise texture
@@ -24,14 +24,12 @@
 
     Chains are immutable once created,
     that is, you cannot change the size.
-    Chains should always be passed around as Shared Pointers.
-    This is because they cannot be copied due to having some OpenGL baggage,
-    yet they may be referenced by VideoNodes that have been
-    copied for rendering.
 
     Chains are owned by Outputs or Output-like things
     (such as the preview adapter.)
 */
+
+class ChainPrivate;
 
 class Chain : public QObject {
     Q_OBJECT
@@ -42,17 +40,36 @@ class Chain : public QObject {
 
 public:
     Chain(QSize size);
-   ~Chain() override;
-    QSize size();
+
+    // Creates a very shallow copy
+    // (all operations will reference original chain)
+    Chain(const Chain &other);
+
+    operator QString() const;
+
+    bool operator==(const Chain &other) const;
+    bool operator>(const Chain &other) const;
+    bool operator<(const Chain &other) const;
+    Chain &operator=(const Chain &other);
 
 public slots:
+    QSize size();
     GLuint noiseTexture();
     GLuint blankTexture();
     QOpenGLVertexArrayObject *vao();
 
 protected:
-    QOpenGLTexture *m_noiseTexture;
-    QOpenGLTexture *m_blankTexture;
-    QOpenGLVertexArrayObject  *m_vao;
-    QSize m_size;
+    QSharedPointer<ChainPrivate> d_ptr;
+};
+
+class ChainPrivate : public QObject {
+    Q_OBJECT
+
+public:
+    ChainPrivate(QSize size);
+    ~ChainPrivate();
+    QOpenGLTexture m_noiseTexture;
+    QOpenGLTexture m_blankTexture;
+    QOpenGLVertexArrayObject m_vao{};
+    QSize m_size{};
 };

@@ -30,21 +30,21 @@ Model::Model()
 Model::~Model() {
 }
 
-void Model::addChain(QSharedPointer<Chain> chain) {
+void Model::addChain(Chain chain) {
     if (!m_chains.contains(chain)) {
         m_chains.append(chain);
         emit chainsChanged(m_chains);
     }
 }
 
-void Model::removeChain(QSharedPointer<Chain> chain) {
+void Model::removeChain(Chain chain) {
     if (m_chains.contains(chain)) {
         m_chains.removeAll(chain);
         emit chainsChanged(m_chains);
     }
 }
 
-QList<QSharedPointer<Chain>> Model::chains() {
+QList<Chain> Model::chains() {
     return m_chains;
 }
 
@@ -208,7 +208,7 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
     }
 }
 
-ModelCopyForRendering Model::createCopyForRendering(QSharedPointer<Chain> chain) {
+ModelCopyForRendering Model::createCopyForRendering(Chain chain) {
     QMutexLocker locker(&m_graphLock);
     ModelCopyForRendering out;
 
@@ -415,12 +415,12 @@ bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
     return ancestors(child).contains(parent);
 }
 
-QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
+QMap<int, GLuint> ModelCopyForRendering::render(Chain chain) {
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
     QVector<QVector<int>> inputs;
-    auto vao = chain->vao();
+    auto vao = chain.vao();
 
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
@@ -442,7 +442,7 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
 
     for (int i=0; i<vertices.count(); i++) {
         auto vertex = vertices.at(i);
-        QVector<GLuint> inputTextures(vertex->inputCount(), chain->blankTexture());
+        QVector<GLuint> inputTextures(vertex->inputCount(), chain.blankTexture());
         for (int j=0; j<vertex->inputCount(); j++) {
             auto fromVertex = inputs.at(i).at(j);
             if (fromVertex != -1) {
