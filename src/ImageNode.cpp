@@ -35,7 +35,7 @@ void ImageNode::onInitialized() {
     m_ready = true;
 }
 
-void ImageNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+void ImageNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
 }
 QString ImageNode::file() {
     Q_ASSERT(QThread::currentThread() == thread());
@@ -66,13 +66,13 @@ void ImageNode::setFile(QString file) {
 }
 
 // See comments in ImageNode.h about these 3 functions
-QSharedPointer<VideoNode> ImageNode::createCopyForRendering(QSharedPointer<Chain> chain) {
+QSharedPointer<VideoNode> ImageNode::createCopyForRendering(Chain chain) {
     Q_UNUSED(chain);
     //periodic();
     return QSharedPointer<VideoNode>(new ImageNode(*this));
 }
 
-GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
+GLuint ImageNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     if (!m_openGLWorker || !m_openGLWorker->m_ready.load() || !m_openGLWorker->m_frameTextures.size())
         return 0;
 

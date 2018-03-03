@@ -11,7 +11,7 @@ class QQuickPreviewAdapter : public QObject {
     Q_PROPERTY(QQuickWindow *previewWindow READ previewWindow WRITE setPreviewWindow NOTIFY previewWindowChanged)
 
 public:
-    QQuickPreviewAdapter(bool hasPreview=true);
+    QQuickPreviewAdapter(QSize size=QSize(300, 300));
    ~QQuickPreviewAdapter() override;
 
 public slots:
@@ -35,11 +35,10 @@ signals:
     void previewWindowChanged(QQuickWindow *window);
 
 protected:
-    Model *m_model;
-    bool m_hasPreview;
+    Model *m_model{};
     QSize m_previewSize;
-    QSharedPointer<Chain> m_previewChain;
-    QQuickWindow *m_previewWindow;
+    Chain m_previewChain;
+    QQuickWindow *m_previewWindow{};
     QMap<int, GLuint> m_lastPreviewRender;
     QMutex m_previewLock;
 };

@@ -25,7 +25,7 @@ void FFmpegOutputNode::setRecording(bool recording) {
 
     m_recording = recording;
     if (m_recording) {
-        QSize size = chain()->size();
+        QSize size = chain().size();
         QString sizeStr(QString("%1x%2").arg(
                     QString::number(size.width()),
                     QString::number(size.height())));

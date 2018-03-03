@@ -79,7 +79,7 @@ void STRBONOpenGLWorker::onTimeout() {
 
     qDebug() << "Render...";
     GLuint texture = m_p->render();
-    auto size = m_p->chain()->size();
+    auto size = m_p->chain().size();
     m_pixelBuffer.resize(3 * size.width() * size.height());
     qDebug() << "Texture ID is:" << texture;
     glBindTexture(GL_TEXTURE_2D, texture);

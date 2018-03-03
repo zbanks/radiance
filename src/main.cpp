@@ -142,7 +142,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     Context context(false);
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
-    QSharedPointer<Chain> chain(new Chain(renderSize));
+    Chain chain(renderSize);
     FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;

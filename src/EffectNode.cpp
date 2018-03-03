@@ -75,7 +75,7 @@ void EffectNode::onInitialized() {
     m_ready = true;
 }
 
-void EffectNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
+void EffectNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
     QMutexLocker locker(&m_stateLock);
     for (int i=0; i<added.count(); i++) {
         auto state = QSharedPointer<EffectNodeRenderState>::create();
@@ -92,7 +92,7 @@ void EffectNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedP
 // and this copy will never be modified
 // out from under it, unlike the parent
 // from which it was created
-GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
+GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     // Hitting this assert means
     // that you failed to make a copy
     // of the VideoNode
@@ -124,11 +124,11 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
         fmt.setInternalTextureFormat(GL_RGBA);
         for(auto & pass : renderState->m_passes) {
             if(!pass.m_output) {
-                pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
+                pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain.size(),fmt);
             }
         }
         if(!renderState->m_extra) {
-            renderState->m_extra = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
+            renderState->m_extra = QSharedPointer<QOpenGLFramebufferObject>::create(chain.size(),fmt);
         }
     }
 
@@ -152,7 +152,7 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
         double audioLevel = 0;
         context()->audio()->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
 
-        auto size = chain->size();
+        auto size = chain.size();
         glViewport(0, 0, size.width(), size.height());
 
         for(auto & pass : renderState->m_passes) {
@@ -171,7 +171,7 @@ GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextu
             }
 
             glActiveTexture(texCount++);
-            glBindTexture(GL_TEXTURE_2D, chain->noiseTexture());
+            glBindTexture(GL_TEXTURE_2D, chain.noiseTexture());
             for(auto && op : renderState->m_passes) {
                 glActiveTexture(texCount++);
                 glBindTexture(GL_TEXTURE_2D, op.m_output->texture());
@@ -343,7 +343,7 @@ void EffectNode::reload() {
 }
 
 // Creates a copy of this node for rendering
-QSharedPointer<VideoNode> EffectNode::createCopyForRendering(QSharedPointer<Chain> chain) {
+QSharedPointer<VideoNode> EffectNode::createCopyForRendering(Chain chain) {
     //periodic();
     {
         QMutexLocker locker(&m_stateLock);

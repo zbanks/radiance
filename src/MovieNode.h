@@ -100,8 +100,8 @@ public:
 
     QJsonObject serialize() override;
 
-    QSharedPointer<VideoNode> createCopyForRendering(QSharedPointer<Chain>) override;
-    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
+    QSharedPointer<VideoNode> createCopyForRendering(Chain) override;
+    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -159,12 +159,12 @@ signals:
     void pauseChanged(bool pause);
 
 protected:
-    void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
+    void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
     QString m_file;
     QString m_name;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
-    QMap<QSharedPointer<Chain>, QSharedPointer<MovieNodeRenderState>> m_renderFbos;
+    QMap<Chain, QSharedPointer<MovieNodeRenderState>> m_renderFbos;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
     QSharedPointer<OpenGLWorkerContext> m_openGLWorkerContext;
     QSize m_videoSize;
