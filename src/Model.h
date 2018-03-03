@@ -1,13 +1,16 @@
 #pragma once
 
-#include "VideoNode.h"
 #include <QObject>
 #include <QDebug>
 #include <QList>
 #include <QVector>
 #include <QVariantList>
 #include <QJsonObject>
+#include <QOpenGLFunctions>
+#include <QMutex>
 
+class VideoNode;
+class Chain;
 class Registry;
 class Context;
 
@@ -42,6 +45,8 @@ class ModelPrivate;
 // These functions are not thread-safe unless noted.
 
 class Model : public QObject {
+    friend class WeakModel;
+
     Q_OBJECT
     Q_PROPERTY(QVariantList vertices READ qmlVertices)
     Q_PROPERTY(QVariantList edges READ qmlEdges)
@@ -143,6 +148,9 @@ protected slots:
     void onMessage(QString message);
     void onWarning(QString str);
     void onFatal(QString str);
+
+private:
+    Model(QSharedPointer<ModelPrivate> other_ptr);
 };
 
 class ModelPrivate {
@@ -172,4 +180,14 @@ public:
 
     // Chains used for rendering this model
     QList<Chain> m_chains;
+};
+
+class WeakModel {
+public:
+    WeakModel();
+    WeakModel(const Model &other);
+    ModelCopyForRendering createCopyForRendering();
+
+protected:
+    QWeakPointer<ModelPrivate> d_ptr;
 };

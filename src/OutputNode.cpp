@@ -39,19 +39,13 @@ GLuint OutputNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     return inputTextures.at(0);
 }
 
-GLuint OutputNode::render(Model *model) {
-    if (model == nullptr) {
-        qDebug() << "Parent is" << parent();
-        // This is a little bit of a hack,
-        model = qobject_cast<Model*>(parent());
-        if (model == nullptr) {
-            return 0;
-        }
-    }
-    auto modelCopy = model->createCopyForRendering();
+GLuint OutputNode::render() {
+    return render(lastModel());
+}
+
+GLuint OutputNode::render(WeakModel model) {
+    auto modelCopy = model.createCopyForRendering();
     auto result = modelCopy.render(chain());
-    qDebug() << "Rendered" << result;
-    qDebug() << "(I am" << *this << ")";
     return result.value(*this, 0);
 }
 

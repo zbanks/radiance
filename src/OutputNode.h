@@ -22,7 +22,8 @@ public:
     OutputNode(OutputNodePrivate *ptr);
 
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
-    GLuint render(Model *model = nullptr);
+    GLuint render();
+    GLuint render(WeakModel model);
 
     Chain chain();
 
