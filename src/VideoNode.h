@@ -11,45 +11,28 @@
 // for nodes in the DAG.
 // VideoNodes have 0 or more inputs, and one output.
 // Unless explicitly stated otherwise,
-// VideoNode methods are not thread-safe
-// and should be called in the same thread
-// or through queued signals and slots.
-// The few exceptions to this
-// are methods relating to rendering.
+// VideoNode methods are ALL thread-safe.
 
 class Context;
+
+class VideoNodePrivate;
 
 class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(Context *context READ context CONSTANT);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
-    Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged);
 
 public:
-    VideoNode(Context *context);
-
-    // VideoNodes must be copyable
+    // Copy constructor
     VideoNode(const VideoNode &other);
 
-   ~VideoNode() override;
+    // Returns a pointer to a copy of this VideoNode
+    virtual VideoNode *clone() const;
 
-    // Methods for de/serializing VideoNodes
-    virtual QJsonObject serialize();
-
-    // Methods for rendering
-
-    // Creates a copy of this node
-    // This function is thread-safe
-    // and the ability to run this function from any thread
-    // is why any state mutation
-    // needs to take the stateLock.
-    //
-    // This should be a soft copy / propagate changes back to
-    // the original.
-    //
-    // The new object will be assigned to the thread
-    // that createCopyForRendering is called in.
-    virtual QSharedPointer<VideoNode> createCopyForRendering(Chain chain) = 0;
+    bool operator==(const VideoNode &other) const;
+    bool operator>(const VideoNode &other) const;
+    bool operator<(const VideoNode &other) const;
+    VideoNode &operator=(const VideoNode &other);
 
     // Paint is run from a valid OpenGL context.
     // It should return the OpenGL texture ID
@@ -64,33 +47,21 @@ public:
     // and size corresponding to the chain.
     // These textures must not be written to.
 
-    // This function is NOT thread-safe.
-    // Since rendering is almost always done on a different thread,
-    // a copy of the VideoNode object must be created.
     // paint() may mutate the RenderState
     // for the chain that it was called on.
     // Returns 0 if the chain does not exist or is not ready.
-    virtual GLuint paint(Chain chain, QVector<GLuint> inputTextures) = 0;
+    virtual GLuint paint(Chain chain, QVector<GLuint> inputTextures);
 
 public slots:
+    // Convert this VideoNode to JSON
+    virtual QJsonObject serialize();
+
     // Number of inputs
     int inputCount();
     void setInputCount(int value);
 
     // Context
     Context *context();
-
-    // Returns a unique identifier
-    // within the context
-    // Anything that references this node in the main thread
-    // can use its pointer.
-    // Anything that references this node outside of the main thread
-    // (mostly render artifacts)
-    // should use this ID
-    // since the pointer may become invalidated or non-unique.
-    // This method is thread-safe.
-    int id();
-    void setId(int id);
 
     // Chains are context and metadata for a render.
     // Creating and destroying chains may be expensive,
@@ -112,18 +83,16 @@ public slots:
 protected slots:
     // If your node does anything at all, you will need to override this method
     // and take appropriate action when the set of render chains changes.
+    // This function is run with the state locked, so try to be brief.
     virtual void chainsEdited(QList<Chain> added, QList<Chain> removed);
 
 protected:
-    int m_inputCount{};
-    QMutex m_stateLock;
-    int m_id;
-    QList<Chain> m_chains;
-    Context *m_context;
+    // Subclasses should use this constructor
+    // to give the VideoNode a pointer to their
+    // private storage, which VideoNode will manage
+    VideoNode(VideoNodePrivate *ptr);
 
-    // This variable stores whether or not this VideoNode is a copy for rendering
-    // Some operations are not available on copies.
-    bool m_copy{false};
+    QSharedPointer<VideoNodePrivate> d_ptr;
 
 signals:
     // Emitted when the object wishes to be deleted
@@ -135,10 +104,22 @@ signals:
     // Emitted when the number of inputs changes
     void inputCountChanged(int value);
 
+    // Emitted when the chains list changes
     void chainsChanged(QList<Chain> chains);
-    void idChanged(int id);
 
     // Emitted when requestedChains changes
     void requestedChainAdded(Chain chain);
     void requestedChainRemoved(Chain chain);
+};
+
+class VideoNodePrivate : public QObject {
+    Q_OBJECT
+
+public:
+    VideoNodePrivate(Context *context);
+
+    int m_inputCount{};
+    QMutex m_stateLock; // TODO this is no longer a meaningful concept, should use separate locks for separate fields
+    QList<Chain> m_chains;
+    Context *m_context;
 };

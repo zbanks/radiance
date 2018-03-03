@@ -73,11 +73,10 @@ void QQuickPreviewAdapter::setPreviewWindow(QQuickWindow *window) {
 }
 
 void QQuickPreviewAdapter::onBeforeSynchronizing() {
-    auto modelCopy = m_model->createCopyForRendering(m_previewChain);
+    auto modelCopy = m_model->createCopyForRendering();
     m_lastPreviewRender = modelCopy.render(m_previewChain);
-    //m_model->copyBackRenderStates(m_previewChain, &modelCopy); XXX??
 }
 
-GLuint QQuickPreviewAdapter::previewTexture(int videoNodeId) {
-    return m_lastPreviewRender.value(videoNodeId, 0);
+GLuint QQuickPreviewAdapter::previewTexture(VideoNode *videoNode) {
+    return m_lastPreviewRender.value(*videoNode, 0);
 }

@@ -1,79 +1,89 @@
 #include "VideoNode.h"
 #include "Model.h"
-#include <QDebug>
 #include <QtQml>
 
-VideoNode::VideoNode(Context *context)
-    : m_context(context) {
+// d_ptr may be null here.
+// Let the superclass initialize it
+// and deal with construction of the VideoNodePrivate.
+VideoNode::VideoNode(VideoNodePrivate *ptr)
+    : d_ptr(ptr, &QObject::deleteLater)
+{
 }
 
 VideoNode::VideoNode(const VideoNode &other)
-    : m_inputCount(other.m_inputCount)
-    , m_id(other.m_id)
-    , m_context(other.m_context)
-    , m_copy(true) {
+    : d_ptr(other.d_ptr)
+{
 }
 
-VideoNode::~VideoNode() = default;
+VideoNode *VideoNode::clone() const {
+    return new VideoNode(*this);
+}
+
+bool VideoNode::operator==(const VideoNode &other) const {
+    return d_ptr == other.d_ptr;
+}
+
+bool VideoNode::operator>(const VideoNode &other) const {
+    return d_ptr.data() > other.d_ptr.data();
+}
+
+bool VideoNode::operator<(const VideoNode &other) const {
+    return d_ptr.data() > other.d_ptr.data();
+}
+
+VideoNode &VideoNode::operator=(const VideoNode &other) {
+    d_ptr = other.d_ptr;
+    return *this;
+}
 
 int VideoNode::inputCount() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    QMutexLocker locker(&m_stateLock);
-    return m_inputCount;
+    QMutexLocker locker(&d_ptr->m_stateLock);
+    return d_ptr->m_inputCount;
 }
 
 void VideoNode::setInputCount(int value) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    Q_ASSERT(!m_copy);
-
-    if (value != m_inputCount) {
-        {
-            QMutexLocker locker(&m_stateLock);
-            m_inputCount = value;
-        }
-        emit inputCountChanged(value);
-    }
-}
-
-int VideoNode::id() {
-    QMutexLocker locker(&m_stateLock);
-    return m_id;
-}
-
-void VideoNode::setId(int id) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    Q_ASSERT(!m_copy);
+    bool changed = false;
     {
-        QMutexLocker locker(&m_stateLock);
-        m_id = id;
+        QMutexLocker locker(&d_ptr->m_stateLock);
+        if (value != d_ptr->m_inputCount) { 
+            d_ptr->m_inputCount = value;
+        }
     }
-    emit idChanged(id);
+    if (changed) emit inputCountChanged(value);
 }
 
 QList<Chain> VideoNode::chains() {
-    QMutexLocker locker(&m_stateLock);
-    return m_chains;
+    QMutexLocker locker(&d_ptr->m_stateLock);
+    return d_ptr->m_chains;
 }
 
 void VideoNode::setChains(QList<Chain> chains) {
-    QList<Chain> toRemove = m_chains;
-    QList<Chain> toAdd;
-    for (int i=0; i<chains.count(); i++) {
-        if (m_chains.contains(chains.at(i))) {
-            // If it exists already, don't remove it
-            toRemove.removeAll(chains.at(i));
-        } else {
-            // If it doesn't exist already, add it
-            toAdd.append(chains.at(i)); // Add it
+    bool wereChainsChanged = false;
+    {
+        QMutexLocker locker(&d_ptr->m_stateLock);
+        QList<Chain> toRemove = d_ptr->m_chains;
+        QList<Chain> toAdd;
+        for (int i=0; i<chains.count(); i++) {
+            if (d_ptr->m_chains.contains(chains.at(i))) {
+                // If it exists already, don't remove it
+                toRemove.removeAll(chains.at(i));
+            } else {
+                // If it doesn't exist already, add it
+                toAdd.append(chains.at(i)); // Add it
+            }
+        }
+        if (!toAdd.empty() || toRemove.empty()) {
+            chainsEdited(toAdd, toRemove);
+            d_ptr->m_chains = chains;
+            wereChainsChanged = true;
         }
     }
-    chainsEdited(toAdd, toRemove);
-    m_chains = chains;
-    emit chainsChanged(chains);
+    if (wereChainsChanged) emit chainsChanged(chains);
 }
 
 Context *VideoNode::context() {
-    return m_context;
+    // Not mutable, so no need to lock
+    return d_ptr->m_context;
 }
 
 QJsonObject VideoNode::serialize() {
@@ -87,4 +97,15 @@ QList<Chain> VideoNode::requestedChains() {
 }
 
 void VideoNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
+}
+
+GLuint VideoNode::paint(Chain chain, QVector<GLuint> inputTextures) {
+    Q_UNUSED(chain);
+    Q_UNUSED(inputTextures);
+    return 0;
+}
+
+VideoNodePrivate::VideoNodePrivate(Context *context)
+    : m_context(context)
+{
 }

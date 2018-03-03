@@ -24,7 +24,7 @@ public slots:
 
     // Use this method to retrieve
     // rendered preview textures
-    GLuint previewTexture(int videoNodeId);
+    GLuint previewTexture(VideoNode *videoNode);
 
 protected slots:
     void onBeforeSynchronizing();
@@ -39,6 +39,6 @@ protected:
     QSize m_previewSize;
     Chain m_previewChain;
     QQuickWindow *m_previewWindow{};
-    QMap<int, GLuint> m_lastPreviewRender;
+    QMap<VideoNode, GLuint> m_lastPreviewRender;
     QMutex m_previewLock;
 };

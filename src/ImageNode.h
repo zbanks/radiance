@@ -8,6 +8,7 @@
 #include <vector>
 
 class ImageNode;
+class ImageNodePrivate;
 
 // This class extends OpenGLWorker
 // to enable shader compilation
@@ -57,7 +58,6 @@ class ImageNode
 public:
     ImageNode(Context *context, QString file);
     ImageNode(const ImageNode &other);
-    ~ImageNode();
 
     QJsonObject serialize() override;
 
@@ -65,7 +65,6 @@ public:
     // periodic() advances the frame when necessary.  As a result,
     // there's no point in making a copy of the ImageNode before
     // paint() and copying it back afterwards.
-    QSharedPointer<VideoNode> createCopyForRendering(Chain) override;
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
@@ -106,8 +105,20 @@ signals:
 protected:
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
-    QString m_file;
-    QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker;
+private:
+    QSharedPointer<ImageNodePrivate> d();
+    QString fileToName();
+};
 
-    bool m_ready;
+class ImageNodePrivate : public VideoNodePrivate {
+public:
+    ImageNodePrivate(Context *context);
+
+    QString m_file;
+
+    // This is not actually shared,
+    // I just like the deletion semantics
+    QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker{};
+
+    bool m_ready{false};
 };
