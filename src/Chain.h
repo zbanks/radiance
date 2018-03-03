@@ -25,8 +25,13 @@
     Chains are immutable once created,
     that is, you cannot change the size.
 
-    Chains are owned by Outputs or Output-like things
+    Chains are created by Outputs or Output-like things
     (such as the preview adapter.)
+
+    Chains are thread-safe by nature of being immutable.
+    However, OpenGL thread restrictions still apply
+    (e.g. don't try to access the textures
+    from multiple threads)
 */
 
 class ChainPrivate;
