@@ -45,8 +45,8 @@ GLuint Chain::noiseTexture() {
         d_ptr->m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &data[0]);
         glFlush();
 
-        if (QThread::currentThread() != thread()) {
-            moveToThread(QThread::currentThread());
+        if (QThread::currentThread() != d_ptr->thread()) {
+            d_ptr->moveToThread(QThread::currentThread());
         }
     }
 
@@ -64,8 +64,8 @@ GLuint Chain::blankTexture() {
         auto data = std::array<uint8_t,4>();
         d_ptr->m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
 
-        if (QThread::currentThread() != thread()) {
-            moveToThread(QThread::currentThread());
+        if (QThread::currentThread() != d_ptr->thread()) {
+            d_ptr->moveToThread(QThread::currentThread());
         }
     }
 
@@ -76,8 +76,8 @@ QOpenGLVertexArrayObject *Chain::vao() {
     if (!d_ptr->m_vao.isCreated()) {
         d_ptr->m_vao.create();
 
-        if (QThread::currentThread() != thread()) {
-            moveToThread(QThread::currentThread());
+        if (QThread::currentThread() != d_ptr->thread()) {
+            d_ptr->moveToThread(QThread::currentThread());
         }
     }
     return &d_ptr->m_vao;
