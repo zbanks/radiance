@@ -3,6 +3,7 @@
 #include <QQmlProperty>
 #include <QFileInfo>
 #include <QQueue>
+#include "VideoNode.h"
 #include "Paths.h"
 
 View::View()

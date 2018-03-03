@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Model.h"
+#include "Chain.h"
+#include "VideoNode.h"
 #include <QList>
 #include <QQuickWindow>
 

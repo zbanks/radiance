@@ -109,6 +109,16 @@ GLuint VideoNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     return 0;
 }
 
+void VideoNode::setLastModel(WeakModel model) {
+    QMutexLocker locker(&d_ptr->m_stateLock);
+    d_ptr->m_lastModel = model;
+}
+
+WeakModel VideoNode::lastModel() {
+    QMutexLocker locker(&d_ptr->m_stateLock);
+    return d_ptr->m_lastModel;
+}
+
 VideoNodePrivate::VideoNodePrivate(Context *context)
     : m_context(context)
 {

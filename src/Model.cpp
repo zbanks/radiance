@@ -38,6 +38,11 @@ Model::Model(const Model &other)
 {
 }
 
+Model::Model(QSharedPointer<ModelPrivate> other_ptr)
+    : d_ptr(other_ptr)
+{
+}
+
 void Model::addChain(Chain chain) {
     if (!d_ptr->m_chains.contains(chain)) {
         d_ptr->m_chains.append(chain);
@@ -62,6 +67,8 @@ void Model::prepareNode(VideoNode *videoNode) {
 
     if(videoNode->parent() != this)
         videoNode->setParent(this);
+
+    videoNode->setLastModel(WeakModel(*this));
 
     videoNode->setChains(d_ptr->m_chains);
 
@@ -544,6 +551,21 @@ void Model::save(QString name) {
     }
     QJsonDocument doc(serialize());
     file.write(doc.toJson());
+}
+
+WeakModel::WeakModel()
+{
+}
+
+WeakModel::WeakModel(const Model &other)
+    : d_ptr(other.d_ptr)
+{
+}
+
+ModelCopyForRendering WeakModel::createCopyForRendering() {
+    auto strong_ptr = d_ptr.toStrongRef();
+    if (!strong_ptr) return ModelCopyForRendering();
+    return Model(strong_ptr).createCopyForRendering();
 }
 
 ModelPrivate::ModelPrivate()

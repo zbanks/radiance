@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Chain.h"
+#include "Model.h"
 #include <QObject>
 #include <QOpenGLTexture>
 #include <QSharedPointer>
@@ -81,6 +82,13 @@ public slots:
     // The Model will add these through setChains.
     virtual QList<Chain> requestedChains();
 
+    // The last model that this VideoNode was added to
+    // WeakModel encapsulates a weak reference to modeldata
+    // because the Model may be deleted out from underneath the VideoNode
+    // and we can't give it a strong reference or deadlock would occur
+    void setLastModel(WeakModel model);
+    WeakModel lastModel();
+
 protected slots:
     // If your node does anything at all, you will need to override this method
     // and take appropriate action when the set of render chains changes.
@@ -122,5 +130,6 @@ public:
     int m_inputCount{};
     QMutex m_stateLock; // TODO this is no longer a meaningful concept, should use separate locks for separate fields
     QList<Chain> m_chains;
-    Context *m_context;
+    Context *m_context{};
+    WeakModel m_lastModel;
 };
