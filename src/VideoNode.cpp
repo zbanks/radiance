@@ -36,6 +36,10 @@ VideoNode &VideoNode::operator=(const VideoNode &other) {
     return *this;
 }
 
+VideoNode::operator QString() const {
+    return QString("%1(d_ptr=%2)").arg(metaObject()->className()).arg(QString().sprintf("%p", d_ptr.data()));
+}
+
 int VideoNode::inputCount() {
     QMutexLocker locker(&d_ptr->m_stateLock);
     return d_ptr->m_inputCount;
