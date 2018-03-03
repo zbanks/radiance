@@ -9,13 +9,13 @@
 #include <QThread>
 #include <QProcess>
 #include "BaseVideoNodeTile.h"
-#include "EffectNode.h"
+//#include "EffectNode.h"
 #include "FramebufferVideoNodeRender.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
-#include "FFmpegOutputNode.h"
-#include "PlaceholderNode.h"
+//#include "FFmpegOutputNode.h"
+//#include "PlaceholderNode.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
@@ -96,7 +96,7 @@ runRadianceGui(QGuiApplication *app) {
     }
     return 0;
 }
-
+/*
 static void
 generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
     QFile outputHtml(outputDir.filePath("index.html"));
@@ -241,7 +241,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
 
     return 0;
 }
-
+*/
 int
 main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
@@ -304,7 +304,8 @@ main(int argc, char *argv[]) {
     }
 
     if (parser.isSet(nodeFilenameOption) || parser.isSet(renderAllOption)) {
-        return runRadianceCli(&app, modelName, parser.value(nodeFilenameOption), outputDirString, renderSize);
+        return 1; // XXX
+        //return runRadianceCli(&app, modelName, parser.value(nodeFilenameOption), outputDirString, renderSize);
     } else {
         return runRadianceGui(&app);
     }

@@ -41,9 +41,9 @@ list(APPEND libradiance_SOURCES
     src/Chain.cpp
     src/Context.cpp
     src/Controls.cpp
-    src/ConsoleOutputNode.cpp
-    src/EffectNode.cpp
-    src/FFmpegOutputNode.cpp
+    #src/ConsoleOutputNode.cpp
+    #src/EffectNode.cpp
+    #src/FFmpegOutputNode.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/ImageNode.cpp
@@ -52,13 +52,13 @@ list(APPEND libradiance_SOURCES
     src/OpenGLUtils.cpp
     src/OpenGLWorker.cpp
     src/OpenGLWorkerContext.cpp
-    src/OutputNode.cpp
-    src/OutputWindow.cpp
+    #src/OutputNode.cpp
+    #src/OutputWindow.cpp
     src/Paths.cpp
-    src/PlaceholderNode.cpp
+    #src/PlaceholderNode.cpp
     src/Registry.cpp
-    src/ScreenOutputNode.cpp
-    src/SelfTimedReadBackOutputNode.cpp
+    #src/ScreenOutputNode.cpp
+    #src/SelfTimedReadBackOutputNode.cpp
     src/Timebase.cpp
     src/VideoNode.cpp
     src/View.cpp
@@ -92,7 +92,7 @@ endif()
 if(MPV_FOUND AND NOT WITHOUT_MPV)
     add_definitions( -DUSE_MPV )
     include_directories(${MPV_INCLUDE_DIRS})
-    list(APPEND libradiance_SOURCES src/MovieNode.cpp)
+    #list(APPEND libradiance_SOURCES src/MovieNode.cpp)
     list(APPEND radiance_LIBRARIES ${MPV_LIBRARY})
 endif()
 

@@ -55,7 +55,6 @@ void Model::prepareNode(VideoNode *videoNode) {
     if(videoNode->parent() != this)
         videoNode->setParent(this);
 
-    videoNode->setId(m_vnId++);
     videoNode->setChains(m_chains);
 
     connect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
@@ -208,7 +207,7 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
     }
 }
 
-ModelCopyForRendering Model::createCopyForRendering(Chain chain) {
+ModelCopyForRendering Model::createCopyForRendering() {
     QMutexLocker locker(&m_graphLock);
     ModelCopyForRendering out;
 
@@ -225,7 +224,7 @@ ModelCopyForRendering Model::createCopyForRendering(Chain chain) {
     }
 
     for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
-        out.vertices.append(m_verticesSortedForRendering.at(i)->createCopyForRendering(chain));
+        out.vertices.append(m_verticesSortedForRendering.at(i)->clone());
     }
 
     return out;
@@ -415,7 +414,7 @@ bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
     return ancestors(child).contains(parent);
 }
 
-QMap<int, GLuint> ModelCopyForRendering::render(Chain chain) {
+QMap<VideoNode, GLuint> ModelCopyForRendering::render(Chain chain) {
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
@@ -456,10 +455,10 @@ QMap<int, GLuint> ModelCopyForRendering::render(Chain chain) {
         resultTextures[i] = vertex->paint(chain, inputTextures);
     }
 
-    QMap<int, GLuint> result;
+    QMap<VideoNode, GLuint> result;
     for (int i=0; i<resultTextures.count(); i++) {
-        if (resultTextures.at(i) != 0 && vertices.at(i)->id() != 0) {
-            result.insert(vertices.at(i)->id(), resultTextures.at(i));
+        if (resultTextures.at(i) != 0) {
+            result.insert(*vertices.at(i), resultTextures.at(i));
         }
     }
     vao->release();
@@ -469,17 +468,21 @@ QMap<int, GLuint> ModelCopyForRendering::render(Chain chain) {
 QJsonObject Model::serialize() {
     QJsonObject jsonOutput;
 
-    QJsonObject jsonVertices;
-    for (auto vertex : m_vertices) {
-        jsonVertices[QString::number(vertex->id())] = vertex->serialize();
+    // Create a map from VideoNodes to indices
+    QMap<VideoNode *, int> map;
+    QJsonArray jsonVertices;
+    for (int i=0; i<m_vertices.count(); i++) {
+        map.insert(m_vertices.at(i), i);
+        jsonVertices.append(m_vertices.at(i)->serialize());
     }
+
     jsonOutput["vertices"] = jsonVertices;
 
     QJsonArray jsonEdges;
     for (auto edge : m_edges) {
         QJsonObject jsonEdge;
-        jsonEdge["fromVertex"] = QString::number(edge.fromVertex->id());
-        jsonEdge["toVertex"] = QString::number(edge.toVertex->id());
+        jsonEdge["fromVertex"] = QString::number(map.value(edge.fromVertex, -1));
+        jsonEdge["toVertex"] = QString::number(map.value(edge.fromVertex, -1));
         jsonEdge["toInput"] = edge.toInput;
         jsonEdges.append(jsonEdge);
     }

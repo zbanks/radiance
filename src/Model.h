@@ -24,7 +24,7 @@ public:
 // Return type of graphCopy
 struct ModelCopyForRendering {
     // Copies of the vertices
-    QVector<QSharedPointer<VideoNode>> vertices;
+    QVector<VideoNode *> vertices;
 
     // Edges, as indices into vertices
     QVector<int> fromVertex;
@@ -32,10 +32,12 @@ struct ModelCopyForRendering {
     QVector<int> toInput;
 
     // Render this model
-    // The return value is a mapping of VideoNode IDs to OpenGL textures
+    // The return value is a mapping of VideoNodes to OpenGL textures
     // that were rendered into
-    QMap<int, GLuint> render(Chain chain);
+    QMap<VideoNode, GLuint> render(Chain chain);
 };
+
+// These functions are not thread-safe unless noted.
 
 class Model : public QObject {
     Q_OBJECT
@@ -70,7 +72,8 @@ public slots:
     // and their connections.
     // This copy is necessary because
     // sometimes nodes are deleted or edited during rendering.
-    ModelCopyForRendering createCopyForRendering(Chain chain);
+    // This function is thread-safe
+    ModelCopyForRendering createCopyForRendering();
 
     // Returns a list of vertices
     // in the order they were added
@@ -139,16 +142,24 @@ protected slots:
     void onFatal(QString str);
 
 private:
+    // m_vertices and m_edges must not be accessed from
+    // other threads.
     QList<VideoNode *> m_vertices;
     QList<Edge> m_edges;
+
+    // m_verticesForRendering, m_edgesForRendering
+    // and m_verticesSortedForRendering
+    // may be accessed from other threads
+    // as long as the m_graphLock is taken.
     QList<VideoNode *> m_verticesForRendering;
     QList<Edge> m_edgesForRendering;
     QVector<VideoNode *> m_verticesSortedForRendering;
 
-    // m_vertices and m_edges can be
-    // read from or written to by the render thread.
+    // m_verticesForRendering, m_edgesForRendering
+    // and m_verticesSortedForRendering
+    // can be read from the render thread.
     // This lock ensures that we aren't
-    // trying to read or write it
+    // trying to write it
     // from the GUI thread at the same time.
     QMutex m_graphLock;
 
