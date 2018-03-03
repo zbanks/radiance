@@ -34,8 +34,6 @@ signals:
 protected:
     bool loadImage(QString file);
     ImageNode *m_p;
-protected slots:
-    void onDestroyed();
 public:
     std::atomic<bool> m_ready{false};
     QString      m_file;

@@ -83,6 +83,8 @@ GLuint ImageNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     if (!d()->m_openGLWorker || !d()->m_openGLWorker->m_ready.load() || !d()->m_openGLWorker->m_frameTextures.size())
         return 0;
 
+    // This seems not the most thread-safe...
+
     auto currentMs = int64_t(context()->timebase()->beat() *  500);
     auto extraMs   = currentMs;
     if(d()->m_openGLWorker->m_totalDelay) {
@@ -109,7 +111,6 @@ ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString file)
     connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
     connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
     connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
-    connect(this, &QObject::destroyed, this, &ImageNodeOpenGLWorker::onDestroyed);
 }
 
 ImageNodeOpenGLWorker::~ImageNodeOpenGLWorker() {
@@ -172,11 +173,6 @@ bool ImageNodeOpenGLWorker::loadImage(QString filename) {
     qDebug() << "Successfully loaded image " << filename << " with " << nFrames << "frames, and a total delay of " << m_totalDelay << "ms";
 
     return true;
-}
-
-void ImageNodeOpenGLWorker::onDestroyed() {
-    // For some reason, QOpenGLTexture does not have setParent
-    // and so we cannot use Qt object tree deletion semantics
 }
 
 QString ImageNode::typeName() {

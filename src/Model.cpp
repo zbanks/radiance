@@ -9,6 +9,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 
+static QString vnp(VideoNode *videoNode) {
+    if (videoNode) return *videoNode;
+    return "null";
+}
+
 QVariantMap Edge::toVariantMap() const {
     QVariantMap result;
     result.insert("fromVertex", QVariant::fromValue(fromVertex));
@@ -150,7 +155,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
      || toInput < 0
      || !m_vertices.contains(fromVertex)
      || !m_vertices.contains(toVertex)) {
-        qWarning() << "Bad edge:" << fromVertex << toVertex << toInput;
+        qWarning() << QString("Bad edge: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
         return;
     }
 
@@ -179,7 +184,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
     if(sortedVertices.count() < m_vertices.count()) {
         // Roll back changes if a cycle was detected
         m_edges = edgesOld;
-        qWarning() << "Not adding edge because it would create a cycle: " << fromVertex << toVertex << toInput;
+        qWarning() << QString("Not adding edge because it would create a cycle: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
         return;
     }
 }
@@ -190,7 +195,7 @@ void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) 
      || toInput < 0
      || !m_vertices.contains(fromVertex)
      || !m_vertices.contains(toVertex)) {
-        qWarning() << "Bad edge:" << fromVertex << toVertex << toInput;
+        qWarning() << QString("Bad edge: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
         return;
     }
 
@@ -332,7 +337,7 @@ void Model::flush() {
     while (i.hasNext()) {
         auto edgeCopy = i.next();
         if (edgeCopy.toInput >= edgeCopy.toVertex->inputCount()) {
-            qDebug() << "Removing invalid edge to" << edgeCopy.toVertex << edgeCopy.toInput;
+            qDebug() << QString("Removing invalid edge to %1 input %2").arg(vnp(edgeCopy.toVertex)).arg(edgeCopy.toInput);
             i.remove();
         }
     }
