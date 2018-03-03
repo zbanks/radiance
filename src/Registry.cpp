@@ -6,7 +6,7 @@
 //#include "EffectNode.h"
 #include "ImageNode.h"
 //#include "MovieNode.h"
-//#include "ScreenOutputNode.h"
+#include "ScreenOutputNode.h"
 //#include "FFmpegOutputNode.h"
 //#include "PlaceholderNode.h"
 //#include "ConsoleOutputNode.h"
@@ -17,7 +17,7 @@ Registry::Registry()
     //registerType<EffectNode>();
     registerType<ImageNode>();
     //registerType<MovieNode>();
-    //registerType<ScreenOutputNode>();
+    registerType<ScreenOutputNode>();
     //registerType<FFmpegOutputNode>();
     //registerType<PlaceholderNode>();
     //registerType<ConsoleOutputNode>();

@@ -2,30 +2,36 @@
 #include <QDebug>
 #include <QJsonObject>
 
+
 OutputNode::OutputNode(Context *context, QSize chainSize)
-    : VideoNode(context)
-    , m_chain(chainSize) {
-    m_inputCount = 1;
+    : VideoNode(new OutputNodePrivate(context, chainSize))
+{
+    setInputCount(1);
+}
+
+OutputNode::OutputNode(OutputNodePrivate *ptr)
+    : VideoNode(ptr)
+{
+    setInputCount(1);
 }
 
 OutputNode::OutputNode(const OutputNode &other)
     : VideoNode(other)
-    , m_chain(other.m_chain)
 {
-    m_inputCount = other.m_inputCount;
 }
 
-OutputNode::~OutputNode() = default;
+OutputNode *OutputNode::clone() const {
+    return new OutputNode(*this);
+}
+
+QSharedPointer<OutputNodePrivate> OutputNode::d() {
+    return d_ptr.staticCast<OutputNodePrivate>();
+}
 
 QList<Chain> OutputNode::requestedChains() {
     auto l = QList<Chain>();
-    l.append(m_chain);
+    l.append(chain());
     return l;
-}
-
-QSharedPointer<VideoNode> OutputNode::createCopyForRendering(Chain chain) {
-    Q_UNUSED(chain);
-    return QSharedPointer<VideoNode>(new OutputNode(*this));
 }
 
 GLuint OutputNode::paint(Chain chain, QVector<GLuint> inputTextures) {
@@ -35,20 +41,27 @@ GLuint OutputNode::paint(Chain chain, QVector<GLuint> inputTextures) {
 
 GLuint OutputNode::render(Model *model) {
     if (model == nullptr) {
+        qDebug() << "Parent is" << parent();
         // This is a little bit of a hack,
         model = qobject_cast<Model*>(parent());
         if (model == nullptr) {
             return 0;
         }
     }
-    auto modelCopy = model->createCopyForRendering(m_chain);
-    auto result = modelCopy.render(m_chain);
-    // XXX
-    // Don't we need to copy back the render state here?
-    // Where did that function go?
-    return result.value(id(), 0);
+    auto modelCopy = model->createCopyForRendering();
+    auto result = modelCopy.render(chain());
+    qDebug() << "Rendered" << result;
+    qDebug() << "(I am" << *this << ")";
+    return result.value(*this, 0);
 }
 
 Chain OutputNode::chain() {
-    return m_chain;
+    // Don't need to lock as long as m_chain is immutable
+    return d()->m_chain;
+}
+
+OutputNodePrivate::OutputNodePrivate(Context *context, QSize chainSize)
+    : VideoNodePrivate(context)
+    , m_chain(chainSize)
+{
 }

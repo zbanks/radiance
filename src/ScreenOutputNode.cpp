@@ -4,61 +4,65 @@
 #include <QGuiApplication>
 
 ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
-    : OutputNode(context, chainSize)
-    , m_outputWindow(nullptr) {
-    m_outputWindow = new OutputWindow(this);
-
-    connect(m_outputWindow, &OutputWindow::screenNameChanged, this, &ScreenOutputNode::screenNameChanged);
-    connect(m_outputWindow, &OutputWindow::shownChanged, this, &ScreenOutputNode::shownChanged);
+    : OutputNode(new ScreenOutputNodePrivate(context, chainSize))
+{
+    d()->m_outputWindow = QSharedPointer<OutputWindow>(new OutputWindow(this));
+    connect(d()->m_outputWindow.data(), &OutputWindow::screenNameChanged, this, &ScreenOutputNode::screenNameChanged);
+    connect(d()->m_outputWindow.data(), &OutputWindow::shownChanged, this, &ScreenOutputNode::shownChanged);
 
     reload();
-    connect(&m_reloader, &QTimer::timeout, this, &ScreenOutputNode::reload);
-    m_reloader.setInterval(1000); // Reload screens every 1000 ms
-    m_reloader.start();
+    connect(&d()->m_reloader, &QTimer::timeout, this, &ScreenOutputNode::reload);
+    d()->m_reloader.setInterval(1000); // Reload screens every 1000 ms
+    d()->m_reloader.start();
 }
 
 ScreenOutputNode::ScreenOutputNode(const ScreenOutputNode &other)
-    : OutputNode(other) {
+    : OutputNode(other)
+{
 }
 
-ScreenOutputNode::~ScreenOutputNode() {
-    delete m_outputWindow;
+ScreenOutputNode *ScreenOutputNode::clone() const {
+    return new ScreenOutputNode(*this);
+}
+
+QSharedPointer<ScreenOutputNodePrivate> ScreenOutputNode::d() {
+    return d_ptr.staticCast<ScreenOutputNodePrivate>();
 }
 
 void ScreenOutputNode::setShown(bool shown) {
-    m_outputWindow->setShown(shown);
+    d()->m_outputWindow->setShown(shown);
 }
 
 bool ScreenOutputNode::shown() {
-    return m_outputWindow->shown();
+    return d()->m_outputWindow->shown();
 }
 
 void ScreenOutputNode::reload() {
     auto screens = QGuiApplication::screens();
 
-    if (screens != m_screens) {
-        m_screens = screens;
+    if (screens != d()->m_screens) {
+        d()->m_screens = screens;
 
-        m_screenNameStrings.clear();
+        d()->m_screenNameStrings.clear();
 
-        foreach(QScreen *screen, m_screens) {
-            m_screenNameStrings << screen->name();
+        foreach(QScreen *screen, d()->m_screens) {
+            d()->m_screenNameStrings << screen->name();
         }
 
-        emit availableScreensChanged(m_screenNameStrings);
+        emit availableScreensChanged(d()->m_screenNameStrings);
     }
 }
 
 QStringList ScreenOutputNode::availableScreens() {
-    return m_screenNameStrings;
+    return d()->m_screenNameStrings;
 }
 
 QString ScreenOutputNode::screenName() {
-    return m_outputWindow->screenName();
+    return d()->m_outputWindow->screenName();
 }
 
 void ScreenOutputNode::setScreenName(QString screenName) {
-    m_outputWindow->setScreenName(screenName);
+    d()->m_outputWindow->setScreenName(screenName);
 }
 
 QString ScreenOutputNode::typeName() {
@@ -82,4 +86,9 @@ QMap<QString, QString> ScreenOutputNode::customInstantiators() {
     auto m = QMap<QString, QString>();
     m.insert("ScreenOutput", "ScreenOutputInstantiator.qml");
     return m;
+}
+
+ScreenOutputNodePrivate::ScreenOutputNodePrivate(Context *context, QSize chainSize)
+    : OutputNodePrivate(context, chainSize)
+{
 }

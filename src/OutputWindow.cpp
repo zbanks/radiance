@@ -8,7 +8,7 @@
 OutputWindow::OutputWindow(OutputNode *videoNode)
     : m_screenName("")
     , m_found(false)
-    , m_videoNode(videoNode)
+    , m_videoNode(videoNode->clone())
     , m_shown(false) {
 
     connect(this, &QWindow::screenChanged, this, &OutputWindow::onScreenChanged);
@@ -22,9 +22,6 @@ OutputWindow::OutputWindow(OutputNode *videoNode)
     connect(&m_reloader, &QTimer::timeout, this, &OutputWindow::reload);
     m_reloader.setInterval(1000); // Reload screens every 1000 ms
     m_reloader.start();
-}
-
-OutputWindow::~OutputWindow() {
 }
 
 void OutputWindow::putOnScreen() {
