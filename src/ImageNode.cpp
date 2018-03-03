@@ -16,6 +16,15 @@ ImageNode::ImageNode(Context *context, QString file)
     setFile(file);
 }
 
+ImageNode::ImageNode(const ImageNode &other)
+    : VideoNode(other)
+{
+}
+
+ImageNode *ImageNode::clone() const {
+    return new ImageNode(*this);
+}
+
 QSharedPointer<ImageNodePrivate> ImageNode::d() {
     return d_ptr.staticCast<ImageNodePrivate>();
 }

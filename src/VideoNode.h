@@ -33,6 +33,7 @@ public:
     bool operator>(const VideoNode &other) const;
     bool operator<(const VideoNode &other) const;
     VideoNode &operator=(const VideoNode &other);
+    operator QString() const;
 
     // Paint is run from a valid OpenGL context.
     // It should return the OpenGL texture ID

@@ -58,6 +58,7 @@ class ImageNode
 public:
     ImageNode(Context *context, QString file);
     ImageNode(const ImageNode &other);
+    ImageNode *clone() const override;
 
     QJsonObject serialize() override;
 
