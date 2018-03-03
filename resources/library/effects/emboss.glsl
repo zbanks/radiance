@@ -5,7 +5,7 @@
 float height(vec2 pos) {
     vec4 c = texture(iInputs[1], pos);
     float amt = (c.r + c.g + c.b) / 3.;
-    return (amt - 1.) * c.a * 0.03 * iIntensity;
+    return (amt - 1.) * c.a * 0.03 * iIntensity * pow(defaultPulse, 2.);
 }
 
 // Estimate the normal of the new displacement-mapped surface

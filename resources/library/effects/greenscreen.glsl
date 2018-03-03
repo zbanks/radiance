@@ -11,5 +11,6 @@ void main() {
     float x = pow(clamp(m.g - (m.r + m.b) * 3.0, 0.0, 1.0), 0.2);
     x *= m.a; // Put alpha back in
 
-    fragColor = composite(fragColor, g * x * iIntensity);
+    float parameter = iIntensity * pow(defaultPulse, 2.);
+    fragColor = composite(fragColor, g * x * parameter);
 }

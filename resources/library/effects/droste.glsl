@@ -1,6 +1,6 @@
 #property description Droste effect (spiral forever!)
 #property author http://roy.red/droste-.html + zbanks
-
+#property frequency 1
 
 // Complex functions from http://glslsandbox.com/e#5664.1
 
@@ -42,7 +42,7 @@ vec2 droste(vec2 z) {
     float angle = atan(scale/(2.0*M_PI));
     z = cdiv(z, cexp(vec2(0,angle))*cos(angle)); 
     // 2. Tile the strips
-    z.x -= iIntensityIntegral * 2.;
+    z.x -= iTime * iFrequency;
     z.x = mod(z.x,scale);
     // 1. Take the annulus to a strip
     z = cexp(z)*r1;
@@ -67,5 +67,5 @@ void main(void) {
     vec2 newUV = droste(normCoord);
     newUV = newUV / aspectCorrection + 0.5;
 
-    fragColor = texture(iInput, mix(uv, newUV, smoothstep(0., 0.2, iIntensity)));
+    fragColor = texture(iInput, mix(uv, newUV, iIntensity));
 }

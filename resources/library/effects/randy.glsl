@@ -1,10 +1,13 @@
 #property description Obnoxiously zoom and rotate ( in honor of  Raaaaandy Seidman )
+#property frequency 0.5
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
-    float theta = 0.3 * (sin(iIntensityIntegral * 0.6) - sin(2. * iIntensityIntegral * 0.6)) * iIntensity;
-    float zoom = 1. + 0.2 * (-1. + sin(iIntensityIntegral * 0.35) - sin(2. * iIntensityIntegral * 0.35)) * iIntensity;
+    float t = iTime * iFrequency;
+
+    float theta = 0.3 * (cos(t * 0.6) - sin(2. * t * 0.6)) * iIntensity;
+    float zoom = 1. + 0.2 * (-1. + sin(t * 0.35) - cos(2. * t * 0.35)) * iIntensity;
 
     float s = sin(theta) / zoom;
     float c = cos(theta) / zoom;

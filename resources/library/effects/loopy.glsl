@@ -1,4 +1,5 @@
 #property description Loopy laser-like pattern
+#property frequency 0.5
 
 void main(void) {
     vec4 originalColor = texture(iInput, uv);
@@ -9,11 +10,11 @@ void main(void) {
     float angle = atan(normCoord.x, normCoord.y);
 
     // Compute the size/position of the 'bulge' that travels around the circle
-    float BULGE_SPEED = 1. / 8.0;
+    float BULGE_SPEED = 1.;
     float BULGE_WIDTH = mix(0.20, 0.28, iAudioLevel);  // 0.25
     float BULGE_HEIGHT = mix(0.01, 0.035, iIntensity); // 0.03
     float NOBULGE_HEIGHT = 0.01;
-    float angle_t = mod(angle / M_PI + iTime * BULGE_SPEED, 2.0) - 1.0;
+    float angle_t = mod(angle / M_PI + iTime * iFrequency * BULGE_SPEED, 2.0) - 1.0;
     float bulge = exp(-pow(angle_t / BULGE_WIDTH, 2.)) * BULGE_HEIGHT;
     bulge += NOBULGE_HEIGHT;
 

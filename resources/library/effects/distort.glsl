@@ -1,4 +1,5 @@
-#property description Distort the screen to the beat
+#property description Distort the screen
+#property frequency 0.5
 
 void main(void) {
     vec3 noise_input = vec3(uv, iTime * 0.3);
@@ -8,5 +9,5 @@ void main(void) {
     shift = 0.3 * shift;
     shift /= aspectCorrection;
 
-    fragColor = texture(iInput, uv + shift * iIntensity * (15. * iAudioLevel) * sawtooth(iTime, 0.1));
+    fragColor = texture(iInput, uv + shift * iIntensity * pow(defaultPulse, 2.) * 5.);
 }

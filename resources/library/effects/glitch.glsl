@@ -19,26 +19,28 @@ void main(void) {
     n1 = pow(n1, vec4(0.1));
     n2 = pow(n2, vec4(0.1));
 
+    float parameter = iIntensity * (0.5 + 0.5 * pow(defaultPulse, 2.));
+
     // White noise glitch
-    float noise_glitch = step(1. - 0.2 * iIntensity, n1.x);
+    float noise_glitch = step(1. - 0.2 * parameter, n1.x);
     vec4 white_noise = texture(iNoise, uv + iTime);
     white_noise.rgb *= white_noise.a;
     c = mix(c, white_noise, noise_glitch);
 
     // Invert colors
-    float invert_glitch = step(1. - 0.2 * iIntensity, n1.y);
+    float invert_glitch = step(1. - 0.2 * parameter, n1.y);
     c.rgb = invert_glitch - 2. * (invert_glitch - 0.5) * c.rgb;
 
     // Solid color glitch
-    float solid_glitch = step(1. - 0.2 * iIntensity, n1.z);
+    float solid_glitch = step(1. - 0.2 * parameter, n1.z);
     c = mix(c, vec4(0., 1., 0., 1.), solid_glitch);
 
     // Shift glitch
-    float shift_glitch = step(1. - 0.2 * iIntensity, n1.w);
+    float shift_glitch = step(1. - 0.2 * parameter, n1.w);
     c = mix(c, texture(iInputs[0], uv - vec2(0.2, 0.)), shift_glitch);
 
     // Freeze glitch
-    float freeze_glitch = step(1. - 0.2 * iIntensity, n2.x);
+    float freeze_glitch = step(1. - 0.2 * parameter, n2.x);
     c = mix(c, texture(iChannel[0], uv), freeze_glitch);
 
     fragColor = c;

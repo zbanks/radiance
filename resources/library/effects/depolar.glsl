@@ -7,7 +7,7 @@ void main(void) {
     rtheta /= aspectCorrection;
     rtheta = (rtheta + 1.) / 2.;
 
-    vec2 uv2 = mix(uv, rtheta, iIntensity);
+    vec2 uv2 = mix(uv, rtheta, iIntensity * pow(defaultPulse, 2.));
 
     fragColor = texture(iInput, uv2);
 }

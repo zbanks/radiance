@@ -11,7 +11,7 @@ vec4 lookup(vec2 coord) {
 void main() {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec2  d = -normCoord / float(DEPTH);
-    float w = iIntensity * iAudioLow * 7. / float(DEPTH);
+    float w = iIntensity * iAudioLow * 7. / float(DEPTH) * pow(defaultPulse, 2.);
     vec2  s = normCoord;
     vec4 col = lookup(s);
     for( int i=0; i<DEPTH; i++ )

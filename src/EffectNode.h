@@ -77,6 +77,7 @@ class EffectNode
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
+    Q_PROPERTY(double frequency READ frequency WRITE setFrequency NOTIFY frequencyChanged)
 
     friend class EffectNodeOpenGLWorker;
 
@@ -122,8 +123,10 @@ public slots:
     qreal intensity();
     QString name();
     QString file();
+    double frequency();
     void setIntensity(qreal value);
     void setFile(QString file);
+    void setFrequency(double frequency);
     void reload();
 
 protected slots:
@@ -135,6 +138,7 @@ signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);
     void fileChanged(QString file);
+    void frequencyChanged(double frequency);
 
 protected:
     QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
@@ -147,4 +151,5 @@ protected:
     QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
     QTimer m_periodic; // XXX do something better here
     bool m_ready;
+    double m_frequency;
 };

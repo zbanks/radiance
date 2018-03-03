@@ -41,5 +41,5 @@ void main(void) {
     c.rgb *= hsv.z;                         // Val
     c *= origColor.a;                       // Alpha
 
-    fragColor = mix(origColor, c, iIntensity);
+    fragColor = mix(origColor, c, iIntensity * pow(defaultPulse, 2.));
 }

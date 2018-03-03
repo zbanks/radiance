@@ -9,7 +9,7 @@ vec4 lookup(float scale) {
 
 void main(void) {
     float scaleReduction = 15. * iIntensity + 1.;
-    float t = mod(-iIntensityIntegral * 0.5, 1.);
+    float t = mod(-iTime * iFrequency * 0.5, 1.);
     float scale = pow(scaleReduction, t - 2.);
     fragColor = lookup(scale) * t;
     scale *= scaleReduction;

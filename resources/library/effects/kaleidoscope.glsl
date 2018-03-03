@@ -10,6 +10,8 @@ void main(void) {
     float tStep = M_PI / bins;
     theta = abs(mod(theta + tStep, 2. * tStep) - tStep);
 
+    theta += mod(iTime * iFrequency * M_PI * 0.125, M_PI);
+
     vec2 newUV = r * vec2(cos(theta), sin(theta));
     newUV *= 0.707;
     newUV /= aspectCorrection;

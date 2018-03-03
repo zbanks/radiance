@@ -16,6 +16,7 @@ out vec4 fragColor;
 // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
 uniform highp float iStep;
 uniform highp float iTime;
+uniform highp float iFrequency;
 
 // Audio levels, high/mid/low/level, [0.0, 1.0]
 uniform vec4  iAudio;
@@ -266,3 +267,5 @@ float modf(float x, out float integralPart) {
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
 float onePixel = 1. / min(iResolution.x, iResolution.y);
 #endif
+
+float defaultPulse = sawtooth(iTime * iFrequency, 0.1);

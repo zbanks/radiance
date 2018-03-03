@@ -32,7 +32,7 @@ void main(void) {
 
 
     // Use bright areas of the source image to help "birth" pixels (or kill)
-    vec4 source = texture(iInput, normCoord);
+    vec4 source = texture(iInput, normCoord) * pow(defaultPulse, 2.);
     //float r = 20. * rand(vec3(normCoord, iTime)) + mix(4.0, 0, iIntensity);
     //float bonus = step(20.5, r + max(max(source.r, source.g), source.b));
     //n += bonus * 3;

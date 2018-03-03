@@ -1,22 +1,12 @@
-#property description Full black strobe. Intensity increases frequency
+#property description Full black strobe
+#property frequency 1
 
 void main(void) {
     fragColor = texture(iInput, uv);
     vec4 c;
 
-    float freq;
-    if(iIntensity < 0.05) freq = 0.;
-    else if(iIntensity < 0.15) freq = 4.;
-    else if(iIntensity < 0.25) freq = 2.;
-    else if(iIntensity < 0.35) freq = 1.;
-    else if(iIntensity < 0.45) freq = 0.5;
-    else if(iIntensity < 0.55) freq = 0.25;
-    else if(iIntensity < 0.65) freq = 0.125;
-    else if(iIntensity < 0.75) freq = 0.0625;
-    else freq = 0.03125;
+    float darkness = (iFrequency == 0.) ? pow(iIntensity, 2.) : smoothstep(0., 0.2, iIntensity);
 
-    if(freq > 0.) {
-        c = vec4(0., 0., 0., 1.) * (1. - mod(iTime, freq) / freq);
-        fragColor = composite(fragColor, c);
-    }
+    c = vec4(0., 0., 0., 1.) * pow(defaultPulse, (iIntensity + 0.5) * 2.) * darkness;
+    fragColor = composite(fragColor, c);
 }

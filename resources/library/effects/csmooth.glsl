@@ -7,7 +7,7 @@ float gaussian(float x)
 
 void main()
 {
-    float sigma = iIntensity / 32.;
+    float sigma = iIntensity / 32. * pow(defaultPulse, 2.);
     vec4 acc = vec4(0.,0.,0.,0.);
     float norm = 0.;
     float stp = aspectCorrection.y * sigma;
@@ -29,7 +29,7 @@ float gaussian(float x)
 
 void main()
 {
-    float sigma = iIntensity / 32.;
+    float sigma = iIntensity / 32. * pow(defaultPulse, 2.);
     vec4 acc = vec4(0.,0.,0.,0);
     float norm = 0.;
     float stp = aspectCorrection.x * sigma;

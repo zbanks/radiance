@@ -27,6 +27,7 @@ public:
         Parameter7,
         Parameter8,
         Parameter9,
+        Frequency,
     };
     Q_ENUM(Control)
 

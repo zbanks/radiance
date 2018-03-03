@@ -7,6 +7,6 @@ void main(void) {
 
     vec4 base = texture(iInput, uv);
     vec4 yuvColor = clamp(vec4(yuv2rgb(yuv), 1.0), 0.0, 1.0);
-    fragColor = mix(base, yuvColor, iIntensity);
+    fragColor = mix(base, yuvColor, iIntensity * pow(defaultPulse, 2.));
 }
 

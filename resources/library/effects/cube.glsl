@@ -1,4 +1,5 @@
 #property description 3D cube
+#property frequency 1
 
 // From maze.glsl
 mat4 viewMatrix(vec3 eye, vec3 dir, vec3 up) {
@@ -90,7 +91,7 @@ void main() {
                    0., 0., z,  p,
                    0., 0., 0., 1.);
 
-    float t = iIntensityIntegral * 1.;
+    float t = iIntensityIntegral * iFrequency + 1.;
     vec3 eye = vec3(sin(t), sin(0.5 * t), cos(t));
     eye = mix(vec3(0., 0., 1.), eye, ssi);
     // TODO inverse can be replaced with adjugate

@@ -30,6 +30,6 @@ void main()
     black = pow(black, mix(1.0, 2.0, iIntensity));
 
     vec4 newColor = texture(iInput, uv);
-    newColor.rgb *= mix(1.0, black, smoothstep(0.0, 0.5, iIntensity));
+    newColor.rgb *= mix(1.0, black, iIntensity * pow(defaultPulse, 2.));
     fragColor = newColor;
 }

@@ -1,8 +1,9 @@
 #property description Recolor output with perlin noise rainbow
+#property frequency 1
 
 void main(void) {
     float factor = pow(iIntensity, 0.6);
-    vec3 noise_input = vec3(uv, iTime / 8.);
+    vec3 noise_input = vec3(uv, iTime * iFrequency / 8.);
     float n = noise(noise_input) - 0.1;
     n += (noise(2. * noise_input) - 0.5) * 0.5;
     n += (noise(4. * noise_input) - 0.5) * 0.25;

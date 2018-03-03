@@ -1,4 +1,5 @@
 #property description Like you're looking at the image reflected in something that was surfaced on a lathe
+#property frequency 0.25
 
 void main(void) {
     vec2 normCoord = 2. * (uv - 0.5);
@@ -11,8 +12,8 @@ void main(void) {
     // Image is sampled along a vertical line that slowly shifts back and forth
     // and this line is then swept into a circle
     // Get two newUVs, one for the top half and one for the bottom half
-    vec2 newUV1 = vec2(sin(iIntensityIntegral * 0.2), r);
-    vec2 newUV2 = vec2(sin(iIntensityIntegral * 0.2), -r);
+    vec2 newUV1 = vec2(sin(iTime * iFrequency * 0.5 * M_PI), r);
+    vec2 newUV2 = vec2(sin(iTime * iFrequency * 0.5 * M_PI), -r);
     newUV1 /= aspectCorrection;
     newUV1 = newUV1 * 0.5 + 0.5;
     newUV2 /= aspectCorrection;

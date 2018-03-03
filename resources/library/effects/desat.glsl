@@ -1,7 +1,7 @@
 #property description Desaturate in YUV space
 
 void main(void) {
-    float factor = pow(iIntensity, 3.);
+    float factor = pow(defaultPulse, 2.) * iIntensity;
 
     vec4 samp = demultiply(texture(iInput, uv));
 
