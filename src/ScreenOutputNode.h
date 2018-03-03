@@ -4,6 +4,8 @@
 #include "OutputWindow.h"
 #include <QScreen>
 
+class ScreenOutputNodePrivate;
+
 class ScreenOutputNode
     : public OutputNode {
     Q_OBJECT
@@ -14,7 +16,7 @@ class ScreenOutputNode
 public:
     ScreenOutputNode(Context *context, QSize chainSize);
     ScreenOutputNode(const ScreenOutputNode &other);
-    ~ScreenOutputNode();
+    ScreenOutputNode *clone() const override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -51,14 +53,20 @@ signals:
     void availableScreensChanged(QStringList availableScreens);
     void screenNameChanged();
 
-protected:
-    OutputWindow *m_outputWindow;
-
 protected slots:
     void reload();
 
 private:
+    QSharedPointer<ScreenOutputNodePrivate> d();
+};
+
+class ScreenOutputNodePrivate : public OutputNodePrivate {
+public:
+    ScreenOutputNodePrivate(Context *context, QSize chainSize);
     QList<QScreen *> m_screens;
     QStringList m_screenNameStrings;
     QTimer m_reloader;
+
+    // Not actually shared, just convenient for deletion
+    QSharedPointer<OutputWindow> m_outputWindow;
 };

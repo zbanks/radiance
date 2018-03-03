@@ -37,6 +37,8 @@ struct ModelCopyForRendering {
     QMap<VideoNode, GLuint> render(Chain chain);
 };
 
+class ModelPrivate;
+
 // These functions are not thread-safe unless noted.
 
 class Model : public QObject {
@@ -46,7 +48,7 @@ class Model : public QObject {
 
 public:
     Model();
-   ~Model() override;
+    Model(const Model &other);
 
 public slots:
     // These functions mutate the graph.
@@ -135,13 +137,18 @@ protected:
     QVector<VideoNode *> topoSort();
     void prepareNode(VideoNode * node);
     void disownNode(VideoNode * node);
+    QSharedPointer<ModelPrivate> d_ptr;
 
 protected slots:
     void onMessage(QString message);
     void onWarning(QString str);
     void onFatal(QString str);
+};
 
-private:
+class ModelPrivate {
+public:
+    ModelPrivate();
+
     // m_vertices and m_edges must not be accessed from
     // other threads.
     QList<VideoNode *> m_vertices;
@@ -165,7 +172,4 @@ private:
 
     // Chains used for rendering this model
     QList<Chain> m_chains;
-
-    // Counter to give VideoNodes unique IDs
-    int m_vnId;
 };

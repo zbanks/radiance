@@ -52,12 +52,12 @@ list(APPEND libradiance_SOURCES
     src/OpenGLUtils.cpp
     src/OpenGLWorker.cpp
     src/OpenGLWorkerContext.cpp
-    #src/OutputNode.cpp
-    #src/OutputWindow.cpp
+    src/OutputNode.cpp
+    src/OutputWindow.cpp
     src/Paths.cpp
     #src/PlaceholderNode.cpp
     src/Registry.cpp
-    #src/ScreenOutputNode.cpp
+    src/ScreenOutputNode.cpp
     #src/SelfTimedReadBackOutputNode.cpp
     src/Timebase.cpp
     src/VideoNode.cpp

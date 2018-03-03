@@ -13,7 +13,7 @@ protected:
     QTimer m_reloader;
     bool m_found;
     QOpenGLShaderProgram *m_program;
-    OutputNode *m_videoNode;
+    QScopedPointer<OutputNode> m_videoNode;
     QOpenGLVertexArrayObject m_vao;
     bool m_shown;
 
@@ -30,8 +30,12 @@ protected slots:
     void reload();
 
 public:
+    // The VideoNode that this is constructed with
+    // will be cloned and the clone will be destroyed
+    // when the OutputWindow is destroyed.
+    // You do not need to worry about the lifetime
+    // of the VideoNode* that you pass in.
     OutputWindow(OutputNode *videoNode);
-   ~OutputWindow();
 
 public slots:
     void setScreenName(QString screen);
