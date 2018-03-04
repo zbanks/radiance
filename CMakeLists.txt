@@ -43,7 +43,7 @@ list(APPEND libradiance_SOURCES
     src/Controls.cpp
     src/ConsoleOutputNode.cpp
     #src/EffectNode.cpp
-    #src/FFmpegOutputNode.cpp
+    src/FFmpegOutputNode.cpp
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/ImageNode.cpp

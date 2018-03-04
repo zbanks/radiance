@@ -4,6 +4,8 @@
 #include "OutputWindow.h"
 #include <QProcess>
 
+class FFmpegOutputNodePrivate;
+
 class FFmpegOutputNode
     : public OutputNode {
     Q_OBJECT
@@ -12,8 +14,9 @@ class FFmpegOutputNode
 
 public:
     FFmpegOutputNode(Context *context, QSize chainSize);
-    FFmpegOutputNode(const FFmpegOutputNode &other);
     ~FFmpegOutputNode();
+    FFmpegOutputNode(const FFmpegOutputNode &other);
+    FFmpegOutputNode *clone() const override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -51,6 +54,13 @@ signals:
     void ffmpegArgumentsChanged(QStringList ffmpegArguments);
 
 private:
+    QSharedPointer<FFmpegOutputNodePrivate> d();
+};
+
+class FFmpegOutputNodePrivate : public OutputNodePrivate {
+public:
+    FFmpegOutputNodePrivate(Context *context, QSize chainSize);
+
     bool m_recording;
     QStringList m_ffmpegArguments;
     QProcess m_ffmpeg;
