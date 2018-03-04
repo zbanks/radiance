@@ -67,7 +67,7 @@ VideoNodeTile {
                 id: vnr;
                 anchors.fill: parent;
                 previewAdapter: Globals.previewAdapter;
-                videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
+                videoNode: tile.videoNode;
             }
         }
 

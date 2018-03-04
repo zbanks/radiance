@@ -44,7 +44,7 @@ class Chain : public QObject {
     Q_PROPERTY(int noiseTexture READ noiseTexture);
 
 public:
-    Chain(QSize size);
+    Chain(QSize size=QSize(0, 0));
 
     // Creates a very shallow copy
     // (all operations will reference original chain)

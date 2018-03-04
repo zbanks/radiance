@@ -3,22 +3,22 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
-//#include "EffectNode.h"
+#include "EffectNode.h"
 #include "ImageNode.h"
 //#include "MovieNode.h"
 #include "ScreenOutputNode.h"
-//#include "FFmpegOutputNode.h"
+#include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
 
 Registry::Registry()
     : m_library(nullptr) {
     // This can be done with some black magic fuckery in the future
-    //registerType<EffectNode>();
+    registerType<EffectNode>();
     registerType<ImageNode>();
     //registerType<MovieNode>();
     registerType<ScreenOutputNode>();
-    //registerType<FFmpegOutputNode>();
+    registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
 
