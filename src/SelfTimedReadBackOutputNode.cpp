@@ -25,7 +25,7 @@ SelfTimedReadBackOutputNode *SelfTimedReadBackOutputNode::clone() const {
     return new SelfTimedReadBackOutputNode(*this);
 }
 
-QSharedPointer<SelfTimedReadBackOutputNodePrivate> SelfTimedReadBackOutputNode::d() {
+QSharedPointer<SelfTimedReadBackOutputNodePrivate> SelfTimedReadBackOutputNode::d() const {
     return d_ptr.staticCast<SelfTimedReadBackOutputNodePrivate>();
 }
 

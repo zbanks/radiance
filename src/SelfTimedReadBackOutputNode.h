@@ -28,7 +28,7 @@ public slots:
     virtual void initialize();
 
 private:
-    QSharedPointer<SelfTimedReadBackOutputNodePrivate> d();
+    QSharedPointer<SelfTimedReadBackOutputNodePrivate> d() const;
 };
 
 class STRBONOpenGLWorker : public OpenGLWorker {

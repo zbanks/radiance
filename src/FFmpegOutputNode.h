@@ -54,7 +54,7 @@ signals:
     void ffmpegArgumentsChanged(QStringList ffmpegArguments);
 
 private:
-    QSharedPointer<FFmpegOutputNodePrivate> d();
+    QSharedPointer<FFmpegOutputNodePrivate> d() const;
 };
 
 class FFmpegOutputNodePrivate : public OutputNodePrivate {

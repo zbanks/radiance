@@ -7,42 +7,8 @@
 #include <QTimer>
 #include <vector>
 
-class ImageNode;
+class ImageNodeOpenGLWorker;
 class ImageNodePrivate;
-
-// This class extends OpenGLWorker
-// to enable shader compilation
-// and other initialization
-// in a background context
-class ImageNodeOpenGLWorker : public OpenGLWorker {
-    Q_OBJECT
-
-public:
-    ImageNodeOpenGLWorker(ImageNode *p, QString file);
-    ~ImageNodeOpenGLWorker() override;
-
-public slots:
-    void initialize();
-    bool ready() const;
-signals:
-    // This is emitted when it is done
-    void initialized();
-
-    void message(QString str);
-    void warning(QString str);
-    void fatal(QString str);
-protected:
-    bool loadImage(QString file);
-    ImageNode *m_p;
-public:
-    std::atomic<bool> m_ready{false};
-    QString      m_file;
-    int          m_totalDelay{};
-    QVector<int> m_frameDelays{}; // milliseconds
-    QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
-};
-
-///////////////////////////////////////////////////////////////////////////////
 
 // This class extends VideoNode to provide a static image or GIF
 class ImageNode
@@ -51,6 +17,7 @@ class ImageNode
     Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
+    friend class WeakImageNode;
     friend class ImageNodeOpenGLWorker;
 
 public:
@@ -105,7 +72,8 @@ protected:
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
 private:
-    QSharedPointer<ImageNodePrivate> d();
+    ImageNode(QSharedPointer<ImageNodePrivate> other_ptr);
+    QSharedPointer<ImageNodePrivate> d() const;
     QString fileToName();
 };
 
@@ -120,4 +88,43 @@ public:
     QSharedPointer<ImageNodeOpenGLWorker> m_openGLWorker{};
 
     bool m_ready{false};
+
+    int          m_totalDelay{};
+    QVector<int> m_frameDelays{}; // milliseconds
+    QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+class WeakImageNode {
+public:
+    WeakImageNode();
+    WeakImageNode(const ImageNode &other);
+    QSharedPointer<ImageNodePrivate> toStrongRef();
+
+protected:
+    QWeakPointer<ImageNodePrivate> d_ptr;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+// This class extends OpenGLWorker
+// to enable shader compilation
+// and other initialization
+// in a background context
+class ImageNodeOpenGLWorker : public OpenGLWorker {
+    Q_OBJECT
+
+public:
+    ImageNodeOpenGLWorker(ImageNode p);
+
+public slots:
+    void initialize(QString filename);
+
+signals:
+    void message(QString str);
+    void warning(QString str);
+    void fatal(QString str);
+protected:
+    WeakImageNode m_p;
 };
