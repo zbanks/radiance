@@ -5,20 +5,20 @@
 // This class extends VideoNode to passthrough its first input, but
 // can be configured to be a wrapper for a different VideoNode
 
+class PlaceholderNodePrivate;
+
 class PlaceholderNode
     : public VideoNode {
     Q_OBJECT
 
 public:
     PlaceholderNode(Context *context, VideoNode *wrapped=nullptr);
-    PlaceholderNode(const PlaceholderNode &other, QSharedPointer<VideoNode> ownedWrapped=nullptr);
-    ~PlaceholderNode();
+    PlaceholderNode(const PlaceholderNode &other);
+    PlaceholderNode *clone() const override;
 
     QJsonObject serialize() override;
 
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
-    // Creates a copy of this node
-    QSharedPointer<VideoNode> createCopyForRendering(Chain) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -45,11 +45,21 @@ public:
 
 public slots:
     void setWrappedVideoNode(VideoNode *wrapped);
+    VideoNode *wrappedVideoNode();
+
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
 signals:
+    void wrappedVideoNodeChanged(VideoNode *videoNode);
 
-protected:
-    VideoNode *m_wrappedVideoNode;
-    QSharedPointer<VideoNode> m_ownedWrappedVideoNode;
+private:
+    QSharedPointer<PlaceholderNodePrivate> d();
+};
+
+class PlaceholderNodePrivate : public VideoNodePrivate
+{
+public:
+    PlaceholderNodePrivate(Context *context);
+
+    QSharedPointer<VideoNode> m_wrappedVideoNode;
 };

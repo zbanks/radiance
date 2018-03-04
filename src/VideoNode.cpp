@@ -51,6 +51,7 @@ void VideoNode::setInputCount(int value) {
         QMutexLocker locker(&d_ptr->m_stateLock);
         if (value != d_ptr->m_inputCount) { 
             d_ptr->m_inputCount = value;
+            changed = true;
         }
     }
     if (changed) emit inputCountChanged(value);

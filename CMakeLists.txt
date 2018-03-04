@@ -55,7 +55,7 @@ list(APPEND libradiance_SOURCES
     src/OutputNode.cpp
     src/OutputWindow.cpp
     src/Paths.cpp
-    #src/PlaceholderNode.cpp
+    src/PlaceholderNode.cpp
     src/Registry.cpp
     src/ScreenOutputNode.cpp
     src/SelfTimedReadBackOutputNode.cpp
