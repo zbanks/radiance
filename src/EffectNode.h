@@ -11,59 +11,21 @@
 #include <QTimer>
 #include <QOpenGLFramebufferObject>
 
-class EffectNode;
+class EffectNodeOpenGLWorker;
+class EffectNodePrivate;
 
-// This struct extends the VideoNodeRenderState
-// to add additional state to each render pipeline.
-// It adds some intermediate framebuffers
-// and an index into them.
 class EffectNodeRenderState {
-    Q_GADGET
 public:
-    using size_type = std::vector<Pass>::size_type;
-    using reference = std::vector<Pass>::reference;
-    using const_reference = std::vector<Pass>::const_reference;
-    using difference_type = std::vector<Pass>::difference_type;
+    EffectNodeRenderState(QVector<QSharedPointer<QOpenGLShaderProgram>> shaders);
 
-    std::atomic<bool> m_ready{false};
-    std::vector<Pass> m_passes;
+    struct Pass {
+        QSharedPointer<QOpenGLFramebufferObject> m_output;
+        QSharedPointer<QOpenGLShaderProgram> m_shader;
+    };
+
+    QVector<Pass> m_passes;
+
     QSharedPointer<QOpenGLFramebufferObject> m_extra;
-
-    bool ready() const { return m_ready.load();}
-    size_type size() const { return m_passes.size();}
-    const_reference at(difference_type x) const { return m_passes.at(x);}
-    const_reference operator[](difference_type x) const { return m_passes[x];}
-    reference operator[](difference_type x) { return m_passes[x];}
-};
-Q_DECLARE_METATYPE(QSharedPointer<EffectNodeRenderState>);
-
-///////////////////////////////////////////////////////////////////////////////
-
-// This class extends OpenGLWorker
-// to enable shader compilation
-// and other initialization
-// in a background context
-class EffectNodeOpenGLWorker : public OpenGLWorker {
-    Q_OBJECT
-
-public:
-    EffectNodeOpenGLWorker(EffectNode *p);
-public slots:
-    // Call this after changing
-    // "file"
-    void initialize(QVector<QStringList> passes);
-    void onPrepareState(QSharedPointer<EffectNodeRenderState> state);
-signals:
-    // This is emitted when it is done
-    void initialized();
-    void prepareState(QSharedPointer<EffectNodeRenderState> state);
-
-    void message(QString str);
-    void warning(QString str);
-    void fatal(QString str);
-protected:
-    bool loadProgram(QString file);
-    QSharedPointer<EffectNodeRenderState> m_state;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -73,6 +35,8 @@ protected:
 // based on one or more shader programs.
 class EffectNode
     : public VideoNode {
+    friend class WeakEffectNode;
+
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
@@ -84,7 +48,7 @@ class EffectNode
 public:
     EffectNode(Context *context, QString name);
     EffectNode(const EffectNode &other);
-    ~EffectNode();
+    EffectNode *clone() const override;
 
     QJsonObject serialize() override;
 
@@ -92,9 +56,6 @@ public:
     static constexpr qreal FPS = 60;
 
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
-
-    // Creates a copy of this node
-    QSharedPointer<VideoNode> createCopyForRendering(Chain chain) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -130,8 +91,7 @@ public slots:
     void reload();
 
 protected slots:
-    void onInitialized();
-    void periodic();
+    void onPeriodic();
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
 signals:
@@ -140,16 +100,70 @@ signals:
     void fileChanged(QString file);
     void frequencyChanged(double frequency);
 
-protected:
+private:
+    QSharedPointer<EffectNodePrivate> d() const;
+    EffectNode(QSharedPointer<EffectNodePrivate> other_ptr);
+};
+
+class EffectNodePrivate : public VideoNodePrivate {
+public:
+    EffectNodePrivate(Context *context);
+
     QMap<Chain, QSharedPointer<EffectNodeRenderState>> m_renderStates;
-    qreal m_intensity;
-    qreal m_intensityIntegral;
-    qreal m_beatLast;
-    qreal m_realTime;
-    qreal m_realTimeLast;
+    qreal m_intensity{};
+    qreal m_intensityIntegral{};
+    qreal m_beatLast{};
+    qreal m_realTime{};
+    qreal m_realTimeLast{};
     QString m_file;
-    QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker;
+    QSharedPointer<EffectNodeOpenGLWorker> m_openGLWorker; // Not shared
     QTimer m_periodic; // XXX do something better here
-    bool m_ready;
-    double m_frequency;
+    bool m_ready{};
+    double m_frequency{};
+    QVector<QSharedPointer<QOpenGLShaderProgram>> m_shaders;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+class WeakEffectNode {
+public:
+    WeakEffectNode();
+    WeakEffectNode(const EffectNode &other);
+    QSharedPointer<EffectNodePrivate> toStrongRef();
+
+protected:
+    QWeakPointer<EffectNodePrivate> d_ptr;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+// This class extends OpenGLWorker
+// to enable shader compilation
+// and other initialization
+// in a background context
+class EffectNodeOpenGLWorker : public OpenGLWorker {
+    Q_OBJECT
+
+public:
+    EffectNodeOpenGLWorker(EffectNode p);
+
+public slots:
+    // Call this after changing
+    // "file"
+    void initialize(QVector<QStringList> passes);
+
+    // Call this to prepare and add a new renderState
+    // if chains change or one is somehow missing
+    void addNewState(Chain chain);
+
+signals:
+    void message(QString str);
+    void warning(QString str);
+    void fatal(QString str);
+
+protected:
+    bool loadProgram(QString file);
+
+private:
+    WeakEffectNode m_p;
 };

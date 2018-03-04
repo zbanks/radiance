@@ -92,7 +92,8 @@ public slots:
 protected slots:
     // If your node does anything at all, you will need to override this method
     // and take appropriate action when the set of render chains changes.
-    // This function is run with the state locked, so try to be brief.
+    // This function is run with the state locked,
+    // so don't lock it again, and try to be brief.
     virtual void chainsEdited(QList<Chain> added, QList<Chain> removed);
 
 protected:
@@ -100,6 +101,10 @@ protected:
     // to give the VideoNode a pointer to their
     // private storage, which VideoNode will manage
     VideoNode(VideoNodePrivate *ptr);
+
+    // Subclasses may use this constructor
+    // to handle promotion of WeakVideoNodes
+    VideoNode(QSharedPointer<VideoNodePrivate> ptr);
 
     QSharedPointer<VideoNodePrivate> d_ptr;
 

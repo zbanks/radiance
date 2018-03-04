@@ -10,6 +10,12 @@ VideoNode::VideoNode(VideoNodePrivate *ptr)
 {
 }
 
+// Only use this for promoting WeakVideoNodes
+VideoNode::VideoNode(QSharedPointer<VideoNodePrivate> ptr)
+    : d_ptr(ptr)
+{
+}
+
 VideoNode::VideoNode(const VideoNode &other)
     : d_ptr(other.d_ptr)
 {
