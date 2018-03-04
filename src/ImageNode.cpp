@@ -12,6 +12,8 @@
 ImageNode::ImageNode(Context *context, QString file)
     : VideoNode(new ImageNodePrivate(context))
 {
+    d()->m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(*this), &QObject::deleteLater);
+
     setInputCount(1);
     setFile(file);
 }
@@ -21,11 +23,16 @@ ImageNode::ImageNode(const ImageNode &other)
 {
 }
 
+ImageNode::ImageNode(QSharedPointer<ImageNodePrivate> other_ptr)
+    : VideoNode(other_ptr.staticCast<VideoNodePrivate>())
+{
+}
+
 ImageNode *ImageNode::clone() const {
     return new ImageNode(*this);
 }
 
-QSharedPointer<ImageNodePrivate> ImageNode::d() {
+QSharedPointer<ImageNodePrivate> ImageNode::d() const {
     return d_ptr.staticCast<ImageNodePrivate>();
 }
 
@@ -67,9 +74,8 @@ void ImageNode::setFile(QString file) {
         if (file != d()->m_file) {
             wasFileChanged = true;
             d()->m_file = file;
-            d()->m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(this, d()->m_file), &QObject::deleteLater);
-            connect(d()->m_openGLWorker.data(), &ImageNodeOpenGLWorker::initialized, this, &ImageNode::onInitialized);
-            bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize");
+            d()->m_ready = false;
+            bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
             Q_ASSERT(result);
             newName = fileToName();
             if (newName != oldName) wasNameChanged = true;
@@ -80,24 +86,32 @@ void ImageNode::setFile(QString file) {
 }
 
 GLuint ImageNode::paint(Chain chain, QVector<GLuint> inputTextures) {
-    if (!d()->m_openGLWorker || !d()->m_openGLWorker->m_ready.load() || !d()->m_openGLWorker->m_frameTextures.size())
-        return 0;
+    int totalDelay;
+    QVector<int> frameDelays;
+    QVector<QSharedPointer<QOpenGLTexture>> frameTextures;
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        if (!d()->m_ready || d()->m_frameTextures.empty())
+            return 0;
 
-    // This seems not the most thread-safe...
+        totalDelay = d()->m_totalDelay;
+        frameDelays = d()->m_frameDelays;
+        frameTextures = d()->m_frameTextures;
+    }
 
     auto currentMs = int64_t(context()->timebase()->beat() *  500);
-    auto extraMs   = currentMs;
-    if(d()->m_openGLWorker->m_totalDelay) {
-        extraMs   = currentMs % (d()->m_openGLWorker->m_totalDelay);
-        if(!d()->m_openGLWorker->m_frameDelays.empty()) {
-            for(auto i = 0; i < d()->m_openGLWorker->m_frameDelays.size(); ++i) {
-                if(d()->m_openGLWorker->m_frameDelays.at(i) >= extraMs)
-                    return d()->m_openGLWorker->m_frameTextures.at(i)->textureId();
+    auto extraMs = currentMs;
+    if (totalDelay) {
+        extraMs = currentMs % totalDelay;
+        if (frameDelays.empty()) {
+            for (auto i = 0; i < frameDelays.size(); ++i) {
+                if (frameDelays.at(i) >= extraMs)
+                    return frameTextures.at(i)->textureId();
             }
         } else {
-            auto perFrame = d()->m_openGLWorker->m_totalDelay / d()->m_openGLWorker->m_frameTextures.size();;
-            auto idx = std::min((unsigned long)(extraMs / perFrame), (unsigned long)(d()->m_openGLWorker->m_frameTextures.size() - 1));
-            return d()->m_openGLWorker->m_frameTextures.at(idx)->textureId();
+            auto perFrame = totalDelay / frameTextures.size();;
+            auto idx = std::min((unsigned long)(extraMs / perFrame), (unsigned long)(frameTextures.size() - 1));
+            return frameTextures.at(idx)->textureId();
         }
     }
     return 0;
@@ -105,45 +119,25 @@ GLuint ImageNode::paint(Chain chain, QVector<GLuint> inputTextures) {
 
 // ImageNodeOpenGLWorker methods
 
-ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString file)
-    : OpenGLWorker(p->context()->openGLWorkerContext())
-    , m_file(file) {
-    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
-    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
-    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
+ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode p)
+    : OpenGLWorker(p.context()->openGLWorkerContext())
+    , m_p(p) {
+    connect(this, &ImageNodeOpenGLWorker::message, &p, &ImageNode::message);
+    connect(this, &ImageNodeOpenGLWorker::warning, &p, &ImageNode::warning);
+    connect(this, &ImageNodeOpenGLWorker::fatal,   &p, &ImageNode::fatal);
 }
 
-ImageNodeOpenGLWorker::~ImageNodeOpenGLWorker() {
-    makeCurrent();
-}
+void ImageNodeOpenGLWorker::initialize(QString filename) {
+    auto d = m_p.toStrongRef();
+    if (d.isNull()) return; // ImageNode was deleted
+    ImageNode p(d);
 
-bool ImageNodeOpenGLWorker::ready() const {
-    return m_ready.load();
-}
-
-void ImageNodeOpenGLWorker::initialize() {
-    // Lock this because we need to use m_frameTextures
-    makeCurrent();
-    auto result = loadImage(m_file);
-    if (!result) {
-        qWarning() << "Can't load image!" << m_file;
-        return;
-    }
-    m_ready.store(true);
-    // Set the current frame to 0
-    emit initialized();
-}
-
-// Call this to load an image into m_frameTextures
-// Returns true if the program was loaded successfully
-bool ImageNodeOpenGLWorker::loadImage(QString filename) {
     filename = Paths::expandLibraryPath(filename);
     QFile file(filename);
 
     QFileInfo check_file(filename);
     if (!(check_file.exists() && check_file.isFile())) {
-        qWarning() << "Could not find" << filename;
-        return false;
+        emit fatal(QString("Could not find \"%1\"").arg(filename));
     }
 
     QImageReader imageReader(filename);
@@ -151,28 +145,37 @@ bool ImageNodeOpenGLWorker::loadImage(QString filename) {
     if (nFrames == 0)
         nFrames = 1; // Returns 0 if animation isn't supported
 
-    m_frameTextures.clear();
-    m_frameTextures.resize(nFrames);
-    m_frameDelays.resize(nFrames);
+    int totalDelay;
+    QVector<int> frameDelays;
+    QVector<QSharedPointer<QOpenGLTexture>> frameTextures;
+
+    frameTextures.resize(nFrames);
+    frameDelays.resize(nFrames);
 
     for (int i = 0; i < nFrames; i++) {
         auto frame = imageReader.read();
         if (frame.isNull()) {
-            qWarning() << "Unable to read frame" << i << "of image:" << imageReader.errorString();
-            return false;
+            emit fatal(QString("Unable to read frame %1 of image: %2").arg(i).arg(imageReader.errorString()));
+            return;
         }
 
-        m_frameDelays[i] = imageReader.nextImageDelay();
-        if(!m_frameDelays[i])
-            m_frameDelays[i] = 10;
-        m_frameTextures[i] = QSharedPointer<QOpenGLTexture>::create(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps);
+        frameDelays[i] = imageReader.nextImageDelay();
+        if(!frameDelays[i])
+            frameDelays[i] = 10;
+        frameTextures[i] = QSharedPointer<QOpenGLTexture>::create(frame.mirrored(), QOpenGLTexture::MipMapGeneration::GenerateMipMaps);
     }
-    std::partial_sum(m_frameDelays.begin(),m_frameDelays.end(),m_frameDelays.begin());
-    m_totalDelay = m_frameDelays.back();
-    glFlush();
-    qDebug() << "Successfully loaded image " << filename << " with " << nFrames << "frames, and a total delay of " << m_totalDelay << "ms";
+    std::partial_sum(frameDelays.begin(),frameDelays.end(),frameDelays.begin());
+    totalDelay = frameDelays.back();
+    qDebug() << "Successfully loaded image " << filename << " with " << nFrames << "frames, and a total delay of " << totalDelay << "ms";
 
-    return true;
+    {
+        QMutexLocker locker(&p.d()->m_stateLock);
+        p.d()->m_totalDelay = totalDelay;
+        p.d()->m_frameTextures = frameTextures;
+        p.d()->m_frameDelays = frameDelays;
+        p.d()->m_ready = true;
+    }
+    glFlush();
 }
 
 QString ImageNode::typeName() {
@@ -200,6 +203,20 @@ VideoNode *ImageNode::fromFile(Context *context, QString filename) {
 QMap<QString, QString> ImageNode::customInstantiators() {
     return QMap<QString, QString>();
 }
+
+WeakImageNode::WeakImageNode()
+{
+}
+
+WeakImageNode::WeakImageNode(const ImageNode &other)
+    : d_ptr(other.d())
+{
+}
+
+QSharedPointer<ImageNodePrivate> WeakImageNode::toStrongRef() {
+    return d_ptr.toStrongRef();
+}
+
 
 ImageNodePrivate::ImageNodePrivate(Context *context)
     : VideoNodePrivate(context)

@@ -31,7 +31,7 @@ protected:
     virtual QList<Chain> requestedChains() override;
 
 private:
-    QSharedPointer<OutputNodePrivate> d();
+    QSharedPointer<OutputNodePrivate> d() const;
 };
 
 class OutputNodePrivate : public VideoNodePrivate {

@@ -24,7 +24,7 @@ OutputNode *OutputNode::clone() const {
     return new OutputNode(*this);
 }
 
-QSharedPointer<OutputNodePrivate> OutputNode::d() {
+QSharedPointer<OutputNodePrivate> OutputNode::d() const {
     return d_ptr.staticCast<OutputNodePrivate>();
 }
 

@@ -17,7 +17,7 @@ FFmpegOutputNode *FFmpegOutputNode::clone() const {
     return new FFmpegOutputNode(*this);
 }
 
-QSharedPointer<FFmpegOutputNodePrivate> FFmpegOutputNode::d() {
+QSharedPointer<FFmpegOutputNodePrivate> FFmpegOutputNode::d() const {
     return d_ptr.staticCast<FFmpegOutputNodePrivate>();
 }
 
