@@ -9,9 +9,6 @@ ConsoleOutputNode::ConsoleOutputNode(const ConsoleOutputNode &other)
     : SelfTimedReadBackOutputNode(other) {
 }
 
-ConsoleOutputNode::~ConsoleOutputNode() {
-}
-
 void ConsoleOutputNode::frame(QSize size, QByteArray frame) {
     qDebug() << size << frame;
 }

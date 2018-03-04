@@ -65,6 +65,7 @@ void Model::prepareNode(VideoNode *videoNode) {
     if(!videoNode)
         return;
 
+    // Giving a QSP a parent... hmm...
     if(videoNode->parent() != this)
         videoNode->setParent(this);
 
