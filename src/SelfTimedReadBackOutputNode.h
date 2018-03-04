@@ -5,6 +5,7 @@
 #include "OpenGLWorker.h"
 
 class STRBONOpenGLWorker;
+class SelfTimedReadBackOutputNodePrivate;
 
 class SelfTimedReadBackOutputNode
     : public OutputNode {
@@ -15,7 +16,7 @@ class SelfTimedReadBackOutputNode
 public:
     SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec=0);
     SelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other);
-    ~SelfTimedReadBackOutputNode();
+    SelfTimedReadBackOutputNode *clone() const override;
 
 public slots:
     void start();
@@ -23,12 +24,11 @@ public slots:
     void setInterval(long msec);
 
     // Reimplement these!
-    virtual void frame(QSize size, QByteArray frame) = 0;
+    virtual void frame(QSize size, QByteArray frame);
     virtual void initialize();
 
 private:
-    OpenGLWorkerContext *m_workerContext{};
-    STRBONOpenGLWorker *m_worker{};
+    QSharedPointer<SelfTimedReadBackOutputNodePrivate> d();
 };
 
 class STRBONOpenGLWorker : public OpenGLWorker {
@@ -44,9 +44,16 @@ public slots:
     void setInterval(long msec);
 protected slots:
     void onTimeout();
-protected:
+private:
     SelfTimedReadBackOutputNode *m_p{};
     QTimer *m_timer{};
     QByteArray m_pixelBuffer;
 };
 
+class SelfTimedReadBackOutputNodePrivate : public OutputNodePrivate {
+public:
+    SelfTimedReadBackOutputNodePrivate(Context *context, QSize chainSize);
+
+    OpenGLWorkerContext *m_workerContext{};
+    STRBONOpenGLWorker *m_worker{};
+};

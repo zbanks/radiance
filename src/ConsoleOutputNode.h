@@ -9,7 +9,6 @@ class ConsoleOutputNode
 public:
     ConsoleOutputNode(Context *context, QSize chainSize);
     ConsoleOutputNode(const ConsoleOutputNode &other);
-    ~ConsoleOutputNode();
     void frame(QSize size, QByteArray frame) override;
 
     // These static methods are required for VideoNode creation
@@ -34,4 +33,8 @@ public:
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
+
+    // Do not add any storage to this class.
+    // If you want it to have storage, create a ConsoleOutputPrivate class
+    // and follow the pattern laid out elsewhere.
 };

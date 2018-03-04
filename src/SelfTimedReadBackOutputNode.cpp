@@ -1,13 +1,14 @@
 #include "SelfTimedReadBackOutputNode.h"
 
 SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec)
-    : OutputNode(context, chainSize) {
-    m_workerContext = new OpenGLWorkerContext();
-    m_workerContext->setParent(this);
-    m_worker = new STRBONOpenGLWorker(this);
+    : OutputNode(new SelfTimedReadBackOutputNodePrivate(context, chainSize)) {
+
+    d()->m_workerContext = new OpenGLWorkerContext();
+    d()->m_workerContext->setParent(this);
+    d()->m_worker = new STRBONOpenGLWorker(this);
 
     {
-        auto result = QMetaObject::invokeMethod(m_worker, "initialize");
+        auto result = QMetaObject::invokeMethod(d()->m_worker, "initialize");
         Q_ASSERT(result);
     }
     if (msec != 0) {
@@ -17,32 +18,40 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize
 
 SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other)
     : OutputNode(other)
-    , m_workerContext(other.m_workerContext) {
+{
 }
 
-SelfTimedReadBackOutputNode::~SelfTimedReadBackOutputNode() {
+SelfTimedReadBackOutputNode *SelfTimedReadBackOutputNode::clone() const {
+    return new SelfTimedReadBackOutputNode(*this);
+}
+
+QSharedPointer<SelfTimedReadBackOutputNodePrivate> SelfTimedReadBackOutputNode::d() {
+    return d_ptr.staticCast<SelfTimedReadBackOutputNodePrivate>();
 }
 
 void SelfTimedReadBackOutputNode::start() {
-    auto result = QMetaObject::invokeMethod(m_worker, "start");
+    auto result = QMetaObject::invokeMethod(d()->m_worker, "start");
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::stop() {
-    auto result = QMetaObject::invokeMethod(m_worker, "stop");
+    auto result = QMetaObject::invokeMethod(d()->m_worker, "stop");
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::setInterval(long msec) {
-    auto result = QMetaObject::invokeMethod(m_worker, "setInterval", Q_ARG(long, msec));
+    auto result = QMetaObject::invokeMethod(d()->m_worker, "setInterval", Q_ARG(long, msec));
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::initialize() {
 }
 
+void SelfTimedReadBackOutputNode::frame(QSize size, QByteArray frame) {
+}
+
 STRBONOpenGLWorker::STRBONOpenGLWorker(SelfTimedReadBackOutputNode *p)
-    : OpenGLWorker(p->m_workerContext)
+    : OpenGLWorker(p->d()->m_workerContext)
     , m_p(p) {
 }
 
@@ -86,4 +95,9 @@ void STRBONOpenGLWorker::onTimeout() {
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, m_pixelBuffer.data());
     m_p->frame(size, m_pixelBuffer);
     qDebug() << "Rendered.";
+}
+
+SelfTimedReadBackOutputNodePrivate::SelfTimedReadBackOutputNodePrivate(Context *context, QSize chainSize)
+    : OutputNodePrivate(context, chainSize)
+{
 }
