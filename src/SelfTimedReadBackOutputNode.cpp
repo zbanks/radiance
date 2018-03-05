@@ -54,6 +54,11 @@ void SelfTimedReadBackOutputNode::setInterval(long msec) {
     Q_ASSERT(result);
 }
 
+void SelfTimedReadBackOutputNode::force() {
+    auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "onTimeout");
+    Q_ASSERT(result);
+}
+
 // WeakSelcTimedReadBackOutputNode methods
 
 WeakSelfTimedReadBackOutputNode::WeakSelfTimedReadBackOutputNode()
