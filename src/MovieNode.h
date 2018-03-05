@@ -131,7 +131,7 @@ public:
     bool m_ready{};
     qreal m_position{};
     qreal m_duration{};
-    bool m_mute{};
+    bool m_mute{true};
     bool m_pause{};
 };
 

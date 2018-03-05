@@ -409,6 +409,9 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 
     command(QStringList() << "loadfile" << filename);
 
+    setMute(p.mute());
+    setPause(p.pause());
+
     qDebug() << "Successfully loaded video" << filename;
 
     // We prepare the state for all chains that exist upon creation

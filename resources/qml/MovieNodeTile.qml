@@ -7,6 +7,23 @@ import radiance 1.0
 VideoNodeTile {
     id: tile;
 
+    onVideoNodeChanged: {
+        mutedCheck.checked = videoNode.mute;
+        pausedCheck.checked = videoNode.pause;
+        videoNode.mute = Qt.binding(function() { return mutedCheck.checked });
+        videoNode.pause = Qt.binding(function() { return pausedCheck.checked });
+    }
+
+    Connections {
+        target: videoNode
+        onMuteChanged: {
+            mutedCheck.checked = mute;
+        }
+        onPauseChanged: {
+            pausedCheck.checked = pause;
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent;
         anchors.margins: 15;
@@ -39,22 +56,10 @@ VideoNodeTile {
             Layout.fillWidth: true
             CheckBox {
                 id: mutedCheck
-                checked: tile.videoNode ? tile.videoNode.mute : false;
-                Binding {
-                    target: tile.videoNode
-                    property: "mute"
-                    value: mutedCheck.checked
-                }
             }
 
             CheckBox {
                 id: pausedCheck
-                checked: tile.videoNode ? tile.videoNode.pause : false;
-                Binding {
-                    target: tile.videoNode
-                    property: "pause"
-                    value: pausedCheck.checked
-                }
             }
         }
 
