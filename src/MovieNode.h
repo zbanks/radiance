@@ -13,68 +13,15 @@
 #include <vector>
 #include <array>
 
-class MovieNode;
+class MovieNodeOpenGLWorker;
+class MovieNodePrivate;
 
 class MovieNodeRenderState {
 public:
-    std::atomic<bool> m_ready{false};
-    Pass              m_pass {};
-};
-Q_DECLARE_METATYPE(QSharedPointer<MovieNodeRenderState>);
+    MovieNodeRenderState(QSharedPointer<QOpenGLShaderProgram> shader);
 
-///////////////////////////////////////////////////////////////////////////////
-
-class MovieNodeOpenGLWorker : public OpenGLWorker {
-    Q_OBJECT
-
-public:
-    MovieNodeOpenGLWorker(MovieNode *p);
-    ~MovieNodeOpenGLWorker() override;
-    std::array<QSharedPointer<QOpenGLFramebufferObject>,3> m_frames;
-//    QSharedPointer<QOpenGLFramebufferObject> m_lastFrame;
-//    QSharedPointer<QOpenGLFramebufferObject> m_nextFrame;
-    QMutex m_rwLock;
-
-signals:
-    void message(QString str);
-    void warning(QString str);
-    void fatal(QString str);
-    void positionChanged(qreal position);
-    void durationChanged(qreal duration);
-    void videoSizeChanged(QSize size);
-    void muteChanged(bool mute);
-    void pauseChanged(bool pause);
-    void initialized();
-    void prepareState(QSharedPointer<MovieNodeRenderState> state);
-
-public slots:
-    void onChainSizeChanged(QSize);
-    void onVideoChanged();
-    void command(const QVariant &params);
-    void drawFrame();
-    void setPosition(qreal position);
-    void setMute(bool mute);
-    void setPause(bool pause);
-
-    void onPrepareState(QSharedPointer<MovieNodeRenderState> state);
-protected:
-    void handleEvent(mpv_event *event);
-
-    static constexpr int BUFFER_COUNT = 3; // TODO double buffering doesn't quite work for some reason
-    MovieNode *m_p;
-    mpv::qt::Handle m_mpv;
-    mpv_opengl_cb_context *m_mpv_gl;
-    QSize m_size;
-    QSize m_videoSize;
-    QSize m_chainSize;
-    QSharedPointer<MovieNodeRenderState> m_state;
-protected slots:
-    void updateSizes();
-    void initialize();
-    void onEvent();
-
-private:
-    bool loadBlitShader();
+    QSharedPointer<QOpenGLShaderProgram> m_shader;
+    QSharedPointer<QOpenGLFramebufferObject> m_output;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -82,6 +29,10 @@ private:
 // This class extends VideoNode to provide a video using libMPV
 class MovieNode
     : public VideoNode {
+
+    friend class WeakMovieNode;
+    friend class MovieNodeOpenGLWorker;
+
     Q_OBJECT
     Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
@@ -91,16 +42,13 @@ class MovieNode
     Q_PROPERTY(bool mute READ mute NOTIFY muteChanged WRITE setMute)
     Q_PROPERTY(bool pause READ pause NOTIFY pauseChanged WRITE setPause)
 
-    friend class MovieNodeOpenGLWorker;
-
 public:
     MovieNode(Context *context, QString file, QString name=QString(""));
     MovieNode(const MovieNode &other);
-    ~MovieNode();
+    MovieNode *clone() const override;
 
     QJsonObject serialize() override;
 
-    QSharedPointer<VideoNode> createCopyForRendering(Chain) override;
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
@@ -141,7 +89,6 @@ public slots:
     void setPause(bool pause);
 
 protected slots:
-    void onInitialized();
     void onVideoSizeChanged(QSize size);
     void onPositionChanged(qreal position);
     void onDurationChanged(qreal duration);
@@ -152,7 +99,6 @@ signals:
     void fileChanged(QString file);
     void nameChanged(QString name);
     void videoSizeChanged(QSize size);
-    void chainSizeChanged(QSize size);
     void positionChanged(qreal position);
     void durationChanged(qreal duration);
     void muteChanged(bool mute);
@@ -160,19 +106,99 @@ signals:
 
 protected:
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
+    void reload();
+
+private:
+    QSharedPointer<MovieNodePrivate> d() const;
+    MovieNode(QSharedPointer<MovieNodePrivate> other_ptr);
+};
+
+class MovieNodePrivate : public VideoNodePrivate {
+public:
+    MovieNodePrivate(Context *context);
 
     QString m_file;
     QString m_name;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
-    QMap<Chain, QSharedPointer<MovieNodeRenderState>> m_renderFbos;
+    OpenGLWorkerContext *m_openGLWorkerContext;
+    QMap<Chain, QSharedPointer<MovieNodeRenderState>> m_renderStates;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
-    QSharedPointer<OpenGLWorkerContext> m_openGLWorkerContext;
+    QSize m_videoSize;
+
+    // Max size of any chain, so we know what res to render the video at
+    QSize m_maxSize;
+
+    bool m_ready{};
+    qreal m_position{};
+    qreal m_duration{};
+    bool m_mute{};
+    bool m_pause{};
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+class WeakMovieNode {
+public:
+    WeakMovieNode();
+    WeakMovieNode(const MovieNode &other);
+    QSharedPointer<MovieNodePrivate> toStrongRef();
+
+protected:
+    QWeakPointer<MovieNodePrivate> d_ptr;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+class MovieNodeOpenGLWorker : public OpenGLWorker {
+    Q_OBJECT
+
+public:
+    MovieNodeOpenGLWorker(MovieNode p);
+    ~MovieNodeOpenGLWorker() override;
+    QVector<QSharedPointer<QOpenGLFramebufferObject>> m_frames{3};
+    QMutex m_rwLock;
+
+signals:
+    void message(QString str);
+    void warning(QString str);
+    void fatal(QString str);
+    void positionChanged(qreal position);
+    void durationChanged(qreal duration);
+    void videoSizeChanged(QSize size);
+    void muteChanged(bool mute);
+    void pauseChanged(bool pause);
+
+public slots:
+    void command(const QVariant &params);
+    void drawFrame();
+    void setPosition(qreal position);
+    void setMute(bool mute);
+    void setPause(bool pause);
+
+    // Call this after changing
+    // "file"
+    void initialize(QString filename);
+
+    // Call this to prepare and add a new renderState
+    // if chains change or one is somehow missing
+    void addNewState(Chain chain);
+
+protected:
+    void handleEvent(mpv_event *event);
+
+    static constexpr int BUFFER_COUNT = 3; // TODO double buffering doesn't quite work for some reason
+    WeakMovieNode m_p;
+    mpv::qt::Handle m_mpv;
+    mpv_opengl_cb_context *m_mpv_gl{}; // TODO check this isn't leaked
+    QSize m_size;
     QSize m_videoSize;
     QSize m_chainSize;
+    QSharedPointer<MovieNodeRenderState> m_state;
 
-    bool m_ready;
-    qreal m_position;
-    qreal m_duration;
-    bool m_mute;
-    bool m_pause;
+protected slots:
+    void onEvent();
+
+private:
+    QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
 };
+

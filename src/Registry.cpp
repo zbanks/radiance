@@ -5,7 +5,7 @@
 
 #include "EffectNode.h"
 #include "ImageNode.h"
-//#include "MovieNode.h"
+#include "MovieNode.h"
 #include "ScreenOutputNode.h"
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
@@ -16,7 +16,7 @@ Registry::Registry()
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
-    //registerType<MovieNode>();
+    registerType<MovieNode>();
     registerType<ScreenOutputNode>();
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();

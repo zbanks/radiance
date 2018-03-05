@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "xoroshiro128plus.hpp"
 #include <QDebug>
+#include <QThread>
 
 using namespace Xoroshiro;
 

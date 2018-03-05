@@ -70,16 +70,32 @@ void EffectNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
 GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     GLuint outTexture = 0;
 
-    if (!d()->m_ready) {
-        //qDebug() << this << "is not ready";
-        return inputTextures.at(0); // Pass-through
+    QSharedPointer<EffectNodeRenderState> renderState;
+    int inputCount;
+    auto time = context()->timebase()->beat();
+    auto wallTime = context()->timebase()->wallTime();
+    qreal step;
+    qreal intensityIntegral;
+    qreal frequency;
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        if (!d()->m_ready) {
+            //qDebug() << this << "is not ready";
+            return inputTextures.at(0); // Pass-through
+        }
+        //qDebug() << "Looking up" << chain << "in" << d()->m_renderStates << "of" << this;
+        if (!d()->m_renderStates.contains(chain)) { // This check doesn't seem to work
+            qDebug() << this << "does not have chain" << chain;
+            return inputTextures.at(0);
+        }
+        renderState = d()->m_renderStates[chain];
+        inputCount = d()->m_inputCount;
+        d()->m_realTimeLast = d()->m_realTime;
+        d()->m_realTime = wallTime;
+        step = d()->m_realTime - d()->m_realTimeLast;
+        intensityIntegral = d()->m_intensityIntegral;
+        frequency = d()->m_frequency;
     }
-    //qDebug() << "Looking up" << chain << "in" << d()->m_renderStates << "of" << this;
-    if (!d()->m_renderStates.contains(chain)) { // This check doesn't seem to work
-        qDebug() << this << "does not have chain" << chain;
-        return inputTextures.at(0);
-    }
-    auto renderState = d()->m_renderStates[chain];
 
     // FBO creation must happen here, and not in initialize,
     // because FBOs are not shared among contexts.
@@ -105,14 +121,10 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
 
     {
         auto chanTex = std::make_unique<GLuint[]>(renderState->m_passes.size());
-        std::iota(&chanTex[0], &chanTex[0] + renderState->m_passes.size(), 1 + d()->m_inputCount);
+        std::iota(&chanTex[0], &chanTex[0] + renderState->m_passes.size(), 1 + inputCount);
         std::reverse(&chanTex[0],&chanTex[0] + renderState->m_passes.size());
-        auto inputTex = std::make_unique<GLuint[]>(d()->m_inputCount);
-        std::iota(&inputTex[0], &inputTex[0] + d()->m_inputCount, 0);
-        auto   time = context()->timebase()->beat();
-        d()->m_realTimeLast = d()->m_realTime;
-        d()->m_realTime     = context()->timebase()->wallTime();
-        auto   step = d()->m_realTime - d()->m_realTimeLast;
+        auto inputTex = std::make_unique<GLuint[]>(inputCount);
+        std::iota(&inputTex[0], &inputTex[0] + inputCount, 0);
         double audioHi = 0;
         double audioMid = 0;
         double audioLow = 0;
@@ -129,7 +141,7 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
             p->bind();
 
             auto texCount = GL_TEXTURE0;
-            for (int k = 0; k < d()->m_inputCount; k++) {
+            for (int k = 0; k < inputCount; k++) {
                 glActiveTexture(texCount++);
                 glBindTexture(GL_TEXTURE_2D, inputTextures.at(k));
                 glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -147,14 +159,14 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
             }
             auto intense = qreal(intensity());
             p->setUniformValue("iIntensity", GLfloat(intense));
-            p->setUniformValue("iIntensityIntegral", GLfloat(d()->m_intensityIntegral));
+            p->setUniformValue("iIntensityIntegral", GLfloat(intensityIntegral));
             p->setUniformValue("iStep", GLfloat(step));
             p->setUniformValue("iTime", GLfloat(time));
-            p->setUniformValue("iFrequency", GLfloat(d()->m_frequency));
+            p->setUniformValue("iFrequency", GLfloat(frequency));
             p->setUniformValue("iFPS",  GLfloat(FPS));
             p->setUniformValue("iAudio", QVector4D(GLfloat(audioLow),GLfloat(audioMid),GLfloat(audioHi),GLfloat(audioLevel)));
-            p->setUniformValueArray("iInputs", &inputTex[0], d()->m_inputCount);
-            p->setUniformValue("iNoise", d()->m_inputCount);
+            p->setUniformValueArray("iInputs", &inputTex[0], inputCount);
+            p->setUniformValue("iNoise", inputCount);
             p->setUniformValue("iResolution", GLfloat(size.width()), GLfloat(size.height()));
             p->setUniformValueArray("iChannel", &chanTex[0], renderState->m_passes.size());
 
@@ -245,9 +257,14 @@ void EffectNode::setFile(QString file) {
 }
 
 void EffectNode::reload() {
-    d()->m_ready = false;
+    QString filename;
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        d()->m_ready = false;
+        filename = d()->m_file;
+    }
 
-    auto filename = Paths::expandLibraryPath(d()->m_file);
+    filename = Paths::expandLibraryPath(filename);
 
     QFileInfo check_file(filename);
     if(!(check_file.exists() && check_file.isFile())) {

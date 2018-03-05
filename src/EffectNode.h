@@ -35,15 +35,15 @@ public:
 // based on one or more shader programs.
 class EffectNode
     : public VideoNode {
+
     friend class WeakEffectNode;
+    friend class EffectNodeOpenGLWorker;
 
     Q_OBJECT
     Q_PROPERTY(qreal intensity READ intensity WRITE setIntensity NOTIFY intensityChanged)
     Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
     Q_PROPERTY(double frequency READ frequency WRITE setFrequency NOTIFY frequencyChanged)
-
-    friend class EffectNodeOpenGLWorker;
 
 public:
     EffectNode(Context *context, QString name);

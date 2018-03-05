@@ -92,7 +92,7 @@ endif()
 if(MPV_FOUND AND NOT WITHOUT_MPV)
     add_definitions( -DUSE_MPV )
     include_directories(${MPV_INCLUDE_DIRS})
-    #list(APPEND libradiance_SOURCES src/MovieNode.cpp)
+    list(APPEND libradiance_SOURCES src/MovieNode.cpp)
     list(APPEND radiance_LIBRARIES ${MPV_LIBRARY})
 endif()
 
