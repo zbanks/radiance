@@ -1,9 +1,10 @@
 #include "OpenGLWorker.h"
+#include "OpenGLWorkerContext.h"
 
 OpenGLWorker::OpenGLWorker(OpenGLWorkerContext *context)
     : m_context(context)
 {
-    m_context->takeObject(this);
+    m_context->takeWorker(this);
 }
 
 OpenGLWorker::~OpenGLWorker() {

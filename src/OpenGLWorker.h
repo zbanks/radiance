@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QObject>
-#include "OpenGLWorkerContext.h"
+#include <QOpenGLContext>
 
 // OpenGLWorkers are used
 // when an OpenGL context is required
@@ -13,6 +13,9 @@
 // and must be treated accordingly
 // i.e. use queued signals
 // and thread-safe mutator methods
+
+class OpenGLWorkerContext;
+
 class OpenGLWorker : public QObject {
     Q_OBJECT
 

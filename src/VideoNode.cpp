@@ -84,8 +84,8 @@ void VideoNode::setChains(QList<Chain> chains) {
             }
         }
         if (!toAdd.empty() || toRemove.empty()) {
-            chainsEdited(toAdd, toRemove);
             d_ptr->m_chains = chains;
+            chainsEdited(toAdd, toRemove);
             wereChainsChanged = true;
         }
     }

@@ -1,6 +1,7 @@
 #include "QQuickPreviewAdapter.h"
 #include "Model.h"
 #include <memory>
+#include <QThread>
 
 QQuickPreviewAdapter::QQuickPreviewAdapter(QSize size)
     : m_previewSize(size)

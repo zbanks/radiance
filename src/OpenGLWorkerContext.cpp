@@ -1,11 +1,8 @@
 #include "OpenGLWorkerContext.h"
+#include "OpenGLWorker.h"
 #include <QOffscreenSurface>
 #include <QDebug>
 
-
-QSharedPointer<OpenGLWorkerContext> OpenGLWorkerContext::create(bool t, QSurface *s) {
-    return QSharedPointer<OpenGLWorkerContext>(new OpenGLWorkerContext(t,s), &QObject::deleteLater);
-}
 OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
     : QObject()
     , m_surface(surface)
@@ -36,7 +33,8 @@ OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
     }
     if (threaded) {
         m_thread = new QThread();
-        takeObject(m_context);
+        m_context->moveToThread(m_thread);
+        m_context->setParent(this);
         connect(m_thread, &QThread::started, this, &OpenGLWorkerContext::initialize, Qt::DirectConnection);
         connect(m_thread, &QThread::finished, this, &OpenGLWorkerContext::deinitialize, Qt::DirectConnection);
         //connect(this, &QObject::destroyed, this, &OpenGLWorkerContext::onDestroyed);
@@ -99,11 +97,10 @@ void OpenGLWorkerContext::makeCurrent() {
     m_context->makeCurrent(m_surface);
 }
 
-void OpenGLWorkerContext::takeObject(QObject *obj, bool parent) {
+void OpenGLWorkerContext::takeWorker(OpenGLWorker *worker) {
     if (m_thread) {
-        obj->moveToThread(m_thread);
+        worker->moveToThread(m_thread);
     }
-    obj->setParent(m_context);
 }
 
 QOpenGLContext *OpenGLWorkerContext::context() {
