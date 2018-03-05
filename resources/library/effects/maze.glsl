@@ -3,6 +3,7 @@
 // Credit for most of this goes to Edd Biddulph and Jamie Wong
 
 #property description 3D maze
+#property frequency 1
 
 const int MAX_MARCHING_STEPS = 255;
 const float MIN_DIST = 0.0;
@@ -194,8 +195,9 @@ mat4 viewMatrix(vec3 eye, vec3 dir, vec3 up) {
 void main()
 {
 	vec3 viewDir = rayDirection(45.0, iResolution.xy, uv * iResolution.xy);
-    vec3 eye = vec3(30. * cos(iTime * 0.1), 2., 30. * sin(iTime * 0.03));
-    vec3 dir = vec3(30. * 0.1 * -sin(iTime * 0.1), -1., 30. * 0.03 * cos(iTime * 0.03));
+    float t = iTime * iFrequency;
+    vec3 eye = vec3(30. * cos(t * 0.1), 2., 30. * sin(t * 0.03));
+    vec3 dir = vec3(30. * 0.1 * -sin(t * 0.1), -1., 30. * 0.03 * cos(t * 0.03));
 
     eye = mix(vec3(0., 50., 0.), eye, iIntensity);
     dir = mix(vec3(0.01, -1., 0.), dir, iIntensity);

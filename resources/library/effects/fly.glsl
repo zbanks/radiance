@@ -1,12 +1,13 @@
 #property description 3D flying view
 #property author inigo quilez (iq/2013), modified by Eric Van Albert
+#property frequency 1
 // Created by inigo quilez - iq/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 // Modified for radiance by Eric Van Albert
 
 void main()
 {
-    float an = iTime*0.2;
+    float an = iTime * iFrequency * 0.2;
     vec2 p = mat2(cos(an),-sin(an),sin(an),cos(an)) * (-1. + 2. * uv);
     vec2 puv = vec2(p.x,1.0)/abs(p.y) + vec2(0., 4.) * iIntensityIntegral;
     puv = abs(mod(0.2 * puv, 2.) - 1.);

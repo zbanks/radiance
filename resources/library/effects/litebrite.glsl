@@ -2,6 +2,7 @@
 
 vec4 triGrid(mat2 basis) {
     float points = min(3. / iIntensity, 10000.);
+    points /= 0.3 + 0.7 * pow(defaultPulse, 2.);
     float r = 0.5 / points;
 
     mat2 invBasis = inverse(basis);

@@ -2,5 +2,5 @@
 
 void main(void) {
     float k = iAudioHi * 3.;
-    fragColor = texture(iInput, uv) * mix(1., min(k, 1.), iIntensity);
+    fragColor = texture(iInput, uv) * mix(1., min(k, 1.), iIntensity) * pow(defaultPulse, 2.);
 }

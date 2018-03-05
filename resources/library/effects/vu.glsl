@@ -6,7 +6,8 @@ void main(void) {
 
     vec3 audio = vec3(iAudioLow, iAudioMid, iAudioHi);
 
-    audio = audio * 2. * iIntensity;
+    audio *= 2. * iIntensity;
+    audio *= 0.3 + 0.7 * pow(defaultPulse, 2.);
 
     vec3 draw = 1. - smoothstep(audio - onePixel, audio, vec3(abs(normCoord.x)));
     vec4 dLow = vec4(0.0, 0.0, 0.5, 1.0) * draw.x;

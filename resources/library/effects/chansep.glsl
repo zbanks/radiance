@@ -1,9 +1,10 @@
 #property description Red / green / blue color channel separation
+#property frequency 1
 // AKA "Chromatic Aberration"
 
 void main(void) {
     float spin = iTime * 0.2;
-    float separate = iIntensity * 0.1 * cos(iTime * M_PI * 0.25);
+    float separate = iIntensity * 0.1 * cos(iTime * M_PI * 0.25 * iFrequency);
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec2 redOffset = normCoord - separate * vec2(cos(spin), sin(spin));
     vec2 greenOffset = normCoord - separate * vec2(cos(2. + spin), sin(2. + spin));

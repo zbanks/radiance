@@ -53,13 +53,13 @@ vec2 vectorField() {
 }
 
 void main(void) {
-    float dt = 0.01;
+    float dt = 0.01 + iFrequency / 256.0;
 
     // Nudge according to vector field
     fragColor = texture(iChannel[1], uv + vectorField() * dt);
 
     // Fade out
-    fragColor *= exp((iIntensity - 2.) / 300.);
+    fragColor *= exp((iIntensity - 2.) * dt / 3.);
 
     // Clear when intensity is zero
     fragColor *= smoothstep(0., 0.1, iIntensity);

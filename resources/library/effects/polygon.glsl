@@ -7,9 +7,9 @@ void main(void) {
     n_sides = whole_sides + smoothstep(0.2, 0.8, n_sides);
 
     vec2 xy_cent = 2. * uv - 1.;
-    float angle = abs(atan(xy_cent.y, xy_cent.x));
+    float angle = atan(xy_cent.y, xy_cent.x);
     float arc = 2. * M_PI / n_sides;
-    float a1 = mod(angle, arc);
+    float a1 = mod(abs(angle) + iFrequency * iTime * arc, arc);
     //float lengthFactor = sqrt(2.);
     float lengthFactor = 1.0;
     float corr = cos(a1 - arc / 2.) / (lengthFactor * cos(arc / 2.));

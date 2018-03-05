@@ -14,7 +14,19 @@ VideoNodeTile {
 
     onVideoNodeChanged: {
         tile.intensity = videoNode.intensity;
+        frequencyCombo.currentIndex = frequencyCombo.find(videoNode.frequency + "");
         videoNode.intensity = Qt.binding(function() { return slider.value });
+        videoNode.frequency = Qt.binding(function() { return frequencyCombo.currentText });
+    }
+
+    Connections {
+        target: videoNode
+        onIntensityChanged: {
+            slider.value = intensity;
+        }
+        onFrequencyChanged: {
+            frequencyCombo.currentIndex = frequencyCombo.find(frequency + "");
+        }
     }
 
     ColumnLayout {
@@ -59,11 +71,67 @@ VideoNodeTile {
             }
         }
 
-        Slider {
-            id: slider;
-            Layout.fillWidth: true;
-            minimumValue: 0;
-            maximumValue: 1;
+        RowLayout {
+            Slider {
+                id: slider;
+                Layout.fillWidth: true;
+                minimumValue: 0;
+                maximumValue: 1;
+
+                style: SliderStyle {
+                    handle: Rectangle {
+                        height: 20
+                        width: 0
+                        radius: width/2
+                        color: "transparent"
+                        border.width: 0
+                        border.color: "white"
+                    }
+
+                    groove: Rectangle {
+                        implicitHeight: 5
+                        radius: height/2
+                        border.color: "white"
+                        color: "transparent"
+                        Rectangle {
+                            height: parent.height
+                            width: styleData.handlePosition
+                            radius: height/2
+                            color: "white"
+                        }
+                    }
+                }
+            }
+
+            ComboBox {
+                id: frequencyCombo;
+                model: [0, 0.25, 0.5, 1, 2, 4, 8, 16, 32]
+                style: ComboBoxStyle {
+                    id: comboBox
+                    background: Rectangle {
+                        id: rectCategory
+                        implicitWidth: textMetrics.width * 4
+                        implicitHeight: textMetrics.height * 1.3
+                        color: "transparent"
+                        border.width: 1
+                        border.color: "white"
+                        radius: 15
+                        TextMetrics {
+                            id: textMetrics
+                            text: "X"
+                            font.pointSize: 6
+                        }
+                    }
+                    label: Text {
+                        id: labelText
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        color: "white"
+                        text: control.currentText
+                        font.pointSize: 6
+                    }
+                }
+            }
         }
 
         /*
@@ -152,6 +220,9 @@ VideoNodeTile {
         if (control >= Controls.Parameter0 && control <= Controls.Parameter9
          && control - Controls.Parameter0 == attachedParameter) {
             intensity = value;
+        }
+        if (control == Controls.Frequency) {
+            videoNode.frequency = value;
         }
     }
 

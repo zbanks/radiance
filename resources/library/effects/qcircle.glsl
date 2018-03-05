@@ -1,8 +1,9 @@
 #property description Big purple soft circle 
+#property frequency 0.5
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
-    float t = iTime / 4.0;
+    float t = iTime * iFrequency * M_PI / 4.;
     vec2 center = vec2(sin(t), cos(t));
     center *= 0.5;
 

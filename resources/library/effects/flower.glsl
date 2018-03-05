@@ -12,7 +12,7 @@ void main(void) {
     float a1 = mod(angle, arc);
     //float lengthFactor = sqrt(2.);
     float lengthFactor = 1.0;
-    float corr = 1. / (pow(cos(a1 - arc / 2.), 2.) * lengthFactor * cos(arc / 2.));
+    float corr = 1. / (pow(cos(a1 - arc / 2.), 1. + 3. * pow(defaultPulse, 2.)) * lengthFactor * cos(arc / 2.));
 
     vec2 rtheta = vec2(length(xy_cent) * corr, 0.5 + angle / (2. * M_PI));
     vec2 uv2 = mix(uv, rtheta, smoothstep(0., 0.2, iIntensity));

@@ -13,6 +13,7 @@ vec3 cmyk2rgb(vec4 cmyk) {
 
 vec3 grid(mat2 basis, vec4 cmykMask, vec2 offset) {
     float points = 300. * pow(2., -9. * iIntensity) + 5.;
+    points /= (0.7 + 0.3 * pow(defaultPulse, 2.));
     float r = 0.5 / points;
 
     mat2 invBasis = inverse(basis);

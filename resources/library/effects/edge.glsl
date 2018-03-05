@@ -32,8 +32,9 @@ void main()
     grad.a = max(max(grad.r, grad.g), max(grad.b, grad.a));
 
     vec4 original = texture(iInput, uv);
-    grad *= smoothstep(0., 0.5, iIntensity);
-    original *= 1. - smoothstep(0.5, 1., iIntensity);
+    float parameter = iIntensity * pow(defaultPulse, 2.);
+    grad *= smoothstep(0., 0.5, parameter);
+    original *= 1. - smoothstep(0.5, 1., parameter);
 
     fragColor = composite(original, grad);
 }

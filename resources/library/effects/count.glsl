@@ -1,4 +1,5 @@
 #property description Count out the beats
+#property frequency 1
 // This looks really dumb if BTrack doesn't do a good job :/
 
 float dist(vec2 point, vec2 xbound, float y) {
@@ -47,8 +48,8 @@ void main(void) {
     float four = min(min(b, c), min(f, g));
 
     // Cycle through 4 digits based on beat counter, slight fade between #s
-    float t = mod(iTime, 4.0);
-    float tOff = mod(iTime + 2.0, 4.0);
+    float t = mod(iTime * iFrequency, 4.0);
+    float tOff = mod(iTime * iFrequency + 2.0, 4.0);
     float totalDist = one   * bound(2.0, 3.0, 0.10, tOff) 
                     + two   * bound(1.0, 2.0, 0.10, t) 
                     + three * bound(2.0, 3.0, 0.10, t)

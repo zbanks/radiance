@@ -8,5 +8,5 @@ void main(void) {
     vec4 pink = vec4(1., 0., 1., 1.);
     vec4 highlight = mix(c, pink, (a <= c.a ? 0. : 1.));
 
-    fragColor = mix(c, highlight, iIntensity);
+    fragColor = mix(c, highlight, iIntensity * defaultPulse);
 }

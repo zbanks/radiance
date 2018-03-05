@@ -7,7 +7,7 @@ float gaussian(float x, float sigma)
 
 void main()
 {
-    float sigma = iIntensity * 16.;
+    float sigma = iIntensity * 16. * (1.0 - defaultPulse);
     vec4 acc = vec4(0.,0.,0.,0);
     float norm = 0.;
     float stp = 1./iResolution.y;
@@ -30,7 +30,7 @@ float gaussian(float x, float sigma)
 
 void main()
 {
-    float sigma = iIntensity * 16.;
+    float sigma = iIntensity * 16. * (1.0 - defaultPulse);
     vec4 acc = vec4(0.,0.,0.,0);
     float norm = 0.;
     float stp = 1./iResolution.x;

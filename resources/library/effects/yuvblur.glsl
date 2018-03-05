@@ -7,7 +7,7 @@ void main(void) {
     fragColor = texture(iInput, uv);
     vec3 yuv = rgb2yuv(demultiply(fragColor).rgb);
 
-    float delta = MAX_DELTA * iIntensity;
+    float delta = MAX_DELTA * iIntensity * pow(defaultPulse, 2.);
     vec3 left  = rgb2yuv(demultiply(texture(iInput, uv + vec2(-delta, 0))).rgb);
     vec3 right = rgb2yuv(demultiply(texture(iInput, uv + vec2(+delta, 0))).rgb);
     yuv.gb = mix(yuv.gb, (left.gb + right.gb) / 2.0, 0.7 * iIntensity);

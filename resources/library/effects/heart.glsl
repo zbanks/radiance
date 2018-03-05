@@ -5,7 +5,8 @@ void main(void) {
 
     // heart from shadertoy
     vec2 normCoord = (uv - 0.5) * aspectCorrection + vec2(0., -0.15);
-    normCoord *= 2. / iIntensity;
+    float parameter = iIntensity * (1. + 0.5 * pow(defaultPulse, 2.));
+    normCoord *= 2. / parameter;
     float a = atan(normCoord.x, normCoord.y) / M_PI;
     float r = length(normCoord);
     float h = abs(a);

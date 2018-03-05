@@ -2,6 +2,7 @@
 
 void main(void) {
     fragColor = texture(iInput, uv);
-    fragColor.r *= 1. - iIntensity;
-    fragColor.b *= 1. - iIntensity;
+    float parameter = iIntensity * pow(defaultPulse, 2.);
+    fragColor.r *= 1. - parameter;
+    fragColor.b *= 1. - parameter;
 }

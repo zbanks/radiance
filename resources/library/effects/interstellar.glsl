@@ -1,5 +1,6 @@
 #property description Lightspeed travel rays
 #property author https://www.shadertoy.com/view/Xdl3D2
+#property frequency 1
 
 const float tau = 6.28318530717958647692;
 
@@ -31,7 +32,7 @@ void main()
 
 	//float offset = iTime*.5;
 	//float speed2 = (cos(offset)+1.0)*2.0;
-	float offset = iIntensityIntegral * 0.5;
+	float offset = iTime * iFrequency * 0.25;
 	float speed2 = 3. * iAudioLow;
 	float speed = speed2+.1;
 	//offset += sin(offset)*.96;
@@ -60,5 +61,5 @@ void main()
     fc *= smoothstep(0., 0.2, iIntensity);
 
     vec4 c = texture(iInput, uv);
-    fragColor = composite(c, fc);
+    fragColor = max(c, fc);
 }

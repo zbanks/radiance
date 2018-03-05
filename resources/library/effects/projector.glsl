@@ -11,7 +11,7 @@ void main() {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     vec4 col = lookup(normCoord);
     vec2 source = vec2(0., -0.45);
-    float w = 0.3 * iIntensity;
+    float w = 0.3 * iIntensity * pow(defaultPulse, 2.);
     for( int i=0; i<DEPTH; i++ )
     {
         w *= 0.98;

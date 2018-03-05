@@ -1,4 +1,5 @@
 #property description Strange tentacles
+#property frequency 1
 
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
@@ -6,8 +7,9 @@ void main(void) {
     // Build a vector to use to sample perlin noise from
     // .xy ~ coordinate, .z ~ time + audio, .w ~ fixed integer per call to noise()
     vec4 noise_input = vec4(0.);
-    noise_input.xy = 5. * normCoord * smoothstep(0., 0.4, iIntensity);
-    noise_input.z = iIntensityIntegral * 0.4 + iAudioLevel * mix(0.2, 0.7, iIntensity);
+    noise_input.xy = 5. * normCoord * iIntensity;
+    noise_input.z = iTime * iFrequency * 0.2;
+    // + iAudioLevel * mix(0.2, 0.7, iIntensity);
 
     float n;
     // Sample perlin noise with many octaves
@@ -18,7 +20,7 @@ void main(void) {
     n += (noise(16. * noise_input) - 0.5) * 0.0625;
     // Take the noise and create "ridges", call it `a`
     n -= 0.5;
-    n *= mix(14.0, 4.0, iAudioLevel);
+    n *= mix(20.0, -4., iAudioLevel);
     n = clamp(abs(n), 0., 1.);
     n = 1.0 - pow(n, mix(1.0, 4.0, iAudioLevel));
     float a = n;
