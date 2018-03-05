@@ -96,11 +96,7 @@ void Audio::run() {
     inputParameters.device = Pa_GetDefaultInputDevice();
     if (inputParameters.device < 0) {
         qWarning() << "Could not find input device, running without";
-        while(m_run.load()) {
-            // i'm so sorry
-            QMutexLocker locker(&m_audioLock);
-            m_time = fmod((m_time + 0.003), 128.);
-        }
+        while(m_run.load());
         goto err;
     }
     inputParameters.channelCount = 1;
@@ -134,21 +130,12 @@ void Audio::run() {
             continue;
         }
         analyzeChunk();
-        {
-            QMutexLocker locker(&m_audioLock);
-            m_time = fmod((m_time + 0.003), 128.);
-        }
         //qDebug() << "read chunk" << m_chunk;
     }
 
 err:
     err = Pa_Terminate();
     if(err != paNoError) qDebug() << "Could not cleanly terminate PortAudio";
-}
-
-double Audio::time() {
-    QMutexLocker locker(&m_audioLock);
-    return m_time;
 }
 
 double Audio::hannWindow(int n) {

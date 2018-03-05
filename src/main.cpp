@@ -7,11 +7,15 @@
 #include <QQuickWindow>
 #include <QSize>
 #include <QThread>
+#include <QProcess>
 #include "BaseVideoNodeTile.h"
 #include "EffectNode.h"
 #include "FramebufferVideoNodeRender.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
+#include "OpenGLWorkerContext.h"
+#include "FFmpegOutputNode.h"
+#include "PlaceholderNode.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
@@ -113,9 +117,9 @@ generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
         QString author = videoNode->property("author").toString();
 
         html << "<tr><td>" << name << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_0.png'>" << "</td>\n";
-        html << "    <td class='static'>" << "<img src='./_assets/" << name << "_51.png'>" << "</td>\n";
-        html << "    <td class='gif'>" << "<img src='./_assets/" << name << IMG_FORMAT "'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << name << "_0.png'>" << "</td>\n";
+        html << "    <td class='static'>" << "<img src='./" << name << "_51.png'>" << "</td>\n";
+        html << "    <td class='gif'>" << "<img src='./" << name << IMG_FORMAT "'>" << "</td>\n";
         html << "    <td class='desc'>" << description;
         if (!author.isNull()) {
             html << "<p>[" << author << "]</p>";
@@ -128,67 +132,112 @@ generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
 }
 
 static int
-runRadianceCli(QGuiApplication *app, QString nodeFilename, QString outputDirString, QSize renderSize) {
+runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QString outputDirString, QSize renderSize) {
     QDir outputDir;
     outputDir.mkpath(outputDirString);
+    outputDir.cd(outputDirString);
 
     Registry registry;
 
-    Context context;
+    Context context(false);
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
     QSharedPointer<Chain> chain(new Chain(renderSize));
+    FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
-    //model.loadFile(&context, &registry, stateFilename);
+    model.load(&context, &registry, modelName);
     model.addChain(chain);
 
-    VideoNode *onblackEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/onblack.glsl\", \"intensity\": 1.0}");
-    VideoNode *highlightEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/afixhighlight.glsl\", \"intensity\": 1.0}");
-    VideoNode *baseEffect = registry.deserialize(&context, "{\"type\": \"EffectNode\", \"file\": \"effects/test.glsl\", \"intensity\": 0.7}");
-    if (!onblackEffect || !highlightEffect || !baseEffect) {
-        qInfo() << "Unable to set up nodes";
-        return EXIT_FAILURE;
-    }
-
-    VideoNode *renderNode = registry.createFromFile(&context, nodeFilename);
-    EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
-    if (!renderNode) {
-        qInfo() << "Unable to open:" << nodeFilename;
-        return EXIT_FAILURE;
-    }
-
-    // Build up model
-    model.addVideoNode(onblackEffect);
-    model.addVideoNode(highlightEffect);
-    model.addVideoNode(baseEffect);
-    model.addVideoNode(renderNode);
-    model.addEdge(baseEffect, renderNode, 0);
-    model.addEdge(renderNode, highlightEffect, 0);
-    model.addEdge(highlightEffect, onblackEffect, 0);
-    model.flush();
-    qInfo() << model.serialize();
-
-    // Render
-    FramebufferVideoNodeRender imgRender(renderSize);
-    for (int i = 0; i <= 100; i++) {
-        if (effectNode != nullptr)
-            effectNode->setIntensity(i / 50.);
-
-        context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
-
-        auto modelCopy = model.createCopyForRendering(chain);
-        auto rendering = modelCopy.render(chain);
-
-        auto outputTextureId = rendering.value(onblackEffect->id(), 0);
-        if (outputTextureId != 0) {
-            QImage img = imgRender.render(outputTextureId);
-            QString filename = outputDir.filePath(QString("%1.png").arg(QString::number(i)));
-            img.save(filename);
+    FFmpegOutputNode *ffmpegNode = nullptr;
+    PlaceholderNode *placeholderNode = nullptr;
+    for (VideoNode *node : model.vertices()) {
+        if (ffmpegNode == nullptr) {
+            ffmpegNode = qobject_cast<FFmpegOutputNode *>(node);
+        }
+        if (placeholderNode == nullptr) {
+            placeholderNode = qobject_cast<PlaceholderNode *>(node);
         }
     }
+    if (ffmpegNode == nullptr) {
+        qCritical() << "Unable to find FFmpegOutputNode in" << modelName;
+        qCritical() << model.serialize();
+        return EXIT_FAILURE;
+    }
+    if (placeholderNode == nullptr) {
+        qCritical() << "Unable to find PlaceholderNode in" << modelName;
+        qCritical() << model.serialize();
+        return EXIT_FAILURE;
+    }
+    qInfo() << "Loaded model:" << modelName;
+    qInfo() << model.serialize();
 
-    generateHtml(outputDir, {renderNode});
+    qInfo() << "Scanning for effects in path:" << Paths::library();
+    QList<VideoNode *> renderNodes;
+    if (nodeFilename.isNull()) {
+        QDir libraryDir(Paths::library());
+        libraryDir.cd("effects");
+
+        for (QString entry : libraryDir.entryList()) {
+            if (entry.startsWith(".")) {
+                continue;
+            }
+            QString entryPath = libraryDir.filePath(entry);
+            VideoNode *renderNode = registry.createFromFile(&context, entryPath);
+            if (!renderNode) {
+                qInfo() << "Unable to open:" << entry << entryPath;
+            } else {
+                renderNodes << renderNode;
+            }
+        }
+
+        // Generate HTML page w/ all nodes
+        generateHtml(outputDir, renderNodes);
+    } else {
+        VideoNode *renderNode = registry.createFromFile(&context, nodeFilename);
+        if (!renderNode) {
+            qInfo() << "Unable to open:" << nodeFilename;
+            return EXIT_FAILURE;
+        }
+        renderNodes << renderNode;
+    }
+
+    // Render
+    for (VideoNode *renderNode : renderNodes) {
+        QString name = renderNode->property("name").toString();
+        qInfo() << "Rendering:" << name;
+
+        placeholderNode->setWrappedVideoNode(renderNode);
+
+        QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
+        ffmpegNode->setFFmpegArguments({outputDir.filePath(gifFilename)});
+        ffmpegNode->setRecording(true);
+
+        // Render 101 frames
+        EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
+        for (int i = 0; i <= 100; i++) {
+            if (effectNode != nullptr)
+                effectNode->setIntensity(i / 50.);
+
+            context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
+
+            auto modelCopy = model.createCopyForRendering(chain);
+            auto rendering = modelCopy.render(chain);
+
+            auto outputTextureId = rendering.value(ffmpegNode->id(), 0);
+            if (outputTextureId != 0) {
+                if (i == 0 || i == 51) {
+                    QImage img = imgRender.render(outputTextureId);
+                    QString filename = outputDir.filePath(QString("%1_%2.png").arg(name, QString::number(i)));
+                    img.save(filename);
+                }
+            }
+            ffmpegNode->recordFrame();
+        }
+
+        // Reset state
+        ffmpegNode->setRecording(false);
+    }
 
     return 0;
 }
@@ -222,10 +271,12 @@ main(int argc, char *argv[]) {
 
     const QCommandLineOption outputDirOption(QStringList() << "o" << "output", "Output Directory", "path");
     parser.addOption(outputDirOption);
-    //const QCommandLineOption stateOption(QStringList() << "s" << "state", "Load this state.json file", "json");
-    //parser.addOption(stateOption);
+    const QCommandLineOption modelOption(QStringList() << "m" << "model", "Load this Model file", "json");
+    parser.addOption(modelOption);
     const QCommandLineOption nodeFilenameOption(QStringList() << "n" << "node", "Render this file", "file");
     parser.addOption(nodeFilenameOption);
+    const QCommandLineOption renderAllOption(QStringList() << "a" << "all", "Render all effects in the library");
+    parser.addOption(renderAllOption);
     const QCommandLineOption sizeOption(QStringList() << "s" << "size", "Render using this size [128x128]", "wxh");
     parser.addOption(sizeOption);
 
@@ -234,6 +285,11 @@ main(int argc, char *argv[]) {
     QString outputDirString("render_output");
     if (parser.isSet(outputDirOption)) {
         outputDirString = parser.value(outputDirOption);
+    }
+
+    QString modelName("cli");
+    if (parser.isSet(modelOption)) {
+        modelName = parser.value(modelOption);
     }
 
     QSize renderSize(128, 128);
@@ -247,8 +303,8 @@ main(int argc, char *argv[]) {
         //TODO: handle failure
     }
 
-    if (parser.isSet(nodeFilenameOption)) {
-        return runRadianceCli(&app, parser.value(nodeFilenameOption), outputDirString, renderSize);
+    if (parser.isSet(nodeFilenameOption) || parser.isSet(renderAllOption)) {
+        return runRadianceCli(&app, modelName, parser.value(nodeFilenameOption), outputDirString, renderSize);
     } else {
         return runRadianceGui(&app);
     }

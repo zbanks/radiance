@@ -19,18 +19,18 @@ before_script:
 script: make
 
 after_success: 
-    - mkdir -p render_output
+    - make doxygen-doc
     - make bundle
-    #- ./radiance_cli -b nyancat.gif -o render_output
+    #- ./radiance_cli -a
 
 deploy:
   - provider: pages
     skip_cleanup: true
     github_token: $GITHUB_TOKEN
-    target_branch: gh-pages-travis
-    local_dir: render_output
+    target_branch: gh-pages
+    local_dir: build/doc/html
     on:
-        branch: modelview
+        condition: "$TRAVIS_OS_NAME == linux"
 
   - provider: releases
     skip_cleanup: true

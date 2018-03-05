@@ -49,6 +49,8 @@ Item {
                     "ImageNode": "ImageNodeTile",
                     "MovieNode": "MovieNodeTile",
                     "ScreenOutputNode": "ScreenOutputNodeTile",
+                    "FFmpegOutputNode": "FFmpegOutputNodeTile",
+                    "PlaceholderNode": "PlaceholderNodeTile",
                     "": "VideoNodeTile"
                 }
                 x: (parent.width - width) / 2

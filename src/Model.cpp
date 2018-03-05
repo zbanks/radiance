@@ -1,8 +1,10 @@
 #include "Model.h"
-#include "VideoNode.h"
 #include "Context.h"
+#include "Paths.h"
 #include "Registry.h"
+#include "VideoNode.h"
 #include <QByteArray>
+#include <QDir>
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -414,21 +416,11 @@ bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
 }
 
 QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
-    //qDebug() << "RENDER!" << chain;
-
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
     QVector<QVector<int>> inputs;
-
     auto vao = chain->vao();
-
-    // XXX
-    // This is the only place that model uses context
-    // so rather than give model a context
-    // I have commented it out
-    //chain->setRealTime(timebase->wallTime());
-    //chain->setBeatTime(timebase->beat());
 
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
@@ -462,7 +454,6 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
         }
         vao->bind();
         resultTextures[i] = vertex->paint(chain, inputTextures);
-        //qDebug() << vertex << "wrote texture" << vertex->texture(chain);
     }
 
     QMap<int, GLuint> result;
@@ -474,19 +465,6 @@ QMap<int, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     vao->release();
     return result;
 }
-
-/*
-void Model::serialize(QTextStream *output) {
-    for (auto vertex : m_vertices) {
-        *output << "v " << vertex->id() << " " << nodeRegistry->serializeNode(vertex) << "\n";
-    }
-    for (auto edge : m_edges) {
-        *output << "e " << edge.fromVertex->id() <<
-                    " " << edge.toVertex->id() <<
-                    " " << edge.toInput << "\n";
-    }
-}
-*/
 
 QJsonObject Model::serialize() {
     QJsonObject jsonOutput;
@@ -533,7 +511,8 @@ void Model::deserialize(Context *context, Registry *registry, const QJsonObject 
     }
 }
 
-void Model::loadFile(Context *context, Registry *registry, QString filename) {
+void Model::load(Context *context, Registry *registry, QString name) {
+    QString filename(QDir(Paths::models()).filePath(QString("%1.json").arg(name)));
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Unable to open file for reading:" << filename;
@@ -545,7 +524,8 @@ void Model::loadFile(Context *context, Registry *registry, QString filename) {
     flush();
 }
 
-void Model::saveFile(QString filename) {
+void Model::save(QString name) {
+    QString filename(QDir(Paths::models()).filePath(QString("%1.json").arg(name)));
     QFile file(filename);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Unable to open file for writing:" << filename;

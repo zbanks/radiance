@@ -90,7 +90,7 @@ public slots:
     // suitable for QML / Javascript
     QVariantList qmlEdges() const;
 
-    // Returns a list of verticies that
+    // Returns a list of vertices that
     // are ancestors of the given node
     QList<VideoNode *> ancestors(VideoNode *node);
 
@@ -113,8 +113,8 @@ public slots:
 
     // These are to wrap serialize/deserialize for the UI
     // TODO: This almost certainly should live elsewhere.
-    void loadFile(Context *context, Registry *registry, QString filename);
-    void saveFile(QString filename);
+    void load(Context *context, Registry *registry, QString name);
+    void save(QString name);
 
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)

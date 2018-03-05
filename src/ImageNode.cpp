@@ -18,9 +18,6 @@ ImageNode::ImageNode(Context *context, QString file)
 
 ImageNode::ImageNode(const ImageNode &other)
     : VideoNode(other)
-//    , m_frameTextures(other.m_frameTextures)
-//    , m_currentTexture(other.m_currentTexture)
-//    , m_currentTextureIdx(other.m_currentTextureIdx)
     , m_file(other.m_file)
     , m_openGLWorker(other.m_openGLWorker)
     , m_ready(other.m_ready) {
@@ -79,12 +76,12 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
     if (!m_openGLWorker || !m_openGLWorker->m_ready.load() || !m_openGLWorker->m_frameTextures.size())
         return 0;
 
-    auto currentMs = int64_t(context()->audio()->time() *  5e3); // XXX IDK wtf time() is, but this speed factor makes the nyancat look good
+    auto currentMs = int64_t(context()->timebase()->beat() *  500);
     auto extraMs   = currentMs;
     if(m_openGLWorker->m_totalDelay) {
         extraMs   = currentMs % (m_openGLWorker->m_totalDelay);
         if(!m_openGLWorker->m_frameDelays.empty()) {
-            for(auto i = size_t{}; i < m_openGLWorker->m_frameDelays.size(); ++i) {
+            for(auto i = 0; i < m_openGLWorker->m_frameDelays.size(); ++i) {
                 if(m_openGLWorker->m_frameDelays.at(i) >= extraMs)
                     return m_openGLWorker->m_frameTextures.at(i)->textureId();
             }
@@ -102,19 +99,20 @@ GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextur
 ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode*p, QString file)
     : OpenGLWorker(p->context()->openGLWorkerContext())
     , m_file(file) {
-//    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
-//    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
-//    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
+    connect(this, &ImageNodeOpenGLWorker::message, p, &ImageNode::message);
+    connect(this, &ImageNodeOpenGLWorker::warning, p, &ImageNode::warning);
+    connect(this, &ImageNodeOpenGLWorker::fatal,   p, &ImageNode::fatal);
     connect(this, &QObject::destroyed, this, &ImageNodeOpenGLWorker::onDestroyed);
 }
+
 ImageNodeOpenGLWorker::~ImageNodeOpenGLWorker() {
     makeCurrent();
-//    m_frameTextures.clear();
-//    m_frameDelays.clear();
 }
+
 bool ImageNodeOpenGLWorker::ready() const {
     return m_ready.load();
 }
+
 void ImageNodeOpenGLWorker::initialize() {
     // Lock this because we need to use m_frameTextures
     makeCurrent();
