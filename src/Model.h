@@ -26,6 +26,8 @@ public:
 
 // Return type of graphCopy
 struct ModelCopyForRendering {
+    virtual ~ModelCopyForRendering();
+
     // Copies of the vertices
     QVector<VideoNode *> vertices;
 
