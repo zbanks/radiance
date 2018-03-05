@@ -51,8 +51,8 @@ QSharedPointer<MovieNodePrivate> MovieNode::d() const {
 
 QJsonObject MovieNode::serialize() {
     QJsonObject o = VideoNode::serialize();
-    o.insert("file", d()->m_file);
-    o.insert("name", d()->m_name);
+    o.insert("file", file());
+    o.insert("name", name());
     return o;
 }
 
@@ -343,6 +343,12 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
     if (d.isNull()) return; // MovieNode was deleted
     MovieNode p(d);
 
+    // I am not sure if this method is okay with being called multiple times.
+    // It may need some changes to un-load the previous MPV context
+    // and load up the new one
+    // in order to support changing the "file" property
+    // or re-loading
+
     setlocale(LC_NUMERIC, "C");
     m_mpv = mpv::qt::Handle::FromRawHandle(mpv_create());
     if (!m_mpv)
@@ -399,7 +405,6 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
         for (int i = 1; i + 1 < parts.count(); i += 2) {
             auto k = parts.at(i);
             auto v = parts.at(i + 1);
-            // This is a bit of hack, if the file is changed the properties will not be cleared
             mpv_set_property_string(m_mpv, k.toLatin1().data(), v.toLatin1().data());
         }
     }
