@@ -246,6 +246,10 @@ ModelCopyForRendering Model::createCopyForRendering() {
     return out;
 }
 
+ModelCopyForRendering::~ModelCopyForRendering() {
+    qDeleteAll(vertices);
+}
+
 QVector<VideoNode *> Model::topoSort() {
     // Kahn's algorithm from Wikipedia
 
