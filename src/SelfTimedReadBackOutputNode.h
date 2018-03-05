@@ -25,6 +25,7 @@ public slots:
     void start();
     void stop();
     void setInterval(long msec);
+    void force();
 
 signals:
     void initialize();
@@ -60,6 +61,7 @@ public slots:
     void start();
     void stop();
     void setInterval(long msec);
+    void onTimeout();
 
 signals:
     void message(QString str);
@@ -67,9 +69,6 @@ signals:
     void fatal(QString str);
     void initialized();
     void frame(QSize size, QByteArray pixelBuffer);
-
-protected slots:
-    void onTimeout();
 
 protected:
     QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
