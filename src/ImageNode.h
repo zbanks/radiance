@@ -27,10 +27,6 @@ public:
 
     QJsonObject serialize() override;
 
-    // We don't actually need to do anything in paint(), because
-    // periodic() advances the frame when necessary.  As a result,
-    // there's no point in making a copy of the ImageNode before
-    // paint() and copying it back afterwards.
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
@@ -60,9 +56,6 @@ public slots:
     QString file();
     QString name();
     void setFile(QString file);
-
-protected slots:
-    void onInitialized();
 
 signals:
     void fileChanged(QString file);
@@ -106,8 +99,8 @@ protected:
 ///////////////////////////////////////////////////////////////////////////////
 
 // This class extends OpenGLWorker
-// to enable shader compilation
-// and other initialization
+// to enable image loading
+// and texture generation
 // in a background context
 class ImageNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
