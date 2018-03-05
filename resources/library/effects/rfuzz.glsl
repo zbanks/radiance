@@ -17,6 +17,7 @@ void main(void) {
     wave += 0.03 * sin(a * 180. + iTime * -10.) * iAudioHi;
     wave *= iAudioLevel;
     wave *= iIntensity;
+    wave *= defaultPulse;
 
     // Avoid discontinuities in the center
     wave *= smoothstep(0., 0.2, l);

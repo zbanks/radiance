@@ -8,8 +8,11 @@ void main(void) {
 }
 #buffershader
 void main(void) {
-    fragColor = texture(iChannel[1], (uv - 0.5) * 0.99 + 0.5);
-    fragColor *= exp(-1. / 20.);
-    if (rand(vec3(uv, iTime)) < exp((iIntensity - 2.) * 4.))
+    float delta = iFrequency / 16.;
+    vec2 uvSample = (uv - 0.5) * (1.0 - delta) + 0.5;
+    fragColor = texture(iChannel[1], clamp(uvSample, 0., 1.));
+    fragColor *= exp(-1. / 10.);
+    float random = rand(texture(iNoise, uv) * iTime);
+    if (random < exp((iIntensity - 2.) * 4.))
         fragColor = vec4(1.);
 }

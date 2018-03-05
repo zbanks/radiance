@@ -1,4 +1,5 @@
 #property description That cool thing that happens when you beat solitaire
+#property frequency 2
 
 void main(void) {
     // Relative size of the bouncing image
@@ -7,7 +8,8 @@ void main(void) {
 
     // Closed-form bouncing behavior
     // I think this is periodic over [0.0, 16.] to prevent discontinuities
-    vec2 xy = vec2(sawtooth(iStep * 0.3125, 0.5), 1.0 - abs(sin(iStep * M_PI * 0.5625)));
+    float phase = iStep * iFrequency / 32.;
+    vec2 xy = vec2(sawtooth(phase * 5.0, 0.5), 1.0 - abs(sin(phase * 9.0 * M_PI)));
 
     xy = (xy - 0.5) * (1.0 - scale);
     vec2 uvSample = (uv - 0.5 + xy) / scale + 0.5;

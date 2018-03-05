@@ -7,6 +7,7 @@ void main(void) {
 }
 
 #buffershader
+// TODO: Add frequency dependence
 
 vec2 pixelate(vec2 xy, float n_buckets) {
     vec2 xy_buckets = n_buckets * aspectCorrection;
@@ -36,9 +37,11 @@ void main(void) {
         float newDist = distance(newCoord, uv);
         float improvement = oldDist - newDist; // positive means reverting to normal
         if (improvement > -1.8 * iIntensity + 0.5) {
+            // Scramble more
             newColor = vec4(newCoord, 1., 1.);
         }
         if (iIntensity < 0.3) {
+            // Revert: Scramble less
             newColor = vec4(uv.xy, 1., 1.);
         }
     }

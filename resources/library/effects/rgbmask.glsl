@@ -7,9 +7,11 @@ void main() {
     vec4 g = texture(iInputs[2], uv);
     vec4 b = texture(iInputs[3], uv);
 
-    fragColor = mix(m, vec4(0.0), iIntensity);
-    m *= iIntensity;
-    fragColor = composite(fragColor, r * m.r);
-    fragColor = composite(fragColor, g * m.g);
-    fragColor = composite(fragColor, b * m.b);
+    float f = m.a * iIntensity * defaultPulse;
+    fragColor.rgb = mix(m.rgb, vec3(0.0), f);
+    fragColor.a = m.a;
+
+    fragColor = composite(fragColor, r * m.r * f);
+    fragColor = composite(fragColor, g * m.g * f);
+    fragColor = composite(fragColor, b * m.b * f);
 }
