@@ -57,8 +57,8 @@ ApplicationWindow {
         shortcut: "Ctrl+R"
         onTriggered: {
             console.log("Loading state from file...");
-            //model.load(defaultContext, registry, modelName.currentText);
-            //model.flush();
+            model.load(defaultContext, registry, modelName.currentText);
+            model.flush();
         }
     }
 
