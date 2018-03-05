@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QOpenGLShaderProgram>
+#include <QOpenGLFramebufferObject>
 #include "OutputNode.h"
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
@@ -54,18 +56,29 @@ public:
     STRBONOpenGLWorker(SelfTimedReadBackOutputNode p);
 
 public slots:
-    void initialize();
+    void initialize(QSize size);
     void start();
     void stop();
     void setInterval(long msec);
 
+signals:
+    void message(QString str);
+    void warning(QString str);
+    void fatal(QString str);
+
 protected slots:
     void onTimeout();
+
+protected:
+    QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
 
 private:
     WeakSelfTimedReadBackOutputNode m_p;
     QTimer *m_timer{};
     QByteArray m_pixelBuffer;
+    QSize m_size;
+    QSharedPointer<QOpenGLShaderProgram> m_shader;
+    QSharedPointer<QOpenGLFramebufferObject> m_fbo;
 };
 
 class SelfTimedReadBackOutputNodePrivate : public OutputNodePrivate {
