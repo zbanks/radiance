@@ -3,7 +3,7 @@
 void main(void) {
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
 
-    vec3 noise_input = vec3(normCoord * iIntensity * 4., iIntensity + iIntensityIntegral * 0.1);
+    vec3 noise_input = vec3(normCoord * iIntensity * 4., iIntensity + iIntensityIntegral * iFrequency);
     float n = noise(noise_input) - 0.1;
     n += (noise(2. * noise_input) - 0.5) * 0.5;
     n += (noise(4. * noise_input) - 0.5) * 0.25;

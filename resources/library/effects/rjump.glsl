@@ -3,14 +3,7 @@
 void main(void) {
     fragColor = texture(iInput, uv);
     
-    float t;
-    if (iIntensity < 0.85)
-        t = iTime / 4.0;
-    else if (iIntensity < 0.95)
-        t = iTime / 2.0;
-    else
-        t = iTime;
-
+    float t = iTime * iFrequency;
     float deviation = mod(2. * floor(t), 8.) / 8.;
     deviation *= clamp(iIntensity / 0.8, 0., 1.);
 

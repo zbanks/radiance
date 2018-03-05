@@ -1,7 +1,8 @@
 #property description Slide the screen left-to-right
+#property frequency 1
 
 void main(void) {
-    float deviation = iIntensityIntegral;
+    float deviation = iTime * iFrequency - 0.5;
     vec2 uv2 = (uv - 0.5) * aspectCorrection;
     uv2.x = abs(mod(uv2.x + deviation + 1.5, 2.) - 1.) - 0.5;
     uv2  = uv2 / aspectCorrection + 0.5;
