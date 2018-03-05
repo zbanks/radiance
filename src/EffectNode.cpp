@@ -62,8 +62,11 @@ void EffectNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
         auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(Chain, chain));
         Q_ASSERT(result);
     }
-    for (int i=0; i<removed.count(); i++) {
-        d()->m_renderStates.remove(removed.at(i));
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        for (int i=0; i<removed.count(); i++) {
+            d()->m_renderStates.remove(removed.at(i));
+        }
     }
 }
 
@@ -186,8 +189,6 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
 }
 
 void EffectNode::onPeriodic() {
-    Q_ASSERT(QThread::currentThread() == thread());
-
     QMutexLocker locker(&d()->m_stateLock);
     qreal beatNow = context()->timebase()->beat();
     qreal beatDiff = beatNow - d()->m_beatLast;
@@ -198,7 +199,7 @@ void EffectNode::onPeriodic() {
 }
 
 qreal EffectNode::intensity() {
-    Q_ASSERT(QThread::currentThread() == thread());
+    QMutexLocker locker(&d()->m_stateLock);
     return d()->m_intensity;
 }
 
@@ -215,45 +216,47 @@ void EffectNode::setIntensity(qreal value) {
 }
 
 QString EffectNode::file() {
-    Q_ASSERT(QThread::currentThread() == thread());
+    QMutexLocker locker(&d()->m_stateLock);
     return d()->m_file;
 }
 
+QString EffectNode::fileToName(QString file) {
+    return QFileInfo(file).baseName();
+}
+
 QString EffectNode::name() {
-    Q_ASSERT(QThread::currentThread() == thread());
-    return QFileInfo(d()->m_file).baseName();
+    QMutexLocker locker(&d()->m_stateLock);
+    return fileToName(d()->m_file);
 }
 
 double EffectNode::frequency() {
-    Q_ASSERT(QThread::currentThread() == thread());
+    QMutexLocker locker(&d()->m_stateLock);
     return d()->m_frequency;
 }
 
 void EffectNode::setFrequency(double frequency) {
-    Q_ASSERT(QThread::currentThread() == thread());
-    if (frequency != d()->m_frequency) {
-        {
-            QMutexLocker locker(&d()->m_stateLock);
-            d()->m_frequency = frequency;
-        }
-        emit frequencyChanged(frequency);
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        if (frequency == d()->m_frequency) return;
+        d()->m_frequency = frequency;
     }
+    emit frequencyChanged(frequency);
 }
 
 void EffectNode::setFile(QString file) {
-    Q_ASSERT(QThread::currentThread() == thread());
     file = Paths::contractLibraryPath(file);
-    if(file != d()->m_file) {
-        auto oldName = name();
-        d()->m_ready = false;
-        {
-            QMutexLocker locker(&d()->m_stateLock);
-            d()->m_file = file;
-        }
-        reload();
-        emit fileChanged(file);
-        if (name() != oldName) emit nameChanged(name());
+    QString oldName;
+    QString newName;
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        oldName = fileToName(d()->m_file);
+        if(file == d()->m_file) return;
+        d()->m_file = file;
+        newName = fileToName(d()->m_file);
     }
+    reload();
+    emit fileChanged(file);
+    if (newName != oldName) emit nameChanged(newName);
 }
 
 void EffectNode::reload() {

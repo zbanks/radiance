@@ -34,7 +34,7 @@ void PlaceholderNode::setWrappedVideoNode(VideoNode *wrapped) {
         QMutexLocker locker(&d()->m_stateLock);
         if (wrapped != nullptr) {
             wrapped = wrapped->clone();
-            wrapped->setChains(chains());
+            wrapped->setChains(d()->m_chains);
         }
         d()->m_wrappedVideoNode = QSharedPointer<VideoNode>(wrapped);
     }

@@ -70,10 +70,11 @@ QList<Chain> VideoNode::chains() {
 
 void VideoNode::setChains(QList<Chain> chains) {
     bool wereChainsChanged = false;
+    QList<Chain> toRemove;
+    QList<Chain> toAdd;
     {
         QMutexLocker locker(&d_ptr->m_stateLock);
-        QList<Chain> toRemove = d_ptr->m_chains;
-        QList<Chain> toAdd;
+        toRemove = d_ptr->m_chains;
         for (int i=0; i<chains.count(); i++) {
             if (d_ptr->m_chains.contains(chains.at(i))) {
                 // If it exists already, don't remove it
@@ -83,13 +84,15 @@ void VideoNode::setChains(QList<Chain> chains) {
                 toAdd.append(chains.at(i)); // Add it
             }
         }
-        if (!toAdd.empty() || toRemove.empty()) {
+        if (!toAdd.empty() || !toRemove.empty()) {
             d_ptr->m_chains = chains;
-            chainsEdited(toAdd, toRemove);
             wereChainsChanged = true;
         }
     }
-    if (wereChainsChanged) emit chainsChanged(chains);
+    if (wereChainsChanged) {
+        chainsEdited(toAdd, toRemove);
+        emit chainsChanged(chains);
+    }
 }
 
 Context *VideoNode::context() {

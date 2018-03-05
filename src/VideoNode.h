@@ -91,9 +91,6 @@ public slots:
 
 protected slots:
     // If your node does anything at all, you will need to override this method
-    // and take appropriate action when the set of render chains changes.
-    // This function is run with the state locked,
-    // so don't lock it again, and try to be brief.
     virtual void chainsEdited(QList<Chain> added, QList<Chain> removed);
 
 protected:
