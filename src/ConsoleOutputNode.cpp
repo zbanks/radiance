@@ -2,6 +2,9 @@
 
 ConsoleOutputNode::ConsoleOutputNode(Context *context, QSize chainSize)
     : SelfTimedReadBackOutputNode(context, chainSize, 10) {
+
+    connect(this, &SelfTimedReadBackOutputNode::frame, this, &ConsoleOutputNode::onFrame, Qt::DirectConnection);
+
     start();
 }
 
@@ -9,7 +12,7 @@ ConsoleOutputNode::ConsoleOutputNode(const ConsoleOutputNode &other)
     : SelfTimedReadBackOutputNode(other) {
 }
 
-void ConsoleOutputNode::frame(QSize size, QByteArray frame) {
+void ConsoleOutputNode::onFrame(QSize size, QByteArray frame) {
     qDebug() << size << frame;
 }
 

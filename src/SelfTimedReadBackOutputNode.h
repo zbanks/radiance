@@ -26,9 +26,9 @@ public slots:
     void stop();
     void setInterval(long msec);
 
-    // Reimplement these!
-    virtual void frame(QSize size, QByteArray frame);
-    virtual void initialize();
+signals:
+    void initialize();
+    void frame(QSize size, QByteArray frame);
 
 private:
     SelfTimedReadBackOutputNode(QSharedPointer<SelfTimedReadBackOutputNodePrivate> other_ptr);
@@ -65,6 +65,8 @@ signals:
     void message(QString str);
     void warning(QString str);
     void fatal(QString str);
+    void initialized();
+    void frame(QSize size, QByteArray pixelBuffer);
 
 protected slots:
     void onTimeout();
