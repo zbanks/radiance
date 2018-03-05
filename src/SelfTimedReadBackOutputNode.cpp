@@ -9,6 +9,9 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize
 
     d()->m_chain.moveToWorkerContext(d()->m_workerContext);
 
+    connect(d()->m_worker.data(), &STRBONOpenGLWorker::initialized, this, &SelfTimedReadBackOutputNode::initialize, Qt::DirectConnection);
+    connect(d()->m_worker.data(), &STRBONOpenGLWorker::frame, this, &SelfTimedReadBackOutputNode::frame, Qt::DirectConnection);
+
     {
         auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize", Q_ARG(QSize, chainSize));
         Q_ASSERT(result);
@@ -49,12 +52,6 @@ void SelfTimedReadBackOutputNode::stop() {
 void SelfTimedReadBackOutputNode::setInterval(long msec) {
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "setInterval", Q_ARG(long, msec));
     Q_ASSERT(result);
-}
-
-void SelfTimedReadBackOutputNode::initialize() {
-}
-
-void SelfTimedReadBackOutputNode::frame(QSize size, QByteArray frame) {
 }
 
 // WeakSelcTimedReadBackOutputNode methods
@@ -122,13 +119,16 @@ void STRBONOpenGLWorker::initialize(QSize size) {
     if (m_shader.isNull()) return;
 
     auto fmt = QOpenGLFramebufferObjectFormat{};
-    fmt.setInternalTextureFormat(GL_RGB);
+    fmt.setInternalTextureFormat(GL_RGBA);
     m_fbo = QSharedPointer<QOpenGLFramebufferObject>::create(size, fmt);
 
     m_size = size;
+    m_pixelBuffer.resize(4 * size.width() * size.height());
 
     m_timer = new QTimer(this);
     connect(m_timer, &QTimer::timeout, this, &STRBONOpenGLWorker::onTimeout);
+
+    emit initialized();
 }
 
 void STRBONOpenGLWorker::setInterval(long msec) {
@@ -160,9 +160,15 @@ void STRBONOpenGLWorker::onTimeout() {
     if (d.isNull()) return; // SelfTimedReadBackOutputNode was deleted
     SelfTimedReadBackOutputNode p(d);
 
-    qDebug() << "Render...";
     makeCurrent();
     GLuint texture = p.render();
+
+    if (texture == 0) {
+        qWarning() << "No frame available";
+        return;
+    }
+
+    auto vao = p.chain().vao();
 
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);
@@ -180,17 +186,16 @@ void STRBONOpenGLWorker::onTimeout() {
 
     m_shader->setUniformValue("iFrame", 0);
 
+    vao->bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    vao->release();
 
-    // READ BACK HERE
+    glReadPixels(0, 0, m_size.width(), m_size.height(), GL_RGBA, GL_UNSIGNED_BYTE, m_pixelBuffer.data());
 
     m_fbo->release();
     m_shader->release();
 
-    //m_pixelBuffer.resize(3 * size.width() * size.height());
-    //qDebug() << "Texture ID is:" << texture;
-    p.frame(m_size, m_pixelBuffer);
-    //qDebug() << "Rendered.";
+    emit frame(m_size, m_pixelBuffer);
 }
 
 SelfTimedReadBackOutputNodePrivate::SelfTimedReadBackOutputNodePrivate(Context *context, QSize chainSize)
