@@ -61,16 +61,19 @@ void MovieNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
         auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(Chain, chain));
         Q_ASSERT(result);
     }
-    for (auto chain : removed) {
-        d()->m_renderStates.remove(chain);
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        for (auto chain : removed) {
+            d()->m_renderStates.remove(chain);
+        }
+        auto size = QSize{};
+        for(auto chain : d()->m_chains) {
+            auto csize = chain.size();
+            size.setWidth(std::max(csize.width(), size.width()));
+            size.setHeight(std::max(csize.height(), size.height()));
+        }
+        d()->m_maxSize = size;
     }
-    auto size = QSize{};
-    for(auto chain : d()->m_chains) {
-        auto csize = chain.size();
-        size.setWidth(std::max(csize.width(), size.width()));
-        size.setHeight(std::max(csize.height(), size.height()));
-    }
-    d()->m_maxSize = size;
 }
 
 QString MovieNode::file() {

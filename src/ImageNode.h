@@ -68,9 +68,6 @@ signals:
     void fileChanged(QString file);
     void nameChanged(QString name);
 
-protected:
-    void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
-
 private:
     ImageNode(QSharedPointer<ImageNodePrivate> other_ptr);
     QSharedPointer<ImageNodePrivate> d() const;

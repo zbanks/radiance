@@ -94,6 +94,9 @@ protected slots:
     void onPeriodic();
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
 
+protected:
+    QString fileToName(QString file);
+
 signals:
     void intensityChanged(qreal value);
     void nameChanged(QString name);

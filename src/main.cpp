@@ -9,13 +9,13 @@
 #include <QThread>
 #include <QProcess>
 #include "BaseVideoNodeTile.h"
-//#include "EffectNode.h"
+#include "EffectNode.h"
 #include "FramebufferVideoNodeRender.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
-//#include "FFmpegOutputNode.h"
-//#include "PlaceholderNode.h"
+#include "FFmpegOutputNode.h"
+#include "PlaceholderNode.h"
 #include "Paths.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
@@ -96,7 +96,7 @@ runRadianceGui(QGuiApplication *app) {
     }
     return 0;
 }
-/*
+
 static void
 generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
     QFile outputHtml(outputDir.filePath("index.html"));
@@ -221,10 +221,10 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
 
             context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
 
-            auto modelCopy = model.createCopyForRendering(chain);
+            auto modelCopy = model.createCopyForRendering();
             auto rendering = modelCopy.render(chain);
 
-            auto outputTextureId = rendering.value(ffmpegNode->id(), 0);
+            auto outputTextureId = rendering.value(*ffmpegNode, 0);
             if (outputTextureId != 0) {
                 if (i == 0 || i == 51) {
                     QImage img = imgRender.render(outputTextureId);
@@ -241,7 +241,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
 
     return 0;
 }
-*/
+
 int
 main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
@@ -304,8 +304,7 @@ main(int argc, char *argv[]) {
     }
 
     if (parser.isSet(nodeFilenameOption) || parser.isSet(renderAllOption)) {
-        return 1; // XXX
-        //return runRadianceCli(&app, modelName, parser.value(nodeFilenameOption), outputDirString, renderSize);
+        return runRadianceCli(&app, modelName, parser.value(nodeFilenameOption), outputDirString, renderSize);
     } else {
         return runRadianceGui(&app);
     }

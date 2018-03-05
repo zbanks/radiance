@@ -47,8 +47,6 @@ void ImageNode::onInitialized() {
     d()->m_ready = true;
 }
 
-void ImageNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
-}
 QString ImageNode::file() {
     QMutexLocker locker(&d()->m_stateLock);
     return d()->m_file;
@@ -75,13 +73,15 @@ void ImageNode::setFile(QString file) {
             wasFileChanged = true;
             d()->m_file = file;
             d()->m_ready = false;
-            bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
-            Q_ASSERT(result);
             newName = fileToName();
             if (newName != oldName) wasNameChanged = true;
         }
     }
-    if (wasFileChanged) emit fileChanged(file);
+    if (wasFileChanged) {
+        bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
+        Q_ASSERT(result);
+        emit fileChanged(file);
+    }
     if (wasNameChanged) emit nameChanged(newName);
 }
 
