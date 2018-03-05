@@ -5,6 +5,7 @@
 #include "xoroshiro128plus.hpp"
 #include <QDebug>
 #include <QThread>
+#include "OpenGLWorkerContext.h"
 
 using namespace Xoroshiro;
 
@@ -20,6 +21,10 @@ Chain::Chain(const Chain &other)
 
 Chain::operator QString() const {
     return QString("Chain(%1x%2, %3)").arg(d_ptr->m_size.width()).arg(d_ptr->m_size.height()).arg(thread()->objectName());
+}
+
+void Chain::moveToWorkerContext(OpenGLWorkerContext *context) {
+    context->takeObject(d_ptr.data());
 }
 
 QSize Chain::size() {
@@ -45,10 +50,6 @@ GLuint Chain::noiseTexture() {
         std::generate(&data[0],&data[compCount],xsrd);
         d_ptr->m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &data[0]);
         glFlush();
-
-        if (QThread::currentThread() != d_ptr->thread()) {
-            d_ptr->moveToThread(QThread::currentThread());
-        }
     }
 
     return d_ptr->m_noiseTexture.textureId();
@@ -64,10 +65,6 @@ GLuint Chain::blankTexture() {
 
         auto data = std::array<uint8_t,4>();
         d_ptr->m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
-
-        if (QThread::currentThread() != d_ptr->thread()) {
-            d_ptr->moveToThread(QThread::currentThread());
-        }
     }
 
     return d_ptr->m_blankTexture.textureId();
@@ -76,10 +73,6 @@ GLuint Chain::blankTexture() {
 QOpenGLVertexArrayObject *Chain::vao() {
     if (!d_ptr->m_vao.isCreated()) {
         d_ptr->m_vao.create();
-
-        if (QThread::currentThread() != d_ptr->thread()) {
-            d_ptr->moveToThread(QThread::currentThread());
-        }
     }
     return &d_ptr->m_vao;
 }

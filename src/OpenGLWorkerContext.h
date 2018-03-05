@@ -19,7 +19,7 @@ protected slots:
     void deinitialize();
 public slots:
     void makeCurrent();
-    void takeWorker(OpenGLWorker *worker);
+    void takeObject(QObject *obj);
 protected slots:
     void onDestroyed();
 protected:

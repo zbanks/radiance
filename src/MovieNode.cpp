@@ -18,7 +18,7 @@ MovieNode::MovieNode(Context *context, QString file, QString name)
 {
     d()->m_openGLWorkerContext = new OpenGLWorkerContext();
     d()->m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(*this), &QObject::deleteLater);
-    d()->m_openGLWorkerContext->setParent(d()->m_openGLWorker.data()); // Delete context when worker is done
+    connect(d()->m_openGLWorker.data(), &QObject::destroyed, d()->m_openGLWorkerContext, &QObject::deleteLater);
 
     connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
     connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);

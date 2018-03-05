@@ -20,6 +20,12 @@ OutputNode::OutputNode(const OutputNode &other)
 {
 }
 
+// Only use this for promoting WeakOutputNodes
+OutputNode::OutputNode(QSharedPointer<OutputNodePrivate> ptr)
+    : VideoNode(ptr.staticCast<VideoNodePrivate>())
+{
+}
+
 OutputNode *OutputNode::clone() const {
     return new OutputNode(*this);
 }

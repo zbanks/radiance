@@ -97,9 +97,9 @@ void OpenGLWorkerContext::makeCurrent() {
     m_context->makeCurrent(m_surface);
 }
 
-void OpenGLWorkerContext::takeWorker(OpenGLWorker *worker) {
+void OpenGLWorkerContext::takeObject(QObject *obj) {
     if (m_thread) {
-        worker->moveToThread(m_thread);
+        obj->moveToThread(m_thread);
     }
 }
 
