@@ -42,11 +42,6 @@ QJsonObject ImageNode::serialize() {
     return o;
 }
 
-void ImageNode::onInitialized() {
-    QMutexLocker locker(&d()->m_stateLock);
-    d()->m_ready = true;
-}
-
 QString ImageNode::file() {
     QMutexLocker locker(&d()->m_stateLock);
     return d()->m_file;

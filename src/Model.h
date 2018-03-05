@@ -26,10 +26,9 @@ public:
 
 // Return type of graphCopy
 struct ModelCopyForRendering {
-    virtual ~ModelCopyForRendering();
-
     // Copies of the vertices
-    QVector<VideoNode *> vertices;
+    // (The QSP here is just to ensure they get deleted)
+    QVector<QSharedPointer<VideoNode>> vertices;
 
     // Edges, as indices into vertices
     QVector<int> fromVertex;

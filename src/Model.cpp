@@ -240,14 +240,10 @@ ModelCopyForRendering Model::createCopyForRendering() {
     }
 
     for (int i=0; i<d_ptr->m_verticesSortedForRendering.count(); i++) {
-        out.vertices.append(d_ptr->m_verticesSortedForRendering.at(i)->clone());
+        out.vertices.append(QSharedPointer<VideoNode>(d_ptr->m_verticesSortedForRendering.at(i)->clone()));
     }
 
     return out;
-}
-
-ModelCopyForRendering::~ModelCopyForRendering() {
-    qDeleteAll(vertices);
 }
 
 QVector<VideoNode *> Model::topoSort() {
