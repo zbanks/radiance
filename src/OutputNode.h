@@ -28,6 +28,8 @@ public:
     Chain chain();
 
 protected:
+    OutputNode(QSharedPointer<OutputNodePrivate> ptr);
+
     virtual QList<Chain> requestedChains() override;
 
 private:

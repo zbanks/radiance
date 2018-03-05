@@ -11,6 +11,7 @@ class SelfTimedReadBackOutputNode
     : public OutputNode {
     Q_OBJECT
 
+    friend class WeakSelfTimedReadBackOutputNode;
     friend class STRBONOpenGLWorker;
 
 public:
@@ -28,24 +29,41 @@ public slots:
     virtual void initialize();
 
 private:
+    SelfTimedReadBackOutputNode(QSharedPointer<SelfTimedReadBackOutputNodePrivate> other_ptr);
     QSharedPointer<SelfTimedReadBackOutputNodePrivate> d() const;
 };
+
+///////////////////////////////////////////////////////////////////////////////
+
+class WeakSelfTimedReadBackOutputNode {
+public:
+    WeakSelfTimedReadBackOutputNode();
+    WeakSelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other);
+    QSharedPointer<SelfTimedReadBackOutputNodePrivate> toStrongRef();
+
+protected:
+    QWeakPointer<SelfTimedReadBackOutputNodePrivate> d_ptr;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 
 class STRBONOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    STRBONOpenGLWorker(SelfTimedReadBackOutputNode *p);
-   ~STRBONOpenGLWorker();
+    STRBONOpenGLWorker(SelfTimedReadBackOutputNode p);
+
 public slots:
     void initialize();
     void start();
     void stop();
     void setInterval(long msec);
+
 protected slots:
     void onTimeout();
+
 private:
-    SelfTimedReadBackOutputNode *m_p{};
+    WeakSelfTimedReadBackOutputNode m_p;
     QTimer *m_timer{};
     QByteArray m_pixelBuffer;
 };
@@ -55,5 +73,5 @@ public:
     SelfTimedReadBackOutputNodePrivate(Context *context, QSize chainSize);
 
     OpenGLWorkerContext *m_workerContext{};
-    STRBONOpenGLWorker *m_worker{};
+    QSharedPointer<STRBONOpenGLWorker> m_worker;
 };

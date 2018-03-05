@@ -58,6 +58,7 @@ public:
     Chain &operator=(const Chain &other);
 
 public slots:
+    void moveToWorkerContext(OpenGLWorkerContext *context);
     QSize size();
     GLuint noiseTexture();
     GLuint blankTexture();
