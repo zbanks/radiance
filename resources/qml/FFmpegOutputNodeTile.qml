@@ -11,6 +11,18 @@ VideoNodeTile {
     normalHeight: 400;
     normalWidth: 300;
 
+    onVideoNodeChanged: {
+        recordingCheck.checked = videoNode.recording;
+        videoNode.recording = Qt.binding(function() { return recordingCheck.checked });
+    }
+
+    Connections {
+        target: videoNode
+        onRecordingChanged: {
+            recordingCheck.checked = recording;
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent;
         anchors.margins: 15;
@@ -36,7 +48,7 @@ VideoNodeTile {
                 id: vnr;
                 anchors.fill: parent;
                 previewAdapter: Globals.previewAdapter;
-                videoNodeId: tile.videoNode ? tile.videoNode.id : 0;
+                videoNode: tile.videoNode;
             }
         }
 
@@ -49,11 +61,6 @@ VideoNodeTile {
             
         CheckBox {
             id: recordingCheck
-            checked: tile.videoNode ? tile.videoNode.recording : false;
-
-            onCheckedChanged: {
-                tile.videoNode.recording = checked;
-            }
 
             style: CheckBoxStyle {
                 label: Text {
