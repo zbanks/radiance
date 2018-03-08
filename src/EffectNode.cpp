@@ -18,7 +18,7 @@
 EffectNode::EffectNode(Context *context, QString file)
     : VideoNode(new EffectNodePrivate(context))
 {
-    qRegisterMetaType<Chain>("Chain");
+    qRegisterMetaType<Chain>("Chain"); // so we can pass it in Q_ARG
 
     d()->m_openGLWorker = QSharedPointer<EffectNodeOpenGLWorker>(new EffectNodeOpenGLWorker(*this), &QObject::deleteLater);
     setInputCount(1);
