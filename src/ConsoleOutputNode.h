@@ -2,6 +2,15 @@
 
 #include "SelfTimedReadBackOutputNode.h"
 
+// This node is a simple example of
+// how to implement a SelfTimedReadBackOutputNode.
+// It prints out its RGBA color values
+// to the console at the specified rate.
+
+// It is intended to be used as an example to developers
+// and is probably not actually useful
+// in any real circumstances.
+
 class ConsoleOutputNode
     : public SelfTimedReadBackOutputNode {
     Q_OBJECT
