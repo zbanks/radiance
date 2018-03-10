@@ -51,6 +51,8 @@ Item {
                     "ScreenOutputNode": "ScreenOutputNodeTile",
                     "FFmpegOutputNode": "FFmpegOutputNodeTile",
                     "PlaceholderNode": "PlaceholderNodeTile",
+                    "KineticsStripOutputNode": "KineticsStripTile",
+                    "KineticsPanel72OutputNode": "KineticsPanel72Tile",
                     "": "VideoNodeTile"
                 }
                 x: (parent.width - width) / 2

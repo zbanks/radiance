@@ -44,6 +44,7 @@ class SelfTimedReadBackOutputNode
 
 public:
     SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec=0);
+        SelfTimedReadBackOutputNode(SelfTimedReadBackOutputNodePrivate *other, Context *context, QSize chainSize, long msec=0);
     SelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other);
     SelfTimedReadBackOutputNode *clone() const override;
 

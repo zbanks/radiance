@@ -47,6 +47,8 @@ list(APPEND libradiance_SOURCES
     src/FramebufferVideoNodeRender.cpp
     src/GraphicalDisplay.cpp
     src/ImageNode.cpp
+    src/KineticsStripOutputNode.cpp
+    src/KineticsPanel72OutputNode.cpp
     src/Library.cpp
     src/Model.cpp
     src/OpenGLUtils.cpp

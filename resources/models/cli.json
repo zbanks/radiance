@@ -1,57 +1,18 @@
 {
     "edges": [
         {
-            "fromVertex": 1,
-            "toInput": 0,
-            "toVertex": 4
-        },
-        {
-            "fromVertex": 2,
-            "toInput": 1,
-            "toVertex": 4
-        },
-        {
-            "fromVertex": 5,
-            "toInput": 0,
-            "toVertex": 3
-        },
-        {
-            "fromVertex": 4,
-            "toInput": 0,
-            "toVertex": 0
-        },
-        {
             "fromVertex": 0,
             "toInput": 0,
-            "toVertex": 5
+            "toVertex": 1
         }
     ],
     "vertices": [
-        {
-            "file": "effects/afixhighlight.glsl",
-            "intensity": 1,
-            "type": "EffectNode"
-        },
         {
             "file": "images/nyancat.gif",
             "type": "ImageNode"
         },
         {
-            "file": "effects/test.glsl",
-            "intensity": 0.7,
-            "type": "EffectNode"
-        },
-        {
-            "type": "FFmpegOutputNode"
-        },
-        {
-            "inputCount": 2,
-            "type": "PlaceholderNode"
-        },
-        {
-            "file": "effects/onblack.glsl",
-            "intensity": 1,
-            "type": "EffectNode"
+            "type": "KineticsStripOutputNode"
         }
     ]
 }

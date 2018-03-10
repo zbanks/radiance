@@ -10,6 +10,8 @@
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
+#include "KineticsStripOutputNode.h"
+#include "KineticsPanel72OutputNode.h"
 
 Registry::Registry()
     : m_library(nullptr) {
@@ -21,6 +23,8 @@ Registry::Registry()
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
+    registerType<KineticsStripOutputNode>();
+    registerType<KineticsPanel72OutputNode>();
 
     m_library = new Library(this);
     m_library->setParent(this);
