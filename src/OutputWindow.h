@@ -16,6 +16,7 @@ protected:
     QScopedPointer<OutputNode> m_videoNode;
     QOpenGLVertexArrayObject m_vao;
     bool m_shown;
+    QSize m_screenSize;
 
     void putOnScreen();
 
@@ -28,6 +29,7 @@ protected:
 protected slots:
     void onScreenChanged(QScreen* screen);
     void reload();
+    void setScreenSize(QSize screenSize);
 
 public:
     // The VideoNode that this is constructed with
@@ -43,10 +45,12 @@ public slots:
     bool found();
     void setShown(bool shown);
     bool shown();
+    QSize screenSize();
 
 signals:
     void screenNameChanged(QString screenName);
     void availableScreensChanged(QStringList availableScreens);
     void foundChanged(bool found);
     void shownChanged(bool shown);
+    void screenSizeChanged(QSize screenSize);
 };
