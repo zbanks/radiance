@@ -17,6 +17,8 @@ OutputWindow::OutputWindow(OutputNode *videoNode)
     setWindowState(Qt::WindowFullScreen);
     putOnScreen();
     connect(this, &QWindow::screenChanged, this, &OutputWindow::putOnScreen);
+    setScreenName(screen()->name());
+    setScreenSize(screen()->geometry().size());
 
     reload();
     connect(&m_reloader, &QTimer::timeout, this, &OutputWindow::reload);
@@ -32,6 +34,10 @@ QString OutputWindow::screenName() {
     return m_screenName;
 }
 
+QSize OutputWindow::screenSize() {
+    return m_screenSize;
+}
+
 void OutputWindow::onScreenChanged(QScreen *screen) {
     reload();
 }
@@ -44,6 +50,13 @@ void OutputWindow::setScreenName(QString screenName) {
     }
 }
 
+void OutputWindow::setScreenSize(QSize screenSize) {
+    if (screenSize != m_screenSize) {
+        m_screenSize = screenSize;
+        emit screenSizeChanged(m_screenSize);
+    }
+}
+
 void OutputWindow::reload() {
     auto screens = QGuiApplication::screens();
 
@@ -53,6 +66,7 @@ void OutputWindow::reload() {
         if (testScreen->name() == m_screenName) {
             if (screen() != testScreen) {
                 setScreen(testScreen);
+                setScreenSize(testScreen->geometry().size());
             }
             found = true;
         }

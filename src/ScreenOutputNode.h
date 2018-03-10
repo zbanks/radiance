@@ -2,6 +2,8 @@
 
 #include "OutputNode.h"
 #include "OutputWindow.h"
+#include <QList>
+#include <QSize>
 #include <QScreen>
 
 class ScreenOutputNodePrivate;
@@ -10,8 +12,11 @@ class ScreenOutputNode
     : public OutputNode {
     Q_OBJECT
     Q_PROPERTY(bool shown READ shown WRITE setShown NOTIFY shownChanged);
+    Q_PROPERTY(bool found READ found NOTIFY foundChanged);
     Q_PROPERTY(QStringList availableScreens READ availableScreens NOTIFY availableScreensChanged);
     Q_PROPERTY(QString screenName READ screenName WRITE setScreenName NOTIFY screenNameChanged);
+    Q_PROPERTY(QVariantList suggestedResolutions READ suggestedResolutions NOTIFY suggestedResolutionsChanged);
+    Q_PROPERTY(QSize resolution READ resolution WRITE setResolution NOTIFY resolutionChanged);
 
 public:
     ScreenOutputNode(Context *context, QSize chainSize);
@@ -41,20 +46,30 @@ public:
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
 
+    static QList<QSize> commonResolutions;
+
 public slots:
     bool shown();
     void setShown(bool shown);
+    bool found();
     QStringList availableScreens();
     QString screenName();
     void setScreenName(QString screenName);
+    QSize resolution();
+    void setResolution(QSize resolution);
+    QVariantList suggestedResolutions();
 
 signals:
     void shownChanged(bool shown);
+    void foundChanged(bool found);
     void availableScreensChanged(QStringList availableScreens);
-    void screenNameChanged();
+    void screenNameChanged(QString screenName);
+    void resolutionChanged(QSize resolution);
+    void suggestedResolutionsChanged(QVariantList resolutions);
 
 protected slots:
     void reload();
+    void onScreenSizeChanged(QSize screenSize);
 
 private:
     QSharedPointer<ScreenOutputNodePrivate> d();
@@ -66,6 +81,7 @@ public:
     QList<QScreen *> m_screens;
     QStringList m_screenNameStrings;
     QTimer m_reloader;
+    QList<QSize> m_suggestedResolutions;
 
     // Not actually shared, just convenient for deletion
     QSharedPointer<OutputWindow> m_outputWindow;
