@@ -41,8 +41,16 @@ class MovieNode
     Q_PROPERTY(qreal position READ position NOTIFY positionChanged WRITE setPosition)
     Q_PROPERTY(bool mute READ mute NOTIFY muteChanged WRITE setMute)
     Q_PROPERTY(bool pause READ pause NOTIFY pauseChanged WRITE setPause)
+    Q_PROPERTY(enum Factor factor READ factor WRITE setFactor NOTIFY factorChanged)
 
 public:
+    enum Factor {
+        Crop,
+        Shrink,
+        Zoom
+    };
+    Q_ENUM(Factor)
+
     MovieNode(Context *context, QString file, QString name=QString(""));
     MovieNode(const MovieNode &other);
     MovieNode *clone() const override;
@@ -82,11 +90,13 @@ public slots:
     qreal duration();
     bool mute();
     bool pause();
+    enum Factor factor();
     void setFile(QString file);
     void setPosition(qreal position);
     void setName(QString name);
     void setMute(bool mute);
     void setPause(bool pause);
+    void setFactor(enum Factor factor);
 
 protected slots:
     void onVideoSizeChanged(QSize size);
@@ -103,6 +113,7 @@ signals:
     void durationChanged(qreal duration);
     void muteChanged(bool mute);
     void pauseChanged(bool pause);
+    void factorChanged(enum Factor factor);
 
 protected:
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
@@ -133,6 +144,7 @@ public:
     qreal m_duration{};
     bool m_mute{true};
     bool m_pause{};
+    enum MovieNode::Factor m_factor{MovieNode::Crop};
 };
 
 ///////////////////////////////////////////////////////////////////////////////
