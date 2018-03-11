@@ -20,11 +20,13 @@ public:
     Context(bool threaded=true);
    ~Context();
 
+    bool threaded();
     Audio *audio();
     Timebase *timebase();
     OpenGLWorkerContext *openGLWorkerContext();
 
 protected:
+    bool m_threaded;
     Audio *m_audio;
     Timebase *m_timebase;
     OpenGLWorkerContext *m_openGLWorkerContext;

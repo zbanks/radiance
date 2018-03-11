@@ -34,6 +34,7 @@ OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
     if (threaded) {
         m_thread = new QThread();
         m_context->moveToThread(m_thread);
+        // XXX this prints a console warning because `this->thread() != m_context->thread()`
         m_context->setParent(this);
         connect(m_thread, &QThread::started, this, &OpenGLWorkerContext::initialize, Qt::DirectConnection);
         connect(m_thread, &QThread::finished, this, &OpenGLWorkerContext::deinitialize, Qt::DirectConnection);

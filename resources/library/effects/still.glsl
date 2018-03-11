@@ -1,5 +1,5 @@
 #property description Stick chunks to the screen
-#propert frequency 1
+#property frequency 1
 
 void main(void) {
     vec4 hold = texture(iChannel[1], uv);
