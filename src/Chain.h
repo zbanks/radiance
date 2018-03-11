@@ -46,6 +46,10 @@ class Chain : public QObject {
 public:
     Chain(QSize size=QSize(0, 0));
 
+    // Creates a new chain with the given size
+    // to replace the given chain
+    Chain(const Chain &other, QSize size);
+
     // Creates a very shallow copy
     // (all operations will reference original chain)
     Chain(const Chain &other);
@@ -59,7 +63,7 @@ public:
 
 public slots:
     void moveToWorkerContext(OpenGLWorkerContext *context);
-    QSize size();
+    QSize size() const;
     GLuint noiseTexture();
     GLuint blankTexture();
     QOpenGLVertexArrayObject *vao();
