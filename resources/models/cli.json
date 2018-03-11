@@ -1,57 +1,57 @@
 {
     "edges": [
         {
-            "fromVertex": "5",
+            "fromVertex": 1,
             "toInput": 0,
-            "toVertex": "8"
+            "toVertex": 4
         },
         {
-            "fromVertex": "6",
+            "fromVertex": 2,
             "toInput": 1,
-            "toVertex": "8"
+            "toVertex": 4
         },
         {
-            "fromVertex": "9",
+            "fromVertex": 5,
             "toInput": 0,
-            "toVertex": "7"
+            "toVertex": 3
         },
         {
-            "fromVertex": "8",
+            "fromVertex": 4,
             "toInput": 0,
-            "toVertex": "10"
+            "toVertex": 0
         },
         {
-            "fromVertex": "10",
+            "fromVertex": 0,
             "toInput": 0,
-            "toVertex": "9"
+            "toVertex": 5
         }
     ],
-    "vertices": {
-        "10": {
+    "vertices": [
+        {
             "file": "effects/afixhighlight.glsl",
             "intensity": 1,
             "type": "EffectNode"
         },
-        "5": {
+        {
             "file": "images/nyancat.gif",
             "type": "ImageNode"
         },
-        "6": {
+        {
             "file": "effects/test.glsl",
             "intensity": 0.7,
             "type": "EffectNode"
         },
-        "7": {
+        {
             "type": "FFmpegOutputNode"
         },
-        "8": {
+        {
             "inputCount": 2,
             "type": "PlaceholderNode"
         },
-        "9": {
+        {
             "file": "effects/onblack.glsl",
             "intensity": 1,
             "type": "EffectNode"
         }
-    }
+    ]
 }
