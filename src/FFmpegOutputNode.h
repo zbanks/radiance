@@ -1,13 +1,11 @@
 #pragma once
 
-#include "OutputNode.h"
-#include "OutputWindow.h"
+#include "SelfTimedReadBackOutputNode.h"
 #include <QProcess>
-
-class FFmpegOutputNodePrivate;
+#include <QMutex>
 
 class FFmpegOutputNode
-    : public OutputNode {
+    : public SelfTimedReadBackOutputNode {
     Q_OBJECT
     Q_PROPERTY(bool recording READ recording WRITE setRecording NOTIFY recordingChanged);
     Q_PROPERTY(QStringList ffmpegArguments READ ffmpegArguments WRITE setFFmpegArguments NOTIFY ffmpegArgumentsChanged);
@@ -16,7 +14,6 @@ public:
     FFmpegOutputNode(Context *context, QSize chainSize);
     ~FFmpegOutputNode();
     FFmpegOutputNode(const FFmpegOutputNode &other);
-    FFmpegOutputNode *clone() const override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -41,8 +38,6 @@ public:
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
 
-    void recordFrame();
-
 public slots:
     bool recording();
     void setRecording(bool recording);
@@ -53,16 +48,14 @@ signals:
     void recordingChanged(bool recording);
     void ffmpegArgumentsChanged(QStringList ffmpegArguments);
 
+private slots:
+    void onFrame(QSize size, QByteArray frame);
+    void onInitialize();
+    void onFFmpegFinished(int exitCode, QProcess::ExitStatus status);
+
 private:
-    QSharedPointer<FFmpegOutputNodePrivate> d() const;
-};
-
-class FFmpegOutputNodePrivate : public OutputNodePrivate {
-public:
-    FFmpegOutputNodePrivate(Context *context, QSize chainSize);
-
     bool m_recording;
     QStringList m_ffmpegArguments;
     QProcess m_ffmpeg;
-    QByteArray m_pixelBuffer;
+    QMutex m_ffmpegLock;
 };

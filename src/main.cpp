@@ -232,7 +232,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                     img.save(filename);
                 }
             }
-            ffmpegNode->recordFrame();
+            ffmpegNode->force();
         }
 
         // Reset state
