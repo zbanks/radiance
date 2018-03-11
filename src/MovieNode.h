@@ -51,6 +51,8 @@ public:
     };
     Q_ENUM(Factor)
 
+    static const float zoomFactor;
+
     MovieNode(Context *context, QString file, QString name=QString(""));
     MovieNode(const MovieNode &other);
     MovieNode *clone() const override;

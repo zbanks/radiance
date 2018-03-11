@@ -7,6 +7,9 @@ import radiance 1.0
 VideoNodeTile {
     id: tile;
 
+    normalHeight: 300;
+    normalWidth: 200;
+
     function setFactorSelector() {
         for(var i = 0; i < factorSelector.model.count; ++i) {
             if (factorSelector.model.get(i).value == videoNode.factor) {

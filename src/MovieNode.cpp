@@ -13,6 +13,11 @@
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
 
+// This zoom factor eliminates top / bottom black bars
+// on videos that are recorded in 21:9 aspect
+// and letterboxed to 16:9
+const float MovieNode::zoomFactor = 16. / 21.;
+
 MovieNode::MovieNode(Context *context, QString file, QString name)
     : VideoNode(new MovieNodePrivate(context))
 {
@@ -309,8 +314,8 @@ GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
                     factorFitY = qMax(factorFitY, 1.f);
                     break;
                 case Zoom:
-                    factorFitX = factorFitX * 16 / 21;
-                    factorFitY = 16.f / 21;
+                    factorFitX = factorFitX * zoomFactor;
+                    factorFitY = zoomFactor;
                     break;
                 case Crop:
                 default:
