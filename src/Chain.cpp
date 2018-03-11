@@ -14,6 +14,12 @@ Chain::Chain(QSize size)
 {
 }
 
+Chain::Chain(const Chain &other, QSize size)
+    : d_ptr(new ChainPrivate(size), &QObject::deleteLater)
+{
+    d_ptr->moveToThread(other.d_ptr->thread());
+}
+
 Chain::Chain(const Chain &other)
     : d_ptr(other.d_ptr)
 {
@@ -24,10 +30,10 @@ Chain::operator QString() const {
 }
 
 void Chain::moveToWorkerContext(OpenGLWorkerContext *context) {
-    context->takeObject(d_ptr.data());
+    d_ptr->moveToThread(context->context()->thread());
 }
 
-QSize Chain::size() {
+QSize Chain::size() const {
     return d_ptr->m_size;
 }
 

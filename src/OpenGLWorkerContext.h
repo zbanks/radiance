@@ -19,7 +19,6 @@ protected slots:
     void deinitialize();
 public slots:
     void makeCurrent();
-    void takeObject(QObject *obj);
 protected slots:
     void onDestroyed();
 protected:
