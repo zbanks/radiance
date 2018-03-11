@@ -497,8 +497,8 @@ QJsonObject Model::serialize() {
     QJsonArray jsonEdges;
     for (auto edge : d_ptr->m_edges) {
         QJsonObject jsonEdge;
-        jsonEdge["fromVertex"] = QString::number(map.value(edge.fromVertex, -1));
-        jsonEdge["toVertex"] = QString::number(map.value(edge.fromVertex, -1));
+        jsonEdge["fromVertex"] = map.value(edge.fromVertex, -1);
+        jsonEdge["toVertex"] = map.value(edge.toVertex, -1);
         jsonEdge["toInput"] = edge.toInput;
         jsonEdges.append(jsonEdge);
     }
@@ -510,21 +510,22 @@ QJsonObject Model::serialize() {
 void Model::deserialize(Context *context, Registry *registry, const QJsonObject &data) {
     //TODO: needs error handling
 
-    QMap<QString, VideoNode *> addedVertices;
-    QJsonObject jsonVertices = data["vertices"].toObject();
-    for (auto vertexName : jsonVertices.keys()) {
-        VideoNode *vertex = registry->deserialize(context, jsonVertices.value(vertexName).toObject());
+    QList<VideoNode *> addedVertices;
+    QJsonArray jsonVertices = data["vertices"].toArray();
+    for (auto _jsonVertex : jsonVertices) {
+        QJsonObject jsonVertex = _jsonVertex.toObject();
+        VideoNode *vertex = registry->deserialize(context, jsonVertex);
         if (vertex != nullptr) {
             addVideoNode(vertex);
-            addedVertices.insert(vertexName, vertex);
         }
+        addedVertices.append(vertex);
     }
 
     QJsonArray jsonEdges = data["edges"].toArray();
     for (auto _jsonEdge : jsonEdges) {
         QJsonObject jsonEdge = _jsonEdge.toObject();
-        VideoNode *fromVertex = addedVertices.value(jsonEdge["fromVertex"].toString());
-        VideoNode *toVertex = addedVertices.value(jsonEdge["toVertex"].toString());
+        VideoNode *fromVertex = addedVertices.at(jsonEdge["fromVertex"].toInt());
+        VideoNode *toVertex = addedVertices.at(jsonEdge["toVertex"].toInt());
         int toInput = jsonEdge["toInput"].toInt();
         addEdge(fromVertex, toVertex, toInput);
     }
