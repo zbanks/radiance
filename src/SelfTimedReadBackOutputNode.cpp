@@ -1,9 +1,10 @@
 #include "SelfTimedReadBackOutputNode.h"
+#include "Context.h"
 
 SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec)
     : OutputNode(new SelfTimedReadBackOutputNodePrivate(context, chainSize)) {
 
-    d()->m_workerContext = new OpenGLWorkerContext();
+    d()->m_workerContext = new OpenGLWorkerContext(context->threaded());
     d()->m_worker = QSharedPointer<STRBONOpenGLWorker>(new STRBONOpenGLWorker(*this), &QObject::deleteLater);
     connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
 
@@ -120,6 +121,7 @@ QSharedPointer<QOpenGLShaderProgram> STRBONOpenGLWorker::loadBlitShader() {
 
 void STRBONOpenGLWorker::initialize(QSize size) {
     makeCurrent();
+    Q_ASSERT(QThread::currentThread() == thread());
     m_shader = loadBlitShader();
     if (m_shader.isNull()) return;
 
@@ -157,10 +159,11 @@ void STRBONOpenGLWorker::stop() {
         qWarning() << "Node not ready, ignoring start";
         return;
     }
-    m_timer->start();
+    m_timer->stop();
 }
 
 void STRBONOpenGLWorker::onTimeout() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto d = m_p.toStrongRef();
     if (d.isNull()) return; // SelfTimedReadBackOutputNode was deleted
     SelfTimedReadBackOutputNode p(d);

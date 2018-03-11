@@ -10,10 +10,15 @@ Context::Context(bool threaded)
     , m_timebase(nullptr)
     , m_openGLWorkerContext(nullptr)
 {
+    m_threaded = threaded;
     m_openGLWorkerContext = new OpenGLWorkerContext(threaded);
 
     m_timebase = new Timebase();
     m_audio = new Audio(m_timebase);
+}
+
+bool Context::threaded() {
+    return m_threaded;
 }
 
 Audio *Context::audio() {
