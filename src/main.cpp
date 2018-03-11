@@ -211,6 +211,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
 
         QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
         ffmpegNode->setFFmpegArguments({outputDir.filePath(gifFilename)});
+        ffmpegNode->setFps(0);
         ffmpegNode->setRecording(true);
 
         // Render 101 frames
@@ -232,7 +233,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                     img.save(filename);
                 }
             }
-            ffmpegNode->recordFrame();
+            ffmpegNode->force();
         }
 
         // Reset state
