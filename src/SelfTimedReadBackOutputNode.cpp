@@ -41,21 +41,25 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(QSharedPointer<SelfTime
 }
 
 void SelfTimedReadBackOutputNode::start() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "start");
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::stop() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "stop");
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::setInterval(long msec) {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "setInterval", Q_ARG(long, msec));
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::force() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "onTimeout");
     Q_ASSERT(result);
 }
@@ -83,6 +87,7 @@ STRBONOpenGLWorker::STRBONOpenGLWorker(SelfTimedReadBackOutputNode p)
 }
 
 QSharedPointer<QOpenGLShaderProgram> STRBONOpenGLWorker::loadBlitShader() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto vertexString = QString{
         "#version 150\n"
         "out vec2 uv;\n"
@@ -120,8 +125,9 @@ QSharedPointer<QOpenGLShaderProgram> STRBONOpenGLWorker::loadBlitShader() {
 }
 
 void STRBONOpenGLWorker::initialize(QSize size) {
-    makeCurrent();
     Q_ASSERT(QThread::currentThread() == thread());
+
+    makeCurrent();
     m_shader = loadBlitShader();
     if (m_shader.isNull()) return;
 
@@ -139,24 +145,29 @@ void STRBONOpenGLWorker::initialize(QSize size) {
 }
 
 void STRBONOpenGLWorker::setInterval(long msec) {
+    Q_ASSERT(QThread::currentThread() == thread());
     if (m_timer == nullptr) {
         qWarning() << "Node not ready, ignoring setInterval";
         return;
     }
+
     m_timer->setInterval(msec);
 }
 
 void STRBONOpenGLWorker::start() {
+    Q_ASSERT(QThread::currentThread() == thread());
     if (m_timer == nullptr) {
         qWarning() << "Node not ready, ignoring start";
         return;
     }
+
     m_timer->start();
 }
 
 void STRBONOpenGLWorker::stop() {
+    Q_ASSERT(QThread::currentThread() == thread());
     if (m_timer == nullptr) {
-        qWarning() << "Node not ready, ignoring start";
+        qWarning() << "Node not ready, ignoring stop";
         return;
     }
     m_timer->stop();
