@@ -112,7 +112,7 @@ void OutputWindow::initializeGL()
     auto fragmentString = QString{
         "#version 150\n"
         "uniform sampler2D iTexture;\n"
-        "varying vec2 uv;\n"
+        "in vec2 uv;\n"
         "out vec4 fragColor;\n"
         "void main() {\n"
         "   fragColor = vec4(texture(iTexture, uv).rgb, 1.);\n"
