@@ -1,9 +1,10 @@
 #include "SelfTimedReadBackOutputNode.h"
+#include "Context.h"
 
 SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec)
     : OutputNode(new SelfTimedReadBackOutputNodePrivate(context, chainSize)) {
 
-    d()->m_workerContext = new OpenGLWorkerContext();
+    d()->m_workerContext = new OpenGLWorkerContext(context->threaded());
     d()->m_worker = QSharedPointer<STRBONOpenGLWorker>(new STRBONOpenGLWorker(*this), &QObject::deleteLater);
     connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
 
@@ -82,6 +83,7 @@ STRBONOpenGLWorker::STRBONOpenGLWorker(SelfTimedReadBackOutputNode p)
 }
 
 QSharedPointer<QOpenGLShaderProgram> STRBONOpenGLWorker::loadBlitShader() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto vertexString = QString{
         "#version 150\n"
         "out vec2 uv;\n"
@@ -119,6 +121,8 @@ QSharedPointer<QOpenGLShaderProgram> STRBONOpenGLWorker::loadBlitShader() {
 }
 
 void STRBONOpenGLWorker::initialize(QSize size) {
+    Q_ASSERT(QThread::currentThread() == thread());
+
     makeCurrent();
     m_shader = loadBlitShader();
     if (m_shader.isNull()) return;
@@ -137,30 +141,36 @@ void STRBONOpenGLWorker::initialize(QSize size) {
 }
 
 void STRBONOpenGLWorker::setInterval(long msec) {
+    Q_ASSERT(QThread::currentThread() == thread());
     if (m_timer == nullptr) {
         qWarning() << "Node not ready, ignoring setInterval";
         return;
     }
+
     m_timer->setInterval(msec);
 }
 
 void STRBONOpenGLWorker::start() {
+    Q_ASSERT(QThread::currentThread() == thread());
     if (m_timer == nullptr) {
         qWarning() << "Node not ready, ignoring start";
         return;
     }
+
     m_timer->start();
 }
 
 void STRBONOpenGLWorker::stop() {
+    Q_ASSERT(QThread::currentThread() == thread());
     if (m_timer == nullptr) {
-        qWarning() << "Node not ready, ignoring start";
+        qWarning() << "Node not ready, ignoring stop";
         return;
     }
-    m_timer->start();
+    m_timer->stop();
 }
 
 void STRBONOpenGLWorker::onTimeout() {
+    Q_ASSERT(QThread::currentThread() == thread());
     auto d = m_p.toStrongRef();
     if (d.isNull()) return; // SelfTimedReadBackOutputNode was deleted
     SelfTimedReadBackOutputNode p(d);

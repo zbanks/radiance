@@ -10,6 +10,7 @@
 #include <array>
 #include <QJsonObject>
 #include "Paths.h"
+#include "Context.h"
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
 
@@ -21,7 +22,7 @@ const float MovieNode::zoomFactor = 16. / 21.;
 MovieNode::MovieNode(Context *context, QString file, QString name)
     : VideoNode(new MovieNodePrivate(context))
 {
-    d()->m_openGLWorkerContext = new OpenGLWorkerContext();
+    d()->m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
     d()->m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(*this), &QObject::deleteLater);
     connect(d()->m_openGLWorker.data(), &QObject::destroyed, d()->m_openGLWorkerContext, &QObject::deleteLater);
 
