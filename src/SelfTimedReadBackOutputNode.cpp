@@ -41,25 +41,21 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(QSharedPointer<SelfTime
 }
 
 void SelfTimedReadBackOutputNode::start() {
-    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "start");
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::stop() {
-    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "stop");
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::setInterval(long msec) {
-    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "setInterval", Q_ARG(long, msec));
     Q_ASSERT(result);
 }
 
 void SelfTimedReadBackOutputNode::force() {
-    Q_ASSERT(QThread::currentThread() == thread());
     auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "onTimeout");
     Q_ASSERT(result);
 }
