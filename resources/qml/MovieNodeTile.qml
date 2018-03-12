@@ -7,11 +7,24 @@ import radiance 1.0
 VideoNodeTile {
     id: tile;
 
+    normalHeight: 300;
+    normalWidth: 200;
+
+    function setFactorSelector() {
+        for(var i = 0; i < factorSelector.model.count; ++i) {
+            if (factorSelector.model.get(i).value == videoNode.factor) {
+                factorSelector.currentIndex = i;
+            }
+        }
+    }
+
     onVideoNodeChanged: {
         mutedCheck.checked = videoNode.mute;
         pausedCheck.checked = videoNode.pause;
+        setFactorSelector();
         videoNode.mute = Qt.binding(function() { return mutedCheck.checked });
         videoNode.pause = Qt.binding(function() { return pausedCheck.checked });
+        videoNode.factor = Qt.binding(function() { return factorSelector.model.get(factorSelector.currentIndex).value });
     }
 
     Connections {
@@ -21,6 +34,9 @@ VideoNodeTile {
         }
         onPauseChanged: {
             pausedCheck.checked = pause;
+        }
+        onFactorChanged: {
+            setFactorSelector();
         }
     }
 
@@ -49,6 +65,19 @@ VideoNodeTile {
                 id: vnr;
                 previewAdapter: Globals.previewAdapter;
                 videoNode: tile.videoNode;
+            }
+        }
+
+        ComboBox {
+            id: factorSelector;
+            Layout.fillWidth: true
+            model: ListModel {
+                ListElement { text: "Crop"; value: MovieNode.Crop }
+                ListElement { text: "Shrink"; value: MovieNode.Shrink }
+                ListElement { text: "Zoom"; value: MovieNode.Zoom }
+            }
+            onCurrentIndexChanged: {
+                videoNode.factor = model.get(currentIndex).value;
             }
         }
 
