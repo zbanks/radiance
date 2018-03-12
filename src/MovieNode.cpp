@@ -14,6 +14,11 @@
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
 
+// This zoom factor eliminates top / bottom black bars
+// on videos that are recorded in 21:9 aspect
+// and letterboxed to 16:9
+const float MovieNode::zoomFactor = 16. / 21.;
+
 MovieNode::MovieNode(Context *context, QString file, QString name)
     : VideoNode(new MovieNodePrivate(context))
 {
@@ -110,6 +115,11 @@ bool MovieNode::mute() {
 bool MovieNode::pause() {
     QMutexLocker locker(&d()->m_stateLock);
     return d()->m_pause;
+}
+
+enum MovieNode::Factor MovieNode::factor() {
+    QMutexLocker locker(&d()->m_stateLock);
+    return d()->m_factor;
 }
 
 void MovieNode::onVideoSizeChanged(QSize size) {
@@ -226,6 +236,15 @@ void MovieNode::setPause(bool pause) {
     QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "setPause", Qt::QueuedConnection, Q_ARG(bool, pause));
 }
 
+void MovieNode::setFactor(enum Factor factor) {
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        if (d()->m_factor == factor) return;
+        d()->m_factor = factor;
+    }
+    emit factorChanged(factor);
+}
+
 static void *get_proc_address(void *ctx, const char *name) {
     Q_UNUSED(ctx);
     QOpenGLContext *glctx = QOpenGLContext::currentContext();
@@ -236,6 +255,7 @@ static void *get_proc_address(void *ctx, const char *name) {
 
 GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     GLuint outTexture = inputTextures.at(0);
+    enum Factor f;
 
     QSharedPointer<MovieNodeRenderState> renderState;
     {
@@ -250,6 +270,7 @@ GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
             return outTexture;
         }
         renderState = d()->m_renderStates[chain];
+        f = d()->m_factor;
     }
 
     auto renderFbo = renderState->m_output;
@@ -284,9 +305,27 @@ GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 
             blitShader->setUniformValue("iVideoFrame", 0);
-            blitShader->setUniformValue("iResolution", GLfloat(renderFbo->width()), GLfloat(renderFbo->height()));
 
-            blitShader->setUniformValue("iVideoResolution", GLfloat(fboi->width()), GLfloat(fboi->height()));
+            auto factorFitX = (float)fboi->height() * renderFbo->width() / fboi->width() / renderFbo->height();
+            auto factorFitY = (float)fboi->width() * renderFbo->height() / fboi->height() / renderFbo->width();
+
+            switch(f) {
+                case Shrink:
+                    factorFitX = qMax(factorFitX, 1.f);
+                    factorFitY = qMax(factorFitY, 1.f);
+                    break;
+                case Zoom:
+                    factorFitX = factorFitX * zoomFactor;
+                    factorFitY = zoomFactor;
+                    break;
+                case Crop:
+                default:
+                    factorFitX = qMin(factorFitX, 1.f);
+                    factorFitY = qMin(factorFitY, 1.f);
+                    break;
+            }
+            blitShader->setUniformValue("iFactor", GLfloat(factorFitX), GLfloat(factorFitY));
+
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             renderFbo->release();
             outTexture = renderFbo->texture();
@@ -605,14 +644,11 @@ QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader() {
     auto fragmentString = QString{
         "#version 150\n"
         "uniform sampler2D iVideoFrame;\n"
-        "uniform vec2 iResolution;\n"
-        "uniform vec2 iVideoResolution;\n"
+        "uniform vec2 iFactor;\n"
         "in vec2 uv;\n"
         "out vec4 fragColor;\n"
         "void main() {\n"
-        "    vec2 factorFit = iVideoResolution.yx * iResolution.xy / iVideoResolution.xy / iResolution.yx;\n"
-        "    vec2 factor = min(factorFit, 1.);\n"
-        "    vec2 texUV = (uv - 0.5) * factor + 0.5;\n"
+        "    vec2 texUV = (uv - 0.5) * iFactor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
         "    fragColor = texture(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
         "}\n"};

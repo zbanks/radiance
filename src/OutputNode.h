@@ -24,6 +24,7 @@ public:
     GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
     GLuint render();
     GLuint render(WeakModel model);
+    void resize(QSize size);
 
     Chain chain();
 

@@ -56,8 +56,22 @@ GLuint OutputNode::render(WeakModel model) {
 }
 
 Chain OutputNode::chain() {
-    // Don't need to lock as long as m_chain is immutable
+    QMutexLocker locker(&d()->m_stateLock);
     return d()->m_chain;
+}
+
+void OutputNode::resize(QSize size) {
+    Chain oldChain;
+    Chain newChain;
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        oldChain = d()->m_chain;
+        if (size == oldChain.size()) return;
+        newChain = Chain(oldChain, size);
+        d()->m_chain = newChain;
+    }
+    emit requestedChainAdded(newChain);
+    emit requestedChainRemoved(oldChain);
 }
 
 OutputNodePrivate::OutputNodePrivate(Context *context, QSize chainSize)
