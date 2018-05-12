@@ -9,11 +9,11 @@ Dialog {
     standardButtons: StandardButton.Ok | StandardButton.Cancel
 
     onAccepted: {
-        var vn = registry.deserialize(context, JSON.stringify({
+        var vn = registry.deserialize(context, {
             type: "MovieNode",
             file: textbox.text,
             name: textbox.text
-        }));
+        });
         if (vn) {
             graph.insertVideoNode(vn);
         } else {

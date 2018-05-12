@@ -44,12 +44,6 @@ template <class T> void Registry::registerType() {
     }
 }
 
-VideoNode *Registry::deserialize(Context *context, QString json) {
-    QJsonDocument d = QJsonDocument::fromJson(json.toUtf8());
-    QJsonObject o = d.object();
-    return deserialize(context, o);
-}
-
 VideoNode *Registry::deserialize(Context *context, QJsonObject object) {
     QString type = object.value("type").toString();
     if (type.isEmpty()) {

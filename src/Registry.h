@@ -33,7 +33,6 @@ public:
     Q_PROPERTY(Library *library READ library CONSTANT);
 
 public slots:
-    VideoNode *deserialize(Context *context, QString json);
     VideoNode *deserialize(Context *context, QJsonObject object);
     bool canCreateFromFile(QString filename);
     VideoNode *createFromFile(Context *context, QString filename);
