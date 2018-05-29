@@ -6,7 +6,7 @@
 #include "EffectNode.h"
 #include "ImageNode.h"
 
-#ifndef WITHOUT_MPV
+#ifdef USE_MPV
 #include "MovieNode.h"
 #endif
 
@@ -15,7 +15,7 @@
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
 
-#ifndef WITHOUT_LUX
+#ifdef USE_LUX
 #include "LuxOutputNode.h"
 #endif
 
@@ -24,14 +24,14 @@ Registry::Registry()
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
-#ifndef WITHOUT_MPV
+#ifdef USE_MPV
     registerType<MovieNode>();
 #endif
     registerType<ScreenOutputNode>();
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
-#ifndef WITHOUT_LUX
+#ifdef USE_LUX
     registerType<LuxOutputNode>();
 #endif
 
