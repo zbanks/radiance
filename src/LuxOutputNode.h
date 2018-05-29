@@ -37,12 +37,22 @@ public:
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
 
-private:
+    int fd();
+    void setFd(int fd);
+
+protected:
     LuxOutputNode(QSharedPointer<LuxOutputNodePrivate> other_ptr);
+
+    void reload();
+
+private:
     QSharedPointer<LuxOutputNodePrivate> d() const;
 };
 
 class LuxOutputNodePrivate : public SelfTimedReadBackOutputNodePrivate {
 public:
     LuxOutputNodePrivate(Context *context, QSize chainSize);
+    ~LuxOutputNodePrivate();
+
+    int m_fd;
 };
