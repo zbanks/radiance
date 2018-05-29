@@ -57,8 +57,10 @@ signals:
     void initialize();
     void frame(QSize size, QByteArray frame);
 
-private:
+protected:
     SelfTimedReadBackOutputNode(QSharedPointer<SelfTimedReadBackOutputNodePrivate> other_ptr);
+
+private:
     QSharedPointer<SelfTimedReadBackOutputNodePrivate> d() const;
 };
 

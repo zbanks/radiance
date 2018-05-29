@@ -32,10 +32,6 @@
 //#include "MovieNode.h"
 //#endif
 
-#ifdef USE_LUX
-#include "Lux.h"
-#endif
-
 #define IMG_FORMAT ".gif"
 
 static int
@@ -60,16 +56,7 @@ runRadianceGui(QGuiApplication *app) {
     bool hasMidi = false;
 #endif
     qmlRegisterType<GraphicalDisplay>("radiance", 1, 0, "GraphicalDisplay");
-
-#ifdef USE_LUX
-    qmlRegisterType<LuxBus>("radiance", 1, 0, "LuxBus");
-    qmlRegisterType<LuxDevice>("radiance", 1, 0, "LuxDevice");
-#else
-    qInfo() << "radiance compiled without lux support";
-#endif
-
     qmlRegisterType<BaseVideoNodeTile>("radiance", 1, 0, "BaseVideoNodeTile");
-
     qmlRegisterUncreatableType<Controls>("radiance", 1, 0, "Controls", "Controls cannot be instantiated");
     qRegisterMetaType<Controls::Control>("Controls::Control");
 

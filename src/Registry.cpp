@@ -5,22 +5,35 @@
 
 #include "EffectNode.h"
 #include "ImageNode.h"
+
+#ifndef WITHOUT_MPV
 #include "MovieNode.h"
+#endif
+
 #include "ScreenOutputNode.h"
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
+
+#ifndef WITHOUT_LUX
+#include "LuxOutputNode.h"
+#endif
 
 Registry::Registry()
     : m_library(nullptr) {
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
+#ifndef WITHOUT_MPV
     registerType<MovieNode>();
+#endif
     registerType<ScreenOutputNode>();
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
+#ifndef WITHOUT_LUX
+    registerType<LuxOutputNode>();
+#endif
 
     m_library = new Library(this);
     m_library->setParent(this);

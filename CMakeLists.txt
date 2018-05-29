@@ -101,7 +101,8 @@ if(NOT APPLE AND NOT WITHOUT_LUX)
     add_definitions( -DUSE_LUX )
     list(APPEND libradiance_SOURCES src/liblux/lux.c
                                     src/liblux/crc.c
-                                    src/Lux.cpp
+                                    src/LuxOutputNode.cpp
+                                    #src/Lux.cpp
     )
 endif()
 

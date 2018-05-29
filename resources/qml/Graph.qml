@@ -51,6 +51,7 @@ Item {
                     "ScreenOutputNode": "ScreenOutputNodeTile",
                     "FFmpegOutputNode": "FFmpegOutputNodeTile",
                     "PlaceholderNode": "PlaceholderNodeTile",
+                    "LuxOutputNode": "LuxOutputNodeTile",
                     "": "VideoNodeTile"
                 }
                 x: (parent.width - width) / 2
