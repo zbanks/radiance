@@ -5,6 +5,8 @@
 #include <QSettings>
 #include <QThread>
 #include <QList>
+#include <QSharedPointer>
+#include <QByteArray>
 #include <string>
 #include <vector>
 #include "VideoNode.h"
@@ -47,7 +49,7 @@ public:
     void setLength(int length);
 
     VideoNode * m_videoNode;
-    QVector<QColor> frame();
+    QByteArray frame(QSize size, QByteArray frame);
 
 public slots:
     void refresh();
@@ -97,8 +99,8 @@ public:
     void setUri(QString uri);
     State state();
 
-    void frame();
-    void detectDevices(QList<LuxDevice *> device_hints);
+    void frame(QSize size, QByteArray frame);
+    void detectDevices(QList<QSharedPointer<LuxDevice>> devices);
 
 public Q_SLOTS:
     void refresh();
@@ -110,6 +112,6 @@ signals:
 private:
     State m_state;
     QString m_uri;
-    QList<LuxDevice *> m_devices;
+    QList<QSharedPointer<LuxDevice>> m_devices;
     int m_fd;
 };

@@ -102,7 +102,7 @@ if(NOT APPLE AND NOT WITHOUT_LUX)
     list(APPEND libradiance_SOURCES src/liblux/lux.c
                                     src/liblux/crc.c
                                     src/LuxOutputNode.cpp
-                                    #src/Lux.cpp
+                                    src/Lux.cpp
     )
 endif()
 

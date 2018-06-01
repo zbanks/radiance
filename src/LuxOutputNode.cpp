@@ -1,6 +1,10 @@
 #include "LuxOutputNode.h"
+#include "Lux.h"
 #include "liblux/lux.h"
 #include <QMutexLocker>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 LuxOutputNode::LuxOutputNode(Context *context, QSize chainSize)
     : SelfTimedReadBackOutputNode(context, chainSize, 10) {
@@ -15,59 +19,42 @@ LuxOutputNode::LuxOutputNode(const LuxOutputNode &other)
     : SelfTimedReadBackOutputNode(other) {
 }
 
-int LuxOutputNode::fd() {
+void LuxOutputNode::setDevices(QList<QSharedPointer<LuxDevice>> devices) {
+    // XXX Is this really sufficient?
     QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_fd;
+    d()->m_devices = devices;
 }
 
-void LuxOutputNode::setFd(int fd) {
+QList<QSharedPointer<LuxDevice>> LuxOutputNode::devices() {
+    // XXX Is this really sufficient?
     QMutexLocker locker(&d()->m_stateLock);
-    d()->m_fd = fd;
+    return d()->m_devices;
+}
+
+void LuxOutputNode::setBuses(QList<QSharedPointer<LuxBus>> buses) {
+    // XXX Is this really sufficient?
+    QMutexLocker locker(&d()->m_stateLock);
+    d()->m_buses = buses;
+}
+
+QList<QSharedPointer<LuxBus>> LuxOutputNode::buses() {
+    // XXX Is this really sufficient?
+    QMutexLocker locker(&d()->m_stateLock);
+    return d()->m_buses;
 }
 
 void LuxOutputNode::reload() {
     qDebug() << "Attempting lux open";
-    const char lux_uri[] = "serial:///dev/ttyACM0";
-    Q_UNUSED(lux_uri);
-    int lux_fd = lux_uri_open(lux_uri);
-    if (lux_fd < 0) {
-        qDebug() << QString("Could not open lux uri \"%1\"").arg(lux_uri);
-        emit fatal(QString("Could not open lux uri \"%1\"").arg(lux_uri));
-        return;
+    for (auto bus : buses()) {
+        bus->refresh();
+        bus->detectDevices(devices());
     }
-    setFd(lux_fd);
     qDebug() << "Lux opened.";
 }
 
 void LuxOutputNode::onFrame(QSize size, QByteArray frame) {
-    int lux_fd = fd();
-    if (lux_fd < 0) return;
-
-    // Compute the frame
-    QByteArray strip(50, 0);
-    for (int i=0; i<50; i++) {
-        double x = 0.5;
-        double y = (double)i / 49.;
-
-        int col = qMax(qMin(qRound(x * size.width()), size.width() - 1), 0);
-        int row = qMax(qMin(qRound(y * size.height()), size.height() - 1), 0);
-        int pixel = 4 * (row * size.height() + col);
-        strip[3 * i + 0] = frame[pixel + 1];
-        strip[3 * i + 1] = frame[pixel + 0];
-        strip[3 * i + 2] = frame[pixel + 2];
-    }
-
-    // Now we have the frame, so send it
-    struct lux_packet packet;
-    packet.destination = 1; // send to id 1
-    packet.command = LUX_CMD_FRAME;
-    packet.index = 0;
-    packet.payload_length = strip.size();
-    uint8_t * payload = packet.payload;
-    for (auto c : strip) *payload++ = c;
-    int rc = lux_write(lux_fd, &packet, (enum lux_flags) 0);
-    if (rc != 0) {
-        qDebug() << "lux_strip_frame returned" << rc;
+    for (auto bus : buses()) {
+        bus->frame(size, frame);
     }
 }
 
@@ -75,17 +62,93 @@ QString LuxOutputNode::typeName() {
     return "LuxOutputNode";
 }
 
+QPolygonF deserializePolygon(QJsonArray arr) {
+    QPolygonF polygon;
+    for (auto _xy : arr) {
+        QJsonArray xy = _xy.toArray();
+        polygon << QPointF(xy[0].toDouble(), xy[1].toDouble());
+    }
+    return polygon;
+}
+
+QJsonArray serializePolygon(QPolygonF polygon) {
+    QJsonArray arr;
+    for (auto xy : polygon) {
+        QJsonArray jsonPoint;
+        jsonPoint << xy.x() << xy.y();
+        arr << jsonPoint;
+    }
+    return arr;
+}
+
+QJsonObject LuxOutputNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+
+    QJsonArray jsonBuses;
+    for (auto bus : buses()) {
+        jsonBuses << bus->uri();
+    }
+    o.insert("buses", jsonBuses);
+
+    QJsonArray jsonDevices;
+    for (auto device : devices()) {
+        QJsonObject jsonDevice;
+        jsonDevice.insert("name", device->name());
+        jsonDevice.insert("lux_id", (int) device->luxId());
+        jsonDevice.insert("length", device->length());
+        jsonDevice.insert("polygon", serializePolygon(device->polygon()));
+        jsonDevices << jsonDevice;
+    }
+    o.insert("devices", jsonDevices);
+    return o;
+}
+
 VideoNode *LuxOutputNode::deserialize(Context *context, QJsonObject obj) {
+    // TODO: error handling
+    QList<QSharedPointer<LuxBus>> busList;
+    QJsonArray jsonBuses = obj["buses"].toArray();
+    for (auto jsonBus : jsonBuses) {
+        QString busUri = jsonBus.toString();
+        QSharedPointer<LuxBus> bus = QSharedPointer<LuxBus>::create();
+        bus->setUri(busUri);
+        busList << bus;
+    }
+
+    QList<QSharedPointer<LuxDevice>> deviceList;
+    QJsonArray jsonDevices = obj["devices"].toArray();
+    for (auto _jsonDevice : jsonDevices) {
+        QJsonObject jsonDevice = _jsonDevice.toObject();
+        QSharedPointer<LuxDevice> device = QSharedPointer<LuxDevice>::create();
+        device->setType(LuxDevice::Type::Strip);
+        device->setName(jsonDevice["name"].toString());
+        device->setLuxId(jsonDevice["lux_id"].toInt());
+        device->setLength(jsonDevice["length"].toInt());
+        device->setPolygon(deserializePolygon(jsonDevice["polygon"].toArray()));
+        deviceList << device;
+    }
+
     LuxOutputNode *e = new LuxOutputNode(context, QSize(100, 100));
+    e->setDevices(deviceList);
+    e->setBuses(busList);
+    e->reload();
+
+
     return e;
 }
 
 bool LuxOutputNode::canCreateFromFile(QString filename) {
-    return false;
+    return filename.endsWith(".lux.json");
 }
 
 VideoNode *LuxOutputNode::fromFile(Context *context, QString filename) {
-    return nullptr;
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Unable to open file for reading:" << filename;
+        return nullptr;
+    }
+    QByteArray data = file.readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    return deserialize(context, doc.object());
 }
 
 QMap<QString, QString> LuxOutputNode::customInstantiators() {
@@ -109,15 +172,10 @@ LuxOutputNode::LuxOutputNode(QSharedPointer<LuxOutputNodePrivate> other_ptr)
 
 LuxOutputNodePrivate::LuxOutputNodePrivate(Context *context, QSize chainSize)
     : SelfTimedReadBackOutputNodePrivate(context, chainSize)
-    , m_fd(-1)
+    , m_devices()
+    , m_buses()
 {
 }
 
 LuxOutputNodePrivate::~LuxOutputNodePrivate() {
-    // TODO RAII
-    if (m_fd >= 0) {
-        lux_close(m_fd);
-        qDebug() << "Lux closed.";
-        m_fd = -1;
-    }
 }

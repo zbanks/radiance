@@ -28,17 +28,15 @@ static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
     return length;
 }
 
-static int lux_strip_frame (int fd, uint32_t lux_id, QVector<QColor> data) {
+static int lux_strip_frame (int fd, uint32_t lux_id, QByteArray data) {
     struct lux_packet packet;
     packet.destination = lux_id;
     packet.command = LUX_CMD_FRAME;
     packet.index = 0;
-    packet.payload_length = data.size() * 3;
+    packet.payload_length = data.size();
     uint8_t * payload = packet.payload;
     for (auto c : data) {
-        *payload++ = c.red();
-        *payload++ = c.green();
-        *payload++ = c.blue();
+        *payload++ = c;
     }
     return lux_write(fd, &packet, (enum lux_flags) 0);
 }
@@ -158,10 +156,18 @@ void LuxDevice::setBus(LuxBus * bus, bool blind) {
     emit stateChanged(m_state);
 }
 
-QVector<QColor> LuxDevice::frame() {
-    //if (m_videoNode == nullptr)
-        return QVector<QColor>();
-    //return m_videoNode->pixels(m_videoNode->context()->outputFboIndex(), m_pixels); // TODO put this back
+QByteArray LuxDevice::frame(QSize size, QByteArray frame) {
+    QByteArray output(length() * 3, 0);
+    int i = 0;
+    for (auto pixel : m_pixels) {
+        int col = qMax(qMin(qRound(pixel.x() * size.width()), size.width() - 1), 0);
+        int row = qMax(qMin(qRound(pixel.y() * size.height()), size.height() - 1), 0);
+        int px = 4 * (row * size.height() + col);
+        output[i++] = frame[px + 1];
+        output[i++] = frame[px + 0];
+        output[i++] = frame[px + 2];
+    }
+    return output;
 }
 void LuxDevice::refresh() {
 }
@@ -218,7 +224,7 @@ void LuxBus::saveSettings(QSettings * settings) {
 void LuxBus::refresh() {
     auto it = m_devices.begin();
     while (it != m_devices.end()) {
-        LuxDevice * dev = *it;
+        QSharedPointer<LuxDevice> dev = *it;
         if (dev->state() == LuxDevice::State::Disconnected ||
             dev->state() == LuxDevice::State::Error) {
             dev->setBus(nullptr);
@@ -229,12 +235,12 @@ void LuxBus::refresh() {
     }
 }
 
-void LuxBus::frame() {
+void LuxBus::frame(QSize size, QByteArray frame) {
     if (m_state != State::Connected)
         return;
 
     for (auto dev : m_devices) {
-        int rc = lux_strip_frame(m_fd, dev->luxId(), dev->frame());
+        int rc = lux_strip_frame(m_fd, dev->luxId(), dev->frame(size, frame));
         if (rc != 0) {
             m_state = State::Error;
             emit stateChanged(m_state);
@@ -242,10 +248,10 @@ void LuxBus::frame() {
     }
 }
 
-void LuxBus::detectDevices(QList<LuxDevice *> device_hints) {
+void LuxBus::detectDevices(QList<QSharedPointer<LuxDevice>> devices) {
     if (m_state != State::Connected)
         return;
-    for (auto dev : device_hints) {
+    for (auto dev : devices) {
         if (dev->state() == LuxDevice::State::Connected ||
             dev->state() == LuxDevice::State::Blind) 
             continue;

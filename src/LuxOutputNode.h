@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SelfTimedReadBackOutputNode.h"
+#include "Lux.h"
 
 class LuxOutputNodePrivate;
 
@@ -13,6 +14,7 @@ public:
     LuxOutputNode(const LuxOutputNode &other);
     LuxOutputNode *clone() const override;
     void onFrame(QSize size, QByteArray frame);
+    QJsonObject serialize() override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -23,6 +25,7 @@ public:
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
     static VideoNode *deserialize(Context *context, QJsonObject obj);
+    
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -37,8 +40,10 @@ public:
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
 
-    int fd();
-    void setFd(int fd);
+    void setDevices(QList<QSharedPointer<LuxDevice>> devices);
+    QList<QSharedPointer<LuxDevice>> devices();
+    void setBuses(QList<QSharedPointer<LuxBus>> buses);
+    QList<QSharedPointer<LuxBus>> buses();
 
 protected:
     LuxOutputNode(QSharedPointer<LuxOutputNodePrivate> other_ptr);
@@ -54,5 +59,6 @@ public:
     LuxOutputNodePrivate(Context *context, QSize chainSize);
     ~LuxOutputNodePrivate();
 
-    int m_fd;
+    QList<QSharedPointer<LuxDevice>> m_devices;
+    QList<QSharedPointer<LuxBus>> m_buses;
 };
