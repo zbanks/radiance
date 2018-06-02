@@ -2,6 +2,7 @@
 
 #include "SelfTimedReadBackOutputNode.h"
 #include "Lux.h"
+#include <QSharedPointer>
 
 class LuxOutputNodePrivate;
 

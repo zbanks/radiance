@@ -100,6 +100,7 @@ int LuxDevice::length() {
 }
 void LuxDevice::setLength(int length) {
     m_length = length;
+    arrangePixels();
     emit lengthChanged(m_length);
 }
 void LuxDevice::loadSettings(QSettings * settings) {
@@ -142,7 +143,8 @@ void LuxDevice::arrangePixels() {
         while (pixel_idx * scale_per_pixel <= cumulative_scale + scale) {
             if (pixel_idx >= m_length) break;
             qreal alpha = (pixel_idx * scale_per_pixel - cumulative_scale) / scale;
-            m_pixels[pixel_idx++] = alpha * m_polygon.at(i) + (1.0 - alpha) * m_polygon.at(i-1);
+            m_pixels << alpha * m_polygon.at(i) + (1.0 - alpha) * m_polygon.at(i-1);
+            pixel_idx++;
         }
         cumulative_scale += scale;
     }
@@ -261,5 +263,6 @@ void LuxBus::detectDevices(QList<QSharedPointer<LuxDevice>> devices) {
 
         dev->setLength(length);
         dev->setBus(this);
+        m_devices << dev;
     }
 }

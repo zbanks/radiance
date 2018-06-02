@@ -7,7 +7,7 @@
 #include <QJsonObject>
 
 LuxOutputNode::LuxOutputNode(Context *context, QSize chainSize)
-    : SelfTimedReadBackOutputNode(context, chainSize, 10) {
+    : SelfTimedReadBackOutputNode(context, chainSize, new LuxOutputNodePrivate(context, chainSize), 10) {
 
     connect(this, &SelfTimedReadBackOutputNode::frame, this, &LuxOutputNode::onFrame, Qt::DirectConnection);
 
@@ -20,25 +20,23 @@ LuxOutputNode::LuxOutputNode(const LuxOutputNode &other)
 }
 
 void LuxOutputNode::setDevices(QList<QSharedPointer<LuxDevice>> devices) {
-    // XXX Is this really sufficient?
     QMutexLocker locker(&d()->m_stateLock);
-    d()->m_devices = devices;
+    d()->m_devices.clear();
+    d()->m_devices << devices;
 }
 
 QList<QSharedPointer<LuxDevice>> LuxOutputNode::devices() {
-    // XXX Is this really sufficient?
     QMutexLocker locker(&d()->m_stateLock);
     return d()->m_devices;
 }
 
 void LuxOutputNode::setBuses(QList<QSharedPointer<LuxBus>> buses) {
-    // XXX Is this really sufficient?
     QMutexLocker locker(&d()->m_stateLock);
-    d()->m_buses = buses;
+    d()->m_buses.clear();
+    d()->m_buses << buses;
 }
 
 QList<QSharedPointer<LuxBus>> LuxOutputNode::buses() {
-    // XXX Is this really sufficient?
     QMutexLocker locker(&d()->m_stateLock);
     return d()->m_buses;
 }
@@ -105,7 +103,7 @@ QJsonObject LuxOutputNode::serialize() {
 
 VideoNode *LuxOutputNode::deserialize(Context *context, QJsonObject obj) {
     // TODO: error handling
-    QList<QSharedPointer<LuxBus>> busList;
+    QList<QSharedPointer<LuxBus>> busList{};
     QJsonArray jsonBuses = obj["buses"].toArray();
     for (auto jsonBus : jsonBuses) {
         QString busUri = jsonBus.toString();
@@ -114,7 +112,7 @@ VideoNode *LuxOutputNode::deserialize(Context *context, QJsonObject obj) {
         busList << bus;
     }
 
-    QList<QSharedPointer<LuxDevice>> deviceList;
+    QList<QSharedPointer<LuxDevice>> deviceList{};
     QJsonArray jsonDevices = obj["devices"].toArray();
     for (auto _jsonDevice : jsonDevices) {
         QJsonObject jsonDevice = _jsonDevice.toObject();
@@ -125,13 +123,13 @@ VideoNode *LuxOutputNode::deserialize(Context *context, QJsonObject obj) {
         device->setLength(jsonDevice["length"].toInt());
         device->setPolygon(deserializePolygon(jsonDevice["polygon"].toArray()));
         deviceList << device;
+        qInfo() << "loaded:" << device;
     }
 
     LuxOutputNode *e = new LuxOutputNode(context, QSize(100, 100));
     e->setDevices(deviceList);
     e->setBuses(busList);
     e->reload();
-
 
     return e;
 }
@@ -172,8 +170,6 @@ LuxOutputNode::LuxOutputNode(QSharedPointer<LuxOutputNodePrivate> other_ptr)
 
 LuxOutputNodePrivate::LuxOutputNodePrivate(Context *context, QSize chainSize)
     : SelfTimedReadBackOutputNodePrivate(context, chainSize)
-    , m_devices()
-    , m_buses()
 {
 }
 

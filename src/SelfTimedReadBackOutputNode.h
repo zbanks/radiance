@@ -46,6 +46,7 @@ public:
     SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec=0);
     SelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other);
     SelfTimedReadBackOutputNode *clone() const override;
+    SelfTimedReadBackOutputNode(Context *context, QSize chainSize, SelfTimedReadBackOutputNodePrivate *ptr, long msec=0);
 
 public slots:
     void start();

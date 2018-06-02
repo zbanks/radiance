@@ -22,6 +22,28 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize
     }
 }
 
+SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize chainSize, SelfTimedReadBackOutputNodePrivate *ptr, long msec)
+    : OutputNode(ptr) {
+    // TODO: refactor these two constructors
+
+    d()->m_workerContext = new OpenGLWorkerContext(context->threaded());
+    d()->m_worker = QSharedPointer<STRBONOpenGLWorker>(new STRBONOpenGLWorker(*this), &QObject::deleteLater);
+    connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
+
+    d()->m_chain.moveToWorkerContext(d()->m_workerContext);
+
+    connect(d()->m_worker.data(), &STRBONOpenGLWorker::initialized, this, &SelfTimedReadBackOutputNode::initialize, Qt::DirectConnection);
+    connect(d()->m_worker.data(), &STRBONOpenGLWorker::frame, this, &SelfTimedReadBackOutputNode::frame, Qt::DirectConnection);
+
+    {
+        auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize", Q_ARG(QSize, chainSize));
+        Q_ASSERT(result);
+    }
+    if (msec != 0) {
+        setInterval(msec);
+    }
+}
+
 SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(const SelfTimedReadBackOutputNode &other)
     : OutputNode(other)
 {
