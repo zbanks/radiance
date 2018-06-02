@@ -1,0 +1,17 @@
+{
+    "buses": [
+        "serial:///dev/ttyACM0",
+        "serial:///dev/ttyACM1"
+    ],
+    "devices": [
+        {
+            "length": 50,
+            "lux_id": 6,
+            "name": "strip_1",
+            "polygon": [
+                [ 0, 0 ],
+                [ 1, 1 ]
+            ]
+        }
+    ]
+}
