@@ -22,10 +22,10 @@ VideoNodeTile {
     Connections {
         target: videoNode
         onIntensityChanged: {
-            slider.value = intensity;
+            slider.value = videoNode.intensity;
         }
         onFrequencyChanged: {
-            frequencyCombo.currentIndex = frequencyCombo.find(frequency + "");
+            frequencyCombo.currentIndex = frequencyCombo.find(videoNode.frequency + "");
         }
     }
 

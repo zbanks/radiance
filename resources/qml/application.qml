@@ -125,6 +125,11 @@ ApplicationWindow {
                 editable: true
                 model: ["gui", "cli"]
             }
+            AutoDJ {
+                context: defaultContext
+                model: model
+                registry: registry
+            }
         }
 
         Item {

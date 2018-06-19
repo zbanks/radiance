@@ -2,9 +2,9 @@ import QtQuick 2.3
 
 QtObject {
     Component.onCompleted: {
-        var vn = registry.deserialize(context, JSON.stringify({
+        var vn = registry.deserialize(context, {
             type: "ConsoleOutputNode"
-        }));
+        });
         if (vn) {
             graph.insertVideoNode(vn);
         } else {
