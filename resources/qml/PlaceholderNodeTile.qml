@@ -15,7 +15,7 @@ VideoNodeTile {
         RowLayout {
             Label {
                 Layout.fillWidth: true;
-                text: "CLI Placeholder";
+                text: "Placeholder";
                 color: "#ddd";
                 elide: Text.ElideRight;
             }
@@ -37,6 +37,7 @@ VideoNodeTile {
             }
         }
 
+        /*
         ComboBox {
             Layout.fillWidth: true;
             id: inputCountSelector;
@@ -47,5 +48,6 @@ VideoNodeTile {
                 tile.videoNode.inputCount = inputCountSelector.currentIndex + 1;
             }
         }
+        */
     }
 }

@@ -11,10 +11,20 @@ RowLayout {
     property var registry;
 
     property var choices: [
+        // Base: something that has color and form
         ["cyan", "dwwave", "fire", "heart", "pink", "purple", "wave", "wwave", "yellow", "vu", "oscope"],
-        ["edge", "crt", "delace", "depolar", "droste", "flippy", "fractalzoom", "glitch", "halftone", "kaleidoscope", "lathe", "litebrite", "lorenz", "polygon"],
-        ["fly", "cube", "tunnel", "warble"],
-        ["foh", "pixelate", "posterize", "melt", "life", "sethue", "greenaway", "scramble", "smoky", "speckle", "stripey", "chansep"]
+
+        // Intensitfy: add distortions and high-pass
+        ["edge", "pixelate", "delace", "depolar", "droste", "flippy", "fractalzoom", "glitch", "halftone", "kaleidoscope", "lathe", "litebrite", "lorenz", "polygon", "uvmapself", "strange"],
+
+        // Colorize
+        ["sethue", "greenaway", "smoky", "chansep", "threedee", "yuvposter", "yuvrot", "yuvsat"],
+
+        // Motion
+        ["fly", "tunnel", "warble", "fractalzoom", "life", "scramble", "tesselate", "id", "id", "id"],
+
+        // Low-pass
+        ["zoh", "foh", "lpf", "diodelpf", "crt", "posterize", "melt", "life", "smoky", "speckle", "stripey"]
     ];
 
     function makeVideoNode(index) {
