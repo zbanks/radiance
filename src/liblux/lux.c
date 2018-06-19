@@ -279,6 +279,9 @@ static int lowlevel_write(int fd, uint8_t* data, int len) {
 
     while(len > 0) {
         n_written = write(fd, data, len);
+        if (n_written < 0) {
+            return -1;
+        }
 
         len -= n_written;
         data += n_written;

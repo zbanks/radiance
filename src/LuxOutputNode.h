@@ -9,6 +9,8 @@ class LuxOutputNodePrivate;
 class LuxOutputNode
     : public SelfTimedReadBackOutputNode {
     Q_OBJECT
+    Q_PROPERTY(int totalDeviceCount READ totalDeviceCount NOTIFY totalDeviceCountChanged)
+    Q_PROPERTY(int activeDeviceCount READ activeDeviceCount NOTIFY activeDeviceCountChanged)
 
 public:
     LuxOutputNode(Context *context, QSize chainSize);
@@ -43,13 +45,21 @@ public:
 
     void setDevices(QList<QSharedPointer<LuxDevice>> devices);
     QList<QSharedPointer<LuxDevice>> devices();
+
     void setBuses(QList<QSharedPointer<LuxBus>> buses);
     QList<QSharedPointer<LuxBus>> buses();
+
+    Q_INVOKABLE void refreshDevices();
+    int totalDeviceCount();
+    int activeDeviceCount();
+
+signals:
+    void totalDeviceCountChanged();
+    void activeDeviceCountChanged();
 
 protected:
     LuxOutputNode(QSharedPointer<LuxOutputNodePrivate> other_ptr);
 
-    void reload();
 
 private:
     QSharedPointer<LuxOutputNodePrivate> d() const;

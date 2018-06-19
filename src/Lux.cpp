@@ -6,6 +6,8 @@
 
 // Lux helper functions
 static int lux_strip_get_length (int fd, uint32_t lux_id, int flags) {
+    lux_timeout_ms = 10;
+
     // TODO: replace with get_descriptor
     struct lux_packet packet;
     packet.destination = lux_id;
@@ -155,6 +157,8 @@ void LuxDevice::setBus(LuxBus * bus, bool blind) {
     else
         m_state = State::Connected;
     m_bus = bus;
+    if (bus == nullptr)
+        m_state = State::Disconnected;
     emit stateChanged(m_state);
 }
 
@@ -197,7 +201,11 @@ LuxBus::State LuxBus::state() {
 }
 void LuxBus::setUri(QString uri) {
     m_uri = uri;
+    setupFd();
+    emit uriChanged(m_uri);
+}
 
+void LuxBus::setupFd() {
     if (m_fd >= 0) {
         lux_close(m_fd);
         m_fd = -1;
@@ -224,6 +232,15 @@ void LuxBus::saveSettings(QSettings * settings) {
 }
 
 void LuxBus::refresh() {
+    qInfo() << "refreshing bus" << uri() << m_fd;
+    if (m_state != State::Connected) {
+        for (auto dev : m_devices)
+            dev->setBus(nullptr);
+        m_devices.clear();
+    }
+    setupFd();
+    qInfo() << "      bus" << uri() << m_fd;
+
     auto it = m_devices.begin();
     while (it != m_devices.end()) {
         QSharedPointer<LuxDevice> dev = *it;
@@ -245,6 +262,7 @@ void LuxBus::frame(QSize size, QByteArray frame) {
         int rc = lux_strip_frame(m_fd, dev->luxId(), dev->frame(size, frame));
         if (rc != 0) {
             m_state = State::Error;
+            qInfo() << "bus errored" << uri();
             emit stateChanged(m_state);
         }
     }

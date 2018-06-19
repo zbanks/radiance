@@ -11,7 +11,7 @@ LuxOutputNode::LuxOutputNode(Context *context, QSize chainSize)
 
     connect(this, &SelfTimedReadBackOutputNode::frame, this, &LuxOutputNode::onFrame, Qt::DirectConnection);
 
-    reload();
+    refreshDevices();
     start();
 }
 
@@ -23,6 +23,8 @@ void LuxOutputNode::setDevices(QList<QSharedPointer<LuxDevice>> devices) {
     QMutexLocker locker(&d()->m_stateLock);
     d()->m_devices.clear();
     d()->m_devices << devices;
+    emit totalDeviceCountChanged();
+    emit activeDeviceCountChanged();
 }
 
 QList<QSharedPointer<LuxDevice>> LuxOutputNode::devices() {
@@ -41,13 +43,13 @@ QList<QSharedPointer<LuxBus>> LuxOutputNode::buses() {
     return d()->m_buses;
 }
 
-void LuxOutputNode::reload() {
-    qDebug() << "Attempting lux open";
+void LuxOutputNode::refreshDevices() {
+    qDebug() << "Refreshing devices";
     for (auto bus : buses()) {
         bus->refresh();
         bus->detectDevices(devices());
     }
-    qDebug() << "Lux opened.";
+    emit activeDeviceCountChanged();
 }
 
 void LuxOutputNode::onFrame(QSize size, QByteArray frame) {
@@ -129,7 +131,7 @@ VideoNode *LuxOutputNode::deserialize(Context *context, QJsonObject obj) {
     LuxOutputNode *e = new LuxOutputNode(context, QSize(100, 100));
     e->setDevices(deviceList);
     e->setBuses(busList);
-    e->reload();
+    e->refreshDevices();
 
     return e;
 }
@@ -153,6 +155,19 @@ QMap<QString, QString> LuxOutputNode::customInstantiators() {
     auto m = QMap<QString, QString>();
     m.insert("LuxOutput", "LuxOutputInstantiator.qml");
     return m;
+}
+
+int LuxOutputNode::activeDeviceCount() {
+    int count = 0;
+    for (auto device : devices()) {
+        if (device->state() == LuxDevice::State::Connected)
+            count++;
+    }
+    return count;
+}
+
+int LuxOutputNode::totalDeviceCount() {
+    return devices().size();
 }
 
 LuxOutputNode *LuxOutputNode::clone() const {

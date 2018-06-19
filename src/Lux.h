@@ -110,6 +110,8 @@ signals:
     void uriChanged(QString uri);
 
 private:
+    void setupFd();
+
     State m_state;
     QString m_uri;
     QList<QSharedPointer<LuxDevice>> m_devices;

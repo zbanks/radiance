@@ -39,5 +39,21 @@ VideoNodeTile {
                 videoNode: tile.videoNode;
             }
         }
+
+        RowLayout {
+            Label {
+                Layout.fillWidth: true;
+                text: !videoNode ? "" : 
+                    ("Outputs: " + videoNode.activeDeviceCount + "/" + videoNode.totalDeviceCount);
+                color: "#ddd";
+            }
+
+            Button {
+                text: "Refresh";
+                onClicked: {
+                    videoNode.refreshDevices();
+                }
+            }
+        }
     }
 }
