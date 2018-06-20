@@ -23,7 +23,14 @@ void main(void) {
 
     vec2 xy = vec2(rand(vec2(iTime, 0.)), rand(vec2(iTime, 1.)));
     vec2 wh = vec2(rand(vec2(iTime, 2.)), rand(vec2(iTime, 3.))) * 0.3 + 0.1;
-    vec4 color = vec4(rand(vec2(iTime, 4.)), rand(vec2(iTime, 5.)), rand(vec2(iTime, 6.)), 1.0);
+
+    //vec4 color = vec4(rand(vec2(iTime, 4.)), rand(vec2(iTime, 5.)), rand(vec2(iTime, 6.)), 1.0);
+
+    //vec3 yuv = vec3(0.5, rand(vec2(iTime, 4.)), rand(vec2(iTime, 5.)));
+    //vec4 color = clamp(vec4(yuv2rgb(yuv), 1.0), 0.0, 1.0);
+
+    vec3 hsv = vec3(rand(vec2(iTime, 4.)), 1.0, 1.0);
+    vec4 color = clamp(vec4(hsv2rgb(hsv), 1.0), 0.0, 1.0);
 
     float inside = box((uv - xy) / wh + 0.5) * trans;
     fragColor = mix(before, color, inside);

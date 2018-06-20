@@ -40,6 +40,10 @@ for i in range(N):
         [x, y]
     ]
 
+    # Shrink towards center by a fraction
+    F = 0.9
+    polygon = [(0.5 + (x - 0.5) * F, 0.5 + (y - 0.5)) for (x, y) in polygon]
+
     output["devices"].append({
         "length": 50,
         "lux_id": i + 1,

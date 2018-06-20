@@ -10,21 +10,49 @@ RowLayout {
     property var context;
     property var registry;
 
+    /*
+    // Setup for working with full 2D video art (e.g. projector, livestream)
     property var choices: [
-        // Base: something that has color and form
-        ["cyan", "dwwave", "fire", "heart", "pink", "purple", "wave", "wwave", "yellow", "vu", "oscope"],
+        // Base: something that has color or form
+        ["cyan", "dwwave", "fire", "heart", "pink", "purple", "wave", "wwave", "yellow", "vu", "oscope", "count", "random"],
 
         // Intensitfy: add distortions and high-pass
-        ["edge", "pixelate", "delace", "depolar", "droste", "flippy", "fractalzoom", "glitch", "halftone", "kaleidoscope", "lathe", "litebrite", "lorenz", "polygon", "uvmapself", "strange"],
+        // Always set to 0.5 frequency
+        ["edge", "pixelate", "delace", "depolar", "droste", "droste", "flippy", "fractalzoom", "glitch", "halftone", "kaleidoscope", "lathe", "litebrite", "lorenz", "polygon", "uvmapself", "strange", "cga1", "crack", "outline", "projector"],
 
         // Colorize
-        ["sethue", "greenaway", "smoky", "chansep", "threedee", "yuvposter", "yuvrot", "yuvsat"],
+        ["sethue", "greenaway", "smoky", "chansep", "threedee", "yuvposter", "yuvrot", "yuvsat", "blowout", "cedge", "gamma", "rainblur", "resat", "rjump", "rsheen", "saturate", "yuvblur", "yuvchansep"],
 
         // Motion
-        ["fly", "tunnel", "warble", "fractalzoom", "life", "scramble", "tesselate", "id", "id", "id"],
+        // Always set to 0.5 frequency
+        ["fly", "tunnel", "warble", "flowing", "flow", "fractalzoom", "life", "scramble", "tesselate", "bespeckle", "bespecklep", "coin", "shake", "solitare", "id", "id", "id"],
 
         // Low-pass
-        ["zoh", "foh", "lpf", "diodelpf", "crt", "posterize", "melt", "life", "smoky", "speckle", "stripey"]
+        ["foh", "lpf", "diodelpf", "crt", "posterize", "melt", "life", "smoky", "speckle", "stripey", "rolling", "still", "swipe"]
+    ];
+    */
+    // Setup for working with light strips and pixels
+    // May need to follow up with an lpf, smooth, no, etc. 
+    property var choices: [
+        // Base: something with *color*, can be static
+        ["cyan", "fire", "fireball", "heart", "purple", "wave", "yellow", "vu", "test", "gay", "rekt", "rekt", "rekt", "smoke", "stripes", "yuvmapid", "uvmapid"],
+
+        // Simple motion
+        // Always set to 0.5 frequency
+        ["warble", "flowing", "flow", "fractalzoom", "flippy", "scramble", "bespeckle", "bespecklep", "shake", "id"],
+
+        // Colorize
+        ["sethue", "greenaway", "yuvposter", "yuvrot", "yuvsat", "blowout", "cedge", "gamma", "rainblur", "resat", "rjump", "rsheen", "saturate", "yuvblur", "yuvchansep"],
+
+        // Simple motion
+        // Always set to 0.5 frequency
+        ["warble", "flowing", "flow", "fractalzoom", "flippy", "scramble", "bespeckle", "bespecklep", "shake", "id"],
+
+        // Colorize
+        ["sethue", "greenaway", "yuvposter", "yuvrot", "yuvsat", "blowout", "cedge", "gamma", "rainblur", "resat", "rjump", "rsheen", "saturate", "yuvblur", "yuvchansep"],
+
+        // Low-pass
+        ["foh", "lpf", "diodelpf", "posterize", "melt", "speckle", "stripey", "rolling", "still", "swipe", "kmeans"]
     ];
 
     function makeVideoNode(index) {
@@ -34,7 +62,11 @@ RowLayout {
             "file": "effects/" + choice + ".glsl",
             "type": "EffectNode"
         });
-        if (index == 1) vn.frequency = 0.5;
+        if (index == 1 || index == 3) {
+            if (Math.random() < 0.1) vn.frequency = 1.0;
+            else if (Math.random() < 0.7) vn.frequency = 0.5;
+            else vn.frequency = 0.25;
+        }
         model.addVideoNode(vn);
         return vn;
     }
