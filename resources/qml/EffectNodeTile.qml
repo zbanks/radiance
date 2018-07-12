@@ -32,19 +32,22 @@ VideoNodeTile {
     ColumnLayout {
         anchors.fill: parent;
         anchors.margins: 15;
+        spacing: 5;
 
         RowLayout {
-            Label {
+            RadianceTileTitle {
                 Layout.fillWidth: true;
                 text: videoNode ? videoNode.name : "(loading)";
-                color: "#ddd";
-                elide: Text.ElideMiddle;
             }
         
             Label {
                 text: attachedParameter >= 0 ? "#" + attachedParameter : "";
                 color: "#ddd";
             }
+        }
+
+        CheckerboardPreview {
+            videoNode: tile.videoNode
         }
 
         /*
@@ -54,22 +57,6 @@ VideoNodeTile {
             editable: true;
         }
         */
-
-        Item {
-            Layout.preferredHeight: width;
-            Layout.fillWidth: true;
-            layer.enabled: true;
-
-            CheckerboardBackground {
-                anchors.fill: parent;
-            }
-            VideoNodePreview {
-                id: vnr;
-                anchors.fill: parent;
-                previewAdapter: Globals.previewAdapter;
-                videoNode: tile.videoNode;
-            }
-        }
 
         RowLayout {
             Slider {
