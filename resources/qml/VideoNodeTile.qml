@@ -10,12 +10,14 @@ BaseVideoNodeTile {
     property alias view: tile.parent
 
     property bool selected: false
-    property int padding: 2
+    property int padding: 10
 
     property var lastX
     property var lastY
     property var dragCC
     property var dragging
+    property var inputArrows
+    property real outputArrow
 
     normalHeight: 170
     normalWidth: 150
@@ -46,6 +48,15 @@ BaseVideoNodeTile {
             var shrinkageY = (inputHeights[0] - minInputHeight) / 2;
             var shrinkageHeight = -(inputHeights[0] - minInputHeight) / 2 - (inputHeights[inputHeights.length - 1] - minInputHeight) / 2;
             blockHeight = sum(inputHeights) + shrinkageHeight;
+
+            var inputArrowLocations = [];
+            var heightSum = 0;
+            for (var i=0; i<inputHeights.length; i++) {
+                inputArrowLocations.push(heightSum + inputHeights[i] / 2 - shrinkageY);
+                heightSum += inputHeights[i];
+            }
+            inputArrows = inputArrowLocations;
+            outputArrow = sum(inputHeights) / 2 - shrinkageY;
         }
 
         // Ys
@@ -256,6 +267,8 @@ BaseVideoNodeTile {
         anchors.fill: parent;
         selected: parent.selected;
         focus: true;
+        inputArrows: parent.inputArrows
+        outputArrow: parent.outputArrow
     }
 
     Behavior on x {
@@ -305,6 +318,19 @@ BaseVideoNodeTile {
     }
 
     Behavior on height {
+        enabled: !dragging
+        NumberAnimation {
+            easing {
+                type: Easing.InOutQuad
+                amplitude: 1.0
+                period: 0.5
+            }
+            duration: 500
+        }
+    }
+
+    Behavior on outputArrow {
+        // inputArrows is not animated because it is hard to animate an array
         enabled: !dragging
         NumberAnimation {
             easing {
