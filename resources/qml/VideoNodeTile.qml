@@ -26,6 +26,8 @@ BaseVideoNodeTile {
     blockWidth: normalWidth
     blockHeight: normalHeight
 
+    z: activeFocus ? 1 : 0
+
     function sum(l) {
         var result = 0;
         for(var i=0; i<l.length; i++) result += l[i];
@@ -86,6 +88,29 @@ BaseVideoNodeTile {
     Drag.hotSpot: Qt.point(width / 2, height / 2)
     Drag.active: dragArea.drag.active;
 
+    states: [
+        State {
+            when: dragging
+            PropertyChanges {
+                target: tile
+                z: 2
+                opacity: 0.5
+            }
+        }
+    ]
+
+    transitions: Transition {
+        NumberAnimation {
+            properties: "z"
+            easing {
+                type: Easing.InOutQuad
+                amplitude: 1.0
+                period: 0.5
+            }
+            duration: 500
+        }
+    }
+
     function dragLift() {
         var ccs = view.selectedConnectedComponents();
         var i;
@@ -98,16 +123,12 @@ BaseVideoNodeTile {
         lastY = y;
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].dragging = true;
-            dragCC.tiles[i].z = 1;
-            dragCC.tiles[i].opacity = 0.5;
         }
     }
 
     function dragDrop() {
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].dragging = false;
-            dragCC.tiles[i].z = 0;
-            dragCC.tiles[i].opacity = 1;
         }
 
         var t = Drag.target;
@@ -267,6 +288,7 @@ BaseVideoNodeTile {
     RadianceTile {
         anchors.fill: parent;
         selected: parent.selected;
+        highlight: parent.activeFocus;
         focus: true;
         inputArrows: parent.inputArrows
         outputArrow: parent.outputArrow
@@ -284,17 +306,6 @@ BaseVideoNodeTile {
         }
     }
     Behavior on y {
-        enabled: !dragging
-        NumberAnimation {
-            easing {
-                type: Easing.InOutQuad
-                amplitude: 1.0
-                period: 0.5
-            }
-            duration: 500
-        }
-    }
-    Behavior on z {
         enabled: !dragging
         NumberAnimation {
             easing {
