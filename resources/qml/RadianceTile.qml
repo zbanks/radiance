@@ -5,8 +5,8 @@ import radiance 1.0
 
 Canvas {
     property bool selected: false;
-    property color darkColor: selected ? "#116" : "#111";
-    property color lightColor: selected ? "#227" : "#222";
+    property color darkColor: selected ? "#113" : "#111";
+    property color lightColor: selected ? "#224" : "#222";
     property real borderWidth: 2;
     property color borderColor: "#666";
     property int padding: 5;
