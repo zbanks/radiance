@@ -18,12 +18,12 @@ BaseVideoNodeTile {
     property real posX: -1
     property real posY: -1
 
-    property var normalHeight: 170;
-    property var normalWidth: 150;
-    property var minInputHeight: 170
+    property var normalHeight: 170
+    property var normalWidth: 150
+    property var minInputHeight: normalHeight
 
     property int blockWidth: normalWidth
-    property var blockHeight: normalHeight;
+    property var blockHeight: normalHeight
 
     property bool selected: false
     property int padding: 2
