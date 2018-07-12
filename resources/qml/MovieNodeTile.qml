@@ -53,6 +53,33 @@ VideoNodeTile {
             videoNode: tile.videoNode
         }
 
+        RadianceTileSlider {
+            property bool controlled;
+            id: slider
+            Layout.fillWidth: true
+            minimumValue: 0
+            maximumValue: tile.videoNode.duration
+            enabled: tile.videoNode.duration > 0
+            value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
+            state: (pressed || controlled) ? "seeking" : ""
+            onValueChanged: {
+                if (state == "seeking"
+                    && tile.videoNode.duration > 0) {
+                    tile.videoNode.position = value;
+                }
+            }
+
+            states: [
+                State {
+                    name: "seeking"
+                    PropertyChanges {
+                        target: slider;
+                        value: value;
+                    }
+                }
+            ]
+        }
+
         ComboBox {
             id: factorSelector;
             Layout.fillWidth: true
@@ -77,35 +104,6 @@ VideoNodeTile {
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            Slider {
-                property bool controlled;
-                id: slider
-                Layout.fillWidth: true
-                minimumValue: 0
-                maximumValue: tile.videoNode.duration
-                enabled: tile.videoNode.duration > 0
-                value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
-                state: (pressed || controlled) ? "seeking" : ""
-                onValueChanged: {
-                    if (state == "seeking"
-                        && tile.videoNode.duration > 0) {
-                        tile.videoNode.position = value;
-                    }
-                }
-
-                states: [
-                    State {
-                        name: "seeking"
-                        PropertyChanges {
-                            target: slider;
-                            value: value;
-                        }
-                    }
-                ]
-            }
-        }
     }
 
     Timer {

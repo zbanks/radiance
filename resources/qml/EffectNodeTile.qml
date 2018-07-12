@@ -34,17 +34,10 @@ VideoNodeTile {
         anchors.margins: 15;
         spacing: 5;
 
-        RowLayout {
-            RadianceTileTitle {
-                Layout.fillWidth: true;
-                text: videoNode ? videoNode.name : "(loading)";
-            }
-        
-            Label {
-                text: attachedParameter >= 0 ? "#" + attachedParameter : "";
-                color: "#ddd";
-            }
-        }
+        RadianceTileTitle {
+            Layout.fillWidth: true;
+            text: videoNode ? videoNode.name : "(loading)";
+        } 
 
         CheckerboardPreview {
             videoNode: tile.videoNode
@@ -58,38 +51,12 @@ VideoNodeTile {
         }
         */
 
+        RadianceTileSlider {
+            id: slider;
+            Layout.fillWidth: true;
+        }
+
         RowLayout {
-            Slider {
-                id: slider;
-                Layout.fillWidth: true;
-                minimumValue: 0;
-                maximumValue: 1;
-
-                style: SliderStyle {
-                    handle: Rectangle {
-                        height: 20
-                        width: 0
-                        radius: width/2
-                        color: "transparent"
-                        border.width: 0
-                        border.color: "white"
-                    }
-
-                    groove: Rectangle {
-                        implicitHeight: 5
-                        radius: height/2
-                        border.color: "white"
-                        color: "transparent"
-                        Rectangle {
-                            height: parent.height
-                            width: styleData.handlePosition
-                            radius: height/2
-                            color: "white"
-                        }
-                    }
-                }
-            }
-
             ComboBox {
                 id: frequencyCombo;
                 model: [0, 0.25, 0.5, 1, 2, 4, 8, 16, 32]
@@ -118,6 +85,11 @@ VideoNodeTile {
                         font.pointSize: 6
                     }
                 }
+            }
+
+            Label {
+                text: attachedParameter >= 0 ? "#" + attachedParameter : "";
+                color: "#ddd";
             }
         }
 
