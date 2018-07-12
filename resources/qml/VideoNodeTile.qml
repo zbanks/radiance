@@ -10,7 +10,8 @@ BaseVideoNodeTile {
     property alias view: tile.parent
 
     property bool selected: false
-    property int padding: 10
+    property int verticalPadding: 10
+    property int horizontalPadding: 0
 
     property var lastX
     property var lastY
@@ -60,13 +61,13 @@ BaseVideoNodeTile {
         }
 
         // Ys
-        y = posY + padding + shrinkageY;
-        height = blockHeight - 2 * padding;
+        y = posY + verticalPadding + shrinkageY;
+        height = blockHeight - 2 * verticalPadding;
 
         // X
-        x = posX + padding;
+        x = posX + horizontalPadding;
         blockWidth = min(blockHeight * 0.6, normalWidth);
-        width = blockWidth - 2 * padding
+        width = blockWidth - 2 * horizontalPadding
     }
 
     onPosYChanged: {
