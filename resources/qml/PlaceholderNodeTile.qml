@@ -7,7 +7,9 @@ import "."
 
 VideoNodeTile {
     id: tile;
+    normalWidth: 50
 
+/*
     ColumnLayout {
         anchors.fill: parent;
         anchors.margins: 15;
@@ -48,4 +50,5 @@ VideoNodeTile {
             }
         }
     }
+*/
 }

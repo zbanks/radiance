@@ -15,28 +15,13 @@ VideoNodeTile {
         anchors.fill: parent;
         anchors.margins: 15;
 
-        Label {
+        RadianceTileTitle {
             Layout.fillWidth: true;
             text: videoNode ? videoNode.name : "";
-            color: "#ddd";
-            elide: Text.ElideMiddle;
         }
 
-        Item {
-            Layout.preferredHeight: width;
-            Layout.fillWidth: true;
-            layer.enabled: true;
-
-            CheckerboardBackground {
-                anchors.fill: parent;
-            }
-
-            VideoNodePreview {
-                anchors.fill: parent;
-                id: vnr;
-                previewAdapter: Globals.previewAdapter;
-                videoNode: tile.videoNode;
-            }
+        CheckerboardPreview {
+            videoNode: tile.videoNode
         }
     }
 

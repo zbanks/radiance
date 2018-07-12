@@ -97,29 +97,13 @@ VideoNodeTile {
         anchors.fill: parent;
         anchors.margins: 15;
 
-        RowLayout {
-            Label {
-                Layout.fillWidth: true;
-                text: "Screen Output";
-                color: "#ddd";
-                elide: Text.ElideMiddle;
-            }
+        RadianceTileTitle {
+            Layout.fillWidth: true;
+            text: "Screen Output";
         }
 
-        Item {
-            Layout.preferredHeight: width;
-            Layout.fillWidth: true;
-            layer.enabled: true;
-
-            CheckerboardBackground {
-                anchors.fill: parent;
-            }
-            VideoNodePreview {
-                id: vnr;
-                anchors.fill: parent;
-                previewAdapter: Globals.previewAdapter;
-                videoNode: tile.videoNode;
-            }
+        CheckerboardPreview {
+            videoNode: tile.videoNode
         }
 
         RowLayout {
