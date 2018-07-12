@@ -7,23 +7,7 @@ import radiance 1.0
 BaseVideoNodeTile {
     id: tile
 
-    // TODO move most of these to BaseVideoNodeTile.cpp
     property alias view: tile.parent
-    property var model
-    property var videoNode
-    property var inputGridHeights
-    property int gridX
-    property int gridY
-    property var inputHeights
-    property real posX: -1
-    property real posY: -1
-
-    property var normalHeight: 170
-    property var normalWidth: 150
-    property var minInputHeight: normalHeight
-
-    property int blockWidth: normalWidth
-    property var blockHeight: normalHeight
 
     property bool selected: false
     property int padding: 2
@@ -33,10 +17,11 @@ BaseVideoNodeTile {
     property var dragCC
     property var dragging
 
-    property var tab: null
-    property var backtab: null
-
-    property int bank: 0
+    normalHeight: 170
+    normalWidth: 150
+    minInputHeight: normalHeight
+    blockWidth: normalWidth
+    blockHeight: normalHeight
 
     function sum(l) {
         var result = 0;
