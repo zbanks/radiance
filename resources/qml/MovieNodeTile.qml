@@ -7,8 +7,8 @@ import radiance 1.0
 VideoNodeTile {
     id: tile;
 
-    normalHeight: 300;
-    normalWidth: 200;
+    normalHeight: 200;
+    normalWidth: 160;
 
     function setFactorSelector() {
         for(var i = 0; i < factorSelector.model.count; ++i) {
