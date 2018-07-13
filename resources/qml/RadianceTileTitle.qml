@@ -8,7 +8,7 @@ Text {
     style: Text.Raised
     styleColor: "#333"
     horizontalAlignment: Text.AlignHCenter
-    font.pointSize: 14
+    font.pointSize: 10
     anchors.topMargin: -5
     anchors.top: parent.top
     Rectangle {

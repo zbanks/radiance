@@ -11,9 +11,11 @@ Item {
     Layout.fillWidth: true;
     Layout.fillHeight: true;
 
-    property real zoomRate: 0.01;
-    property real zoomMin: 0.1;
-    property real zoomMax: 10;
+    property real zoomRate: 0.001
+    property real zoomStep: 0.1
+    property real zoomMin: 0.1
+    property real zoomMax: 10
+    property real intensityRate: 0.0003
 
     function insertVideoNode(videoNode) {
         model.addVideoNode(videoNode);
@@ -43,7 +45,6 @@ Item {
             property string currentOutputName: ""
             width: Math.max(view.width * view.scale + 400, flickable.width)
             height: Math.max(view.height * view.scale + 400, flickable.height)
-            focus: true
 
             View {
                 id: view
@@ -59,6 +60,8 @@ Item {
                 }
                 x: (parent.width - width) / 2
                 y: (parent.height - height) / 2
+
+                focus: true
 
                 Behavior on x { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
                 Behavior on y { PropertyAnimation { easing.type: Easing.InOutQuad; duration: 500; } }
@@ -93,7 +96,26 @@ Item {
                         scale = Math.max(Math.min(scale * Math.exp(wheel.angleDelta.y * zoomRate), zoomMax), zoomMin);
                         view.scale = scale;
                         wheel.accepted = true;
+                    } else if (!view.focus) {
+                        view.Controls.changeControlRel(0, Controls.PrimaryParameter, wheel.angleDelta.y * intensityRate);
+                        wheel.accepted = true;
                     }
+                }
+            }
+            Action {
+                id: zoomIn
+                text: "Zoom &In"
+                shortcut: StandardKey.ZoomIn
+                onTriggered: {
+                    view.scale *= Math.exp(zoomStep);
+                }
+            }
+            Action {
+                id: zoomOut
+                text: "Zoom &Out"
+                shortcut: StandardKey.ZoomOut
+                onTriggered: {
+                    view.scale *= Math.exp(-zoomStep);
                 }
             }
             Action {
