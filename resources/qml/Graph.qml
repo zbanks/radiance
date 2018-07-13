@@ -11,6 +11,10 @@ Item {
     Layout.fillWidth: true;
     Layout.fillHeight: true;
 
+    property real zoomRate: 0.01;
+    property real zoomMin: 0.1;
+    property real zoomMax: 10;
+
     function insertVideoNode(videoNode) {
         model.addVideoNode(videoNode);
         if (lastClickedTile) {
@@ -29,16 +33,16 @@ Item {
     Flickable {
         id: flickable
         anchors.fill: parent
-        contentWidth: view.width + 600;
-        contentHeight: view.height + 400;
+        contentWidth: view.width * view.scale + 600;
+        contentHeight: view.height * view.scale + 400;
         clip: true;
 
         Item {
             id: viewWrapper
             property var lastClickedTile
             property string currentOutputName: ""
-            width: Math.max(view.width + 400, flickable.width)
-            height: Math.max(view.height + 400, flickable.height)
+            width: Math.max(view.width * view.scale + 400, flickable.width)
+            height: Math.max(view.height * view.scale + 400, flickable.height)
             focus: true
 
             View {
@@ -81,6 +85,14 @@ Item {
                     view.focus = true;
                 }
                 z: -1;
+
+                onWheel: {
+                    if (wheel.modifiers & Qt.ControlModifier) {
+                        var scale = view.scale;
+                        scale = Math.max(Math.min(scale * Math.exp(wheel.angleDelta.y * zoomRate), zoomMax), zoomMin);
+                        view.scale = scale;
+                    }
+                }
             }
         }
     }
