@@ -7,8 +7,10 @@ Text {
     elide: Text.ElideMiddle
     style: Text.Raised
     styleColor: "#333"
-    bottomPadding: 5
-    topPadding: -3
+    horizontalAlignment: Text.AlignHCenter
+    font.pointSize: 14
+    anchors.topMargin: -5
+    anchors.top: parent.top
     Rectangle {
         color: "#666"
         anchors.left: parent.left
@@ -17,6 +19,6 @@ Text {
         height: 1
         anchors.leftMargin: -3
         anchors.rightMargin: -3
-        anchors.bottomMargin: 2
+        anchors.bottomMargin: -3
   }
 }
