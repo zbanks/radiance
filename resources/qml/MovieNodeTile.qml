@@ -57,8 +57,8 @@ VideoNodeTile {
             property bool controlled;
             id: slider
             Layout.fillWidth: true
-            minimumValue: 0
-            maximumValue: tile.videoNode.duration
+            from: 0
+            to: tile.videoNode.duration
             enabled: tile.videoNode.duration > 0
             value: tile.videoNode.duration > 0 ? tile.videoNode.position : 0
             state: (pressed || controlled) ? "seeking" : ""
