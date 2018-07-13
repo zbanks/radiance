@@ -1,6 +1,6 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 2.3
+import QtQuick.Controls 2.2
 import QtGraphicalEffects 1.0
 
 Slider {
