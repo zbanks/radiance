@@ -74,6 +74,14 @@ Item {
                 }
                 //*/
             }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    view.select([]);
+                    view.focus = true;
+                }
+                z: -1;
+            }
         }
     }
 }
