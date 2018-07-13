@@ -87,10 +87,12 @@ Item {
                 z: -1;
 
                 onWheel: {
+                    wheel.accepted = false;
                     if (wheel.modifiers & Qt.ControlModifier) {
                         var scale = view.scale;
                         scale = Math.max(Math.min(scale * Math.exp(wheel.angleDelta.y * zoomRate), zoomMax), zoomMin);
                         view.scale = scale;
+                        wheel.accepted = true;
                     }
                 }
             }

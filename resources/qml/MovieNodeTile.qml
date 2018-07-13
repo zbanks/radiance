@@ -42,7 +42,7 @@ VideoNodeTile {
 
     ColumnLayout {
         anchors.fill: parent;
-        anchors.margins: 15;
+        anchors.margins: 10;
 
         RadianceTileTitle {
             Layout.fillWidth: true;

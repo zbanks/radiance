@@ -7,16 +7,16 @@ Text {
     elide: Text.ElideMiddle
     style: Text.Raised
     styleColor: "#333"
-    bottomPadding: 10
-    topPadding: -5
+    bottomPadding: 5
+    topPadding: -3
     Rectangle {
         color: "#666"
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: 2
-        anchors.leftMargin: -5
-        anchors.rightMargin: -5
+        height: 1
+        anchors.leftMargin: -3
+        anchors.rightMargin: -3
         anchors.bottomMargin: 2
   }
 }

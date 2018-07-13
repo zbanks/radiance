@@ -20,8 +20,8 @@ BaseVideoNodeTile {
     property var inputArrows
     property real outputArrow
 
-    normalHeight: 200
-    normalWidth: 120
+    normalHeight: 130
+    normalWidth: 80
     minInputHeight: normalHeight
     blockWidth: normalWidth
     blockHeight: normalHeight
