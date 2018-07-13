@@ -17,13 +17,15 @@ Slider {
                 GradientStop { position: 0; color: "#777" }
                 GradientStop { position: 0.5; color: "#444" }
             }
+            border.width: 1
+            border.color: "#222"
         }
 
         groove: Rectangle {
             implicitHeight: 6
             radius: height/2
             border.width: 1
-            border.color: "#111"
+            border.color: "#000"
             gradient: Gradient {
                 GradientStop { position: 0.5; color: "#000" }
                 GradientStop { position: 1; color: "#333" }

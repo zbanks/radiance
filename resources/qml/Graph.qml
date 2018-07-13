@@ -96,6 +96,14 @@ Item {
                     }
                 }
             }
+            Action {
+                id: resetZoom
+                text: "&Reset zoom"
+                shortcut: "Ctrl+0"
+                onTriggered: {
+                    view.scale = 1;
+                }
+            }
         }
     }
 }

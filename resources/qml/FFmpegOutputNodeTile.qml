@@ -8,8 +8,8 @@ import "."
 VideoNodeTile {
     id: tile;
 
-    normalHeight: 400;
-    normalWidth: 300;
+    normalHeight: 260;
+    normalWidth: 200;
 
     onVideoNodeChanged: {
         recordingCheck.checked = videoNode.recording;
