@@ -8,8 +8,8 @@ ApplicationWindow {
     id: window;
     visible: true
     color: "#333"
-    width: 1200
-    height: 800
+    width: 800
+    height: 530
     title: "Radiance"
     property bool hasMidi: false
 
@@ -140,17 +140,14 @@ ApplicationWindow {
                 anchors.fill: parent
                 RowLayout {
                     BeatIndicator {
-                        width: 25
                         opacity: .9
                         context: defaultContext
                     }
                     Waveform {
-                        width: 500
                         opacity: .9
                         context: defaultContext
                     }
                     Spectrum {
-                        width: 500
                         opacity: .9
                         context: defaultContext
                     }
@@ -161,15 +158,15 @@ ApplicationWindow {
                         graph: graph;
                         registry: registry
                         context: defaultContext
-                        width: 200
+                        width: 130
                         
                         Layout.fillHeight: true
                     }
                     Rectangle {
                         width: 1
                         Layout.fillHeight: true
-                        Layout.topMargin: 30
-                        Layout.bottomMargin: 30
+                        Layout.topMargin: 20
+                        Layout.bottomMargin: 20
                         color: "#eee"
                         opacity: 0.1
                     }
@@ -181,7 +178,7 @@ ApplicationWindow {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.margins: 10
+                anchors.margins: 7
                 color: "white"
                 MouseArea {
                     anchors.fill: parent

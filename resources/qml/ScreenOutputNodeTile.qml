@@ -8,8 +8,8 @@ import "."
 VideoNodeTile {
     id: tile;
 
-    normalHeight: 400;
-    normalWidth: 300;
+    normalHeight: 260;
+    normalWidth: 200;
     property bool updatingResolutionSelector: false;
     property bool updatingScreenSelector: false;
 
@@ -95,7 +95,7 @@ VideoNodeTile {
     }
     ColumnLayout {
         anchors.fill: parent;
-        anchors.margins: 15;
+        anchors.margins: 10;
 
         RadianceTileTitle {
             Layout.fillWidth: true;

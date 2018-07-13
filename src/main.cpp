@@ -249,6 +249,7 @@ main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationName("Radiance");
     QCoreApplication::setOrganizationDomain("radiance.video");
     QCoreApplication::setApplicationName("Radiance");
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     // Use OpenGL 3.2 core profile
     // (otherwise MacOS falls back to 2.1)
     {

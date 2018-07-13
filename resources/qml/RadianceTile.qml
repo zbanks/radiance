@@ -8,17 +8,17 @@ Canvas {
     property bool highlight: false;
     property color darkColor: selected ? "#113" : "#111";
     property color lightColor: selected ? "#224" : "#222";
-    property real borderWidth: 2;
+    property real borderWidth: 1;
     property color borderColor: highlight ? "#AA3" : "#666";
-    property int padding: 5;
-    property int blockWidth: 100;
-    property int blockHeight: 170;
+    property int padding: 3;
+    property int blockWidth: 65;
+    property int blockHeight: 110;
     layer.enabled: true;
 
     property var inputArrows: []
     property real outputArrow: height / 2;
-    property real arrowWidth: 10;
-    property real arrowHeight: 30;
+    property real arrowWidth: 7;
+    property real arrowHeight: 20;
 
     anchors.rightMargin: -arrowWidth - borderWidth / 2;
     anchors.leftMargin: -borderWidth / 2;

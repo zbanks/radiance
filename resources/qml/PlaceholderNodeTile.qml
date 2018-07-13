@@ -7,7 +7,7 @@ import "."
 
 VideoNodeTile {
     id: tile;
-    normalWidth: 50
+    normalWidth: 30
 
 /*
     ColumnLayout {

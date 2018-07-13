@@ -10,8 +10,8 @@ Slider {
 
     style: SliderStyle {
         handle: Rectangle {
-            height: 20
-            width: 20
+            height: 12
+            width: 12
             radius: width/2
             gradient: Gradient {
                 GradientStop { position: 0; color: "#777" }
@@ -20,7 +20,7 @@ Slider {
         }
 
         groove: Rectangle {
-            implicitHeight: 10
+            implicitHeight: 6
             radius: height/2
             border.width: 1
             border.color: "#111"
@@ -29,9 +29,9 @@ Slider {
                 GradientStop { position: 1; color: "#333" }
             }
             Rectangle {
-                x: 2.5
-                y: 2.5
-                height: parent.height - 5
+                x: 1.5
+                y: 1.5
+                height: parent.height - 3
                 width: styleData.handlePosition
                 radius: height/2
                 gradient: Gradient {
