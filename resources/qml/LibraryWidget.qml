@@ -11,6 +11,9 @@ Item {
     property var registry
     property var context
 
+    signal searchStarted
+    signal searchStopped
+
     ColumnLayout {
         anchors.fill: parent
 
@@ -127,11 +130,6 @@ Item {
                 addSelected();
             }
         }
-        Button {
-            id: nodeAddButton
-            text: "Add"
-            action: nodeAddAction
-        }
         Label {
             id: nodeAddDescription
             Layout.fillWidth: true;
@@ -145,12 +143,14 @@ Item {
         searchBox.visible = true;
         searchBox.focus = true;
         searchBox.forceActiveFocus();
+        searchStarted();
     }
 
     function stopSearching() {
         searchBox.text = "";
         searchBox.visible = false;
         searchBox.focus = false;
+        searchStopped();
     }
 
     function finishCreation() {

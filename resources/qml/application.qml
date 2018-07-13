@@ -152,23 +152,51 @@ ApplicationWindow {
                         context: defaultContext
                     }
                 }
-                RowLayout {
+                SplitView {
+                    id: splitView
+                    property real openWidth: 100
+                    Layout.fillHeight: true
+                    Layout.fillWidth: true
+
                     LibraryWidget {
                         id: libraryWidget
                         graph: graph;
                         registry: registry
                         context: defaultContext
-                        width: 130
+                        implicitWidth: splitView.openWidth
+                        clip: true
                         
                         Layout.fillHeight: true
+
+                        Rectangle {
+                            anchors.fill: parent
+                            z: -1
+                            opacity: 0.9
+                            color: "#333"
+                        }
+
+                        onSearchStarted: {
+                            if (libraryWidget.width == 0) {
+                                libraryWidget.width = splitView.openWidth;
+                            }
+                        }
+                        onSearchStopped: {
+                            if (libraryWidget.width != 0) {
+                                splitView.openWidth = libraryWidget.width;
+                                libraryWidget.width = 0;
+                            }
+                        }
+
+                        Behavior on width {
+                            enabled: !splitView.resizing
+                            PropertyAnimation {
+                                easing.type: Easing.InOutQuad;
+                                duration: 300;
+                            }
+                        }
                     }
-                    Rectangle {
-                        width: 1
-                        Layout.fillHeight: true
-                        Layout.topMargin: 20
-                        Layout.bottomMargin: 20
-                        color: "#eee"
-                        opacity: 0.1
+                    Item {
+                        Layout.fillWidth: true
                     }
                 }
             }
