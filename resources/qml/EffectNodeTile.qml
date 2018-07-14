@@ -1,7 +1,7 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
-import QtQuick.Controls.Styles 1.4
+import QtQuick.Controls 2.2
+import QtGraphicalEffects 1.0
 import radiance 1.0
 import "."
 
@@ -14,9 +14,9 @@ VideoNodeTile {
 
     onVideoNodeChanged: {
         tile.intensity = videoNode.intensity;
-        frequencyCombo.currentIndex = frequencyCombo.find(videoNode.frequency + "");
+        frequencyCombo.value = videoNode.frequency;
         videoNode.intensity = Qt.binding(function() { return slider.value });
-        videoNode.frequency = Qt.binding(function() { return frequencyCombo.currentText });
+        videoNode.frequency = Qt.binding(function() { return frequencyCombo.value });
     }
 
     Connections {
@@ -25,7 +25,7 @@ VideoNodeTile {
             slider.value = intensity;
         }
         onFrequencyChanged: {
-            frequencyCombo.currentIndex = frequencyCombo.find(frequency + "");
+            frequencyCombo.value = frequency;
         }
     }
 
@@ -42,21 +42,18 @@ VideoNodeTile {
             videoNode: tile.videoNode
         }
 
-        /*
-        ComboBox {
-            Layout.fillWidth: true;
-            model: NodeList.effectNames();
-            editable: true;
-        }
-        */
-
         RadianceTileSlider {
             id: slider;
             Layout.fillWidth: true;
         }
 
         RowLayout {
+            FrequencyDropDown {
+                id: frequencyCombo;
+            }
+            /*
             ComboBox {
+                visible: false
                 id: frequencyCombo;
                 model: [0, 0.25, 0.5, 1, 2, 4, 8, 16, 32]
                 style: ComboBoxStyle {
@@ -84,7 +81,7 @@ VideoNodeTile {
                         font.pointSize: 6
                     }
                 }
-            }
+            }*/
 
             Label {
                 text: attachedParameter >= 0 ? "#" + attachedParameter : "";
