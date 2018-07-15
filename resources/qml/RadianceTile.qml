@@ -57,7 +57,7 @@ Item {
             fill.addColorStop(1, bottomColor);
 
             ctx.beginPath()
-            ctx.moveTo(inset, inset);
+            ctx.moveTo(inset * oversample, inset * oversample);
             for (var i=0; i<inputArrows.length; i++) {
                 var y = inputArrows[i];
                 ctx.lineTo(inset * oversample, (y - arrowHeight / 2) * oversample);

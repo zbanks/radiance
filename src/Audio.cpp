@@ -298,6 +298,7 @@ void Audio::renderGraphics() {
         m_waveformTexture = new QOpenGLTexture(QOpenGLTexture::Target1D);
         m_waveformTexture->setSize(WaveformLength);
         m_waveformTexture->setFormat(QOpenGLTexture::RGBA32F);
+        m_waveformTexture->setWrapMode(QOpenGLTexture::ClampToEdge);
         m_waveformTexture->allocateStorage();
     }
     if(m_waveformBeatsTexture == NULL || m_waveformBeatsTexture->width() != WaveformLength) {
@@ -305,6 +306,7 @@ void Audio::renderGraphics() {
         m_waveformBeatsTexture = new QOpenGLTexture(QOpenGLTexture::Target1D);
         m_waveformBeatsTexture->setSize(WaveformLength);
         m_waveformBeatsTexture->setFormat(QOpenGLTexture::RGBA32F);
+        m_waveformBeatsTexture->setWrapMode(QOpenGLTexture::ClampToEdge);
         m_waveformBeatsTexture->allocateStorage();
     }
     if(m_spectrumTexture == NULL || m_spectrumTexture->width() != SpectrumBins) {
@@ -312,6 +314,7 @@ void Audio::renderGraphics() {
         m_spectrumTexture = new QOpenGLTexture(QOpenGLTexture::Target1D);
         m_spectrumTexture->setSize(SpectrumBins);
         m_spectrumTexture->setFormat(QOpenGLTexture::R32F);
+        m_spectrumTexture->setWrapMode(QOpenGLTexture::ClampToEdge);
         m_spectrumTexture->allocateStorage();
     }
     m_waveformTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformGL[waveformPtr * 4]);
