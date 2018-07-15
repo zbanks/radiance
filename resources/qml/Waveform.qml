@@ -6,6 +6,12 @@ GraphicalDisplay {
     implicitWidth: 330;
     implicitHeight: 65;
 
+    property color lowColor: Qt.darker(midColor, 1.5)
+    property color midColor: RadianceStyle.mainAccentColor
+    property color hiColor: Qt.lighter(midColor, 1.5)
+    property color levelColor: RadianceStyle.mainTextColor
+    property color beatColor: RadianceStyle.mainTextColor
+
     fragmentShader: "
         #version 150
 
@@ -15,12 +21,17 @@ GraphicalDisplay {
         // Alpha-compsite two colors, putting one on top of the other
         vec4 composite(vec4 under, vec4 over) {
             float a_out = 1. - (1. - over.a) * (1. - under.a);
-            return clamp(vec4((over.rgb * over.a  + under.rgb * under.a * (1. - over.a)) / a_out, a_out), vec4(0.), vec4(1.));
+            return clamp(vec4((over.rgb + under.rgb * (1. - over.a)), a_out), vec4(0.), vec4(1.));
         }
 
         uniform sampler1D iWaveform;
         uniform sampler1D iBeats;
         uniform vec2 iResolution;
+        uniform vec4 lowColor;
+        uniform vec4 midColor;
+        uniform vec4 hiColor;
+        uniform vec4 levelColor;
+        uniform vec4 beatColor;
 
         void main(void) {
             float g = uv.y * 0.5 + 0.1;
@@ -32,16 +43,17 @@ GraphicalDisplay {
             float mag = abs(uv.y - 0.5);
             vec4 wav = texture(iWaveform, freq);
             vec4 beats = texture(iBeats, freq);
-            vec3 wf = (wav.rgb - mag) * 90.;
-            wf = smoothstep(0., 1., wf);
-            float level = (wav.a - mag) * 90.;
-            level = (smoothstep(-5., 0., level) - smoothstep(0., 5., level));
-            float beat = beats.x;
-            fragColor = composite(fragColor, vec4(0.0, 0.0, 0.6, wf.b));
-            fragColor = composite(fragColor, vec4(0.3, 0.3, 1.0, wf.g));
-            fragColor = composite(fragColor, vec4(0.7, 0.7, 1.0, wf.r));
-            fragColor = composite(fragColor, vec4(0.7, 0.7, 0.7, level * 0.5));
-            fragColor = composite(fragColor, vec4(0.7, 0.7, 0.7, beat));
-            fragColor.rgb *= fragColor.a;
+            vec3 wfDist = (wav.rgb - mag) * 90.;
+            vec3 wf = smoothstep(0., 1., wfDist);
+            float levelDist = (wav.a - mag) * 90.;
+            float thickness = 1.;
+            float level = (smoothstep(-0.5 * thickness - 1., -0.5 * thickness, levelDist) - smoothstep(0.5 * thickness, 0.5 * thickness + 1., levelDist));
+            float beat = (1. - beats.x) * smoothstep(0., 1., max(wfDist.b, max(wfDist.g, wfDist.r)));
+            float lighten = 0.2;
+            fragColor = composite(fragColor, levelColor * level);
+            fragColor = composite(fragColor, lowColor * wf.b);
+            fragColor = composite(fragColor, midColor * wf.g);
+            fragColor = composite(fragColor, hiColor * wf.r);
+            fragColor = composite(fragColor, vec4(vec3(0.), 0.5 * beat));
         }"
 }

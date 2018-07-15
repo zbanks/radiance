@@ -215,7 +215,7 @@ void Audio::analyzeChunk() {
         else
             beatLPF = 0.6;
     } else {
-        beatLPF *= 0.88;
+        beatLPF *= 0.95;
     }
 
     {
