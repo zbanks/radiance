@@ -7,7 +7,7 @@ GraphicalDisplay {
     implicitHeight: 65;
 
     property color lowColor: Qt.darker(midColor, 1.5)
-    property color midColor: RadianceStyle.mainAccentColor
+    property color midColor: RadianceStyle.waveformColor
     property color hiColor: Qt.lighter(midColor, 1.5)
     property color levelColor: RadianceStyle.mainLineColor
 

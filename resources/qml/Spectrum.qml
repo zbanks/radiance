@@ -6,9 +6,9 @@ GraphicalDisplay {
     implicitWidth: 330;
     implicitHeight: 65;
 
-    property color spectrumColorTop: Qt.lighter(RadianceStyle.mainAccentColor, 1.75)
-    property color spectrumColorBottom: RadianceStyle.mainAccentColor
-    property color spectrumColorOutline: Qt.darker(RadianceStyle.mainAccentColor, 2.)
+    property color spectrumColorTop: Qt.lighter(spectrumColorBottom, 1.75)
+    property color spectrumColorBottom: RadianceStyle.spectrumColor
+    property color spectrumColorOutline: Qt.darker(spectrumColorBottom, 2.)
 
     fragmentShader: "
         #version 150

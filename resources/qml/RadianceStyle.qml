@@ -7,7 +7,6 @@ QtObject {
     readonly property color mainTextColor: "#aaa"
     readonly property color mainTextHighlightColor: "#eee"
     readonly property color mainLineColor: "#aaa"
-    readonly property color mainAccentColor: "#a00"
 
     // These colors are for the tiles
     readonly property color tileBackgroundColor: "#111"
@@ -20,4 +19,9 @@ QtObject {
     readonly property color sliderKnobColor: "#333"
     readonly property color sliderTrackColor: "#111"
     readonly property color sliderFillColor: "#00f"
+
+    // Indicators
+    readonly property color ballColor: "#a00"
+    readonly property color spectrumColor: "#a00"
+    readonly property color waveformColor: "#a00"
 }  
