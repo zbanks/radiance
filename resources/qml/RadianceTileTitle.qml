@@ -3,16 +3,16 @@ import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
 
 Text {
-    color: "#ddd"
+    color: Style.tileTextColor
     elide: Text.ElideMiddle
     style: Text.Raised
-    styleColor: "#333"
+    styleColor: Qt.darker(Style.tileTextColor, 3)
     horizontalAlignment: Text.AlignHCenter
     font.pointSize: 10
     anchors.topMargin: -5
     anchors.top: parent.top
     Rectangle {
-        color: "#666"
+        color: Style.tileLineColor
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

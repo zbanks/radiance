@@ -5,6 +5,9 @@ GraphicalDisplay {
     implicitWidth: 65;
     implicitHeight: 65;
 
+    property color ballColorBottom: "#00f"
+    property color ballColorTop: Qt.lighter(ballColorBottom, 1.5)
+
     fragmentShader: "
         #version 150
 
@@ -12,6 +15,8 @@ GraphicalDisplay {
         out vec4 fragColor;
 
         uniform highp float iTime;
+        uniform vec4 ballColorBottom;
+        uniform vec4 ballColorTop;
 
         vec4 composite(vec4 under, vec4 over) {
             float a_out = 1. - (1. - over.a) * (1. - under.a);
@@ -29,7 +34,7 @@ GraphicalDisplay {
             height *= (1. - 0.4 * (1. - step(3., mod(iTime, 4.))));
 
             vec2 ballLoc = vec2(0.5, 0.8 - 0.6 * height);
-            vec4 ballColor = mix(vec4(0.6, 0., 0., 1.), vec4(0.8, 0.5, 0.5, 1.), clamp(10. * (ballLoc.y - uv.y), 0., 1.));
+            vec4 ballColor = mix(ballColorBottom, ballColorTop, clamp(10. * (ballLoc.y - uv.y), 0., 1.));
             vec4 ball = ballColor * (1. - step(0.1, length(uv - ballLoc)));
 
             float floorBox = box((uv - vec2(0.2, 0.9)) / vec2(0.6, 0.05));

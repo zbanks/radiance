@@ -58,7 +58,7 @@ Item {
                     }
                     width: tm.width
                     text: styleData.isExpanded ? "▼" : "▶"
-                    color: "#aaa"
+                    color: Style.mainTextColor
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -67,7 +67,7 @@ Item {
             itemDelegate: Item {
                 id: container
                 Text {
-                    color: styleData.selected ? "white" : "#aaa"
+                    color: styleData.selected ? Style.mainTextHighlightColor : Style.mainTextColor
                     font.bold: styleData.selected
                     text: styleData.value
                     verticalAlignment: Text.AlignVCenter
@@ -123,19 +123,11 @@ Item {
             }
         }
 
-        // pass
         Action {
             id: nodeAddAction
             onTriggered: {
                 addSelected();
             }
-        }
-        Label {
-            id: nodeAddDescription
-            Layout.fillWidth: true;
-            elide: Text.ElideRight;
-            color: "#ddd";
-            //text: NodeRegistry.nodeTypes[nodeSelector.currentText].description;
         }
     }
 

@@ -51,7 +51,7 @@ ComboBox {
         ColorOverlay {
             anchors.fill: image
             source: image
-            color: "white"
+            color: Style.tileTextColor
         }
     }
     background: Item {
