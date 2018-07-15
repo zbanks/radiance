@@ -2,26 +2,32 @@ pragma Singleton
 import QtQuick 2.7
 
 QtObject {
+    // Master color definitions
+    readonly property color gray: "#333"
+    readonly property color black: "#111"
+    readonly property color white: "#aaa"
+    readonly property color accent: "#60a"
+
     // These colors are for the main UI background
-    readonly property color mainBackgroundColor: "#333"
-    readonly property color mainTextColor: "#aaa"
-    readonly property color mainTextHighlightColor: "#eee"
-    readonly property color mainLineColor: "#aaa"
+    readonly property color mainBackgroundColor: gray
+    readonly property color mainTextColor: white
+    readonly property color mainTextHighlightColor: Qt.lighter(white, 1.5)
+    readonly property color mainLineColor: white
 
     // These colors are for the tiles
-    readonly property color tileBackgroundColor: "#111"
-    readonly property color tileBackgroundHighlightColor: "#113"
-    readonly property color tileTextColor: "#ddd"
-    readonly property color tileLineColor: "#666"
-    readonly property color tileLineHighlightColor: "#aa3"
+    readonly property color tileBackgroundColor: black
+    readonly property color tileBackgroundHighlightColor: Qt.darker(accent, 5)
+    readonly property color tileTextColor: Qt.lighter(white, 1.5)
+    readonly property color tileLineColor: Qt.darker(white, 1.5)
+    readonly property color tileLineHighlightColor: accent
 
     // Colors for UI elements
-    readonly property color sliderKnobColor: "#333"
-    readonly property color sliderTrackColor: "#111"
-    readonly property color sliderFillColor: "#00f"
+    readonly property color sliderKnobColor: gray
+    readonly property color sliderTrackColor: black
+    readonly property color sliderFillColor: accent
 
     // Indicators
-    readonly property color ballColor: "#a00"
-    readonly property color spectrumColor: "#a00"
-    readonly property color waveformColor: "#a00"
+    readonly property color ballColor: accent
+    readonly property color spectrumColor: accent
+    readonly property color waveformColor: accent
 }  

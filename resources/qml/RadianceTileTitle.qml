@@ -5,8 +5,6 @@ import QtQuick.Controls.Styles 1.4
 Text {
     color: RadianceStyle.tileTextColor
     elide: Text.ElideMiddle
-    style: Text.Raised
-    styleColor: Qt.darker(RadianceStyle.tileTextColor, 3)
     horizontalAlignment: Text.AlignHCenter
     font.pointSize: 10
     anchors.topMargin: -5
