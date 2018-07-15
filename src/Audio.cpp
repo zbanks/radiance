@@ -169,12 +169,29 @@ void Audio::analyzeChunk() {
 
     // Convert to spectrum (log(power))
     for(auto i=0; i<SpectrumBins; i++) {
-        if(spectrumCount[i] == 0) {
-            spectrum[i] = spectrum[i - 1];
-        } else {
+        if(spectrumCount[i] != 0) {
             spectrum[i] = SpectrumGain * (std::log1p(spectrum[i]) - SpectrumOffset);
             if(spectrum[i] < 0) spectrum[i] = 0;
             if(spectrum[i] > 1) spectrum[i] = 1;
+        }
+    }
+
+    // Fill in holes
+    for(auto i=0; i<SpectrumBins; i++) {
+        if(spectrumCount[i] == 0) {
+            auto before = i;
+            auto after = i;
+            for (; before >= 0; before--) {
+                if (spectrumCount[before] != 0) break;
+            }
+            for (; after < SpectrumBins; after++) {
+                if (spectrumCount[after] != 0) break;
+            }
+            float weightAfter = (float)(i - before) / (after - before);
+            float weightBefore = (float)(after - i) / (after - before);
+            weightAfter *= weightAfter;
+            weightBefore *= weightBefore;
+            spectrum[i] = (weightBefore * spectrum[before] + weightAfter * spectrum[after]) / (weightAfter + weightBefore);
         }
     }
 
