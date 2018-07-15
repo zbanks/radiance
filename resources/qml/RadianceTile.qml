@@ -11,8 +11,8 @@ Item {
     property alias arrowHeight: canvas.arrowHeight
     property alias selected: canvas.selected;
     property alias highlight: canvas.highlight;
-    property alias darkColor: canvas.darkColor;
-    property alias lightColor: canvas.lightColor;
+    property alias bottomColor: canvas.bottomColor;
+    property alias topColor: canvas.topColor;
     property alias borderWidth: canvas.borderWidth;
     property alias borderColor: canvas.borderColor;
     property alias padding: canvas.padding;
@@ -28,10 +28,10 @@ Item {
         id: canvas
         property bool selected: false;
         property bool highlight: false;
-        property color darkColor: selected ? "#113" : "#111";
-        property color lightColor: selected ? "#224" : "#222";
+        property color bottomColor: selected ? Style.tileBackgroundHighlightColor : Style.tileBackgroundColor;
+        property color topColor: Qt.lighter(bottomColor, 1.75);
         property real borderWidth: 1;
-        property color borderColor: highlight ? "#AA3" : "#666";
+        property color borderColor: highlight ? Style.tileLineHighlightColor : Style.tileLineColor;
         property int padding: 3;
         property int blockWidth: 65;
         property int blockHeight: 110;
@@ -53,8 +53,8 @@ Item {
             ctx.reset();
 
             var fill = ctx.createLinearGradient(0, 0, 0, 100 * oversample);
-            fill.addColorStop(0, lightColor);
-            fill.addColorStop(1, darkColor);
+            fill.addColorStop(0, topColor);
+            fill.addColorStop(1, bottomColor);
 
             ctx.beginPath()
             ctx.moveTo(inset, inset);

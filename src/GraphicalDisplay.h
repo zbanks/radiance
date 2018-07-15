@@ -14,6 +14,7 @@ public:
     void setFragmentShader(QString fragmentShader);
     Context *context();
     void setContext(Context *context);
+    QMap<const char *, QColor> colors() const;
 
 signals:
     void fragmentShaderChanged(QString value);

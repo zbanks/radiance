@@ -85,7 +85,7 @@ VideoNodeTile {
 
             Label {
                 text: attachedParameter >= 0 ? "#" + attachedParameter : "";
-                color: "#ddd";
+                color: Style.tileTextColor;
             }
         }
 

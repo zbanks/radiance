@@ -13,6 +13,8 @@ class GraphicalDisplayRenderer : public QQuickFramebufferObject::Renderer, prote
     Context * const *m_context;
     QOpenGLShaderProgram *m_program;
     QOpenGLVertexArrayObject m_vao;
+    QMap<const char *, QColor> m_colors;
+
 public:
     GraphicalDisplayRenderer(Context * const *context)
         : m_context(context)
@@ -59,6 +61,7 @@ err:
 
     void synchronize(QQuickFramebufferObject *item) override {
         auto waveformUI = static_cast<GraphicalDisplay *>(item);
+        m_colors = waveformUI->colors();
         auto fs = waveformUI->fragmentShader();
         if(fs != m_fragmentShader) changeProgram(fs);
     }
@@ -87,6 +90,9 @@ err:
             m_program->setUniformValue("iBeats", 1);
             m_program->setUniformValue("iSpectrum", 2);
             m_program->setUniformValue("iTime", (GLfloat) context()->timebase()->beat());
+            for(auto e : m_colors.keys()) {
+                m_program->setUniformValue(e, m_colors.value(e));
+            }
             m_vao.bind();
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             m_program->release();
@@ -125,4 +131,16 @@ void GraphicalDisplay::setContext(Context *context) {
         m_context = context;
         emit contextChanged(context);
     }
+}
+
+QMap<const char *, QColor> GraphicalDisplay::colors() const {
+    QMap<const char *, QColor> result;
+    auto metaObj = metaObject();
+    for (int i = metaObj->propertyOffset(); i < metaObj->propertyCount(); i++) {
+        auto p = metaObj->property(i);
+        if (p.type() == QVariant::nameToType("QColor")) {
+            result.insert(p.name(), p.read(this).value<QColor>());
+        }
+    }
+    return result;
 }
