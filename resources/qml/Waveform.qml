@@ -9,8 +9,7 @@ GraphicalDisplay {
     property color lowColor: Qt.darker(midColor, 1.5)
     property color midColor: RadianceStyle.mainAccentColor
     property color hiColor: Qt.lighter(midColor, 1.5)
-    property color levelColor: RadianceStyle.mainTextColor
-    property color beatColor: RadianceStyle.mainTextColor
+    property color levelColor: RadianceStyle.mainLineColor
 
     fragmentShader: "
         #version 150
@@ -31,7 +30,6 @@ GraphicalDisplay {
         uniform vec4 midColor;
         uniform vec4 hiColor;
         uniform vec4 levelColor;
-        uniform vec4 beatColor;
 
         void main(void) {
             float g = uv.y * 0.5 + 0.1;
@@ -47,9 +45,8 @@ GraphicalDisplay {
             vec3 wf = smoothstep(0., 1., wfDist);
             float levelDist = (wav.a - mag) * 90.;
             float thickness = 1.;
-            float level = (smoothstep(-0.5 * thickness - 1., -0.5 * thickness, levelDist) - smoothstep(0.5 * thickness, 0.5 * thickness + 1., levelDist));
+            float level = smoothstep(-2., -1., levelDist);
             float beat = (1. - beats.x) * smoothstep(0., 1., max(wfDist.b, max(wfDist.g, wfDist.r)));
-            float lighten = 0.2;
             fragColor = composite(fragColor, levelColor * level);
             fragColor = composite(fragColor, lowColor * wf.b);
             fragColor = composite(fragColor, midColor * wf.g);
