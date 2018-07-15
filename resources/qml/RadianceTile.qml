@@ -28,10 +28,10 @@ Item {
         id: canvas
         property bool selected: false;
         property bool highlight: false;
-        property color bottomColor: selected ? Style.tileBackgroundHighlightColor : Style.tileBackgroundColor;
+        property color bottomColor: selected ? RadianceStyle.tileBackgroundHighlightColor : RadianceStyle.tileBackgroundColor;
         property color topColor: Qt.lighter(bottomColor, 1.75);
         property real borderWidth: 1;
-        property color borderColor: highlight ? Style.tileLineHighlightColor : Style.tileLineColor;
+        property color borderColor: highlight ? RadianceStyle.tileLineHighlightColor : RadianceStyle.tileLineColor;
         property int padding: 3;
         property int blockWidth: 65;
         property int blockHeight: 110;

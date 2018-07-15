@@ -58,7 +58,7 @@ Item {
                     }
                     width: tm.width
                     text: styleData.isExpanded ? "▼" : "▶"
-                    color: Style.mainTextColor
+                    color: RadianceStyle.mainTextColor
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -67,7 +67,7 @@ Item {
             itemDelegate: Item {
                 id: container
                 Text {
-                    color: styleData.selected ? Style.mainTextHighlightColor : Style.mainTextColor
+                    color: styleData.selected ? RadianceStyle.mainTextHighlightColor : RadianceStyle.mainTextColor
                     font.bold: styleData.selected
                     text: styleData.value
                     verticalAlignment: Text.AlignVCenter

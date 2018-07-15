@@ -18,11 +18,11 @@ Slider {
         width: 12
         radius: width/2
         gradient: Gradient {
-            GradientStop { position: 0; color: Qt.lighter(Style.sliderKnobColor, 1.75) }
-            GradientStop { position: 0.5; color: Style.sliderKnobColor }
+            GradientStop { position: 0; color: Qt.lighter(RadianceStyle.sliderKnobColor, 1.75) }
+            GradientStop { position: 0.5; color: RadianceStyle.sliderKnobColor }
         }
         border.width: 1
-        border.color: Qt.darker(Style.sliderKnobColor, 1.5)
+        border.color: Qt.darker(RadianceStyle.sliderKnobColor, 1.5)
     }
 
     background: Rectangle {
@@ -34,10 +34,10 @@ Slider {
         width: control.availableWidth
         radius: height/2
         border.width: 1
-        border.color: Qt.darker(Style.sliderTrackColor, 1.5)
+        border.color: Qt.darker(RadianceStyle.sliderTrackColor, 1.5)
         gradient: Gradient {
-            GradientStop { position: 0.5; color: Style.sliderTrackColor }
-            GradientStop { position: 1; color: Qt.lighter(Style.sliderTrackColor, 3) }
+            GradientStop { position: 0.5; color: RadianceStyle.sliderTrackColor }
+            GradientStop { position: 1; color: Qt.lighter(RadianceStyle.sliderTrackColor, 3) }
         }
         Rectangle {
             x: 1.5
@@ -46,8 +46,8 @@ Slider {
             width: control.visualPosition * (parent.width - 3)
             radius: height/2
             gradient: Gradient {
-                GradientStop { position: 0; color: Qt.lighter(Style.sliderFillColor, 1.5) }
-                GradientStop { position: 0.5; color: Style.sliderFillColor }
+                GradientStop { position: 0; color: Qt.lighter(RadianceStyle.sliderFillColor, 1.5) }
+                GradientStop { position: 0.5; color: RadianceStyle.sliderFillColor }
             }
         }
     }
