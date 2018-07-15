@@ -7,7 +7,7 @@ import "."
 ApplicationWindow {
     id: window;
     visible: true
-    color: Style.mainBackgroundColor
+    color: RadianceStyle.mainBackgroundColor
     width: 800
     height: 530
     title: "Radiance"
@@ -118,7 +118,7 @@ ApplicationWindow {
             }
             Label {
                 text: "Model File:"
-                color: Style.mainTextColor
+                color: RadianceStyle.mainTextColor
             }
             ComboBox {
                 id: modelName
@@ -172,7 +172,7 @@ ApplicationWindow {
                             anchors.fill: parent
                             z: -1
                             opacity: 0.9
-                            color: Style.mainBackgroundColor
+                            color: RadianceStyle.mainBackgroundColor
                         }
 
                         onSearchStarted: {
@@ -207,7 +207,7 @@ ApplicationWindow {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: 7
-                color: Style.mainTextColor
+                color: RadianceStyle.mainTextColor
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {

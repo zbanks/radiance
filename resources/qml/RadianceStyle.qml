@@ -6,6 +6,8 @@ QtObject {
     readonly property color mainBackgroundColor: "#333"
     readonly property color mainTextColor: "#aaa"
     readonly property color mainTextHighlightColor: "#eee"
+    readonly property color mainLineColor: "#aaa"
+    readonly property color mainAccentColor: "#a00"
 
     // These colors are for the tiles
     readonly property color tileBackgroundColor: "#111"
