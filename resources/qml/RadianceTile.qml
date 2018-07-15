@@ -4,7 +4,7 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 Item {
-    property real oversample: 4
+    property real oversample: 1
     property alias inputArrows: canvas.inputArrows
     property alias outputArrow: canvas.outputArrow
     property alias arrowWidth: canvas.arrowWidth
