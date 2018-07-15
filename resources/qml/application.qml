@@ -139,11 +139,12 @@ ApplicationWindow {
             ColumnLayout {
                 anchors.fill: parent
                 RowLayout {
-                    BeatIndicator {
+                    spacing: 20
+                    Waveform {
                         opacity: .9
                         context: defaultContext
                     }
-                    Waveform {
+                    BeatIndicator {
                         opacity: .9
                         context: defaultContext
                     }
