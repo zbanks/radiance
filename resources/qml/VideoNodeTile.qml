@@ -94,7 +94,7 @@ BaseVideoNodeTile {
             PropertyChanges {
                 target: tile
                 z: 2
-                opacity: 0.5
+                opacity: 0.15
             }
         }
     ]

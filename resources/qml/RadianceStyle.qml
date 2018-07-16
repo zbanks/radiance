@@ -30,4 +30,5 @@ QtObject {
     readonly property color ballColor: accent
     readonly property color spectrumColor: accent
     readonly property color waveformColor: accent
+    readonly property color dropTargetColor: Qt.lighter(accent, 2)
 }  
