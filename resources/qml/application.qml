@@ -118,7 +118,7 @@ ApplicationWindow {
                             ColorOverlay {
                                 anchors.fill: image
                                 source: image
-                                color: RadianceStyle.tileTextColor
+                                color: RadianceStyle.tileLineColor
                             }
                         }
                         text: ""
