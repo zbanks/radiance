@@ -2,6 +2,7 @@ import QtQuick 2.7
 import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
 import radiance 1.0
+import "."
 
 DropArea {
     id: dragTarget
@@ -29,6 +30,7 @@ DropArea {
 
     ShaderEffect {
         id: dropRectangle
+        property color highlightColor: RadianceStyle.dropTargetColor
         vertexShader: "
             #version 150
             uniform mat4 qt_Matrix;
@@ -44,11 +46,11 @@ DropArea {
             in vec2 coord;
             uniform float qt_Opacity;
             out vec4 fragColor;
+            uniform vec4 highlightColor;
             void main() {
-                vec4 c = vec4(1., 1., 0., 1.);
                 float i = max(1. - length(2. * coord.xy - 1.), 0.);
                 i = pow(i, 3.);
-                c *= i;
+                vec4 c = highlightColor * i;
                 fragColor = c * qt_Opacity;
             }"
 
