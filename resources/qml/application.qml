@@ -1,6 +1,7 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
 import QtQuick.Controls 1.4
+import QtGraphicalEffects 1.0
 import radiance 1.0
 import "."
 
@@ -12,6 +13,7 @@ ApplicationWindow {
     height: 530
     title: "Radiance"
     property bool hasMidi: false
+    property string modelName: settings.modelName
 
     PreviewAdapter {
         id: previewAdapter;
@@ -42,41 +44,12 @@ ApplicationWindow {
         }
     }
 
-    Action {
-        id: saveAction
-        shortcut: "Ctrl+S"
-        onTriggered: {
-            if (model.vertices.length >= 0) {
-                model.save(modelName.currentText);
-            }
-        }
-    }
-
-    Action {
-        id: loadAction
-        shortcut: "Ctrl+R"
-        onTriggered: {
-            console.log("Loading state from file...");
-            model.load(defaultContext, registry, modelName.currentText);
-            model.flush();
-        }
-    }
-
     Timer {
         repeat: true
         running: true
         interval: 10 * 1000
         onTriggered: saveAction.trigger()
     }
-
-    /*
-    // Make some nodes here to show it can be done; alternatively call model.createVideoNode(...)
-    EffectNode {
-        id: cross
-        name: "crossfader"
-        inputCount: 2
-    }
-    */
 
     Component.onCompleted: {
         Globals.previewAdapter = previewAdapter;
@@ -89,43 +62,7 @@ ApplicationWindow {
     }
 
     ColumnLayout {
-        anchors.fill: parent;
-
-        RowLayout {
-            Layout.fillWidth: true;
-
-            Loader {
-                source: window.hasMidi ? "MidiMappingSelector.qml" : ""
-                onLoaded: {
-                    item.target = graph.view;
-                }
-            }
-
-            Button {
-                text: "Save"
-                action: saveAction
-            }
-            Button {
-                text: "Load"
-                action: loadAction
-            }
-            Button {
-                text: "Clear"
-                onClicked: {
-                    model.clear();
-                    model.flush();
-                }
-            }
-            Label {
-                text: "Model File:"
-                color: RadianceStyle.mainTextColor
-            }
-            ComboBox {
-                id: modelName
-                editable: true
-                model: ["gui", "cli"]
-            }
-        }
+        anchors.fill: parent
 
         Item {
             Layout.fillWidth: true;
@@ -138,8 +75,14 @@ ApplicationWindow {
 
             ColumnLayout {
                 anchors.fill: parent
+                spacing: 10
+
                 RowLayout {
                     spacing: 20
+
+                    Item {
+                        width: 1
+                    }
                     Waveform {
                         opacity: .9
                         context: defaultContext
@@ -151,6 +94,41 @@ ApplicationWindow {
                     Spectrum {
                         opacity: .9
                         context: defaultContext
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                    RadianceButton {
+                        Item {
+                            id: contentItem
+                            property real oversample: 4
+                            anchors.fill: parent
+                            anchors.margins: 3
+                            scale: 1. / oversample
+                            Image {
+                                id: image
+                                anchors.centerIn: parent
+                                source: "../graphics/gear.svg"
+                                fillMode: Image.PreserveAspectFit
+                                visible: false
+                                width: parent.width * contentItem.oversample
+                                height: parent.height * contentItem.oversample
+                                sourceSize.height: 128
+                            }
+                            ColorOverlay {
+                                anchors.fill: image
+                                source: image
+                                color: RadianceStyle.tileTextColor
+                            }
+                        }
+                        text: ""
+                        action: settingsToggle
+                        implicitHeight: 25
+                        implicitWidth: implicitHeight
+                        colorDark: RadianceStyle.mainBackgroundColor
+                    }
+                    Item {
+                        width: 1
                     }
                 }
                 SplitView {
@@ -198,6 +176,63 @@ ApplicationWindow {
                     }
                     Item {
                         Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        Item {
+                            id: settingsWidget
+                            property real openWidth: 200
+
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: 0
+                            clip: true
+
+                            Behavior on width {
+                                enabled: !splitView.resizing
+                                PropertyAnimation {
+                                    easing.type: Easing.InOutQuad;
+                                    duration: 300;
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                z: -1
+                                opacity: 0.9
+                                color: RadianceStyle.mainBackgroundColor
+                            }
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                color: RadianceStyle.mainLineColor
+                                width: 1
+                            }
+
+                            SettingsWidget {
+                                id: settings
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: parent.openWidth - 20
+                                anchors.margins: 10
+                            }
+
+                            Action {
+                                id: settingsToggle
+                                text: "&Settings"
+                                onTriggered: {
+                                    if (settingsWidget.width != 0) {
+                                        settingsWidget.width = 0;
+                                    } else {
+                                        settingsWidget.width = settingsWidget.openWidth;
+                                    }
+                                }
+                            }
+
+                        }
                     }
                 }
             }
@@ -216,6 +251,26 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    Action {
+        id: saveAction
+        shortcut: "Ctrl+S"
+        onTriggered: {
+            if (model.vertices.length >= 0) {
+                model.save(modelName);
+            }
+        }
+    }
+
+    Action {
+        id: loadAction
+        shortcut: "Ctrl+R"
+        onTriggered: {
+            console.log("Loading state from file...");
+            model.load(defaultContext, registry, modelName);
+            model.flush();
         }
     }
 
