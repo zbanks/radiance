@@ -4,6 +4,7 @@ import QtQuick.Controls 1.4
 import QtQuick.Controls.Styles 1.4
 import QtQml.Models 2.2
 import radiance 1.0
+import "."
 
 Item {
     id: libraryWidget
