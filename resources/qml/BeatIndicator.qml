@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import radiance 1.0
+import "."
 
 GraphicalDisplay {
     implicitWidth: 65;
