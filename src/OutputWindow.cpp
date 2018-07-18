@@ -18,7 +18,8 @@ OutputWindow::OutputWindow(OutputNode *videoNode)
     putOnScreen();
     connect(this, &QWindow::screenChanged, this, &OutputWindow::putOnScreen);
     setScreenName(screen()->name());
-    setScreenSize(screen()->geometry().size());
+    // Gross hack to fudge rounding errors in actual screen size
+    setScreenSize(screen()->geometry().size() * screen()->devicePixelRatio() / 4 * 4);
 
     reload();
     connect(&m_reloader, &QTimer::timeout, this, &OutputWindow::reload);
