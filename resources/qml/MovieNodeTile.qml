@@ -80,9 +80,10 @@ VideoNodeTile {
             ]
         }
 
-        ComboBox {
+        RadianceComboBox {
             id: factorSelector;
             Layout.fillWidth: true
+            textRole: "text"
             model: ListModel {
                 ListElement { text: "Crop"; value: MovieNode.Crop }
                 ListElement { text: "Shrink"; value: MovieNode.Shrink }
@@ -95,12 +96,14 @@ VideoNodeTile {
 
         RowLayout {
             Layout.fillWidth: true
-            CheckBox {
+            RadianceCheckBox {
                 id: mutedCheck
+                text: "M"
             }
 
-            CheckBox {
+            RadianceCheckBox {
                 id: pausedCheck
+                text: "P"
             }
         }
 

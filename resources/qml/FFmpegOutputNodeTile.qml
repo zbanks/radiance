@@ -1,15 +1,14 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
-import QtQuick.Controls.Styles 1.4
+import QtQuick.Controls 2.2
 import radiance 1.0
 import "."
 
 VideoNodeTile {
     id: tile;
 
-    normalHeight: 260;
-    normalWidth: 200;
+    normalHeight: 200;
+    normalWidth: 160;
 
     onVideoNodeChanged: {
         recordingCheck.checked = videoNode.recording;
@@ -27,13 +26,8 @@ VideoNodeTile {
         anchors.fill: parent;
         anchors.margins: 15;
 
-        RowLayout {
-            Label {
-                Layout.fillWidth: true;
-                text: "ffmpeg Output";
-                color: "#ddd";
-                elide: Text.ElideMiddle;
-            }
+        RadianceTileTitle {
+            text: "FFmpeg Output";
         }
 
         Item {
@@ -54,20 +48,16 @@ VideoNodeTile {
 
         Label {
             Layout.fillWidth: true
+            font.pointSize: 8
             text: "Args:" + tile.videoNode.ffmpegArguments.join(" ")
-            color: "#ddd";
-            elide: Text.ElideMiddle;
+            color: RadianceStyle.tileTextColor;
+            elide: Text.ElideRight;
+            wrapMode: Text.Wrap
         }
             
-        CheckBox {
+        RadianceCheckBox {
             id: recordingCheck
-
-            style: CheckBoxStyle {
-                label: Text {
-                    color: "#ddd"
-                    text: "Recording"
-                }
-            }
+            text: "Rec"
         }
     }
 }
