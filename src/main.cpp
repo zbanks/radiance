@@ -86,6 +86,10 @@ runRadianceGui(QGuiApplication *app) {
         QQmlComponent component(&engine, QUrl(Paths::qml() + "/application.qml"));
         auto c = component.create();
         if(c == nullptr) {
+            auto errors = component.errors();
+            for (auto e = errors.begin(); e != errors.end(); e++) {
+                qDebug() << *e;
+            }
             qFatal("Failed to load main QML application");
             return 1;
         }

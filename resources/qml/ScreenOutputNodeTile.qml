@@ -1,7 +1,6 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
-import QtQuick.Controls.Styles 1.4
+import QtQuick.Controls 2.2
 import radiance 1.0
 import "."
 
@@ -107,7 +106,7 @@ VideoNodeTile {
         }
 
         RowLayout {
-            ComboBox {
+            RadianceComboBox {
                 id: screenSelector;
                 enabled: !visibleCheck.checked;
                 onCurrentTextChanged: {
@@ -124,7 +123,7 @@ VideoNodeTile {
             }
         }
 
-        ComboBox {
+        RadianceComboBox {
             id: resolutionSelector;
             enabled: !visibleCheck.checked;
             onCurrentTextChanged: {
@@ -137,15 +136,9 @@ VideoNodeTile {
 
         RowLayout {
             Layout.fillWidth: true
-            CheckBox {
+            RadianceCheckBox {
                 id: visibleCheck
-
-                style: CheckBoxStyle {
-                    label: Text {
-                        color: "#ddd"
-                        text: "Visible"
-                    }
-                }
+                text: "Visible"
             }
         }
     }

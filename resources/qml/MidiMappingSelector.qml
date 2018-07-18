@@ -1,13 +1,13 @@
 import QtQuick 2.7
-import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
 import Qt.labs.folderlistmodel 2.1
 import radiance 1.0
 
-ComboBox {
+RadianceComboBox {
     id: combobox
     property var target;
     property string qmlDir;
+    implicitWidth: 120
+    currentIndex: 0
 
     model: folderModel
     textRole: "fileName"
