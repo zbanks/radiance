@@ -1,5 +1,6 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
+import QtQuick.Controls 2.2 as Controls2
 import QtQuick.Controls 1.4
 import QtGraphicalEffects 1.0
 import radiance 1.0
@@ -48,13 +49,13 @@ ApplicationWindow {
         repeat: true
         running: true
         interval: 10 * 1000
-        onTriggered: saveAction.trigger()
+        onTriggered: save()
     }
 
     Component.onCompleted: {
         Globals.previewAdapter = previewAdapter;
 
-        loadAction.trigger();
+        load();
         if (model.vertices.length == 0) {
             // If the state was empty, then open up a few nodes as a demo
             model.load(defaultContext, registry, "gui_default");
@@ -122,7 +123,7 @@ ApplicationWindow {
                             }
                         }
                         text: ""
-                        action: settingsToggle
+                        onClicked: settingsWidget.toggle()
                         implicitHeight: 25
                         implicitWidth: implicitHeight
                         colorDark: RadianceStyle.mainBackgroundColor
@@ -133,7 +134,7 @@ ApplicationWindow {
                 }
                 SplitView {
                     id: splitView
-                    property real openWidth: 100
+                    property real openWidth: 150
                     Layout.fillHeight: true
                     Layout.fillWidth: true
 
@@ -220,18 +221,13 @@ ApplicationWindow {
                                 anchors.margins: 10
                             }
 
-                            Action {
-                                id: settingsToggle
-                                text: "&Settings"
-                                onTriggered: {
-                                    if (settingsWidget.width != 0) {
-                                        settingsWidget.width = 0;
-                                    } else {
-                                        settingsWidget.width = settingsWidget.openWidth;
-                                    }
+                            function toggle() {
+                                if (settingsWidget.width != 0) {
+                                    settingsWidget.width = 0;
+                                } else {
+                                    settingsWidget.width = settingsWidget.openWidth;
                                 }
                             }
-
                         }
                     }
                 }
@@ -254,37 +250,37 @@ ApplicationWindow {
         }
     }
 
-    Action {
-        id: saveAction
-        shortcut: "Ctrl+S"
-        onTriggered: {
-            if (model.vertices.length >= 0) {
-                model.save(modelName);
-            }
+    function save() {
+        if (model.vertices.length >= 0) {
+            model.save(modelName);
         }
     }
 
-    Action {
-        id: loadAction
-        shortcut: "Ctrl+R"
-        onTriggered: {
-            console.log("Loading state from file...");
-            model.load(defaultContext, registry, modelName);
-            model.flush();
-        }
+    function load() {
+        console.log("Loading state from file...");
+        model.load(defaultContext, registry, modelName);
+        model.flush();
     }
 
-    Action {
-        id: quitAction
-        text: "&Quit"
-        shortcut: "Ctrl+Q"
-        onTriggered: {
-            saveAction.trigger()
-            Qt.quit()
-        }
+    function quit() {
+        save()
+        Qt.quit()
     }
 
-    onClosing: {
-        quitAction.trigger();
+    Shortcut {
+        sequence: "Ctrl+S"
+        onActivated: save()
     }
+
+    Shortcut {
+        sequence: "Ctrl+R"
+        onActivated: load()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Q"
+        onActivated: quit()
+    }
+
+    onClosing: quit()
 }

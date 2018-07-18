@@ -11,7 +11,7 @@ QtObject {
     // These colors are for the main UI background
     readonly property color mainBackgroundColor: gray
     readonly property color mainTextColor: white
-    readonly property color mainTextHighlightColor: Qt.lighter(white, 1.5)
+    readonly property color mainTextHighlightColor: Qt.lighter(mainTextColor, 1.5)
     readonly property color mainLineColor: white
 
     // These colors are for the tiles

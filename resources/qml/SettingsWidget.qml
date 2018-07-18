@@ -12,16 +12,17 @@ Item {
     ColumnLayout {
         anchors.fill: parent
 
-        RowLayout {
+        ColumnLayout {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
-
             Label {
+                Layout.alignment: Qt.AlignHCenter
                 text: "MIDI controller:"
                 color: RadianceStyle.mainTextColor
             }
 
             Loader {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+                Layout.fillWidth: true
 
                 source: window.hasMidi ? "MidiMappingSelector.qml" : ""
                 onLoaded: {
@@ -38,7 +39,7 @@ Item {
                 color: RadianceStyle.mainTextColor
             }
 
-            ComboBox {
+            RadianceComboBox {
                 id: modelNameComboBox
                 editable: true
                 model: ["gui", "cli"]
@@ -48,15 +49,15 @@ Item {
         RowLayout {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
 
-            Button {
+            RadianceButton {
                 text: "Save"
-                action: saveAction
+                onClicked: save()
             }
-            Button {
+            RadianceButton {
                 text: "Load"
-                action: loadAction
+                onClicked: load()
             }
-            Button {
+            RadianceButton {
                 text: "Clear"
                 onClicked: {
                     model.clear();

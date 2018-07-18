@@ -48,12 +48,15 @@ Item {
             }
             style: TreeViewStyle {
                 TextMetrics {
+                    font.pointSize: 10
                     id: tm
                     text: "MM"
                 }
                 indentation: tm.width;
                 branchDelegate: Text {
+                    font.pointSize: 10
                     TextMetrics {
+                        font.pointSize: 10
                         id: tm
                         text: "M"
                     }
@@ -70,6 +73,7 @@ Item {
                 Text {
                     color: styleData.selected ? RadianceStyle.mainTextHighlightColor : RadianceStyle.mainTextColor
                     font.bold: styleData.selected
+                    font.pointSize: 10
                     text: styleData.value
                     verticalAlignment: Text.AlignVCenter
                 }
