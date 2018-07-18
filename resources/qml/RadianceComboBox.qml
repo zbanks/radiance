@@ -51,9 +51,8 @@ ComboBox {
         onPaint: {
             context.reset();
             context.moveTo(borderWidth * 2, borderWidth * 2);
-            context.lineTo(width - borderWidth * 2, borderWidth * 2);
             context.lineTo(width / 2, height - borderWidth * 2);
-            context.closePath();
+            context.lineTo(width - borderWidth * 2, borderWidth * 2);
             context.lineWidth = borderWidth;
             context.strokeStyle = RadianceStyle.tileLineColor;
             context.stroke();
