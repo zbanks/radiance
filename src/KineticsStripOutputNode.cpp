@@ -60,6 +60,20 @@ QString KineticsStripOutputNode::typeName() {
     return "KineticsStripOutputNode";
 }
 
+QJsonObject KineticsStripOutputNode::parameters() {
+    QMutexLocker locker(&d()->m_stateLock);
+    return *d()->m_parameters;
+}
+
+QJsonObject KineticsStripOutputNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    QJsonObject params = parameters();
+    for (QString key : params.keys()) {
+      o.insert(key, params.value(key));
+    }
+    return o;
+}
+
 void KineticsStripOutputNode::initDataSocket(QJsonObject obj) {
     d()->host->setAddress(obj.value("host").toString());
     std::string sdmxPort = obj.value("dmxPort").toString().toUtf8().constData();
@@ -72,11 +86,18 @@ VideoNode *KineticsStripOutputNode::deserialize(Context *context, QJsonObject ob
     swidth = swidth.compare("") == 0 ? "1" : swidth;
     std::string sheight = obj.value("height").toString().toUtf8().constData();
     sheight = sheight.compare("") == 0 ? "1" : sheight;
+
     int width = std::stoi(swidth);
     int height = std::stoi(sheight);
 
     KineticsStripOutputNode *e = new KineticsStripOutputNode(context, QSize(width, height));
     e->initDataSocket(obj);
+    e->d()->m_parameters = new QJsonObject({
+      {"width", obj.value("width").toString()},
+      {"height", obj.value("height").toString()},
+      {"host", obj.value("host").toString()},
+      {"dmxPort", obj.value("port").toString()}
+    });
     return e;
 }
 
@@ -100,4 +121,7 @@ KineticsStripOutputNodePrivate::KineticsStripOutputNodePrivate(Context *context,
     outPacket = new QByteArray();
     host = new QHostAddress();
     udpSocket = new QUdpSocket();
+
+    //state that gets (de)serialized on restart
+    QJsonObject m_parameters;
 }

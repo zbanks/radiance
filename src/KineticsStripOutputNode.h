@@ -28,6 +28,10 @@ public:
 
     // A string representation of this VideoNode type
     static QString typeName();
+    QJsonObject parameters();
+
+    //return the state of this node in the json format
+    QJsonObject serialize() override;
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
@@ -59,4 +63,7 @@ public:
     QByteArray *outPacket;
     QHostAddress *host;
     int dmxPort;
+
+    //state that gets (de)serialized on restart
+    QJsonObject *m_parameters;
 };

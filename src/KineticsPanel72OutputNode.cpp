@@ -55,7 +55,7 @@ void KineticsPanel72OutputNode::onFrame(QSize size, QByteArray frame) {
         startI %= d()->fWidth;
         int endI = panelNum%2 ==0 ? startI-6 : startI+6;
         int deltaI = panelNum%2 ==0 ? -1 : 1;
-        // the y range always increments, but due to the order of the panels has
+        // the y range always increments, but due to the order of the panels
         // each panel starts at a decrementing index
         int startJ = d()->fHeight - 1 - (((panelNum*6)/d()->fWidth+1)*12 -1);
         int endJ = d()->fHeight - 1 - ((panelNum*6)/d()->fWidth *12);
@@ -80,6 +80,20 @@ void KineticsPanel72OutputNode::onFrame(QSize size, QByteArray frame) {
 
 QString KineticsPanel72OutputNode::typeName() {
     return "KineticsPanel72OutputNode";
+}
+
+QJsonObject KineticsPanel72OutputNode::parameters() {
+    QMutexLocker locker(&d()->m_stateLock);
+    return *d()->m_parameters;
+}
+
+QJsonObject KineticsPanel72OutputNode::serialize() {
+    QJsonObject o = VideoNode::serialize();
+    QJsonObject params = parameters();
+    for (QString key : params.keys()) {
+      o.insert(key, params.value(key));
+    }
+    return o;
 }
 
 void KineticsPanel72OutputNode::initDataSocket(QJsonObject obj) {
@@ -110,6 +124,13 @@ VideoNode *KineticsPanel72OutputNode::deserialize(Context *context, QJsonObject 
 
     KineticsPanel72OutputNode *e = new KineticsPanel72OutputNode(context, QSize(fWidth, fHeight));
     e->initDataSocket(obj);
+    e->d()->m_parameters = new QJsonObject({
+      {"host", obj.value("host").toString()},
+      {"fullWidth", obj.value("fullWidth").toString()},
+      {"fullHeight", obj.value("fullHeight").toString()},
+      {"sectionStart", obj.value("sectionStart").toString()},
+      {"sectionEnd", obj.value("sectionEnd").toString()}
+    });
     return e;
 }
 
