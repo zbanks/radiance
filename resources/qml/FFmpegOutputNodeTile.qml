@@ -55,7 +55,7 @@ VideoNodeTile {
             wrapMode: Text.Wrap
         }
             
-        RadianceCheckBox {
+        CheckBox {
             id: recordingCheck
             text: "Rec"
         }

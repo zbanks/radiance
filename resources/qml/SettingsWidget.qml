@@ -39,7 +39,7 @@ Item {
                 color: RadianceStyle.mainTextColor
             }
 
-            RadianceComboBox {
+            ComboBox {
                 id: modelNameComboBox
                 editable: true
                 model: ["gui", "cli"]
@@ -49,15 +49,15 @@ Item {
         RowLayout {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
 
-            RadianceButton {
+            Button {
                 text: "Save"
                 onClicked: save()
             }
-            RadianceButton {
+            Button {
                 text: "Load"
                 onClicked: load()
             }
-            RadianceButton {
+            Button {
                 text: "Clear"
                 onClicked: {
                     model.clear();

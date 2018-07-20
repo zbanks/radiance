@@ -99,7 +99,7 @@ ApplicationWindow {
                     Item {
                         Layout.fillWidth: true
                     }
-                    RadianceButton {
+                    Button {
                         Item {
                             id: contentItem
                             property real oversample: 4

@@ -2,7 +2,7 @@ import QtQuick 2.7
 import Qt.labs.folderlistmodel 2.1
 import radiance 1.0
 
-RadianceComboBox {
+ComboBox {
     id: combobox
     property var target;
     property string qmlDir;
