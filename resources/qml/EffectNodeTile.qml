@@ -42,7 +42,7 @@ VideoNodeTile {
             videoNode: tile.videoNode
         }
 
-        RadianceTileSlider {
+        Slider {
             id: slider;
             Layout.fillWidth: true;
         }

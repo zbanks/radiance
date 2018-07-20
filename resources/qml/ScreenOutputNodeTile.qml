@@ -106,7 +106,7 @@ VideoNodeTile {
         }
 
         RowLayout {
-            RadianceComboBox {
+            ComboBox {
                 id: screenSelector;
                 enabled: !visibleCheck.checked;
                 onCurrentTextChanged: {
@@ -123,7 +123,7 @@ VideoNodeTile {
             }
         }
 
-        RadianceComboBox {
+        ComboBox {
             id: resolutionSelector;
             enabled: !visibleCheck.checked;
             onCurrentTextChanged: {
@@ -136,7 +136,7 @@ VideoNodeTile {
 
         RowLayout {
             Layout.fillWidth: true
-            RadianceCheckBox {
+            CheckBox {
                 id: visibleCheck
                 text: "Visible"
             }

@@ -53,7 +53,7 @@ VideoNodeTile {
             videoNode: tile.videoNode
         }
 
-        RadianceTileSlider {
+        Slider {
             property bool controlled;
             id: slider
             Layout.fillWidth: true
@@ -80,7 +80,7 @@ VideoNodeTile {
             ]
         }
 
-        RadianceComboBox {
+        ComboBox {
             id: factorSelector;
             Layout.fillWidth: true
             textRole: "text"
@@ -96,12 +96,12 @@ VideoNodeTile {
 
         RowLayout {
             Layout.fillWidth: true
-            RadianceCheckBox {
+            CheckBox {
                 id: mutedCheck
                 text: "M"
             }
 
-            RadianceCheckBox {
+            CheckBox {
                 id: pausedCheck
                 text: "P"
             }

@@ -112,6 +112,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
+                anchors.margins: 3
                 visible: false
                 onAccepted: {
                     addSelected();
