@@ -1,6 +1,5 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 2.2 as Controls2
 import QtQuick.Controls 1.4
 import QtGraphicalEffects 1.0
 import radiance 1.0
@@ -123,7 +122,7 @@ ApplicationWindow {
                             }
                         }
                         text: ""
-                        onClicked: settingsWidget.toggle()
+                        onClicked: settingsContainer.toggle()
                         implicitHeight: 25
                         implicitWidth: implicitHeight
                         colorDark: RadianceStyle.mainBackgroundColor
@@ -132,102 +131,38 @@ ApplicationWindow {
                         width: 1
                     }
                 }
-                SplitView {
-                    id: splitView
-                    property real openWidth: 150
+                Item {
                     Layout.fillHeight: true
                     Layout.fillWidth: true
+                    PopOut {
+                        id: libraryContainer
+                        openWidth: 150
+                        side: "left"
+                        open: true
 
-                    LibraryWidget {
-                        id: libraryWidget
-                        graph: graph;
-                        registry: registry
-                        context: defaultContext
-                        implicitWidth: splitView.openWidth
-                        clip: true
-                        
-                        Layout.fillHeight: true
+                        LibraryWidget {
+                            id: libraryWidget
+                            graph: graph;
+                            registry: registry
+                            context: defaultContext
 
-                        Rectangle {
                             anchors.fill: parent
-                            z: -1
-                            opacity: 0.9
-                            color: RadianceStyle.mainBackgroundColor
-                        }
 
-                        onSearchStarted: {
-                            if (libraryWidget.width == 0) {
-                                libraryWidget.width = splitView.openWidth;
+                            onSearchStarted: {
+                                libraryContainer.open = true
                             }
-                        }
-                        onSearchStopped: {
-                            if (libraryWidget.width != 0) {
-                                splitView.openWidth = libraryWidget.width;
-                                libraryWidget.width = 0;
-                            }
-                        }
-
-                        Behavior on width {
-                            enabled: !splitView.resizing
-                            PropertyAnimation {
-                                easing.type: Easing.InOutQuad;
-                                duration: 300;
+                            onSearchStopped: {
+                                libraryContainer.open = false
                             }
                         }
                     }
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
+                    PopOut {
+                        id: settingsContainer
+                        side: "right"
 
-                        Item {
-                            id: settingsWidget
-                            property real openWidth: 200
-
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            width: 0
-                            clip: true
-
-                            Behavior on width {
-                                enabled: !splitView.resizing
-                                PropertyAnimation {
-                                    easing.type: Easing.InOutQuad;
-                                    duration: 300;
-                                }
-                            }
-
-                            Rectangle {
-                                anchors.fill: parent
-                                z: -1
-                                opacity: 0.9
-                                color: RadianceStyle.mainBackgroundColor
-                            }
-
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.top: parent.top
-                                anchors.bottom: parent.bottom
-                                color: RadianceStyle.mainLineColor
-                                width: 1
-                            }
-
-                            SettingsWidget {
-                                id: settings
-                                anchors.left: parent.left
-                                anchors.top: parent.top
-                                anchors.bottom: parent.bottom
-                                width: parent.openWidth - 20
-                                anchors.margins: 10
-                            }
-
-                            function toggle() {
-                                if (settingsWidget.width != 0) {
-                                    settingsWidget.width = 0;
-                                } else {
-                                    settingsWidget.width = settingsWidget.openWidth;
-                                }
-                            }
+                        SettingsWidget {
+                            id: settings
+                            anchors.fill: parent
                         }
                     }
                 }
