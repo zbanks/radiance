@@ -145,10 +145,12 @@ Item {
     }
 
     function stopSearching() {
-        searchBox.text = "";
-        searchBox.visible = false;
-        searchBox.focus = false;
-        searchStopped();
+        if (searchBox.visible) {
+            searchBox.text = "";
+            searchBox.visible = false;
+            searchBox.focus = false;
+            searchStopped();
+        }
     }
 
     function finishCreation() {
