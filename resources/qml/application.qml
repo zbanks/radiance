@@ -98,38 +98,6 @@ ApplicationWindow {
                     Item {
                         Layout.fillWidth: true
                     }
-                    Button {
-                        Item {
-                            id: contentItem
-                            property real oversample: 4
-                            anchors.fill: parent
-                            anchors.margins: 3
-                            scale: 1. / oversample
-                            Image {
-                                id: image
-                                anchors.centerIn: parent
-                                source: "../graphics/gear.svg"
-                                fillMode: Image.PreserveAspectFit
-                                visible: false
-                                width: parent.width * contentItem.oversample
-                                height: parent.height * contentItem.oversample
-                                sourceSize.height: 128
-                            }
-                            ColorOverlay {
-                                anchors.fill: image
-                                source: image
-                                color: RadianceStyle.tileLineColor
-                            }
-                        }
-                        text: ""
-                        onClicked: settingsContainer.toggle()
-                        implicitHeight: 25
-                        implicitWidth: implicitHeight
-                        colorDark: RadianceStyle.mainBackgroundColor
-                    }
-                    Item {
-                        width: 1
-                    }
                 }
                 Item {
                     Layout.fillHeight: true
