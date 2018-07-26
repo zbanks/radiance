@@ -16,10 +16,10 @@ QtObject {
 
     // These colors are for the tiles
     readonly property color tileBackgroundColor: black
-    readonly property color tileBackgroundHighlightColor: Qt.darker(accent, 5)
+    readonly property color tileBackgroundHighlightColor: Qt.darker(accent, 3)
     readonly property color tileTextColor: Qt.lighter(white, 1.5)
     readonly property color tileLineColor: Qt.darker(white, 1.5)
-    readonly property color tileLineHighlightColor: accent
+    readonly property color tileLineHighlightColor: Qt.lighter(white, 1.5)
 
     // Colors for UI elements
     readonly property color sliderKnobColor: gray

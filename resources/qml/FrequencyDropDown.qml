@@ -25,13 +25,22 @@ ComboBox {
         width: control.width
         height: 20
         Image {
+            id: imageInDropDown
             anchors.fill: parent
             source: "../graphics/" + img
             sourceSize.height: 128
-            //height: 12
-            //width: 20
             fillMode: Image.PreserveAspectFit
+            visible: false
         }
+        ColorOverlay {
+            anchors.fill: imageInDropDown
+            source: imageInDropDown
+            color: RadianceStyle.tileTextColor
+        }
+        background: Rectangle {
+            color: highlighted ? RadianceStyle.tileBackgroundHighlightColor : "transparent"
+        }
+        highlighted: control.highlightedIndex === index
     }
     indicator: Item {
     }
