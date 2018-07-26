@@ -107,7 +107,7 @@ Item {
                 text: "Zoom &In"
                 shortcut: StandardKey.ZoomIn
                 onTriggered: {
-                    view.scale *= Math.exp(zoomStep);
+                    view.scale = Math.min(view.scale * Math.exp(zoomStep), zoomMax);
                 }
             }
             Action {
@@ -115,7 +115,7 @@ Item {
                 text: "Zoom &Out"
                 shortcut: StandardKey.ZoomOut
                 onTriggered: {
-                    view.scale *= Math.exp(-zoomStep);
+                    view.scale = Math.max(view.scale * Math.exp(-zoomStep), zoomMin);
                 }
             }
             Action {
