@@ -30,7 +30,7 @@ Build
 
 ### Dependencies
 
-- `Qt 5.9`
+- `Qt 5.9` or higher
 - `PortAudio`
 - `FFTW3`
 - `libsamplerate`
@@ -43,7 +43,7 @@ Install dependencies on Ubuntu:
 
     $ sudo apt-add-repository ppa:beineri/opt-qt591-trusty
     $ sudo apt-get update
-    $ sudo apt-get install qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev libmpv-dev
+    $ sudo apt-get install qt59base qt59multimedia qt59quickcontrols qt59imageformats qt59quickcontrols2 qt59script libfftw3-dev libsamplerate0-dev libasound2-dev libmpv-dev libdrm-dev libgl1-mesa-dev
     $ git clone https://github.com/EddieRingle/portaudio    # build & install
     $ git clone https://github.com/thestk/rtmidi            # build & install
 
@@ -73,23 +73,33 @@ or on Mac:
 
     brew install youtube-dl
 
-You can then load YouTube videos into Radiance by typing `youtube:search terms` into the pattern loader box.
+You can then load YouTube videos into Radiance using the youtube node in the library.
 
-Keyboard Shortcuts
-------------------
+Mouse Control
+-------------
 
-### Tiles
+- `Double click` (in the library) - add tile
+- `Click` (on a tile) - select tile
+- `Ctrl`-`click` (on a tile) - select multiple
+- `Shift`-`click` (on a tile) - select contiguous
+- `Click and drag` (on a tile) - re-order selected tiles
+- `Scroll wheel` - change intensity of selected tiles
+- `Ctrl`-`scroll wheel` - zoom
+
+Keyboard Control
+----------------
+
+- `:` - Search library
+- `Ctrl`-`+` - Zoom in
+- `Ctrl`-`-` - Zoom out
+- `Ctrl`-`0` - Reset zoom
+- `` ` ``, `0-9` - Set selected slider. `` ` `` = 0%; `1` = 10%; `5` = 50%; `0` = 100%
 - `j` - Decrement selected slider by 10%
 - `k`  - Increment selected slider by 10%
-- `` ` ``, `0-9` - Set selected slider. `` ` `` = 0%; `1` = 10%; `5` = 50%; `0` = 100%
 - `Delete` - Remove a tile
-- `Enter` - Set a tile as output (then click `Show Output` to fullscreen it)
-- `Ctrl` + `` ` ``, `0-9` - Assign slider to MIDI knob
-- `r` - Reload node
-
-### Other
-- `q` - Close output window
-- `:` - Load node
+- `Ctrl` + `` ` ``, `1-9` - Assign slider to MIDI knob
+- `r` - Reload tile
+- `Esc` - Close output window
 
 Shader Effects
 --------------
