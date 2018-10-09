@@ -8,17 +8,35 @@
 VideoNode::VideoNode(VideoNodePrivate *ptr)
     : d_ptr(ptr, &QObject::deleteLater)
 {
+    attachSignals();
 }
 
 // Only use this for promoting WeakVideoNodes
 VideoNode::VideoNode(QSharedPointer<VideoNodePrivate> ptr)
     : d_ptr(ptr)
 {
+    attachSignals();
 }
 
 VideoNode::VideoNode(const VideoNode &other)
     : d_ptr(other.d_ptr)
 {
+    attachSignals();
+}
+
+void VideoNode::attachSignals() {
+    // TODO I think this can be done with QMetaObject
+    // which will remove the need to have this method
+    // in subclasses
+    qRegisterMetaType<Chain>("Chain"); // so we can pass it in Q_ARG
+    connect(d_ptr.data(), &VideoNodePrivate::message, this, &VideoNode::message);
+    connect(d_ptr.data(), &VideoNodePrivate::warning, this, &VideoNode::warning);
+    connect(d_ptr.data(), &VideoNodePrivate::error, this, &VideoNode::error);
+    connect(d_ptr.data(), &VideoNodePrivate::inputCountChanged, this, &VideoNode::inputCountChanged);
+    connect(d_ptr.data(), &VideoNodePrivate::chainsChanged, this, &VideoNode::chainsChanged);
+    connect(d_ptr.data(), &VideoNodePrivate::requestedChainAdded, this, &VideoNode::requestedChainAdded);
+    connect(d_ptr.data(), &VideoNodePrivate::requestedChainRemoved, this, &VideoNode::requestedChainRemoved);
+    connect(d_ptr.data(), &VideoNodePrivate::nodeStateChanged, this, &VideoNode::nodeStateChanged);
 }
 
 VideoNode *VideoNode::clone() const {
@@ -60,7 +78,24 @@ void VideoNode::setInputCount(int value) {
             changed = true;
         }
     }
-    if (changed) emit inputCountChanged(value);
+    if (changed) emit d_ptr->inputCountChanged(value);
+}
+
+VideoNode::NodeState VideoNode::nodeState() {
+    QMutexLocker locker(&d_ptr->m_stateLock);
+    return d_ptr->m_nodeState;
+}
+
+void VideoNode::setNodeState(NodeState value) {
+    bool changed = false;
+    {
+        QMutexLocker locker(&d_ptr->m_stateLock);
+        if (value != d_ptr->m_nodeState) { 
+            d_ptr->m_nodeState = value;
+            changed = true;
+        }
+    }
+    if (changed) emit d_ptr->nodeStateChanged(value);
 }
 
 QList<Chain> VideoNode::chains() {
@@ -91,7 +126,7 @@ void VideoNode::setChains(QList<Chain> chains) {
     }
     if (wereChainsChanged) {
         chainsEdited(toAdd, toRemove);
-        emit chainsChanged(chains);
+        emit d_ptr->chainsChanged(chains);
     }
 }
 

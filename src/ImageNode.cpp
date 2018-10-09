@@ -73,6 +73,7 @@ void ImageNode::setFile(QString file) {
         }
     }
     if (wasFileChanged) {
+        setNodeState(VideoNode::Loading);
         bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
         Q_ASSERT(result);
         emit fileChanged(file);
@@ -119,7 +120,7 @@ ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode p)
     , m_p(p) {
     connect(this, &ImageNodeOpenGLWorker::message, &p, &ImageNode::message);
     connect(this, &ImageNodeOpenGLWorker::warning, &p, &ImageNode::warning);
-    connect(this, &ImageNodeOpenGLWorker::fatal,   &p, &ImageNode::fatal);
+    connect(this, &ImageNodeOpenGLWorker::error,   &p, &ImageNode::error);
 }
 
 void ImageNodeOpenGLWorker::initialize(QString filename) {
@@ -132,7 +133,8 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
 
     QFileInfo check_file(filename);
     if (!(check_file.exists() && check_file.isFile())) {
-        emit fatal(QString("Could not find \"%1\"").arg(filename));
+        emit error(QString("Could not find \"%1\"").arg(filename));
+        p.setNodeState(VideoNode::Broken);
     }
 
     QImageReader imageReader(filename);
@@ -150,7 +152,8 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
     for (int i = 0; i < nFrames; i++) {
         auto frame = imageReader.read();
         if (frame.isNull()) {
-            emit fatal(QString("Unable to read frame %1 of image: %2").arg(i).arg(imageReader.errorString()));
+            emit error(QString("Unable to read frame %1 of image: %2").arg(i).arg(imageReader.errorString()));
+            p.setNodeState(VideoNode::Broken);
             return;
         }
 
@@ -171,6 +174,7 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
         p.d()->m_ready = true;
     }
     glFlush();
+    p.setNodeState(VideoNode::Ready);
 }
 
 QString ImageNode::typeName() {

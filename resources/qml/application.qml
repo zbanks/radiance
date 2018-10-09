@@ -39,7 +39,7 @@ ApplicationWindow {
         onWarning: {
             messages.text += "<font color=\"gold\"><pre>" + str + "</pre></font>";
         }
-        onFatal: {
+        onError: {
             messages.text += "<font color=\"red\"><pre>" + str + "</pre></font>";
         }
     }

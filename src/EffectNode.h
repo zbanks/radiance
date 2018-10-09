@@ -96,6 +96,7 @@ protected slots:
 
 protected:
     QString fileToName(QString file);
+    void attachSignals();
 
 signals:
     void intensityChanged(qreal value);
@@ -109,6 +110,8 @@ private:
 };
 
 class EffectNodePrivate : public VideoNodePrivate {
+    Q_OBJECT
+
 public:
     EffectNodePrivate(Context *context);
 
@@ -124,6 +127,12 @@ public:
     bool m_ready{};
     double m_frequency{};
     QVector<QSharedPointer<QOpenGLShaderProgram>> m_shaders;
+
+signals:
+    void intensityChanged(qreal value);
+    void nameChanged(QString name);
+    void fileChanged(QString file);
+    void frequencyChanged(double frequency);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -162,7 +171,7 @@ public slots:
 signals:
     void message(QString str);
     void warning(QString str);
-    void fatal(QString str);
+    void error(QString str);
 
 protected:
     bool loadProgram(QString file);

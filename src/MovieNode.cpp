@@ -22,6 +22,7 @@ const float MovieNode::zoomFactor = 16. / 21.;
 MovieNode::MovieNode(Context *context, QString file, QString name)
     : VideoNode(new MovieNodePrivate(context))
 {
+    attachSignals();
     d()->m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
     d()->m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(*this), &QObject::deleteLater);
     connect(d()->m_openGLWorker.data(), &QObject::destroyed, d()->m_openGLWorkerContext, &QObject::deleteLater);
@@ -40,11 +41,13 @@ MovieNode::MovieNode(Context *context, QString file, QString name)
 MovieNode::MovieNode(const MovieNode &other)
     : VideoNode(other)
 {
+    attachSignals();
 }
 
 MovieNode::MovieNode(QSharedPointer<MovieNodePrivate> other_ptr)
     : VideoNode(other_ptr.staticCast<VideoNodePrivate>())
 {
+    attachSignals();
 }
 
 MovieNode *MovieNode::clone() const {
@@ -53,6 +56,18 @@ MovieNode *MovieNode::clone() const {
 
 QSharedPointer<MovieNodePrivate> MovieNode::d() const {
     return d_ptr.staticCast<MovieNodePrivate>();
+}
+
+void MovieNode::attachSignals() {
+    VideoNode::attachSignals();
+    connect(d().data(), &MovieNodePrivate::fileChanged, this, &MovieNode::fileChanged);
+    connect(d().data(), &MovieNodePrivate::nameChanged, this, &MovieNode::nameChanged);
+    connect(d().data(), &MovieNodePrivate::videoSizeChanged, this, &MovieNode::videoSizeChanged);
+    connect(d().data(), &MovieNodePrivate::positionChanged, this, &MovieNode::positionChanged);
+    connect(d().data(), &MovieNodePrivate::durationChanged, this, &MovieNode::durationChanged);
+    connect(d().data(), &MovieNodePrivate::muteChanged, this, &MovieNode::muteChanged);
+    connect(d().data(), &MovieNodePrivate::pauseChanged, this, &MovieNode::pauseChanged);
+    connect(d().data(), &MovieNodePrivate::factorChanged, this, &MovieNode::factorChanged);
 }
 
 QJsonObject MovieNode::serialize() {
@@ -131,7 +146,7 @@ void MovieNode::onVideoSizeChanged(QSize size) {
             changed = true;
         }
     }
-    if (changed) emit videoSizeChanged(size);
+    if (changed) emit d()->videoSizeChanged(size);
 }
 
 void MovieNode::onPositionChanged(qreal position) {
@@ -143,7 +158,7 @@ void MovieNode::onPositionChanged(qreal position) {
             changed = true;
         }
     }
-    if (changed) emit positionChanged(position);
+    if (changed) emit d()->positionChanged(position);
 }
 
 void MovieNode::onDurationChanged(qreal duration) {
@@ -155,7 +170,7 @@ void MovieNode::onDurationChanged(qreal duration) {
             changed = true;
         }
     }
-    if (changed) emit durationChanged(duration);
+    if (changed) emit d()->durationChanged(duration);
 }
 
 void MovieNode::onMuteChanged(bool mute) {
@@ -167,7 +182,7 @@ void MovieNode::onMuteChanged(bool mute) {
             changed = true;
         }
     }
-    if (changed) emit muteChanged(mute);
+    if (changed) emit d()->muteChanged(mute);
 }
 
 void MovieNode::onPauseChanged(bool pause) {
@@ -179,11 +194,13 @@ void MovieNode::onPauseChanged(bool pause) {
             changed = true;
         }
     }
-    if (changed) emit pauseChanged(pause);
+    if (changed) emit d()->pauseChanged(pause);
 }
 
 void MovieNode::reload() {
     QString filename;
+    setNodeState(VideoNode::Loading);
+
     {
         QMutexLocker locker(&d()->m_stateLock);
         d()->m_ready = false;
@@ -208,7 +225,7 @@ void MovieNode::setFile(QString file) {
     }
     if (changed) {
         reload();
-        emit fileChanged(file);
+        emit d()->fileChanged(file);
     }
 }
 
@@ -221,7 +238,7 @@ void MovieNode::setName(QString name) {
             changed = true;
         }
     }
-    if (changed) emit nameChanged(name);
+    if (changed) emit d()->nameChanged(name);
 }
 
 void MovieNode::setPosition(qreal position) {
@@ -242,7 +259,7 @@ void MovieNode::setFactor(enum Factor factor) {
         if (d()->m_factor == factor) return;
         d()->m_factor = factor;
     }
-    emit factorChanged(factor);
+    emit d()->factorChanged(factor);
 }
 
 static void *get_proc_address(void *ctx, const char *name) {
@@ -367,7 +384,7 @@ MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode p)
 {
     connect(this, &MovieNodeOpenGLWorker::message, &p, &MovieNode::message);
     connect(this, &MovieNodeOpenGLWorker::warning, &p, &MovieNode::warning);
-    connect(this, &MovieNodeOpenGLWorker::fatal,   &p, &MovieNode::fatal);
+    connect(this, &MovieNodeOpenGLWorker::error,   &p, &MovieNode::error);
 }
 
 static void requestUpdate(void *ctx) {
@@ -430,7 +447,7 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 
     mpv_set_wakeup_callback(m_mpv, requestWakeup, this);
 
-    auto shader = loadBlitShader();
+    auto shader = loadBlitShader(p);
     if (shader.isNull()) return;
 
     qDebug() << "LOAD" << filename;
@@ -542,6 +559,10 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
             if (prop->format == MPV_FORMAT_DOUBLE) {
                 double time = *(double *)prop->data;
                 emit durationChanged(time);
+                auto d = m_p.toStrongRef();
+                if (d.isNull()) return; // MovieNode was deleted
+                MovieNode p(d);
+                p.setNodeState(VideoNode::Ready);
             }
         } else if (strcmp(prop->name, "video-params/w") == 0) {
             if (prop->format == MPV_FORMAT_INT64) {
@@ -631,7 +652,7 @@ MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
     mpv_opengl_cb_uninit_gl(m_mpv_gl);
 }
 
-QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader() {
+QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader(MovieNode p) {
     auto vertexString = QString{
         "#version 150\n"
         "out vec2 uv;\n"
@@ -656,15 +677,18 @@ QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader() {
     auto shader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
 
     if (!shader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
-        emit fatal("Could not compile vertex shader");
+        emit error("Could not compile vertex shader");
+        p.setNodeState(VideoNode::Broken);
         return nullptr;
     }
     if (!shader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
-        emit fatal("Could not compile fragment shader");
+        emit error("Could not compile fragment shader");
+        p.setNodeState(VideoNode::Broken);
         return nullptr;
     }
     if (!shader->link()) {
-        emit fatal("Could not link shader program");
+        emit error("Could not link shader program");
+        p.setNodeState(VideoNode::Broken);
         return nullptr;
     }
 

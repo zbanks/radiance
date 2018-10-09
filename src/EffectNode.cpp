@@ -18,8 +18,7 @@
 EffectNode::EffectNode(Context *context, QString file)
     : VideoNode(new EffectNodePrivate(context))
 {
-    qRegisterMetaType<Chain>("Chain"); // so we can pass it in Q_ARG
-
+    attachSignals();
     d()->m_openGLWorker = QSharedPointer<EffectNodeOpenGLWorker>(new EffectNodeOpenGLWorker(*this), &QObject::deleteLater);
     setInputCount(1);
     setFrequency(0);
@@ -35,11 +34,13 @@ EffectNode::EffectNode(Context *context, QString file)
 EffectNode::EffectNode(const EffectNode &other)
     : VideoNode(other)
 {
+    attachSignals();
 }
 
 EffectNode::EffectNode(QSharedPointer<EffectNodePrivate> other_ptr)
     : VideoNode(other_ptr.staticCast<VideoNodePrivate>())
 {
+    attachSignals();
 }
 
 EffectNode *EffectNode::clone() const {
@@ -48,6 +49,13 @@ EffectNode *EffectNode::clone() const {
 
 QSharedPointer<EffectNodePrivate> EffectNode::d() const {
     return d_ptr.staticCast<EffectNodePrivate>();
+}
+
+void EffectNode::attachSignals() {
+    connect(d().data(), &EffectNodePrivate::intensityChanged, this, &EffectNode::intensityChanged);
+    connect(d().data(), &EffectNodePrivate::nameChanged, this, &EffectNode::nameChanged);
+    connect(d().data(), &EffectNodePrivate::fileChanged, this, &EffectNode::fileChanged);
+    connect(d().data(), &EffectNodePrivate::frequencyChanged, this, &EffectNode::frequencyChanged);
 }
 
 QJsonObject EffectNode::serialize() {
@@ -212,7 +220,7 @@ void EffectNode::setIntensity(qreal value) {
             return;
         d()->m_intensity = value;
     }
-    emit intensityChanged(value);
+    emit d()->intensityChanged(value);
 }
 
 QString EffectNode::file() {
@@ -240,7 +248,7 @@ void EffectNode::setFrequency(double frequency) {
         if (frequency == d()->m_frequency) return;
         d()->m_frequency = frequency;
     }
-    emit frequencyChanged(frequency);
+    emit d()->frequencyChanged(frequency);
 }
 
 void EffectNode::setFile(QString file) {
@@ -255,11 +263,12 @@ void EffectNode::setFile(QString file) {
         newName = fileToName(d()->m_file);
     }
     reload();
-    emit fileChanged(file);
-    if (newName != oldName) emit nameChanged(newName);
+    emit d()->fileChanged(file);
+    if (newName != oldName) emit d()->nameChanged(newName);
 }
 
 void EffectNode::reload() {
+    setNodeState(VideoNode::Loading);
     QString filename;
     {
         QMutexLocker locker(&d()->m_stateLock);
@@ -271,13 +280,15 @@ void EffectNode::reload() {
 
     QFileInfo check_file(filename);
     if(!(check_file.exists() && check_file.isFile())) {
-        emit fatal(QString("Could not open \"%1\"").arg(filename));
+        emit d()->error(QString("Could not open \"%1\"").arg(filename));
+        setNodeState(VideoNode::Broken);
         return;
     }
 
     QFile file(filename);
     if(!file.open(QIODevice::ReadOnly)) {
-        emit fatal(QString("Could not open \"%1\"").arg(filename));
+        emit d()->error(QString("Could not open \"%1\"").arg(filename));
+        setNodeState(VideoNode::Broken);
         return;
     }
 
@@ -316,7 +327,8 @@ void EffectNode::reload() {
     }
 
     if(passes.empty()) {
-        emit fatal(QString("No shaders found for \"%1\"").arg(filename));
+        emit d()->error(QString("No shaders found for \"%1\"").arg(filename));
+        setNodeState(VideoNode::Broken);
         return;
     }
 
@@ -345,9 +357,9 @@ EffectNodeRenderState::EffectNodeRenderState(QVector<QSharedPointer<QOpenGLShade
 EffectNodeOpenGLWorker::EffectNodeOpenGLWorker(EffectNode p)
     : OpenGLWorker(p.context()->openGLWorkerContext())
     , m_p(p) {
-    connect(this, &EffectNodeOpenGLWorker::message, &p, &EffectNode::message);
-    connect(this, &EffectNodeOpenGLWorker::warning, &p, &EffectNode::warning);
-    connect(this, &EffectNodeOpenGLWorker::fatal,   &p, &EffectNode::fatal);
+    connect(this, &EffectNodeOpenGLWorker::message, p.d().data(), &EffectNodePrivate::message);
+    connect(this, &EffectNodeOpenGLWorker::warning, p.d().data(), &EffectNodePrivate::warning);
+    connect(this, &EffectNodeOpenGLWorker::error,   p.d().data(), &EffectNodePrivate::error);
 }
 
 void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
@@ -372,7 +384,8 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
         auto effectHeaderFilefile = Paths::glsl() + "/effect_header.glsl";
         QFile header_file(effectHeaderFilefile);
         if(!header_file.open(QIODevice::ReadOnly)) {
-            emit fatal(QString("Could not open \"%1\"").arg(effectHeaderFilefile));
+            emit error(QString("Could not open \"%1\"").arg(effectHeaderFilefile));
+            p.setNodeState(VideoNode::Broken);
             return;
         }
         QTextStream headerStream(&header_file);
@@ -387,16 +400,19 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
             QOpenGLShader::Vertex
           , vertexString
             )) {
-            emit fatal("Could not compile vertex shader");
+            emit error("Could not compile vertex shader");
+            p.setNodeState(VideoNode::Broken);
             return;
         }
         auto frag = headerString + "\n" + code.join("\n");
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
-            emit fatal(QString("Could not compile fragment shader:\n") + program->log().trimmed());
+            emit error(QString("Could not compile fragment shader:\n") + program->log().trimmed());
+            p.setNodeState(VideoNode::Broken);
             return;
         }
         if(!program->link()) {
-            emit fatal("Could not link shader program");
+            emit error("Could not link shader program");
+            p.setNodeState(VideoNode::Broken);
             return;
         }
         shaders.append(program);
@@ -432,6 +448,7 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
     }
 
     glFlush();
+    p.setNodeState(VideoNode::Ready);
 }
 
 // Invoke this method when a Chain gets added
