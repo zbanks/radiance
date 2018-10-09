@@ -6,7 +6,7 @@ import radiance 1.0
 import "."
 
 Item {
-    property alias videoNode: vnr.videoNode;
+    property alias videoNode: vnr.videoNode
 
     Layout.fillWidth: true;
     Layout.fillHeight: true;
@@ -20,9 +20,15 @@ Item {
             anchors.fill: parent;
         }
         VideoNodePreview {
-            id: vnr;
-            anchors.fill: parent;
-            previewAdapter: Globals.previewAdapter;
+            id: vnr
+            anchors.fill: parent
+            previewAdapter: Globals.previewAdapter
+        }
+        BusyIndicator {
+            id: busy
+            anchors.fill: parent
+            anchors.margins: 10
+            running: vnr.videoNode && vnr.videoNode.nodeState == VideoNode.Loading
         }
     }
 }

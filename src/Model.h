@@ -136,7 +136,7 @@ signals:
 
     void message(VideoNode *videoNode, QString str);
     void warning(VideoNode *videoNode, QString str);
-    void fatal(VideoNode *videoNode, QString str);
+    void error(VideoNode *videoNode, QString str);
 
 protected:
     void emitGraphChanged();
@@ -148,7 +148,7 @@ protected:
 protected slots:
     void onMessage(QString message);
     void onWarning(QString str);
-    void onFatal(QString str);
+    void onError(QString str);
 
 private:
     Model(QSharedPointer<ModelPrivate> other_ptr);

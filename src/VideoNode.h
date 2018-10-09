@@ -22,8 +22,16 @@ class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(Context *context READ context CONSTANT);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
+    Q_PROPERTY(NodeState nodeState READ nodeState WRITE setNodeState NOTIFY nodeStateChanged);
 
 public:
+    enum NodeState {
+        Ready,
+        Loading,
+        Broken
+    };
+    Q_ENUM(NodeState)
+
     // Copy constructor
     VideoNode(const VideoNode &other);
 
@@ -89,6 +97,17 @@ public slots:
     void setLastModel(WeakModel model);
     WeakModel lastModel();
 
+    // This member variable sets what state the VideoNode is in.
+    // This state can be Ready (VideoNode is active and working,)
+    // Loading (VideoNode is initializing and will be ready soon,)
+    // or Broken (something went wrong and this VideoNode is not functioning as intended.)
+    // This is mainly for UI purposes, and the state
+    // does not affect how the VideoNode processes video.
+    // Even broken VideoNodes should at a minimum
+    // pass through video unchanged
+    NodeState nodeState();
+    void setNodeState(NodeState value);
+
 protected slots:
     // If your node does anything at all, you will need to override this method
     virtual void chainsEdited(QList<Chain> added, QList<Chain> removed);
@@ -105,12 +124,14 @@ protected:
 
     QSharedPointer<VideoNodePrivate> d_ptr;
 
+    void attachSignals();
+
 signals:
-    // Emitted when the object wishes to be deleted
+    // Emitted when the object has something to say
     // e.g. due to an error
     void message(QString str);
     void warning(QString str);
-    void fatal(QString str);
+    void error(QString str);
 
     // Emitted when the number of inputs changes
     void inputCountChanged(int value);
@@ -121,6 +142,9 @@ signals:
     // Emitted when requestedChains changes
     void requestedChainAdded(Chain chain);
     void requestedChainRemoved(Chain chain);
+
+    // Emitted when state changes
+    void nodeStateChanged(NodeState value);
 };
 
 class VideoNodePrivate : public QObject {
@@ -134,4 +158,15 @@ public:
     QList<Chain> m_chains;
     Context *m_context{};
     WeakModel m_lastModel;
+    VideoNode::NodeState m_nodeState{VideoNode::Ready};
+
+signals:
+    void message(QString str);
+    void warning(QString str);
+    void error(QString str);
+    void inputCountChanged(int value);
+    void chainsChanged(QList<Chain> chains);
+    void requestedChainAdded(Chain chain);
+    void requestedChainRemoved(Chain chain);
+    void nodeStateChanged(VideoNode::NodeState value);
 };

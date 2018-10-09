@@ -120,6 +120,7 @@ signals:
 protected:
     void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
     void reload();
+    void attachSignals();
 
 private:
     QSharedPointer<MovieNodePrivate> d() const;
@@ -127,6 +128,8 @@ private:
 };
 
 class MovieNodePrivate : public VideoNodePrivate {
+    Q_OBJECT
+
 public:
     MovieNodePrivate(Context *context);
 
@@ -147,6 +150,16 @@ public:
     bool m_mute{true};
     bool m_pause{};
     enum MovieNode::Factor m_factor{MovieNode::Crop};
+
+signals:
+    void fileChanged(QString file);
+    void nameChanged(QString name);
+    void videoSizeChanged(QSize size);
+    void positionChanged(qreal position);
+    void durationChanged(qreal duration);
+    void muteChanged(bool mute);
+    void pauseChanged(bool pause);
+    void factorChanged(enum MovieNode::Factor factor);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -175,7 +188,7 @@ public:
 signals:
     void message(QString str);
     void warning(QString str);
-    void fatal(QString str);
+    void error(QString str);
     void positionChanged(qreal position);
     void durationChanged(qreal duration);
     void videoSizeChanged(QSize size);
@@ -213,6 +226,6 @@ protected slots:
     void onEvent();
 
 private:
-    QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
+    QSharedPointer<QOpenGLShaderProgram> loadBlitShader(MovieNode p);
 };
 

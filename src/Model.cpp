@@ -76,7 +76,7 @@ void Model::prepareNode(VideoNode *videoNode) {
     connect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
     connect(videoNode, &VideoNode::message, this, &Model::onMessage);
     connect(videoNode, &VideoNode::warning, this, &Model::onWarning);
-    connect(videoNode, &VideoNode::fatal, this, &Model::onFatal);
+    connect(videoNode, &VideoNode::error, this, &Model::onError);
     connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
 
     // See if this VideoNode requests any chains
@@ -102,7 +102,7 @@ void Model::disownNode(VideoNode *videoNode) {
     disconnect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
     disconnect(videoNode, &VideoNode::message, this, &Model::onMessage);
     disconnect(videoNode, &VideoNode::warning, this, &Model::onWarning);
-    disconnect(videoNode, &VideoNode::fatal, this, &Model::onFatal);
+    disconnect(videoNode, &VideoNode::error, this, &Model::onError);
 
     auto requestedChains = videoNode->requestedChains();
     auto chains = d_ptr->m_chains;
@@ -125,11 +125,9 @@ void Model::onWarning(QString str) {
     emit warning(vn, str);
 }
 
-void Model::onFatal(QString str) {
+void Model::onError(QString str) {
     auto vn = qobject_cast<VideoNode *>(sender());
-    emit fatal(vn, str);
-    removeVideoNode(vn);
-    flush();
+    emit error(vn, str);
 }
 
 void Model::addVideoNode(VideoNode *videoNode) {

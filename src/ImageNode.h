@@ -114,7 +114,7 @@ public slots:
 signals:
     void message(QString str);
     void warning(QString str);
-    void fatal(QString str);
+    void error(QString str);
 protected:
     WeakImageNode m_p;
 };
