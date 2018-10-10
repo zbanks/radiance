@@ -29,7 +29,9 @@ void VideoNode::attachSignals() {
     // which will remove the need to have this method
     // in subclasses
     qRegisterMetaType<Chain>("Chain"); // so we can pass it in Q_ARG
+    qRegisterMetaType<QList<Chain>>("QList<Chain>");
     qRegisterMetaType<VideoNode::NodeState>("VideoNode::NodeState");
+
     connect(d_ptr.data(), &VideoNodePrivate::message, this, &VideoNode::message);
     connect(d_ptr.data(), &VideoNodePrivate::warning, this, &VideoNode::warning);
     connect(d_ptr.data(), &VideoNodePrivate::error, this, &VideoNode::error);
