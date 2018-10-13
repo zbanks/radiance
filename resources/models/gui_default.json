@@ -1,39 +1,127 @@
 {
     "edges": [
         {
-            "fromVertex": 0,
+            "fromVertex": 7,
             "toInput": 0,
-            "toVertex": 1
+            "toVertex": 8
         },
         {
-            "fromVertex": 1,
+            "fromVertex": 6,
             "toInput": 0,
-            "toVertex": 2
+            "toVertex": 9
         },
         {
             "fromVertex": 2,
             "toInput": 0,
+            "toVertex": 6
+        },
+        {
+            "fromVertex": 10,
+            "toInput": 0,
+            "toVertex": 2
+        },
+        {
+            "fromVertex": 5,
+            "toInput": 0,
+            "toVertex": 10
+        },
+        {
+            "fromVertex": 8,
+            "toInput": 0,
+            "toVertex": 12
+        },
+        {
+            "fromVertex": 1,
+            "toInput": 0,
+            "toVertex": 7
+        },
+        {
+            "fromVertex": 12,
+            "toInput": 1,
+            "toVertex": 2
+        },
+        {
+            "fromVertex": 11,
+            "toInput": 0,
+            "toVertex": 0
+        },
+        {
+            "fromVertex": 4,
+            "toInput": 0,
+            "toVertex": 11
+        },
+        {
+            "fromVertex": 9,
+            "toInput": 0,
             "toVertex": 3
+        },
+        {
+            "fromVertex": 3,
+            "toInput": 0,
+            "toVertex": 4
         }
     ],
     "vertices": [
         {
-            "file": "images/nyancat.gif",
+            "type": "ScreenOutputNode"
+        },
+        {
+            "file": "effects/oscope.glsl",
+            "intensity": 0.4811999999999999,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/uvmap.glsl",
+            "intensity": 0.1,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/rfuzz.glsl",
+            "intensity": 0.2,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/edge.glsl",
+            "intensity": 1,
+            "type": "EffectNode"
+        },
+        {
+            "file": "images/logo.png",
             "type": "ImageNode"
         },
         {
-            "file": "effects/test.glsl",
-            "intensity": 0,
+            "file": "effects/diodelpf.glsl",
+            "intensity": 0.34769999999999984,
             "type": "EffectNode"
         },
         {
-            "file": "effects/interstellar.glsl",
-            "intensity": 0,
+            "file": "effects/droste.glsl",
+            "intensity": 1,
             "type": "EffectNode"
         },
         {
-            "file": "effects/crossfader.glsl",
-            "intensity": 0,
+            "file": "effects/warble.glsl",
+            "intensity": 0.5181,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/rainblur.glsl",
+            "intensity": 1,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/zoomout.glsl",
+            "intensity": 0.3,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/smoky.glsl",
+            "intensity": 0.1,
+            "type": "EffectNode"
+        },
+        {
+            "file": "effects/lpf.glsl",
+            "intensity": 0.5952,
             "type": "EffectNode"
         }
     ]
