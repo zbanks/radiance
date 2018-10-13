@@ -8,8 +8,6 @@ Text {
     elide: Text.ElideMiddle
     horizontalAlignment: Text.AlignHCenter
     font.pointSize: 10
-    anchors.topMargin: -5
-    anchors.top: parent.top
     Rectangle {
         color: RadianceStyle.tileLineColor
         anchors.left: parent.left
@@ -19,5 +17,5 @@ Text {
         anchors.leftMargin: -3
         anchors.rightMargin: -3
         anchors.bottomMargin: -3
-  }
+    }
 }

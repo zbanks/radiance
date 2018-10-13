@@ -33,15 +33,9 @@ ApplicationWindow {
             console.log("Graph changed!", changeset);
         }
 
-        onMessage: {
-            messages.text += "<font color=\"green\"><pre>" + str + "</pre></font>";
-        }
-        onWarning: {
-            messages.text += "<font color=\"gold\"><pre>" + str + "</pre></font>";
-        }
-        onError: {
-            messages.text += "<font color=\"red\"><pre>" + str + "</pre></font>";
-        }
+        onMessage: errorConsole.message(vdeoNode, str)
+        onWarning: errorConsole.warning(videoNode, str)
+        onError: errorConsole.error(videoNode, str)
     }
 
     Timer {
@@ -104,7 +98,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     PopOut {
                         id: libraryContainer
-                        openWidth: 150
+                        openSize: 150
                         side: "left"
                         open: true
 
@@ -131,6 +125,31 @@ ApplicationWindow {
                         SettingsWidget {
                             id: settings
                             anchors.fill: parent
+                        }
+                    }
+                    PopOut {
+                        id: consoleContainer
+                        side: "bottom"
+                        openSize: 80
+                        opacity: errorConsole.count > 0 ? 1 : 0
+                        active: errorConsole.count > 0
+                        Behavior on opacity {
+                            NumberAnimation {
+                                easing {
+                                    type: Easing.InOutQuad
+                                    amplitude: 1.0
+                                    period: 0.5
+                                }
+                                duration: 300
+                            }
+                        }
+
+                        ConsoleWidget {
+                            graph: graph
+                            id: errorConsole
+                            anchors.fill: parent
+                            onPopOut: consoleContainer.open = true
+                            onPopIn: consoleContainer.open = false
                         }
                     }
                 }
