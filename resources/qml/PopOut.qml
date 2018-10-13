@@ -7,20 +7,22 @@ Item {
     id: container
     property string side
     default property alias content: inner.children
-    property real openWidth: 250
+    property real openSize: 250 // TODO rename to openSize
     property real extra: 10
     property real padding: 10
     property bool open: false
-    width: extra + (open ? openWidth : 0)
+    property alias active: mouseArea.enabled
+    width: side == "left" || side == "right" ? extra + (open ? openSize : 0) : undefined
+    height: side == "top" || side == "bottom" ? extra + (open ? openSize : 0) : undefined
 
     function toggle() {
         open = !open;
     }
 
-    anchors.right: side == "right" ? parent.right : undefined
-    anchors.left: side == "left" ? parent.left : undefined
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
+    anchors.right: side == "left" ? undefined : parent.right
+    anchors.left: side == "right" ? undefined : parent.left
+    anchors.top: side == "bottom" ? undefined : parent.top
+    anchors.bottom: side == "top" ? undefined : parent.bottom
     clip: true
 
     Behavior on width {
@@ -29,18 +31,25 @@ Item {
             duration: 300;
         }
     }
+    Behavior on height {
+        PropertyAnimation {
+            easing.type: Easing.InOutQuad;
+            duration: 300;
+        }
+    }
 
     Item {
         id: inner
-        anchors.left: side == "right" ? parent.left : undefined
-        anchors.right: side == "left" ? parent.right : undefined
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
+        anchors.left: side == "left" ? undefined : parent.left
+        anchors.right: side == "right" ? undefined : parent.right
+        anchors.top: side == "top" ? undefined : parent.top
+        anchors.bottom: side == "bottom" ? undefined : parent.bottom
         anchors.leftMargin: padding + (side == "right" ? extra : 0)
         anchors.rightMargin: padding + (side == "left" ? extra : 0)
-        anchors.topMargin: padding
-        anchors.bottomMargin: padding
-        width: openWidth - 2 * padding
+        anchors.topMargin: padding + (side == "bottom" ? extra : 0)
+        anchors.bottomMargin: padding + (side == "top" ? extra : 0)
+        width: side == "left" || side == "right" ? openSize - 2 * padding : undefined
+        height: side == "top" || side == "bottom" ? openSize - 2 * padding : undefined
     }
 
     Rectangle {
@@ -52,13 +61,16 @@ Item {
 
     Canvas {
         id: handle
-        anchors.right: side == "right" ? inner.left : undefined
-        anchors.left: side == "left" ? inner.right : undefined
+        anchors.right: side == "right" ? inner.left : side == "left" ? undefined : parent.right
+        anchors.left: side == "left" ? inner.right : side == "right" ? undefined : parent.left
+        anchors.top: side == "top" ? inner.bottom : side == "bottom" ? undefined : parent.top
+        anchors.bottom: side == "bottom" ? inner.top : side == "top" ? undefined : parent.bottom
         anchors.rightMargin: side == "right" ? padding - width / 2 : 0
         anchors.leftMargin: side == "left" ? padding - width / 2 : 0
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        width: 20
+        anchors.topMargin: side == "top" ? padding - height / 2 : 0
+        anchors.bottomMargin: side == "bottom" ? padding - height / 2 : 0
+        width: side == "left" || side == "right" ? 20 : undefined
+        height: side == "top" || side == "bottom" ? 20 : undefined
         layer.enabled: true;
 
         property real lineWidth: 1;
@@ -73,19 +85,22 @@ Item {
             var ctx = getContext("2d");
             ctx.reset();
 
-            var sign = side == "right" ? -1 : 1;
+            var sign = side == "right" || side == "bottom" ? -1 : 1;
 
             ctx.beginPath()
-            ctx.moveTo(width / 2 + sign * inset, inset);
-            ctx.lineTo(width / 2 + sign * inset, height / 2 - arrowHeight / 2);
-            ctx.lineTo(width / 2 + sign * (inset + arrowWidth * arrowDirection), height / 2);
-            ctx.lineTo(width / 2 + sign * inset, height / 2 + arrowHeight / 2);
-            ctx.lineTo(width / 2 + sign * inset, parent.height - inset);
-            //ctx.lineTo((parent.width - arrowWidth - inset), (parent.height - inset));
-            //ctx.lineTo((parent.width - arrowWidth - inset), (outputArrow + arrowHeight / 2));
-            //ctx.lineTo((parent.width - inset) , outputArrow);
-            //ctx.lineTo((parent.width - arrowWidth - inset), (outputArrow - arrowHeight / 2));
-            //ctx.lineTo((parent.width - arrowWidth - inset), inset);
+            if (side == "left" || side == "right") {
+                ctx.moveTo(width / 2 + sign * inset, inset);
+                ctx.lineTo(width / 2 + sign * inset, height / 2 - arrowHeight / 2);
+                ctx.lineTo(width / 2 + sign * (inset + arrowWidth * arrowDirection), height / 2);
+                ctx.lineTo(width / 2 + sign * inset, height / 2 + arrowHeight / 2);
+                ctx.lineTo(width / 2 + sign * inset, parent.height - inset);
+            } else {
+                ctx.moveTo(inset, height / 2 + sign * inset);
+                ctx.lineTo(width / 2 - arrowHeight / 2, height / 2 + sign * inset);
+                ctx.lineTo(width / 2, height / 2 + sign * (inset + arrowWidth * arrowDirection));
+                ctx.lineTo(width / 2 + arrowHeight / 2, height / 2 + sign * inset);
+                ctx.lineTo(parent.width - inset, height / 2 + sign * inset);
+            }
             ctx.lineWidth = lineWidth;
             ctx.strokeStyle = lineColor;
             ctx.stroke();
@@ -94,8 +109,9 @@ Item {
         onArrowDirectionChanged: requestPaint();
 
         MouseArea {
+            id: mouseArea
             anchors.fill: parent
-            anchors.margins: -20
+            anchors.margins: -5
             onClicked: toggle()
         }
 

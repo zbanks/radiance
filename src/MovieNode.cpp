@@ -501,7 +501,6 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
         }
 
         p.d()->m_blitShader = shader;
-        p.d()->m_ready = true;
     }
 }
 
@@ -563,6 +562,10 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
                 if (d.isNull()) return; // MovieNode was deleted
                 MovieNode p(d);
                 p.setNodeState(VideoNode::Ready);
+                {
+                    QMutexLocker locker(&p.d()->m_stateLock);
+                    p.d()->m_ready = true;
+                }
             }
         } else if (strcmp(prop->name, "video-params/w") == 0) {
             if (prop->format == MPV_FORMAT_INT64) {
