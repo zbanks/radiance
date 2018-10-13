@@ -119,7 +119,7 @@ In addition, each shader has access to additional uniforms which are documented 
 Each shader must follow these properties:
 
 * The `fragColor` set by each shader must be a valid, pre-multiplied alpha, RGBA tuple. Each component of the `vec4` must be in the range `[0.0, 1.0]`, and the RGB components must be less than or equal to the A component. (See `afixhighlight` for a shader that will highlight errors here in pink)
-* Identity: the shader must pass through its first input completely unchanged when `iIntensity == 0.` This means that inserting a new shader should not effect the output until it's intensity is increased.
+* Identity: the shader must pass through its first input completely unchanged when `iIntensity == 0.` This means that inserting a new shader should not affect the output until its intensity is increased.
 
 
 ### Multi-buffer Shader Effects

@@ -7,65 +7,23 @@ import "."
 ComboBox {
     id: control
     implicitHeight: 12
-    implicitWidth: 20
+    implicitWidth: 30
 
     property real value: 0
 
     model: ListModel {
         id: model
-        ListElement { img: "rest.svg"; value: 0 }
-        ListElement { img: "whole.svg"; value: 0.25 }
-        ListElement { img: "half.svg"; value: 0.5 }
-        ListElement { img: "quarter.svg"; value: 1 }
-        ListElement { img: "eighth.svg"; value: 2 }
-        ListElement { img: "sixteenth.svg"; value: 4 }
-        ListElement { img: "thirtysecond.svg"; value: 8 }
+        ListElement { text: "0"; value: 0 }
+        ListElement { text: "1/8"; value: 0.125 }
+        ListElement { text: "1/4"; value: 0.25 }
+        ListElement { text: "1/2"; value: 0.5 }
+        ListElement { text: "1"; value: 1 }
+        ListElement { text: "2"; value: 2 }
+        ListElement { text: "4"; value: 4 }
+        ListElement { text: "8"; value: 8 }
     }
-    delegate: ItemDelegate {
-        width: control.width
-        height: 20
-        Image {
-            id: imageInDropDown
-            anchors.fill: parent
-            source: "../graphics/" + img
-            sourceSize.height: 128
-            fillMode: Image.PreserveAspectFit
-            visible: false
-        }
-        ColorOverlay {
-            anchors.fill: imageInDropDown
-            source: imageInDropDown
-            color: RadianceStyle.tileTextColor
-        }
-        background: Rectangle {
-            color: highlighted ? RadianceStyle.tileBackgroundHighlightColor : "transparent"
-        }
-        highlighted: control.highlightedIndex === index
-    }
-    indicator: Item {
-    }
-    contentItem: Item {
-        id: contentItem
-        property real oversample: 4
-        scale: 1. / oversample
-        Image {
-            id: image
-            anchors.centerIn: parent
-            source: "../graphics/" + control.model.get(control.currentIndex).img
-            fillMode: Image.PreserveAspectFit
-            visible: false
-            width: parent.width * contentItem.oversample
-            height: parent.height * contentItem.oversample
-            sourceSize.height: 128
-        }
-        ColorOverlay {
-            anchors.fill: image
-            source: image
-            color: RadianceStyle.tileTextColor
-        }
-    }
-    background: Item {
-    }
+
+    textRole: "text"
 
     onCurrentIndexChanged: {
         value = model.get(currentIndex).value;
