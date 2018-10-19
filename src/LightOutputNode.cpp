@@ -1,7 +1,7 @@
 #include "LightOutputNode.h"
 #include "Context.h"
 
-LightOutputNode::LightOutputNode(Context *context)
+LightOutputNode::LightOutputNode(Context *context, QString url)
     : OutputNode(new LightOutputNodePrivate(context)) {
     attachSignals();
     d()->m_workerContext = new OpenGLWorkerContext(context->threaded());
@@ -10,10 +10,7 @@ LightOutputNode::LightOutputNode(Context *context)
 
     d()->m_chain.moveToWorkerContext(d()->m_workerContext);
 
-    {
-        auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize");
-        Q_ASSERT(result);
-    }
+    if (!url.isEmpty()) setUrl(url);
 }
 
 LightOutputNode::LightOutputNode(const LightOutputNode &other)
@@ -85,6 +82,11 @@ void LightOutputNode::setUrl(QString value) {
             return;
         d()->m_url = value;
     }
+
+    setNodeState(VideoNode::Loading);
+    auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize");
+    Q_ASSERT(result);
+
     emit d()->urlChanged(value);
 }
 
@@ -108,6 +110,8 @@ QSharedPointer<LightOutputNodePrivate> WeakLightOutputNode::toStrongRef() {
 LightOutputNodeOpenGLWorker::LightOutputNodeOpenGLWorker(LightOutputNode p)
     : OpenGLWorker(p.d()->m_workerContext)
     , m_p(p) {
+    qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
+    connect(&m_socket, &QAbstractSocket::stateChanged, this, &LightOutputNodeOpenGLWorker::onStateChanged);
 }
 
 QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadBlitShader() {
@@ -148,8 +152,30 @@ QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadBlitShader
     return shader;
 }
 
+void LightOutputNodeOpenGLWorker::onStateChanged(QAbstractSocket::SocketState socketState) {
+    qDebug() << "Socket is now in state" << socketState;
+}
+
+void LightOutputNodeOpenGLWorker::connectToDevice(QString url) {
+    m_socket.close();
+    auto parts = url.split(":");
+    auto port = 9001;
+    if (parts.count() == 2) {
+        port = parts.at(1).toInt();
+    }
+    m_socket.connectToHost(parts.at(0), port);
+    qDebug() << "Connecting to" << parts.at(0) << "on port" << port;
+}
+
 void LightOutputNodeOpenGLWorker::initialize() {
     Q_ASSERT(QThread::currentThread() == thread());
+
+    auto d = m_p.toStrongRef();
+    if (d.isNull()) return; // LightOutputNode was deleted
+    LightOutputNode p(d);
+    auto url = p.url();
+
+    connectToDevice(url);
 
     QSize size(100, 100);
 

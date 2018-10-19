@@ -2,6 +2,7 @@
 
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFramebufferObject>
+#include <QTcpSocket>
 #include "OutputNode.h"
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
@@ -17,7 +18,7 @@ class LightOutputNode
     friend class LightOutputNodeOpenGLWorker;
 
 public:
-    LightOutputNode(Context *context);
+    LightOutputNode(Context *context, QString url = "");
     LightOutputNode(const LightOutputNode &other);
     LightOutputNode *clone() const override;
 
@@ -88,6 +89,10 @@ signals:
 
 protected:
     QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
+    void connectToDevice(QString url);
+
+protected slots:
+    void onStateChanged(QAbstractSocket::SocketState socketState);
 
 private:
     WeakLightOutputNode m_p;
@@ -96,6 +101,7 @@ private:
     QSize m_size;
     QSharedPointer<QOpenGLShaderProgram> m_shader;
     QSharedPointer<QOpenGLFramebufferObject> m_fbo;
+    QTcpSocket m_socket;
 };
 
 class LightOutputNodePrivate : public OutputNodePrivate {
