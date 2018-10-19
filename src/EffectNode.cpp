@@ -60,8 +60,8 @@ void EffectNode::attachSignals() {
 
 QJsonObject EffectNode::serialize() {
     QJsonObject o = VideoNode::serialize();
-    o.insert("file", d()->m_file);
-    o.insert("intensity", d()->m_intensity);
+    o.insert("file", file());
+    o.insert("intensity", intensity());
     return o;
 }
 

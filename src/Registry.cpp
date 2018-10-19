@@ -10,6 +10,7 @@
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
+#include "LightOutputNode.h"
 
 Registry::Registry()
     : m_library(nullptr) {
@@ -21,6 +22,7 @@ Registry::Registry()
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
+    registerType<LightOutputNode>();
 
     m_library = new Library(this);
     m_library->setParent(this);

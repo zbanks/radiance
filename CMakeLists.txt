@@ -49,6 +49,7 @@ list(APPEND libradiance_SOURCES
     src/GraphicalDisplay.cpp
     src/ImageNode.cpp
     src/Library.cpp
+    src/LightOutputNode.cpp
     src/Model.cpp
     src/OpenGLUtils.cpp
     src/OpenGLWorker.cpp
