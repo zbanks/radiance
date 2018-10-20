@@ -1,5 +1,6 @@
 #include "LightOutputNode.h"
 #include "Context.h"
+#include <QJsonDocument>
 
 LightOutputNode::LightOutputNode(Context *context, QString url)
     : OutputNode(new LightOutputNodePrivate(context)) {
@@ -35,6 +36,7 @@ LightOutputNode::LightOutputNode(QSharedPointer<LightOutputNodePrivate> other_pt
 
 void LightOutputNode::attachSignals() {
     connect(d().data(), &LightOutputNodePrivate::urlChanged, this, &LightOutputNode::urlChanged);
+    connect(d().data(), &LightOutputNodePrivate::nameChanged, this, &LightOutputNode::nameChanged);
 }
 
 QString LightOutputNode::typeName() {
@@ -90,6 +92,22 @@ void LightOutputNode::setUrl(QString value) {
     emit d()->urlChanged(value);
 }
 
+QString LightOutputNode::name() {
+    QMutexLocker locker(&d()->m_stateLock);
+    return d()->m_name;
+}
+
+void LightOutputNode::setName(QString value) {
+    {
+        QMutexLocker locker(&d()->m_stateLock);
+        if(d()->m_name == value)
+            return;
+        d()->m_name = value;
+    }
+
+    emit d()->nameChanged(value);
+}
+
 // WeakLightOutputNode methods
 
 WeakLightOutputNode::WeakLightOutputNode()
@@ -109,9 +127,14 @@ QSharedPointer<LightOutputNodePrivate> WeakLightOutputNode::toStrongRef() {
 
 LightOutputNodeOpenGLWorker::LightOutputNodeOpenGLWorker(LightOutputNode p)
     : OpenGLWorker(p.d()->m_workerContext)
-    , m_p(p) {
+    , m_p(p)
+    , m_packet(4, 0) {
     qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
-    connect(&m_socket, &QAbstractSocket::stateChanged, this, &LightOutputNodeOpenGLWorker::onStateChanged);
+    connect(this, &LightOutputNodeOpenGLWorker::packetReceived, this, &LightOutputNodeOpenGLWorker::onPacketReceived);
+
+    connect(this, &LightOutputNodeOpenGLWorker::message, p.d().data(), &LightOutputNodePrivate::message);
+    connect(this, &LightOutputNodeOpenGLWorker::warning, p.d().data(), &LightOutputNodePrivate::warning);
+    connect(this, &LightOutputNodeOpenGLWorker::error,   p.d().data(), &LightOutputNodePrivate::error);
 }
 
 QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadBlitShader() {
@@ -152,18 +175,108 @@ QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadBlitShader
     return shader;
 }
 
+void LightOutputNodeOpenGLWorker::throwError(QString msg) {
+    auto d = m_p.toStrongRef();
+    if (d.isNull()) return; // LightOutputNode was deleted
+    LightOutputNode p(d);
+
+    m_connectionState = LightOutputNodeOpenGLWorker::Broken;
+    emit error(msg);
+    p.setNodeState(VideoNode::Broken);
+    m_socket->close();
+}
+
 void LightOutputNodeOpenGLWorker::onStateChanged(QAbstractSocket::SocketState socketState) {
-    qDebug() << "Socket is now in state" << socketState;
+    if (socketState == QAbstractSocket::UnconnectedState) {
+        if (m_connectionState == LightOutputNodeOpenGLWorker::Connected) {
+            throwError("Device closed connection");
+        } else if (m_connectionState == LightOutputNodeOpenGLWorker::Disconnected) {
+            throwError("Could not connect");
+        }
+    } else if (socketState == QAbstractSocket::ConnectedState) {
+        auto d = m_p.toStrongRef();
+        if (d.isNull()) return; // LightOutputNode was deleted
+        LightOutputNode p(d);
+
+        p.setNodeState(VideoNode::Ready);
+        m_connectionState = LightOutputNodeOpenGLWorker::Connected;
+    }
+    //qDebug() << "Socket is now in state" << socketState;
+}
+
+void LightOutputNodeOpenGLWorker::onReadyRead() {
+    for (;;) {
+        qint64 bytesAvailable = m_socket->bytesAvailable();
+        if (!bytesAvailable) break;
+        if (m_packetIndex < 4) {
+            auto bytesToRead = qMin(bytesAvailable, (qint64)(4 - m_packetIndex));
+            auto bytesRead = m_socket->read(m_packet.data() + m_packetIndex, bytesToRead);
+            if (bytesRead < bytesToRead) {
+                throwError("Read error");
+                return;
+            }
+            m_packetIndex += bytesRead;
+            bytesAvailable -= bytesRead;
+            if (m_packetIndex == 4) {
+                quint32 packetLength;
+                {
+                    QDataStream qds(m_packet);
+                    qds.setByteOrder(QDataStream::LittleEndian);
+                    qds >> packetLength;
+                }
+                m_packet.resize(packetLength + 4);
+            }
+        }
+        if (m_packetIndex >= 4) {
+            auto bytesToRead = qMin(bytesAvailable, (qint64)(m_packet.size() - m_packetIndex));
+            auto bytesRead = m_socket->read(m_packet.data() + m_packetIndex, bytesToRead);
+            if (bytesRead < bytesToRead) {
+                throwError("Read error");
+                return;
+            }
+            m_packetIndex += bytesRead;
+            bytesAvailable -= bytesRead;
+            if ((qint64)m_packetIndex == m_packet.size()) {
+                emit packetReceived(m_packet);
+                m_packet.resize(4);
+                m_packetIndex = 0;
+            }
+        }
+    }
+}
+
+void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
+    if (packet.size() == 4) return;
+    auto cmd = (unsigned char)packet.at(4);
+    if (cmd == 0) { // Description
+        auto data = QJsonDocument::fromJson(packet.right(packet.size() - 5));
+        if (data.isNull()) {
+            qWarning() << "Could not parse JSON";
+            return;
+        }
+        if (!data.isObject()) {
+            qWarning() << "JSON root not an object";
+            return;
+        }
+        auto obj = data.object();
+        auto name = obj.value("name").toString();
+        if (!name.isEmpty()) {
+            auto d = m_p.toStrongRef();
+            if (d.isNull()) return; // LightOutputNode was deleted
+            LightOutputNode p(d);
+            p.setName(name);
+        }
+    }
 }
 
 void LightOutputNodeOpenGLWorker::connectToDevice(QString url) {
-    m_socket.close();
+    m_socket->close();
     auto parts = url.split(":");
     auto port = 9001;
     if (parts.count() == 2) {
         port = parts.at(1).toInt();
     }
-    m_socket.connectToHost(parts.at(0), port);
+    m_socket->connectToHost(parts.at(0), port);
     qDebug() << "Connecting to" << parts.at(0) << "on port" << port;
 }
 
@@ -173,7 +286,14 @@ void LightOutputNodeOpenGLWorker::initialize() {
     auto d = m_p.toStrongRef();
     if (d.isNull()) return; // LightOutputNode was deleted
     LightOutputNode p(d);
+    p.setName("");
     auto url = p.url();
+
+    if (m_socket == NULL) {
+        m_socket = new QTcpSocket(this);
+        connect(m_socket, &QAbstractSocket::stateChanged, this, &LightOutputNodeOpenGLWorker::onStateChanged);
+        connect(m_socket, &QAbstractSocket::readyRead, this, &LightOutputNodeOpenGLWorker::onReadyRead);
+    }
 
     connectToDevice(url);
 

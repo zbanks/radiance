@@ -3,6 +3,8 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFramebufferObject>
 #include <QTcpSocket>
+#include <QDataStream>
+#include <QtGlobal>
 #include "OutputNode.h"
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
@@ -13,6 +15,8 @@ class LightOutputNodePrivate;
 class LightOutputNode
     : public OutputNode {
     Q_OBJECT
+    Q_PROPERTY(QString url READ url WRITE setUrl NOTIFY urlChanged)
+    Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
     friend class WeakLightOutputNode;
     friend class LightOutputNodeOpenGLWorker;
@@ -47,9 +51,11 @@ public:
 public slots:
     QString url();
     void setUrl(QString value);
+    QString name();
 
 signals:
     void urlChanged(QString value);
+    void nameChanged(QString value);
 
 private:
     LightOutputNode(QSharedPointer<LightOutputNodePrivate> other_ptr);
@@ -57,6 +63,7 @@ private:
 
 protected:
     void attachSignals();
+    void setName(QString value);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -78,6 +85,12 @@ class LightOutputNodeOpenGLWorker : public OpenGLWorker {
 public:
     LightOutputNodeOpenGLWorker(LightOutputNode p);
 
+    enum LightOutputNodeState {
+        Disconnected,
+        Connected,
+        Broken
+    };
+
 public slots:
     void initialize();
     void render();
@@ -86,13 +99,17 @@ signals:
     void message(QString str);
     void warning(QString str);
     void error(QString str);
+    void packetReceived(QByteArray packet);
 
 protected:
     QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
     void connectToDevice(QString url);
+    void throwError(QString msg);
 
 protected slots:
     void onStateChanged(QAbstractSocket::SocketState socketState);
+    void onReadyRead();
+    void onPacketReceived(QByteArray packet);
 
 private:
     WeakLightOutputNode m_p;
@@ -101,7 +118,12 @@ private:
     QSize m_size;
     QSharedPointer<QOpenGLShaderProgram> m_shader;
     QSharedPointer<QOpenGLFramebufferObject> m_fbo;
-    QTcpSocket m_socket;
+    QTcpSocket *m_socket{};
+    LightOutputNodeState m_connectionState{Disconnected};
+
+    // For the radiance output protocol
+    QByteArray m_packet;
+    quint64 m_packetIndex{};
 };
 
 class LightOutputNodePrivate : public OutputNodePrivate {
@@ -112,7 +134,9 @@ public:
     OpenGLWorkerContext *m_workerContext{};
     QSharedPointer<LightOutputNodeOpenGLWorker> m_worker;
     QString m_url;
+    QString m_name;
 
 signals:
     void urlChanged(QString value);
+    void nameChanged(QString value);
 };

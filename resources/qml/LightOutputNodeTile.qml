@@ -19,7 +19,7 @@ VideoNodeTile {
 
         RadianceTileTitle {
             Layout.fillWidth: true
-            text: "Light Output"
+            text: tile.videoNode.name ? tile.videoNode.name : "Light Output"
         }
 
         CheckerboardPreview {
