@@ -100,6 +100,7 @@ signals:
     void warning(QString str);
     void error(QString str);
     void packetReceived(QByteArray packet);
+    void sizeChanged(QSize size);
 
 protected:
     QSharedPointer<QOpenGLShaderProgram> loadSamplerShader();

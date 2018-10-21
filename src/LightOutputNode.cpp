@@ -1,6 +1,7 @@
 #include "LightOutputNode.h"
 #include "Context.h"
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <cmath>
 
 LightOutputNode::LightOutputNode(Context *context, QString url)
@@ -11,6 +12,7 @@ LightOutputNode::LightOutputNode(Context *context, QString url)
     connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
 
     d()->m_chain.moveToWorkerContext(d()->m_workerContext);
+    connect(d()->m_worker.data(), &LightOutputNodeOpenGLWorker::sizeChanged, this, &OutputNode::resize);
 
     if (!url.isEmpty()) setUrl(url);
 }
@@ -270,6 +272,18 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
             LightOutputNode p(d);
             p.setName(name);
         }
+        auto sizeInt = (int)obj.value("size").toDouble();
+        if (sizeInt > 0) {
+            emit sizeChanged(QSize(sizeInt, sizeInt));
+        }
+        auto sizeArray = obj.value("size").toArray();
+        if (!sizeArray.isEmpty() && sizeArray.count() == 2) {
+            auto width = (int)sizeArray.at(0).toDouble();
+            auto height = (int)sizeArray.at(1).toDouble();
+            if (width > 0 && height > 0) {
+                emit sizeChanged(QSize(width, height));
+            }
+        }
     } else if (cmd == 1) {
         if (packet.size() != 9) {
             qWarning() << "Unexpected number of bytes";
@@ -297,9 +311,6 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         // to store the output
         m_pixelCount = (packet.size() - 5) / 8;
         auto dim = (int)ceil(sqrt(m_pixelCount));
-
-        qDebug() << "Looking up" << m_pixelCount << "pixels";
-        qDebug() << "Dim is" << dim;
 
         // Load up the lookup texture
         makeCurrent();
