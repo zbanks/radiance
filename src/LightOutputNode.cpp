@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <cmath>
+#include <array>
 
 LightOutputNode::LightOutputNode(Context *context, QString url)
     : OutputNode(new LightOutputNodePrivate(context)) {
