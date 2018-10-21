@@ -49,6 +49,16 @@ public:
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
 
+    QMutex *bufferLock();
+    // Remember to take the bufferlock before
+    // calling any of these accessors:
+    quint32 pixelCount();
+    QOpenGLBuffer &colorsBuffer();
+    QOpenGLBuffer &lookupCoordinatesBuffer();
+    QOpenGLBuffer &physicalCoordinatesBuffer();
+    QOpenGLTexture &geometry2DTexture();
+    // end
+
 public slots:
     QString url();
     void setUrl(QString value);

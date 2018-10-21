@@ -111,6 +111,30 @@ void LightOutputNode::setName(QString value) {
     emit d()->nameChanged(value);
 }
 
+QMutex *LightOutputNode::bufferLock() {
+    return &d()->m_bufferLock;
+}
+
+quint32 LightOutputNode::pixelCount() {
+    return d()->m_pixelCount;
+}
+
+QOpenGLBuffer &LightOutputNode::colorsBuffer() {
+    return d()->m_colors;
+}
+
+QOpenGLBuffer &LightOutputNode::lookupCoordinatesBuffer() {
+    return d()->m_lookupCoordinates;
+}
+
+QOpenGLBuffer &LightOutputNode::physicalCoordinatesBuffer() {
+    return d()->m_physicalCoordinates;
+}
+
+QOpenGLTexture &LightOutputNode::geometry2DTexture() {
+    return d()->m_geometry2D;
+}
+
 // WeakLightOutputNode methods
 
 WeakLightOutputNode::WeakLightOutputNode()
@@ -346,11 +370,16 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
             QMutexLocker locker(&p.d()->m_bufferLock);
             if (m_pixelCount != p.d()->m_pixelCount) {
                 p.d()->m_pixelCount = m_pixelCount;
+                p.d()->m_colors.bind();
                 p.d()->m_colors.allocate(m_pixelCount * 4);
+                p.d()->m_lookupCoordinates.bind();
                 p.d()->m_lookupCoordinates.allocate(m_pixelCount * 8);
+                p.d()->m_physicalCoordinates.bind();
                 p.d()->m_physicalCoordinates.allocate(m_pixelCount * 8);
             }
+            p.d()->m_lookupCoordinates.bind();
             p.d()->m_lookupCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
+            p.d()->m_lookupCoordinates.release();
         }
     }
 }
@@ -479,7 +508,9 @@ void LightOutputNodeOpenGLWorker::render() {
     // Write the new colors to the VBO for visualization
     {
         QMutexLocker locker(&p.d()->m_bufferLock);
+        p.d()->m_colors.bind();
         p.d()->m_colors.write(0, m_pixelBuffer.constData(), m_pixelCount * 4);
+        p.d()->m_colors.release();
     }
 
     sendFrame();
