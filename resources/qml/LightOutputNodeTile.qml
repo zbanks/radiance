@@ -22,8 +22,21 @@ VideoNodeTile {
             text: tile.videoNode.name ? tile.videoNode.name : "Light Output"
         }
 
-        CheckerboardPreview {
-            videoNode: tile.videoNode
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.margins: 5
+            layer.enabled: true
+
+            LightOutputPreview {
+                id: vnr
+                videoNode: tile.videoNode
+                anchors.fill: parent
+            }
+            BusyBrokenIndicator {
+                anchors.fill: parent
+                videoNode: vnr.videoNode
+            }
         }
     }
 }

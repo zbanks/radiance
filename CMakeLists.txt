@@ -111,7 +111,8 @@ add_library(libradiance ${libradiance_SOURCES})
 
 add_executable(radiance WIN32 src/main.cpp
     src/QQuickVideoNodePreview.cpp
-    src/QQuickPreviewAdapter.cpp)
+    src/QQuickPreviewAdapter.cpp
+    src/QQuickLightOutputPreview.cpp)
 
 set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
 set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})

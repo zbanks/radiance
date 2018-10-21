@@ -17,6 +17,7 @@
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "Paths.h"
+#include "QQuickLightOutputPreview.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
 #include "Timebase.h"
@@ -49,8 +50,8 @@ runRadianceGui(QGuiApplication *app) {
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
     qmlRegisterType<Model>("radiance", 1, 0, "Model");
     qmlRegisterType<View>("radiance", 1, 0, "View");
-
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
+    qmlRegisterType<QQuickLightOutputPreview>("radiance", 1, 0, "LightOutputPreview");
 
 #ifdef USE_RTMIDI
     qmlRegisterType<MidiController>("radiance", 1, 0, "MidiController");
