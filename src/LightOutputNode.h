@@ -102,9 +102,10 @@ signals:
     void packetReceived(QByteArray packet);
 
 protected:
-    QSharedPointer<QOpenGLShaderProgram> loadBlitShader();
+    QSharedPointer<QOpenGLShaderProgram> loadSamplerShader();
     void connectToDevice(QString url);
     void throwError(QString msg);
+    void sendFrame();
 
 protected slots:
     void onStateChanged(QAbstractSocket::SocketState socketState);
@@ -113,13 +114,15 @@ protected slots:
 
 private:
     WeakLightOutputNode m_p;
-    //QTimer *m_timer{};
+    QTimer *m_timer{};
     QByteArray m_pixelBuffer;
-    QSize m_size;
+    //QSize m_size;
     QSharedPointer<QOpenGLShaderProgram> m_shader;
     QSharedPointer<QOpenGLFramebufferObject> m_fbo;
     QTcpSocket *m_socket{};
     LightOutputNodeState m_connectionState{Disconnected};
+    QOpenGLTexture m_lookupTexture2D;
+    quint32 m_pixelCount{};
 
     // For the radiance output protocol
     QByteArray m_packet;

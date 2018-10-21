@@ -1,6 +1,7 @@
 #include "LightOutputNode.h"
 #include "Context.h"
 #include <QJsonDocument>
+#include <cmath>
 
 LightOutputNode::LightOutputNode(Context *context, QString url)
     : OutputNode(new LightOutputNodePrivate(context)) {
@@ -128,6 +129,7 @@ QSharedPointer<LightOutputNodePrivate> WeakLightOutputNode::toStrongRef() {
 LightOutputNodeOpenGLWorker::LightOutputNodeOpenGLWorker(LightOutputNode p)
     : OpenGLWorker(p.d()->m_workerContext)
     , m_p(p)
+    , m_lookupTexture2D(QOpenGLTexture::Target2D)
     , m_packet(4, 0) {
     qRegisterMetaType<QAbstractSocket::SocketState>("QAbstractSocket::SocketState");
     connect(this, &LightOutputNodeOpenGLWorker::packetReceived, this, &LightOutputNodeOpenGLWorker::onPacketReceived);
@@ -137,7 +139,7 @@ LightOutputNodeOpenGLWorker::LightOutputNodeOpenGLWorker(LightOutputNode p)
     connect(this, &LightOutputNodeOpenGLWorker::error,   p.d().data(), &LightOutputNodePrivate::error);
 }
 
-QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadBlitShader() {
+QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadSamplerShader() {
     Q_ASSERT(QThread::currentThread() == thread());
     auto vertexString = QString{
         "#version 150\n"
@@ -151,10 +153,11 @@ QSharedPointer<QOpenGLShaderProgram> LightOutputNodeOpenGLWorker::loadBlitShader
     auto fragmentString = QString{
         "#version 150\n"
         "uniform sampler2D iFrame;\n"
+        "uniform sampler2D iMap;\n"
         "in vec2 uv;\n"
         "out vec4 fragColor;\n"
         "void main() {\n"
-        "    fragColor = texture(iFrame, uv);\n"
+        "    fragColor = texture(iFrame, texture(iMap, uv).xy);\n"
         "}\n"};
 
     auto shader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
@@ -183,6 +186,7 @@ void LightOutputNodeOpenGLWorker::throwError(QString msg) {
     m_connectionState = LightOutputNodeOpenGLWorker::Broken;
     emit error(msg);
     p.setNodeState(VideoNode::Broken);
+    m_timer->stop();
     m_socket->close();
 }
 
@@ -220,9 +224,9 @@ void LightOutputNodeOpenGLWorker::onReadyRead() {
             if (m_packetIndex == 4) {
                 quint32 packetLength;
                 {
-                    QDataStream qds(m_packet);
-                    qds.setByteOrder(QDataStream::LittleEndian);
-                    qds >> packetLength;
+                    QDataStream ds(m_packet);
+                    ds.setByteOrder(QDataStream::LittleEndian);
+                    ds >> packetLength;
                 }
                 m_packet.resize(packetLength + 4);
             }
@@ -266,6 +270,81 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
             LightOutputNode p(d);
             p.setName(name);
         }
+    } else if (cmd == 1) {
+        if (packet.size() != 9) {
+            qWarning() << "Unexpected number of bytes";
+            return;
+        }
+        quint32 msec;
+        QDataStream ds(m_packet);
+        ds.setByteOrder(QDataStream::LittleEndian);
+        ds.skipRawData(5);
+        ds >> msec;
+        if (msec == 0) {
+            m_timer->stop();
+        } else {
+            m_timer->setInterval(msec);
+            m_timer->start();
+        }
+        render();
+    } else if (cmd == 3) {
+        if ((packet.size() - 5) % 8 != 0) {
+            qWarning() << "Unexpected number of bytes";
+            return;
+        }
+
+        // We make a square texture of the minimum necessary size
+        // to store the output
+        m_pixelCount = (packet.size() - 5) / 8;
+        auto dim = (int)ceil(sqrt(m_pixelCount));
+
+        qDebug() << "Looking up" << m_pixelCount << "pixels";
+        qDebug() << "Dim is" << dim;
+
+        // Load up the lookup texture
+        makeCurrent();
+        if (dim != m_lookupTexture2D.width()) {
+            if (m_lookupTexture2D.isCreated()) {
+                m_lookupTexture2D.destroy();
+            }
+            m_lookupTexture2D.setSize(dim, dim);
+            m_lookupTexture2D.setFormat(QOpenGLTexture::RG32F);
+            m_lookupTexture2D.allocateStorage(QOpenGLTexture::RG, QOpenGLTexture::Float32);
+            m_lookupTexture2D.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+            m_lookupTexture2D.setWrapMode(QOpenGLTexture::ClampToEdge);
+        }
+        auto extraBytes = 8 * (dim * dim - m_pixelCount);
+        m_packet.append(extraBytes, 0);
+        m_lookupTexture2D.setData(QOpenGLTexture::RG, QOpenGLTexture::Float32, m_packet.constData() + 5);
+
+        // Resize the FBO
+        if (m_fbo->width() != dim) {
+            auto fmt = QOpenGLFramebufferObjectFormat{};
+            fmt.setInternalTextureFormat(GL_RGBA);
+            m_fbo = QSharedPointer<QOpenGLFramebufferObject>::create(QSize(dim, dim), fmt);
+        }
+
+        // Resize the output bytearray
+        m_pixelBuffer.resize(dim * dim * 4);
+    }
+}
+
+void LightOutputNodeOpenGLWorker::sendFrame() {
+    QByteArray packetHeader(5, 0);
+    QDataStream ds(&packetHeader, QIODevice::WriteOnly);
+    ds.setByteOrder(QDataStream::LittleEndian);
+    quint32 packetLength = 4 * m_pixelCount + 1;
+    unsigned char cmdId = 2;
+    ds << packetLength << cmdId;
+    auto result = m_socket->write(packetHeader);
+    if (result != packetHeader.size()) {
+        throwError("Could not write data");
+        return;
+    }
+    result = m_socket->write(m_pixelBuffer.data(), 4 * m_pixelCount);
+    if (result != 4 * m_pixelCount) {
+        throwError("Could not write data");
+        return;
     }
 }
 
@@ -294,24 +373,25 @@ void LightOutputNodeOpenGLWorker::initialize() {
         connect(m_socket, &QAbstractSocket::stateChanged, this, &LightOutputNodeOpenGLWorker::onStateChanged);
         connect(m_socket, &QAbstractSocket::readyRead, this, &LightOutputNodeOpenGLWorker::onReadyRead);
     }
+    if (m_timer == NULL) {
+        m_timer = new QTimer(this);
+        connect(m_timer, &QTimer::timeout, this, &LightOutputNodeOpenGLWorker::render);
+    }
+
+    if (m_shader.isNull()) {
+        m_shader = loadSamplerShader();
+        if (m_shader.isNull()) return;
+    }
+
+    if (m_fbo.isNull()) {
+        makeCurrent();
+
+        auto fmt = QOpenGLFramebufferObjectFormat{};
+        fmt.setInternalTextureFormat(GL_RGBA);
+        m_fbo = QSharedPointer<QOpenGLFramebufferObject>::create(QSize(1, 1), fmt);
+    }
 
     connectToDevice(url);
-
-    QSize size(100, 100);
-
-    makeCurrent();
-    m_shader = loadBlitShader();
-    if (m_shader.isNull()) return;
-
-    auto fmt = QOpenGLFramebufferObjectFormat{};
-    fmt.setInternalTextureFormat(GL_RGBA);
-    m_fbo = QSharedPointer<QOpenGLFramebufferObject>::create(size, fmt);
-
-    m_size = size;
-    m_pixelBuffer.resize(4 * size.width() * size.height());
-
-    //m_timer = new QTimer(this);
-    //connect(m_timer, &QTimer::timeout, this, &LightOutputNodeOpenGLWorker::onTimeout);
 }
 
 void LightOutputNodeOpenGLWorker::render() {
@@ -336,7 +416,8 @@ void LightOutputNodeOpenGLWorker::render() {
 
     m_fbo->bind();
     // VAO??
-    glViewport(0, 0, m_size.width(), m_size.height());
+    auto size = m_fbo->size();
+    glViewport(0, 0, size.width(), size.height());
 
     m_shader->bind();
     glActiveTexture(GL_TEXTURE0);
@@ -344,16 +425,25 @@ void LightOutputNodeOpenGLWorker::render() {
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_lookupTexture2D.textureId());
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+
     m_shader->setUniformValue("iFrame", 0);
+    m_shader->setUniformValue("iMap", 1);
 
     vao->bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     vao->release();
 
-    glReadPixels(0, 0, m_size.width(), m_size.height(), GL_RGBA, GL_UNSIGNED_BYTE, m_pixelBuffer.data());
+    glReadPixels(0, 0, size.width(), size.height(), GL_RGBA, GL_UNSIGNED_BYTE, m_pixelBuffer.data());
+
+    sendFrame();
 
     m_fbo->release();
     m_shader->release();
+    glActiveTexture(GL_TEXTURE0);
 }
 
 LightOutputNodePrivate::LightOutputNodePrivate(Context *context)
