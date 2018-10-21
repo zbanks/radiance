@@ -290,11 +290,11 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
     if (cmd == 0) { // Description
         auto data = QJsonDocument::fromJson(packet.right(packet.size() - 5));
         if (data.isNull()) {
-            qWarning() << "Could not parse JSON";
+            emit warning("Could not parse JSON in \"description\" packet");
             return;
         }
         if (!data.isObject()) {
-            qWarning() << "JSON root not an object";
+            emit warning("JSON root not an object in \"description\" packet");
             return;
         }
         auto obj = data.object();
@@ -319,7 +319,7 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         }
     } else if (cmd == 1) {
         if (packet.size() != 9) {
-            qWarning() << "Unexpected number of bytes";
+            emit warning("Unexpected number of bytes in \"get frame\" packet");
             return;
         }
         quint32 msec;
@@ -336,7 +336,7 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         render();
     } else if (cmd == 3) {
         if ((packet.size() - 5) % 8 != 0) {
-            qWarning() << "Unexpected number of bytes";
+            emit warning("Unexpected number of bytes in \"lookup coordinates 2D\" packet");
             return;
         }
 
@@ -392,7 +392,7 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         }
     } else if (cmd == 4) {
         if ((double)(packet.size() - 5) / 8 != m_pixelCount) {
-            qWarning() << "Unexpected number of bytes";
+            emit warning("Unexpected number of bytes in \"physical coordinates 2D\" packet");
             return;
         }
         // Write the physical coordinates
@@ -418,7 +418,7 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
             p.d()->m_geometry2D.destroy();
             p.d()->m_geometry2D.setData(image.mirrored());
         } else {
-            qWarning() << "Could not parse image data";
+            emit warning("Could not parse image data in \"geometry 2D\" packet");
         }
     }
 }
@@ -486,6 +486,8 @@ void LightOutputNodeOpenGLWorker::initialize() {
 
     {
         QMutexLocker locker(&p.d()->m_bufferLock);
+        m_pixelCount = 0;
+        p.d()->m_pixelCount = 0;
         if (!p.d()->m_colors.isCreated()) {
             p.d()->m_colors.create();
             p.d()->m_lookupCoordinates.create();
