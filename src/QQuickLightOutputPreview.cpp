@@ -30,7 +30,6 @@ public:
 
         auto videoNode = QSharedPointer<LightOutputNode>(m_p->videoNodeSafe());
         if (!videoNode.isNull()) {
-            m_shader->bind();
             m_vao.bind();
 
             auto outputSize = videoNode->chain().size();
@@ -45,18 +44,30 @@ public:
 
             QMatrix4x4 projection;
             projection.ortho(centerX, centerX + factorFitX, centerY + factorFitY, centerY, -1., 1.);
-            m_shader->setUniformValue("mvp", projection);
 
-            auto posAttr = m_shader->attributeLocation("posAttr");
-            auto colAttr = m_shader->attributeLocation("colAttr");
-            glEnableVertexAttribArray(posAttr);
-            glEnableVertexAttribArray(colAttr);
-
+            auto posAttr = m_lightShader->attributeLocation("posAttr");
+            auto colAttr = m_lightShader->attributeLocation("colAttr");
             {
                 QMutexLocker locker(videoNode->bufferLock());
+                auto background = videoNode->geometry2DTexture();
                 auto pixelCount = videoNode->pixelCount();
                 auto colors = videoNode->colorsBuffer();
                 auto lookupCoordinates = videoNode->lookupCoordinatesBuffer();
+
+                // Draw background
+                m_backgroundShader->bind();
+                glActiveTexture(GL_TEXTURE0);
+                background->bind();
+
+                m_backgroundShader->setUniformValue("mvp", projection);
+                m_backgroundShader->setUniformValue("background", 0);
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                // Draw lights
+                m_lightShader->bind();
+                glEnableVertexAttribArray(posAttr);
+                glEnableVertexAttribArray(colAttr);
+                m_lightShader->setUniformValue("mvp", projection);
 
                 lookupCoordinates.bind();
                 glVertexAttribPointer(posAttr, 2, GL_FLOAT, GL_FALSE, 0, 0);
@@ -64,12 +75,12 @@ public:
                 glVertexAttribPointer(colAttr, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
                 colors.release();
                 glDrawArrays(GL_POINTS, 0, pixelCount);
+                glDisableVertexAttribArray(posAttr);
+                glDisableVertexAttribArray(colAttr);
             }
 
-            glDisableVertexAttribArray(posAttr);
-            glDisableVertexAttribArray(colAttr);
             m_vao.release();
-            m_shader->release();
+            m_lightShader->release();
         }
         glDisable(GL_PROGRAM_POINT_SIZE);
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
@@ -90,7 +101,7 @@ public:
     }
 
 private:
-    QSharedPointer<QOpenGLShaderProgram> loadShader() {
+    QSharedPointer<QOpenGLShaderProgram> loadLightShader() {
         auto vertexString = QString{
             "#version 150\n"
             "attribute vec2 posAttr;\n"
@@ -126,16 +137,54 @@ private:
             return nullptr;
         }
 
-        m_vao.create();
+        return shader;
+    }
+    QSharedPointer<QOpenGLShaderProgram> loadBackgroundShader() {
+        auto vertexString = QString{
+            "#version 150\n"
+            "out vec2 uv;\n"
+            "const vec2 varray[4] = vec2[](vec2(1., 1.),vec2(1., 0.),vec2(0., 1.),vec2(0., 0.));\n"
+            "uniform mat4 mvp;\n"
+            "void main() {\n"
+            "    vec2 vertex = varray[gl_VertexID];\n"
+            "    gl_Position = mvp * vec4(vertex, 0., 1.);\n"
+            "    uv = vertex;\n"
+            "}\n"};
+    auto fragmentString = QString{
+            "#version 150\n"
+            "uniform sampler2D background;\n"
+            "in vec2 uv;\n"
+            "out vec4 fragColor;\n"
+            "void main() {\n"
+            "    fragColor = texture(background, uv);\n"
+            "}\n"};
+
+        auto shader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
+
+        if (!shader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
+            qWarning() << "Could not compile vertex shader";
+            return nullptr;
+        }
+        if (!shader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
+            qWarning() << "Could not compile fragment shader";
+            return nullptr;
+        }
+        if (!shader->link()) {
+            qWarning() << "Could not link shader program";
+            return nullptr;
+        }
 
         return shader;
     }
 
     void initialize() {
-        m_shader = loadShader();
+        m_lightShader = loadLightShader();
+        m_backgroundShader = loadBackgroundShader();
+        m_vao.create();
     }
 
-    QSharedPointer<QOpenGLShaderProgram> m_shader;
+    QSharedPointer<QOpenGLShaderProgram> m_lightShader;
+    QSharedPointer<QOpenGLShaderProgram> m_backgroundShader;
     bool m_initialized{};
     QQuickLightOutputPreview *m_p{};
     QOpenGLVertexArrayObject m_vao;

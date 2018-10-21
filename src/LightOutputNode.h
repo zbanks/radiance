@@ -56,7 +56,7 @@ public:
     QOpenGLBuffer &colorsBuffer();
     QOpenGLBuffer &lookupCoordinatesBuffer();
     QOpenGLBuffer &physicalCoordinatesBuffer();
-    QOpenGLTexture &geometry2DTexture();
+    QOpenGLTexture *geometry2DTexture();
     // end
 
 public slots:

@@ -36,6 +36,10 @@ class RadianceOutputDevice:
         locations_flat = [item for sublist in locations for item in sublist]
         self.send_packet(bytes((3,)) + struct.pack("<{}f".format(len(locations_flat)), *locations_flat))
 
+    def send_geometry_2d(self, fn):
+        with open(fn, "rb") as f:
+            self.send_packet(bytes((5,)) + f.read())
+
     def recv_packet(self):
         while True:
             result = self.clientsocket.recv(4096)
@@ -62,13 +66,14 @@ while True:
     d.accept()
 
     print("Connected! Sending description and framerate")
-    d.send_description({"name": "Python test server", "size": [300,100]})
+    d.send_description({"name": "Python test server", "size": [100,100]})
     #d.send_lookup_2d([(0, 0), (0, 1), (1, 0), (1, 1), (0.5, 0.5)])
     pts = [(0, i / 100) for i in range(100)]
     pts += [(i / 100, 0) for i in range(100)]
     pts += [(1, 1 - i / 100) for i in range(100)]
     pts += [(1 - i / 100, 1) for i in range(100)]
     d.send_lookup_2d(pts)
+    #d.send_geometry_2d("../resources/library/images/logo.png")
     d.send_get_frame(10)
 
     while True:

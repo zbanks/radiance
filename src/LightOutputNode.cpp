@@ -131,8 +131,8 @@ QOpenGLBuffer &LightOutputNode::physicalCoordinatesBuffer() {
     return d()->m_physicalCoordinates;
 }
 
-QOpenGLTexture &LightOutputNode::geometry2DTexture() {
-    return d()->m_geometry2D;
+QOpenGLTexture *LightOutputNode::geometry2DTexture() {
+    return &d()->m_geometry2D;
 }
 
 // WeakLightOutputNode methods
@@ -381,6 +381,20 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
             p.d()->m_lookupCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
             p.d()->m_lookupCoordinates.release();
         }
+    } else if (cmd == 5) {
+        auto d = m_p.toStrongRef();
+        if (d.isNull()) return; // LightOutputNode was deleted
+        LightOutputNode p(d);
+
+        QImage image;
+        auto result = image.loadFromData((const uchar *)m_packet.constData() + 5, m_packet.size() - 5);
+        if (result) {
+            QMutexLocker locker(&p.d()->m_bufferLock);
+            p.d()->m_geometry2D.destroy();
+            p.d()->m_geometry2D.setData(image.mirrored());
+        } else {
+            qWarning() << "Could not parse image data";
+        }
     }
 }
 
@@ -445,12 +459,23 @@ void LightOutputNodeOpenGLWorker::initialize() {
         m_fbo = QSharedPointer<QOpenGLFramebufferObject>::create(QSize(1, 1), fmt);
     }
 
-    if (!p.d()->m_colors.isCreated()) {
+    {
         QMutexLocker locker(&p.d()->m_bufferLock);
-        p.d()->m_colors.create();
-        p.d()->m_lookupCoordinates.create();
-        p.d()->m_physicalCoordinates.create();
-        p.d()->m_geometry2D.create();
+        if (!p.d()->m_colors.isCreated()) {
+            p.d()->m_colors.create();
+            p.d()->m_lookupCoordinates.create();
+            p.d()->m_physicalCoordinates.create();
+        }
+
+        p.d()->m_geometry2D.destroy();
+        p.d()->m_geometry2D.setSize(1, 1);
+        p.d()->m_geometry2D.setFormat(QOpenGLTexture::RGBA8_UNorm);
+        p.d()->m_geometry2D.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+        p.d()->m_geometry2D.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+        p.d()->m_geometry2D.setWrapMode(QOpenGLTexture::Repeat);
+
+        auto data = std::array<uint8_t,4>();
+        p.d()->m_geometry2D.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
     }
 
     connectToDevice(url);
