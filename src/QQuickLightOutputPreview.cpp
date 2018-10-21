@@ -4,6 +4,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QtDebug>
+#include <QQuickWindow>
 #include "LightOutputNode.h"
 
 // Renderer
@@ -23,34 +24,56 @@ public:
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         //glDisable(GL_DEPTH_TEST);
-        //glDisable(GL_BLEND);
+        glEnable(GL_BLEND);
+        glBlendEquationSeparate(GL_MAX, GL_MAX);
+        glEnable(GL_PROGRAM_POINT_SIZE);
 
         auto videoNode = QSharedPointer<LightOutputNode>(m_p->videoNodeSafe());
         if (!videoNode.isNull()) {
             m_shader->bind();
             m_vao.bind();
+
+            auto outputSize = videoNode->chain().size();
+
+            auto factorFitX = (float)outputSize.height() * m_viewportSize.width() / outputSize.width() / m_viewportSize.height();
+            auto factorFitY = (float)outputSize.width() * m_viewportSize.height() / outputSize.height() / m_viewportSize.width();
+
+            factorFitX = qMax(factorFitX, 1.f);
+            factorFitY = qMax(factorFitY, 1.f);
+            auto centerX = 0.5 * (1. - factorFitX);
+            auto centerY = 0.5 * (1. - factorFitY);
+
+            QMatrix4x4 projection;
+            projection.ortho(centerX, centerX + factorFitX, centerY + factorFitY, centerY, -1., 1.);
+            m_shader->setUniformValue("mvp", projection);
+
             auto posAttr = m_shader->attributeLocation("posAttr");
             auto colAttr = m_shader->attributeLocation("colAttr");
-
-            QMutexLocker locker(videoNode->bufferLock());
-            auto pixelCount = videoNode->pixelCount();
-            auto colors = videoNode->colorsBuffer();
-            auto lookupCoordinates = videoNode->lookupCoordinatesBuffer();
-
-            lookupCoordinates.bind();
             glEnableVertexAttribArray(posAttr);
-            glVertexAttribPointer(posAttr, 2, GL_FLOAT, GL_FALSE, 0, 0);
-            colors.bind();
             glEnableVertexAttribArray(colAttr);
-            glVertexAttribPointer(colAttr, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-            colors.release();
-            glDrawArrays(GL_POINTS, 0, pixelCount);
+
+            {
+                QMutexLocker locker(videoNode->bufferLock());
+                auto pixelCount = videoNode->pixelCount();
+                auto colors = videoNode->colorsBuffer();
+                auto lookupCoordinates = videoNode->lookupCoordinatesBuffer();
+
+                lookupCoordinates.bind();
+                glVertexAttribPointer(posAttr, 2, GL_FLOAT, GL_FALSE, 0, 0);
+                colors.bind();
+                glVertexAttribPointer(colAttr, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+                colors.release();
+                glDrawArrays(GL_POINTS, 0, pixelCount);
+            }
+
             glDisableVertexAttribArray(posAttr);
             glDisableVertexAttribArray(colAttr);
             m_vao.release();
             m_shader->release();
         }
-
+        glDisable(GL_PROGRAM_POINT_SIZE);
+        glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+        glDisable(GL_BLEND);
         update();
     }
 
@@ -62,6 +85,7 @@ public:
         }
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        m_viewportSize = size;
         return new QOpenGLFramebufferObject(size, format);
     }
 
@@ -72,16 +96,19 @@ private:
             "attribute vec2 posAttr;\n"
             "attribute vec4 colAttr;\n"
             "out vec4 col;\n"
+            "uniform mat4 mvp;\n"
             "void main() {\n"
             "   col = colAttr;\n"
-            "   gl_Position = vec4(posAttr - 0.5, 0., 1.);\n"
+            "   gl_Position = mvp * vec4(posAttr, 0., 1.);\n"
+            "   gl_PointSize = 20;\n"
             "}\n"};
         auto fragmentString = QString{
             "#version 150\n"
             "in vec4 col;\n"
             "out vec4 fragColor;\n"
             "void main() {\n"
-            "   fragColor = col;\n"
+            "   float fadeOut = max(1. - length(2. * gl_PointCoord - 1.), 0.);\n"
+            "   fragColor = col * fadeOut * fadeOut;\n"
             "}\n"};
 
         auto shader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
@@ -112,6 +139,7 @@ private:
     bool m_initialized{};
     QQuickLightOutputPreview *m_p{};
     QOpenGLVertexArrayObject m_vao;
+    QSize m_viewportSize;
 };
 
 // QQuickItem

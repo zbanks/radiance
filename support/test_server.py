@@ -62,12 +62,17 @@ while True:
     d.accept()
 
     print("Connected! Sending description and framerate")
-    d.send_description({"name": "Python test server"})
-    d.send_lookup_2d([(0, 0), (0, 1), (1, 0), (1, 1), (0.5, 0.5)])
+    d.send_description({"name": "Python test server", "size": [300,100]})
+    #d.send_lookup_2d([(0, 0), (0, 1), (1, 0), (1, 1), (0.5, 0.5)])
+    pts = [(0, i / 100) for i in range(100)]
+    pts += [(i / 100, 0) for i in range(100)]
+    pts += [(1, 1 - i / 100) for i in range(100)]
+    pts += [(1 - i / 100, 1) for i in range(100)]
+    d.send_lookup_2d(pts)
     d.send_get_frame(10)
 
     while True:
         packet = d.recv_packet()
         if not packet:
             break
-        print(d.parse_frame(packet))
+        #print(d.parse_frame(packet))
