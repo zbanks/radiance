@@ -36,6 +36,10 @@ class RadianceOutputDevice:
         locations_flat = [item for sublist in locations for item in sublist]
         self.send_packet(bytes((3,)) + struct.pack("<{}f".format(len(locations_flat)), *locations_flat))
 
+    def send_physical_2d(self, locations):
+        locations_flat = [item for sublist in locations for item in sublist]
+        self.send_packet(bytes((4,)) + struct.pack("<{}f".format(len(locations_flat)), *locations_flat))
+
     def send_geometry_2d(self, fn):
         with open(fn, "rb") as f:
             self.send_packet(bytes((5,)) + f.read())
@@ -73,6 +77,12 @@ while True:
     pts += [(1, 1 - i / 100) for i in range(100)]
     pts += [(1 - i / 100, 1) for i in range(100)]
     d.send_lookup_2d(pts)
+
+    import math
+    def moveToCircle(x, y):
+        l = math.hypot(x - 0.5, y - 0.5)
+        return (0.5 * (x - 0.5) / l + 0.5, 0.5 * (y - 0.5) / l + 0.5)
+    d.send_physical_2d([moveToCircle(x, y) for (x, y) in pts])
     #d.send_geometry_2d("../resources/library/images/logo.png")
     d.send_get_frame(10)
 

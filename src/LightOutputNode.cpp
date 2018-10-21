@@ -135,6 +135,10 @@ QOpenGLTexture *LightOutputNode::geometry2DTexture() {
     return &d()->m_geometry2D;
 }
 
+LightOutputNode::DisplayMode LightOutputNode::displayMode() {
+    return d()->m_displayMode;
+}
+
 // WeakLightOutputNode methods
 
 WeakLightOutputNode::WeakLightOutputNode()
@@ -381,6 +385,22 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
             p.d()->m_lookupCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
             p.d()->m_lookupCoordinates.release();
         }
+    } else if (cmd == 4) {
+        if ((double)(packet.size() - 5) / 8 != m_pixelCount) {
+            qWarning() << "Unexpected number of bytes";
+            return;
+        }
+        // Write the physical coordinates
+        auto d = m_p.toStrongRef();
+        if (d.isNull()) return; // LightOutputNode was deleted
+        LightOutputNode p(d);
+        {
+            QMutexLocker locker(&p.d()->m_bufferLock);
+            p.d()->m_physicalCoordinates.bind();
+            p.d()->m_physicalCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
+            p.d()->m_physicalCoordinates.release();
+            p.d()->m_displayMode = LightOutputNode::DisplayPhysical2D;
+        }
     } else if (cmd == 5) {
         auto d = m_p.toStrongRef();
         if (d.isNull()) return; // LightOutputNode was deleted
@@ -476,6 +496,7 @@ void LightOutputNodeOpenGLWorker::initialize() {
 
         auto data = std::array<uint8_t,4>();
         p.d()->m_geometry2D.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+        p.d()->m_displayMode = LightOutputNode::DisplayLookup2D;
     }
 
     connectToDevice(url);

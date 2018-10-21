@@ -52,7 +52,9 @@ public:
                 auto background = videoNode->geometry2DTexture();
                 auto pixelCount = videoNode->pixelCount();
                 auto colors = videoNode->colorsBuffer();
+                auto displayMode = videoNode->displayMode();
                 auto lookupCoordinates = videoNode->lookupCoordinatesBuffer();
+                auto physicalCoordinates = videoNode->physicalCoordinatesBuffer();
 
                 // Draw background
                 m_backgroundShader->bind();
@@ -69,7 +71,11 @@ public:
                 glEnableVertexAttribArray(colAttr);
                 m_lightShader->setUniformValue("mvp", projection);
 
-                lookupCoordinates.bind();
+                if (displayMode == LightOutputNode::DisplayPhysical2D) {
+                    physicalCoordinates.bind();
+                } else {
+                    lookupCoordinates.bind();
+                }
                 glVertexAttribPointer(posAttr, 2, GL_FLOAT, GL_FALSE, 0, 0);
                 colors.bind();
                 glVertexAttribPointer(colAttr, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);

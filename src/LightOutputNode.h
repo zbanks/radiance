@@ -27,6 +27,11 @@ public:
     LightOutputNode(const LightOutputNode &other);
     LightOutputNode *clone() const override;
 
+    enum DisplayMode {
+        DisplayLookup2D,
+        DisplayPhysical2D
+    };
+
     QJsonObject serialize() override;
 
     // A string representation of this VideoNode type
@@ -57,6 +62,7 @@ public:
     QOpenGLBuffer &lookupCoordinatesBuffer();
     QOpenGLBuffer &physicalCoordinatesBuffer();
     QOpenGLTexture *geometry2DTexture();
+    DisplayMode displayMode();
     // end
 
 public slots:
@@ -158,6 +164,7 @@ public:
     QOpenGLBuffer m_lookupCoordinates;
     QOpenGLBuffer m_physicalCoordinates;
     QOpenGLTexture m_geometry2D;
+    LightOutputNode::DisplayMode m_displayMode{LightOutputNode::DisplayLookup2D};
     // end
 
 signals:
