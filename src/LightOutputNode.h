@@ -5,6 +5,7 @@
 #include <QTcpSocket>
 #include <QDataStream>
 #include <QtGlobal>
+#include <QOpenGLBuffer>
 #include "OutputNode.h"
 #include "OpenGLWorkerContext.h"
 #include "OpenGLWorker.h"
@@ -117,7 +118,6 @@ private:
     WeakLightOutputNode m_p;
     QTimer *m_timer{};
     QByteArray m_pixelBuffer;
-    //QSize m_size;
     QSharedPointer<QOpenGLShaderProgram> m_shader;
     QSharedPointer<QOpenGLFramebufferObject> m_fbo;
     QTcpSocket *m_socket{};
@@ -139,6 +139,16 @@ public:
     QSharedPointer<LightOutputNodeOpenGLWorker> m_worker;
     QString m_url;
     QString m_name;
+
+    QMutex m_bufferLock;
+    // Please take the bufferlock when
+    // editing or using any of these:
+    quint32 m_pixelCount;
+    QOpenGLBuffer m_colors;
+    QOpenGLBuffer m_lookupCoordinates;
+    QOpenGLBuffer m_physicalCoordinates;
+    QOpenGLTexture m_geometry2D;
+    // end
 
 signals:
     void urlChanged(QString value);

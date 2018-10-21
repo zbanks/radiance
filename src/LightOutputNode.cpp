@@ -337,6 +337,21 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
 
         // Resize the output bytearray
         m_pixelBuffer.resize(dim * dim * 4);
+
+        // Resize the VBOs and write the lookup coordinates
+        auto d = m_p.toStrongRef();
+        if (d.isNull()) return; // LightOutputNode was deleted
+        LightOutputNode p(d);
+        {
+            QMutexLocker locker(&p.d()->m_bufferLock);
+            if (m_pixelCount != p.d()->m_pixelCount) {
+                p.d()->m_pixelCount = m_pixelCount;
+                p.d()->m_colors.allocate(m_pixelCount * 4);
+                p.d()->m_lookupCoordinates.allocate(m_pixelCount * 8);
+                p.d()->m_physicalCoordinates.allocate(m_pixelCount * 8);
+            }
+            p.d()->m_lookupCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
+        }
     }
 }
 
@@ -367,7 +382,6 @@ void LightOutputNodeOpenGLWorker::connectToDevice(QString url) {
         port = parts.at(1).toInt();
     }
     m_socket->connectToHost(parts.at(0), port);
-    qDebug() << "Connecting to" << parts.at(0) << "on port" << port;
 }
 
 void LightOutputNodeOpenGLWorker::initialize() {
@@ -400,6 +414,14 @@ void LightOutputNodeOpenGLWorker::initialize() {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
         m_fbo = QSharedPointer<QOpenGLFramebufferObject>::create(QSize(1, 1), fmt);
+    }
+
+    if (!p.d()->m_colors.isCreated()) {
+        QMutexLocker locker(&p.d()->m_bufferLock);
+        p.d()->m_colors.create();
+        p.d()->m_lookupCoordinates.create();
+        p.d()->m_physicalCoordinates.create();
+        p.d()->m_geometry2D.create();
     }
 
     connectToDevice(url);
@@ -450,14 +472,21 @@ void LightOutputNodeOpenGLWorker::render() {
 
     glReadPixels(0, 0, size.width(), size.height(), GL_RGBA, GL_UNSIGNED_BYTE, m_pixelBuffer.data());
 
-    sendFrame();
-
     m_fbo->release();
     m_shader->release();
     glActiveTexture(GL_TEXTURE0);
+
+    // Write the new colors to the VBO for visualization
+    {
+        QMutexLocker locker(&p.d()->m_bufferLock);
+        p.d()->m_colors.write(0, m_pixelBuffer.constData(), m_pixelCount * 4);
+    }
+
+    sendFrame();
 }
 
 LightOutputNodePrivate::LightOutputNodePrivate(Context *context)
     : OutputNodePrivate(context, QSize(300, 300))
+    , m_geometry2D(QOpenGLTexture::Target2D)
 {
 }
