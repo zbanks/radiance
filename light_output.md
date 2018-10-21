@@ -12,6 +12,8 @@ To try it out, run it in the background. Then, open Radiance and create a new `L
 Add a full-screen pattern such as `purple` before the `LightOutputNode` to fill the display with color.
 You should see a circle of lights that correspond to the edges of the frame.
 
+If you restart the server and want to reconnect, simply select the `LightOutputNode` and hit `R`.
+
 ## Nuts and bolts
 * Your device should bind a TCP port. Radiance will connect.
 * Radiance defaults to port 9001 if no port is specified.

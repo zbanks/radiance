@@ -5,7 +5,6 @@ import json
 import struct
 import time
 
-
 class RadianceOutputDevice:
     def __init__(self, port=9001):
         self.port = port
@@ -62,33 +61,57 @@ class RadianceOutputDevice:
             return
         return [(packet[i], packet[i+1], packet[i+2], packet[i+3]) for i in range(5, len(packet), 4)]
 
-d = RadianceOutputDevice()
-d.listen()
-
-while True:
-    print("Waiting for a connection on port {}".format(d.port))
-    d.accept()
-
-    print("Connected! Sending description and framerate")
-    d.send_description({"name": "Python test server", "size": [100,100]})
-    #d.send_lookup_2d([(0, 0), (0, 1), (1, 0), (1, 1), (0.5, 0.5)])
-    N = 30
-    pts = [(0, i / N) for i in range(N)]
-    pts += [(i / N, 0) for i in range(N)]
-    pts += [(1, 1 - i / N) for i in range(N)]
-    pts += [(1 - i / N, 1) for i in range(N)]
-    d.send_lookup_2d(pts)
-
-    import math
-    def moveToCircle(x, y):
-        l = math.hypot(x - 0.5, y - 0.5)
-        return (0.5 * (x - 0.5) / l + 0.5, 0.5 * (y - 0.5) / l + 0.5)
-    d.send_physical_2d([moveToCircle(x, y) for (x, y) in pts])
-    #d.send_geometry_2d("../resources/library/images/logo.png")
-    d.send_get_frame(10)
+def main():
+    d = RadianceOutputDevice()
+    d.listen()
 
     while True:
-        packet = d.recv_packet()
-        if not packet:
-            break
-        #print(d.parse_frame(packet))
+        print("Waiting for a connection on port {}".format(d.port))
+        d.accept()
+
+        print("Connected!")
+        # This tells Radiance the name of our device, and how big the sampled canvas should be.
+        d.send_description({"name": "Python test server", "size": [100,100]})
+
+        # This would request 5 pixels at the corners and center.
+        #d.send_lookup_2d([(0, 0), (0, 1), (1, 0), (1, 1), (0.5, 0.5)])
+
+        # Instead, lets request 120 pixels around the border.
+        N = 30
+        pts = [(0, i / N) for i in range(N)]
+        pts += [(i / N, 0) for i in range(N)]
+        pts += [(1, 1 - i / N) for i in range(N)]
+        pts += [(1 - i / N, 1) for i in range(N)]
+        d.send_lookup_2d(pts)
+
+        # If we stopped here, Radiance would visualize this display using the lookup coordinates
+        # and show a square.
+        # If the physical display looks different, we tell Radiance about it with the
+        # "physical coordinates" command.
+        # Lets tell Radiance to visualize the points as a circle instead.
+
+        import math
+        def moveToCircle(x, y):
+            l = math.hypot(x - 0.5, y - 0.5)
+            return (0.5 * (x - 0.5) / l + 0.5, 0.5 * (y - 0.5) / l + 0.5)
+        d.send_physical_2d([moveToCircle(x, y) for (x, y) in pts])
+
+        # We can send radiance a PNG file to be used as a background image for visualization.
+        # This logo image is not very useful, but perhaps some line-art of your venue would work well.
+
+        #d.send_geometry_2d("../resources/library/images/logo.png")
+
+        # Ask for frames from Radiance every 10 ms (100 FPS)
+
+        d.send_get_frame(10)
+
+        while True:
+            packet = d.recv_packet()
+            if not packet:
+                break
+            # Print out the received pixel colors.
+            # This line is commented out because it generates a lot of output.
+            #print(d.parse_frame(packet))
+
+if __name__ == "__main__":
+    main()
