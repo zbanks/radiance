@@ -80,6 +80,12 @@ QString LightOutputNode::url() {
     return d()->m_url;
 }
 
+void LightOutputNode::reload() {
+    setNodeState(VideoNode::Loading);
+    auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize");
+    Q_ASSERT(result);
+}
+
 void LightOutputNode::setUrl(QString value) {
     {
         QMutexLocker locker(&d()->m_stateLock);
@@ -88,9 +94,7 @@ void LightOutputNode::setUrl(QString value) {
         d()->m_url = value;
     }
 
-    setNodeState(VideoNode::Loading);
-    auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize");
-    Q_ASSERT(result);
+    reload();
 
     emit d()->urlChanged(value);
 }

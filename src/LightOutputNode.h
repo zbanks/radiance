@@ -69,6 +69,7 @@ public slots:
     QString url();
     void setUrl(QString value);
     QString name();
+    void reload();
 
 signals:
     void urlChanged(QString value);

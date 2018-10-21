@@ -39,4 +39,10 @@ VideoNodeTile {
             }
         }
     }
+    Keys.onPressed: {
+        if (event.modifiers == Qt.NoModifier) {
+            if (event.key == Qt.Key_R)
+                videoNode.reload();
+        }
+    }
 }
