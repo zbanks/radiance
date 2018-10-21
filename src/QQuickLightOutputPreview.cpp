@@ -41,9 +41,11 @@ public:
             factorFitY = qMax(factorFitY, 1.f);
             auto centerX = 0.5 * (1. - factorFitX);
             auto centerY = 0.5 * (1. - factorFitY);
+            auto marginX = (5 * m_devicePixelRatio) / m_viewportSize.width();
+            auto marginY = (5 * m_devicePixelRatio) / m_viewportSize.height();
 
             QMatrix4x4 projection;
-            projection.ortho(centerX, centerX + factorFitX, centerY + factorFitY, centerY, -1., 1.);
+            projection.ortho(centerX - marginX, centerX + factorFitX + marginX, centerY + factorFitY + marginY, centerY - marginY, -1., 1.);
 
             auto posAttr = m_lightShader->attributeLocation("posAttr");
             auto colAttr = m_lightShader->attributeLocation("colAttr");
@@ -70,6 +72,7 @@ public:
                 glEnableVertexAttribArray(posAttr);
                 glEnableVertexAttribArray(colAttr);
                 m_lightShader->setUniformValue("mvp", projection);
+                m_lightShader->setUniformValue("dpr", (GLfloat)m_devicePixelRatio);
 
                 if (displayMode == LightOutputNode::DisplayPhysical2D) {
                     physicalCoordinates.bind();
@@ -103,6 +106,7 @@ public:
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         m_viewportSize = size;
+        m_devicePixelRatio = m_p->window()->devicePixelRatio();
         return new QOpenGLFramebufferObject(size, format);
     }
 
@@ -114,10 +118,11 @@ private:
             "attribute vec4 colAttr;\n"
             "out vec4 col;\n"
             "uniform mat4 mvp;\n"
+            "uniform float dpr;\n"
             "void main() {\n"
             "   col = colAttr;\n"
             "   gl_Position = mvp * vec4(posAttr, 0., 1.);\n"
-            "   gl_PointSize = 20;\n"
+            "   gl_PointSize = 10 * dpr;\n"
             "}\n"};
         auto fragmentString = QString{
             "#version 150\n"
@@ -195,6 +200,7 @@ private:
     QQuickLightOutputPreview *m_p{};
     QOpenGLVertexArrayObject m_vao;
     QSize m_viewportSize;
+    qreal m_devicePixelRatio;
 };
 
 // QQuickItem

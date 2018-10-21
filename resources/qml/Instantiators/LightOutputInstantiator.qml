@@ -5,7 +5,7 @@ import QtQuick.Layouts 1.3
 
 Dialog {
     visible: true
-    title: "Youtube Search"
+    title: "Connect to light output device"
     standardButtons: StandardButton.Ok | StandardButton.Cancel
 
     onAccepted: {

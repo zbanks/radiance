@@ -72,10 +72,11 @@ while True:
     print("Connected! Sending description and framerate")
     d.send_description({"name": "Python test server", "size": [100,100]})
     #d.send_lookup_2d([(0, 0), (0, 1), (1, 0), (1, 1), (0.5, 0.5)])
-    pts = [(0, i / 100) for i in range(100)]
-    pts += [(i / 100, 0) for i in range(100)]
-    pts += [(1, 1 - i / 100) for i in range(100)]
-    pts += [(1 - i / 100, 1) for i in range(100)]
+    N = 30
+    pts = [(0, i / N) for i in range(N)]
+    pts += [(i / N, 0) for i in range(N)]
+    pts += [(1, 1 - i / N) for i in range(N)]
+    pts += [(1 - i / N, 1) for i in range(N)]
     d.send_lookup_2d(pts)
 
     import math
