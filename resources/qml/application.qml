@@ -42,17 +42,12 @@ ApplicationWindow {
         repeat: true
         running: true
         interval: 10 * 1000
-        onTriggered: save()
+        onTriggered: model.saveDefault();
     }
 
     Component.onCompleted: {
         Globals.previewAdapter = previewAdapter;
-
-        load();
-        if (model.vertices.length == 0) {
-            // If the state was empty, then open up a few nodes as a demo
-            model.load(defaultContext, registry, "gui_default");
-        }
+        model.loadDefault(defaultContext, registry);
     }
 
     ColumnLayout {
@@ -185,7 +180,7 @@ ApplicationWindow {
     }
 
     function quit() {
-        save()
+        model.saveDefault()
         Qt.quit()
     }
 

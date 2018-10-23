@@ -93,14 +93,18 @@ LibraryItem *Library::itemFromFile(QString filename, LibraryItem *parent) {
     return new LibraryItem(baseName, filename, parent);
 }
 
-void Library::populate(LibraryItem *item, QString currentDirectory) {
-    QDir d(currentDirectory);
-    auto ls = d.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+void Library::populate(LibraryItem *item, QString currentDirectory = "") {
+    QDir systemDir(Paths::systemLibrary() + "/" + currentDirectory);
+    QDir userDir(Paths::userLibrary() + "/" + currentDirectory);
+    auto systemLs = systemDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    auto userLs = userDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    auto ls = (systemLs + userLs).toSet().toList();
+    ls.sort(Qt::CaseInsensitive);
     for (auto f = ls.begin(); f != ls.end(); f++) {
-        auto fullPath = currentDirectory + "/" + *f;
-        if (QDir(fullPath).exists()) {
+        auto path = currentDirectory + "/" + *f;
+        if (QDir(Paths::systemLibrary() + "/" + path).exists() || QDir(Paths::userLibrary() + "/" + path).exists()) {
             auto newItem = new LibraryItem(*f, "", item);
-            populate(newItem, fullPath);
+            populate(newItem, path);
             // Add directories only if
             // they have contents,
             // or there is no filter set
@@ -110,7 +114,7 @@ void Library::populate(LibraryItem *item, QString currentDirectory) {
                 delete newItem;
             }
         } else {
-            auto newItem = itemFromFile(fullPath, item);
+            auto newItem = itemFromFile(path, item);
             if (newItem != nullptr) {
                 item->appendChild(newItem);
             }
@@ -137,7 +141,7 @@ void Library::rebuild() {
     beginResetModel();
     delete m_rootItem;
     m_rootItem = new LibraryItem("", "");
-    populate(m_rootItem, Paths::library());
+    populate(m_rootItem);
     addCustomInstantiators(m_rootItem, m_registry->instantiators());
     endResetModel();
 }

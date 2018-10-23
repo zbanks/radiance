@@ -178,10 +178,10 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     qInfo() << "Loaded model:" << modelName;
     qInfo() << model.serialize();
 
-    qInfo() << "Scanning for effects in path:" << Paths::library();
+    qInfo() << "Scanning for effects in path:" << Paths::systemLibrary();
     QList<VideoNode *> renderNodes;
     if (nodeFilename.isNull()) {
-        QDir libraryDir(Paths::library());
+        QDir libraryDir(Paths::systemLibrary());
         libraryDir.cd("effects");
 
         for (QString entry : libraryDir.entryList()) {
