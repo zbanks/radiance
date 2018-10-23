@@ -129,7 +129,6 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
     ImageNode p(d);
 
     filename = Paths::expandLibraryPath(filename);
-    qDebug() << "New imagenode" << filename;
     QFile file(filename);
 
     QFileInfo check_file(filename);
