@@ -47,7 +47,9 @@ ApplicationWindow {
 
     Component.onCompleted: {
         Globals.previewAdapter = previewAdapter;
+        console.log("Setting preview adapter to", Globals.previewAdapter)
         model.loadDefault(defaultContext, registry);
+        model.flush();
     }
 
     ColumnLayout {
