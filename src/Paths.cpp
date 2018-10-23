@@ -3,16 +3,38 @@
 #include <QStandardPaths>
 #include <QCoreApplication>
 #include <QDir>
+#include <QtGlobal>
+
+#ifndef RADIANCE_SYSTEM_RESOURCES
+#error RADIANCE_SYSTEM_RESOURCES not set
+#endif
 
 bool Paths::m_initialized = false;
-QString Paths::m_library;
+QString Paths::m_systemLibrary;
+QString Paths::m_userLibrary;
+QString Paths::m_systemConfig;
+QString Paths::m_userConfig;
 QString Paths::m_qml;
 QString Paths::m_glsl;
-QString Paths::m_models;
 
-QString Paths::library() {
+QString Paths::systemLibrary() {
     Q_ASSERT(m_initialized);
-    return Paths::m_library;
+    return Paths::m_systemLibrary;
+}
+
+QString Paths::userLibrary() {
+    Q_ASSERT(m_initialized);
+    return Paths::m_userLibrary;
+}
+
+QString Paths::systemConfig() {
+    Q_ASSERT(m_initialized);
+    return Paths::m_systemConfig;
+}
+
+QString Paths::userConfig() {
+    Q_ASSERT(m_initialized);
+    return Paths::m_userConfig;
 }
 
 QString Paths::qml() {
@@ -25,60 +47,78 @@ QString Paths::glsl() {
     return Paths::m_glsl;
 }
 
-QString Paths::models() {
-    Q_ASSERT(m_initialized);
-    return Paths::m_models;
-}
-
 void Paths::initialize() {
-    if (QDir(QCoreApplication::applicationDirPath() + "/../Resources/").exists()) {
-        // MacOS Bundle
-        Paths::m_library = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/library/").absolutePath();
-        Paths::m_qml = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/qml/").absolutePath();
-        Paths::m_glsl = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/glsl/").absolutePath();
-        Paths::m_models = QFileInfo(QCoreApplication::applicationDirPath() + "/../Resources/models/").absolutePath();
-    } else if (QDir(QCoreApplication::applicationDirPath() + "/resources/").exists()) {
-        // Linux Bundle
-        Paths::m_library = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/library/").absolutePath();
-        Paths::m_qml = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/qml/").absolutePath();
-        Paths::m_glsl = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/glsl/").absolutePath();
-        Paths::m_models = QFileInfo(QCoreApplication::applicationDirPath() + "/resources/models/").absolutePath();
-    } else if (QDir("../resources/").exists()) {
-        // Debug build
-        Paths::m_library = QFileInfo("../resources/library/").absolutePath();
-        Paths::m_qml = QFileInfo("../resources/qml/").absolutePath();
-        Paths::m_glsl = QFileInfo("../resources/glsl/").absolutePath();
-        Paths::m_models = QFileInfo("../resources/models/").absolutePath();
-    } else {
-        // Anything else
-        Paths::m_library = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "library", QStandardPaths::LocateDirectory)).absolutePath();
-        Paths::m_qml = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "qml", QStandardPaths::LocateDirectory)).absolutePath();
-        Paths::m_glsl = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "glsl", QStandardPaths::LocateDirectory)).absolutePath();
-        Paths::m_models = QFileInfo(QStandardPaths::locate(QStandardPaths::AppDataLocation, "models", QStandardPaths::LocateDirectory)).absolutePath();
+    QString systemResources(RADIANCE_SYSTEM_RESOURCES);
+    if (!systemResources.startsWith("/")) {
+        systemResources = QCoreApplication::applicationDirPath() + "/" + systemResources;
     }
+    Paths::m_systemLibrary = systemResources + "library/";
+    Paths::m_systemConfig = systemResources + "config/";
+    Paths::m_qml = systemResources + "qml/";
+    Paths::m_glsl = systemResources + "glsl/";
+
+    auto appDataLocations = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
+    if (appDataLocations.count() == 0) {
+        qFatal("Could not determine AppDataLocation");
+    }
+    auto userPath = appDataLocations.at(0);
+    Paths::m_userLibrary = userPath + "/library";
+    Paths::m_userConfig = userPath + "/config";
     Paths::m_initialized = true;
-    qDebug() << "Library path is:" << Paths::m_library;
+    qDebug() << "System library path is:" << Paths::m_systemLibrary;
+    qDebug() << "User library path is:" << Paths::m_userLibrary;
+    qDebug() << "System config path is:" << Paths::m_systemConfig;
+    qDebug() << "User config path is:" << Paths::m_userConfig;
     qDebug() << "QML path is:" << Paths::m_qml;
     qDebug() << "GLSL path is:" << Paths::m_glsl;
-    qDebug() << "Models path is:" << Paths::m_models;
 }
 
 QString Paths::expandLibraryPath(QString filename) {
     Q_ASSERT(m_initialized);
+    qDebug() << "Expanding library path:" << filename;
     if (QFileInfo(filename).isAbsolute()) {
+        qDebug() << "Is absolute!";
         return filename;
     }
-    auto fullPath = QDir::cleanPath(library() + "/" + filename);
-    return fullPath;
+    auto userPath = QDir::cleanPath(userLibrary() + "/" + filename);
+    if (QFileInfo(userPath).exists()) {
+        qDebug() << "Is userpath!" << userPath;
+        return userPath;
+    }
+    auto systemPath = QDir::cleanPath(systemLibrary() + "/" + filename);
+    if (QFileInfo(systemPath).exists()) {
+        qDebug() << "Is systempath!" << systemPath;
+        return systemPath;
+    }
+    qDebug() << "Is not found! Returning userpath" << userPath;
+    return userPath;
 }
 
 QString Paths::contractLibraryPath(QString filename) {
     Q_ASSERT(m_initialized);
-    auto lib = QDir(library());
-    auto shortPath = lib.relativeFilePath(filename);
-    if (shortPath.contains("..")) {
-        return filename;
-    } else {
+    auto userLib = QDir(userLibrary());
+    auto shortPath = userLib.relativeFilePath(filename);
+    if (!shortPath.contains("..")) {
         return shortPath;
     }
+    auto systemLib = QDir(systemLibrary());
+    shortPath = systemLib.relativeFilePath(filename);
+    if (!shortPath.contains("..")) {
+        return shortPath;
+    }
+    return filename;
+}
+
+QString Paths::ensureUserLibrary(QString filename) {
+    if (filename.startsWith("/")) return filename;
+    auto p = QDir::cleanPath(userLibrary() + "/" + filename);
+    QFileInfo(p).dir().mkpath(".");
+    return p;
+}
+
+QString Paths::ensureUserConfig(QString filename) {
+    if (filename.startsWith("/")) return filename;
+    auto p = QDir::cleanPath(userConfig() + "/" + filename);
+    QFileInfo(p).dir().mkpath(".");
+    return p;
 }

@@ -5,12 +5,21 @@ BINARY=$2
 APP=$3
 DMG=$4
 QT=$5
+RESOURCES=$6
 
 echo "Source dir: $SOURCE_DIR"
 echo "Binary: $BINARY"
 echo "App: $APP"
 echo "DMG: $DMG"
 echo "Qt: $QT"
+echo "Resources: $RESOURCES"
+
+if [ $RESOURCES != "resources" ]; then
+echo "*** ERROR ***" >&2
+echo "For a MacOS bundle to work, RADIANCE_SYSTEM_RESOURCES must be set to '../Resources/'" >&2
+echo "Please recompile with cmake -DRADIANCE_SYSTEM_RESOURCES=../Resources/" >&2
+exit 1
+fi
 
 echo "Create bundle directory..."
 mkdir -p "$APP/Contents/MacOS"

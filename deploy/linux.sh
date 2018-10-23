@@ -5,12 +5,21 @@ BINARY=$2
 APP=$3
 TARGZ=$4
 QT=$5
+RESOURCES=$6
 
 echo "Source dir: $SOURCE_DIR"
 echo "Binary: $BINARY"
 echo "App: $APP"
 echo "TARGZ: $TARGZ"
 echo "Qt: $QT"
+echo "Resources: $RESOURCES"
+
+if [ $RESOURCES != "resources" ]; then
+echo "*** ERROR ***" >&2
+echo "For a Linux bundle to work, RADIANCE_SYSTEM_RESOURCES must be set to 'resources/'" >&2
+echo "Please recompile with cmake -DRADIANCE_SYSTEM_RESOURCES=resources/" >&2
+exit 1
+fi
 
 echo "Create AppDir directory..."
 mkdir -p "$APP"
