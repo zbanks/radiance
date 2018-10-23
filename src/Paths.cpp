@@ -75,22 +75,17 @@ void Paths::initialize() {
 
 QString Paths::expandLibraryPath(QString filename) {
     Q_ASSERT(m_initialized);
-    qDebug() << "Expanding library path:" << filename;
     if (QFileInfo(filename).isAbsolute()) {
-        qDebug() << "Is absolute!";
         return filename;
     }
     auto userPath = QDir::cleanPath(userLibrary() + "/" + filename);
     if (QFileInfo(userPath).exists()) {
-        qDebug() << "Is userpath!" << userPath;
         return userPath;
     }
     auto systemPath = QDir::cleanPath(systemLibrary() + "/" + filename);
     if (QFileInfo(systemPath).exists()) {
-        qDebug() << "Is systempath!" << systemPath;
         return systemPath;
     }
-    qDebug() << "Is not found! Returning userpath" << userPath;
     return userPath;
 }
 

@@ -93,7 +93,7 @@ LibraryItem *Library::itemFromFile(QString filename, LibraryItem *parent) {
     return new LibraryItem(baseName, filename, parent);
 }
 
-void Library::populate(LibraryItem *item, QString currentDirectory = "") {
+void Library::populate(LibraryItem *item, QString currentDirectory = ".") {
     QDir systemDir(Paths::systemLibrary() + "/" + currentDirectory);
     QDir userDir(Paths::userLibrary() + "/" + currentDirectory);
     auto systemLs = systemDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
