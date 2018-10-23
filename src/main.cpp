@@ -83,7 +83,7 @@ runRadianceGui(QGuiApplication *app) {
         QQmlEngine engine;
         QObject::connect(&engine, &QQmlEngine::quit, app, &QGuiApplication::quit);
         engine.rootContext()->setContextProperty("defaultContext", &context);
-        QQmlComponent component(&engine, QUrl(Paths::qml() + "/application.qml"));
+        QQmlComponent component(&engine, QUrl(QDir::cleanPath(Paths::qml() + "/application.qml")));
         auto c = component.create();
         if(c == nullptr) {
             auto errors = component.errors();
