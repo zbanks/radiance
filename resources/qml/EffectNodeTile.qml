@@ -115,6 +115,29 @@ VideoNodeTile {
         */
     }
 
+    Loader {
+        id: editorLoader
+
+        function makeVisible() {
+            // Use show instead incase it isn't loaded yet
+            item.visible = true
+        }
+
+        function show() {
+            if (source == "") {
+                editorLoader.source = "GlslEditor.qml"
+            }
+            if (status == Loader.Ready) {
+                makeVisible();
+            }
+            console.log(status)
+        }
+        onLoaded: {
+            item.videoNode = videoNode
+            makeVisible();
+        }
+    }
+
     Keys.onPressed: {
         if (event.modifiers == Qt.NoModifier) {
             if (event.key == Qt.Key_J)
@@ -145,6 +168,8 @@ VideoNodeTile {
                 slider.value = 1.0;
             else if (event.key == Qt.Key_R)
                 videoNode.reload();
+            else if (event.key == Qt.Key_E)
+                editorLoader.show();
         } else if (event.modifiers == Qt.ControlModifier) {
             if (event.key == Qt.Key_QuoteLeft)
                 attachedParameter = -1;
