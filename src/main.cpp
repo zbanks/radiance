@@ -11,6 +11,7 @@
 #include "BaseVideoNodeTile.h"
 #include "EffectNode.h"
 #include "FramebufferVideoNodeRender.h"
+#include "GlslDocument.h"
 #include "GraphicalDisplay.h"
 #include "Model.h"
 #include "OpenGLWorkerContext.h"
@@ -51,6 +52,7 @@ runRadianceGui(QGuiApplication *app) {
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
+    qmlRegisterType<GlslDocument>("radiance", 1, 0, "GlslDocument");
 
 #ifdef USE_RTMIDI
     qmlRegisterType<MidiController>("radiance", 1, 0, "MidiController");

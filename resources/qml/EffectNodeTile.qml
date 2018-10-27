@@ -120,20 +120,28 @@ VideoNodeTile {
 
         function makeVisible() {
             // Use show instead incase it isn't loaded yet
-            item.visible = true
+            item.file = videoNode.file;
+            item.load();
+            item.visible = true;
+        }
+
+        Connections {
+            target: item
+            onSaved: {
+                if (item.file == videoNode.file) {
+                    videoNode.reload()
+                }
+            }
         }
 
         function show() {
-            if (source == "") {
-                editorLoader.source = "GlslEditor.qml"
-            }
             if (status == Loader.Ready) {
                 makeVisible();
+            } else if (source == "") {
+                editorLoader.source = "GlslEditor.qml"
             }
-            console.log(status)
         }
         onLoaded: {
-            item.videoNode = videoNode
             makeVisible();
         }
     }
