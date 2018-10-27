@@ -68,7 +68,7 @@ bool GlslDocument::save(QString filename) {
         qWarning() << "Cannot call save() with no filename set";
         return false;
     }
-    //filename = Paths::ensureUserLibrary(filename); XXX
+    filename = Paths::ensureUserLibrary(filename);
 
     QFile f(filename);
     if (!f.open(QFile::WriteOnly | QFile::Text)) {
@@ -105,8 +105,7 @@ void GlslDocument::onContentsChanged() {
 
 QString GlslDocument::loadDirectory(QString filename) {
     if (filename.isEmpty()) {
-        //return Paths::userLibrary(); // XXX
-        return Paths::library(); // XXX
+        return Paths::userLibrary();
     }
     auto p = Paths::expandLibraryPath(filename);
     return QFileInfo(p).dir().absolutePath();
@@ -114,11 +113,9 @@ QString GlslDocument::loadDirectory(QString filename) {
 
 QString GlslDocument::saveDirectory(QString filename) {
     if (filename.isEmpty()) {
-        //return Paths::userLibrary(); // XXX
-        return Paths::library(); // XXX
+        return Paths::userLibrary();
     }
-    //auto p = Paths::ensureUserLibrary(filename);
-    auto p = filename; // XXX
+    auto p = Paths::ensureUserLibrary(filename);
     return QFileInfo(p).dir().absolutePath();
 }
 

@@ -121,14 +121,13 @@ VideoNodeTile {
         function makeVisible() {
             // Use show instead incase it isn't loaded yet
             item.file = videoNode.file;
-            item.load();
-            item.visible = true;
+            item.open();
         }
 
         Connections {
-            target: item
+            target: editorLoader.item
             onSaved: {
-                if (item.file == videoNode.file) {
+                if (editorLoader.item.file == videoNode.file) {
                     videoNode.reload()
                 }
             }

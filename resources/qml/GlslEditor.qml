@@ -38,7 +38,6 @@ ApplicationWindow {
 
     statusBar: StatusBar {
         RowLayout {
-            //anchors.fill: parent
             Label { text: glslDocument.message }
         }
     }
@@ -190,6 +189,7 @@ ApplicationWindow {
             backgroundColor: RadianceStyle.editorBackgroundColor
         }
         frameVisible: false
+        wrapMode: TextEdit.NoWrap
 
         Keys.onPressed: {
             if (event.key == Qt.Key_Tab) {
@@ -216,7 +216,7 @@ ApplicationWindow {
 
     function save() {
         if (glslDocument.save(window.file)) {
-            saved();
+            window.saved();
             if (afterSave) {
                 afterSave();
             }
@@ -234,6 +234,9 @@ ApplicationWindow {
     }
 
     function open() {
+        if (window.file) {
+            load();
+        }
         window.visible = true;
         window.afterSave = null;
     }
