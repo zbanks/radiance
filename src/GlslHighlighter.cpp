@@ -8,48 +8,69 @@ GlslHighlighter::GlslHighlighter(QTextDocument *parent)
 {
     HighlightingRule rule;
 
-    keywordFormat.setForeground(Qt::darkBlue);
-    keywordFormat.setFontWeight(QFont::Bold);
-    QStringList keywordPatterns;
-    keywordPatterns << "\\bchar\\b" << "\\bclass\\b" << "\\bconst\\b"
-                    << "\\bdouble\\b" << "\\benum\\b" << "\\bexplicit\\b"
-                    << "\\bfriend\\b" << "\\binline\\b" << "\\bint\\b"
-                    << "\\blong\\b" << "\\bnamespace\\b" << "\\boperator\\b"
-                    << "\\bprivate\\b" << "\\bprotected\\b" << "\\bpublic\\b"
-                    << "\\bshort\\b" << "\\bsignals\\b" << "\\bsigned\\b"
-                    << "\\bslots\\b" << "\\bstatic\\b" << "\\bstruct\\b"
-                    << "\\btemplate\\b" << "\\btypedef\\b" << "\\btypename\\b"
-                    << "\\bunion\\b" << "\\bunsigned\\b" << "\\bvirtual\\b"
-                    << "\\bvoid\\b" << "\\bvolatile\\b" << "\\bbool\\b";
-    foreach (const QString &pattern, keywordPatterns) {
-        rule.pattern = QRegularExpression(pattern);
-        rule.format = keywordFormat;
-        highlightingRules.append(rule);
-    }
-
-    classFormat.setFontWeight(QFont::Bold);
-    classFormat.setForeground(Qt::darkMagenta);
-    rule.pattern = QRegularExpression("\\bQ[A-Za-z]+\\b");
-    rule.format = classFormat;
-    highlightingRules.append(rule);
-
-    singleLineCommentFormat.setForeground(Qt::red);
+    QTextCharFormat singleLineCommentFormat;
+    singleLineCommentFormat.setForeground(Qt::cyan);
     rule.pattern = QRegularExpression("//[^\n]*");
     rule.format = singleLineCommentFormat;
     highlightingRules.append(rule);
 
-    multiLineCommentFormat.setForeground(Qt::red);
+    multiLineCommentFormat.setForeground(Qt::cyan);
 
-    quotationFormat.setForeground(Qt::darkGreen);
+    QTextCharFormat numberFormat;
+    numberFormat.setForeground(Qt::magenta);
+    rule.pattern = QRegularExpression("[\\d\\.]+");
+    rule.format =  numberFormat;
+    highlightingRules.append(rule);
+
+    QTextCharFormat quotationFormat;
+    quotationFormat.setForeground(Qt::magenta);
     rule.pattern = QRegularExpression("\".*\"");
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 
-    functionFormat.setFontItalic(true);
-    functionFormat.setForeground(Qt::blue);
-    rule.pattern = QRegularExpression("\\b[A-Za-z0-9_]+(?=\\()");
-    rule.format = functionFormat;
+    QTextCharFormat preProcessorFormat;
+    preProcessorFormat.setForeground(QColor::fromRgb(100, 100, 255));
+    rule.pattern = QRegularExpression("^\\s*#[A-Za-z0-9_]+\\s.*");
+    rule.format = preProcessorFormat;
     highlightingRules.append(rule);
+
+    // Keywords
+    QTextCharFormat keywordFormat;
+    keywordFormat.setForeground(Qt::yellow);
+    QStringList keywords{
+        "break", "continue", "do", "for", "while",
+        "if", "else",
+        "discard", "return",
+    };
+    foreach (const QString &keyword, keywords) {
+        rule.pattern = QRegularExpression("\\b" + keyword + "\\b");
+        rule.format = keywordFormat;
+        highlightingRules.append(rule);
+    }
+
+    // Types
+    QTextCharFormat typeFormat;
+    typeFormat.setForeground(Qt::green);
+    QStringList types{
+        "attribute", "const", "uniform", "varying",
+        "centroid",
+        "in", "out", "inout",
+        "float", "int", "void", "bool", "true", "false",
+        "invariant",
+        "mat2", "mat3", "mat4",
+        "mat2x2", "mat2x3", "mat2x4",
+        "mat3x2", "mat3x3", "mat3x4",
+        "mat4x2", "mat4x3", "mat4x4",
+        "vec2", "vec3", "vec4", "ivec2", "ivec3", "ivec4", "bvec2", "bvec3", "bvec4",
+        "sampler1D", "sampler2D", "sampler3D", "samplerCube",
+        "sampler1DShadow", "sampler2DShadow",
+        "struct"
+    };
+    foreach (const QString &type, types) {
+        rule.pattern = QRegularExpression("\\b" + type + "\\b");
+        rule.format = typeFormat;
+        highlightingRules.append(rule);
+    }
 
     commentStartExpression = QRegularExpression("/\\*");
     commentEndExpression = QRegularExpression("\\*/");

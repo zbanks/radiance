@@ -190,6 +190,14 @@ ApplicationWindow {
             backgroundColor: RadianceStyle.editorBackgroundColor
         }
         frameVisible: false
+
+        Keys.onPressed: {
+            if (event.key == Qt.Key_Tab) {
+                textArea.remove(textArea.selectionStart, textArea.selectionEnd);
+                textArea.insert(textArea.cursorPosition, "&nbsp;&nbsp;&nbsp;&nbsp;");
+                event.accepted = true;
+            }
+        }
     }
 
     GlslDocument {
