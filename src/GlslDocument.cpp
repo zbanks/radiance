@@ -94,6 +94,41 @@ void GlslDocument::clear() {
     setMessage("");
 }
 
+bool GlslDocument::revert(QString filename) {
+    if (m_document == nullptr || m_document->textDocument() == nullptr) {
+        qWarning() << "Cannot call revert() with no document set";
+        return false;
+    }
+    if (filename.isEmpty()) {
+        qWarning() << "Cannot call revert() with no filename set";
+        return false;
+    }
+
+    if (QFileInfo(filename).isAbsolute()) {
+        setMessage(QString("\"%1\" is not a library path").arg(filename));
+        return false;
+    }
+    auto systemPath = QDir::cleanPath(Paths::systemLibrary() + "/" + filename);
+    if (!QFileInfo(systemPath).exists()) {
+        setMessage(QString("\"%1\" not found in system library, nothing to revert to!").arg(filename));
+        return false;
+    }
+    auto userPath = QDir::cleanPath(Paths::userLibrary() + "/" + filename);
+    if (!QFileInfo(userPath).exists()) {
+        setMessage(QString("\"%1\" not found in user library, no changes to revert!").arg(filename));
+        return false;
+    }
+    if (QFile(userPath).remove()) {
+        if (load(filename)) {
+            setMessage(QString("Reverted to system version of \"%1\"").arg(filename));
+            return true;
+        }
+        return false;
+    }
+    setMessage(QString("Could not remove \"%1\"").arg(userPath));
+    return true;
+}
+
 bool GlslDocument::modified() {
     if (m_document == nullptr || m_document->textDocument() == nullptr) return false;
     return m_document->textDocument()->isModified();

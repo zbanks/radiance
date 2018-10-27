@@ -31,6 +31,10 @@ ApplicationWindow {
             }
             MenuSeparator { }
             MenuItem {
+                action: revertAction
+            }
+            MenuSeparator { }
+            MenuItem {
                 action: closeAction
             }
         }
@@ -78,6 +82,15 @@ ApplicationWindow {
         text: "Save &As..."
         onTriggered: {
             showSaveDialog();
+        }
+    }
+
+    Action {
+        id: revertAction
+        text: "Revert"
+        shortcut: "Ctrl+R"
+        onTriggered: {
+            revert();
         }
     }
 
@@ -255,5 +268,10 @@ ApplicationWindow {
         } else {
             close();
         }
+    }
+
+    function revert() {
+        glslDocument.revert(window.file);
+        saved(); // Not actually but effectively
     }
 }

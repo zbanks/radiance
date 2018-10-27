@@ -16,6 +16,7 @@ public slots:
     QString message();
     void setMessage(QString message);
     bool modified();
+    bool revert(QString filename);
     QString loadDirectory(QString filename);
     QString saveDirectory(QString filename);
     QString contractLibraryPath(QString filename);
