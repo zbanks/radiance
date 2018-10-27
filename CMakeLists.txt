@@ -110,6 +110,7 @@ add_library(libradiance ${libradiance_SOURCES})
 
 add_executable(radiance WIN32 src/main.cpp
     src/GlslDocument.cpp
+    src/GlslHighlighter.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickPreviewAdapter.cpp)
 

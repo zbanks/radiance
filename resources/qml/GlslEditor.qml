@@ -197,6 +197,10 @@ ApplicationWindow {
         document: textArea.textDocument
     }
 
+    GlslHighlighter {
+        document: textArea.textDocument
+    }
+
     function load() {
         if (glslDocument.load(window.file)) {
         }
