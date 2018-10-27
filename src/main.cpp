@@ -87,7 +87,7 @@ runRadianceGui(QGuiApplication *app) {
         QQmlEngine engine;
         QObject::connect(&engine, &QQmlEngine::quit, app, &QGuiApplication::quit);
         engine.rootContext()->setContextProperty("defaultContext", &context);
-        QQmlComponent component(&engine, QUrl(Paths::qml() + "/application.qml"));
+        QQmlComponent component(&engine, QUrl(QDir::cleanPath(Paths::qml() + "/application.qml")));
         auto c = component.create();
         if(c == nullptr) {
             auto errors = component.errors();
@@ -182,10 +182,10 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     qInfo() << "Loaded model:" << modelName;
     qInfo() << model.serialize();
 
-    qInfo() << "Scanning for effects in path:" << Paths::library();
+    qInfo() << "Scanning for effects in path:" << Paths::systemLibrary();
     QList<VideoNode *> renderNodes;
     if (nodeFilename.isNull()) {
-        QDir libraryDir(Paths::library());
+        QDir libraryDir(Paths::systemLibrary());
         libraryDir.cd("effects");
 
         for (QString entry : libraryDir.entryList()) {

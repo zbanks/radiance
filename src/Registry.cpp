@@ -10,6 +10,7 @@
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
+#include "Paths.h"
 
 Registry::Registry()
     : m_library(nullptr) {
@@ -67,7 +68,7 @@ VideoNode *Registry::deserialize(Context *context, QJsonObject object) {
 
 bool Registry::canCreateFromFile(QString filename) {
     for (auto f = m_factories.begin(); f != m_factories.end(); f++) {
-        if (f->canCreateFromFile(filename)) {
+        if (f->canCreateFromFile(Paths::expandLibraryPath(filename))) {
             return true;
         }
     }
@@ -76,7 +77,7 @@ bool Registry::canCreateFromFile(QString filename) {
 
 VideoNode *Registry::createFromFile(Context *context, QString filename) {
     for (auto f = m_factories.begin(); f != m_factories.end(); f++) {
-        if (f->canCreateFromFile(filename)) {
+        if (f->canCreateFromFile(Paths::expandLibraryPath(filename))) {
             return f->fromFile(context, filename);
         }
     }

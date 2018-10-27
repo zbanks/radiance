@@ -123,9 +123,10 @@ public slots:
     void deserialize(Context *context, Registry *registry, const QJsonObject &data);
 
     // These are to wrap serialize/deserialize for the UI
-    // TODO: This almost certainly should live elsewhere.
-    void load(Context *context, Registry *registry, QString name);
-    void save(QString name);
+    void load(Context *context, Registry *registry, QString filename);
+    void save(QString filename);
+    void loadDefault(Context *context, Registry *registry);
+    void saveDefault();
 
 signals:
     // Emitted after flush() is called (assuming the graph did actually change)

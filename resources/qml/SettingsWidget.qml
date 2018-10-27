@@ -7,7 +7,7 @@ import "."
 
 Item {
     id: settingsWidget
-    property alias modelName: modelNameComboBox.currentText
+    property alias modelName: modelNameTextInput.text
 
     ColumnLayout {
         anchors.fill: parent
@@ -39,10 +39,9 @@ Item {
                 color: RadianceStyle.mainTextColor
             }
 
-            ComboBox {
-                id: modelNameComboBox
-                editable: true
-                model: ["gui", "cli"]
+            TextInput {
+                id: modelNameTextInput
+                text: "model.json"
             }
         }
 

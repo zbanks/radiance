@@ -529,8 +529,22 @@ void Model::deserialize(Context *context, Registry *registry, const QJsonObject 
     }
 }
 
-void Model::load(Context *context, Registry *registry, QString name) {
-    QString filename(QDir(Paths::models()).filePath(QString("%1.json").arg(name)));
+void Model::loadDefault(Context *context, Registry *registry) {
+    auto fn = Paths::userConfig() + "/" + "model.json";
+    if (!QFileInfo(fn).exists()) {
+        fn = Paths::systemConfig() + "/" + "gui_default.json";
+    }
+    qDebug() << "Attempting to load" << fn;
+    load(context, registry, fn);
+}
+
+void Model::saveDefault() {
+    auto fn = Paths::ensureUserConfig("model.json");
+    save(fn);
+}
+
+void Model::load(Context *context, Registry *registry, QString filename) {
+    filename = Paths::expandLibraryPath(filename);
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "Unable to open file for reading:" << filename;
@@ -542,8 +556,8 @@ void Model::load(Context *context, Registry *registry, QString name) {
     flush();
 }
 
-void Model::save(QString name) {
-    QString filename(QDir(Paths::models()).filePath(QString("%1.json").arg(name)));
+void Model::save(QString filename) {
+    filename = Paths::ensureUserLibrary(filename);
     QFile file(filename);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Unable to open file for writing:" << filename;
