@@ -21,6 +21,11 @@ QtObject {
     readonly property color tileLineColor: Qt.darker(white, 1.5)
     readonly property color tileLineHighlightColor: Qt.lighter(white, 1.5)
 
+    // Colors for the editor
+    readonly property color editorBackgroundColor: tileBackgroundColor
+    readonly property color editorTextColor: tileTextColor
+    readonly property color editorLineColor: tileLineColor
+
     // Colors for UI elements
     readonly property color sliderKnobColor: gray
     readonly property color sliderTrackColor: black

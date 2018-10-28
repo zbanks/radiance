@@ -25,6 +25,7 @@ BaseVideoNodeTile {
     minInputHeight: normalHeight
     blockWidth: normalWidth
     blockHeight: normalHeight
+    signal reloaded()
 
     z: activeFocus ? 1 : 0
 

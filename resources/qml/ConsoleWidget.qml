@@ -29,6 +29,21 @@ Item {
         popOut();
     }
 
+    Connections {
+        target: graph.model
+        onGraphChanged: {
+            for (var i=0; i<listModel.count; i++) {
+                for (var j=0; j<verticesRemoved.length; j++) {
+                    if (verticesRemoved[j] == listModel.get(i).videoNode) {
+                        listModel.remove(i);
+                        i--;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     ListView {
         id: listView
         clip: true
@@ -42,6 +57,11 @@ Item {
             height: t.height + 8
             width: parent.width - 15
             anchors.margins: 5
+
+            function removeMe() {
+                listModel.remove(index);
+            }
+
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 2
@@ -49,21 +69,29 @@ Item {
                 color: type == "warning" ? "gold" : type == "error" ? "red" : "green"
                 radius: 3
             }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    graph.view.tileForVideoNode(videoNode).forceActiveFocus();
+                }
+            }
+            Connections {
+                target: videoNode ? graph.view.tileForVideoNode(videoNode) : null;
+                onReloaded: removeMe()
+            }
             ColumnLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
                 Text {
+                    textFormat: Text.RichText
                     color: RadianceStyle.mainTextColor
                     id: t
-                    text: str
+                    text: "<style>a {color: " + RadianceStyle.mainTextHighlightColor + ";}</style>" + str
                     Layout.maximumWidth: parent.width - 20
-                }
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    graph.view.tileForVideoNode(videoNode).forceActiveFocus();
+                    onLinkActivated: {
+                        graph.view.tileForVideoNode(videoNode).consoleLinkClicked(link);
+                    }
                 }
             }
             Rectangle {
@@ -84,9 +112,7 @@ Item {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: {
-                        listModel.remove(index)
-                    }
+                    onClicked: removeMe()
                 }
             }
         }
