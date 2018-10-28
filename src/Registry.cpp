@@ -5,19 +5,24 @@
 
 #include "EffectNode.h"
 #include "ImageNode.h"
-#include "MovieNode.h"
 #include "ScreenOutputNode.h"
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
 #include "Paths.h"
 
+#ifdef USE_MPV
+#include "MovieNode.h"
+#endif
+
 Registry::Registry()
     : m_library(nullptr) {
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
+#ifdef USE_MPV
     registerType<MovieNode>();
+#endif
     registerType<ScreenOutputNode>();
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
