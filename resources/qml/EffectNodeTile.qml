@@ -115,6 +115,42 @@ VideoNodeTile {
         */
     }
 
+    Loader {
+        id: editorLoader
+        property int line;
+        property int col;
+
+        function makeVisible() {
+            // Use show instead incase it isn't loaded yet
+            item.line = line;
+            item.col = col;
+            item.open(videoNode.file);
+        }
+
+        Connections {
+            target: editorLoader.item
+            onSaved: {
+                if (editorLoader.item.file == videoNode.file) {
+                    videoNode.reload();
+                    reloaded();
+                }
+            }
+        }
+
+        function show(line, col) {
+            editorLoader.line = line ? line : 0;
+            editorLoader.col = col ? col : 0;
+            if (status == Loader.Ready) {
+                makeVisible();
+            } else if (source == "") {
+                editorLoader.source = "GlslEditor.qml"
+            }
+        }
+        onLoaded: {
+            makeVisible();
+        }
+    }
+
     Keys.onPressed: {
         if (event.modifiers == Qt.NoModifier) {
             if (event.key == Qt.Key_J)
@@ -143,8 +179,11 @@ VideoNodeTile {
                 slider.value = 0.9;
             else if (event.key == Qt.Key_0)
                 slider.value = 1.0;
-            else if (event.key == Qt.Key_R)
+            else if (event.key == Qt.Key_R) {
                 videoNode.reload();
+                reloaded();
+            } else if (event.key == Qt.Key_E)
+                editorLoader.show();
         } else if (event.modifiers == Qt.ControlModifier) {
             if (event.key == Qt.Key_QuoteLeft)
                 attachedParameter = -1;
@@ -197,6 +236,15 @@ VideoNodeTile {
             if (i > 1) i = 1;
             if (i < 0) i = 0;
             intensity = i;
+        }
+    }
+
+    function consoleLinkClicked(link) {
+        link = link.split(",");
+        if (link[0] == "editline") {
+            var line = link[1];
+            var col = link[2];
+            editorLoader.show(line, col);
         }
     }
 }

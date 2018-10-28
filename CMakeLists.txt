@@ -19,6 +19,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb3 -O2 -ffast-math -marc
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -ffast-math -march=native")
 set(CMAKE_CXX_STANDARD 14)
 set(OpenGL_GL_PREFERENCE GLVND)
+set(RADIANCE_SYSTEM_RESOURCES "${CMAKE_SOURCE_DIR}/resources/" CACHE STRING "The path where Radiance looks for its resources")
 
 include(Doxygen)
 include_directories(BTrack/src)
@@ -80,6 +81,12 @@ list(APPEND radiance_LIBRARIES
     ${OPENGL_LIBRARIES}
     )
 
+set_property(
+  SOURCE src/Paths.cpp
+  PROPERTY COMPILE_DEFINITIONS
+    RADIANCE_SYSTEM_RESOURCES=\"${RADIANCE_SYSTEM_RESOURCES}\"
+)
+
 include_directories(${FFTW_INCLUDE_DIRS})
 include_directories(${SAMPLERATE_INCLUDE_DIRS})
 include_directories(${PORTAUDIO_INCLUDE_DIRS})
@@ -110,6 +117,8 @@ endif()
 add_library(libradiance ${libradiance_SOURCES})
 
 add_executable(radiance WIN32 src/main.cpp
+    src/GlslDocument.cpp
+    src/GlslHighlighter.cpp
     src/QQuickVideoNodePreview.cpp
     src/QQuickPreviewAdapter.cpp
     src/QQuickLightOutputPreview.cpp)
@@ -138,6 +147,7 @@ IF(APPLE)
         "${CMAKE_BINARY_DIR}/Radiance.app"
         "${CMAKE_BINARY_DIR}/Radiance.dmg"
         "${Qt5Core_DIR}/../../.."
+        "${RADIANCE_SYSTEM_RESOURCES}"
         DEPENDS radiance
     )
 ELSEIF(UNIX)
@@ -148,6 +158,7 @@ ELSEIF(UNIX)
         "${CMAKE_BINARY_DIR}/Radiance.AppDir"
         "${CMAKE_BINARY_DIR}/Radiance.AppDir.tar.gz"
         "${Qt5Core_DIR}/../../.."
+        "${RADIANCE_SYSTEM_RESOURCES}"
         DEPENDS radiance
     )
 ENDIF()
