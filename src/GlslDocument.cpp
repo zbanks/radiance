@@ -158,3 +158,40 @@ QString GlslDocument::contractLibraryPath(QString filename) {
     auto p = Paths::contractLibraryPath(filename);
     return p;
 }
+
+int GlslDocument::cursorPositionAt(int line, int col) {
+    if (m_document == nullptr || m_document->textDocument() == nullptr) {
+        qWarning() << "Cannot call cursorPositionAt() with no document set";
+        return false;
+    }
+    line--; // Zero-index lines
+    if (line < 0) return 0;
+    col--; // Zero-index cols
+    if (col < 0) col = 0;
+
+    auto text = m_document->textDocument()->toPlainText();
+    auto lines = text.split("\n");
+    if (lines.count() <= line) {
+        return text.length(); // Return end of document
+    }
+    auto lineText = lines.at(line);
+    if (lineText.length() < col) col = lineText.length();
+
+    // Move over columns first
+    int position = 0;
+    for (int i=0; i<col; i++) {
+        // GLSL has a funky way of calculating columns
+        // that considers groups of spaces as one character
+        if (position < lineText.length() - 1 && lineText.at(position).isSpace() && lineText.at(position + 1).isSpace()) {
+            i--;
+        }
+        position++;
+        if (position >= lineText.length()) break;
+    }
+
+    // Now move down lines
+    for (int i=0; i<line; i++) {
+        position += lines.at(i).length() + 1;
+    }
+    return position;
+}

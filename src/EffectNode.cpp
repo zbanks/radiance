@@ -406,7 +406,10 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
         }
         auto frag = headerString + "\n" + code.join("\n");
         if(!program->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
-            emit error(QString("Could not compile fragment shader:\n") + program->log().trimmed());
+            auto log = program->log().trimmed();
+            QRegularExpression re("0:(\\d+)\\((\\d+)\\):");
+            log.replace(re, "<a href=\"editline,\\1,\\2\">\\1(\\2)</a>:");
+            emit error(QString("Could not compile fragment shader:\n") + log);
             p.setNodeState(VideoNode::Broken);
             return;
         }

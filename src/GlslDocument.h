@@ -20,6 +20,7 @@ public slots:
     QString loadDirectory(QString filename);
     QString saveDirectory(QString filename);
     QString contractLibraryPath(QString filename);
+    int cursorPositionAt(int line, int col);
 
 signals:
     void documentChanged(QQuickTextDocument *document);

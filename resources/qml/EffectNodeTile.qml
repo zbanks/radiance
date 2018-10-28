@@ -117,11 +117,14 @@ VideoNodeTile {
 
     Loader {
         id: editorLoader
+        property int line;
+        property int col;
 
         function makeVisible() {
             // Use show instead incase it isn't loaded yet
-            item.file = videoNode.file;
-            item.open();
+            item.line = line;
+            item.col = col;
+            item.open(videoNode.file);
         }
 
         Connections {
@@ -133,7 +136,9 @@ VideoNodeTile {
             }
         }
 
-        function show() {
+        function show(line, col) {
+            editorLoader.line = line ? line : 0;
+            editorLoader.col = col ? col : 0;
             if (status == Loader.Ready) {
                 makeVisible();
             } else if (source == "") {
@@ -229,6 +234,15 @@ VideoNodeTile {
             if (i > 1) i = 1;
             if (i < 0) i = 0;
             intensity = i;
+        }
+    }
+
+    function consoleLinkClicked(link) {
+        link = link.split(",");
+        if (link[0] == "editline") {
+            var line = link[1];
+            var col = link[2];
+            editorLoader.show(line, col);
         }
     }
 }

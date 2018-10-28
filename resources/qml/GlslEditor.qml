@@ -12,6 +12,8 @@ ApplicationWindow {
     title: "GLSL Editor"
     property string file
     property var afterSave
+    property int line
+    property int col
     signal saved()
 
     menuBar: MenuBar {
@@ -224,7 +226,13 @@ ApplicationWindow {
 
     function load() {
         if (glslDocument.load(window.file)) {
+            setCursor();
         }
+    }
+
+    function setCursor() {
+        var pos = glslDocument.cursorPositionAt(line, col);
+        textArea.cursorPosition = pos;
     }
 
     function save() {
@@ -246,11 +254,16 @@ ApplicationWindow {
         glslDocument.clear();
     }
 
-    function open() {
-        if (window.file) {
-            load();
+    function open(file) {
+        if (window.visible && file == window.file) {
+            setCursor();
+        } else {
+            window.file = file;
+            if (window.file) {
+                load();
+            }
+            window.visible = true;
         }
-        window.visible = true;
         window.afterSave = null;
     }
 

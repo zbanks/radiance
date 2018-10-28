@@ -49,21 +49,25 @@ Item {
                 color: type == "warning" ? "gold" : type == "error" ? "red" : "green"
                 radius: 3
             }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    graph.view.tileForVideoNode(videoNode).forceActiveFocus();
+                }
+            }
             ColumnLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
                 Text {
+                    textFormat: Text.RichText
                     color: RadianceStyle.mainTextColor
                     id: t
                     text: str
                     Layout.maximumWidth: parent.width - 20
-                }
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    graph.view.tileForVideoNode(videoNode).forceActiveFocus();
+                    onLinkActivated: {
+                        graph.view.tileForVideoNode(videoNode).consoleLinkClicked(link);
+                    }
                 }
             }
             Rectangle {
