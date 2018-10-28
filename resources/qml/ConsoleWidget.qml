@@ -63,7 +63,7 @@ Item {
                     textFormat: Text.RichText
                     color: RadianceStyle.mainTextColor
                     id: t
-                    text: str
+                    text: "<style>a {color: " + RadianceStyle.mainTextHighlightColor + ";}</style>" + str
                     Layout.maximumWidth: parent.width - 20
                     onLinkActivated: {
                         graph.view.tileForVideoNode(videoNode).consoleLinkClicked(link);
