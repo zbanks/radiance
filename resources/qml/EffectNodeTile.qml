@@ -131,7 +131,8 @@ VideoNodeTile {
             target: editorLoader.item
             onSaved: {
                 if (editorLoader.item.file == videoNode.file) {
-                    videoNode.reload()
+                    videoNode.reload();
+                    reloaded();
                 }
             }
         }
@@ -178,9 +179,10 @@ VideoNodeTile {
                 slider.value = 0.9;
             else if (event.key == Qt.Key_0)
                 slider.value = 1.0;
-            else if (event.key == Qt.Key_R)
+            else if (event.key == Qt.Key_R) {
                 videoNode.reload();
-            else if (event.key == Qt.Key_E)
+                reloaded();
+            } else if (event.key == Qt.Key_E)
                 editorLoader.show();
         } else if (event.modifiers == Qt.ControlModifier) {
             if (event.key == Qt.Key_QuoteLeft)
