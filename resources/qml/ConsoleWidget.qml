@@ -121,7 +121,7 @@ Item {
             if (count == 0) popIn();
         }
         onContentHeightChanged: {
-            contentY = contentHeight - height;
+            contentY = Math.max(contentHeight - height, 0);
         }
 
         ScrollIndicator.vertical: ScrollIndicator {}
