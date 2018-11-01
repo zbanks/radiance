@@ -19,6 +19,7 @@
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "Paths.h"
+#include "QQuickLightOutputPreview.h"
 #include "QQuickVideoNodePreview.h"
 #include "Registry.h"
 #include "Timebase.h"
@@ -55,6 +56,7 @@ runRadianceGui(QGuiApplication *app) {
 #endif
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
+    qmlRegisterType<QQuickLightOutputPreview>("radiance", 1, 0, "LightOutputPreview");
     qmlRegisterType<GlslDocument>("radiance", 1, 0, "GlslDocument");
     qmlRegisterType<GlslHighlighter>("radiance", 1, 0, "GlslHighlighter");
 

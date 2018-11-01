@@ -9,6 +9,7 @@
 #include "FFmpegOutputNode.h"
 #include "PlaceholderNode.h"
 #include "ConsoleOutputNode.h"
+#include "LightOutputNode.h"
 #include "Paths.h"
 
 #ifdef USE_MPV
@@ -27,6 +28,7 @@ Registry::Registry()
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
+    registerType<LightOutputNode>();
 
     m_library = new Library(this);
     m_library->setParent(this);
