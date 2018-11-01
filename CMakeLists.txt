@@ -50,6 +50,7 @@ list(APPEND libradiance_SOURCES
     src/GraphicalDisplay.cpp
     src/ImageNode.cpp
     src/Library.cpp
+    src/LightOutputNode.cpp
     src/Model.cpp
     src/OpenGLUtils.cpp
     src/OpenGLWorker.cpp
@@ -119,7 +120,8 @@ add_executable(radiance WIN32 src/main.cpp
     src/GlslDocument.cpp
     src/GlslHighlighter.cpp
     src/QQuickVideoNodePreview.cpp
-    src/QQuickPreviewAdapter.cpp)
+    src/QQuickPreviewAdapter.cpp
+    src/QQuickLightOutputPreview.cpp)
 
 set_target_properties(radiance PROPERTIES OUTPUT_NAME ${EXE_NAME})
 set_target_properties(libradiance PROPERTIES OUTPUT_NAME ${LIB_NAME})
