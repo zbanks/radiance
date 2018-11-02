@@ -14,7 +14,7 @@ echo "TARGZ: $TARGZ"
 echo "Qt: $QT"
 echo "Resources: $RESOURCES"
 
-if [ $RESOURCES != "resources" ]; then
+if [ $RESOURCES != "resources/" ]; then
 echo "*** ERROR ***" >&2
 echo "For a Linux bundle to work, RADIANCE_SYSTEM_RESOURCES must be set to 'resources/'" >&2
 echo "Please recompile with cmake -DRADIANCE_SYSTEM_RESOURCES=resources/" >&2

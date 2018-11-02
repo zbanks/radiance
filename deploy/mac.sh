@@ -14,7 +14,7 @@ echo "DMG: $DMG"
 echo "Qt: $QT"
 echo "Resources: $RESOURCES"
 
-if [ $RESOURCES != "resources" ]; then
+if [ $RESOURCES != "../Resources/" ]; then
 echo "*** ERROR ***" >&2
 echo "For a MacOS bundle to work, RADIANCE_SYSTEM_RESOURCES must be set to '../Resources/'" >&2
 echo "Please recompile with cmake -DRADIANCE_SYSTEM_RESOURCES=../Resources/" >&2

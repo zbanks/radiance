@@ -133,7 +133,7 @@ target_link_libraries(radiance libradiance ${radiance_LIBRARIES})
 install(CODE "
     if(NOT \"${RADIANCE_SYSTEM_RESOURCES}\" STREQUAL \"${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/\")
         MESSAGE(\"For an install to work, RADIANCE_SYSTEM_RESOURCES must be set to '\\\${CMAKE_INSTALL_PREFIX}share/${PROJECT_NAME}/'\")
-        MESSAGE(FATAL_ERROR \"Please recompile with cmake -DRADIANCE_SYSTEM_RESOURCES=${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/\")
+        MESSAGE(\"If your install doesn't work, recompile with cmake -DRADIANCE_SYSTEM_RESOURCES=${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/\")
     endif()
 ")
 
