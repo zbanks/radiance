@@ -445,7 +445,7 @@ void LightOutputNodeOpenGLWorker::sendFrame() {
 void LightOutputNodeOpenGLWorker::connectToDevice(QString url) {
     m_socket->close();
     auto parts = url.split(":");
-    auto port = 9001;
+    auto port = 11647;
     if (parts.count() == 2) {
         port = parts.at(1).toInt();
     }
