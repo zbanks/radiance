@@ -16,7 +16,7 @@ If you restart the server and want to reconnect, simply select the `LightOutputN
 
 ## Nuts and bolts
 * Your device should bind a TCP port. Radiance will connect.
-* Radiance defaults to port 9001 if no port is specified.
+* Radiance defaults to port 11647 if no port is specified.
 * All messages are asynchronous and may be sent at any time.
 * Unknown messages should be ignored.
 * All values are little-endian unless otherwise noted.
@@ -154,7 +154,7 @@ If you restart the server and want to reconnect, simply select the `LightOutputN
 ### Typical conversation
 
 A minimal example:
-* **Radiance**: connects to your device on port 9001
+* **Radiance**: connects to your device on port 11647
 * **Device**: sends `lookup coordinates 2D` command with 5 pixel coordinates in UV space
 * **Device**: sends `get frame` command with `0` ms period
 * **Radiance**: sends `frame` command with 5 pixel colors
@@ -163,7 +163,7 @@ A minimal example:
 * etc.
 
 A more fully featured example:
-* **Radiance**: connects to your device on port 9001
+* **Radiance**: connects to your device on port 11647
 * **Device**: sends `lookup coordinates 2D` command with pixel coordinates in UV space indicating how they should be sampled
 * **Device**: sends `physical coordinates 2D` command with pixel coordinates in UV space indicating how they should be visualized in Radiance
 * **Device**: sends `geometry 2D` command with a PNG image to serve as a background in Radiance
