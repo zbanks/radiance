@@ -6,7 +6,7 @@ long_description += "\n    ".join(open("output_example.py").read().split("\n"))
 
 setup(
     name="radiance",
-    version="0.1dev5",
+    version="0.1",
     packages=["radiance",],
     license="MIT",
     description="Python tools for the Radiance video art system",
