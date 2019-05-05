@@ -4,6 +4,8 @@ import struct
 import time
 import logging
 
+__all__ = ["LightOutputNode"]
+
 class LightOutputNode:
     def __init__(self, port=11647, host=""):
         self.host = host
