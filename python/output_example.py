@@ -26,9 +26,9 @@ class Example(radiance.LightOutputNode):
         # Instead, lets request 120 pixels around the border.
         N = 30
         self.lookup_2d = [(0, i / N) for i in range(N)]
-        self.lookup_2d += [(i / N, 0) for i in range(N)]
+        self.lookup_2d += [(i / N, 1) for i in range(N)]
         self.lookup_2d += [(1, 1 - i / N) for i in range(N)]
-        self.lookup_2d += [(1 - i / N, 1) for i in range(N)]
+        self.lookup_2d += [(1 - i / N, 0) for i in range(N)]
 
         # If we stopped here, Radiance would visualize this display using the lookup coordinates
         # and show a square.
