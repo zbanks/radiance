@@ -5,7 +5,7 @@ then all you have to do is instantiate a LightOutputNode and point it to your de
 This document describes the communication protocol between your device and Radiance.
 
 ## Example device
-The file [test_server.py](support/test_server.py) implements a simple device.
+The file [output_example.py](python/output_example.py) implements a simple device.
 You should use it as a reference for implementing your own devices.
 
 To try it out, run it in the background. Then, open Radiance and create a new `LightOutputNode` pointing at `localhost`.
