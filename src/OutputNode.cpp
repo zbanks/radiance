@@ -67,7 +67,7 @@ void OutputNode::resize(QSize size) {
         QMutexLocker locker(&d()->m_stateLock);
         oldChain = d()->m_chain;
         if (size == oldChain->size()) return;
-        newChain = ChainSP(new Chain(oldChain.data(), size));
+        newChain = ChainSP(new Chain(oldChain.data(), size), &QObject::deleteLater);
         d()->m_chain = newChain;
     }
     emit requestedChainAdded(newChain);
