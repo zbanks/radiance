@@ -18,7 +18,7 @@ public:
 
     QJsonObject serialize() override;
 
-    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -47,7 +47,7 @@ public slots:
     void setWrappedVideoNode(VideoNode *wrapped);
     VideoNode *wrappedVideoNode();
 
-    void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
+    void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) override;
 
 signals:
     void wrappedVideoNodeChanged(VideoNode *videoNode);

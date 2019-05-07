@@ -43,21 +43,21 @@ Model::Model(QSharedPointer<ModelPrivate> other_ptr)
 {
 }
 
-void Model::addChain(Chain chain) {
+void Model::addChain(ChainSP chain) {
     if (!d_ptr->m_chains.contains(chain)) {
         d_ptr->m_chains.append(chain);
         emit chainsChanged(d_ptr->m_chains);
     }
 }
 
-void Model::removeChain(Chain chain) {
+void Model::removeChain(ChainSP chain) {
     if (d_ptr->m_chains.contains(chain)) {
         d_ptr->m_chains.removeAll(chain);
         emit chainsChanged(d_ptr->m_chains);
     }
 }
 
-QList<Chain> Model::chains() {
+QList<ChainSP> Model::chains() {
     return d_ptr->m_chains;
 }
 
@@ -428,12 +428,12 @@ bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
     return ancestors(child).contains(parent);
 }
 
-QMap<VideoNode, GLuint> ModelCopyForRendering::render(Chain chain) {
+QMap<VideoNode, GLuint> ModelCopyForRendering::render(ChainSP chain) {
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
     QVector<QVector<int>> inputs;
-    auto vao = chain.vao();
+    auto vao = chain->vao();
 
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
@@ -455,7 +455,7 @@ QMap<VideoNode, GLuint> ModelCopyForRendering::render(Chain chain) {
 
     for (int i=0; i<vertices.count(); i++) {
         auto vertex = vertices.at(i);
-        QVector<GLuint> inputTextures(vertex->inputCount(), chain.blankTexture());
+        QVector<GLuint> inputTextures(vertex->inputCount(), chain->blankTexture());
         for (int j=0; j<vertex->inputCount(); j++) {
             auto fromVertex = inputs.at(i).at(j);
             if (fromVertex != -1) {

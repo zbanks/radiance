@@ -34,13 +34,13 @@ QSharedPointer<OutputNodePrivate> OutputNode::d() const {
     return d_ptr.staticCast<OutputNodePrivate>();
 }
 
-QList<Chain> OutputNode::requestedChains() {
-    auto l = QList<Chain>();
+QList<ChainSP> OutputNode::requestedChains() {
+    auto l = QList<ChainSP>();
     l.append(chain());
     return l;
 }
 
-GLuint OutputNode::paint(Chain chain, QVector<GLuint> inputTextures) {
+GLuint OutputNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     Q_UNUSED(chain);
     return inputTextures.at(0);
 }
@@ -55,19 +55,19 @@ GLuint OutputNode::render(WeakModel model) {
     return result.value(*this, 0);
 }
 
-Chain OutputNode::chain() {
+ChainSP OutputNode::chain() {
     QMutexLocker locker(&d()->m_stateLock);
     return d()->m_chain;
 }
 
 void OutputNode::resize(QSize size) {
-    Chain oldChain;
-    Chain newChain;
+    ChainSP oldChain;
+    ChainSP newChain;
     {
         QMutexLocker locker(&d()->m_stateLock);
         oldChain = d()->m_chain;
-        if (size == oldChain.size()) return;
-        newChain = Chain(oldChain, size);
+        if (size == oldChain->size()) return;
+        newChain = ChainSP(new Chain(oldChain.data(), size));
         d()->m_chain = newChain;
     }
     emit requestedChainAdded(newChain);
@@ -76,6 +76,6 @@ void OutputNode::resize(QSize size) {
 
 OutputNodePrivate::OutputNodePrivate(Context *context, QSize chainSize)
     : VideoNodePrivate(context)
-    , m_chain(chainSize)
+    , m_chain(new Chain(chainSize))
 {
 }

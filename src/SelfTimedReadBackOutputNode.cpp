@@ -8,7 +8,7 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize
     d()->m_worker = QSharedPointer<STRBONOpenGLWorker>(new STRBONOpenGLWorker(*this), &QObject::deleteLater);
     connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
 
-    d()->m_chain.moveToWorkerContext(d()->m_workerContext);
+    d()->m_chain->moveToWorkerContext(d()->m_workerContext);
 
     connect(d()->m_worker.data(), &STRBONOpenGLWorker::initialized, this, &SelfTimedReadBackOutputNode::initialize, Qt::DirectConnection);
     connect(d()->m_worker.data(), &STRBONOpenGLWorker::frame, this, &SelfTimedReadBackOutputNode::frame, Qt::DirectConnection);
@@ -183,7 +183,7 @@ void STRBONOpenGLWorker::onTimeout() {
         return;
     }
 
-    auto vao = p.chain().vao();
+    auto vao = p.chain()->vao();
 
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);

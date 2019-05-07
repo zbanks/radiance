@@ -59,7 +59,7 @@ public:
 
     QJsonObject serialize() override;
 
-    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -118,7 +118,7 @@ signals:
     void factorChanged(enum Factor factor);
 
 protected:
-    void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
+    void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) override;
     void reload();
     void attachSignals();
 
@@ -137,7 +137,7 @@ public:
     QString m_name;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
     OpenGLWorkerContext *m_openGLWorkerContext;
-    QMap<Chain, QSharedPointer<MovieNodeRenderState>> m_renderStates;
+    QMap<ChainSP, QSharedPointer<MovieNodeRenderState>> m_renderStates;
     QSharedPointer<QOpenGLShaderProgram> m_blitShader;
     QSize m_videoSize;
 
@@ -208,7 +208,7 @@ public slots:
 
     // Call this to prepare and add a new renderState
     // if chains change or one is somehow missing
-    void addNewState(Chain chain);
+    void addNewState(ChainSP chain);
 
 protected:
     void handleEvent(mpv_event *event);

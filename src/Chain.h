@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OpenGLWorker.h"
+#include "QmlSharedPointer.h"
 #include <QOpenGLTexture>
 #include <QOpenGLVertexArrayObject>
 #include <QSharedPointer>
@@ -34,8 +35,6 @@
     from multiple threads)
 */
 
-class ChainPrivate;
-
 class Chain : public QObject {
     Q_OBJECT
 
@@ -48,11 +47,9 @@ public:
 
     // Creates a new chain with the given size
     // to replace the given chain
-    Chain(const Chain &other, QSize size);
-
-    // Creates a very shallow copy
-    // (all operations will reference original chain)
-    Chain(const Chain &other);
+    // (currently all this does
+    // is move it to the other's thread)
+    Chain(const Chain *other, QSize size);
 
     operator QString() const;
 
@@ -69,17 +66,10 @@ public slots:
     QOpenGLVertexArrayObject *vao();
 
 protected:
-    QSharedPointer<ChainPrivate> d_ptr;
-};
-
-class ChainPrivate : public QObject {
-    Q_OBJECT
-
-public:
-    ChainPrivate(QSize size);
-    ~ChainPrivate();
     QOpenGLTexture m_noiseTexture;
     QOpenGLTexture m_blankTexture;
     QOpenGLVertexArrayObject m_vao{};
     QSize m_size{};
 };
+
+typedef QmlSharedPointer<Chain> ChainSP;

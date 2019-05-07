@@ -76,11 +76,11 @@ void ScreenOutputNode::setScreenName(QString screenName) {
 }
 
 QSize ScreenOutputNode::resolution() {
-    return chain().size();
+    return chain()->size();
 }
 
 void ScreenOutputNode::setResolution(QSize resolution) {
-    if (resolution != chain().size()) {
+    if (resolution != chain()->size()) {
         resize(resolution);
         emit resolutionChanged(resolution);
     }

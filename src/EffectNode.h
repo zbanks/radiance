@@ -55,7 +55,7 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
-    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -92,7 +92,7 @@ public slots:
 
 protected slots:
     void onPeriodic();
-    void chainsEdited(QList<Chain> added, QList<Chain> removed) override;
+    void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) override;
 
 protected:
     QString fileToName(QString file);
@@ -115,7 +115,7 @@ class EffectNodePrivate : public VideoNodePrivate {
 public:
     EffectNodePrivate(Context *context);
 
-    QMap<Chain, QSharedPointer<EffectNodeRenderState>> m_renderStates;
+    QMap<ChainSP, QSharedPointer<EffectNodeRenderState>> m_renderStates;
     qreal m_intensity{};
     qreal m_intensityIntegral{};
     qreal m_beatLast{};
@@ -166,7 +166,7 @@ public slots:
 
     // Call this to prepare and add a new renderState
     // if chains change or one is somehow missing
-    void addNewState(Chain chain);
+    void addNewState(ChainSP chain);
 
 signals:
     void message(QString str);

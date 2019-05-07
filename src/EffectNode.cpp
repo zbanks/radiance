@@ -65,9 +65,9 @@ QJsonObject EffectNode::serialize() {
     return o;
 }
 
-void EffectNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
+void EffectNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     for (auto chain : added) {
-        auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(Chain, chain));
+        auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
         Q_ASSERT(result);
     }
     {
@@ -78,7 +78,7 @@ void EffectNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
     }
 }
 
-GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
+GLuint EffectNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     GLuint outTexture = 0;
 
     QSharedPointer<EffectNodeRenderState> renderState;
@@ -118,11 +118,11 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
         fmt.setInternalTextureFormat(GL_RGBA);
         for(auto & pass : renderState->m_passes) {
             if(!pass.m_output) {
-                pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain.size(),fmt);
+                pass.m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
             }
         }
         if(!renderState->m_extra) {
-            renderState->m_extra = QSharedPointer<QOpenGLFramebufferObject>::create(chain.size(),fmt);
+            renderState->m_extra = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(),fmt);
         }
     }
 
@@ -142,7 +142,7 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
         double audioLevel = 0;
         context()->audio()->levels(&audioHi, &audioMid, &audioLow, &audioLevel);
 
-        auto size = chain.size();
+        auto size = chain->size();
         glViewport(0, 0, size.width(), size.height());
 
         for(auto & pass : renderState->m_passes) {
@@ -161,7 +161,7 @@ GLuint EffectNode::paint(Chain chain, QVector<GLuint> inputTextures) {
             }
 
             glActiveTexture(texCount++);
-            glBindTexture(GL_TEXTURE_2D, chain.noiseTexture());
+            glBindTexture(GL_TEXTURE_2D, chain->noiseTexture());
             for(auto && op : renderState->m_passes) {
                 glActiveTexture(texCount++);
                 glBindTexture(GL_TEXTURE_2D, op.m_output->texture());
@@ -427,7 +427,7 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
 
     // We prepare the state for all chains that exist upon creation
     auto chains = p.chains();
-    QMap<Chain, QSharedPointer<EffectNodeRenderState>> states;
+    QMap<ChainSP, QSharedPointer<EffectNodeRenderState>> states;
 
     for (auto chain : chains) {
         states.insert(chain, QSharedPointer<EffectNodeRenderState>::create(shaders));
@@ -454,10 +454,10 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
     p.setNodeState(VideoNode::Ready);
 }
 
-// Invoke this method when a Chain gets added
+// Invoke this method when a ChainSP gets added
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
-void EffectNodeOpenGLWorker::addNewState(Chain c) {
+void EffectNodeOpenGLWorker::addNewState(ChainSP c) {
     auto d = m_p.toStrongRef();
     if (d.isNull()) return; // EffectNode was deleted
     EffectNode p(d);

@@ -46,7 +46,7 @@ VideoNode *PlaceholderNode::wrappedVideoNode() {
     return d()->m_wrappedVideoNode.data();
 }
 
-GLuint PlaceholderNode::paint(Chain chain, QVector<GLuint> inputTextures) {
+GLuint PlaceholderNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     QSharedPointer<VideoNode> wrapped; // How many layers of QSP can we have
     {
         QMutexLocker locker(&d()->m_stateLock);
@@ -57,18 +57,18 @@ GLuint PlaceholderNode::paint(Chain chain, QVector<GLuint> inputTextures) {
         if (inputTextures.size() >= 1) {
             return inputTextures.at(0);
         }
-        return chain.blankTexture();
+        return chain->blankTexture();
     }
     if (inputTextures.size() > wrapped->inputCount()) {
         inputTextures.resize(wrapped->inputCount());
     }
     while (inputTextures.size() < wrapped->inputCount()) {
-        inputTextures.append(chain.blankTexture());
+        inputTextures.append(chain->blankTexture());
     }
     return wrapped->paint(chain, inputTextures);
 }
 
-void PlaceholderNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
+void PlaceholderNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     if (d()->m_wrappedVideoNode == nullptr) {
         return;
     }

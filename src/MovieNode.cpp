@@ -77,9 +77,9 @@ QJsonObject MovieNode::serialize() {
     return o;
 }
 
-void MovieNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
+void MovieNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     for (auto chain : added) {
-        auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(Chain, chain));
+        auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
         Q_ASSERT(result);
     }
     {
@@ -89,7 +89,7 @@ void MovieNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
         }
         auto size = QSize{};
         for(auto chain : d()->m_chains) {
-            auto csize = chain.size();
+            auto csize = chain->size();
             size.setWidth(std::max(csize.width(), size.width()));
             size.setHeight(std::max(csize.height(), size.height()));
         }
@@ -270,7 +270,7 @@ static void *get_proc_address(void *ctx, const char *name) {
     return (void *)glctx->getProcAddress(QByteArray(name));
 }
 
-GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
+GLuint MovieNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     GLuint outTexture = inputTextures.at(0);
     enum Factor f;
 
@@ -297,10 +297,10 @@ GLuint MovieNode::paint(Chain chain, QVector<GLuint> inputTextures) {
     // Textures are, however, so in the future maybe we can move
     // texture creation to initialize()
     // and leave lightweight FBO creation here
-    if(!renderFbo || renderFbo->size() != chain.size()) {
+    if(!renderFbo || renderFbo->size() != chain->size()) {
         auto fmt = QOpenGLFramebufferObjectFormat{};
         fmt.setInternalTextureFormat(GL_RGBA);
-        renderFbo = renderState->m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain.size(), fmt);
+        renderFbo = renderState->m_output = QSharedPointer<QOpenGLFramebufferObject>::create(chain->size(), fmt);
     }
 
     {
@@ -481,7 +481,7 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 
     // We prepare the state for all chains that exist upon creation
     auto chains = p.chains();
-    QMap<Chain, QSharedPointer<MovieNodeRenderState>> states;
+    QMap<ChainSP, QSharedPointer<MovieNodeRenderState>> states;
 
     for (auto chain : chains) {
         states.insert(chain, QSharedPointer<MovieNodeRenderState>::create(shader));
@@ -504,10 +504,10 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
     }
 }
 
-// Invoke this method when a Chain gets added
+// Invoke this method when a ChainSP gets added
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
-void MovieNodeOpenGLWorker::addNewState(Chain c) {
+void MovieNodeOpenGLWorker::addNewState(ChainSP c) {
     auto d = m_p.toStrongRef();
     if (d.isNull()) return; // MovieNode was deleted
     MovieNode p(d);

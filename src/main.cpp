@@ -156,7 +156,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     Context context(false);
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
-    Chain chain(renderSize);
+    ChainSP chain(new Chain(renderSize));
     FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
