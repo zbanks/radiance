@@ -1,5 +1,6 @@
 #pragma once
 
+#include "QmlSharedPointer.h"
 #include <QObject>
 #include <QDebug>
 #include <QList>
@@ -11,6 +12,7 @@
 
 class VideoNode;
 class Chain;
+typedef QmlSharedPointer<Chain> ChainSP;
 class Registry;
 class Context;
 
@@ -38,7 +40,7 @@ struct ModelCopyForRendering {
     // Render this model
     // The return value is a mapping of VideoNodes to OpenGL textures
     // that were rendered into
-    QMap<VideoNode, GLuint> render(Chain chain);
+    QMap<VideoNode, GLuint> render(ChainSP chain);
 };
 
 class ModelPrivate;
@@ -115,9 +117,9 @@ public slots:
     // or a different thead.
     // When requesting a render of the model,
     // you must use one of its chains.
-    QList<Chain> chains();
-    void addChain(Chain chain);
-    void removeChain(Chain chain);
+    QList<ChainSP> chains();
+    void addChain(ChainSP chain);
+    void removeChain(ChainSP chain);
 
     QJsonObject serialize();
     void deserialize(Context *context, Registry *registry, const QJsonObject &data);
@@ -133,7 +135,7 @@ signals:
     // with the interim changes
     void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
 
-    void chainsChanged(QList<Chain> chains);
+    void chainsChanged(QList<ChainSP> chains);
 
     void message(VideoNode *videoNode, QString str);
     void warning(VideoNode *videoNode, QString str);
@@ -181,7 +183,7 @@ public:
     QMutex m_graphLock;
 
     // Chains used for rendering this model
-    QList<Chain> m_chains;
+    QList<ChainSP> m_chains;
 };
 
 class WeakModel {

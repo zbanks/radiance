@@ -39,7 +39,7 @@ signals:
 protected:
     Model *m_model{};
     QSize m_previewSize;
-    Chain m_previewChain;
+    ChainSP m_previewChain;
     QQuickWindow *m_previewWindow{};
     QMap<VideoNode, GLuint> m_lastPreviewRender;
     QMutex m_previewLock;

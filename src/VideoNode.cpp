@@ -28,8 +28,8 @@ void VideoNode::attachSignals() {
     // TODO I think this can be done with QMetaObject
     // which will remove the need to have this method
     // in subclasses
-    qRegisterMetaType<Chain>("Chain"); // so we can pass it in Q_ARG
-    qRegisterMetaType<QList<Chain>>("QList<Chain>");
+    qRegisterMetaType<ChainSP>("ChainSP"); // so we can pass it in Q_ARG
+    qRegisterMetaType<QList<ChainSP>>("QList<ChainSP>");
     qRegisterMetaType<VideoNode::NodeState>("VideoNode::NodeState");
 
     connect(d_ptr.data(), &VideoNodePrivate::message, this, &VideoNode::message);
@@ -101,15 +101,15 @@ void VideoNode::setNodeState(NodeState value) {
     if (changed) emit d_ptr->nodeStateChanged(value);
 }
 
-QList<Chain> VideoNode::chains() {
+QList<ChainSP> VideoNode::chains() {
     QMutexLocker locker(&d_ptr->m_stateLock);
     return d_ptr->m_chains;
 }
 
-void VideoNode::setChains(QList<Chain> chains) {
+void VideoNode::setChains(QList<ChainSP> chains) {
     bool wereChainsChanged = false;
-    QList<Chain> toRemove;
-    QList<Chain> toAdd;
+    QList<ChainSP> toRemove;
+    QList<ChainSP> toAdd;
     {
         QMutexLocker locker(&d_ptr->m_stateLock);
         toRemove = d_ptr->m_chains;
@@ -144,14 +144,14 @@ QJsonObject VideoNode::serialize() {
     return o;
 }
 
-QList<Chain> VideoNode::requestedChains() {
-    return QList<Chain>();
+QList<ChainSP> VideoNode::requestedChains() {
+    return QList<ChainSP>();
 }
 
-void VideoNode::chainsEdited(QList<Chain> added, QList<Chain> removed) {
+void VideoNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
 }
 
-GLuint VideoNode::paint(Chain chain, QVector<GLuint> inputTextures) {
+GLuint VideoNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     Q_UNUSED(chain);
     Q_UNUSED(inputTextures);
     return 0;

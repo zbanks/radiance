@@ -32,7 +32,7 @@ public:
         if (!videoNode.isNull()) {
             m_vao.bind();
 
-            auto outputSize = videoNode->chain().size();
+            auto outputSize = videoNode->chain()->size();
 
             auto factorFitX = (float)outputSize.height() * m_viewportSize.width() / outputSize.width() / m_viewportSize.height();
             auto factorFitY = (float)outputSize.width() * m_viewportSize.height() / outputSize.height() / m_viewportSize.width();

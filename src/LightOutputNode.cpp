@@ -12,7 +12,7 @@ LightOutputNode::LightOutputNode(Context *context, QString url)
     d()->m_worker = QSharedPointer<LightOutputNodeOpenGLWorker>(new LightOutputNodeOpenGLWorker(*this), &QObject::deleteLater);
     connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
 
-    d()->m_chain.moveToWorkerContext(d()->m_workerContext);
+    d()->m_chain->moveToWorkerContext(d()->m_workerContext);
     connect(d()->m_worker.data(), &LightOutputNodeOpenGLWorker::sizeChanged, this, &OutputNode::resize);
 
     if (!url.isEmpty()) setUrl(url);
@@ -523,7 +523,7 @@ void LightOutputNodeOpenGLWorker::render() {
         return;
     }
 
-    auto vao = p.chain().vao();
+    auto vao = p.chain()->vao();
 
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);

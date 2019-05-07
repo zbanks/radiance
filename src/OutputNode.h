@@ -21,19 +21,19 @@ public:
     OutputNode *clone() const override;
     OutputNode(OutputNodePrivate *ptr);
 
-    GLuint paint(Chain chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
     GLuint render();
     GLuint render(WeakModel model);
 
 public slots:
     void resize(QSize size);
 
-    Chain chain();
+    ChainSP chain();
 
 protected:
     OutputNode(QSharedPointer<OutputNodePrivate> ptr);
 
-    virtual QList<Chain> requestedChains() override;
+    virtual QList<ChainSP> requestedChains() override;
 
 private:
     QSharedPointer<OutputNodePrivate> d() const;
@@ -44,5 +44,5 @@ class OutputNodePrivate : public VideoNodePrivate {
 
 public:
     OutputNodePrivate(Context *context, QSize chainSize);
-    Chain m_chain;
+    ChainSP m_chain;
 };
