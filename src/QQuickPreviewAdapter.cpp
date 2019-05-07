@@ -5,7 +5,7 @@
 
 QQuickPreviewAdapter::QQuickPreviewAdapter(QSize size)
     : m_previewSize(size)
-    , m_previewChain(new Chain(size))
+    , m_previewChain(new Chain(size), &QObject::deleteLater)
 {
 }
 
