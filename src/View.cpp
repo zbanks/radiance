@@ -165,8 +165,8 @@ void View::onGraphChanged() {
     }
 
     QList<Child> newChildren;
-    auto vertices = m_model->vertices();
-    auto edges = m_model->edges();
+    auto vertices = (*m_model)->vertices();
+    auto edges = (*m_model)->edges();
 
     for (auto v = vertices.begin(); v != vertices.end(); v++) {
         auto oldChild = existingChildMap.value(*v, -1);
@@ -456,15 +456,15 @@ void View::selectionChanged() {
     m_selection = found;
 }
 
-Model *View::model() {
+ModelSP *View::model() {
     return m_model;
 }
 
-void View::setModel(Model *model) {
+void View::setModel(ModelSP *model) {
     if(m_model != nullptr) disconnect(model, nullptr, this, nullptr);
     m_model = model;
     if(m_model != nullptr) {
-        connect(model, &Model::graphChanged, this, &View::onGraphChanged);
+        connect(model->data(), &Model::graphChanged, this, &View::onGraphChanged);
     }
     rebuild();
     emit modelChanged(model);
@@ -610,7 +610,7 @@ QVariantList View::selectedConnectedComponents() {
     // given node.
 
     // Find only the vertices contained in the selection
-    auto vertices = m_model->vertices();
+    auto vertices = (*m_model)->vertices();
     QSet<VideoNode *> selectedVerticesSet;
     QVector<VideoNode *> selectedVertices;
     {
@@ -626,7 +626,7 @@ QVariantList View::selectedConnectedComponents() {
 
     // Find only the edges contained in the selection
     QVector<Edge> selectedEdges;
-    auto edges = m_model->edges();
+    auto edges = (*m_model)->edges();
     for (int i=0; i<edges.count(); i++) {
         if (selectedVerticesSet.contains(edges.at(i).fromVertex)
          && selectedVerticesSet.contains(edges.at(i).toVertex)) {
@@ -767,7 +767,7 @@ static void findAllPaths(int n, int end, const QVector<QVector<int>> &edges, QVe
 
 QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *tile2) {
     // Create a map from VideoNodes to indices
-    auto vertices = m_model->vertices();
+    auto vertices = (*m_model)->vertices();
     QMap<VideoNode *, int> map;
     for (int i=0; i<vertices.count(); i++) {
         map.insert(vertices.at(i), i);
@@ -787,7 +787,7 @@ QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *til
     }
 
     // Create a data structure for looking up edges
-    auto edges = m_model->edges();
+    auto edges = (*m_model)->edges();
     QVector<QVector<int>> edgeLookup(vertices.count());
     for (int i=0; i<edges.count(); i++) {
         auto fromIndex = map.value(edges.at(i).fromVertex, -1);

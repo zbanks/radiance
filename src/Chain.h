@@ -73,3 +73,4 @@ protected:
 };
 
 typedef QmlSharedPointer<Chain> ChainSP;
+Q_DECLARE_METATYPE(ChainSP*)

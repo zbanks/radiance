@@ -8,7 +8,7 @@
 
 class QQuickPreviewAdapter : public QObject {
     Q_OBJECT
-    Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
+    Q_PROPERTY(ModelSP *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QSize previewSize READ previewSize WRITE setPreviewSize NOTIFY previewSizeChanged)
     Q_PROPERTY(QQuickWindow *previewWindow READ previewWindow WRITE setPreviewWindow NOTIFY previewWindowChanged)
 
@@ -17,8 +17,8 @@ public:
    ~QQuickPreviewAdapter() override;
 
 public slots:
-    Model *model();
-    void setModel(Model *model);
+    ModelSP *model();
+    void setModel(ModelSP *model);
     QSize previewSize(); // thread-safe
     void setPreviewSize(QSize size);
     QQuickWindow *previewWindow(); // thread-safe
@@ -33,11 +33,11 @@ protected slots:
 
 signals:
     void previewSizeChanged(QSize size);
-    void modelChanged(Model *model);
+    void modelChanged(ModelSP *model);
     void previewWindowChanged(QQuickWindow *window);
 
 protected:
-    Model *m_model{};
+    ModelSP *m_model{};
     QSize m_previewSize;
     ChainSP m_previewChain;
     QQuickWindow *m_previewWindow{};

@@ -94,8 +94,8 @@ public slots:
     // WeakModel encapsulates a weak reference to modeldata
     // because the Model may be deleted out from underneath the VideoNode
     // and we can't give it a strong reference or deadlock would occur
-    void setLastModel(WeakModel model);
-    WeakModel lastModel();
+    void setLastModel(QWeakPointer<Model> model);
+    QWeakPointer<Model> lastModel();
 
     // This member variable sets what state the VideoNode is in.
     // This state can be Ready (VideoNode is active and working,)
@@ -157,7 +157,7 @@ public:
     QMutex m_stateLock; // TODO this is no longer a meaningful concept, should use separate locks for separate fields
     QList<ChainSP> m_chains;
     Context *m_context{};
-    WeakModel m_lastModel;
+    QWeakPointer<Model> m_lastModel;
     VideoNode::NodeState m_nodeState{VideoNode::Ready};
 
 signals:

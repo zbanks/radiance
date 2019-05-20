@@ -11,24 +11,24 @@ QQuickPreviewAdapter::QQuickPreviewAdapter(QSize size)
 
 QQuickPreviewAdapter::~QQuickPreviewAdapter() {
     if (m_model != nullptr) {
-        m_model->removeChain(m_previewChain);
+        (*m_model)->removeChain(m_previewChain);
     }
 }
 
-Model *QQuickPreviewAdapter::model() {
+ModelSP *QQuickPreviewAdapter::model() {
     Q_ASSERT(QThread::currentThread() == thread());
     return m_model;
 }
 
-void QQuickPreviewAdapter::setModel(Model *model) {
+void QQuickPreviewAdapter::setModel(ModelSP *model) {
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_model != model) {
         if (m_model != nullptr) {
-            m_model->removeChain(m_previewChain);
+            (*m_model)->removeChain(m_previewChain);
         }
         m_model = model;
         if (m_model != nullptr) {
-            m_model->addChain(m_previewChain);
+            (*m_model)->addChain(m_previewChain);
         }
         emit modelChanged(model);
     }
@@ -47,8 +47,8 @@ void QQuickPreviewAdapter::setPreviewSize(QSize size) {
             m_previewSize = size;
             ChainSP previewChain(new Chain(size));
             if (m_model != nullptr) {
-                m_model->removeChain(m_previewChain);
-                m_model->addChain(previewChain);
+                (*m_model)->removeChain(m_previewChain);
+                (*m_model)->addChain(previewChain);
             }
             m_previewChain = previewChain;
         }
@@ -64,18 +64,22 @@ void QQuickPreviewAdapter::setPreviewWindow(QQuickWindow *window) {
     Q_ASSERT(QThread::currentThread() == thread());
     {
         QMutexLocker locker(&m_previewLock);
-        if (m_previewWindow )
+        if (m_previewWindow ) {
             disconnect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &QQuickPreviewAdapter::onBeforeSynchronizing);
+        }
         m_previewWindow = window;
-        if (m_previewWindow )
+        if (m_previewWindow ) {
             connect(m_previewWindow, &QQuickWindow::beforeSynchronizing, this, &QQuickPreviewAdapter::onBeforeSynchronizing, Qt::DirectConnection);
+        }
     }
     emit previewWindowChanged(window);
 }
 
 void QQuickPreviewAdapter::onBeforeSynchronizing() {
-    auto modelCopy = m_model->createCopyForRendering();
-    m_lastPreviewRender = modelCopy.render(m_previewChain);
+    if (m_model != nullptr) {
+        auto modelCopy = (*m_model)->createCopyForRendering();
+        m_lastPreviewRender = modelCopy.render(m_previewChain);
+    }
 }
 
 GLuint QQuickPreviewAdapter::previewTexture(VideoNode *videoNode) {

@@ -49,8 +49,8 @@ GLuint OutputNode::render() {
     return render(lastModel());
 }
 
-GLuint OutputNode::render(WeakModel model) {
-    auto modelCopy = model.createCopyForRendering();
+GLuint OutputNode::render(QWeakPointer<Model> model) {
+    auto modelCopy = Model::createCopyForRendering(model);
     auto result = modelCopy.render(chain());
     return result.value(*this, 0);
 }

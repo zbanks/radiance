@@ -2,13 +2,15 @@
 
 #include <QQuickItem>
 #include "Controls.h"
+#include "QmlSharedPointer.h"
 
 class Model;
+typedef QmlSharedPointer<Model> ModelSP;
 class VideoNode;
 
 class BaseVideoNodeTile : public QQuickItem {
     Q_OBJECT
-    Q_PROPERTY(Model *model MEMBER m_model NOTIFY onModelChanged);
+    Q_PROPERTY(ModelSP *model MEMBER m_model NOTIFY onModelChanged);
     Q_PROPERTY(VideoNode *videoNode MEMBER m_videoNode NOTIFY onVideoNodeChanged);
     Q_PROPERTY(QVariantList inputGridHeights MEMBER m_inputGridHeights NOTIFY onInputGridHeightsChanged);
     Q_PROPERTY(QVariantList inputHeights MEMBER m_inputHeights NOTIFY onInputHeightsChanged);
@@ -30,7 +32,7 @@ public:
    ~BaseVideoNodeTile() override;
 
 signals:
-    void onModelChanged(Model *model);
+    void onModelChanged(ModelSP *model);
     void onVideoNodeChanged(VideoNode *videoNode);
     void onInputGridHeightsChanged(QVariantList inputGridHeights);
     void onInputHeightsChanged(QVariantList inputHeights);
@@ -48,7 +50,7 @@ signals:
     void onBankChanged(int bank);
 
 protected:
-    Model *m_model{};
+    ModelSP *m_model{};
     VideoNode *m_videoNode{};
 
     qreal m_normalHeight{};

@@ -10,9 +10,11 @@
 #include <QOpenGLFunctions>
 #include <QMutex>
 
+#include "Chain.h"
+
 class VideoNode;
-class Chain;
-typedef QmlSharedPointer<Chain> ChainSP;
+//class Chain;
+//typedef QmlSharedPointer<Chain> ChainSP;
 class Registry;
 class Context;
 
@@ -43,20 +45,28 @@ struct ModelCopyForRendering {
     QMap<VideoNode, GLuint> render(ChainSP chain);
 };
 
-class ModelPrivate;
-
 // These functions are not thread-safe unless noted.
 
-class Model : public QObject {
-    friend class WeakModel;
-
+class Model
+    : public QObject
+    , public QEnableSharedFromThis<Model>
+{
     Q_OBJECT
     Q_PROPERTY(QVariantList vertices READ qmlVertices)
     Q_PROPERTY(QVariantList edges READ qmlEdges)
 
 public:
     Model();
-    Model(const Model &other);
+
+    static ModelCopyForRendering createCopyForRendering(QWeakPointer<Model> model);
+
+    // Returns a list of vertices
+    // in the order they were added
+    QList<VideoNode *> vertices() const;
+
+    // Returns a list of edges
+    // in the order they were added
+    QList<Edge> edges() const;
 
 public slots:
     // These functions mutate the graph.
@@ -84,14 +94,6 @@ public slots:
     // sometimes nodes are deleted or edited during rendering.
     // This function is thread-safe
     ModelCopyForRendering createCopyForRendering();
-
-    // Returns a list of vertices
-    // in the order they were added
-    QList<VideoNode *> vertices() const;
-
-    // Returns a list of edges
-    // in the order they were added
-    QList<Edge> edges() const;
 
     // Returns a list of vertices
     // in the order they were added
@@ -146,20 +148,6 @@ protected:
     QVector<VideoNode *> topoSort();
     void prepareNode(VideoNode * node);
     void disownNode(VideoNode * node);
-    QSharedPointer<ModelPrivate> d_ptr;
-
-protected slots:
-    void onMessage(QString message);
-    void onWarning(QString str);
-    void onError(QString str);
-
-private:
-    Model(QSharedPointer<ModelPrivate> other_ptr);
-};
-
-class ModelPrivate {
-public:
-    ModelPrivate();
 
     // m_vertices and m_edges must not be accessed from
     // other threads.
@@ -184,14 +172,12 @@ public:
 
     // Chains used for rendering this model
     QList<ChainSP> m_chains;
+
+protected slots:
+    void onMessage(QString message);
+    void onWarning(QString str);
+    void onError(QString str);
 };
 
-class WeakModel {
-public:
-    WeakModel();
-    WeakModel(const Model &other);
-    ModelCopyForRendering createCopyForRendering();
-
-protected:
-    QWeakPointer<ModelPrivate> d_ptr;
-};
+typedef QmlSharedPointer<Model> ModelSP;
+Q_DECLARE_METATYPE(ModelSP*)

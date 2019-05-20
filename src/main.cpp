@@ -48,7 +48,7 @@ runRadianceGui(QGuiApplication *app) {
     qmlRegisterType<Context>("radiance", 1, 0, "Context");
     qmlRegisterType<Registry>("radiance", 1, 0, "Registry");
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
-    qmlRegisterType<Model>("radiance", 1, 0, "Model");
+    qmlRegisterType<ModelSP>("radiance", 1, 0, "ModelSP");
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
 #ifdef USE_MPV
