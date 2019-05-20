@@ -13,8 +13,6 @@ class PlaceholderNode
 
 public:
     PlaceholderNode(Context *context, VideoNode *wrapped=nullptr);
-    PlaceholderNode(const PlaceholderNode &other);
-    PlaceholderNode *clone() const override;
 
     QJsonObject serialize() override;
 
@@ -28,7 +26,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -37,7 +35,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
@@ -52,14 +50,9 @@ public slots:
 signals:
     void wrappedVideoNodeChanged(VideoNode *videoNode);
 
-private:
-    QSharedPointer<PlaceholderNodePrivate> d();
-};
-
-class PlaceholderNodePrivate : public VideoNodePrivate
-{
-public:
-    PlaceholderNodePrivate(Context *context);
-
+protected:
     QSharedPointer<VideoNode> m_wrappedVideoNode;
 };
+
+typedef QmlSharedPointer<PlaceholderNode> PlaceholderNodeSP;
+Q_DECLARE_METATYPE(PlaceholderNodeSP*)

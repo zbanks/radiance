@@ -4,21 +4,10 @@
 #include <QGuiApplication>
 
 FFmpegOutputNode::FFmpegOutputNode(Context *context, QSize chainSize)
-    : OutputNode(new FFmpegOutputNodePrivate(context, chainSize))
+    : OutputNode(context, chainSize)
+    , m_recording(false)
+    , m_ffmpegArguments({"-vcodec", "h264", "output.mp4"})
 {
-}
-
-FFmpegOutputNode::FFmpegOutputNode(const FFmpegOutputNode &other)
-    : OutputNode(other)
-{
-}
-
-FFmpegOutputNode *FFmpegOutputNode::clone() const {
-    return new FFmpegOutputNode(*this);
-}
-
-QSharedPointer<FFmpegOutputNodePrivate> FFmpegOutputNode::d() const {
-    return d_ptr.staticCast<FFmpegOutputNodePrivate>();
 }
 
 FFmpegOutputNode::~FFmpegOutputNode() {
@@ -26,12 +15,12 @@ FFmpegOutputNode::~FFmpegOutputNode() {
 }
 
 void FFmpegOutputNode::setRecording(bool recording) {
-    QMutexLocker locker(&d()->m_stateLock);
+    QMutexLocker locker(&m_stateLock);
     {
-        if (d()->m_recording == recording)
+        if (m_recording == recording)
             return;
 
-        d()->m_recording = recording;
+        m_recording = recording;
 
         if (recording) {
             QSize size = chain()->size();
@@ -39,9 +28,9 @@ void FFmpegOutputNode::setRecording(bool recording) {
                         QString::number(size.width()),
                         QString::number(size.height())));
 
-            d()->m_pixelBuffer.resize(3 * size.width() * size.height());
+            m_pixelBuffer.resize(3 * size.width() * size.height());
 
-            d()->m_ffmpeg.start("ffmpeg", QStringList() 
+            m_ffmpeg.start("ffmpeg", QStringList() 
                     << "-y"
                     << "-vcodec" << "rawvideo"
                     << "-f" << "rawvideo"
@@ -49,10 +38,10 @@ void FFmpegOutputNode::setRecording(bool recording) {
                     << "-s" << sizeStr
                     << "-i" << "pipe:0"
                     << "-vf" << "vflip"
-                    << d()->m_ffmpegArguments);
+                    << m_ffmpegArguments);
         } else {
-            d()->m_ffmpeg.closeWriteChannel();
-            d()->m_ffmpeg.waitForFinished();
+            m_ffmpeg.closeWriteChannel();
+            m_ffmpeg.waitForFinished();
             //qInfo() << m_ffmpeg.readAllStandardOutput();
             //qInfo() << m_ffmpeg.readAllStandardError();
         }
@@ -61,21 +50,21 @@ void FFmpegOutputNode::setRecording(bool recording) {
 }
 
 bool FFmpegOutputNode::recording() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_recording;
+    QMutexLocker locker(&m_stateLock);
+    return m_recording;
 }
 
 QStringList FFmpegOutputNode::ffmpegArguments() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_ffmpegArguments;
+    QMutexLocker locker(&m_stateLock);
+    return m_ffmpegArguments;
 }
 
 void FFmpegOutputNode::setFFmpegArguments(QStringList ffmpegArguments) {
     setRecording(false);
 
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        d()->m_ffmpegArguments = ffmpegArguments;
+        QMutexLocker locker(&m_stateLock);
+        m_ffmpegArguments = ffmpegArguments;
     }
     emit ffmpegArgumentsChanged(ffmpegArguments);
 }
@@ -108,18 +97,11 @@ QMap<QString, QString> FFmpegOutputNode::customInstantiators() {
 void FFmpegOutputNode::recordFrame() {
     GLuint texture = render();
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if (!d()->m_recording)
+        QMutexLocker locker(&m_stateLock);
+        if (!m_recording)
             return;
         glBindTexture(GL_TEXTURE_2D, texture);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, d()->m_pixelBuffer.data()); // XXX UNSAFE
-        d()->m_ffmpeg.write(d()->m_pixelBuffer);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, m_pixelBuffer.data()); // XXX UNSAFE
+        m_ffmpeg.write(m_pixelBuffer);
     }
-}
-
-FFmpegOutputNodePrivate::FFmpegOutputNodePrivate(Context *context, QSize chainSize)
-    : OutputNodePrivate(context, chainSize)
-    , m_recording(false)
-    , m_ffmpegArguments({"-vcodec", "h264", "output.mp4"})
-{
 }

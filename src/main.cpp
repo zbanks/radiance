@@ -43,7 +43,7 @@
 static int
 runRadianceGui(QGuiApplication *app) {
     // Set up QML types
-    qmlRegisterUncreatableType<VideoNode>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterUncreatableType<VideoNodeSP>("radiance", 1, 0, "VideoNodeSP", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterUncreatableType<Library>("radiance", 1, 0, "Library", "Library should be accessed through the Registry");
     qmlRegisterType<Context>("radiance", 1, 0, "Context");
     qmlRegisterType<Registry>("radiance", 1, 0, "Registry");
@@ -52,7 +52,7 @@ runRadianceGui(QGuiApplication *app) {
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
 #ifdef USE_MPV
-    qmlRegisterUncreatableType<MovieNode>("radiance", 1, 0, "MovieNode", "MovieNode cannot be constructed from QML");
+    qmlRegisterUncreatableType<MovieNodeSP>("radiance", 1, 0, "MovieNodeSP", "MovieNode cannot be constructed from QML");
 #endif
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");

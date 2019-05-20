@@ -2,36 +2,11 @@
 #include <QDebug>
 #include <QJsonObject>
 
-
 OutputNode::OutputNode(Context *context, QSize chainSize)
-    : VideoNode(new OutputNodePrivate(context, chainSize))
+    : VideoNode(context)
+    , m_chain(new Chain(chainSize))
 {
     setInputCount(1);
-}
-
-OutputNode::OutputNode(OutputNodePrivate *ptr)
-    : VideoNode(ptr)
-{
-    setInputCount(1);
-}
-
-OutputNode::OutputNode(const OutputNode &other)
-    : VideoNode(other)
-{
-}
-
-// Only use this for promoting WeakOutputNodes
-OutputNode::OutputNode(QSharedPointer<OutputNodePrivate> ptr)
-    : VideoNode(ptr.staticCast<VideoNodePrivate>())
-{
-}
-
-OutputNode *OutputNode::clone() const {
-    return new OutputNode(*this);
-}
-
-QSharedPointer<OutputNodePrivate> OutputNode::d() const {
-    return d_ptr.staticCast<OutputNodePrivate>();
 }
 
 QList<ChainSP> OutputNode::requestedChains() {
@@ -56,26 +31,20 @@ GLuint OutputNode::render(QWeakPointer<Model> model) {
 }
 
 ChainSP OutputNode::chain() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_chain;
+    QMutexLocker locker(&m_stateLock);
+    return m_chain;
 }
 
 void OutputNode::resize(QSize size) {
     ChainSP oldChain;
     ChainSP newChain;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        oldChain = d()->m_chain;
+        QMutexLocker locker(&m_stateLock);
+        oldChain = m_chain;
         if (size == oldChain->size()) return;
         newChain = ChainSP(new Chain(oldChain.data(), size), &QObject::deleteLater);
-        d()->m_chain = newChain;
+        m_chain = newChain;
     }
     emit requestedChainAdded(newChain);
     emit requestedChainRemoved(oldChain);
-}
-
-OutputNodePrivate::OutputNodePrivate(Context *context, QSize chainSize)
-    : VideoNodePrivate(context)
-    , m_chain(new Chain(chainSize))
-{
 }

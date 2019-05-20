@@ -12,7 +12,6 @@
 #include <QOpenGLFramebufferObject>
 
 class EffectNodeOpenGLWorker;
-class EffectNodePrivate;
 
 class EffectNodeRenderState {
 public:
@@ -36,7 +35,6 @@ public:
 class EffectNode
     : public VideoNode {
 
-    friend class WeakEffectNode;
     friend class EffectNodeOpenGLWorker;
 
     Q_OBJECT
@@ -48,7 +46,6 @@ class EffectNode
 public:
     EffectNode(Context *context, QString name);
     EffectNode(const EffectNode &other);
-    EffectNode *clone() const override;
 
     QJsonObject serialize() override;
 
@@ -65,7 +62,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -74,7 +71,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
@@ -98,23 +95,6 @@ protected:
     QString fileToName(QString file);
     void attachSignals();
 
-signals:
-    void intensityChanged(qreal value);
-    void nameChanged(QString name);
-    void fileChanged(QString file);
-    void frequencyChanged(double frequency);
-
-private:
-    QSharedPointer<EffectNodePrivate> d() const;
-    EffectNode(QSharedPointer<EffectNodePrivate> other_ptr);
-};
-
-class EffectNodePrivate : public VideoNodePrivate {
-    Q_OBJECT
-
-public:
-    EffectNodePrivate(Context *context);
-
     QMap<ChainSP, QSharedPointer<EffectNodeRenderState>> m_renderStates;
     qreal m_intensity{};
     qreal m_intensityIntegral{};
@@ -135,17 +115,8 @@ signals:
     void frequencyChanged(double frequency);
 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-class WeakEffectNode {
-public:
-    WeakEffectNode();
-    WeakEffectNode(const EffectNode &other);
-    QSharedPointer<EffectNodePrivate> toStrongRef();
-
-protected:
-    QWeakPointer<EffectNodePrivate> d_ptr;
-};
+typedef QmlSharedPointer<EffectNode> EffectNodeSP;
+Q_DECLARE_METATYPE(EffectNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -157,7 +128,7 @@ class EffectNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    EffectNodeOpenGLWorker(EffectNode p);
+    EffectNodeOpenGLWorker(EffectNodeSP p);
 
 public slots:
     // Call this after changing
@@ -177,5 +148,5 @@ protected:
     bool loadProgram(QString file);
 
 private:
-    WeakEffectNode m_p;
+    QWeakPointer<EffectNode> m_p;
 };

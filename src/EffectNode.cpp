@@ -16,46 +16,19 @@
 #include "Paths.h"
 
 EffectNode::EffectNode(Context *context, QString file)
-    : VideoNode(new EffectNodePrivate(context))
+    : VideoNode(context)
 {
     attachSignals();
-    d()->m_openGLWorker = QSharedPointer<EffectNodeOpenGLWorker>(new EffectNodeOpenGLWorker(*this), &QObject::deleteLater);
+    m_openGLWorker = QSharedPointer<EffectNodeOpenGLWorker>(new EffectNodeOpenGLWorker(*this), &QObject::deleteLater);
     setInputCount(1);
     setFrequency(0);
-    d()->m_periodic.setInterval(10);
-    d()->m_periodic.start();
-    connect(&d()->m_periodic, &QTimer::timeout, this, &EffectNode::onPeriodic);
+    m_periodic.setInterval(10);
+    m_periodic.start();
+    connect(&m_periodic, &QTimer::timeout, this, &EffectNode::onPeriodic);
 
-    d()->m_beatLast = context->timebase()->beat();
-    d()->m_realTimeLast = context->timebase()->wallTime();
+    m_beatLast = context->timebase()->beat();
+    m_realTimeLast = context->timebase()->wallTime();
     if (!file.isEmpty()) setFile(file);
-}
-
-EffectNode::EffectNode(const EffectNode &other)
-    : VideoNode(other)
-{
-    attachSignals();
-}
-
-EffectNode::EffectNode(QSharedPointer<EffectNodePrivate> other_ptr)
-    : VideoNode(other_ptr.staticCast<VideoNodePrivate>())
-{
-    attachSignals();
-}
-
-EffectNode *EffectNode::clone() const {
-    return new EffectNode(*this);
-}
-
-QSharedPointer<EffectNodePrivate> EffectNode::d() const {
-    return d_ptr.staticCast<EffectNodePrivate>();
-}
-
-void EffectNode::attachSignals() {
-    connect(d().data(), &EffectNodePrivate::intensityChanged, this, &EffectNode::intensityChanged);
-    connect(d().data(), &EffectNodePrivate::nameChanged, this, &EffectNode::nameChanged);
-    connect(d().data(), &EffectNodePrivate::fileChanged, this, &EffectNode::fileChanged);
-    connect(d().data(), &EffectNodePrivate::frequencyChanged, this, &EffectNode::frequencyChanged);
 }
 
 QJsonObject EffectNode::serialize() {
@@ -67,13 +40,13 @@ QJsonObject EffectNode::serialize() {
 
 void EffectNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     for (auto chain : added) {
-        auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
+        auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
         Q_ASSERT(result);
     }
     {
-        QMutexLocker locker(&d()->m_stateLock);
+        QMutexLocker locker(&m_stateLock);
         for (int i=0; i<removed.count(); i++) {
-            d()->m_renderStates.remove(removed.at(i));
+            m_renderStates.remove(removed.at(i));
         }
     }
 }
@@ -89,23 +62,23 @@ GLuint EffectNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     qreal intensityIntegral;
     qreal frequency;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if (!d()->m_ready) {
+        QMutexLocker locker(&m_stateLock);
+        if (!m_ready) {
             //qDebug() << this << "is not ready";
             return inputTextures.at(0); // Pass-through
         }
-        //qDebug() << "Looking up" << chain << "in" << d()->m_renderStates << "of" << this;
-        if (!d()->m_renderStates.contains(chain)) {
+        //qDebug() << "Looking up" << chain << "in" << m_renderStates << "of" << this;
+        if (!m_renderStates.contains(chain)) {
             qDebug() << this << "does not have chain" << chain;
             return inputTextures.at(0);
         }
-        renderState = d()->m_renderStates[chain];
-        inputCount = d()->m_inputCount;
-        d()->m_realTimeLast = d()->m_realTime;
-        d()->m_realTime = wallTime;
-        step = d()->m_realTime - d()->m_realTimeLast;
-        intensityIntegral = d()->m_intensityIntegral;
-        frequency = d()->m_frequency;
+        renderState = m_renderStates[chain];
+        inputCount = m_inputCount;
+        m_realTimeLast = m_realTime;
+        m_realTime = wallTime;
+        step = m_realTime - m_realTimeLast;
+        intensityIntegral = m_intensityIntegral;
+        frequency = m_frequency;
     }
 
     // FBO creation must happen here, and not in initialize,
@@ -146,7 +119,7 @@ GLuint EffectNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
         glViewport(0, 0, size.width(), size.height());
 
         for(auto & pass : renderState->m_passes) {
-            //qDebug() << "Rendering shader" << j << "onto" << (renderState->m_textureIndex + j + 1) % (d()->m_programs.count() + 1);
+            //qDebug() << "Rendering shader" << j << "onto" << (renderState->m_textureIndex + j + 1) % (m_programs.count() + 1);
             auto && p = pass.m_shader;
             renderState->m_extra->bind();
             p->bind();
@@ -191,41 +164,41 @@ GLuint EffectNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
             glActiveTexture(GL_TEXTURE0); // Very important to reset OpenGL state for scene graph rendering
         }
         //qDebug() << this << "Output texture ID is" << outTexture << renderState;
-        //qDebug() << "Output is" << ((renderState->m_textureIndex + 1) % (d()->m_programs.count() + 1));
+        //qDebug() << "Output is" << ((renderState->m_textureIndex + 1) % (m_programs.count() + 1));
     }
     return outTexture;
 }
 
 void EffectNode::onPeriodic() {
-    QMutexLocker locker(&d()->m_stateLock);
+    QMutexLocker locker(&m_stateLock);
     qreal beatNow = context()->timebase()->beat();
-    qreal beatDiff = beatNow - d()->m_beatLast;
+    qreal beatDiff = beatNow - m_beatLast;
     if (beatDiff < 0)
         beatDiff += Timebase::MAX_BEAT;
-    d()->m_intensityIntegral = fmod(d()->m_intensityIntegral + d()->m_intensity * beatDiff, MAX_INTEGRAL);
-    d()->m_beatLast = beatNow;
+    m_intensityIntegral = fmod(m_intensityIntegral + m_intensity * beatDiff, MAX_INTEGRAL);
+    m_beatLast = beatNow;
 }
 
 qreal EffectNode::intensity() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_intensity;
+    QMutexLocker locker(&m_stateLock);
+    return m_intensity;
 }
 
 void EffectNode::setIntensity(qreal value) {
     {
-        QMutexLocker locker(&d()->m_stateLock);
+        QMutexLocker locker(&m_stateLock);
         if(value > 1) value = 1;
         if(value < 0) value = 0;
-        if(d()->m_intensity == value)
+        if(m_intensity == value)
             return;
-        d()->m_intensity = value;
+        m_intensity = value;
     }
-    emit d()->intensityChanged(value);
+    emit intensityChanged(value);
 }
 
 QString EffectNode::file() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_file;
+    QMutexLocker locker(&m_stateLock);
+    return m_file;
 }
 
 QString EffectNode::fileToName(QString file) {
@@ -233,22 +206,22 @@ QString EffectNode::fileToName(QString file) {
 }
 
 QString EffectNode::name() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return fileToName(d()->m_file);
+    QMutexLocker locker(&m_stateLock);
+    return fileToName(m_file);
 }
 
 double EffectNode::frequency() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_frequency;
+    QMutexLocker locker(&m_stateLock);
+    return m_frequency;
 }
 
 void EffectNode::setFrequency(double frequency) {
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if (frequency == d()->m_frequency) return;
-        d()->m_frequency = frequency;
+        QMutexLocker locker(&m_stateLock);
+        if (frequency == m_frequency) return;
+        m_frequency = frequency;
     }
-    emit d()->frequencyChanged(frequency);
+    emit frequencyChanged(frequency);
 }
 
 void EffectNode::setFile(QString file) {
@@ -256,38 +229,38 @@ void EffectNode::setFile(QString file) {
     QString oldName;
     QString newName;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        oldName = fileToName(d()->m_file);
-        if(file == d()->m_file) return;
-        d()->m_file = file;
-        newName = fileToName(d()->m_file);
+        QMutexLocker locker(&m_stateLock);
+        oldName = fileToName(m_file);
+        if(file == m_file) return;
+        m_file = file;
+        newName = fileToName(m_file);
     }
     reload();
-    emit d()->fileChanged(file);
-    if (newName != oldName) emit d()->nameChanged(newName);
+    emit fileChanged(file);
+    if (newName != oldName) emit nameChanged(newName);
 }
 
 void EffectNode::reload() {
     setNodeState(VideoNode::Loading);
     QString filename;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        d()->m_ready = false;
-        filename = d()->m_file;
+        QMutexLocker locker(&m_stateLock);
+        m_ready = false;
+        filename = m_file;
     }
 
     filename = Paths::expandLibraryPath(filename);
 
     QFileInfo check_file(filename);
     if(!(check_file.exists() && check_file.isFile())) {
-        emit d()->error(QString("Could not open \"%1\"").arg(filename));
+        emit error(QString("Could not open \"%1\"").arg(filename));
         setNodeState(VideoNode::Broken);
         return;
     }
 
     QFile file(filename);
     if(!file.open(QIODevice::ReadOnly)) {
-        emit d()->error(QString("Could not open \"%1\"").arg(filename));
+        emit error(QString("Could not open \"%1\"").arg(filename));
         setNodeState(VideoNode::Broken);
         return;
     }
@@ -327,7 +300,7 @@ void EffectNode::reload() {
     }
 
     if(passes.empty()) {
-        emit d()->error(QString("No shaders found for \"%1\"").arg(filename));
+        emit error(QString("No shaders found for \"%1\"").arg(filename));
         setNodeState(VideoNode::Broken);
         return;
     }
@@ -337,7 +310,7 @@ void EffectNode::reload() {
         setProperty(prop->toLatin1().data(), value);
     }
 
-    bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QVector<QStringList>, passes));
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QVector<QStringList>, passes));
     Q_ASSERT(result);
 }
 
@@ -435,19 +408,19 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
 
     // Swap out the newly loaded stuff
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
-        p.d()->m_renderStates.clear();
+        QMutexLocker locker(&p.m_stateLock);
+        p.m_renderStates.clear();
 
         // Chains may have been deleted while we were preparing the states
-        auto realChains = p.d()->m_chains;
+        auto realChains = p.m_chains;
         for (auto realChain: realChains) {
             if (states.contains(realChain)) {
-                p.d()->m_renderStates.insert(realChain, states.value(realChain));
+                p.m_renderStates.insert(realChain, states.value(realChain));
             }
         }
 
-        p.d()->m_shaders = shaders;
-        p.d()->m_ready = true;
+        p.m_shaders = shaders;
+        p.m_ready = true;
     }
 
     glFlush();
@@ -464,24 +437,24 @@ void EffectNodeOpenGLWorker::addNewState(ChainSP c) {
 
     QVector<QSharedPointer<QOpenGLShaderProgram>> shaders;
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
+        QMutexLocker locker(&p.m_stateLock);
         // Don't make states that we don't have to
-        if (!p.d()->m_ready) return;
-        if (!p.d()->m_chains.contains(c)) return;
-        if (p.d()->m_renderStates.contains(c)) return;
-        shaders = p.d()->m_shaders;
+        if (!p.m_ready) return;
+        if (!p.m_chains.contains(c)) return;
+        if (p.m_renderStates.contains(c)) return;
+        shaders = p.m_shaders;
     }
 
     makeCurrent();
     auto state = QSharedPointer<EffectNodeRenderState>::create(shaders);
 
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
+        QMutexLocker locker(&p.m_stateLock);
         // Check that everything is still OK
-        if (!p.d()->m_ready) return;
-        if (!p.d()->m_chains.contains(c)) return;
-        if (p.d()->m_renderStates.contains(c)) return;
-        p.d()->m_renderStates.insert(c, state);
+        if (!p.m_ready) return;
+        if (!p.m_chains.contains(c)) return;
+        if (p.m_renderStates.contains(c)) return;
+        p.m_renderStates.insert(c, state);
     }
 }
 
@@ -489,7 +462,7 @@ QString EffectNode::typeName() {
     return "EffectNode";
 }
 
-VideoNode *EffectNode::deserialize(Context *context, QJsonObject obj) {
+VideoNodeSP *EffectNode::deserialize(Context *context, QJsonObject obj) {
     QString file = obj.value("file").toString();
     if (obj.isEmpty()) {
         return nullptr;
@@ -504,29 +477,11 @@ bool EffectNode::canCreateFromFile(QString file) {
     return file.endsWith(".glsl", Qt::CaseInsensitive);
 }
 
-VideoNode *EffectNode::fromFile(Context *context, QString file) {
+VideoNodeSP *EffectNode::fromFile(Context *context, QString file) {
     EffectNode *e = new EffectNode(context, file);
     return e;
 }
 
 QMap<QString, QString> EffectNode::customInstantiators() {
     return QMap<QString, QString>();
-}
-
-WeakEffectNode::WeakEffectNode()
-{
-}
-
-WeakEffectNode::WeakEffectNode(const EffectNode &other)
-    : d_ptr(other.d())
-{
-}
-
-QSharedPointer<EffectNodePrivate> WeakEffectNode::toStrongRef() {
-    return d_ptr.toStrongRef();
-}
-
-EffectNodePrivate::EffectNodePrivate(Context *context)
-    : VideoNodePrivate(context)
-{
 }

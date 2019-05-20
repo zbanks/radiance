@@ -20,54 +20,22 @@
 const float MovieNode::zoomFactor = 16. / 21.;
 
 MovieNode::MovieNode(Context *context, QString file, QString name)
-    : VideoNode(new MovieNodePrivate(context))
+    : VideoNode(context)
 {
     attachSignals();
-    d()->m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
-    d()->m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(*this), &QObject::deleteLater);
-    connect(d()->m_openGLWorker.data(), &QObject::destroyed, d()->m_openGLWorkerContext, &QObject::deleteLater);
+    m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
+    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(*this), &QObject::deleteLater);
+    connect(m_openGLWorker.data(), &QObject::destroyed, m_openGLWorkerContext, &QObject::deleteLater);
 
-    connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
-    connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
-    connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
-    connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
-    connect(d()->m_openGLWorker.data(), &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::positionChanged, this, &MovieNode::onPositionChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::durationChanged, this, &MovieNode::onDurationChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::muteChanged, this, &MovieNode::onMuteChanged);
+    connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::pauseChanged, this, &MovieNode::onPauseChanged);
 
     setInputCount(1);
     setName(name);
     setFile(file);
-}
-
-MovieNode::MovieNode(const MovieNode &other)
-    : VideoNode(other)
-{
-    attachSignals();
-}
-
-MovieNode::MovieNode(QSharedPointer<MovieNodePrivate> other_ptr)
-    : VideoNode(other_ptr.staticCast<VideoNodePrivate>())
-{
-    attachSignals();
-}
-
-MovieNode *MovieNode::clone() const {
-    return new MovieNode(*this);
-}
-
-QSharedPointer<MovieNodePrivate> MovieNode::d() const {
-    return d_ptr.staticCast<MovieNodePrivate>();
-}
-
-void MovieNode::attachSignals() {
-    VideoNode::attachSignals();
-    connect(d().data(), &MovieNodePrivate::fileChanged, this, &MovieNode::fileChanged);
-    connect(d().data(), &MovieNodePrivate::nameChanged, this, &MovieNode::nameChanged);
-    connect(d().data(), &MovieNodePrivate::videoSizeChanged, this, &MovieNode::videoSizeChanged);
-    connect(d().data(), &MovieNodePrivate::positionChanged, this, &MovieNode::positionChanged);
-    connect(d().data(), &MovieNodePrivate::durationChanged, this, &MovieNode::durationChanged);
-    connect(d().data(), &MovieNodePrivate::muteChanged, this, &MovieNode::muteChanged);
-    connect(d().data(), &MovieNodePrivate::pauseChanged, this, &MovieNode::pauseChanged);
-    connect(d().data(), &MovieNodePrivate::factorChanged, this, &MovieNode::factorChanged);
 }
 
 QJsonObject MovieNode::serialize() {
@@ -79,122 +47,122 @@ QJsonObject MovieNode::serialize() {
 
 void MovieNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     for (auto chain : added) {
-        auto result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
+        auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
         Q_ASSERT(result);
     }
     {
-        QMutexLocker locker(&d()->m_stateLock);
+        QMutexLocker locker(&m_stateLock);
         for (auto chain : removed) {
-            d()->m_renderStates.remove(chain);
+            m_renderStates.remove(chain);
         }
         auto size = QSize{};
-        for(auto chain : d()->m_chains) {
+        for(auto chain : m_chains) {
             auto csize = chain->size();
             size.setWidth(std::max(csize.width(), size.width()));
             size.setHeight(std::max(csize.height(), size.height()));
         }
-        d()->m_maxSize = size;
+        m_maxSize = size;
     }
 }
 
 QString MovieNode::file() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_file;
+    QMutexLocker locker(&m_stateLock);
+    return m_file;
 }
 
 QString MovieNode::name() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_name;
+    QMutexLocker locker(&m_stateLock);
+    return m_name;
 }
 
 qreal MovieNode::position() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_position;
+    QMutexLocker locker(&m_stateLock);
+    return m_position;
 }
 
 qreal MovieNode::duration() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_duration;
+    QMutexLocker locker(&m_stateLock);
+    return m_duration;
 }
 
 QSize MovieNode::videoSize() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_videoSize;
+    QMutexLocker locker(&m_stateLock);
+    return m_videoSize;
 }
 
 bool MovieNode::mute() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_mute;
+    QMutexLocker locker(&m_stateLock);
+    return m_mute;
 }
 
 bool MovieNode::pause() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_pause;
+    QMutexLocker locker(&m_stateLock);
+    return m_pause;
 }
 
 enum MovieNode::Factor MovieNode::factor() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_factor;
+    QMutexLocker locker(&m_stateLock);
+    return m_factor;
 }
 
 void MovieNode::onVideoSizeChanged(QSize size) {
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(size != d()->m_videoSize) {
-            d()->m_videoSize = size;
+        QMutexLocker locker(&m_stateLock);
+        if(size != m_videoSize) {
+            m_videoSize = size;
             changed = true;
         }
     }
-    if (changed) emit d()->videoSizeChanged(size);
+    if (changed) emit videoSizeChanged(size);
 }
 
 void MovieNode::onPositionChanged(qreal position) {
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(position != d()->m_position) {
-            d()->m_position = position;
+        QMutexLocker locker(&m_stateLock);
+        if(position != m_position) {
+            m_position = position;
             changed = true;
         }
     }
-    if (changed) emit d()->positionChanged(position);
+    if (changed) emit positionChanged(position);
 }
 
 void MovieNode::onDurationChanged(qreal duration) {
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(duration != d()->m_duration) {
-            d()->m_duration = duration;
+        QMutexLocker locker(&m_stateLock);
+        if(duration != m_duration) {
+            m_duration = duration;
             changed = true;
         }
     }
-    if (changed) emit d()->durationChanged(duration);
+    if (changed) emit durationChanged(duration);
 }
 
 void MovieNode::onMuteChanged(bool mute) {
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(mute != d()->m_mute) {
-            d()->m_mute = mute;
+        QMutexLocker locker(&m_stateLock);
+        if(mute != m_mute) {
+            m_mute = mute;
             changed = true;
         }
     }
-    if (changed) emit d()->muteChanged(mute);
+    if (changed) emit muteChanged(mute);
 }
 
 void MovieNode::onPauseChanged(bool pause) {
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(pause != d()->m_pause) {
-            d()->m_pause = pause;
+        QMutexLocker locker(&m_stateLock);
+        if(pause != m_pause) {
+            m_pause = pause;
             changed = true;
         }
     }
-    if (changed) emit d()->pauseChanged(pause);
+    if (changed) emit pauseChanged(pause);
 }
 
 void MovieNode::reload() {
@@ -202,12 +170,12 @@ void MovieNode::reload() {
     setNodeState(VideoNode::Loading);
 
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        d()->m_ready = false;
-        filename = d()->m_file;
+        QMutexLocker locker(&m_stateLock);
+        m_ready = false;
+        filename = m_file;
     }
 
-    bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QString, filename));
+    bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, filename));
     Q_ASSERT(result);
 }
 
@@ -217,49 +185,49 @@ void MovieNode::setFile(QString file) {
     }
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(file != d()->m_file) {
-            d()->m_file = file;
+        QMutexLocker locker(&m_stateLock);
+        if(file != m_file) {
+            m_file = file;
             changed = true;
         }
     }
     if (changed) {
         reload();
-        emit d()->fileChanged(file);
+        emit fileChanged(file);
     }
 }
 
 void MovieNode::setName(QString name) {
     bool changed = false;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(name != d()->m_name) {
-            d()->m_name = name;
+        QMutexLocker locker(&m_stateLock);
+        if(name != m_name) {
+            m_name = name;
             changed = true;
         }
     }
-    if (changed) emit d()->nameChanged(name);
+    if (changed) emit nameChanged(name);
 }
 
 void MovieNode::setPosition(qreal position) {
-    QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "setPosition", Qt::QueuedConnection, Q_ARG(qreal, position));
+    QMetaObject::invokeMethod(m_openGLWorker.data(), "setPosition", Qt::QueuedConnection, Q_ARG(qreal, position));
 }
 
 void MovieNode::setMute(bool mute) {
-    QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "setMute", Qt::QueuedConnection, Q_ARG(bool, mute));
+    QMetaObject::invokeMethod(m_openGLWorker.data(), "setMute", Qt::QueuedConnection, Q_ARG(bool, mute));
 }
 
 void MovieNode::setPause(bool pause) {
-    QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "setPause", Qt::QueuedConnection, Q_ARG(bool, pause));
+    QMetaObject::invokeMethod(m_openGLWorker.data(), "setPause", Qt::QueuedConnection, Q_ARG(bool, pause));
 }
 
 void MovieNode::setFactor(enum Factor factor) {
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if (d()->m_factor == factor) return;
-        d()->m_factor = factor;
+        QMutexLocker locker(&m_stateLock);
+        if (m_factor == factor) return;
+        m_factor = factor;
     }
-    emit d()->factorChanged(factor);
+    emit factorChanged(factor);
 }
 
 static void *get_proc_address(void *ctx, const char *name) {
@@ -276,18 +244,18 @@ GLuint MovieNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
 
     QSharedPointer<MovieNodeRenderState> renderState;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if (!d()->m_ready) {
+        QMutexLocker locker(&m_stateLock);
+        if (!m_ready) {
             //qDebug() << this << "is not ready";
             return outTexture;
         }
-        //qDebug() << "Looking up" << chain << "in" << d()->m_renderStates << "of" << this;
-        if (!d()->m_renderStates.contains(chain)) { // This check doesn't seem to work
+        //qDebug() << "Looking up" << chain << "in" << m_renderStates << "of" << this;
+        if (!m_renderStates.contains(chain)) { // This check doesn't seem to work
             qDebug() << this << "does not have chain" << chain;
             return outTexture;
         }
-        renderState = d()->m_renderStates[chain];
-        f = d()->m_factor;
+        renderState = m_renderStates[chain];
+        f = m_factor;
     }
 
     auto renderFbo = renderState->m_output;
@@ -304,8 +272,8 @@ GLuint MovieNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     }
 
     {
-        QMutexLocker locker(&d()->m_openGLWorker->m_rwLock);
-        auto fboi = d()->m_openGLWorker->m_frames.front();
+        QMutexLocker locker(&m_openGLWorker->m_rwLock);
+        auto fboi = m_openGLWorker->m_frames.front();
         if (fboi) {
             glClearColor(0, 0, 0, 0);
             glDisable(GL_DEPTH_TEST);
@@ -354,32 +322,10 @@ GLuint MovieNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     return outTexture;
 }
 
-// WeakMovieNode methods
-
-WeakMovieNode::WeakMovieNode()
-{
-}
-
-WeakMovieNode::WeakMovieNode(const MovieNode &other)
-    : d_ptr(other.d())
-{
-}
-
-QSharedPointer<MovieNodePrivate> WeakMovieNode::toStrongRef() {
-    return d_ptr.toStrongRef();
-}
-
-// MovieNodePrivate methods
-
-MovieNodePrivate::MovieNodePrivate(Context *context)
-    : VideoNodePrivate(context)
-{
-}
-
 // MovieNodeOpenGLWorker methods
 
-MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNode p)
-    : OpenGLWorker(p.d()->m_openGLWorkerContext)
+MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNodeSP p)
+    : OpenGLWorker(p->m_openGLWorkerContext)
     , m_p(p)
 {
     connect(this, &MovieNodeOpenGLWorker::message, &p, &MovieNode::message);
@@ -396,9 +342,9 @@ static void requestWakeup(void *ctx) {
 }
 
 void MovieNodeOpenGLWorker::initialize(QString filename) {
-    auto d = m_p.toStrongRef();
+    auto d = m_p->toStrongRef();
     if (d.isNull()) return; // MovieNode was deleted
-    MovieNode p(d);
+    MovieNodeSP p(d);
 
     // I am not sure if this method is okay with being called multiple times.
     // It may need some changes to un-load the previous MPV context
@@ -474,13 +420,13 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 
     command(QStringList() << "loadfile" << filename);
 
-    setMute(p.mute());
-    setPause(p.pause());
+    setMute(p->mute());
+    setPause(p->pause());
 
     qDebug() << "Successfully loaded video" << filename;
 
     // We prepare the state for all chains that exist upon creation
-    auto chains = p.chains();
+    auto chains = p->chains();
     QMap<ChainSP, QSharedPointer<MovieNodeRenderState>> states;
 
     for (auto chain : chains) {
@@ -489,18 +435,18 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 
     // Swap out the newly loaded stuff
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
-        p.d()->m_renderStates.clear();
+        QMutexLocker locker(&p->m_stateLock);
+        p->m_renderStates.clear();
 
         // Chains may have been deleted while we were preparing the states
-        auto realChains = p.d()->m_chains;
+        auto realChains = p->m_chains;
         for (auto realChain: realChains) {
             if (states.contains(realChain)) {
-                p.d()->m_renderStates.insert(realChain, states.value(realChain));
+                p->m_renderStates.insert(realChain, states.value(realChain));
             }
         }
 
-        p.d()->m_blitShader = shader;
+        p->m_blitShader = shader;
     }
 }
 
@@ -508,30 +454,30 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
 void MovieNodeOpenGLWorker::addNewState(ChainSP c) {
-    auto d = m_p.toStrongRef();
+    auto d = m_p->toStrongRef();
     if (d.isNull()) return; // MovieNode was deleted
     MovieNode p(d);
 
     QSharedPointer<QOpenGLShaderProgram> shader;
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
+        QMutexLocker locker(&p->m_stateLock);
         // Don't make states that we don't have to
-        if (!p.d()->m_ready) return;
-        if (!p.d()->m_chains.contains(c)) return;
-        if (p.d()->m_renderStates.contains(c)) return;
-        shader = p.d()->m_blitShader;
+        if (!p->m_ready) return;
+        if (!p->m_chains.contains(c)) return;
+        if (p->m_renderStates.contains(c)) return;
+        shader = p->m_blitShader;
     }
 
     makeCurrent();
     auto state = QSharedPointer<MovieNodeRenderState>::create(shader);
 
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
+        QMutexLocker locker(&p->m_stateLock);
         // Check that everything is still OK
-        if (!p.d()->m_ready) return;
-        if (!p.d()->m_chains.contains(c)) return;
-        if (p.d()->m_renderStates.contains(c)) return;
-        p.d()->m_renderStates.insert(c, state);
+        if (!p->m_ready) return;
+        if (!p->m_chains.contains(c)) return;
+        if (p->m_renderStates.contains(c)) return;
+        p->m_renderStates.insert(c, state);
     }
 }
 
@@ -558,13 +504,13 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
             if (prop->format == MPV_FORMAT_DOUBLE) {
                 double time = *(double *)prop->data;
                 emit durationChanged(time);
-                auto d = m_p.toStrongRef();
+                auto d = m_p->toStrongRef();
                 if (d.isNull()) return; // MovieNode was deleted
                 MovieNode p(d);
-                p.setNodeState(VideoNode::Ready);
+                p->setNodeState(VideoNode::Ready);
                 {
-                    QMutexLocker locker(&p.d()->m_stateLock);
-                    p.d()->m_ready = true;
+                    QMutexLocker locker(&p->m_stateLock);
+                    p->m_ready = true;
                 }
             }
         } else if (strcmp(prop->name, "video-params/w") == 0) {
@@ -598,19 +544,19 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
 }
 
 void MovieNodeOpenGLWorker::drawFrame() {
-    auto d = m_p.toStrongRef();
+    auto d = m_p->toStrongRef();
     if (d.isNull()) return; // MovieNode was deleted
     MovieNode p(d);
 
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
+        QMutexLocker locker(&p->m_stateLock);
         if(!m_videoSize.width() || !m_videoSize.height())
             return;
         if(!m_chainSize.width() || !m_chainSize.height())
             return;
         auto scale = std::max({
-            p.d()->m_maxSize.width() / qreal(m_videoSize.width()),
-            p.d()->m_maxSize.height() / qreal(m_videoSize.height()),
+            p->m_maxSize.width() / qreal(m_videoSize.width()),
+            p->m_maxSize.height() / qreal(m_videoSize.height()),
             //qreal(1)
             });
         m_size = m_videoSize * scale;
@@ -674,24 +620,24 @@ QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader(Movie
         "void main() {\n"
         "    vec2 texUV = (uv - 0.5) * iFactor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
-        "    fragColor = texture(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
+        "    fragColor = texture(iVideoFrame, texUV) * clamp->x * clamp->y;\n"
         "}\n"};
 
     auto shader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
 
     if (!shader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexString)) {
         emit error("Could not compile vertex shader");
-        p.setNodeState(VideoNode::Broken);
+        p->setNodeState(VideoNode::Broken);
         return nullptr;
     }
     if (!shader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentString)) {
         emit error("Could not compile fragment shader");
-        p.setNodeState(VideoNode::Broken);
+        p->setNodeState(VideoNode::Broken);
         return nullptr;
     }
     if (!shader->link()) {
         emit error("Could not link shader program");
-        p.setNodeState(VideoNode::Broken);
+        p->setNodeState(VideoNode::Broken);
         return nullptr;
     }
 
@@ -702,7 +648,7 @@ QString MovieNode::typeName() {
     return "MovieNode";
 }
 
-VideoNode *MovieNode::deserialize(Context *context, QJsonObject obj) {
+VideoNodeSP *MovieNode::deserialize(Context *context, QJsonObject obj) {
     QString file = obj.value("file").toString();
     if (obj.isEmpty()) {
         return nullptr;

@@ -39,7 +39,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -48,7 +48,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
@@ -75,33 +75,35 @@ signals:
     void urlChanged(QString value);
     void nameChanged(QString value);
 
-private:
-    LightOutputNode(QSharedPointer<LightOutputNodePrivate> other_ptr);
-    QSharedPointer<LightOutputNodePrivate> d() const;
-
 protected:
-    void attachSignals();
     void setName(QString value);
+
+    OpenGLWorkerContext *m_workerContext{};
+    QSharedPointer<LightOutputNodeOpenGLWorker> m_worker;
+    QString m_url;
+    QString m_name;
+
+    QMutex m_bufferLock;
+    // Please take the bufferlock when
+    // editing or using any of these:
+    quint32 m_pixelCount;
+    QOpenGLBuffer m_colors;
+    QOpenGLBuffer m_lookupCoordinates;
+    QOpenGLBuffer m_physicalCoordinates;
+    QOpenGLTexture m_geometry2D;
+    LightOutputNode::DisplayMode m_displayMode{LightOutputNode::DisplayLookup2D};
+    // end
 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-class WeakLightOutputNode {
-public:
-    WeakLightOutputNode();
-    WeakLightOutputNode(const LightOutputNode &other);
-    QSharedPointer<LightOutputNodePrivate> toStrongRef();
-
-protected:
-    QWeakPointer<LightOutputNodePrivate> d_ptr;
-};
+typedef QmlSharedPointer<LightOutputNode> LightOutputNodeSP;
+Q_DECLARE_METATYPE(LightOutputNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////
 
 class LightOutputNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 public:
-    LightOutputNodeOpenGLWorker(LightOutputNode p);
+    LightOutputNodeOpenGLWorker(LightOutputNodeSP p);
 
     enum LightOutputNodeState {
         Disconnected,
@@ -132,7 +134,7 @@ protected slots:
     void onPacketReceived(QByteArray packet);
 
 private:
-    WeakLightOutputNode m_p;
+    QWeakPointer<LightOutputNode> m_p;
     QTimer *m_timer{};
     QByteArray m_pixelBuffer;
     QSharedPointer<QOpenGLShaderProgram> m_shader;
@@ -145,30 +147,4 @@ private:
     // For the radiance output protocol
     QByteArray m_packet;
     quint64 m_packetIndex{};
-};
-
-class LightOutputNodePrivate : public OutputNodePrivate {
-    Q_OBJECT
-public:
-    LightOutputNodePrivate(Context *context);
-
-    OpenGLWorkerContext *m_workerContext{};
-    QSharedPointer<LightOutputNodeOpenGLWorker> m_worker;
-    QString m_url;
-    QString m_name;
-
-    QMutex m_bufferLock;
-    // Please take the bufferlock when
-    // editing or using any of these:
-    quint32 m_pixelCount;
-    QOpenGLBuffer m_colors;
-    QOpenGLBuffer m_lookupCoordinates;
-    QOpenGLBuffer m_physicalCoordinates;
-    QOpenGLTexture m_geometry2D;
-    LightOutputNode::DisplayMode m_displayMode{LightOutputNode::DisplayLookup2D};
-    // end
-
-signals:
-    void urlChanged(QString value);
-    void nameChanged(QString value);
 };

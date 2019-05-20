@@ -6,48 +6,23 @@
 #include <array>
 
 LightOutputNode::LightOutputNode(Context *context, QString url)
-    : OutputNode(new LightOutputNodePrivate(context)) {
-    attachSignals();
-    d()->m_workerContext = new OpenGLWorkerContext(context->threaded());
-    d()->m_worker = QSharedPointer<LightOutputNodeOpenGLWorker>(new LightOutputNodeOpenGLWorker(*this), &QObject::deleteLater);
-    connect(d()->m_worker.data(), &QObject::destroyed, d()->m_workerContext, &QObject::deleteLater);
+    : OutputNode(context, QSize(300, 300))
+    , m_geometry2D(QOpenGLTexture::Target2D) {
+    m_workerContext = new OpenGLWorkerContext(context->threaded());
+    m_worker = QSharedPointer<LightOutputNodeOpenGLWorker>(new LightOutputNodeOpenGLWorker(*this), &QObject::deleteLater);
+    connect(m_worker.data(), &QObject::destroyed, m_workerContext, &QObject::deleteLater);
 
-    d()->m_chain->moveToWorkerContext(d()->m_workerContext);
-    connect(d()->m_worker.data(), &LightOutputNodeOpenGLWorker::sizeChanged, this, &OutputNode::resize);
+    m_chain->moveToWorkerContext(m_workerContext);
+    connect(m_worker.data(), &LightOutputNodeOpenGLWorker::sizeChanged, this, &OutputNode::resize);
 
     if (!url.isEmpty()) setUrl(url);
-}
-
-LightOutputNode::LightOutputNode(const LightOutputNode &other)
-    : OutputNode(other)
-{
-    attachSignals();
-}
-
-LightOutputNode *LightOutputNode::clone() const {
-    return new LightOutputNode(*this);
-}
-
-QSharedPointer<LightOutputNodePrivate> LightOutputNode::d() const {
-    return d_ptr.staticCast<LightOutputNodePrivate>();
-}
-
-LightOutputNode::LightOutputNode(QSharedPointer<LightOutputNodePrivate> other_ptr)
-    : OutputNode(other_ptr.staticCast<OutputNodePrivate>())
-{
-    attachSignals();
-}
-
-void LightOutputNode::attachSignals() {
-    connect(d().data(), &LightOutputNodePrivate::urlChanged, this, &LightOutputNode::urlChanged);
-    connect(d().data(), &LightOutputNodePrivate::nameChanged, this, &LightOutputNode::nameChanged);
 }
 
 QString LightOutputNode::typeName() {
     return "LightOutputNode";
 }
 
-VideoNode *LightOutputNode::deserialize(Context *context, QJsonObject obj) {
+VideoNodeSP *LightOutputNode::deserialize(Context *context, QJsonObject obj) {
     LightOutputNode *e = new LightOutputNode(context);
     QString url = obj.value("url").toString();
     if (!url.isEmpty()) {
@@ -66,7 +41,7 @@ bool LightOutputNode::canCreateFromFile(QString filename) {
     return false;
 }
 
-VideoNode *LightOutputNode::fromFile(Context *context, QString filename) {
+VideoNodeSP *LightOutputNode::fromFile(Context *context, QString filename) {
     return nullptr;
 }
 
@@ -77,92 +52,77 @@ QMap<QString, QString> LightOutputNode::customInstantiators() {
 }
 
 QString LightOutputNode::url() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_url;
+    QMutexLocker locker(&m_stateLock);
+    return m_url;
 }
 
 void LightOutputNode::reload() {
     setNodeState(VideoNode::Loading);
-    auto result = QMetaObject::invokeMethod(d()->m_worker.data(), "initialize");
+    auto result = QMetaObject::invokeMethod(m_worker.data(), "initialize");
     Q_ASSERT(result);
 }
 
 void LightOutputNode::setUrl(QString value) {
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(d()->m_url == value)
+        QMutexLocker locker(&m_stateLock);
+        if(m_url == value)
             return;
-        d()->m_url = value;
+        m_url = value;
     }
 
     reload();
 
-    emit d()->urlChanged(value);
+    emit urlChanged(value);
 }
 
 QString LightOutputNode::name() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_name;
+    QMutexLocker locker(&m_stateLock);
+    return m_name;
 }
 
 void LightOutputNode::setName(QString value) {
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if(d()->m_name == value)
+        QMutexLocker locker(&m_stateLock);
+        if(m_name == value)
             return;
-        d()->m_name = value;
+        m_name = value;
     }
 
-    emit d()->nameChanged(value);
+    emit nameChanged(value);
 }
 
 QMutex *LightOutputNode::bufferLock() {
-    return &d()->m_bufferLock;
+    return &m_bufferLock;
 }
 
 quint32 LightOutputNode::pixelCount() {
-    return d()->m_pixelCount;
+    return m_pixelCount;
 }
 
 QOpenGLBuffer &LightOutputNode::colorsBuffer() {
-    return d()->m_colors;
+    return m_colors;
 }
 
 QOpenGLBuffer &LightOutputNode::lookupCoordinatesBuffer() {
-    return d()->m_lookupCoordinates;
+    return m_lookupCoordinates;
 }
 
 QOpenGLBuffer &LightOutputNode::physicalCoordinatesBuffer() {
-    return d()->m_physicalCoordinates;
+    return m_physicalCoordinates;
 }
 
 QOpenGLTexture *LightOutputNode::geometry2DTexture() {
-    return &d()->m_geometry2D;
+    return &m_geometry2D;
 }
 
 LightOutputNode::DisplayMode LightOutputNode::displayMode() {
-    return d()->m_displayMode;
-}
-
-// WeakLightOutputNode methods
-
-WeakLightOutputNode::WeakLightOutputNode()
-{
-}
-
-WeakLightOutputNode::WeakLightOutputNode(const LightOutputNode &other)
-    : d_ptr(other.d())
-{
-}
-
-QSharedPointer<LightOutputNodePrivate> WeakLightOutputNode::toStrongRef() {
-    return d_ptr.toStrongRef();
+    return m_displayMode;
 }
 
 // LightOutputNodeOpenGLWorker methods
 
-LightOutputNodeOpenGLWorker::LightOutputNodeOpenGLWorker(LightOutputNode p)
-    : OpenGLWorker(p.d()->m_workerContext)
+LightOutputNodeOpenGLWorker::LightOutputNodeOpenGLWorker(LightOutputNodeSP p)
+    : OpenGLWorker(p.m_workerContext)
     , m_p(p)
     , m_lookupTexture2D(QOpenGLTexture::Target2D)
     , m_packet(4, 0) {
@@ -376,19 +336,19 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         if (d.isNull()) return; // LightOutputNode was deleted
         LightOutputNode p(d);
         {
-            QMutexLocker locker(&p.d()->m_bufferLock);
-            if (m_pixelCount != p.d()->m_pixelCount) {
-                p.d()->m_pixelCount = m_pixelCount;
-                p.d()->m_colors.bind();
-                p.d()->m_colors.allocate(m_pixelCount * 4);
-                p.d()->m_lookupCoordinates.bind();
-                p.d()->m_lookupCoordinates.allocate(m_pixelCount * 8);
-                p.d()->m_physicalCoordinates.bind();
-                p.d()->m_physicalCoordinates.allocate(m_pixelCount * 8);
+            QMutexLocker locker(&p.m_bufferLock);
+            if (m_pixelCount != p.m_pixelCount) {
+                p.m_pixelCount = m_pixelCount;
+                p.m_colors.bind();
+                p.m_colors.allocate(m_pixelCount * 4);
+                p.m_lookupCoordinates.bind();
+                p.m_lookupCoordinates.allocate(m_pixelCount * 8);
+                p.m_physicalCoordinates.bind();
+                p.m_physicalCoordinates.allocate(m_pixelCount * 8);
             }
-            p.d()->m_lookupCoordinates.bind();
-            p.d()->m_lookupCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
-            p.d()->m_lookupCoordinates.release();
+            p.m_lookupCoordinates.bind();
+            p.m_lookupCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
+            p.m_lookupCoordinates.release();
         }
     } else if (cmd == 4) {
         if ((double)(packet.size() - 5) / 8 != m_pixelCount) {
@@ -400,11 +360,11 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         if (d.isNull()) return; // LightOutputNode was deleted
         LightOutputNode p(d);
         {
-            QMutexLocker locker(&p.d()->m_bufferLock);
-            p.d()->m_physicalCoordinates.bind();
-            p.d()->m_physicalCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
-            p.d()->m_physicalCoordinates.release();
-            p.d()->m_displayMode = LightOutputNode::DisplayPhysical2D;
+            QMutexLocker locker(&p.m_bufferLock);
+            p.m_physicalCoordinates.bind();
+            p.m_physicalCoordinates.write(0, m_packet.constData() + 5, m_pixelCount * 8);
+            p.m_physicalCoordinates.release();
+            p.m_displayMode = LightOutputNode::DisplayPhysical2D;
         }
     } else if (cmd == 5) {
         auto d = m_p.toStrongRef();
@@ -414,9 +374,9 @@ void LightOutputNodeOpenGLWorker::onPacketReceived(QByteArray packet) {
         QImage image;
         auto result = image.loadFromData((const uchar *)m_packet.constData() + 5, m_packet.size() - 5);
         if (result) {
-            QMutexLocker locker(&p.d()->m_bufferLock);
-            p.d()->m_geometry2D.destroy();
-            p.d()->m_geometry2D.setData(image.mirrored());
+            QMutexLocker locker(&p.m_bufferLock);
+            p.m_geometry2D.destroy();
+            p.m_geometry2D.setData(image.mirrored());
         } else {
             emit warning("Could not parse image data in \"geometry 2D\" packet");
         }
@@ -455,9 +415,8 @@ void LightOutputNodeOpenGLWorker::connectToDevice(QString url) {
 void LightOutputNodeOpenGLWorker::initialize() {
     Q_ASSERT(QThread::currentThread() == thread());
 
-    auto d = m_p.toStrongRef();
-    if (d.isNull()) return; // LightOutputNode was deleted
-    LightOutputNode p(d);
+    auto p = m_p.toStrongRef();
+    if (p.isNull()) return; // LightOutputNode was deleted
     p.setName("");
     auto url = p.url();
 
@@ -485,25 +444,25 @@ void LightOutputNodeOpenGLWorker::initialize() {
     }
 
     {
-        QMutexLocker locker(&p.d()->m_bufferLock);
+        QMutexLocker locker(&p.m_bufferLock);
         m_pixelCount = 0;
-        p.d()->m_pixelCount = 0;
-        if (!p.d()->m_colors.isCreated()) {
-            p.d()->m_colors.create();
-            p.d()->m_lookupCoordinates.create();
-            p.d()->m_physicalCoordinates.create();
+        p.m_pixelCount = 0;
+        if (!p.m_colors.isCreated()) {
+            p.m_colors.create();
+            p.m_lookupCoordinates.create();
+            p.m_physicalCoordinates.create();
         }
 
-        p.d()->m_geometry2D.destroy();
-        p.d()->m_geometry2D.setSize(1, 1);
-        p.d()->m_geometry2D.setFormat(QOpenGLTexture::RGBA8_UNorm);
-        p.d()->m_geometry2D.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
-        p.d()->m_geometry2D.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
-        p.d()->m_geometry2D.setWrapMode(QOpenGLTexture::Repeat);
+        p.m_geometry2D.destroy();
+        p.m_geometry2D.setSize(1, 1);
+        p.m_geometry2D.setFormat(QOpenGLTexture::RGBA8_UNorm);
+        p.m_geometry2D.allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+        p.m_geometry2D.setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+        p.m_geometry2D.setWrapMode(QOpenGLTexture::Repeat);
 
         auto data = std::array<uint8_t,4>();
-        p.d()->m_geometry2D.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
-        p.d()->m_displayMode = LightOutputNode::DisplayLookup2D;
+        p.m_geometry2D.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+        p.m_displayMode = LightOutputNode::DisplayLookup2D;
     }
 
     connectToDevice(url);
@@ -560,17 +519,11 @@ void LightOutputNodeOpenGLWorker::render() {
 
     // Write the new colors to the VBO for visualization
     {
-        QMutexLocker locker(&p.d()->m_bufferLock);
-        p.d()->m_colors.bind();
-        p.d()->m_colors.write(0, m_pixelBuffer.constData(), m_pixelCount * 4);
-        p.d()->m_colors.release();
+        QMutexLocker locker(&p.m_bufferLock);
+        p.m_colors.bind();
+        p.m_colors.write(0, m_pixelBuffer.constData(), m_pixelCount * 4);
+        p.m_colors.release();
     }
 
     sendFrame();
-}
-
-LightOutputNodePrivate::LightOutputNodePrivate(Context *context)
-    : OutputNodePrivate(context, QSize(300, 300))
-    , m_geometry2D(QOpenGLTexture::Target2D)
-{
 }

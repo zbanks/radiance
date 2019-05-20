@@ -6,8 +6,6 @@
 #include <QSize>
 #include <QScreen>
 
-class ScreenOutputNodePrivate;
-
 class ScreenOutputNode
     : public OutputNode {
     Q_OBJECT
@@ -20,8 +18,6 @@ class ScreenOutputNode
 
 public:
     ScreenOutputNode(Context *context, QSize chainSize);
-    ScreenOutputNode(const ScreenOutputNode &other);
-    ScreenOutputNode *clone() const override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -31,7 +27,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -40,7 +36,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
@@ -71,12 +67,7 @@ protected slots:
     void reload();
     void onScreenSizeChanged(QSize screenSize);
 
-private:
-    QSharedPointer<ScreenOutputNodePrivate> d();
-};
-
-class ScreenOutputNodePrivate : public OutputNodePrivate {
-public:
+protected:
     ScreenOutputNodePrivate(Context *context, QSize chainSize);
     QList<QScreen *> m_screens;
     QStringList m_screenNameStrings;
@@ -86,3 +77,6 @@ public:
     // Not actually shared, just convenient for deletion
     QSharedPointer<OutputWindow> m_outputWindow;
 };
+
+typedef QmlSharedPointer<ScreenOutputNode> ScreenOutputNodeSP;
+Q_DECLARE_METATYPE(ScreenOutputNodeSP*)
