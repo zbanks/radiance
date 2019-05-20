@@ -23,7 +23,7 @@ public:
 
     GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
     GLuint render();
-    GLuint render(WeakModel model);
+    GLuint render(QWeakPointer<Model> model);
 
 public slots:
     void resize(QSize size);

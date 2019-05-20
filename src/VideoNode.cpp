@@ -157,12 +157,12 @@ GLuint VideoNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     return 0;
 }
 
-void VideoNode::setLastModel(WeakModel model) {
+void VideoNode::setLastModel(QWeakPointer<Model> model) {
     QMutexLocker locker(&d_ptr->m_stateLock);
     d_ptr->m_lastModel = model;
 }
 
-WeakModel VideoNode::lastModel() {
+QWeakPointer<Model> VideoNode::lastModel() {
     QMutexLocker locker(&d_ptr->m_stateLock);
     return d_ptr->m_lastModel;
 }

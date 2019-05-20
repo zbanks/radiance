@@ -11,15 +11,15 @@ struct Child {
 
 class View : public QQuickItem {
     Q_OBJECT
-    Q_PROPERTY(Model *model READ model WRITE setModel NOTIFY modelChanged)
+    Q_PROPERTY(ModelSP *model READ model WRITE setModel NOTIFY modelChanged)
     Q_PROPERTY(QVariantMap delegates READ qml_delegates WRITE qml_setDelegates NOTIFY qml_delegatesChanged)
 
 public:
     View();
     ~View() override;
 
-    Model *model();
-    void setModel(Model *model);
+    ModelSP *model();
+    void setModel(ModelSP *model);
     QMap<QString, QString> delegates();
     void setDelegates(QMap<QString, QString> delegates);
     QVariantMap qml_delegates();
@@ -62,7 +62,7 @@ public slots:
     BaseVideoNodeTile *focusedChild();
 
 protected:
-    Model *m_model;
+    ModelSP *m_model;
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
     QList<QQuickItem *> m_dropAreas;
@@ -80,7 +80,7 @@ private:
     QQuickItem *createDropArea();
 
 signals:
-    void modelChanged(Model *model);
+    void modelChanged(ModelSP *model);
     void qml_delegatesChanged(QVariantMap delegates);
     void delegatesChanged(QMap<QString, QString> delegates);
 };
