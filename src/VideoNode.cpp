@@ -2,108 +2,43 @@
 #include "Model.h"
 #include <QtQml>
 
-// d_ptr may be null here.
-// Let the superclass initialize it
-// and deal with construction of the VideoNodePrivate.
-VideoNode::VideoNode(VideoNodePrivate *ptr)
-    : d_ptr(ptr, &QObject::deleteLater)
-{
-    attachSignals();
-}
-
-// Only use this for promoting WeakVideoNodes
-VideoNode::VideoNode(QSharedPointer<VideoNodePrivate> ptr)
-    : d_ptr(ptr)
-{
-    attachSignals();
-}
-
-VideoNode::VideoNode(const VideoNode &other)
-    : d_ptr(other.d_ptr)
-{
-    attachSignals();
-}
-
-void VideoNode::attachSignals() {
-    // TODO I think this can be done with QMetaObject
-    // which will remove the need to have this method
-    // in subclasses
-    qRegisterMetaType<ChainSP>("ChainSP"); // so we can pass it in Q_ARG
-    qRegisterMetaType<QList<ChainSP>>("QList<ChainSP>");
-    qRegisterMetaType<VideoNode::NodeState>("VideoNode::NodeState");
-
-    connect(d_ptr.data(), &VideoNodePrivate::message, this, &VideoNode::message);
-    connect(d_ptr.data(), &VideoNodePrivate::warning, this, &VideoNode::warning);
-    connect(d_ptr.data(), &VideoNodePrivate::error, this, &VideoNode::error);
-    connect(d_ptr.data(), &VideoNodePrivate::inputCountChanged, this, &VideoNode::inputCountChanged);
-    connect(d_ptr.data(), &VideoNodePrivate::chainsChanged, this, &VideoNode::chainsChanged);
-    connect(d_ptr.data(), &VideoNodePrivate::requestedChainAdded, this, &VideoNode::requestedChainAdded);
-    connect(d_ptr.data(), &VideoNodePrivate::requestedChainRemoved, this, &VideoNode::requestedChainRemoved);
-    connect(d_ptr.data(), &VideoNodePrivate::nodeStateChanged, this, &VideoNode::nodeStateChanged);
-}
-
-VideoNode *VideoNode::clone() const {
-    return new VideoNode(*this);
-}
-
-bool VideoNode::operator==(const VideoNode &other) const {
-    return d_ptr == other.d_ptr;
-}
-
-bool VideoNode::operator>(const VideoNode &other) const {
-    return d_ptr.data() > other.d_ptr.data();
-}
-
-bool VideoNode::operator<(const VideoNode &other) const {
-    return d_ptr.data() > other.d_ptr.data();
-}
-
-VideoNode &VideoNode::operator=(const VideoNode &other) {
-    d_ptr = other.d_ptr;
-    return *this;
-}
-
-VideoNode::operator QString() const {
-    return QString("%1(d_ptr=%2)").arg(metaObject()->className()).arg(QString().sprintf("%p", d_ptr.data()));
-}
-
 int VideoNode::inputCount() {
-    QMutexLocker locker(&d_ptr->m_stateLock);
-    return d_ptr->m_inputCount;
+    QMutexLocker locker(&m_stateLock);
+    return m_inputCount;
 }
 
 void VideoNode::setInputCount(int value) {
     bool changed = false;
     {
-        QMutexLocker locker(&d_ptr->m_stateLock);
-        if (value != d_ptr->m_inputCount) { 
-            d_ptr->m_inputCount = value;
+        QMutexLocker locker(&m_stateLock);
+        if (value != m_inputCount) { 
+            m_inputCount = value;
             changed = true;
         }
     }
-    if (changed) emit d_ptr->inputCountChanged(value);
+    if (changed) emit inputCountChanged(value);
 }
 
 VideoNode::NodeState VideoNode::nodeState() {
-    QMutexLocker locker(&d_ptr->m_stateLock);
-    return d_ptr->m_nodeState;
+    QMutexLocker locker(&m_stateLock);
+    return m_nodeState;
 }
 
 void VideoNode::setNodeState(NodeState value) {
     bool changed = false;
     {
-        QMutexLocker locker(&d_ptr->m_stateLock);
-        if (value != d_ptr->m_nodeState) { 
-            d_ptr->m_nodeState = value;
+        QMutexLocker locker(&m_stateLock);
+        if (value != m_nodeState) { 
+            m_nodeState = value;
             changed = true;
         }
     }
-    if (changed) emit d_ptr->nodeStateChanged(value);
+    if (changed) emit nodeStateChanged(value);
 }
 
 QList<ChainSP> VideoNode::chains() {
-    QMutexLocker locker(&d_ptr->m_stateLock);
-    return d_ptr->m_chains;
+    QMutexLocker locker(&m_stateLock);
+    return m_chains;
 }
 
 void VideoNode::setChains(QList<ChainSP> chains) {
@@ -111,10 +46,10 @@ void VideoNode::setChains(QList<ChainSP> chains) {
     QList<ChainSP> toRemove;
     QList<ChainSP> toAdd;
     {
-        QMutexLocker locker(&d_ptr->m_stateLock);
-        toRemove = d_ptr->m_chains;
+        QMutexLocker locker(&m_stateLock);
+        toRemove = m_chains;
         for (int i=0; i<chains.count(); i++) {
-            if (d_ptr->m_chains.contains(chains.at(i))) {
+            if (m_chains.contains(chains.at(i))) {
                 // If it exists already, don't remove it
                 toRemove.removeAll(chains.at(i));
             } else {
@@ -123,19 +58,19 @@ void VideoNode::setChains(QList<ChainSP> chains) {
             }
         }
         if (!toAdd.empty() || !toRemove.empty()) {
-            d_ptr->m_chains = chains;
+            m_chains = chains;
             wereChainsChanged = true;
         }
     }
     if (wereChainsChanged) {
         chainsEdited(toAdd, toRemove);
-        emit d_ptr->chainsChanged(chains);
+        emit chainsChanged(chains);
     }
 }
 
 Context *VideoNode::context() {
     // Not mutable, so no need to lock
-    return d_ptr->m_context;
+    return m_context;
 }
 
 QJsonObject VideoNode::serialize() {
@@ -158,13 +93,13 @@ GLuint VideoNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
 }
 
 void VideoNode::setLastModel(QWeakPointer<Model> model) {
-    QMutexLocker locker(&d_ptr->m_stateLock);
-    d_ptr->m_lastModel = model;
+    QMutexLocker locker(&m_stateLock);
+    m_lastModel = model;
 }
 
 QWeakPointer<Model> VideoNode::lastModel() {
-    QMutexLocker locker(&d_ptr->m_stateLock);
-    return d_ptr->m_lastModel;
+    QMutexLocker locker(&m_stateLock);
+    return m_lastModel;
 }
 
 VideoNodePrivate::VideoNodePrivate(Context *context)

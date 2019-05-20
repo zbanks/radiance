@@ -16,8 +16,6 @@
 
 class Context;
 
-class VideoNodePrivate;
-
 class VideoNode : public QObject {
     Q_OBJECT
     Q_PROPERTY(Context *context READ context CONSTANT);
@@ -31,18 +29,6 @@ public:
         Broken
     };
     Q_ENUM(NodeState)
-
-    // Copy constructor
-    VideoNode(const VideoNode &other);
-
-    // Returns a pointer to a copy of this VideoNode
-    virtual VideoNode *clone() const;
-
-    bool operator==(const VideoNode &other) const;
-    bool operator>(const VideoNode &other) const;
-    bool operator<(const VideoNode &other) const;
-    VideoNode &operator=(const VideoNode &other);
-    operator QString() const;
 
     // Paint is run from a valid OpenGL context.
     // It should return the OpenGL texture ID
@@ -112,20 +98,6 @@ protected slots:
     // If your node does anything at all, you will need to override this method
     virtual void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed);
 
-protected:
-    // Subclasses should use this constructor
-    // to give the VideoNode a pointer to their
-    // private storage, which VideoNode will manage
-    VideoNode(VideoNodePrivate *ptr);
-
-    // Subclasses may use this constructor
-    // to handle promotion of WeakVideoNodes
-    VideoNode(QSharedPointer<VideoNodePrivate> ptr);
-
-    QSharedPointer<VideoNodePrivate> d_ptr;
-
-    void attachSignals();
-
 signals:
     // Emitted when the object has something to say
     // e.g. due to an error
@@ -145,28 +117,12 @@ signals:
 
     // Emitted when state changes
     void nodeStateChanged(NodeState value);
-};
 
-class VideoNodePrivate : public QObject {
-    Q_OBJECT
-
-public:
-    VideoNodePrivate(Context *context);
-
+protected:
     int m_inputCount{};
     QMutex m_stateLock; // TODO this is no longer a meaningful concept, should use separate locks for separate fields
     QList<ChainSP> m_chains;
     Context *m_context{};
     QWeakPointer<Model> m_lastModel;
     VideoNode::NodeState m_nodeState{VideoNode::Ready};
-
-signals:
-    void message(QString str);
-    void warning(QString str);
-    void error(QString str);
-    void inputCountChanged(int value);
-    void chainsChanged(QList<ChainSP> chains);
-    void requestedChainAdded(ChainSP chain);
-    void requestedChainRemoved(ChainSP chain);
-    void nodeStateChanged(VideoNode::NodeState value);
 };

@@ -10,30 +10,12 @@
 #include "Paths.h"
 
 ImageNode::ImageNode(Context *context, QString file)
-    : VideoNode(new ImageNodePrivate(context))
+    : VideoNode(context)
 {
-    d()->m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(*this), &QObject::deleteLater);
+    m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(*this), &QObject::deleteLater);
 
     setInputCount(1);
     setFile(file);
-}
-
-ImageNode::ImageNode(const ImageNode &other)
-    : VideoNode(other)
-{
-}
-
-ImageNode::ImageNode(QSharedPointer<ImageNodePrivate> other_ptr)
-    : VideoNode(other_ptr.staticCast<VideoNodePrivate>())
-{
-}
-
-ImageNode *ImageNode::clone() const {
-    return new ImageNode(*this);
-}
-
-QSharedPointer<ImageNodePrivate> ImageNode::d() const {
-    return d_ptr.staticCast<ImageNodePrivate>();
 }
 
 QJsonObject ImageNode::serialize() {
@@ -43,16 +25,16 @@ QJsonObject ImageNode::serialize() {
 }
 
 QString ImageNode::file() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_file;
+    QMutexLocker locker(&m_stateLock);
+    return m_file;
 }
 
 QString ImageNode::fileToName() {
-    return QFileInfo(d()->m_file).baseName();
+    return QFileInfo(m_file).baseName();
 }
 
 QString ImageNode::name() {
-    QMutexLocker locker(&d()->m_stateLock);
+    QMutexLocker locker(&m_stateLock);
     return fileToName();
 }
 
@@ -62,19 +44,19 @@ void ImageNode::setFile(QString file) {
     bool wasNameChanged = false;
     QString newName;
     {
-        QMutexLocker locker(&d()->m_stateLock);
+        QMutexLocker locker(&m_stateLock);
         auto oldName = fileToName();
-        if (file != d()->m_file) {
+        if (file != m_file) {
             wasFileChanged = true;
-            d()->m_file = file;
-            d()->m_ready = false;
+            m_file = file;
+            m_ready = false;
             newName = fileToName();
             if (newName != oldName) wasNameChanged = true;
         }
     }
     if (wasFileChanged) {
         setNodeState(VideoNode::Loading);
-        bool result = QMetaObject::invokeMethod(d()->m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
+        bool result = QMetaObject::invokeMethod(m_openGLWorker.data(), "initialize", Q_ARG(QString, file));
         Q_ASSERT(result);
         emit fileChanged(file);
     }
@@ -86,13 +68,13 @@ GLuint ImageNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     QVector<int> frameDelays;
     QVector<QSharedPointer<QOpenGLTexture>> frameTextures;
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        if (!d()->m_ready || d()->m_frameTextures.empty())
+        QMutexLocker locker(&m_stateLock);
+        if (!m_ready || m_frameTextures.empty())
             return 0;
 
-        totalDelay = d()->m_totalDelay;
-        frameDelays = d()->m_frameDelays;
-        frameTextures = d()->m_frameTextures;
+        totalDelay = m_totalDelay;
+        frameDelays = m_frameDelays;
+        frameTextures = m_frameTextures;
     }
 
     auto currentMs = int64_t(context()->timebase()->beat() *  500);
@@ -115,7 +97,7 @@ GLuint ImageNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
 
 // ImageNodeOpenGLWorker methods
 
-ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode p)
+ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNodeSP p)
     : OpenGLWorker(p.context()->openGLWorkerContext())
     , m_p(p) {
     connect(this, &ImageNodeOpenGLWorker::message, &p, &ImageNode::message);
@@ -126,7 +108,7 @@ ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNode p)
 void ImageNodeOpenGLWorker::initialize(QString filename) {
     auto d = m_p.toStrongRef();
     if (d.isNull()) return; // ImageNode was deleted
-    ImageNode p(d);
+    ImageNodeSP p(d);
 
     filename = Paths::expandLibraryPath(filename);
     QFile file(filename);
@@ -167,11 +149,11 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
     qDebug() << "Successfully loaded image " << filename << " with " << nFrames << "frames, and a total delay of " << totalDelay << "ms";
 
     {
-        QMutexLocker locker(&p.d()->m_stateLock);
-        p.d()->m_totalDelay = totalDelay;
-        p.d()->m_frameTextures = frameTextures;
-        p.d()->m_frameDelays = frameDelays;
-        p.d()->m_ready = true;
+        QMutexLocker locker(&p.m_stateLock);
+        p.m_totalDelay = totalDelay;
+        p.m_frameTextures = frameTextures;
+        p.m_frameDelays = frameDelays;
+        p.m_ready = true;
     }
     glFlush();
     p.setNodeState(VideoNode::Ready);
@@ -181,7 +163,7 @@ QString ImageNode::typeName() {
     return "ImageNode";
 }
 
-VideoNode *ImageNode::deserialize(Context *context, QJsonObject obj) {
+VideoNodeSP *ImageNode::deserialize(Context *context, QJsonObject obj) {
     QString name = obj.value("file").toString();
     if (obj.isEmpty()) {
         return nullptr;
@@ -194,30 +176,11 @@ bool ImageNode::canCreateFromFile(QString filename) {
     return QImageReader(filename).canRead();
 }
 
-VideoNode *ImageNode::fromFile(Context *context, QString filename) {
+VideoNodeSP *ImageNode::fromFile(Context *context, QString filename) {
     ImageNode *e = new ImageNode(context, filename);
     return e;
 }
 
 QMap<QString, QString> ImageNode::customInstantiators() {
     return QMap<QString, QString>();
-}
-
-WeakImageNode::WeakImageNode()
-{
-}
-
-WeakImageNode::WeakImageNode(const ImageNode &other)
-    : d_ptr(other.d())
-{
-}
-
-QSharedPointer<ImageNodePrivate> WeakImageNode::toStrongRef() {
-    return d_ptr.toStrongRef();
-}
-
-
-ImageNodePrivate::ImageNodePrivate(Context *context)
-    : VideoNodePrivate(context)
-{
 }

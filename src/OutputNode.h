@@ -10,16 +10,11 @@
 // This abstract class extends VideoNode to provide radiance output functionality.
 // You should extend it if you are writing an output.
 
-class OutputNodePrivate;
-
 class OutputNode : public VideoNode {
     Q_OBJECT
 
 public:
     OutputNode(Context *context, QSize chainSize);
-    OutputNode(const OutputNode &other);
-    OutputNode *clone() const override;
-    OutputNode(OutputNodePrivate *ptr);
 
     GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
     GLuint render();
@@ -35,14 +30,8 @@ protected:
 
     virtual QList<ChainSP> requestedChains() override;
 
-private:
-    QSharedPointer<OutputNodePrivate> d() const;
-};
-
-class OutputNodePrivate : public VideoNodePrivate {
-    Q_OBJECT
-
-public:
-    OutputNodePrivate(Context *context, QSize chainSize);
     ChainSP m_chain;
 };
+
+typedef QmlSharedPointer<OutputNode> OutputNodeSP;
+Q_DECLARE_METATYPE(OutputNodeSP*)

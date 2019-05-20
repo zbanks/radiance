@@ -4,8 +4,6 @@
 #include "OutputWindow.h"
 #include <QProcess>
 
-class FFmpegOutputNodePrivate;
-
 class FFmpegOutputNode
     : public OutputNode {
     Q_OBJECT
@@ -15,8 +13,6 @@ class FFmpegOutputNode
 public:
     FFmpegOutputNode(Context *context, QSize chainSize);
     ~FFmpegOutputNode();
-    FFmpegOutputNode(const FFmpegOutputNode &other);
-    FFmpegOutputNode *clone() const override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -26,7 +22,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -35,7 +31,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
@@ -53,14 +49,7 @@ signals:
     void recordingChanged(bool recording);
     void ffmpegArgumentsChanged(QStringList ffmpegArguments);
 
-private:
-    QSharedPointer<FFmpegOutputNodePrivate> d() const;
-};
-
-class FFmpegOutputNodePrivate : public OutputNodePrivate {
-public:
-    FFmpegOutputNodePrivate(Context *context, QSize chainSize);
-
+protected:
     bool m_recording;
     QStringList m_ffmpegArguments;
     QProcess m_ffmpeg;

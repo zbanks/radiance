@@ -14,7 +14,6 @@
 #include <array>
 
 class MovieNodeOpenGLWorker;
-class MovieNodePrivate;
 
 class MovieNodeRenderState {
 public:
@@ -30,7 +29,6 @@ public:
 class MovieNode
     : public VideoNode {
 
-    friend class WeakMovieNode;
     friend class MovieNodeOpenGLWorker;
 
     Q_OBJECT
@@ -54,8 +52,6 @@ public:
     static const float zoomFactor;
 
     MovieNode(Context *context, QString file, QString name=QString(""));
-    MovieNode(const MovieNode &other);
-    MovieNode *clone() const override;
 
     QJsonObject serialize() override;
 
@@ -69,7 +65,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -122,17 +118,6 @@ protected:
     void reload();
     void attachSignals();
 
-private:
-    QSharedPointer<MovieNodePrivate> d() const;
-    MovieNode(QSharedPointer<MovieNodePrivate> other_ptr);
-};
-
-class MovieNodePrivate : public VideoNodePrivate {
-    Q_OBJECT
-
-public:
-    MovieNodePrivate(Context *context);
-
     QString m_file;
     QString m_name;
     QSharedPointer<MovieNodeOpenGLWorker> m_openGLWorker;
@@ -150,29 +135,10 @@ public:
     bool m_mute{true};
     bool m_pause{};
     enum MovieNode::Factor m_factor{MovieNode::Crop};
-
-signals:
-    void fileChanged(QString file);
-    void nameChanged(QString name);
-    void videoSizeChanged(QSize size);
-    void positionChanged(qreal position);
-    void durationChanged(qreal duration);
-    void muteChanged(bool mute);
-    void pauseChanged(bool pause);
-    void factorChanged(enum MovieNode::Factor factor);
 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-class WeakMovieNode {
-public:
-    WeakMovieNode();
-    WeakMovieNode(const MovieNode &other);
-    QSharedPointer<MovieNodePrivate> toStrongRef();
-
-protected:
-    QWeakPointer<MovieNodePrivate> d_ptr;
-};
+typedef QmlSharedPointer<MovieNode> MovieNodeSP;
+Q_DECLARE_METATYPE(MovieNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -180,7 +146,7 @@ class MovieNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    MovieNodeOpenGLWorker(MovieNode p);
+    MovieNodeOpenGLWorker(MovieNodeSP p);
     ~MovieNodeOpenGLWorker() override;
     QVector<QSharedPointer<QOpenGLFramebufferObject>> m_frames{BUFFER_COUNT};
     QMutex m_rwLock;
@@ -214,7 +180,7 @@ protected:
     void handleEvent(mpv_event *event);
 
     static constexpr int BUFFER_COUNT = 3; // TODO double buffering doesn't quite work for some reason
-    WeakMovieNode m_p;
+    QWeakPointer<MovieNode> m_p;
     mpv::qt::Handle m_mpv;
     mpv_opengl_cb_context *m_mpv_gl{}; // TODO check this isn't leaked
     QSize m_size;
@@ -226,6 +192,6 @@ protected slots:
     void onEvent();
 
 private:
-    QSharedPointer<QOpenGLShaderProgram> loadBlitShader(MovieNode p);
+    QSharedPointer<QOpenGLShaderProgram> loadBlitShader(MovieNodeSP p);
 };
 

@@ -8,7 +8,6 @@
 #include <vector>
 
 class ImageNodeOpenGLWorker;
-class ImageNodePrivate;
 
 // This class extends VideoNode to provide a static image or GIF
 class ImageNode
@@ -17,7 +16,6 @@ class ImageNode
     Q_PROPERTY(QString file READ file WRITE setFile NOTIFY fileChanged)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
 
-    friend class WeakImageNode;
     friend class ImageNodeOpenGLWorker;
 
 public:
@@ -37,7 +35,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -46,7 +44,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
@@ -62,15 +60,9 @@ signals:
     void nameChanged(QString name);
 
 private:
-    ImageNode(QSharedPointer<ImageNodePrivate> other_ptr);
-    QSharedPointer<ImageNodePrivate> d() const;
     QString fileToName();
-};
 
-class ImageNodePrivate : public VideoNodePrivate {
-public:
-    ImageNodePrivate(Context *context);
-
+protected:
     QString m_file;
 
     // This is not actually shared,
@@ -84,17 +76,8 @@ public:
     QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-class WeakImageNode {
-public:
-    WeakImageNode();
-    WeakImageNode(const ImageNode &other);
-    QSharedPointer<ImageNodePrivate> toStrongRef();
-
-protected:
-    QWeakPointer<ImageNodePrivate> d_ptr;
-};
+typedef QmlSharedPointer<ImageNode> ImageNodeSP;
+Q_DECLARE_METATYPE(ImageNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -106,7 +89,7 @@ class ImageNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    ImageNodeOpenGLWorker(ImageNode p);
+    ImageNodeOpenGLWorker(ImageNodeSP p);
 
 public slots:
     void initialize(QString filename);
@@ -116,5 +99,5 @@ signals:
     void warning(QString str);
     void error(QString str);
 protected:
-    WeakImageNode m_p;
+    QWeakPointer<ImageNode> m_p;
 };

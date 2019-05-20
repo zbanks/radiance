@@ -9,19 +9,6 @@ PlaceholderNode::PlaceholderNode(Context *context, VideoNode *wrapped)
     setWrappedVideoNode(wrapped);
 }
 
-PlaceholderNode::PlaceholderNode(const PlaceholderNode &other)
-    : VideoNode(other)
-{
-}
-
-PlaceholderNode *PlaceholderNode::clone() const {
-    return new PlaceholderNode(*this);
-}
-
-QSharedPointer<PlaceholderNodePrivate> PlaceholderNode::d() {
-    return d_ptr.staticCast<PlaceholderNodePrivate>();
-}
-
 QJsonObject PlaceholderNode::serialize() {
     QJsonObject o = VideoNode::serialize();
     o["inputCount"] = inputCount();
@@ -31,26 +18,26 @@ QJsonObject PlaceholderNode::serialize() {
 
 void PlaceholderNode::setWrappedVideoNode(VideoNode *wrapped) {
     {
-        QMutexLocker locker(&d()->m_stateLock);
+        QMutexLocker locker(&m_stateLock);
         if (wrapped != nullptr) {
             wrapped = wrapped->clone();
-            wrapped->setChains(d()->m_chains);
+            wrapped->setChains(m_chains);
         }
-        d()->m_wrappedVideoNode = QSharedPointer<VideoNode>(wrapped);
+        m_wrappedVideoNode = QSharedPointer<VideoNode>(wrapped);
     }
     emit wrappedVideoNodeChanged(wrapped);
 }
 
 VideoNode *PlaceholderNode::wrappedVideoNode() {
-    QMutexLocker locker(&d()->m_stateLock);
-    return d()->m_wrappedVideoNode.data();
+    QMutexLocker locker(&m_stateLock);
+    return m_wrappedVideoNode.data();
 }
 
 GLuint PlaceholderNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     QSharedPointer<VideoNode> wrapped; // How many layers of QSP can we have
     {
-        QMutexLocker locker(&d()->m_stateLock);
-        wrapped = d()->m_wrappedVideoNode;
+        QMutexLocker locker(&m_stateLock);
+        wrapped = m_wrappedVideoNode;
     }
 
     if (wrapped.isNull()) {
@@ -69,18 +56,18 @@ GLuint PlaceholderNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
 }
 
 void PlaceholderNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
-    if (d()->m_wrappedVideoNode == nullptr) {
+    if (m_wrappedVideoNode == nullptr) {
         return;
     }
 
-    d()->m_wrappedVideoNode->setChains(chains());
+    m_wrappedVideoNode->setChains(chains());
 }
 
 QString PlaceholderNode::typeName() {
     return "PlaceholderNode";
 }
 
-VideoNode *PlaceholderNode::deserialize(Context *context, QJsonObject obj) {
+VideoNodeSP *PlaceholderNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
