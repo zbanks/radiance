@@ -10,6 +10,7 @@
 #include <QMutex>
 #include <QTimer>
 #include <QOpenGLFramebufferObject>
+#include <QEnableSharedFromThis>
 
 class EffectNodeOpenGLWorker;
 
@@ -45,7 +46,6 @@ class EffectNode
 
 public:
     EffectNode(Context *context, QString name);
-    EffectNode(const EffectNode &other);
 
     QJsonObject serialize() override;
 
@@ -115,7 +115,7 @@ signals:
     void frequencyChanged(double frequency);
 };
 
-typedef QmlSharedPointer<EffectNode> EffectNodeSP;
+typedef QmlSharedPointer<EffectNode, VideoNodeSP> EffectNodeSP;
 Q_DECLARE_METATYPE(EffectNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,7 +128,7 @@ class EffectNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    EffectNodeOpenGLWorker(EffectNodeSP p);
+    EffectNodeOpenGLWorker(QSharedPointer<EffectNode> p);
 
 public slots:
     // Call this after changing

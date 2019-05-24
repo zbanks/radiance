@@ -137,7 +137,7 @@ protected:
     enum MovieNode::Factor m_factor{MovieNode::Crop};
 };
 
-typedef QmlSharedPointer<MovieNode> MovieNodeSP;
+typedef QmlSharedPointer<MovieNode, VideoNodeSP> MovieNodeSP;
 Q_DECLARE_METATYPE(MovieNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////

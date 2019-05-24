@@ -20,8 +20,6 @@ class ImageNode
 
 public:
     ImageNode(Context *context, QString file);
-    ImageNode(const ImageNode &other);
-    ImageNode *clone() const override;
 
     QJsonObject serialize() override;
 
@@ -76,7 +74,7 @@ protected:
     QVector<QSharedPointer<QOpenGLTexture>> m_frameTextures{};
 };
 
-typedef QmlSharedPointer<ImageNode> ImageNodeSP;
+typedef QmlSharedPointer<ImageNode, VideoNodeSP> ImageNodeSP;
 Q_DECLARE_METATYPE(ImageNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////

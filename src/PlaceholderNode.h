@@ -54,5 +54,5 @@ protected:
     QSharedPointer<VideoNode> m_wrappedVideoNode;
 };
 
-typedef QmlSharedPointer<PlaceholderNode> PlaceholderNodeSP;
+typedef QmlSharedPointer<PlaceholderNode, VideoNodeSP> PlaceholderNodeSP;
 Q_DECLARE_METATYPE(PlaceholderNodeSP*)

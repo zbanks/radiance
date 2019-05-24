@@ -2,6 +2,11 @@
 #include "Model.h"
 #include <QtQml>
 
+VideoNode::VideoNode(Context *context)
+    : m_context(context)
+{
+}
+
 int VideoNode::inputCount() {
     QMutexLocker locker(&m_stateLock);
     return m_inputCount;
@@ -100,9 +105,4 @@ void VideoNode::setLastModel(QWeakPointer<Model> model) {
 QWeakPointer<Model> VideoNode::lastModel() {
     QMutexLocker locker(&m_stateLock);
     return m_lastModel;
-}
-
-VideoNodePrivate::VideoNodePrivate(Context *context)
-    : m_context(context)
-{
 }

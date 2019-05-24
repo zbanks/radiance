@@ -16,7 +16,10 @@
 
 class Context;
 
-class VideoNode : public QObject {
+class VideoNode
+    : public QObject 
+    , public QEnableSharedFromThis<VideoNode>
+{
     Q_OBJECT
     Q_PROPERTY(Context *context READ context CONSTANT);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
@@ -119,6 +122,8 @@ signals:
     void nodeStateChanged(NodeState value);
 
 protected:
+    VideoNode(Context *context);
+
     int m_inputCount{};
     QMutex m_stateLock; // TODO this is no longer a meaningful concept, should use separate locks for separate fields
     QList<ChainSP> m_chains;
@@ -126,3 +131,6 @@ protected:
     QWeakPointer<Model> m_lastModel;
     VideoNode::NodeState m_nodeState{VideoNode::Ready};
 };
+
+typedef QmlSharedPointer<VideoNode> VideoNodeSP;
+Q_DECLARE_METATYPE(VideoNodeSP*)
