@@ -42,8 +42,7 @@ public:
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode
     static QMap<QString, QString> customInstantiators();
-
-    // Do not add any storage to this class.
-    // If you want it to have storage, create a ConsoleOutputPrivate class
-    // and follow the pattern laid out elsewhere.
 };
+
+typedef QmlSharedPointer<ConsoleOutputNode, SelfTimedReadBackOutputNodeSP> ConsoleOutputNodeSP;
+Q_DECLARE_METATYPE(ConsoleOutputNodeSP*);

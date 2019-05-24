@@ -58,7 +58,7 @@ protected:
     QSharedPointer<STRBONOpenGLWorker> m_worker;
 };
 
-typedef QmlSharedPointer<SelfTimedReadBackOutputNode> SelfTimedReadBackOutputNodeSP;
+typedef QmlSharedPointer<SelfTimedReadBackOutputNode, OutputNodeSP> SelfTimedReadBackOutputNodeSP;
 Q_DECLARE_METATYPE(SelfTimedReadBackOutputNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////

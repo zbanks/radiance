@@ -68,7 +68,6 @@ protected slots:
     void onScreenSizeChanged(QSize screenSize);
 
 protected:
-    ScreenOutputNodePrivate(Context *context, QSize chainSize);
     QList<QScreen *> m_screens;
     QStringList m_screenNameStrings;
     QTimer m_reloader;
@@ -78,5 +77,5 @@ protected:
     QSharedPointer<OutputWindow> m_outputWindow;
 };
 
-typedef QmlSharedPointer<ScreenOutputNode> ScreenOutputNodeSP;
+typedef QmlSharedPointer<ScreenOutputNode, OutputNodeSP> ScreenOutputNodeSP;
 Q_DECLARE_METATYPE(ScreenOutputNodeSP*)

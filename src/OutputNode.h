@@ -26,12 +26,10 @@ public slots:
     ChainSP chain();
 
 protected:
-    OutputNode(QSharedPointer<OutputNodePrivate> ptr);
-
     virtual QList<ChainSP> requestedChains() override;
 
     ChainSP m_chain;
 };
 
-typedef QmlSharedPointer<OutputNode> OutputNodeSP;
+typedef QmlSharedPointer<OutputNode, VideoNodeSP> OutputNodeSP;
 Q_DECLARE_METATYPE(OutputNodeSP*)

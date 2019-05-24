@@ -55,3 +55,6 @@ protected:
     QProcess m_ffmpeg;
     QByteArray m_pixelBuffer;
 };
+
+typedef QmlSharedPointer<FFmpegOutputNode, OutputNodeSP> FFmpegOutputNodeSP;
+Q_DECLARE_METATYPE(FFmpegOutputNodeSP*)

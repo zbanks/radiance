@@ -24,8 +24,6 @@ class LightOutputNode
 
 public:
     LightOutputNode(Context *context, QString url = "");
-    LightOutputNode(const LightOutputNode &other);
-    LightOutputNode *clone() const override;
 
     enum DisplayMode {
         DisplayLookup2D,
@@ -95,7 +93,7 @@ protected:
     // end
 };
 
-typedef QmlSharedPointer<LightOutputNode> LightOutputNodeSP;
+typedef QmlSharedPointer<LightOutputNode, OutputNodeSP> LightOutputNodeSP;
 Q_DECLARE_METATYPE(LightOutputNodeSP*)
 
 ///////////////////////////////////////////////////////////////////////////////

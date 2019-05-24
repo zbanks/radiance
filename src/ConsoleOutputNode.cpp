@@ -8,10 +8,6 @@ ConsoleOutputNode::ConsoleOutputNode(Context *context, QSize chainSize)
     start();
 }
 
-ConsoleOutputNode::ConsoleOutputNode(const ConsoleOutputNode &other)
-    : SelfTimedReadBackOutputNode(other) {
-}
-
 void ConsoleOutputNode::onFrame(QSize size, QByteArray frame) {
     qDebug() << size << frame;
 }
