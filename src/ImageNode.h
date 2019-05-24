@@ -87,7 +87,7 @@ class ImageNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    ImageNodeOpenGLWorker(ImageNodeSP p);
+    ImageNodeOpenGLWorker(QSharedPointer<ImageNode> p);
 
 public slots:
     void initialize(QString filename);
