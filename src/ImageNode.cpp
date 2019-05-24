@@ -12,7 +12,7 @@
 ImageNode::ImageNode(Context *context, QString file)
     : VideoNode(context)
 {
-    m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(*this), &QObject::deleteLater);
+    m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(qSharedPointerCast<ImageNode>(sharedFromThis())), &QObject::deleteLater);
 
     setInputCount(1);
     setFile(file);
@@ -97,18 +97,17 @@ GLuint ImageNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
 
 // ImageNodeOpenGLWorker methods
 
-ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(ImageNodeSP p)
-    : OpenGLWorker(p.context()->openGLWorkerContext())
+ImageNodeOpenGLWorker::ImageNodeOpenGLWorker(QSharedPointer<ImageNode> p)
+    : OpenGLWorker(p->context()->openGLWorkerContext())
     , m_p(p) {
-    connect(this, &ImageNodeOpenGLWorker::message, &p, &ImageNode::message);
-    connect(this, &ImageNodeOpenGLWorker::warning, &p, &ImageNode::warning);
-    connect(this, &ImageNodeOpenGLWorker::error,   &p, &ImageNode::error);
+    connect(this, &ImageNodeOpenGLWorker::message, p.data(), &ImageNode::message);
+    connect(this, &ImageNodeOpenGLWorker::warning, p.data(), &ImageNode::warning);
+    connect(this, &ImageNodeOpenGLWorker::error,   p.data(), &ImageNode::error);
 }
 
 void ImageNodeOpenGLWorker::initialize(QString filename) {
-    auto d = m_p.toStrongRef();
-    if (d.isNull()) return; // ImageNode was deleted
-    ImageNodeSP p(d);
+    auto p = m_p.toStrongRef();
+    if (p.isNull()) return; // ImageNode was deleted
 
     filename = Paths::expandLibraryPath(filename);
     QFile file(filename);
@@ -116,7 +115,7 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
     QFileInfo check_file(filename);
     if (!(check_file.exists() && check_file.isFile())) {
         emit error(QString("Could not find \"%1\"").arg(filename));
-        p.setNodeState(VideoNode::Broken);
+        p->setNodeState(VideoNode::Broken);
     }
 
     QImageReader imageReader(filename);
@@ -135,7 +134,7 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
         auto frame = imageReader.read();
         if (frame.isNull()) {
             emit error(QString("Unable to read frame %1 of image: %2").arg(i).arg(imageReader.errorString()));
-            p.setNodeState(VideoNode::Broken);
+            p->setNodeState(VideoNode::Broken);
             return;
         }
 
@@ -149,14 +148,14 @@ void ImageNodeOpenGLWorker::initialize(QString filename) {
     qDebug() << "Successfully loaded image " << filename << " with " << nFrames << "frames, and a total delay of " << totalDelay << "ms";
 
     {
-        QMutexLocker locker(&p.m_stateLock);
-        p.m_totalDelay = totalDelay;
-        p.m_frameTextures = frameTextures;
-        p.m_frameDelays = frameDelays;
-        p.m_ready = true;
+        QMutexLocker locker(&p->m_stateLock);
+        p->m_totalDelay = totalDelay;
+        p->m_frameTextures = frameTextures;
+        p->m_frameDelays = frameDelays;
+        p->m_ready = true;
     }
     glFlush();
-    p.setNodeState(VideoNode::Ready);
+    p->setNodeState(VideoNode::Ready);
 }
 
 QString ImageNode::typeName() {
@@ -168,8 +167,7 @@ VideoNodeSP *ImageNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
-    ImageNode *e = new ImageNode(context, name);
-    return e;
+    return new VideoNodeSP(new ImageNode(context, name));
 }
 
 bool ImageNode::canCreateFromFile(QString filename) {
@@ -177,8 +175,7 @@ bool ImageNode::canCreateFromFile(QString filename) {
 }
 
 VideoNodeSP *ImageNode::fromFile(Context *context, QString filename) {
-    ImageNode *e = new ImageNode(context, filename);
-    return e;
+    return new VideoNodeSP(new ImageNode(context, filename));
 }
 
 QMap<QString, QString> ImageNode::customInstantiators() {

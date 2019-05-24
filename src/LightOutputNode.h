@@ -101,7 +101,7 @@ Q_DECLARE_METATYPE(LightOutputNodeSP*)
 class LightOutputNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 public:
-    LightOutputNodeOpenGLWorker(LightOutputNodeSP p);
+    LightOutputNodeOpenGLWorker(QSharedPointer<LightOutputNode> p);
 
     enum LightOutputNodeState {
         Disconnected,

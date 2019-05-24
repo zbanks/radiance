@@ -10,8 +10,9 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 
-static QString vnp(VideoNode *videoNode) {
-    if (videoNode) return *videoNode;
+static QString vnp(VideoNodeSP *videoNode) {
+    //if (videoNode) return *videoNode;
+    if (videoNode) return "TODO"; // fixme
     return "null";
 }
 
@@ -51,7 +52,7 @@ QList<ChainSP> Model::chains() {
     return m_chains;
 }
 
-void Model::prepareNode(VideoNode *videoNode) {
+void Model::prepareNode(VideoNodeSP *videoNode) {
     if(!videoNode)
         return;
 
@@ -68,7 +69,7 @@ void Model::prepareNode(VideoNode *videoNode) {
     connect(videoNode, &VideoNode::error, this, &Model::onError);
     connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
 
-    // See if this VideoNode requests any chains
+    // See if this VideoNodeSP requests any chains
     auto requestedChains = videoNode->requestedChains();
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
         if (!m_chains.contains(*c)) {
@@ -80,7 +81,7 @@ void Model::prepareNode(VideoNode *videoNode) {
     connect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 }
 
-void Model::disownNode(VideoNode *videoNode) {
+void Model::disownNode(VideoNodeSP *videoNode) {
     if(!videoNode)
         return;
 
@@ -105,21 +106,21 @@ void Model::disownNode(VideoNode *videoNode) {
 }
 
 void Model::onMessage(QString str) {
-    auto vn = qobject_cast<VideoNode *>(sender());
+    auto vn = qobject_cast<VideoNodeSP *>(sender());
     emit message(vn, str);
 }
 
 void Model::onWarning(QString str) {
-    auto vn = qobject_cast<VideoNode *>(sender());
+    auto vn = qobject_cast<VideoNodeSP *>(sender());
     emit warning(vn, str);
 }
 
 void Model::onError(QString str) {
-    auto vn = qobject_cast<VideoNode *>(sender());
+    auto vn = qobject_cast<VideoNodeSP *>(sender());
     emit error(vn, str);
 }
 
-void Model::addVideoNode(VideoNode *videoNode) {
+void Model::addVideoNode(VideoNodeSP *videoNode) {
     if(!videoNode)
         return;
     if (!m_vertices.contains(videoNode)) {
@@ -128,7 +129,7 @@ void Model::addVideoNode(VideoNode *videoNode) {
     }
 }
 
-void Model::removeVideoNode(VideoNode *videoNode) {
+void Model::removeVideoNode(VideoNodeSP *videoNode) {
     QList<Edge> removed;
 
     QMutableListIterator<Edge> i(m_edges);
@@ -147,7 +148,7 @@ void Model::removeVideoNode(VideoNode *videoNode) {
     }
 }
 
-void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
+void Model::addEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput) {
     if (fromVertex == nullptr
      || toVertex == nullptr
      || toInput < 0
@@ -178,7 +179,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
     }
 
     m_edges.append(newEdge);
-    QVector<VideoNode *> sortedVertices = topoSort();
+    QVector<VideoNodeSP *> sortedVertices = topoSort();
     if(sortedVertices.count() < m_vertices.count()) {
         // Roll back changes if a cycle was detected
         m_edges = edgesOld;
@@ -187,7 +188,7 @@ void Model::addEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
     }
 }
 
-void Model::removeEdge(VideoNode *fromVertex, VideoNode *toVertex, int toInput) {
+void Model::removeEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput) {
     if (fromVertex == nullptr
      || toVertex == nullptr
      || toInput < 0
@@ -215,7 +216,7 @@ ModelCopyForRendering Model::createCopyForRendering() {
     ModelCopyForRendering out;
 
     // Create a map from VideoNodes to indices
-    QMap<VideoNode *, int> map;
+    QMap<VideoNodeSP *, int> map;
     for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
         map.insert(m_verticesSortedForRendering.at(i), i);
     }
@@ -233,15 +234,15 @@ ModelCopyForRendering Model::createCopyForRendering() {
     return out;
 }
 
-QVector<VideoNode *> Model::topoSort() {
+QVector<VideoNodeSP *> Model::topoSort() {
     // Kahn's algorithm from Wikipedia
 
     auto edges = m_edges;
 
-    QVector<VideoNode *> l;
-    QList<VideoNode *> s;
+    QVector<VideoNodeSP *> l;
+    QList<VideoNodeSP *> s;
     {
-        QSet<VideoNode *> sSet;
+        QSet<VideoNodeSP *> sSet;
         // Populate s, the start nodes
         for (auto v = m_vertices.begin(); v != m_vertices.end(); v++) {
             sSet.insert(*v);
@@ -257,7 +258,7 @@ QVector<VideoNode *> Model::topoSort() {
         auto n = s.takeFirst();
         l.append(n);
 
-        QSet<VideoNode *> newStartNodes; // Potential new start nodes
+        QSet<VideoNodeSP *> newStartNodes; // Potential new start nodes
         for (auto e = edges.begin(); e != edges.end();) {
             // Remove edges originating from the node we just took
             // See https://stackoverflow.com/questions/16269696/erasing-while-iterating-an-stdlist
@@ -288,7 +289,7 @@ QVector<VideoNode *> Model::topoSort() {
     return l;
 }
 
-QList<VideoNode *> Model::vertices() const {
+QList<VideoNodeSP *> Model::vertices() const {
     return m_vertices;
 }
 
@@ -325,8 +326,8 @@ void Model::clear() {
 }
 
 void Model::flush() {
-    QList<VideoNode *> verticesAdded;
-    QList<VideoNode *> verticesRemoved;
+    QList<VideoNodeSP *> verticesAdded;
+    QList<VideoNodeSP *> verticesRemoved;
     QList<Edge> edgesAdded;
     QList<Edge> edgesRemoved;
 
@@ -342,8 +343,8 @@ void Model::flush() {
 
     // Compute the changeset
     {
-        auto v = QSet<VideoNode *>::fromList(m_vertices);
-        auto v4r = QSet<VideoNode *>::fromList(m_verticesForRendering);
+        auto v = QSet<VideoNodeSP *>::fromList(m_vertices);
+        auto v4r = QSet<VideoNodeSP *>::fromList(m_verticesForRendering);
         // TODO Can't use QSet without implementing qHash
         //auto e = QSet<Edge>::fromList(m_edges);
         //auto e4r = QSet<Edge>::fromList(m_edgesForRendering);
@@ -388,18 +389,18 @@ void Model::flush() {
     emit graphChanged(verticesAddedVL, verticesRemovedVL, edgesAddedVL, edgesRemovedVL);
 }
 
-QList<VideoNode *> Model::ancestors(VideoNode *node) {
-    QSet<VideoNode *> ancestorSet;
-    QList<VideoNode *> nodeStack;
+QList<VideoNodeSP *> Model::ancestors(VideoNodeSP *node) {
+    QSet<VideoNodeSP *> ancestorSet;
+    QList<VideoNodeSP *> nodeStack;
     nodeStack.append(node);
 
     while (!nodeStack.isEmpty()) {
-        VideoNode * n = nodeStack.takeLast();
+        VideoNodeSP * n = nodeStack.takeLast();
         for (auto e : m_edges) {
             if (e.toVertex != n)
                 continue;
 
-            VideoNode * newNode = e.fromVertex;
+            VideoNodeSP * newNode = e.fromVertex;
             Q_ASSERT(newNode != node); // cycles are bad
             if (ancestorSet.contains(newNode))
                 continue;
@@ -412,7 +413,7 @@ QList<VideoNode *> Model::ancestors(VideoNode *node) {
     return ancestorSet.values();
 }
 
-bool Model::isAncestor(VideoNode *parent, VideoNode *child) {
+bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) {
     // TODO: This is obviously not optimal
     return ancestors(child).contains(parent);
 }
@@ -472,7 +473,7 @@ QJsonObject Model::serialize() {
     QJsonObject jsonOutput;
 
     // Create a map from VideoNodes to indices
-    QMap<VideoNode *, int> map;
+    QMap<VideoNodeSP *, int> map;
     QJsonArray jsonVertices;
     for (int i=0; i<m_vertices.count(); i++) {
         map.insert(m_vertices.at(i), i);
@@ -497,11 +498,11 @@ QJsonObject Model::serialize() {
 void Model::deserialize(Context *context, Registry *registry, const QJsonObject &data) {
     //TODO: needs error handling
 
-    QList<VideoNode *> addedVertices;
+    QList<VideoNodeSP *> addedVertices;
     QJsonArray jsonVertices = data["vertices"].toArray();
     for (auto _jsonVertex : jsonVertices) {
         QJsonObject jsonVertex = _jsonVertex.toObject();
-        VideoNode *vertex = registry->deserialize(context, jsonVertex);
+        VideoNodeSP *vertex = registry->deserialize(context, jsonVertex);
         if (vertex != nullptr) {
             addVideoNode(vertex);
         }
@@ -511,8 +512,8 @@ void Model::deserialize(Context *context, Registry *registry, const QJsonObject 
     QJsonArray jsonEdges = data["edges"].toArray();
     for (auto _jsonEdge : jsonEdges) {
         QJsonObject jsonEdge = _jsonEdge.toObject();
-        VideoNode *fromVertex = addedVertices.at(jsonEdge["fromVertex"].toInt());
-        VideoNode *toVertex = addedVertices.at(jsonEdge["toVertex"].toInt());
+        VideoNodeSP *fromVertex = addedVertices.at(jsonEdge["fromVertex"].toInt());
+        VideoNodeSP *toVertex = addedVertices.at(jsonEdge["toVertex"].toInt());
         int toInput = jsonEdge["toInput"].toInt();
         addEdge(fromVertex, toVertex, toInput);
     }
