@@ -67,7 +67,7 @@ class STRBONOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    STRBONOpenGLWorker(SelfTimedReadBackOutputNodeSP p);
+    STRBONOpenGLWorker(QSharedPointer<SelfTimedReadBackOutputNode> p);
 
 public slots:
     void initialize(QSize size);

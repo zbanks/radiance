@@ -13,45 +13,41 @@
 template <class T, class B>
 class QmlSharedPointer;
 
-template <class T>
 class QmlSharedPointerBase
     : public QObject
-    , public QSharedPointer<T>
+    , public QSharedPointer<QObject>
 {
 public:
-    QmlSharedPointerBase()
-        : QSharedPointer<T>(new T())
-    {
-    }
-
     template <typename X> explicit QmlSharedPointerBase(X *ptr)
-        : QSharedPointer<T>(ptr)
+        : QSharedPointer<QObject>((QObject *)ptr)
     {
     }
 
     template <typename X, typename Deleter> QmlSharedPointerBase(X *ptr, Deleter d)
-        : QSharedPointer<T>(ptr, d)
+        : QSharedPointer<QObject>((QObject *)ptr, d)
     {
     }
 
-    QmlSharedPointerBase(const QSharedPointer<T> &other)
-        : QSharedPointer<T>(other)
+    template <typename X>
+    QmlSharedPointerBase(const QSharedPointer<X> &other)
+        : QSharedPointer<QObject>(other)
     {
     }
 
-    QmlSharedPointerBase(const QmlSharedPointerBase<T> &other)
-        : QSharedPointer<T>(other)
+    QmlSharedPointerBase(const QmlSharedPointerBase &other)
+        : QSharedPointer<QObject>(other)
     {
     }
 
-    QmlSharedPointerBase(const QWeakPointer<T> &other)
-        : QSharedPointer<T>(other)
+    template <typename X>
+    explicit QmlSharedPointerBase(const QWeakPointer<X> &other)
+        : QSharedPointer<QObject>(other)
     {
     }
 
-    QmlSharedPointerBase& operator=(const QmlSharedPointerBase<T>& d)
+    QmlSharedPointerBase& operator=(const QmlSharedPointerBase& d)
     {
-        QSharedPointer<T>::operator=(d);
+        QSharedPointer<QObject>::operator=(d);
         return *this;
     }
 
@@ -61,7 +57,7 @@ public:
     }
 };
 
-template <class T, class B = QmlSharedPointerBase<T>>
+template <class T, class B = QmlSharedPointerBase>
 class QmlSharedPointer
     : public B
 {
@@ -89,7 +85,7 @@ private:
         {
             auto incomingSignal = T::staticMetaObject.method(i);
             if (incomingSignal.methodType() != QMetaMethod::Signal) continue;
-            QMetaObject::connect(B::data(), i, this, i);
+            QMetaObject::connect(data(), i, this, i);
         }
     }
     void deinit()
@@ -101,7 +97,7 @@ private:
         {
             auto incomingSignal = T::staticMetaObject.method(i);
             if (incomingSignal.methodType() != QMetaMethod::Signal) continue;
-            QMetaObject::disconnect(QmlSharedPointer<T, B>::data(), i, this, i);
+            QMetaObject::disconnect(data(), i, this, i);
         }
     }
     static const QMetaObject *gen_superdata();
@@ -168,7 +164,8 @@ public:
         init();
     }
 
-    QmlSharedPointer(const QSharedPointer<T> &other)
+    template <typename X>
+    QmlSharedPointer(const QSharedPointer<X> &other)
         : B(other)
     {
         init();
@@ -180,7 +177,8 @@ public:
         init();
     }
 
-    QmlSharedPointer(const QWeakPointer<T> &other)
+    template <typename X>
+    QmlSharedPointer(const QWeakPointer<X> &other)
         : B(other)
     {
         init();
@@ -192,6 +190,21 @@ public:
         B::operator=(d);
         init();
         return *this;
+    }
+
+    T *data() const
+    {
+        return (T *)QSharedPointer<QObject>::data();
+    }
+
+    T &	operator*() const
+    {
+        return *data();
+    }
+
+    T *	operator->() const
+    {
+        return data();
     }
 
     virtual QmlSharedPointer<T, B> *clone()
@@ -243,7 +256,7 @@ template <typename T, typename B> void QmlSharedPointer<T, B>::findAndActivateSi
 template <typename T, typename B> void QmlSharedPointer<T, B>::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     auto *_t = static_cast<QmlSharedPointer<T, B> *>(_o);
-    auto *_child = _t->B::data();
+    auto *_child = _t->data();
     Q_ASSERT(_child != nullptr);
 
     //qDebug() << "Static metacall on..." << staticMetaObject.className() << _o << _c << _id;
