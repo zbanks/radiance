@@ -5,10 +5,10 @@
 
 // OutputWindow
 
-OutputWindow::OutputWindow(OutputNodeSP *videoNode)
+OutputWindow::OutputWindow(OutputNodeSP videoNode)
     : m_screenName("")
     , m_found(false)
-    , m_videoNode(new OutputNodeSP(*videoNode))
+    , m_videoNode(videoNode)
     , m_shown(false) {
 
     connect(this, &QWindow::screenChanged, this, &OutputWindow::onScreenChanged);
@@ -129,7 +129,7 @@ void OutputWindow::resizeGL(int w, int h) {
 }
 
 void OutputWindow::paintGL() {
-    GLuint texture = (*m_videoNode)->render();
+    GLuint texture = m_videoNode->render();
     auto dpr = devicePixelRatio();
     glViewport(0, 0, width() * dpr, height() * dpr);
     glClearColor(0, 0, 0, 0);
@@ -139,9 +139,9 @@ void OutputWindow::paintGL() {
     m_program->bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    (*m_videoNode)->chain()->vao()->bind();
+    m_videoNode->chain()->vao()->bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    (*m_videoNode)->chain()->vao()->release();
+    m_videoNode->chain()->vao()->release();
     m_program->release();
     update();
 }

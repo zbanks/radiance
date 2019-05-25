@@ -6,7 +6,7 @@
 ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
     : OutputNode(context, chainSize)
 {
-    m_outputWindow = QSharedPointer<OutputWindow>(new OutputWindow(new OutputNodeSP(qSharedPointerCast<OutputNode>(sharedFromThis()))));
+    m_outputWindow = QSharedPointer<OutputWindow>(new OutputWindow(qSharedPointerCast<OutputNode>(sharedFromThis())));
     connect(m_outputWindow.data(), &OutputWindow::screenNameChanged, this, &ScreenOutputNode::screenNameChanged);
     connect(m_outputWindow.data(), &OutputWindow::screenSizeChanged, this, &ScreenOutputNode::onScreenSizeChanged);
     connect(m_outputWindow.data(), &OutputWindow::shownChanged, this, &ScreenOutputNode::shownChanged);

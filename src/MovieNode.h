@@ -146,7 +146,7 @@ class MovieNodeOpenGLWorker : public OpenGLWorker {
     Q_OBJECT
 
 public:
-    MovieNodeOpenGLWorker(MovieNodeSP p);
+    MovieNodeOpenGLWorker(QSharedPointer<MovieNode> p);
     ~MovieNodeOpenGLWorker() override;
     QVector<QSharedPointer<QOpenGLFramebufferObject>> m_frames{BUFFER_COUNT};
     QMutex m_rwLock;

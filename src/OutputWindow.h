@@ -13,7 +13,7 @@ protected:
     QTimer m_reloader;
     bool m_found;
     QOpenGLShaderProgram *m_program;
-    QScopedPointer<OutputNodeSP> m_videoNode; // XXX can this be unwrapped
+    OutputNodeSP m_videoNode;
     QOpenGLVertexArrayObject m_vao;
     bool m_shown;
     QSize m_screenSize;
@@ -32,12 +32,7 @@ protected slots:
     void setScreenSize(QSize screenSize);
 
 public:
-    // The VideoNode that this is constructed with
-    // will be cloned and the clone will be destroyed
-    // when the OutputWindow is destroyed.
-    // You do not need to worry about the lifetime
-    // of the VideoNode* that you pass in.
-    OutputWindow(OutputNodeSP *videoNode);
+    OutputWindow(OutputNodeSP videoNode);
 
 public slots:
     void setScreenName(QString screen);

@@ -324,7 +324,7 @@ GLuint MovieNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
 
 // MovieNodeOpenGLWorker methods
 
-MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNodeSP p)
+MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(QSharedPointer<MovieNode> p)
     : OpenGLWorker(p->m_openGLWorkerContext)
     , m_p(p)
 {

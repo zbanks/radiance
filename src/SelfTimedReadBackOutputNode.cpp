@@ -44,7 +44,7 @@ void SelfTimedReadBackOutputNode::force() {
 
 // STRBONOpenGLWorker methods
 
-STRBONOpenGLWorker::STRBONOpenGLWorker(SelfTimedReadBackOutputNodeSP p)
+STRBONOpenGLWorker::STRBONOpenGLWorker(QSharedPointer<SelfTimedReadBackOutputNode> p)
     : OpenGLWorker(p->m_workerContext)
     , m_p(p) {
 }
