@@ -60,41 +60,41 @@ void Model::prepareNode(VideoNodeSP *videoNode) {
     if(videoNode->parent() != this)
         videoNode->setParent(this);
 
-    videoNode->setLastModel(QWeakPointer<Model>(sharedFromThis()));
-    videoNode->setChains(m_chains);
+    (*videoNode)->setLastModel(QWeakPointer<Model>(sharedFromThis()));
+    (*videoNode)->setChains(m_chains);
 
-    connect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
-    connect(videoNode, &VideoNode::message, this, &Model::onMessage);
-    connect(videoNode, &VideoNode::warning, this, &Model::onWarning);
-    connect(videoNode, &VideoNode::error, this, &Model::onError);
-    connect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
+    connect(videoNode->data(), &VideoNode::inputCountChanged, this, &Model::flush);
+    connect(videoNode->data(), &VideoNode::message, this, &Model::onMessage);
+    connect(videoNode->data(), &VideoNode::warning, this, &Model::onWarning);
+    connect(videoNode->data(), &VideoNode::error, this, &Model::onError);
+    connect(this, &Model::chainsChanged, videoNode->data(), &VideoNode::setChains);
 
     // See if this VideoNodeSP requests any chains
-    auto requestedChains = videoNode->requestedChains();
+    auto requestedChains = (*videoNode)->requestedChains();
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
         if (!m_chains.contains(*c)) {
             addChain(*c);
         }
     }
     // and be notified of changes
-    connect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
-    connect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
+    connect(videoNode->data(), &VideoNode::requestedChainAdded, this, &Model::addChain);
+    connect(videoNode->data(), &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 }
 
 void Model::disownNode(VideoNodeSP *videoNode) {
     if(!videoNode)
         return;
 
-    disconnect(this, &Model::chainsChanged, videoNode, &VideoNode::setChains);
-    disconnect(videoNode, &VideoNode::requestedChainAdded, this, &Model::addChain);
-    disconnect(videoNode, &VideoNode::requestedChainRemoved, this, &Model::removeChain);
+    disconnect(this, &Model::chainsChanged, videoNode->data(), &VideoNode::setChains);
+    disconnect(videoNode->data(), &VideoNode::requestedChainAdded, this, &Model::addChain);
+    disconnect(videoNode->data(), &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 
-    disconnect(videoNode, &VideoNode::inputCountChanged, this, &Model::flush);
-    disconnect(videoNode, &VideoNode::message, this, &Model::onMessage);
-    disconnect(videoNode, &VideoNode::warning, this, &Model::onWarning);
-    disconnect(videoNode, &VideoNode::error, this, &Model::onError);
+    disconnect(videoNode->data(), &VideoNode::inputCountChanged, this, &Model::flush);
+    disconnect(videoNode->data(), &VideoNode::message, this, &Model::onMessage);
+    disconnect(videoNode->data(), &VideoNode::warning, this, &Model::onWarning);
+    disconnect(videoNode->data(), &VideoNode::error, this, &Model::onError);
 
-    auto requestedChains = videoNode->requestedChains();
+    auto requestedChains = (*videoNode)->requestedChains();
     auto chains = m_chains;
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
         m_chains.removeAll(*c);
@@ -228,7 +228,7 @@ ModelCopyForRendering Model::createCopyForRendering() {
     }
 
     for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
-        out.vertices.append(QSharedPointer<VideoNode>(m_verticesSortedForRendering.at(i)->clone()));
+        out.vertices.append(QSharedPointer<VideoNodeSP>(m_verticesSortedForRendering.at(i)));
     }
 
     return out;
@@ -335,7 +335,7 @@ void Model::flush() {
     QMutableListIterator<Edge> i(m_edges);
     while (i.hasNext()) {
         auto edgeCopy = i.next();
-        if (edgeCopy.toInput >= edgeCopy.toVertex->inputCount()) {
+        if (edgeCopy.toInput >= (*edgeCopy.toVertex)->inputCount()) {
             qDebug() << QString("Removing invalid edge to %1 input %2").arg(vnp(edgeCopy.toVertex)).arg(edgeCopy.toInput);
             i.remove();
         }
@@ -418,7 +418,7 @@ bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) {
     return ancestors(child).contains(parent);
 }
 
-QMap<VideoNode, GLuint> ModelCopyForRendering::render(ChainSP chain) {
+QMap<VideoNodeSP, GLuint> ModelCopyForRendering::render(ChainSP chain) {
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs
@@ -427,7 +427,7 @@ QMap<VideoNode, GLuint> ModelCopyForRendering::render(ChainSP chain) {
 
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
-        auto inputCount = vertices.at(i)->inputCount();
+        auto inputCount = (*vertices.at(i))->inputCount();
         inputs.append(QVector<int>(inputCount, -1));
     }
 
@@ -445,8 +445,8 @@ QMap<VideoNode, GLuint> ModelCopyForRendering::render(ChainSP chain) {
 
     for (int i=0; i<vertices.count(); i++) {
         auto vertex = vertices.at(i);
-        QVector<GLuint> inputTextures(vertex->inputCount(), chain->blankTexture());
-        for (int j=0; j<vertex->inputCount(); j++) {
+        QVector<GLuint> inputTextures((*vertex)->inputCount(), chain->blankTexture());
+        for (int j=0; j<(*vertex)->inputCount(); j++) {
             auto fromVertex = inputs.at(i).at(j);
             if (fromVertex != -1) {
                 auto inpTexture = resultTextures.at(fromVertex);
@@ -456,10 +456,10 @@ QMap<VideoNode, GLuint> ModelCopyForRendering::render(ChainSP chain) {
             }
         }
         vao->bind();
-        resultTextures[i] = vertex->paint(chain, inputTextures);
+        resultTextures[i] = (*vertex)->paint(chain, inputTextures);
     }
 
-    QMap<VideoNode, GLuint> result;
+    QMap<VideoNodeSP, GLuint> result;
     for (int i=0; i<resultTextures.count(); i++) {
         if (resultTextures.at(i) != 0) {
             result.insert(*vertices.at(i), resultTextures.at(i));
@@ -477,7 +477,7 @@ QJsonObject Model::serialize() {
     QJsonArray jsonVertices;
     for (int i=0; i<m_vertices.count(); i++) {
         map.insert(m_vertices.at(i), i);
-        jsonVertices.append(m_vertices.at(i)->serialize());
+        jsonVertices.append((*m_vertices.at(i))->serialize());
     }
 
     jsonOutput["vertices"] = jsonVertices;

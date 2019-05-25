@@ -24,7 +24,7 @@ MovieNode::MovieNode(Context *context, QString file, QString name)
 {
     attachSignals();
     m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
-    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(*this), &QObject::deleteLater);
+    m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(qSharedPointerCast<MovieNode>(sharedFromThis())), &QObject::deleteLater);
     connect(m_openGLWorker.data(), &QObject::destroyed, m_openGLWorkerContext, &QObject::deleteLater);
 
     connect(m_openGLWorker.data(), &MovieNodeOpenGLWorker::videoSizeChanged, this, &MovieNode::onVideoSizeChanged);
@@ -328,9 +328,9 @@ MovieNodeOpenGLWorker::MovieNodeOpenGLWorker(MovieNodeSP p)
     : OpenGLWorker(p->m_openGLWorkerContext)
     , m_p(p)
 {
-    connect(this, &MovieNodeOpenGLWorker::message, &p, &MovieNode::message);
-    connect(this, &MovieNodeOpenGLWorker::warning, &p, &MovieNode::warning);
-    connect(this, &MovieNodeOpenGLWorker::error,   &p, &MovieNode::error);
+    connect(this, &MovieNodeOpenGLWorker::message, p.data(), &MovieNode::message);
+    connect(this, &MovieNodeOpenGLWorker::warning, p.data(), &MovieNode::warning);
+    connect(this, &MovieNodeOpenGLWorker::error,   p.data(), &MovieNode::error);
 }
 
 static void requestUpdate(void *ctx) {
@@ -342,9 +342,8 @@ static void requestWakeup(void *ctx) {
 }
 
 void MovieNodeOpenGLWorker::initialize(QString filename) {
-    auto d = m_p->toStrongRef();
-    if (d.isNull()) return; // MovieNode was deleted
-    MovieNodeSP p(d);
+    auto p = m_p.toStrongRef();
+    if (p.isNull()) return; // MovieNode was deleted
 
     // I am not sure if this method is okay with being called multiple times.
     // It may need some changes to un-load the previous MPV context
@@ -454,9 +453,8 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
 void MovieNodeOpenGLWorker::addNewState(ChainSP c) {
-    auto d = m_p->toStrongRef();
-    if (d.isNull()) return; // MovieNode was deleted
-    MovieNode p(d);
+    auto p = m_p.toStrongRef();
+    if (p.isNull()) return; // MovieNode was deleted
 
     QSharedPointer<QOpenGLShaderProgram> shader;
     {
@@ -504,9 +502,8 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
             if (prop->format == MPV_FORMAT_DOUBLE) {
                 double time = *(double *)prop->data;
                 emit durationChanged(time);
-                auto d = m_p->toStrongRef();
-                if (d.isNull()) return; // MovieNode was deleted
-                MovieNode p(d);
+                auto p = m_p.toStrongRef();
+                if (p.isNull()) return; // MovieNode was deleted
                 p->setNodeState(VideoNode::Ready);
                 {
                     QMutexLocker locker(&p->m_stateLock);
@@ -544,9 +541,8 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
 }
 
 void MovieNodeOpenGLWorker::drawFrame() {
-    auto d = m_p->toStrongRef();
-    if (d.isNull()) return; // MovieNode was deleted
-    MovieNode p(d);
+    auto p = m_p.toStrongRef();
+    if (p.isNull()) return; // MovieNode was deleted
 
     {
         QMutexLocker locker(&p->m_stateLock);
@@ -601,7 +597,7 @@ MovieNodeOpenGLWorker::~MovieNodeOpenGLWorker() {
     mpv_opengl_cb_uninit_gl(m_mpv_gl);
 }
 
-QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader(MovieNode p) {
+QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader(MovieNodeSP p) {
     auto vertexString = QString{
         "#version 150\n"
         "out vec2 uv;\n"
@@ -653,12 +649,12 @@ VideoNodeSP *MovieNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
-    MovieNode *e = new MovieNode(context, file);
+    auto e = new MovieNode(context, file);
     auto name = obj.value("name").toString();
     if (!name.isEmpty()) {
         e->setName(name);
     }
-    return e;
+    return new VideoNodeSP(e);
 }
 
 bool MovieNode::canCreateFromFile(QString filename) {
@@ -669,12 +665,12 @@ bool MovieNode::canCreateFromFile(QString filename) {
     return false;
 }
 
-VideoNode *MovieNode::fromFile(Context *context, QString filename) {
-    MovieNode *e = new MovieNode(context, filename);
+VideoNodeSP *MovieNode::fromFile(Context *context, QString filename) {
+    auto e = new MovieNode(context, filename);
     if (e != nullptr) {
         e->setName(QFileInfo(e->file()).baseName());
     }
-    return e;
+    return new VideoNodeSP(e);
 }
 
 QMap<QString, QString> MovieNode::customInstantiators() {

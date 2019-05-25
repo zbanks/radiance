@@ -112,7 +112,7 @@ runRadianceGui(QGuiApplication *app) {
 }
 
 static void
-generateHtml(QDir outputDir, QList<VideoNode*> videoNodes) {
+generateHtml(QDir outputDir, QList<VideoNodeSP*> videoNodes) {
     QFile outputHtml(outputDir.filePath("index.html"));
     outputHtml.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream html(&outputHtml);
@@ -163,14 +163,14 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     model.load(&context, &registry, modelName);
     model.addChain(chain);
 
-    FFmpegOutputNode *ffmpegNode = nullptr;
-    PlaceholderNode *placeholderNode = nullptr;
-    for (VideoNode *node : model.vertices()) {
+    FFmpegOutputNodeSP *ffmpegNode = nullptr;
+    PlaceholderNodeSP *placeholderNode = nullptr;
+    for (VideoNodeSP *node : model.vertices()) {
         if (ffmpegNode == nullptr) {
-            ffmpegNode = qobject_cast<FFmpegOutputNode *>(node);
+            ffmpegNode = qobject_cast<FFmpegOutputNodeSP *>(node);
         }
         if (placeholderNode == nullptr) {
-            placeholderNode = qobject_cast<PlaceholderNode *>(node);
+            placeholderNode = qobject_cast<PlaceholderNodeSP *>(node);
         }
     }
     if (ffmpegNode == nullptr) {
@@ -187,7 +187,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     qInfo() << model.serialize();
 
     qInfo() << "Scanning for effects in path:" << Paths::systemLibrary();
-    QList<VideoNode *> renderNodes;
+    QList<VideoNodeSP *> renderNodes;
     if (nodeFilename.isNull()) {
         QDir libraryDir(Paths::systemLibrary());
         libraryDir.cd("effects");
@@ -197,7 +197,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                 continue;
             }
             QString entryPath = libraryDir.filePath(entry);
-            VideoNode *renderNode = registry.createFromFile(&context, entryPath);
+            VideoNodeSP *renderNode = registry.createFromFile(&context, entryPath);
             if (!renderNode) {
                 qInfo() << "Unable to open:" << entry << entryPath;
             } else {
@@ -208,7 +208,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
         // Generate HTML page w/ all nodes
         generateHtml(outputDir, renderNodes);
     } else {
-        VideoNode *renderNode = registry.createFromFile(&context, nodeFilename);
+        VideoNodeSP *renderNode = registry.createFromFile(&context, nodeFilename);
         if (!renderNode) {
             qInfo() << "Unable to open:" << nodeFilename;
             return EXIT_FAILURE;
@@ -217,21 +217,21 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     }
 
     // Render
-    for (VideoNode *renderNode : renderNodes) {
+    for (VideoNodeSP *renderNode : renderNodes) {
         QString name = renderNode->property("name").toString();
         qInfo() << "Rendering:" << name;
 
-        placeholderNode->setWrappedVideoNode(renderNode);
+        (*placeholderNode)->setWrappedVideoNode(renderNode);
 
         QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
-        ffmpegNode->setFFmpegArguments({outputDir.filePath(gifFilename)});
-        ffmpegNode->setRecording(true);
+        (*ffmpegNode)->setFFmpegArguments({outputDir.filePath(gifFilename)});
+        (*ffmpegNode)->setRecording(true);
 
         // Render 101 frames
-        EffectNode * effectNode = qobject_cast<EffectNode *>(renderNode);
+        EffectNodeSP * effectNode = qobject_cast<EffectNodeSP *>(renderNode);
         for (int i = 0; i <= 100; i++) {
             if (effectNode != nullptr)
-                effectNode->setIntensity(i / 50.);
+                (*effectNode)->setIntensity(i / 50.);
 
             context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
 
@@ -246,11 +246,11 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                     img.save(filename);
                 }
             }
-            ffmpegNode->recordFrame();
+            (*ffmpegNode)->recordFrame();
         }
 
         // Reset state
-        ffmpegNode->setRecording(false);
+        (*ffmpegNode)->setRecording(false);
     }
 
     return 0;

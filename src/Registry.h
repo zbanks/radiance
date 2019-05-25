@@ -10,7 +10,7 @@ struct TypeFactory {
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    VideoNode *(*deserialize)(Context *context, QJsonObject obj);
+    VideoNodeSP *(*deserialize)(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -19,7 +19,7 @@ struct TypeFactory {
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    VideoNode *(*fromFile)(Context *context, QString filename);
+    VideoNodeSP *(*fromFile)(Context *context, QString filename);
 };
 
 class Registry : public QObject {
@@ -33,10 +33,10 @@ public:
     Q_PROPERTY(Library *library READ library CONSTANT);
 
 public slots:
-    VideoNode *deserialize(Context *context, QString json);
-    VideoNode *deserialize(Context *context, QJsonObject object);
+    VideoNodeSP *deserialize(Context *context, QString json);
+    VideoNodeSP *deserialize(Context *context, QJsonObject object);
     bool canCreateFromFile(QString filename);
-    VideoNode *createFromFile(Context *context, QString filename);
+    VideoNodeSP *createFromFile(Context *context, QString filename);
     const QMap<QString, QString> instantiators() const;
 
     Library *library();

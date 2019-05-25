@@ -24,7 +24,7 @@ class Registry;
 class Context;
 
 struct Edge {
-    VideoNodeSP *fromVertex;
+    VideoNodeSP *fromVertex; // XXX can this be unwrapped
     VideoNodeSP *toVertex;
     int toInput;
 
@@ -37,7 +37,7 @@ public:
 struct ModelCopyForRendering {
     // Copies of the vertices
     // (The QSP here is just to ensure they get deleted)
-    QVector<QSharedPointer<VideoNodeSP>> vertices;
+    QVector<QSharedPointer<VideoNodeSP>> vertices; // XXX can this be unwrapped
 
     // Edges, as indices into vertices
     QVector<int> fromVertex;

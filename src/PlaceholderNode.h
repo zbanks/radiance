@@ -12,7 +12,7 @@ class PlaceholderNode
     Q_OBJECT
 
 public:
-    PlaceholderNode(Context *context, VideoNode *wrapped=nullptr);
+    PlaceholderNode(Context *context, VideoNodeSP *wrapped=nullptr);
 
     QJsonObject serialize() override;
 
@@ -42,16 +42,16 @@ public:
     static QMap<QString, QString> customInstantiators();
 
 public slots:
-    void setWrappedVideoNode(VideoNode *wrapped);
-    VideoNode *wrappedVideoNode();
+    void setWrappedVideoNode(VideoNodeSP *wrapped);
+    VideoNodeSP *wrappedVideoNode();
 
     void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) override;
 
 signals:
-    void wrappedVideoNodeChanged(VideoNode *videoNode);
+    void wrappedVideoNodeChanged(VideoNodeSP *videoNode);
 
 protected:
-    QSharedPointer<VideoNode> m_wrappedVideoNode;
+    QSharedPointer<VideoNodeSP> m_wrappedVideoNode; // XXX can we unwrap this
 };
 
 typedef QmlSharedPointer<PlaceholderNode, VideoNodeSP> PlaceholderNodeSP;

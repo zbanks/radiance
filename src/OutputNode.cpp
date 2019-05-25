@@ -27,7 +27,7 @@ GLuint OutputNode::render() {
 GLuint OutputNode::render(QWeakPointer<Model> model) {
     auto modelCopy = Model::createCopyForRendering(model);
     auto result = modelCopy.render(chain());
-    return result.value(*this, 0);
+    return result.value(VideoNodeSP(sharedFromThis()), 0);
 }
 
 ChainSP OutputNode::chain() {

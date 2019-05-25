@@ -4,7 +4,7 @@
 #include "Controls.h"
 
 struct Child {
-    VideoNode *videoNode;
+    VideoNodeSP *videoNode;
     BaseVideoNodeTile *item;
     QVector<int> inputHeights;
 };
@@ -55,7 +55,7 @@ public slots:
     QVariantList tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *tile2);
 
     // Returns the tile for the given VideoNode instance
-    BaseVideoNodeTile *tileForVideoNode(VideoNode *videoNode);
+    BaseVideoNodeTile *tileForVideoNode(VideoNodeSP *videoNode);
 
     // The tile that has focus,
     // or nullptr if no tile has focus
@@ -67,7 +67,7 @@ protected:
     QList<Child> m_children;
     QList<QQuickItem *> m_dropAreas;
     void rebuild();
-    Child newChild(VideoNode *videoNode);
+    Child newChild(VideoNodeSP *videoNode);
     QSet<BaseVideoNodeTile *> m_selection;
     void selectionChanged();
     void componentComplete() override;
