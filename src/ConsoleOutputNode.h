@@ -28,7 +28,7 @@ public:
 
     // Create a VideoNode from a JSON description of one
     // Returns nullptr if the description is invalid
-    static VideoNode *deserialize(Context *context, QJsonObject obj);
+    static VideoNodeSP *deserialize(Context *context, QJsonObject obj);
 
     // Return true if a VideoNode could be created from
     // the given filename
@@ -37,7 +37,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode

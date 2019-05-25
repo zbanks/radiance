@@ -4,9 +4,9 @@
 #include <QGuiApplication>
 
 ScreenOutputNode::ScreenOutputNode(Context *context, QSize chainSize)
-    : OutputNode(new ScreenOutputNodePrivate(context, chainSize))
+    : OutputNode(context, chainSize)
 {
-    m_outputWindow = QSharedPointer<OutputWindow>(new OutputWindow(this));
+    m_outputWindow = QSharedPointer<OutputWindow>(new OutputWindow(new OutputNodeSP(qSharedPointerCast<OutputNode>(sharedFromThis()))));
     connect(m_outputWindow.data(), &OutputWindow::screenNameChanged, this, &ScreenOutputNode::screenNameChanged);
     connect(m_outputWindow.data(), &OutputWindow::screenSizeChanged, this, &ScreenOutputNode::onScreenSizeChanged);
     connect(m_outputWindow.data(), &OutputWindow::shownChanged, this, &ScreenOutputNode::shownChanged);
@@ -103,16 +103,16 @@ QString ScreenOutputNode::typeName() {
     return "ScreenOutputNode";
 }
 
-VideoNode *ScreenOutputNode::deserialize(Context *context, QJsonObject obj) {
-    ScreenOutputNode *e = new ScreenOutputNode(context, QSize(640,480));
-    return e;
+VideoNodeSP *ScreenOutputNode::deserialize(Context *context, QJsonObject obj) {
+    auto e = new ScreenOutputNode(context, QSize(640,480));
+    return new VideoNodeSP(e);
 }
 
 bool ScreenOutputNode::canCreateFromFile(QString filename) {
     return false;
 }
 
-VideoNode *ScreenOutputNode::fromFile(Context *context, QString filename) {
+VideoNodeSP *ScreenOutputNode::fromFile(Context *context, QString filename) {
     return nullptr;
 }
 

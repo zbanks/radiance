@@ -16,16 +16,16 @@ QString ConsoleOutputNode::typeName() {
     return "ConsoleOutputNode";
 }
 
-VideoNode *ConsoleOutputNode::deserialize(Context *context, QJsonObject obj) {
-    ConsoleOutputNode *e = new ConsoleOutputNode(context, QSize(4, 4));
-    return e;
+VideoNodeSP *ConsoleOutputNode::deserialize(Context *context, QJsonObject obj) {
+    auto e = new ConsoleOutputNode(context, QSize(4, 4));
+    return new VideoNodeSP(e);
 }
 
 bool ConsoleOutputNode::canCreateFromFile(QString filename) {
     return false;
 }
 
-VideoNode *ConsoleOutputNode::fromFile(Context *context, QString filename) {
+VideoNodeSP *ConsoleOutputNode::fromFile(Context *context, QString filename) {
     return nullptr;
 }
 

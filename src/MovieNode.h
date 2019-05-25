@@ -74,7 +74,7 @@ public:
 
     // Create a VideoNode from a filename
     // Returns nullptr if a VideoNode cannot be create from the given filename
-    static VideoNode *fromFile(Context *context, QString filename);
+    static VideoNodeSP *fromFile(Context *context, QString filename);
 
     // Returns QML filenames that can be loaded
     // to instantiate custom instances of this VideoNode

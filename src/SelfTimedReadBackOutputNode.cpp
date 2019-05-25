@@ -5,7 +5,7 @@ SelfTimedReadBackOutputNode::SelfTimedReadBackOutputNode(Context *context, QSize
     : OutputNode(context, chainSize) {
 
     m_workerContext = new OpenGLWorkerContext(context->threaded());
-    m_worker = QSharedPointer<STRBONOpenGLWorker>(new STRBONOpenGLWorker(*this), &QObject::deleteLater);
+    m_worker = QSharedPointer<STRBONOpenGLWorker>(new STRBONOpenGLWorker(qSharedPointerCast<SelfTimedReadBackOutputNode>(sharedFromThis())), &QObject::deleteLater);
     connect(m_worker.data(), &QObject::destroyed, m_workerContext, &QObject::deleteLater);
 
     m_chain->moveToWorkerContext(m_workerContext);
@@ -45,7 +45,7 @@ void SelfTimedReadBackOutputNode::force() {
 // STRBONOpenGLWorker methods
 
 STRBONOpenGLWorker::STRBONOpenGLWorker(SelfTimedReadBackOutputNodeSP p)
-    : OpenGLWorker(p.m_workerContext)
+    : OpenGLWorker(p->m_workerContext)
     , m_p(p) {
 }
 
@@ -138,19 +138,18 @@ void STRBONOpenGLWorker::stop() {
 
 void STRBONOpenGLWorker::onTimeout() {
     Q_ASSERT(QThread::currentThread() == thread());
-    auto d = m_p.toStrongRef();
-    if (d.isNull()) return; // SelfTimedReadBackOutputNode was deleted
-    SelfTimedReadBackOutputNode p(d);
+    auto p = m_p.toStrongRef();
+    if (p.isNull()) return; // SelfTimedReadBackOutputNode was deleted
 
     makeCurrent();
-    GLuint texture = p.render();
+    GLuint texture = p->render();
 
     if (texture == 0) {
         qWarning() << "No frame available";
         return;
     }
 
-    auto vao = p.chain()->vao();
+    auto vao = p->chain()->vao();
 
     glClearColor(0, 0, 0, 0);
     glDisable(GL_DEPTH_TEST);
