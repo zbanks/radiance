@@ -82,6 +82,6 @@ void QQuickPreviewAdapter::onBeforeSynchronizing() {
     }
 }
 
-GLuint QQuickPreviewAdapter::previewTexture(VideoNode *videoNode) {
+GLuint QQuickPreviewAdapter::previewTexture(VideoNodeSP *videoNode) {
     return m_lastPreviewRender.value(*videoNode, 0);
 }

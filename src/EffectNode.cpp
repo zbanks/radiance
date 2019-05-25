@@ -18,7 +18,6 @@
 EffectNode::EffectNode(Context *context, QString file)
     : VideoNode(context)
 {
-    attachSignals();
     m_openGLWorker = QSharedPointer<EffectNodeOpenGLWorker>(new EffectNodeOpenGLWorker(qSharedPointerCast<EffectNode>(sharedFromThis())), &QObject::deleteLater);
     setInputCount(1);
     setFrequency(0);

@@ -22,7 +22,6 @@ const float MovieNode::zoomFactor = 16. / 21.;
 MovieNode::MovieNode(Context *context, QString file, QString name)
     : VideoNode(context)
 {
-    attachSignals();
     m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
     m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(qSharedPointerCast<MovieNode>(sharedFromThis())), &QObject::deleteLater);
     connect(m_openGLWorker.data(), &QObject::destroyed, m_openGLWorkerContext, &QObject::deleteLater);

@@ -116,7 +116,6 @@ signals:
 protected:
     void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) override;
     void reload();
-    void attachSignals();
 
     QString m_file;
     QString m_name;
