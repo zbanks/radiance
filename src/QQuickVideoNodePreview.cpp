@@ -19,11 +19,11 @@ void QQuickVideoNodePreview::onWindowChanged(QQuickWindow *window) {
 QQuickVideoNodePreview::~QQuickVideoNodePreview() {
 }
 
-VideoNode *QQuickVideoNodePreview::videoNode() {
+VideoNodeSP *QQuickVideoNodePreview::videoNode() {
     return m_videoNode;
 }
 
-void QQuickVideoNodePreview::setVideoNode(VideoNode *videoNode) {
+void QQuickVideoNodePreview::setVideoNode(VideoNodeSP *videoNode) {
     delete m_videoNode;
     if (videoNode != nullptr) {
         m_videoNode = videoNode->clone();

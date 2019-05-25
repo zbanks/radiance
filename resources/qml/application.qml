@@ -25,7 +25,7 @@ ApplicationWindow {
         id: registry;
     }
 
-    ModelSP {
+    Model {
         id: model;
         onGraphChanged: {
             var changeset = "+" + verticesAdded.length + " -" + verticesRemoved.length + " vertices, ";

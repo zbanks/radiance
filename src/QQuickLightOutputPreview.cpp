@@ -28,7 +28,7 @@ public:
         glBlendEquationSeparate(GL_MAX, GL_MAX);
         glEnable(GL_PROGRAM_POINT_SIZE);
 
-        auto videoNode = QSharedPointer<LightOutputNode>(m_p->videoNodeSafe());
+        auto videoNode = m_p->videoNodeSafe();
         if (!videoNode.isNull()) {
             m_vao.bind();
 
@@ -213,17 +213,17 @@ QQuickFramebufferObject::Renderer *QQuickLightOutputPreview::createRenderer() co
     return m_renderer;
 }
 
-VideoNode *QQuickLightOutputPreview::videoNode() {
+LightOutputNodeSP *QQuickLightOutputPreview::videoNode() {
     return m_videoNode;
 }
 
-LightOutputNode *QQuickLightOutputPreview::videoNodeSafe() {
+QSharedPointer<LightOutputNode> QQuickLightOutputPreview::videoNodeSafe() {
     QMutexLocker locker(&m_videoNodeLock);
     if (m_videoNode == nullptr) return nullptr;
-    return static_cast<LightOutputNode *>(m_videoNode->clone());
+    return qSharedPointerCast<LightOutputNode>(*m_videoNode);
 }
 
-void QQuickLightOutputPreview::setVideoNode(VideoNode *videoNode) {
+void QQuickLightOutputPreview::setVideoNode(LightOutputNodeSP *videoNode) {
     delete m_videoNode;
     if (videoNode != nullptr) {
         m_videoNode = videoNode->clone();

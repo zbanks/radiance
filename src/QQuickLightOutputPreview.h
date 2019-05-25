@@ -1,13 +1,13 @@
 #include <QQuickFramebufferObject>
 #include "VideoNode.h"
+#include "LightOutputNode.h"
 
 class LightOutputRenderer;
-class LightOutputNode;
 
 class QQuickLightOutputPreview : public QQuickFramebufferObject
 {
     Q_OBJECT
-    Q_PROPERTY(VideoNode *videoNode READ videoNode WRITE setVideoNode NOTIFY videoNodeChanged)
+    Q_PROPERTY(LightOutputNodeSP *videoNode READ videoNode WRITE setVideoNode NOTIFY videoNodeChanged)
 
 public:
     QQuickLightOutputPreview();
@@ -15,7 +15,7 @@ public:
     Renderer *createRenderer() const override;
 
     // Use this method from other threads
-    LightOutputNode *videoNodeSafe();
+    QSharedPointer<LightOutputNode> videoNodeSafe();
 
 public slots:
     // Watch out--
@@ -24,17 +24,17 @@ public slots:
     // so don't rely in pointer values for equality checking
     // or debugging.
     // instead, check *videoNode == *otherVideoNode.
-    VideoNode *videoNode();
-    void setVideoNode(VideoNode *videoNode);
+    LightOutputNodeSP *videoNode();
+    void setVideoNode(LightOutputNodeSP *videoNode);
     // In fact, these really should take in / return VideoNode instead of VideoNode*
     // but then they would be non-nullable
     // Also, they are not thread-safe.
 
 signals:
-    void videoNodeChanged(VideoNode *videoNode);
+    void videoNodeChanged(LightOutputNodeSP *videoNode);
 
 protected:
     LightOutputRenderer *m_renderer;
-    VideoNode *m_videoNode{};
+    LightOutputNodeSP *m_videoNode{};
     QMutex m_videoNodeLock;
 };

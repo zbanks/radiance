@@ -93,7 +93,6 @@ protected slots:
 
 protected:
     QString fileToName(QString file);
-    void attachSignals();
 
     QMap<ChainSP, QSharedPointer<EffectNodeRenderState>> m_renderStates;
     qreal m_intensity{};
