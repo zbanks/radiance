@@ -5,11 +5,13 @@
 
 // OutputWindow
 
-OutputWindow::OutputWindow(OutputNodeSP videoNode)
+OutputWindow::OutputWindow(QSharedPointer<OutputNode> videoNode)
     : m_screenName("")
     , m_found(false)
     , m_videoNode(videoNode)
     , m_shown(false) {
+
+    Q_ASSERT(!videoNode.isNull());
 
     connect(this, &QWindow::screenChanged, this, &OutputWindow::onScreenChanged);
 

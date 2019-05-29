@@ -24,8 +24,8 @@ class Registry;
 class Context;
 
 struct Edge {
-    VideoNodeSP *fromVertex; // XXX can this be unwrapped
-    VideoNodeSP *toVertex;
+    QSharedPointer<VideoNode> fromVertex;
+    QSharedPointer<VideoNode> toVertex;
     int toInput;
 
 public:
@@ -36,8 +36,7 @@ public:
 // Return type of graphCopy
 struct ModelCopyForRendering {
     // Copies of the vertices
-    // (The QSP here is just to ensure they get deleted)
-    QVector<QSharedPointer<VideoNodeSP>> vertices; // XXX can this be unwrapped
+    QVector<QSharedPointer<VideoNode>> vertices;
 
     // Edges, as indices into vertices
     QVector<int> fromVertex;
@@ -47,7 +46,7 @@ struct ModelCopyForRendering {
     // Render this model
     // The return value is a mapping of VideoNodes to OpenGL textures
     // that were rendered into
-    QMap<VideoNodeSP, GLuint> render(ChainSP chain);
+    QMap<QSharedPointer<VideoNode>, GLuint> render(ChainSP chain);
 };
 
 // These functions are not thread-safe unless noted.
@@ -67,7 +66,7 @@ public:
 
     // Returns a list of vertices
     // in the order they were added
-    QList<VideoNodeSP *> vertices() const;
+    QList<QSharedPointer<VideoNode>> vertices() const;
 
     // Returns a list of edges
     // in the order they were added
@@ -78,9 +77,13 @@ public slots:
     // Calling these functions does not emit signals
     // or change what is rendered
     // until flush() is called.
+    void addVideoNode(QSharedPointer<VideoNode> videoNode);
     void addVideoNode(VideoNodeSP *videoNode);
+    void removeVideoNode(QSharedPointer<VideoNode> videoNode);
     void removeVideoNode(VideoNodeSP *videoNode);
+    void addEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNode> toVertex, int toInput);
     void addEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput);
+    void removeEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNode> toVertex, int toInput);
     void removeEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput);
 
     // Delete all nodes & edges (still need to call flush())
@@ -112,10 +115,11 @@ public slots:
 
     // Returns a list of vertices that
     // are ancestors of the given node
-    QList<VideoNodeSP *> ancestors(VideoNodeSP *node);
+    QList<QSharedPointer<VideoNode>> ancestors(QSharedPointer<VideoNode> node);
 
     // Returns true if `parent`
     // is an ancestor of `child`
+    bool isAncestor(QSharedPointer<VideoNode> parent, QSharedPointer<VideoNode> child);
     bool isAncestor(VideoNodeSP *parent, VideoNodeSP *child);
 
     // Chains are instances of the
@@ -124,7 +128,7 @@ public slots:
     // or a different thead.
     // When requesting a render of the model,
     // you must use one of its chains.
-    QList<ChainSP> chains();
+    QList<ChainSP> chains(); // TODO make raw QSP
     void addChain(ChainSP chain);
     void removeChain(ChainSP chain);
 
@@ -150,22 +154,22 @@ signals:
 
 protected:
     void emitGraphChanged();
-    QVector<VideoNodeSP *> topoSort();
-    void prepareNode(VideoNodeSP *node);
-    void disownNode(VideoNodeSP *node);
+    QVector<QSharedPointer<VideoNode>> topoSort();
+    void prepareNode(QSharedPointer<VideoNode> node);
+    void disownNode(QSharedPointer<VideoNode> node);
 
     // m_vertices and m_edges must not be accessed from
     // other threads.
-    QList<VideoNodeSP *> m_vertices;
+    QList<QSharedPointer<VideoNode>> m_vertices;
     QList<Edge> m_edges;
 
     // m_verticesForRendering, m_edgesForRendering
     // and m_verticesSortedForRendering
     // may be accessed from other threads
     // as long as the m_graphLock is taken.
-    QList<VideoNodeSP *> m_verticesForRendering;
+    QList<QSharedPointer<VideoNode>> m_verticesForRendering;
     QList<Edge> m_edgesForRendering;
-    QVector<VideoNodeSP *> m_verticesSortedForRendering;
+    QVector<QSharedPointer<VideoNode>> m_verticesSortedForRendering;
 
     // m_verticesForRendering, m_edgesForRendering
     // and m_verticesSortedForRendering

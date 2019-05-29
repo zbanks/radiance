@@ -9,8 +9,12 @@
 #include <QtQml>
 #include "Paths.h"
 
-ImageNode::ImageNode(Context *context, QString file)
+ImageNode::ImageNode(Context *context)
     : VideoNode(context)
+{
+}
+
+void ImageNode::init(QString file)
 {
     m_openGLWorker = QSharedPointer<ImageNodeOpenGLWorker>(new ImageNodeOpenGLWorker(qSharedPointerCast<ImageNode>(sharedFromThis())), &QObject::deleteLater);
 
@@ -163,11 +167,13 @@ QString ImageNode::typeName() {
 }
 
 VideoNodeSP *ImageNode::deserialize(Context *context, QJsonObject obj) {
-    QString name = obj.value("file").toString();
+    QString file = obj.value("file").toString();
     if (obj.isEmpty()) {
         return nullptr;
     }
-    return new VideoNodeSP(new ImageNode(context, name));
+    QSharedPointer<ImageNode> node(new ImageNode(context));
+    node->init(file);
+    return new ImageNodeSP(node);
 }
 
 bool ImageNode::canCreateFromFile(QString filename) {
@@ -175,7 +181,9 @@ bool ImageNode::canCreateFromFile(QString filename) {
 }
 
 VideoNodeSP *ImageNode::fromFile(Context *context, QString filename) {
-    return new VideoNodeSP(new ImageNode(context, filename));
+    QSharedPointer<ImageNode> node(new ImageNode(context));
+    node->init(filename);
+    return new ImageNodeSP(node);
 }
 
 QMap<QString, QString> ImageNode::customInstantiators() {

@@ -45,7 +45,8 @@ class EffectNode
     Q_PROPERTY(double frequency READ frequency WRITE setFrequency NOTIFY frequencyChanged)
 
 public:
-    EffectNode(Context *context, QString name);
+    EffectNode(Context *context);
+    void init(QString file);
 
     QJsonObject serialize() override;
 
@@ -136,7 +137,7 @@ public slots:
 
     // Call this to prepare and add a new renderState
     // if chains change or one is somehow missing
-    void addNewState(ChainSP chain);
+    void addNewState(QSharedPointer<Chain> chain);
 
 signals:
     void message(QString str);

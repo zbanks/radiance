@@ -13,7 +13,7 @@ protected:
     QTimer m_reloader;
     bool m_found;
     QOpenGLShaderProgram *m_program;
-    OutputNodeSP m_videoNode;
+    QSharedPointer<OutputNode> m_videoNode;
     QOpenGLVertexArrayObject m_vao;
     bool m_shown;
     QSize m_screenSize;
@@ -32,7 +32,7 @@ protected slots:
     void setScreenSize(QSize screenSize);
 
 public:
-    OutputWindow(OutputNodeSP videoNode);
+    OutputWindow(QSharedPointer<OutputNode> videoNode);
 
 public slots:
     void setScreenName(QString screen);

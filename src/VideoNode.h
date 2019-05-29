@@ -134,3 +134,4 @@ protected:
 
 typedef QmlSharedPointer<VideoNode> VideoNodeSP;
 Q_DECLARE_METATYPE(VideoNodeSP*)
+Q_DECLARE_METATYPE(VideoNode::NodeState)
