@@ -8,7 +8,7 @@
 
 #include <QSharedPointer>
 #include <QMetaMethod>
-//#include <QDebug>
+#include <QDebug>
 
 template <class T, class B>
 class QmlSharedPointer;
@@ -78,6 +78,7 @@ private:
 private:
     void init()
     {
+        Q_ASSERT(!QSharedPointer<QObject>::isNull());
         // Connect all signals from the encapsulated item to the QmlSharedPointer
         // Skip QObject's signals (e.g. destroyed)
         const int qObjectMethodCount = QObject::staticMetaObject.methodCount();
@@ -85,6 +86,7 @@ private:
         {
             auto incomingSignal = T::staticMetaObject.method(i);
             if (incomingSignal.methodType() != QMetaMethod::Signal) continue;
+            qDebug() << "connect" << data() << i << incomingSignal.methodSignature();
             QMetaObject::connect(data(), i, this, i);
         }
     }

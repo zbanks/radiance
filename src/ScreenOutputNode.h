@@ -18,6 +18,7 @@ class ScreenOutputNode
 
 public:
     ScreenOutputNode(Context *context, QSize chainSize);
+    void init();
 
     // These static methods are required for VideoNode creation
     // through the registry

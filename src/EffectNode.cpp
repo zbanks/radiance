@@ -15,8 +15,12 @@
 #include <algorithm>
 #include "Paths.h"
 
-EffectNode::EffectNode(Context *context, QString file)
+EffectNode::EffectNode(Context *context)
     : VideoNode(context)
+{
+}
+
+void EffectNode::init(QString file)
 {
     m_openGLWorker = QSharedPointer<EffectNodeOpenGLWorker>(new EffectNodeOpenGLWorker(qSharedPointerCast<EffectNode>(sharedFromThis())), &QObject::deleteLater);
     setInputCount(1);
@@ -25,8 +29,8 @@ EffectNode::EffectNode(Context *context, QString file)
     m_periodic.start();
     connect(&m_periodic, &QTimer::timeout, this, &EffectNode::onPeriodic);
 
-    m_beatLast = context->timebase()->beat();
-    m_realTimeLast = context->timebase()->wallTime();
+    m_beatLast = m_context->timebase()->beat();
+    m_realTimeLast = m_context->timebase()->wallTime();
     if (!file.isEmpty()) setFile(file);
 }
 
@@ -39,7 +43,7 @@ QJsonObject EffectNode::serialize() {
 
 void EffectNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     for (auto chain : added) {
-        auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
+        auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(QSharedPointer<Chain>, qSharedPointerCast<Chain>(chain)));
         Q_ASSERT(result);
     }
     {
@@ -428,7 +432,7 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
 // Invoke this method when a ChainSP gets added
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
-void EffectNodeOpenGLWorker::addNewState(ChainSP c) {
+void EffectNodeOpenGLWorker::addNewState(QSharedPointer<Chain> c) {
     auto p = m_p.toStrongRef();
     if (p.isNull()) return; // EffectNode was deleted
 
@@ -464,10 +468,11 @@ VideoNodeSP *EffectNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
-    auto e = new EffectNode(context, file);
+    QSharedPointer<EffectNode> node(new EffectNode(context));
+    node->init(file);
     double intensity = obj.value("intensity").toDouble();
-    e->setIntensity(intensity);
-    return new VideoNodeSP((VideoNode*)e);
+    node->setIntensity(intensity);
+    return new EffectNodeSP(node);
 }
 
 bool EffectNode::canCreateFromFile(QString file) {
@@ -475,7 +480,9 @@ bool EffectNode::canCreateFromFile(QString file) {
 }
 
 VideoNodeSP *EffectNode::fromFile(Context *context, QString file) {
-    return new VideoNodeSP(new EffectNode(context, file));
+    auto node = QSharedPointer<EffectNode>(new EffectNode(context));
+    node->init(file);
+    return new EffectNodeSP(node);
 }
 
 QMap<QString, QString> EffectNode::customInstantiators() {

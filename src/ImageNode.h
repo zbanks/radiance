@@ -19,7 +19,8 @@ class ImageNode
     friend class ImageNodeOpenGLWorker;
 
 public:
-    ImageNode(Context *context, QString file);
+    ImageNode(Context *context);
+    void init(QString file);
 
     QJsonObject serialize() override;
 
