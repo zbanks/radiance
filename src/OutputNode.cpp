@@ -9,13 +9,13 @@ OutputNode::OutputNode(Context *context, QSize chainSize)
     setInputCount(1);
 }
 
-QList<ChainSP> OutputNode::requestedChains() {
-    auto l = QList<ChainSP>();
+QList<QSharedPointer<Chain>> OutputNode::requestedChains() {
+    auto l = QList<QSharedPointer<Chain>>();
     l.append(chain());
     return l;
 }
 
-GLuint OutputNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
+GLuint OutputNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     Q_UNUSED(chain);
     return inputTextures.at(0);
 }
@@ -30,19 +30,19 @@ GLuint OutputNode::render(QWeakPointer<Model> model) {
     return result.value(sharedFromThis(), 0);
 }
 
-ChainSP OutputNode::chain() {
+QSharedPointer<Chain> OutputNode::chain() {
     QMutexLocker locker(&m_stateLock);
     return m_chain;
 }
 
 void OutputNode::resize(QSize size) {
-    ChainSP oldChain;
-    ChainSP newChain;
+    QSharedPointer<Chain> oldChain;
+    QSharedPointer<Chain> newChain;
     {
         QMutexLocker locker(&m_stateLock);
         oldChain = m_chain;
         if (size == oldChain->size()) return;
-        newChain = ChainSP(new Chain(oldChain.data(), size), &QObject::deleteLater);
+        newChain = QSharedPointer<Chain>(new Chain(oldChain.data(), size), &QObject::deleteLater);
         m_chain = newChain;
     }
     emit requestedChainAdded(newChain);

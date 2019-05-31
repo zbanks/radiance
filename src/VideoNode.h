@@ -49,7 +49,7 @@ public:
     // paint() may mutate the RenderState
     // for the chain that it was called on.
     // Returns 0 if the chain does not exist or is not ready.
-    virtual GLuint paint(ChainSP chain, QVector<GLuint> inputTextures);
+    virtual GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures);
 
 public slots:
     // Convert this VideoNode to JSON
@@ -66,8 +66,8 @@ public slots:
     // Creating and destroying chains may be expensive,
     // so we perform a diff and only tell you
     // which ones that changed through the function chainsEdited.
-    QList<ChainSP> chains();
-    void setChains(QList<ChainSP> chains);
+    QList<QSharedPointer<Chain>> chains();
+    void setChains(QList<QSharedPointer<Chain>> chains);
 
     // A VideoNode may request of the model
     // that certain chains exist.
@@ -77,7 +77,7 @@ public slots:
     // You must also emit the signals
     // requestedChainAdded and requestedChainRemoved.
     // The Model will add these through setChains.
-    virtual QList<ChainSP> requestedChains();
+    virtual QList<QSharedPointer<Chain>> requestedChains();
 
     // The last model that this VideoNode was added to
     // WeakModel encapsulates a weak reference to modeldata
@@ -99,7 +99,7 @@ public slots:
 
 protected slots:
     // If your node does anything at all, you will need to override this method
-    virtual void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed);
+    virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed);
 
 signals:
     // Emitted when the object has something to say
@@ -112,11 +112,11 @@ signals:
     void inputCountChanged(int value);
 
     // Emitted when the chains list changes
-    void chainsChanged(QList<ChainSP> chains);
+    void chainsChanged(QList<QSharedPointer<Chain>> chains);
 
     // Emitted when requestedChains changes
-    void requestedChainAdded(ChainSP chain);
-    void requestedChainRemoved(ChainSP chain);
+    void requestedChainAdded(QSharedPointer<Chain> chain);
+    void requestedChainRemoved(QSharedPointer<Chain> chain);
 
     // Emitted when state changes
     void nodeStateChanged(NodeState value);
@@ -126,7 +126,7 @@ protected:
 
     int m_inputCount{};
     QMutex m_stateLock; // TODO this is no longer a meaningful concept, should use separate locks for separate fields
-    QList<ChainSP> m_chains;
+    QList<QSharedPointer<Chain>> m_chains;
     Context *m_context{};
     QWeakPointer<Model> m_lastModel;
     VideoNode::NodeState m_nodeState{VideoNode::Ready};

@@ -41,15 +41,15 @@ void VideoNode::setNodeState(NodeState value) {
     if (changed) emit nodeStateChanged(value);
 }
 
-QList<ChainSP> VideoNode::chains() {
+QList<QSharedPointer<Chain>> VideoNode::chains() {
     QMutexLocker locker(&m_stateLock);
     return m_chains;
 }
 
-void VideoNode::setChains(QList<ChainSP> chains) {
+void VideoNode::setChains(QList<QSharedPointer<Chain>> chains) {
     bool wereChainsChanged = false;
-    QList<ChainSP> toRemove;
-    QList<ChainSP> toAdd;
+    QList<QSharedPointer<Chain>> toRemove;
+    QList<QSharedPointer<Chain>> toAdd;
     {
         QMutexLocker locker(&m_stateLock);
         toRemove = m_chains;
@@ -84,14 +84,14 @@ QJsonObject VideoNode::serialize() {
     return o;
 }
 
-QList<ChainSP> VideoNode::requestedChains() {
-    return QList<ChainSP>();
+QList<QSharedPointer<Chain>> VideoNode::requestedChains() {
+    return QList<QSharedPointer<Chain>>();
 }
 
-void VideoNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
+void VideoNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
 }
 
-GLuint VideoNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
+GLuint VideoNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     Q_UNUSED(chain);
     Q_UNUSED(inputTextures);
     return 0;

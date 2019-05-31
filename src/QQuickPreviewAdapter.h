@@ -43,6 +43,6 @@ protected:
     QSize m_previewSize;
     QSharedPointer<Chain> m_previewChain;
     QQuickWindow *m_previewWindow{};
-    QMap<VideoNodeSP, GLuint> m_lastPreviewRender;
+    QMap<QSharedPointer<VideoNode>, GLuint> m_lastPreviewRender;
     QMutex m_previewLock;
 };
