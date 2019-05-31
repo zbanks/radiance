@@ -35,13 +35,7 @@
     from multiple threads)
 */
 
-class Chain : public QObject {
-    Q_OBJECT
-
-    Q_PROPERTY(QSize size READ size CONSTANT);
-    Q_PROPERTY(int blankTexture READ blankTexture);
-    Q_PROPERTY(int noiseTexture READ noiseTexture);
-
+class Chain {
 public:
     Chain(QSize size=QSize(0, 0));
 
@@ -53,12 +47,6 @@ public:
 
     operator QString() const;
 
-    bool operator==(const Chain &other) const;
-    bool operator>(const Chain &other) const;
-    bool operator<(const Chain &other) const;
-    Chain &operator=(const Chain &other);
-
-public slots:
     void moveToWorkerContext(OpenGLWorkerContext *context);
     QSize size() const;
     GLuint noiseTexture();
@@ -71,6 +59,3 @@ protected:
     QOpenGLVertexArrayObject m_vao{};
     QSize m_size{};
 };
-
-typedef QmlSharedPointer<Chain> ChainSP;
-Q_DECLARE_METATYPE(ChainSP*)

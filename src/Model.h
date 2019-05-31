@@ -19,7 +19,7 @@ typedef QmlSharedPointer<VideoNode> VideoNodeSP;
 //class VideoNode;
 //class VideoNodeSP;
 //class Chain;
-//typedef QmlSharedPointer<Chain> ChainSP;
+//typedef QmlSharedPointer<Chain> QSharedPointer<Chain>;
 class Registry;
 class Context;
 
@@ -46,7 +46,7 @@ struct ModelCopyForRendering {
     // Render this model
     // The return value is a mapping of VideoNodes to OpenGL textures
     // that were rendered into
-    QMap<QSharedPointer<VideoNode>, GLuint> render(ChainSP chain);
+    QMap<QSharedPointer<VideoNode>, GLuint> render(QSharedPointer<Chain> chain);
 };
 
 // These functions are not thread-safe unless noted.
@@ -128,9 +128,9 @@ public slots:
     // or a different thead.
     // When requesting a render of the model,
     // you must use one of its chains.
-    QList<ChainSP> chains(); // TODO make raw QSP
-    void addChain(ChainSP chain);
-    void removeChain(ChainSP chain);
+    QList<QSharedPointer<Chain>> chains();
+    void addChain(QSharedPointer<Chain> chain);
+    void removeChain(QSharedPointer<Chain> chain);
 
     QJsonObject serialize();
     void deserialize(Context *context, Registry *registry, const QJsonObject &data);
@@ -146,7 +146,7 @@ signals:
     // with the interim changes
     void graphChanged(QVariantList verticesAdded, QVariantList verticesRemoved, QVariantList edgesAdded, QVariantList edgesRemoved);
 
-    void chainsChanged(QList<ChainSP> chains);
+    void chainsChanged(QList<QSharedPointer<Chain>> chains);
 
     void message(VideoNodeSP *videoNode, QString str);
     void warning(VideoNodeSP *videoNode, QString str);
@@ -180,7 +180,7 @@ protected:
     QMutex m_graphLock;
 
     // Chains used for rendering this model
-    QList<ChainSP> m_chains;
+    QList<QSharedPointer<Chain>> m_chains;
 
 protected slots:
     void onMessage(QString message);

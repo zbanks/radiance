@@ -67,7 +67,7 @@ void ImageNode::setFile(QString file) {
     if (wasNameChanged) emit nameChanged(newName);
 }
 
-GLuint ImageNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
+GLuint ImageNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     int totalDelay;
     QVector<int> frameDelays;
     QVector<QSharedPointer<QOpenGLTexture>> frameTextures;

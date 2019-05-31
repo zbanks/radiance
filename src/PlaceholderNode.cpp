@@ -16,43 +16,57 @@ QJsonObject PlaceholderNode::serialize() {
     return o;
 }
 
+void PlaceholderNode::setWrappedVideoNode(QSharedPointer<VideoNode> wrapped) {
+    // Use parent-child semantics for managing the object that is created
+    // from the raw QSharedPointer that comes in here.
+    // This doesn't necessarily free the wrapped VideoNode when the PlacehodlderNode is deleted,
+    // but it derefs it.
+    auto wrapped_ptr = new VideoNodeSP(wrapped);
+    wrapped_ptr->setParent(this);
+    setWrappedVideoNode(wrapped_ptr);
+}
+
 void PlaceholderNode::setWrappedVideoNode(VideoNodeSP *wrapped) {
     {
         QMutexLocker locker(&m_stateLock);
-        if (wrapped != nullptr) {
-            wrapped = new VideoNodeSP(*wrapped);
-            (*wrapped)->setChains(m_chains);
+        if (m_wrappedVideoNode != nullptr) {
+            if (m_wrappedVideoNode->parent() == this) {
+                delete m_wrappedVideoNode;
+            }
         }
-        m_wrappedVideoNode = QSharedPointer<VideoNodeSP>(wrapped);
+        m_wrappedVideoNode = wrapped;
+        (*m_wrappedVideoNode)->setChains(m_chains); // XXX this needs to be more dynamic
     }
-    emit wrappedVideoNodeChanged(wrapped);
+    emit wrappedVideoNodeChanged(m_wrappedVideoNode);
 }
 
 VideoNodeSP *PlaceholderNode::wrappedVideoNode() {
     QMutexLocker locker(&m_stateLock);
-    return m_wrappedVideoNode.data();
+    return m_wrappedVideoNode;
 }
 
 GLuint PlaceholderNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
-    QSharedPointer<VideoNodeSP> wrapped; // How many layers of QSP can we have
+    QSharedPointer<VideoNode> wrapped;
     {
         QMutexLocker locker(&m_stateLock);
-        wrapped = m_wrappedVideoNode;
+
+        if (m_wrappedVideoNode == nullptr) {
+            if (inputTextures.size() >= 1) {
+                return inputTextures.at(0);
+            }
+            return chain->blankTexture();
+        }
+
+        wrapped = qSharedPointerCast<VideoNode>(*m_wrappedVideoNode);
     }
 
-    if (wrapped.isNull()) {
-        if (inputTextures.size() >= 1) {
-            return inputTextures.at(0);
-        }
-        return chain->blankTexture();
+    if (inputTextures.size() > wrapped->inputCount()) {
+        inputTextures.resize(wrapped->inputCount());
     }
-    if (inputTextures.size() > (*wrapped)->inputCount()) {
-        inputTextures.resize((*wrapped)->inputCount());
-    }
-    while (inputTextures.size() < (*wrapped)->inputCount()) {
+    while (inputTextures.size() < wrapped->inputCount()) {
         inputTextures.append(chain->blankTexture());
     }
-    return (*wrapped)->paint(chain, inputTextures);
+    return wrapped->paint(chain, inputTextures);
 }
 
 void PlaceholderNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {

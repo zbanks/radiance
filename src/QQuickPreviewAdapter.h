@@ -37,9 +37,11 @@ signals:
     void previewWindowChanged(QQuickWindow *window);
 
 protected:
+    // m_model needs to be a ModelSP since there are QML properties that fetch it
+    // This one ModelSP pointer can be shared by all of the UI and not cause problems
     ModelSP *m_model{};
     QSize m_previewSize;
-    ChainSP m_previewChain;
+    QSharedPointer<Chain> m_previewChain;
     QQuickWindow *m_previewWindow{};
     QMap<VideoNodeSP, GLuint> m_lastPreviewRender;
     QMutex m_previewLock;

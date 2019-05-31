@@ -41,7 +41,7 @@ QJsonObject EffectNode::serialize() {
     return o;
 }
 
-void EffectNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
+void EffectNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     for (auto chain : added) {
         auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(QSharedPointer<Chain>, qSharedPointerCast<Chain>(chain)));
         Q_ASSERT(result);
@@ -54,7 +54,7 @@ void EffectNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
     }
 }
 
-GLuint EffectNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
+GLuint EffectNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     GLuint outTexture = 0;
 
     QSharedPointer<EffectNodeRenderState> renderState;
@@ -402,7 +402,7 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
 
     // We prepare the state for all chains that exist upon creation
     auto chains = p->chains();
-    QMap<ChainSP, QSharedPointer<EffectNodeRenderState>> states;
+    QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> states;
 
     for (auto chain : chains) {
         states.insert(chain, QSharedPointer<EffectNodeRenderState>::create(shaders));
@@ -429,7 +429,7 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
     p->setNodeState(VideoNode::Ready);
 }
 
-// Invoke this method when a ChainSP gets added
+// Invoke this method when a QSharedPointer<Chain> gets added
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
 void EffectNodeOpenGLWorker::addNewState(QSharedPointer<Chain> c) {

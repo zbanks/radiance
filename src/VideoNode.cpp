@@ -106,3 +106,11 @@ QWeakPointer<Model> VideoNode::lastModel() {
     QMutexLocker locker(&m_stateLock);
     return m_lastModel;
 }
+
+QDebug operator<<(QDebug debug, const VideoNode &vn)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << "VideoNode";
+
+    return debug;
+}
