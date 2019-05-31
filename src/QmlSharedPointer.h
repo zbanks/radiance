@@ -86,7 +86,7 @@ private:
         {
             auto incomingSignal = T::staticMetaObject.method(i);
             if (incomingSignal.methodType() != QMetaMethod::Signal) continue;
-            qDebug() << "connect" << data() << i << incomingSignal.methodSignature();
+            //qDebug() << "connect" << data() << i << incomingSignal.methodSignature();
             QMetaObject::connect(data(), i, this, i);
         }
     }

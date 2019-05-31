@@ -132,6 +132,8 @@ protected:
     VideoNode::NodeState m_nodeState{VideoNode::Ready};
 };
 
+QDebug operator<<(QDebug debug, const VideoNode &vn);
+
 typedef QmlSharedPointer<VideoNode> VideoNodeSP;
 Q_DECLARE_METATYPE(VideoNodeSP*)
 Q_DECLARE_METATYPE(VideoNode::NodeState)

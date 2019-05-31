@@ -24,7 +24,7 @@ public:
 
     QJsonObject serialize() override;
 
-    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
     // through the registry

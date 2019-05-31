@@ -53,7 +53,7 @@ public:
     static constexpr qreal MAX_INTEGRAL = 1024;
     static constexpr qreal FPS = 60;
 
-    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
 
     // These static methods are required for VideoNode creation
     // through the registry
@@ -90,12 +90,12 @@ public slots:
 
 protected slots:
     void onPeriodic();
-    void chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) override;
+    void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
 protected:
     QString fileToName(QString file);
 
-    QMap<ChainSP, QSharedPointer<EffectNodeRenderState>> m_renderStates;
+    QMap<QSharedPointer<Chain>, QSharedPointer<EffectNodeRenderState>> m_renderStates;
     qreal m_intensity{};
     qreal m_intensityIntegral{};
     qreal m_beatLast{};

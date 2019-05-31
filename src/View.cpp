@@ -31,7 +31,7 @@ void View::rebuild() {
     onGraphChanged();
 }
 
-Child View::newChild(VideoNodeSP *videoNode) {
+Child View::newChild(QSharedPointer<VideoNode> videoNode) {
     Child c;
     c.videoNode = videoNode;
     c.item = nullptr;
@@ -57,7 +57,7 @@ Child View::newChild(VideoNodeSP *videoNode) {
 
     item->setParentItem(this);
     item->setProperty("videoNode", QVariant::fromValue(videoNode));
-    item->setProperty("model", QVariant::fromValue(m_model));
+    item->setProperty("model", QVariant::fromValue(new ModelSP(m_model)));
     c.item = item;
 
     return c;
@@ -159,7 +159,7 @@ QQuickItem *View::createDropArea() {
 void View::onGraphChanged() {
     if (m_model == nullptr) return;
 
-    QMap<VideoNodeSP *, int> existingChildMap;
+    QMap<QSharedPointer<VideoNode>, int> existingChildMap;
     for (int i=0; i<m_children.count(); i++) {
         existingChildMap.insert(m_children.at(i).videoNode, i);
     }
@@ -178,7 +178,7 @@ void View::onGraphChanged() {
     }
 
     // Create a map from VideoNodes to indices
-    QMap<VideoNodeSP *, int> map;
+    QMap<QSharedPointer<VideoNode>, int> map;
     for (int i=0; i<vertices.count(); i++) {
         map.insert(vertices.at(i), i);
     }
@@ -198,7 +198,7 @@ void View::onGraphChanged() {
         auto index = map.value(m_children.at(i).videoNode, -1);
         Q_ASSERT(index >= 0);
         QVariant heightVar = m_children.at(i).item->property("minInputHeight");
-        auto inputCount = (*m_children.at(i).videoNode)->inputCount();
+        auto inputCount = m_children.at(i).videoNode->inputCount();
         if (inputCount < 1) inputCount = 1; // Handle zero-input nodes
         if (heightVar.canConvert(QMetaType::QVariantList)) {
             QVariantList heightList = heightVar.toList();
@@ -238,7 +238,7 @@ void View::onGraphChanged() {
 
     // Create a list of -1's
     for (int i=0; i<vertices.count(); i++) {
-        auto inputCount = (*vertices.at(i))->inputCount();
+        auto inputCount = vertices.at(i)->inputCount();
         if (inputCount < 1) inputCount = 1;
         inputs.append(QVector<int>(inputCount, -1));
         inputGridHeight.append(QVector<int>(inputCount, -1));
@@ -255,13 +255,13 @@ void View::onGraphChanged() {
 
     // Find the root nodes
     QVector<int> s;
-    QSet<VideoNodeSP *> sSet;
+    QSet<QSharedPointer<VideoNode>> sSet;
     // Populate s, the start nodes
     for (int i=0; i<vertices.count(); i++) {
         sSet.insert(vertices.at(i));
     }
     for (auto e = edges.begin(); e != edges.end(); e++) {
-        if (e->toInput < (*e->toVertex)->inputCount()) sSet.remove(e->fromVertex);
+        if (e->toInput < e->toVertex->inputCount()) sSet.remove(e->fromVertex);
     }
     for (int i=0; i<vertices.count(); i++) {
         if (sSet.contains(vertices.at(i))) {
@@ -374,7 +374,7 @@ void View::onGraphChanged() {
         Q_ASSERT(myInputGridHeights.count() == myInputHeights.count());
         qreal sumInputHeights = 0;
 
-        for (int j=0; j<(*vertex)->inputCount(); j++) {
+        for (int j=0; j<vertex->inputCount(); j++) {
             // Create a drop area at each input of every node
             auto item = createDropArea();
 
@@ -464,10 +464,10 @@ void View::setModel(ModelSP *model) {
     if(m_model != nullptr) disconnect(model, nullptr, this, nullptr);
     m_model = model;
     if(m_model != nullptr) {
-        connect(model->data(), &Model::graphChanged, this, &View::onGraphChanged);
+        connect(m_model->data(), &Model::graphChanged, this, &View::onGraphChanged);
     }
     rebuild();
-    emit modelChanged(model);
+    emit modelChanged(m_model);
 }
 
 QMap<QString, QString> View::delegates() {
@@ -611,10 +611,10 @@ QVariantList View::selectedConnectedComponents() {
 
     // Find only the vertices contained in the selection
     auto vertices = (*m_model)->vertices();
-    QSet<VideoNodeSP *> selectedVerticesSet;
-    QVector<VideoNodeSP *> selectedVertices;
+    QSet<QSharedPointer<VideoNode>> selectedVerticesSet;
+    QVector<QSharedPointer<VideoNode>> selectedVertices;
     {
-        auto vSet = QSet<VideoNodeSP *>::fromList(vertices);
+        auto vSet = QSet<QSharedPointer<VideoNode>>::fromList(vertices);
         for (int i=0; i<m_children.count(); i++) {
             if (m_selection.contains(m_children.at(i).item)
              && vSet.contains(m_children.at(i).videoNode)) {
@@ -635,7 +635,7 @@ QVariantList View::selectedConnectedComponents() {
     }
 
     // Create a map from VideoNodes to indices
-    QMap<VideoNodeSP *, int> map;
+    QMap<QSharedPointer<VideoNode>, int> map;
     for (int i=0; i<selectedVertices.count(); i++) {
         map.insert(selectedVertices.at(i), i);
     }
@@ -660,7 +660,7 @@ QVariantList View::selectedConnectedComponents() {
     // Create a data structure for looking up edges in reverse
     QVector<QVector<int>> edgeRevLookup(selectedVertices.count());
     for (int i=0; i<selectedVertices.count(); i++) {
-        edgeRevLookup[i] = QVector<int>((*selectedVertices.at(i))->inputCount(), -1);
+        edgeRevLookup[i] = QVector<int>(selectedVertices.at(i)->inputCount(), -1);
     }
     for (int i=0; i<selectedEdges.count(); i++) {
         auto fromIndex = map.value(selectedEdges.at(i).fromVertex, -1);
@@ -676,7 +676,7 @@ QVariantList View::selectedConnectedComponents() {
     for (int c=1; c<curColor; c++) { // TODO this is a little bit N^2
         // Find all tiles of that color
         QVariantList tiles;
-        QSet<VideoNodeSP *> coloredVerticesSet;
+        QSet<QSharedPointer<VideoNode>> coloredVerticesSet;
         for (int i=0; i<m_children.count(); i++) {
             auto tileIndex = map.value(m_children.at(i).videoNode, -1);
             if (tileIndex >= 0 && colors.at(tileIndex) == c) {
@@ -708,7 +708,7 @@ QVariantList View::selectedConnectedComponents() {
         }
 
         // Find the output node (the node with no outgoing edges)
-        QSet<VideoNodeSP *> sSet = coloredVerticesSet;
+        QSet<QSharedPointer<VideoNode>> sSet = coloredVerticesSet;
         for (auto e = selectedEdges.begin(); e != selectedEdges.end(); e++) {
             auto toIndex = map.value(e->toVertex, -1);
             auto fromIndex = map.value(e->toVertex, -1);
@@ -768,7 +768,7 @@ static void findAllPaths(int n, int end, const QVector<QVector<int>> &edges, QVe
 QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *tile2) {
     // Create a map from VideoNodes to indices
     auto vertices = (*m_model)->vertices();
-    QMap<VideoNodeSP *, int> map;
+    QMap<QSharedPointer<VideoNode>, int> map;
     for (int i=0; i<vertices.count(); i++) {
         map.insert(vertices.at(i), i);
     }
@@ -815,8 +815,10 @@ QVariantList View::tilesBetween(BaseVideoNodeTile *tile1, BaseVideoNodeTile *til
 }
 
 BaseVideoNodeTile *View::tileForVideoNode(VideoNodeSP *videoNode) {
+    if (videoNode == nullptr) return nullptr;
+    auto vn = qSharedPointerCast<VideoNode>(*videoNode);
     for (auto child : m_children) {
-        if (child.videoNode == videoNode)
+        if (child.videoNode == vn)
             return child.item;
     }
     return nullptr;

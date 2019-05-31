@@ -4,7 +4,7 @@
 #include "Controls.h"
 
 struct Child {
-    VideoNodeSP *videoNode;
+    QSharedPointer<VideoNode> videoNode;
     BaseVideoNodeTile *item;
     QVector<int> inputHeights;
 };
@@ -62,12 +62,14 @@ public slots:
     BaseVideoNodeTile *focusedChild();
 
 protected:
+    // m_model needs to be a ModelSP since there are QML properties that fetch it
+    // This one ModelSP pointer can be shared by all of the UI and not cause problems
     ModelSP *m_model;
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
     QList<QQuickItem *> m_dropAreas;
     void rebuild();
-    Child newChild(VideoNodeSP *videoNode);
+    Child newChild(QSharedPointer<VideoNode> videoNode);
     QSet<BaseVideoNodeTile *> m_selection;
     void selectionChanged();
     void componentComplete() override;

@@ -41,21 +41,21 @@ Model::Model() {
     qDebug() << "In Model constructor." << this;
 }
 
-void Model::addChain(ChainSP chain) {
+void Model::addChain(QSharedPointer<Chain> chain) {
     if (!m_chains.contains(chain)) {
         m_chains.append(chain);
         emit chainsChanged(m_chains);
     }
 }
 
-void Model::removeChain(ChainSP chain) {
+void Model::removeChain(QSharedPointer<Chain> chain) {
     if (m_chains.contains(chain)) {
         m_chains.removeAll(chain);
         emit chainsChanged(m_chains);
     }
 }
 
-QList<ChainSP> Model::chains() {
+QList<QSharedPointer<Chain>> Model::chains() {
     return m_chains;
 }
 
@@ -453,7 +453,7 @@ bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) {
     return isAncestor(qSharedPointerCast<VideoNode>(*parent), qSharedPointerCast<VideoNode>(*child));
 }
 
-QMap<QSharedPointer<VideoNode>, GLuint> ModelCopyForRendering::render(ChainSP chain) {
+QMap<QSharedPointer<VideoNode>, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
     // inputs is parallel to vertices
     // and contains the VideoNodes connected to the
     // corresponding vertex's inputs

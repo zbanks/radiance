@@ -45,7 +45,7 @@ void QQuickPreviewAdapter::setPreviewSize(QSize size) {
         {
             QMutexLocker locker(&m_previewLock);
             m_previewSize = size;
-            ChainSP previewChain(new Chain(size));
+            QSharedPointer<Chain> previewChain(new Chain(size));
             if (m_model != nullptr) {
                 (*m_model)->removeChain(m_previewChain);
                 (*m_model)->addChain(previewChain);
