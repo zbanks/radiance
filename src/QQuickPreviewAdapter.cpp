@@ -83,5 +83,6 @@ void QQuickPreviewAdapter::onBeforeSynchronizing() {
 }
 
 GLuint QQuickPreviewAdapter::previewTexture(VideoNodeSP *videoNode) {
-    return m_lastPreviewRender.value(*videoNode, 0);
+    if (videoNode == nullptr) return 0;
+    return m_lastPreviewRender.value(qSharedPointerCast<VideoNode>(*videoNode), 0);
 }

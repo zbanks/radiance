@@ -348,7 +348,7 @@ void *QmlSharedPointer<T, B>::gen_extradata()
     return T::staticMetaObject.d.extradata;
 }
 
-QT_INIT_METAOBJECT template<typename T, typename B> const QMetaObject QmlSharedPointer<T, B>::staticMetaObject = { {
+template<typename T, typename B> const QMetaObject QmlSharedPointer<T, B>::staticMetaObject = { {
     QmlSharedPointer<T, B>::gen_superdata(),
     QmlSharedPointer<T, B>::gen_stringdata(),
     QmlSharedPointer<T, B>::gen_data(),

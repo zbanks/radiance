@@ -16,19 +16,19 @@ class OutputNode : public VideoNode {
 public:
     OutputNode(Context *context, QSize chainSize);
 
-    GLuint paint(ChainSP chain, QVector<GLuint> inputTextures) override;
+    GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
     GLuint render();
     GLuint render(QWeakPointer<Model> model);
 
 public slots:
     void resize(QSize size);
 
-    ChainSP chain();
+    QSharedPointer<Chain> chain();
 
 protected:
-    virtual QList<ChainSP> requestedChains() override;
+    virtual QList<QSharedPointer<Chain>> requestedChains() override;
 
-    ChainSP m_chain;
+    QSharedPointer<Chain> m_chain;
 };
 
 typedef QmlSharedPointer<OutputNode, VideoNodeSP> OutputNodeSP;

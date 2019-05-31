@@ -80,6 +80,8 @@ runRadianceGui(QGuiApplication *app) {
 
     qmlRegisterUncreatableType<Controls>("radiance", 1, 0, "Controls", "Controls cannot be instantiated");
     qRegisterMetaType<Controls::Control>("Controls::Control");
+    qRegisterMetaType<QSharedPointer<Chain>>("QSharedPointer<Chain>");
+    qRegisterMetaType<VideoNode::NodeState>("NodeState");
 
     // We have to create the context here
     // (as opposed to in QML)
@@ -156,7 +158,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     Context context(false);
     context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBPM, 140.);
 
-    ChainSP chain(new Chain(renderSize));
+    QSharedPointer<Chain> chain(new Chain(renderSize));
     FramebufferVideoNodeRender imgRender(renderSize);
 
     Model model;
@@ -201,7 +203,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
             if (!renderNode) {
                 qInfo() << "Unable to open:" << entry << entryPath;
             } else {
-                renderNodes << *renderNode;
+                renderNodes << qSharedPointerCast<VideoNode>(*renderNode);
                 delete renderNode; // deref
             }
         }
@@ -209,12 +211,13 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
         // Generate HTML page w/ all nodes
         generateHtml(outputDir, renderNodes);
     } else {
-        QSharedPointer<VideoNode> renderNode = registry.createFromFile(&context, nodeFilename);
+        auto renderNode = registry.createFromFile(&context, nodeFilename);
         if (!renderNode) {
             qInfo() << "Unable to open:" << nodeFilename;
             return EXIT_FAILURE;
         }
-        renderNodes << renderNode;
+        renderNodes << qSharedPointerCast<VideoNode>(*renderNode);
+        delete renderNode; // deref
     }
 
     // Render
@@ -229,7 +232,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
         ffmpegNode->setRecording(true);
 
         // Render 101 frames
-        QSharedPointer<EffectNode> effectNode = renderNode.dynamicCast<EffectNodeSP>();
+        QSharedPointer<EffectNode> effectNode = renderNode.dynamicCast<EffectNode>();
         for (int i = 0; i <= 100; i++) {
             if (effectNode != nullptr)
                 effectNode->setIntensity(i / 50.);

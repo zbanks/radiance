@@ -44,9 +44,9 @@ QJsonObject MovieNode::serialize() {
     return o;
 }
 
-void MovieNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
+void MovieNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     for (auto chain : added) {
-        auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(ChainSP, chain));
+        auto result = QMetaObject::invokeMethod(m_openGLWorker.data(), "addNewState", Q_ARG(QSharedPointer<Chain>, chain));
         Q_ASSERT(result);
     }
     {
@@ -237,7 +237,7 @@ static void *get_proc_address(void *ctx, const char *name) {
     return (void *)glctx->getProcAddress(QByteArray(name));
 }
 
-GLuint MovieNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
+GLuint MovieNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     GLuint outTexture = inputTextures.at(0);
     enum Factor f;
 
@@ -425,7 +425,7 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
 
     // We prepare the state for all chains that exist upon creation
     auto chains = p->chains();
-    QMap<ChainSP, QSharedPointer<MovieNodeRenderState>> states;
+    QMap<QSharedPointer<Chain>, QSharedPointer<MovieNodeRenderState>> states;
 
     for (auto chain : chains) {
         states.insert(chain, QSharedPointer<MovieNodeRenderState>::create(shader));
@@ -448,10 +448,10 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
     }
 }
 
-// Invoke this method when a ChainSP gets added
+// Invoke this method when a QSharedPointer<Chain> gets added
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
-void MovieNodeOpenGLWorker::addNewState(ChainSP c) {
+void MovieNodeOpenGLWorker::addNewState(QSharedPointer<Chain> c) {
     auto p = m_p.toStrongRef();
     if (p.isNull()) return; // MovieNode was deleted
 

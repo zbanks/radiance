@@ -45,7 +45,7 @@ VideoNodeSP *PlaceholderNode::wrappedVideoNode() {
     return m_wrappedVideoNode;
 }
 
-GLuint PlaceholderNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
+GLuint PlaceholderNode::paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) {
     QSharedPointer<VideoNode> wrapped;
     {
         QMutexLocker locker(&m_stateLock);
@@ -69,7 +69,7 @@ GLuint PlaceholderNode::paint(ChainSP chain, QVector<GLuint> inputTextures) {
     return wrapped->paint(chain, inputTextures);
 }
 
-void PlaceholderNode::chainsEdited(QList<ChainSP> added, QList<ChainSP> removed) {
+void PlaceholderNode::chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) {
     if (m_wrappedVideoNode == nullptr) {
         return;
     }

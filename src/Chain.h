@@ -35,7 +35,9 @@
     from multiple threads)
 */
 
-class Chain {
+class Chain : public QObject {
+    Q_OBJECT // We inherit from QObject to get thread association
+
 public:
     Chain(QSize size=QSize(0, 0));
 
@@ -47,6 +49,7 @@ public:
 
     operator QString() const;
 
+public slots:
     void moveToWorkerContext(OpenGLWorkerContext *context);
     QSize size() const;
     GLuint noiseTexture();
