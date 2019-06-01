@@ -24,7 +24,6 @@ VideoNodeSP *QQuickVideoNodePreview::videoNode() {
 }
 
 void QQuickVideoNodePreview::setVideoNode(VideoNodeSP *videoNode) {
-    qDebug() << "Set QQVNP VN" << videoNode;
     delete m_videoNode;
     if (videoNode != nullptr) {
         m_videoNode = videoNode->clone();
