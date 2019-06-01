@@ -17,8 +17,7 @@ QString ConsoleOutputNode::typeName() {
 }
 
 VideoNodeSP *ConsoleOutputNode::deserialize(Context *context, QJsonObject obj) {
-    auto e = new ConsoleOutputNode(context, QSize(4, 4));
-    return new VideoNodeSP(e);
+    return new ConsoleOutputNodeSP(new ConsoleOutputNode(context, QSize(4, 4)));
 }
 
 bool ConsoleOutputNode::canCreateFromFile(QString filename) {

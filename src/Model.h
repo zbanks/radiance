@@ -48,7 +48,7 @@ struct ModelCopyForRendering {
 
 class Model
     : public QObject
-    , public QEnableSharedFromThis<Model>
+    , public QEnableSharedFromThis<QObject>
 {
     Q_OBJECT
     Q_PROPERTY(QVariantList vertices READ qmlVertices)

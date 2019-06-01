@@ -58,7 +58,7 @@ void Model::prepareNode(VideoNodeSP *videoNode) {
 
     videoNode->setParent(this);
 
-    (*videoNode)->setLastModel(QWeakPointer<Model>(sharedFromThis()));
+    (*videoNode)->setLastModel(QWeakPointer<Model>(qSharedPointerCast<Model>(sharedFromThis())));
     (*videoNode)->setChains(m_chains);
 
     connect(videoNode->data(), &VideoNode::inputCountChanged, this, &Model::flush);
