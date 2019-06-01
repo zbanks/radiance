@@ -114,7 +114,7 @@ runRadianceGui(QGuiApplication *app) {
 }
 
 static void
-generateHtml(QDir outputDir, QList<QSharedPointer<VideoNode>> videoNodes) {
+generateHtml(QDir outputDir, QList<VideoNodeSP*> videoNodes) {
     QFile outputHtml(outputDir.filePath("index.html"));
     outputHtml.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream html(&outputHtml);
@@ -165,22 +165,22 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     model.load(&context, &registry, modelName);
     model.addChain(chain);
 
-    QSharedPointer<FFmpegOutputNode> ffmpegNode;
-    QSharedPointer<PlaceholderNode> placeholderNode;
-    for (QSharedPointer<VideoNode> node : model.vertices()) {
-        if (ffmpegNode.isNull()) {
-            ffmpegNode = node.dynamicCast<FFmpegOutputNode>();
+    FFmpegOutputNodeSP *ffmpegNode = nullptr;
+    PlaceholderNodeSP *placeholderNode = nullptr;
+    for (VideoNodeSP *node : model.vertices()) {
+        if (ffmpegNode == nullptr) {
+            ffmpegNode = qobject_cast<FFmpegOutputNodeSP *>(node);
         }
         if (placeholderNode == nullptr) {
-            placeholderNode = node.dynamicCast<PlaceholderNode>();
+            placeholderNode = qobject_cast<PlaceholderNodeSP *>(node);
         }
     }
-    if (ffmpegNode.isNull()) {
+    if (ffmpegNode == nullptr) {
         qCritical() << "Unable to find FFmpegOutputNode in" << modelName;
         qCritical() << model.serialize();
         return EXIT_FAILURE;
     }
-    if (placeholderNode.isNull()) {
+    if (placeholderNode == nullptr) {
         qCritical() << "Unable to find PlaceholderNode in" << modelName;
         qCritical() << model.serialize();
         return EXIT_FAILURE;
@@ -189,7 +189,7 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
     qInfo() << model.serialize();
 
     qInfo() << "Scanning for effects in path:" << Paths::systemLibrary();
-    QList<QSharedPointer<VideoNode>> renderNodes;
+    QList<VideoNodeSP *> renderNodes;
     if (nodeFilename.isNull()) {
         QDir libraryDir(Paths::systemLibrary());
         libraryDir.cd("effects");
@@ -199,50 +199,48 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                 continue;
             }
             QString entryPath = libraryDir.filePath(entry);
-            auto renderNode = registry.createFromFile(&context, entryPath);
+            VideoNodeSP *renderNode = registry.createFromFile(&context, entryPath);
             if (!renderNode) {
                 qInfo() << "Unable to open:" << entry << entryPath;
             } else {
-                renderNodes << qSharedPointerCast<VideoNode>(*renderNode);
-                delete renderNode; // deref
+                renderNodes << renderNode;
             }
         }
 
         // Generate HTML page w/ all nodes
         generateHtml(outputDir, renderNodes);
     } else {
-        auto renderNode = registry.createFromFile(&context, nodeFilename);
+        VideoNodeSP *renderNode = registry.createFromFile(&context, nodeFilename);
         if (!renderNode) {
             qInfo() << "Unable to open:" << nodeFilename;
             return EXIT_FAILURE;
         }
-        renderNodes << qSharedPointerCast<VideoNode>(*renderNode);
-        delete renderNode; // deref
+        renderNodes << renderNode;
     }
 
     // Render
-    for (QSharedPointer<VideoNode> renderNode : renderNodes) {
+    for (VideoNodeSP *renderNode : renderNodes) {
         QString name = renderNode->property("name").toString();
         qInfo() << "Rendering:" << name;
 
-        placeholderNode->setWrappedVideoNode(renderNode);
+        (*placeholderNode)->setWrappedVideoNode(renderNode);
 
         QString gifFilename = QString("%1" IMG_FORMAT).arg(name);
-        ffmpegNode->setFFmpegArguments({outputDir.filePath(gifFilename)});
-        ffmpegNode->setRecording(true);
+        (*ffmpegNode)->setFFmpegArguments({outputDir.filePath(gifFilename)});
+        (*ffmpegNode)->setRecording(true);
 
         // Render 101 frames
-        QSharedPointer<EffectNode> effectNode = renderNode.dynamicCast<EffectNode>();
+        EffectNodeSP * effectNode = qobject_cast<EffectNodeSP *>(renderNode);
         for (int i = 0; i <= 100; i++) {
             if (effectNode != nullptr)
-                effectNode->setIntensity(i / 50.);
+                (*effectNode)->setIntensity(i / 50.);
 
             context.timebase()->update(Timebase::TimeSourceDiscrete, Timebase::TimeSourceEventBeat, i / 12.5);
 
             auto modelCopy = model.createCopyForRendering();
             auto rendering = modelCopy.render(chain);
 
-            auto outputTextureId = rendering.value(ffmpegNode, 0);
+            auto outputTextureId = rendering.value(qSharedPointerCast<VideoNode>(*ffmpegNode), 0);
             if (outputTextureId != 0) {
                 if (i == 0 || i == 51) {
                     QImage img = imgRender.render(outputTextureId);
@@ -250,11 +248,11 @@ runRadianceCli(QGuiApplication *app, QString modelName, QString nodeFilename, QS
                     img.save(filename);
                 }
             }
-            ffmpegNode->recordFrame();
+            (*ffmpegNode)->recordFrame();
         }
 
         // Reset state
-        ffmpegNode->setRecording(false);
+        (*ffmpegNode)->setRecording(false);
     }
 
     return 0;

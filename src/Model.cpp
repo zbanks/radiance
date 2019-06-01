@@ -16,13 +16,6 @@ static QString vnp(VideoNodeSP *videoNode) {
     return "null";
 }
 
-static QString vnp(QSharedPointer<VideoNode> videoNode) {
-    //if (!videoNode.isNull()) return *videoNode;
-    //return "null";
-    if (videoNode) return "TODO"; // fixme
-    return "null";
-}
-
 QVariantMap Edge::toVariantMap() const {
     QVariantMap result;
     result.insert("fromVertex", QVariant::fromValue(fromVertex));
@@ -59,45 +52,47 @@ QList<QSharedPointer<Chain>> Model::chains() {
     return m_chains;
 }
 
-void Model::prepareNode(QSharedPointer<VideoNode> videoNode) {
+void Model::prepareNode(VideoNodeSP *videoNode) {
     if(!videoNode)
         return;
 
-    videoNode->setLastModel(QWeakPointer<Model>(sharedFromThis()));
-    videoNode->setChains(m_chains);
+    videoNode->setParent(this);
 
-    connect(videoNode.data(), &VideoNode::inputCountChanged, this, &Model::flush);
-    connect(videoNode.data(), &VideoNode::message, this, &Model::onMessage);
-    connect(videoNode.data(), &VideoNode::warning, this, &Model::onWarning);
-    connect(videoNode.data(), &VideoNode::error, this, &Model::onError);
-    connect(this, &Model::chainsChanged, videoNode.data(), &VideoNode::setChains);
+    (*videoNode)->setLastModel(QWeakPointer<Model>(sharedFromThis()));
+    (*videoNode)->setChains(m_chains);
 
-    // See if this VideoNode requests any chains
-    auto requestedChains = videoNode->requestedChains();
+    connect(videoNode->data(), &VideoNode::inputCountChanged, this, &Model::flush);
+    connect(videoNode->data(), &VideoNode::message, this, &Model::onMessage);
+    connect(videoNode->data(), &VideoNode::warning, this, &Model::onWarning);
+    connect(videoNode->data(), &VideoNode::error, this, &Model::onError);
+    connect(this, &Model::chainsChanged, videoNode->data(), &VideoNode::setChains);
+
+    // See if this VideoNodeSP requests any chains
+    auto requestedChains = (*videoNode)->requestedChains();
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
         if (!m_chains.contains(*c)) {
             addChain(*c);
         }
     }
     // and be notified of changes
-    connect(videoNode.data(), &VideoNode::requestedChainAdded, this, &Model::addChain);
-    connect(videoNode.data(), &VideoNode::requestedChainRemoved, this, &Model::removeChain);
+    connect(videoNode->data(), &VideoNode::requestedChainAdded, this, &Model::addChain);
+    connect(videoNode->data(), &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 }
 
-void Model::disownNode(QSharedPointer<VideoNode> videoNode) {
+void Model::disownNode(VideoNodeSP *videoNode) {
     if(!videoNode)
         return;
 
-    disconnect(this, &Model::chainsChanged, videoNode.data(), &VideoNode::setChains);
-    disconnect(videoNode.data(), &VideoNode::requestedChainAdded, this, &Model::addChain);
-    disconnect(videoNode.data(), &VideoNode::requestedChainRemoved, this, &Model::removeChain);
+    disconnect(this, &Model::chainsChanged, videoNode->data(), &VideoNode::setChains);
+    disconnect(videoNode->data(), &VideoNode::requestedChainAdded, this, &Model::addChain);
+    disconnect(videoNode->data(), &VideoNode::requestedChainRemoved, this, &Model::removeChain);
 
-    disconnect(videoNode.data(), &VideoNode::inputCountChanged, this, &Model::flush);
-    disconnect(videoNode.data(), &VideoNode::message, this, &Model::onMessage);
-    disconnect(videoNode.data(), &VideoNode::warning, this, &Model::onWarning);
-    disconnect(videoNode.data(), &VideoNode::error, this, &Model::onError);
+    disconnect(videoNode->data(), &VideoNode::inputCountChanged, this, &Model::flush);
+    disconnect(videoNode->data(), &VideoNode::message, this, &Model::onMessage);
+    disconnect(videoNode->data(), &VideoNode::warning, this, &Model::onWarning);
+    disconnect(videoNode->data(), &VideoNode::error, this, &Model::onError);
 
-    auto requestedChains = videoNode->requestedChains();
+    auto requestedChains = (*videoNode)->requestedChains();
     auto chains = m_chains;
     for (auto c = requestedChains.begin(); c != requestedChains.end(); c++) {
         m_chains.removeAll(*c);
@@ -123,19 +118,16 @@ void Model::onError(QString str) {
     emit error(vn, str);
 }
 
-void Model::addVideoNode(QSharedPointer<VideoNode> videoNode) {
+void Model::addVideoNode(VideoNodeSP *videoNode) {
+    if(!videoNode)
+        return;
     if (!m_vertices.contains(videoNode)) {
         prepareNode(videoNode);
         m_vertices.append(videoNode);
     }
 }
 
-void Model::addVideoNode(VideoNodeSP *videoNode) {
-    if(videoNode == nullptr) return;
-    addVideoNode(qSharedPointerCast<VideoNode>(*videoNode));
-}
-
-void Model::removeVideoNode(QSharedPointer<VideoNode> videoNode) {
+void Model::removeVideoNode(VideoNodeSP *videoNode) {
     QList<Edge> removed;
 
     QMutableListIterator<Edge> i(m_edges);
@@ -154,13 +146,10 @@ void Model::removeVideoNode(QSharedPointer<VideoNode> videoNode) {
     }
 }
 
-void Model::removeVideoNode(VideoNodeSP *videoNode) {
-    if (videoNode == nullptr) return;
-    removeVideoNode(qSharedPointerCast<VideoNode>(*videoNode));
-}
-
-void Model::addEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNode> toVertex, int toInput) {
-    if (toInput < 0
+void Model::addEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput) {
+    if (fromVertex == nullptr
+     || toVertex == nullptr
+     || toInput < 0
      || !m_vertices.contains(fromVertex)
      || !m_vertices.contains(toVertex)) {
         qWarning() << QString("Bad edge: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
@@ -197,20 +186,10 @@ void Model::addEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNo
     }
 }
 
-void Model::addEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput) {
+void Model::removeEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput) {
     if (fromVertex == nullptr
-     || toVertex == nullptr) {
-        qWarning() << QString("Bad edge: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
-        return;
-    }
-
-    addEdge(qSharedPointerCast<VideoNode>(*fromVertex),
-            qSharedPointerCast<VideoNode>(*toVertex),
-            toInput);
-}
-
-void Model::removeEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<VideoNode> toVertex, int toInput) {
-    if (toInput < 0
+     || toVertex == nullptr
+     || toInput < 0
      || !m_vertices.contains(fromVertex)
      || !m_vertices.contains(toVertex)) {
         qWarning() << QString("Bad edge: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
@@ -230,17 +209,6 @@ void Model::removeEdge(QSharedPointer<VideoNode> fromVertex, QSharedPointer<Vide
     }
 }
 
-void Model::removeEdge(VideoNodeSP *fromVertex, VideoNodeSP *toVertex, int toInput) {
-    if (fromVertex == nullptr
-     || toVertex == nullptr) {
-        qWarning() << QString("Bad edge: %1 to %2 input %3").arg(vnp(fromVertex)).arg(vnp(toVertex)).arg(toInput);
-        return;
-    }
-    removeEdge(qSharedPointerCast<VideoNode>(*fromVertex),
-            qSharedPointerCast<VideoNode>(*toVertex),
-            toInput);
-}
-
 ModelCopyForRendering Model::createCopyForRendering() {
     QMutexLocker locker(&m_graphLock);
     ModelCopyForRendering out;
@@ -252,13 +220,15 @@ ModelCopyForRendering Model::createCopyForRendering() {
     }
 
     for (int i=0; i<m_edgesForRendering.count(); i++) {
-        out.fromVertex.append(map.value(m_edgesForRendering.at(i).fromVertex, -1));
-        out.toVertex.append(map.value(m_edgesForRendering.at(i).toVertex, -1));
+        auto fromVertex = qSharedPointerCast<VideoNode>(*m_edgesForRendering.at(i).fromVertex);
+        auto toVertex = qSharedPointerCast<VideoNode>(*m_edgesForRendering.at(i).toVertex);
+        out.fromVertex.append(map.value(fromVertex, -1));
+        out.toVertex.append(map.value(toVertex, -1));
         out.toInput.append(m_edgesForRendering.at(i).toInput);
     }
 
     for (int i=0; i<m_verticesSortedForRendering.count(); i++) {
-        out.vertices.append(QSharedPointer<VideoNode>(m_verticesSortedForRendering.at(i)));
+        out.vertices.append(m_verticesSortedForRendering.at(i));
     }
 
     return out;
@@ -275,10 +245,10 @@ QVector<QSharedPointer<VideoNode>> Model::topoSort() {
         QSet<QSharedPointer<VideoNode>> sSet;
         // Populate s, the start nodes
         for (auto v = m_vertices.begin(); v != m_vertices.end(); v++) {
-            sSet.insert(*v);
+            sSet.insert(qSharedPointerCast<VideoNode>(**v));
         }
         for (auto e = edges.begin(); e != edges.end(); e++) {
-            sSet.remove(e->toVertex);
+            sSet.remove(qSharedPointerCast<VideoNode>(*e->toVertex));
         }
         s = sSet.values();
     }
@@ -293,8 +263,8 @@ QVector<QSharedPointer<VideoNode>> Model::topoSort() {
             // Remove edges originating from the node we just took
             // See https://stackoverflow.com/questions/16269696/erasing-while-iterating-an-stdlist
             // about erasing while using iterators
-            if (e->fromVertex == n) {
-                newStartNodes.insert(e->toVertex);
+            if (qSharedPointerCast<VideoNode>(*e->fromVertex) == n) {
+                newStartNodes.insert(qSharedPointerCast<VideoNode>(*e->toVertex));
                 e = edges.erase(e);
                 // Any node pointed to by one of these deleted edges
                 // is a potential new start node
@@ -304,7 +274,7 @@ QVector<QSharedPointer<VideoNode>> Model::topoSort() {
         }
         // Prune the potential new start nodes down to just the ones
         for (auto e = edges.begin(); e != edges.end(); e++) {
-            newStartNodes.remove(e->toVertex);
+            newStartNodes.remove(qSharedPointerCast<VideoNode>(*e->toVertex));
         }
         // Add them to s
         for (auto newStartNode = newStartNodes.begin(); newStartNode != newStartNodes.end(); newStartNode++) {
@@ -319,7 +289,7 @@ QVector<QSharedPointer<VideoNode>> Model::topoSort() {
     return l;
 }
 
-QList<QSharedPointer<VideoNode>> Model::vertices() const {
+QList<VideoNodeSP *> Model::vertices() const {
     return m_vertices;
 }
 
@@ -356,8 +326,8 @@ void Model::clear() {
 }
 
 void Model::flush() {
-    QList<QSharedPointer<VideoNode>> verticesAdded;
-    QList<QSharedPointer<VideoNode>> verticesRemoved;
+    QList<VideoNodeSP *> verticesAdded;
+    QList<VideoNodeSP *> verticesRemoved;
     QList<Edge> edgesAdded;
     QList<Edge> edgesRemoved;
 
@@ -365,7 +335,7 @@ void Model::flush() {
     QMutableListIterator<Edge> i(m_edges);
     while (i.hasNext()) {
         auto edgeCopy = i.next();
-        if (edgeCopy.toInput >= edgeCopy.toVertex->inputCount()) {
+        if (edgeCopy.toInput >= (*edgeCopy.toVertex)->inputCount()) {
             qDebug() << QString("Removing invalid edge to %1 input %2").arg(vnp(edgeCopy.toVertex)).arg(edgeCopy.toInput);
             i.remove();
         }
@@ -373,8 +343,8 @@ void Model::flush() {
 
     // Compute the changeset
     {
-        auto v = QSet<QSharedPointer<VideoNode>>::fromList(m_vertices);
-        auto v4r = QSet<QSharedPointer<VideoNode>>::fromList(m_verticesForRendering);
+        auto v = QSet<VideoNodeSP *>::fromList(m_vertices);
+        auto v4r = QSet<VideoNodeSP *>::fromList(m_verticesForRendering);
         // TODO Can't use QSet without implementing qHash
         //auto e = QSet<Edge>::fromList(m_edges);
         //auto e4r = QSet<Edge>::fromList(m_edgesForRendering);
@@ -419,18 +389,18 @@ void Model::flush() {
     emit graphChanged(verticesAddedVL, verticesRemovedVL, edgesAddedVL, edgesRemovedVL);
 }
 
-QList<QSharedPointer<VideoNode>> Model::ancestors(QSharedPointer<VideoNode> node) {
-    QSet<QSharedPointer<VideoNode>> ancestorSet;
-    QList<QSharedPointer<VideoNode>> nodeStack;
+QList<VideoNodeSP *> Model::ancestors(VideoNodeSP *node) {
+    QSet<VideoNodeSP *> ancestorSet;
+    QList<VideoNodeSP *> nodeStack;
     nodeStack.append(node);
 
     while (!nodeStack.isEmpty()) {
-        auto n = nodeStack.takeLast();
+        VideoNodeSP * n = nodeStack.takeLast();
         for (auto e : m_edges) {
             if (e.toVertex != n)
                 continue;
 
-            auto newNode = e.fromVertex;
+            VideoNodeSP * newNode = e.fromVertex;
             Q_ASSERT(newNode != node); // cycles are bad
             if (ancestorSet.contains(newNode))
                 continue;
@@ -443,14 +413,9 @@ QList<QSharedPointer<VideoNode>> Model::ancestors(QSharedPointer<VideoNode> node
     return ancestorSet.values();
 }
 
-bool Model::isAncestor(QSharedPointer<VideoNode> parent, QSharedPointer<VideoNode> child) {
+bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) {
     // TODO: This is obviously not optimal
     return ancestors(child).contains(parent);
-}
-
-bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) {
-    if (parent == nullptr || child == nullptr) return false;
-    return isAncestor(qSharedPointerCast<VideoNode>(*parent), qSharedPointerCast<VideoNode>(*child));
 }
 
 QMap<QSharedPointer<VideoNode>, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {
@@ -508,11 +473,11 @@ QJsonObject Model::serialize() {
     QJsonObject jsonOutput;
 
     // Create a map from VideoNodes to indices
-    QMap<QSharedPointer<VideoNode>, int> map;
+    QMap<VideoNodeSP *, int> map;
     QJsonArray jsonVertices;
     for (int i=0; i<m_vertices.count(); i++) {
         map.insert(m_vertices.at(i), i);
-        jsonVertices.append(m_vertices.at(i)->serialize());
+        jsonVertices.append((*m_vertices.at(i))->serialize());
     }
 
     jsonOutput["vertices"] = jsonVertices;
