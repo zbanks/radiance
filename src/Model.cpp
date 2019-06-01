@@ -11,8 +11,7 @@
 #include <QJsonDocument>
 
 static QString vnp(VideoNodeSP *videoNode) {
-    //if (videoNode) return *videoNode;
-    if (videoNode) return "TODO"; // fixme
+    if (videoNode) return QString("%1(%2)").arg((*videoNode)->metaObject()->className()).arg((qintptr)videoNode->data());
     return "null";
 }
 
@@ -31,7 +30,6 @@ bool Edge::operator==(const Edge &other) const {
 }
 
 Model::Model() {
-    qDebug() << "In Model constructor." << this;
 }
 
 void Model::addChain(QSharedPointer<Chain> chain) {
