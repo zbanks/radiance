@@ -18,7 +18,7 @@ class Context;
 
 class VideoNode
     : public QObject 
-    , public QEnableSharedFromThis<VideoNode>
+    , public QEnableSharedFromThis<QObject>
 {
     Q_OBJECT
     Q_PROPERTY(Context *context READ context CONSTANT);
