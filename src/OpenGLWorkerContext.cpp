@@ -34,10 +34,9 @@ OpenGLWorkerContext::OpenGLWorkerContext(bool threaded, QSurface *surface)
     if (threaded) {
         m_thread = new QThread();
         m_context->moveToThread(m_thread);
-        m_context->setParent(this);
         connect(m_thread, &QThread::started, this, &OpenGLWorkerContext::initialize, Qt::DirectConnection);
         connect(m_thread, &QThread::finished, this, &OpenGLWorkerContext::deinitialize, Qt::DirectConnection);
-        //connect(this, &QObject::destroyed, this, &OpenGLWorkerContext::onDestroyed);
+        connect(this, &QObject::destroyed, this, &OpenGLWorkerContext::onDestroyed);
         m_thread->start();
     } else {
         initialize();

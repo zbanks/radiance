@@ -19,7 +19,7 @@ class QmlSharedPointerBase
 {
 public:
     template <typename X> explicit QmlSharedPointerBase(X *ptr)
-        : QSharedPointer<QObject>(ptr)
+        : QSharedPointer<QObject>(ptr, &QObject::deleteLater)
     {
     }
 

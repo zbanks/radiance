@@ -5,10 +5,14 @@
 #include <cmath>
 #include <array>
 
-LightOutputNode::LightOutputNode(Context *context, QString url)
+LightOutputNode::LightOutputNode(Context *context)
     : OutputNode(context, QSize(300, 300))
     , m_geometry2D(QOpenGLTexture::Target2D) {
-    m_workerContext = new OpenGLWorkerContext(context->threaded());
+}
+
+void LightOutputNode::init(QString url)
+{
+    m_workerContext = new OpenGLWorkerContext(m_context->threaded());
     m_worker = QSharedPointer<LightOutputNodeOpenGLWorker>(new LightOutputNodeOpenGLWorker(qSharedPointerCast<LightOutputNode>(sharedFromThis())), &QObject::deleteLater);
     connect(m_worker.data(), &QObject::destroyed, m_workerContext, &QObject::deleteLater);
 
@@ -23,12 +27,13 @@ QString LightOutputNode::typeName() {
 }
 
 VideoNodeSP *LightOutputNode::deserialize(Context *context, QJsonObject obj) {
-    auto e = new LightOutputNode(context);
+    auto node = new LightOutputNodeSP(new LightOutputNode(context));
+    (*node)->init();
     QString url = obj.value("url").toString();
     if (!url.isEmpty()) {
-        e->setUrl(url);
+        (*node)->setUrl(url);
     }
-    return new VideoNodeSP(e);
+    return node;
 }
 
 QJsonObject LightOutputNode::serialize() {

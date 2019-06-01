@@ -468,11 +468,11 @@ VideoNodeSP *EffectNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
-    QSharedPointer<EffectNode> node(new EffectNode(context));
-    node->init(file);
+    auto node = new EffectNodeSP(new EffectNode(context));
+    (*node)->init(file);
     double intensity = obj.value("intensity").toDouble();
-    node->setIntensity(intensity);
-    return new EffectNodeSP(node);
+    (*node)->setIntensity(intensity);
+    return node;
 }
 
 bool EffectNode::canCreateFromFile(QString file) {
@@ -480,9 +480,9 @@ bool EffectNode::canCreateFromFile(QString file) {
 }
 
 VideoNodeSP *EffectNode::fromFile(Context *context, QString file) {
-    auto node = QSharedPointer<EffectNode>(new EffectNode(context));
-    node->init(file);
-    return new EffectNodeSP(node);
+    auto node = new EffectNodeSP(new EffectNode(context));
+    (*node)->init(file);
+    return node;
 }
 
 QMap<QString, QString> EffectNode::customInstantiators() {

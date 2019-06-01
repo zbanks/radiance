@@ -42,7 +42,6 @@ public:
     static QMap<QString, QString> customInstantiators();
 
 public slots:
-    void setWrappedVideoNode(QSharedPointer<VideoNode> wrapped);
     void setWrappedVideoNode(VideoNodeSP *wrapped);
     VideoNodeSP *wrappedVideoNode();
 

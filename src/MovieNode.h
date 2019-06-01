@@ -51,7 +51,8 @@ public:
 
     static const float zoomFactor;
 
-    MovieNode(Context *context, QString file, QString name=QString(""));
+    MovieNode(Context *context);
+    void init(QString file, QString name="");
 
     QJsonObject serialize() override;
 
