@@ -83,3 +83,16 @@ TBD, read [this](https://wiki.qt.io/Shared_Pointers_and_QML_Ownership) for now t
 ### I hate the pattern of `(*videoNode)->method` when working on `VideoNodeSP *`
 
 Too bad, that's how we have to do it. Also be sure to check `videoNode != nullptr` before doing that.
+
+### Why do some VideoNodes have an `init` method in addition to their constructor?
+
+Because they take advantage of `QEnableSharedFromThis`, and `sharedFromThis()` doesn't work in the constructor.
+
+Some VideoNodes themselves are multi-threaded, for instance, `EffectNode` uses a worker thread to compile the GLSL
+so that the UI doesn't lag while it is loaded or reloaded.
+This worker thread needs a `QSharedPointer` to the `EffectNode`, and it gets one using `sharedFromThis()`.
+Since `sharedFromThis()` relies on the object *already* being managed by a shared pointer, it doesn't work in the constructor.
+
+`init()` should always be called immediately after the object has been constructed and put in a shared pointer.
+You can look at `deserialize()` for an example of correct construction of a `VideoNode`.
+Remember to always set the deleter to `&QObject::deleteLater` (using a `QmlSharedPointer` automatically does this.)

@@ -16,16 +16,6 @@ QJsonObject PlaceholderNode::serialize() {
     return o;
 }
 
-void PlaceholderNode::setWrappedVideoNode(QSharedPointer<VideoNode> wrapped) {
-    // Use parent-child semantics for managing the object that is created
-    // from the raw QSharedPointer that comes in here.
-    // This doesn't necessarily free the wrapped VideoNode when the PlacehodlderNode is deleted,
-    // but it derefs it.
-    auto wrapped_ptr = new VideoNodeSP(wrapped);
-    wrapped_ptr->setParent(this);
-    setWrappedVideoNode(wrapped_ptr);
-}
-
 void PlaceholderNode::setWrappedVideoNode(VideoNodeSP *wrapped) {
     {
         QMutexLocker locker(&m_stateLock);
@@ -92,9 +82,9 @@ VideoNodeSP *PlaceholderNode::deserialize(Context *context, QJsonObject obj) {
         inputCount = inputCountValue.toInt();
     }
 
-    auto e = new PlaceholderNode(context);
-    e->setInputCount(inputCount);
-    return new VideoNodeSP(e);
+    auto node = new PlaceholderNodeSP(new PlaceholderNode(context));
+    (*node)->setInputCount(inputCount);
+    return node;
 }
 
 bool PlaceholderNode::canCreateFromFile(QString filename) {

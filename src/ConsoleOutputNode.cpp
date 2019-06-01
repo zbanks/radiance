@@ -1,10 +1,12 @@
 #include "ConsoleOutputNode.h"
 
 ConsoleOutputNode::ConsoleOutputNode(Context *context, QSize chainSize)
-    : SelfTimedReadBackOutputNode(context, chainSize, 10) {
+    : SelfTimedReadBackOutputNode(context, chainSize) {
+}
 
+void ConsoleOutputNode::init() {
+    SelfTimedReadBackOutputNode::init(10);
     connect(this, &SelfTimedReadBackOutputNode::frame, this, &ConsoleOutputNode::onFrame, Qt::DirectConnection);
-
     start();
 }
 
@@ -17,7 +19,9 @@ QString ConsoleOutputNode::typeName() {
 }
 
 VideoNodeSP *ConsoleOutputNode::deserialize(Context *context, QJsonObject obj) {
-    return new ConsoleOutputNodeSP(new ConsoleOutputNode(context, QSize(4, 4)));
+    auto node = new ConsoleOutputNodeSP(new ConsoleOutputNode(context, QSize(4, 4)));
+    (*node)->init();
+    return node;
 }
 
 bool ConsoleOutputNode::canCreateFromFile(QString filename) {

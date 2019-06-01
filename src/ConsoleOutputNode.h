@@ -18,6 +18,7 @@ class ConsoleOutputNode
 public:
     ConsoleOutputNode(Context *context, QSize chainSize);
     ConsoleOutputNode(const ConsoleOutputNode &other);
+    void init();
     void onFrame(QSize size, QByteArray frame);
 
     // These static methods are required for VideoNode creation

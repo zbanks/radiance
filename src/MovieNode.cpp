@@ -19,10 +19,14 @@
 // and letterboxed to 16:9
 const float MovieNode::zoomFactor = 16. / 21.;
 
-MovieNode::MovieNode(Context *context, QString file, QString name)
+MovieNode::MovieNode(Context *context)
     : VideoNode(context)
 {
-    m_openGLWorkerContext = new OpenGLWorkerContext(context->threaded());
+}
+
+void MovieNode::init(QString file, QString name)
+{
+    m_openGLWorkerContext = new OpenGLWorkerContext(m_context->threaded());
     m_openGLWorker = QSharedPointer<MovieNodeOpenGLWorker>(new MovieNodeOpenGLWorker(qSharedPointerCast<MovieNode>(sharedFromThis())), &QObject::deleteLater);
     connect(m_openGLWorker.data(), &QObject::destroyed, m_openGLWorkerContext, &QObject::deleteLater);
 
@@ -648,12 +652,13 @@ VideoNodeSP *MovieNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
-    auto e = new MovieNode(context, file);
+    auto node = new MovieNodeSP(new MovieNode(context));
+    (*node)->init(file);
     auto name = obj.value("name").toString();
     if (!name.isEmpty()) {
-        e->setName(name);
+        (*node)->setName(name);
     }
-    return new VideoNodeSP(e);
+    return node;
 }
 
 bool MovieNode::canCreateFromFile(QString filename) {
@@ -665,11 +670,10 @@ bool MovieNode::canCreateFromFile(QString filename) {
 }
 
 VideoNodeSP *MovieNode::fromFile(Context *context, QString filename) {
-    auto e = new MovieNode(context, filename);
-    if (e != nullptr) {
-        e->setName(QFileInfo(e->file()).baseName());
-    }
-    return new VideoNodeSP(e);
+    auto node = new MovieNodeSP(new MovieNode(context));
+    (*node)->init(filename);
+    (*node)->setName(QFileInfo((*node)->file()).baseName());
+    return node;
 }
 
 QMap<QString, QString> MovieNode::customInstantiators() {

@@ -222,6 +222,7 @@ ModelCopyForRendering Model::createCopyForRendering() {
     for (int i=0; i<m_edgesForRendering.count(); i++) {
         auto fromVertex = qSharedPointerCast<VideoNode>(*m_edgesForRendering.at(i).fromVertex);
         auto toVertex = qSharedPointerCast<VideoNode>(*m_edgesForRendering.at(i).toVertex);
+
         out.fromVertex.append(map.value(fromVertex, -1));
         out.toVertex.append(map.value(toVertex, -1));
         out.toInput.append(m_edgesForRendering.at(i).toInput);

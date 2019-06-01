@@ -41,7 +41,8 @@ class SelfTimedReadBackOutputNode
     friend class STRBONOpenGLWorker;
 
 public:
-    SelfTimedReadBackOutputNode(Context *context, QSize chainSize, long msec=0);
+    SelfTimedReadBackOutputNode(Context *context, QSize chainSize);
+    void init(long msec=0);
 
 public slots:
     void start();

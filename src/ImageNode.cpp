@@ -171,9 +171,9 @@ VideoNodeSP *ImageNode::deserialize(Context *context, QJsonObject obj) {
     if (obj.isEmpty()) {
         return nullptr;
     }
-    QSharedPointer<ImageNode> node(new ImageNode(context));
-    node->init(file);
-    return new ImageNodeSP(node);
+    auto node = new ImageNodeSP(new ImageNode(context));
+    (*node)->init(file);
+    return node;
 }
 
 bool ImageNode::canCreateFromFile(QString filename) {
@@ -181,8 +181,8 @@ bool ImageNode::canCreateFromFile(QString filename) {
 }
 
 VideoNodeSP *ImageNode::fromFile(Context *context, QString filename) {
-    QSharedPointer<ImageNode> node(new ImageNode(context));
-    node->init(filename);
+    auto node = new ImageNodeSP(new ImageNode(context));
+    (*node)->init(filename);
     return new ImageNodeSP(node);
 }
 

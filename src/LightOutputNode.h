@@ -23,7 +23,8 @@ class LightOutputNode
     friend class LightOutputNodeOpenGLWorker;
 
 public:
-    LightOutputNode(Context *context, QString url = "");
+    LightOutputNode(Context *context);
+    void init(QString url="");
 
     enum DisplayMode {
         DisplayLookup2D,
