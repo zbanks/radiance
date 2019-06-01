@@ -36,7 +36,7 @@ Child View::newChild(VideoNodeSP *videoNode) {
     c.videoNode = videoNode;
     c.item = nullptr;
 
-    auto delegate = m_delegates.value(videoNode->metaObject()->className());
+    auto delegate = m_delegates.value((*videoNode)->metaObject()->className());
     if (delegate.isEmpty()) {
         delegate = m_delegates.value("");
         if (delegate.isEmpty()) {
