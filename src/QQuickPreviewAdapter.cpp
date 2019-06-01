@@ -21,6 +21,7 @@ ModelSP *QQuickPreviewAdapter::model() {
 }
 
 void QQuickPreviewAdapter::setModel(ModelSP *model) {
+    qDebug() << "QQPA setModel" << model;
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_model != model) {
         if (m_model != nullptr) {

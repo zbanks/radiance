@@ -7,11 +7,12 @@
 class Model;
 typedef QmlSharedPointer<Model> ModelSP;
 class VideoNode;
+typedef QmlSharedPointer<VideoNode> VideoNodeSP;
 
 class BaseVideoNodeTile : public QQuickItem {
     Q_OBJECT
     Q_PROPERTY(ModelSP *model MEMBER m_model NOTIFY onModelChanged);
-    Q_PROPERTY(VideoNode *videoNode MEMBER m_videoNode NOTIFY onVideoNodeChanged);
+    Q_PROPERTY(VideoNodeSP *videoNode MEMBER m_videoNode NOTIFY onVideoNodeChanged);
     Q_PROPERTY(QVariantList inputGridHeights MEMBER m_inputGridHeights NOTIFY onInputGridHeightsChanged);
     Q_PROPERTY(QVariantList inputHeights MEMBER m_inputHeights NOTIFY onInputHeightsChanged);
     Q_PROPERTY(int gridX MEMBER m_gridX NOTIFY onGridXChanged);
@@ -33,7 +34,7 @@ public:
 
 signals:
     void onModelChanged(ModelSP *model);
-    void onVideoNodeChanged(VideoNode *videoNode);
+    void onVideoNodeChanged(VideoNodeSP *videoNode);
     void onInputGridHeightsChanged(QVariantList inputGridHeights);
     void onInputHeightsChanged(QVariantList inputHeights);
     void onGridXChanged(int gridX);
@@ -51,7 +52,7 @@ signals:
 
 protected:
     ModelSP *m_model{};
-    VideoNode *m_videoNode{};
+    VideoNodeSP *m_videoNode{};
 
     qreal m_normalHeight{};
     qreal m_normalWidth{};

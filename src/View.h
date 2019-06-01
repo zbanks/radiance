@@ -4,7 +4,7 @@
 #include "Controls.h"
 
 struct Child {
-    QSharedPointer<VideoNode> videoNode;
+    VideoNodeSP *videoNode;
     BaseVideoNodeTile *item;
     QVector<int> inputHeights;
 };
@@ -69,7 +69,7 @@ protected:
     QList<Child> m_children;
     QList<QQuickItem *> m_dropAreas;
     void rebuild();
-    Child newChild(QSharedPointer<VideoNode> videoNode);
+    Child newChild(VideoNodeSP *videoNode);
     QSet<BaseVideoNodeTile *> m_selection;
     void selectionChanged();
     void componentComplete() override;
