@@ -93,7 +93,7 @@ Item {
                 target: librarytree.model
 
                 onFilterChanged: {
-                    if (!filter) return;
+                    if (!librarytree.model.filter) return;
                     selModel.clearCurrentIndex();
                     function selectOrExpand(index) {
                         if (librarytree.model.hasChildren(index)) {
