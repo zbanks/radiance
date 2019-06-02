@@ -1,3 +1,5 @@
+# Memory management in Radiance
+
 So, memory management in Radiance is a clusterfuck. Here's why:
 
 1. Radiance uses QML. That's how it can have such a snazzy UI and a Javascript scripting engine, which are both really nice things.
@@ -59,9 +61,32 @@ You're probably doing it wrong if you have:
 - An object whose API features `QSharedPointer<VideoNode>` setters / getters but whose backing member variable is a `VideoNodeSP *`.
   There's actually nothing technically wrong with this, it's just poor style.
 
-### How does upcasting and downcasting work?
+### How does upcasting, downcasting, and converting work?
 
-- TBD
+The signature of QML signals and slots should be `VideoNodeSP *`. You can happily pass in an `EffectNodeSP *`, and do static casts.
+
+The signature for internal code should be `QSharedPointer<VideoNode>`. You can use `qSharedPointerCast<YourNode>()` for casting.
+
+To convert from a `VideoNodeSP *` to a `QSharedPointer<VideoNode>`, use the following snippet:
+
+```
+if (vnsp == nullptr) return QSharedPointer<VideoNode>();
+return qSharedPointerCast<VideoNode>(*vnsp);
+```
+
+To create a new `VideoNodeSP *`, use the following snippet:
+
+```
+auto node = new YourNodeSP(new YourNode(context));
+(*node)->init(args); // If your node has an init() method
+```
+
+If you are converting from a `QSharedPointer<VideoNode>` to a `VideoNodeSP *`, you are probably doing something wrong (see above.)
+
+`QEnableSharedFromThis` is a useful tool. If you want to use `sharedFromThis` on a class that gets wrapped in `QmlSharedPointer`,
+you will need to inherit from `QEnableSharedFromThis<QObject>`. Unfortunately, you can't use your actual type in the template here,
+To upcast, simply do `qSharedPointerCast<YourNode>(sharedFromThis()))`.
+See the section in this document about `init` for some possible pitfalls.
 
 ### If I have a `VideoNodeSP *v`, what is the difference between `v == nullptr` and `v->isNull()`?
 
@@ -78,7 +103,13 @@ It should be turned into a `nullptr`, not a pointer to a `VideoNodeSP(nullptr)`.
 
 ### Who `delete`s objects passed into QML land?
 
-TBD, read [this](https://wiki.qt.io/Shared_Pointers_and_QML_Ownership) for now to get some idea.
+For the most part, we try to use parent-child management of objects passed into QML.
+The alternatives are pretty scary, and I recommend you read [this](https://wiki.qt.io/Shared_Pointers_and_QML_Ownership).
+
+For instance, in QML, a fresh `VideoNode` (actually a `VideoNodeSP *`) created using e.g. `deserialize()` has no parent.
+It will be claimed by the Javascript garbage collector if left that way.
+When it gets added to a `Model`, that model becomes its parent.
+Typically, QML will create the `Model` (actually a `ModelSP *`) declaratively and it will be cleaned up by the QML engine.
 
 ### I hate the pattern of `(*videoNode)->method` when working on `VideoNodeSP *`
 
