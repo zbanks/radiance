@@ -619,7 +619,7 @@ QSharedPointer<QOpenGLShaderProgram> MovieNodeOpenGLWorker::loadBlitShader(Movie
         "void main() {\n"
         "    vec2 texUV = (uv - 0.5) * iFactor + 0.5;\n"
         "    vec2 clamp = (step(0., texUV) - step(1., texUV));\n"
-        "    fragColor = texture(iVideoFrame, texUV) * clamp->x * clamp->y;\n"
+        "    fragColor = texture(iVideoFrame, texUV) * clamp.x * clamp.y;\n"
         "}\n"};
 
     auto shader = QSharedPointer<QOpenGLShaderProgram>(new QOpenGLShaderProgram());
