@@ -96,15 +96,18 @@ class LightOutputNode:
             logger.debug("Waiting for a connection on {}:{}".format(self.host, self.port))
             self.accept()
             logger.debug("Connected to {}".format(self.address[0]))
-            self.on_connect()
-            if self.period is not None:
-                self.send_get_frame(self.period)
+            try:
+                self.on_connect()
+                if self.period is not None:
+                    self.send_get_frame(self.period)
 
-            while True:
-                packet = self.recv_packet()
-                if not packet:
-                    break
-                self.handle_packet(packet)
+                while True:
+                    packet = self.recv_packet()
+                    if not packet:
+                        break
+                    self.handle_packet(packet)
+            except BrokenPipeError:
+                pass
 
             logger.debug("Disconnected from {}".format(self.address[0]))
             self.on_disconnect()
