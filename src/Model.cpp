@@ -101,18 +101,28 @@ void Model::disownNode(VideoNodeSP *videoNode) {
     }
 }
 
+VideoNodeSP *Model::lookupSender() {
+    auto vn_data = qobject_cast<VideoNode *>(sender());
+    for (auto vertex = m_vertices.begin(); vertex != m_vertices.end(); vertex++) {
+        if ((*vertex)->data() == vn_data) {
+            return *vertex;
+        }
+    }
+    return nullptr;
+}
+
 void Model::onMessage(QString str) {
-    auto vn = qobject_cast<VideoNodeSP *>(sender());
+    auto vn = lookupSender();
     emit message(vn, str);
 }
 
 void Model::onWarning(QString str) {
-    auto vn = qobject_cast<VideoNodeSP *>(sender());
+    auto vn = lookupSender();
     emit warning(vn, str);
 }
 
 void Model::onError(QString str) {
-    auto vn = qobject_cast<VideoNodeSP *>(sender());
+    auto vn = lookupSender();
     emit error(vn, str);
 }
 

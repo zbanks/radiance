@@ -172,6 +172,10 @@ protected:
     // Chains used for rendering this model
     QList<QSharedPointer<Chain>> m_chains;
 
+    // Find which VideoNodeSP* in this model
+    // emitted a signal
+    VideoNodeSP *lookupSender();
+
 protected slots:
     void onMessage(QString message);
     void onWarning(QString str);
