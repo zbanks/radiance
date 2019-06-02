@@ -25,6 +25,7 @@
 #include "Timebase.h"
 #include "VideoNode.h"
 #include "View.h"
+#include "qqml_templated.h"
 
 #ifdef USE_RTMIDI
 #include "MidiController.h"
@@ -43,16 +44,16 @@
 static int
 runRadianceGui(QGuiApplication *app) {
     // Set up QML types
-    qmlRegisterUncreatableType<VideoNodeSP>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
+    qmlRegisterUncreatableTemplatedType<VideoNodeSP>("radiance", 1, 0, "VideoNode", "VideoNode is abstract and cannot be instantiated");
     qmlRegisterUncreatableType<Library>("radiance", 1, 0, "Library", "Library should be accessed through the Registry");
     qmlRegisterType<Context>("radiance", 1, 0, "Context");
     qmlRegisterType<Registry>("radiance", 1, 0, "Registry");
     qmlRegisterType<QQuickPreviewAdapter>("radiance", 1, 0, "PreviewAdapter");
-    qmlRegisterType<ModelSP>("radiance", 1, 0, "Model");
+    qmlRegisterTemplatedType<ModelSP>("radiance", 1, 0, "Model");
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
 #ifdef USE_MPV
-    qmlRegisterUncreatableType<MovieNodeSP>("radiance", 1, 0, "MovieNode", "MovieNode cannot be constructed from QML");
+    qmlRegisterUncreatableTemplatedType<MovieNodeSP>("radiance", 1, 0, "MovieNode", "MovieNode cannot be constructed from QML");
     qRegisterMetaType<MovieNode::Factor>("Factor");
 #endif
 
