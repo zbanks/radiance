@@ -25,7 +25,9 @@ void PlaceholderNode::setWrappedVideoNode(VideoNodeSP *wrapped) {
             }
         }
         m_wrappedVideoNode = wrapped;
-        (*m_wrappedVideoNode)->setChains(m_chains); // XXX this needs to be more dynamic
+        if (m_wrappedVideoNode != nullptr) {
+            (*m_wrappedVideoNode)->setChains(m_chains); // XXX this needs to be more dynamic
+        }
     }
     emit wrappedVideoNodeChanged(m_wrappedVideoNode);
 }

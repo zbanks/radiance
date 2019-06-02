@@ -19,6 +19,7 @@ public:
     GLuint paint(QSharedPointer<Chain> chain, QVector<GLuint> inputTextures) override;
     GLuint render();
     GLuint render(QWeakPointer<Model> model);
+    void setWorkerContext(OpenGLWorkerContext *context);
 
 public slots:
     void resize(QSize size);
@@ -29,6 +30,7 @@ protected:
     virtual QList<QSharedPointer<Chain>> requestedChains() override;
 
     QSharedPointer<Chain> m_chain;
+    OpenGLWorkerContext *m_workerContext{};
 };
 
 typedef QmlSharedPointer<OutputNode, VideoNodeSP> OutputNodeSP;

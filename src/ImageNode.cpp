@@ -183,7 +183,7 @@ bool ImageNode::canCreateFromFile(QString filename) {
 VideoNodeSP *ImageNode::fromFile(Context *context, QString filename) {
     auto node = new ImageNodeSP(new ImageNode(context));
     (*node)->init(filename);
-    return new ImageNodeSP(node);
+    return node;
 }
 
 QMap<QString, QString> ImageNode::customInstantiators() {
