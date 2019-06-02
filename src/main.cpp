@@ -52,7 +52,7 @@ runRadianceGui(QGuiApplication *app) {
     qmlRegisterType<View>("radiance", 1, 0, "View");
 
 #ifdef USE_MPV
-    qmlRegisterUncreatableType<MovieNodeSP>("radiance", 1, 0, "MovieNodeSP", "MovieNode cannot be constructed from QML");
+    qmlRegisterUncreatableType<MovieNodeSP>("radiance", 1, 0, "MovieNode", "MovieNode cannot be constructed from QML");
 #endif
 
     qmlRegisterType<QQuickVideoNodePreview>("radiance", 1, 0, "VideoNodePreview");
