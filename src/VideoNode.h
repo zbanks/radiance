@@ -80,7 +80,7 @@ public slots:
     virtual QList<QSharedPointer<Chain>> requestedChains();
 
     // The last model that this VideoNode was added to
-    // WeakModel encapsulates a weak reference to modeldata
+    // QWeakPointer encapsulates a weak reference to the Model
     // because the Model may be deleted out from underneath the VideoNode
     // and we can't give it a strong reference or deadlock would occur
     void setLastModel(QWeakPointer<Model> model);
