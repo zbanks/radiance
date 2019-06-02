@@ -14,8 +14,7 @@ public:
 
     Renderer *createRenderer() const override;
 
-    // Use this method from other threads
-    QSharedPointer<LightOutputNode> videoNodeSafe();
+    QSharedPointer<LightOutputNode> videoNodeForRendering();
 
 public slots:
     // Watch out--
@@ -24,11 +23,9 @@ public slots:
     // so don't rely in pointer values for equality checking
     // or debugging.
     // instead, check *videoNode == *otherVideoNode.
+    // These methods are not thread-safe.
     LightOutputNodeSP *videoNode();
     void setVideoNode(LightOutputNodeSP *videoNode);
-    // In fact, these really should take in / return VideoNode instead of VideoNode*
-    // but then they would be non-nullable
-    // Also, they are not thread-safe.
 
 signals:
     void videoNodeChanged(LightOutputNodeSP *videoNode);

@@ -16,8 +16,10 @@ class LightOutputRenderer
     , protected QOpenGLFunctions {
 
 public:
-    LightOutputRenderer(QQuickLightOutputPreview *p) 
-        : m_p(p) {
+    void synchronize(QQuickFramebufferObject *item) override {
+        auto p = static_cast<QQuickLightOutputPreview *>(item);
+        m_videoNode = p->videoNodeForRendering();
+        m_devicePixelRatio = p->window()->devicePixelRatio();
     }
 
     void render() override {
@@ -28,11 +30,10 @@ public:
         glBlendEquationSeparate(GL_MAX, GL_MAX);
         glEnable(GL_PROGRAM_POINT_SIZE);
 
-        auto videoNode = m_p->videoNodeSafe();
-        if (!videoNode.isNull()) {
+        if (!m_videoNode.isNull()) {
             m_vao.bind();
 
-            auto outputSize = videoNode->chain()->size();
+            auto outputSize = m_videoNode->chain()->size();
 
             auto factorFitX = (float)outputSize.height() * m_viewportSize.width() / outputSize.width() / m_viewportSize.height();
             auto factorFitY = (float)outputSize.width() * m_viewportSize.height() / outputSize.height() / m_viewportSize.width();
@@ -50,13 +51,13 @@ public:
             auto posAttr = m_lightShader->attributeLocation("posAttr");
             auto colAttr = m_lightShader->attributeLocation("colAttr");
             {
-                QMutexLocker locker(videoNode->bufferLock());
-                auto background = videoNode->geometry2DTexture();
-                auto pixelCount = videoNode->pixelCount();
-                auto colors = videoNode->colorsBuffer();
-                auto displayMode = videoNode->displayMode();
-                auto lookupCoordinates = videoNode->lookupCoordinatesBuffer();
-                auto physicalCoordinates = videoNode->physicalCoordinatesBuffer();
+                QMutexLocker locker(m_videoNode->bufferLock());
+                auto background = m_videoNode->geometry2DTexture();
+                auto pixelCount = m_videoNode->pixelCount();
+                auto colors = m_videoNode->colorsBuffer();
+                auto displayMode = m_videoNode->displayMode();
+                auto lookupCoordinates = m_videoNode->lookupCoordinatesBuffer();
+                auto physicalCoordinates = m_videoNode->physicalCoordinatesBuffer();
 
                 // Draw background
                 m_backgroundShader->bind();
@@ -106,7 +107,6 @@ public:
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         m_viewportSize = size;
-        m_devicePixelRatio = m_p->window()->devicePixelRatio();
         return new QOpenGLFramebufferObject(size, format);
     }
 
@@ -197,16 +197,16 @@ private:
     QSharedPointer<QOpenGLShaderProgram> m_lightShader;
     QSharedPointer<QOpenGLShaderProgram> m_backgroundShader;
     bool m_initialized{};
-    QQuickLightOutputPreview *m_p{};
     QOpenGLVertexArrayObject m_vao;
     QSize m_viewportSize;
     qreal m_devicePixelRatio;
+    QSharedPointer<LightOutputNode> m_videoNode;
 };
 
 // QQuickItem
 
 QQuickLightOutputPreview::QQuickLightOutputPreview() {
-    m_renderer = new LightOutputRenderer(this);
+    m_renderer = new LightOutputRenderer();
 }
 
 QQuickFramebufferObject::Renderer *QQuickLightOutputPreview::createRenderer() const {
@@ -217,8 +217,7 @@ LightOutputNodeSP *QQuickLightOutputPreview::videoNode() {
     return m_videoNode;
 }
 
-QSharedPointer<LightOutputNode> QQuickLightOutputPreview::videoNodeSafe() {
-    QMutexLocker locker(&m_videoNodeLock);
+QSharedPointer<LightOutputNode> QQuickLightOutputPreview::videoNodeForRendering() {
     if (m_videoNode == nullptr) return nullptr;
     return qSharedPointerCast<LightOutputNode>(*m_videoNode);
 }

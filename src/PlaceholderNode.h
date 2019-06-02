@@ -52,7 +52,7 @@ signals:
 
 protected:
     // m_wrappedVideoNode needs to be a VideoNodeSP since there are QML properties that fetch it
-    VideoNodeSP *m_wrappedVideoNode;
+    VideoNodeSP *m_wrappedVideoNode{};
 };
 
 typedef QmlSharedPointer<PlaceholderNode, VideoNodeSP> PlaceholderNodeSP;

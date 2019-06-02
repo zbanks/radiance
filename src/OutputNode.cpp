@@ -4,7 +4,7 @@
 
 OutputNode::OutputNode(Context *context, QSize chainSize)
     : VideoNode(context)
-    , m_chain(new Chain(chainSize))
+    , m_chain(new Chain(chainSize), &QObject::deleteLater)
 {
     setInputCount(1);
 }
@@ -30,6 +30,13 @@ GLuint OutputNode::render(QWeakPointer<Model> model) {
     return result.value(qSharedPointerCast<VideoNode>(sharedFromThis()), 0);
 }
 
+void OutputNode::setWorkerContext(OpenGLWorkerContext *context) {
+    m_workerContext = context;
+    if (m_workerContext != nullptr) {
+        m_chain->moveToWorkerContext(m_workerContext);
+    }
+}
+
 QSharedPointer<Chain> OutputNode::chain() {
     QMutexLocker locker(&m_stateLock);
     return m_chain;
@@ -44,6 +51,9 @@ void OutputNode::resize(QSize size) {
         if (size == oldChain->size()) return;
         newChain = QSharedPointer<Chain>(new Chain(oldChain.data(), size), &QObject::deleteLater);
         m_chain = newChain;
+        if (m_workerContext != nullptr) {
+            m_chain->moveToWorkerContext(m_workerContext);
+        }
     }
     emit requestedChainAdded(newChain);
     emit requestedChainRemoved(oldChain);

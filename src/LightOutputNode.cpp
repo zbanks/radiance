@@ -16,7 +16,7 @@ void LightOutputNode::init(QString url)
     m_worker = QSharedPointer<LightOutputNodeOpenGLWorker>(new LightOutputNodeOpenGLWorker(qSharedPointerCast<LightOutputNode>(sharedFromThis())), &QObject::deleteLater);
     connect(m_worker.data(), &QObject::destroyed, m_workerContext, &QObject::deleteLater);
 
-    m_chain->moveToWorkerContext(m_workerContext);
+    setWorkerContext(m_workerContext);
     connect(m_worker.data(), &LightOutputNodeOpenGLWorker::sizeChanged, this, &OutputNode::resize);
 
     if (!url.isEmpty()) setUrl(url);
