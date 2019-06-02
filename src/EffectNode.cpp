@@ -440,7 +440,6 @@ void EffectNodeOpenGLWorker::addNewState(QSharedPointer<Chain> c) {
     {
         QMutexLocker locker(&p->m_stateLock);
         // Don't make states that we don't have to
-        if (!p->m_ready) return;
         if (!p->m_chains.contains(c)) return;
         if (p->m_renderStates.contains(c)) return;
         shaders = p->m_shaders;
@@ -452,7 +451,6 @@ void EffectNodeOpenGLWorker::addNewState(QSharedPointer<Chain> c) {
     {
         QMutexLocker locker(&p->m_stateLock);
         // Check that everything is still OK
-        if (!p->m_ready) return;
         if (!p->m_chains.contains(c)) return;
         if (p->m_renderStates.contains(c)) return;
         p->m_renderStates.insert(c, state);
