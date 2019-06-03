@@ -429,7 +429,7 @@ void EffectNodeOpenGLWorker::initialize(QVector<QStringList> sourceCode) {
     p->setNodeState(VideoNode::Ready);
 }
 
-// Invoke this method when a QSharedPointer<Chain> gets added
+// Invoke this method when a Chain gets added
 // (or when the state for a given chain is somehow missing)
 // It will create the new state asynchronously and add it when it is ready.
 void EffectNodeOpenGLWorker::addNewState(QSharedPointer<Chain> c) {
