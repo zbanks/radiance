@@ -136,8 +136,14 @@ void Model::addVideoNode(VideoNodeSP *videoNode) {
 }
 
 void Model::removeVideoNode(VideoNodeSP *videoNode) {
-    QList<Edge> removed;
+    if (!videoNode) return;
 
+    if (!m_vertices.contains(videoNode)) {
+        qWarning() << QString("Attempted to remove %1 which is not in the model").arg(vnp(videoNode));
+        return;
+    }
+
+    QList<Edge> removed;
     QMutableListIterator<Edge> i(m_edges);
     while (i.hasNext()) {
         auto edgeCopy = i.next();
