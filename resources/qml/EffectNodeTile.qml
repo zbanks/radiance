@@ -15,17 +15,17 @@ VideoNodeTile {
     onVideoNodeChanged: {
         tile.intensity = videoNode.intensity;
         frequencyCombo.value = videoNode.frequency;
-        videoNode.intensity = Qt.binding(function() { return slider.value });
-        videoNode.frequency = Qt.binding(function() { return frequencyCombo.value });
+        videoNode.intensity = slider.value;
+        videoNode.frequency = frequencyCombo.value;
     }
 
     Connections {
         target: videoNode
         onIntensityChanged: {
-            slider.value = intensity;
+            slider.value = videoNode.intensity;
         }
         onFrequencyChanged: {
-            frequencyCombo.value = frequency;
+            frequencyCombo.value = videoNode.frequency;
         }
     }
 
@@ -48,11 +48,13 @@ VideoNodeTile {
         Slider {
             id: slider;
             Layout.fillWidth: true;
+            onValueChanged: videoNode.intensity = slider.value
         }
 
         RowLayout {
             FrequencyDropDown {
                 id: frequencyCombo;
+                onValueChanged: videoNode.frequency = frequencyCombo.value
             }
             /*
             ComboBox {
