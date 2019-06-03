@@ -121,6 +121,8 @@ ApplicationWindow {
                         SettingsWidget {
                             id: settings
                             anchors.fill: parent
+                            model: model
+                            registry: registry
                         }
                     }
                     PopOut {

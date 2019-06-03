@@ -8,6 +8,8 @@ import "."
 Item {
     id: settingsWidget
     property alias modelName: modelNameTextInput.text
+    property var model;
+    property var registry;
 
     ColumnLayout {
         anchors.fill: parent
@@ -63,6 +65,12 @@ Item {
                     model.flush();
                 }
             }
+        }
+
+        AutoDJ {
+            context: defaultContext
+            model: settingsWidget.model
+            registry: settingsWidget.registry
         }
 
         Item {
