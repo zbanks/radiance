@@ -7,3 +7,7 @@ BaseVideoNodeTile::BaseVideoNodeTile(QQuickItem *p)
 }
 
 BaseVideoNodeTile::~BaseVideoNodeTile() = default;
+
+VideoNodeSP *BaseVideoNodeTile::videoNode() const {
+    return m_videoNode;
+}

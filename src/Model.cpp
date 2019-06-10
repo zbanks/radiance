@@ -127,8 +127,9 @@ void Model::onError(QString str) {
 }
 
 void Model::addVideoNode(VideoNodeSP *videoNode) {
-    if(!videoNode)
+    if(!videoNode) {
         return;
+    }
     if (!m_vertices.contains(videoNode)) {
         prepareNode(videoNode);
         m_vertices.append(videoNode);
@@ -136,6 +137,14 @@ void Model::addVideoNode(VideoNodeSP *videoNode) {
 }
 
 void Model::removeVideoNode(VideoNodeSP *videoNode) {
+    if (!videoNode) {
+        return;
+    }
+    if (!m_vertices.contains(videoNode)) {
+        qWarning() << QString("Attempted to remove %1 which is not in the model").arg(vnp(videoNode));
+        return;
+    }
+
     QList<Edge> removed;
 
     QMutableListIterator<Edge> i(m_edges);
@@ -398,7 +407,7 @@ void Model::flush() {
     emit graphChanged(verticesAddedVL, verticesRemovedVL, edgesAddedVL, edgesRemovedVL);
 }
 
-QList<VideoNodeSP *> Model::ancestors(VideoNodeSP *node) {
+QList<VideoNodeSP *> Model::ancestors(VideoNodeSP *node) const {
     QSet<VideoNodeSP *> ancestorSet;
     QList<VideoNodeSP *> nodeStack;
     nodeStack.append(node);
@@ -422,9 +431,59 @@ QList<VideoNodeSP *> Model::ancestors(VideoNodeSP *node) {
     return ancestorSet.values();
 }
 
-bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) {
+bool Model::isAncestor(VideoNodeSP *parent, VideoNodeSP *child) const {
     // TODO: This is obviously not optimal
     return ancestors(child).contains(parent);
+}
+
+QVariantList Model::qmlAncestors(VideoNodeSP *vn) const {
+    QList<VideoNodeSP *> nodes = ancestors(vn);
+    QVariantList output;
+
+    for (auto node = nodes.begin(); node != nodes.end(); node++) {
+        output.append(QVariant::fromValue(*node));
+    }
+    return output;
+}
+
+
+QList<VideoNodeSP *> Model::descendants(VideoNodeSP *node) const {
+    QSet<VideoNodeSP *> descendantSet;
+    QList<VideoNodeSP *> nodeStack;
+    nodeStack.append(node);
+
+    while (!nodeStack.isEmpty()) {
+        VideoNodeSP * n = nodeStack.takeLast();
+        for (auto e : m_edges) {
+            if (e.fromVertex != n)
+                continue;
+
+            VideoNodeSP * newNode = e.toVertex;
+            Q_ASSERT(newNode != node); // cycles are bad
+            if (descendantSet.contains(newNode))
+                continue;
+
+            descendantSet.insert(newNode);
+            nodeStack.append(newNode);
+        }
+    }
+
+    return descendantSet.values();
+}
+
+bool Model::isDescendant(VideoNodeSP *parent, VideoNodeSP *child) const {
+    // TODO: This is obviously not optimal
+    return descendants(child).contains(parent);
+}
+
+QVariantList Model::qmlDescendants(VideoNodeSP *vn) const {
+    QList<VideoNodeSP *> nodes = descendants(vn);
+    QVariantList output;
+
+    for (auto node = nodes.begin(); node != nodes.end(); node++) {
+        output.append(QVariant::fromValue(*node));
+    }
+    return output;
 }
 
 QMap<QSharedPointer<VideoNode>, GLuint> ModelCopyForRendering::render(QSharedPointer<Chain> chain) {

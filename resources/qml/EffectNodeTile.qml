@@ -22,7 +22,7 @@ VideoNodeTile {
     Connections {
         target: videoNode
         onIntensityChanged: {
-            slider.value = intensity;
+            slider.value = videoNode.intensity;
         }
         onFrequencyChanged: {
             frequencyCombo.value = frequency;
