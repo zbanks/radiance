@@ -106,11 +106,29 @@ public slots:
 
     // Returns a list of vertices that
     // are ancestors of the given node
-    QList<VideoNodeSP *> ancestors(VideoNodeSP *node);
+    QList<VideoNodeSP *> ancestors(VideoNodeSP *node) const;
 
     // Returns true if `parent`
     // is an ancestor of `child`
-    bool isAncestor(VideoNodeSP *parent, VideoNodeSP *child);
+    bool isAncestor(VideoNodeSP *parent, VideoNodeSP *child) const;
+
+    // Returns a list of vertices that
+    // are ancestors of the given node
+    // suitable for QML / Javascript
+    QVariantList qmlAncestors(VideoNodeSP *node) const;
+
+    // Returns a list of vertices, that
+    // are descendants of the given node
+    QList<VideoNodeSP *> descendants(VideoNodeSP *node) const;
+
+    // Returns true if `parent`
+    // is an descendant of `child`
+    bool isDescendant(VideoNodeSP *parent, VideoNodeSP *child) const;
+
+    // Returns a list of vertices that
+    // are ancestors of the given node
+    // suitable for QML / Javascript
+    QVariantList qmlDescendants(VideoNodeSP *node) const;
 
     // Chains are instances of the
     // model render pipeline

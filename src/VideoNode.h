@@ -24,6 +24,9 @@ class VideoNode
     Q_PROPERTY(Context *context READ context CONSTANT);
     Q_PROPERTY(int inputCount READ inputCount WRITE setInputCount NOTIFY inputCountChanged);
     Q_PROPERTY(NodeState nodeState READ nodeState WRITE setNodeState NOTIFY nodeStateChanged);
+    Q_PROPERTY(bool frozenInput READ frozenInput WRITE setFrozenInput NOTIFY frozenInputChanged);
+    Q_PROPERTY(bool frozenOutput READ frozenOutput WRITE setFrozenOutput NOTIFY frozenOutputChanged);
+    Q_PROPERTY(bool frozenParameters READ frozenParameters WRITE setFrozenParameters NOTIFY frozenParametersChanged);
 
 public:
     enum NodeState {
@@ -97,6 +100,21 @@ public slots:
     NodeState nodeState();
     void setNodeState(NodeState value);
 
+    // Freeze the input edge(s) to this VideoNode to discourage
+    // the user from changing them with the default UI
+    bool frozenInput();
+    void setFrozenInput(bool value);
+
+    // Freeze the output edge from this VideoNode to discourage
+    // the user from changing it with the default UI
+    bool frozenOutput();
+    void setFrozenOutput(bool value);
+
+    // Freeze the VideoNode-specific parameters (e.g. intensity)
+    // to discourage the user from changing them with the default UI
+    bool frozenParameters();
+    void setFrozenParameters(bool value);
+
 protected slots:
     // If your node does anything at all, you will need to override this method
     virtual void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed);
@@ -121,6 +139,11 @@ signals:
     // Emitted when state changes
     void nodeStateChanged(NodeState value);
 
+    // Emitted when the frozen tstate changes
+    void frozenInputChanged(bool value);
+    void frozenOutputChanged(bool value);
+    void frozenParametersChanged(bool value);
+
 protected:
     VideoNode(Context *context);
 
@@ -130,6 +153,9 @@ protected:
     Context *m_context{};
     QWeakPointer<Model> m_lastModel;
     VideoNode::NodeState m_nodeState{VideoNode::Ready};
+    bool m_frozenInput{false};
+    bool m_frozenOutput{false};
+    bool m_frozenParameters{false};
 };
 
 QDebug operator<<(QDebug debug, const VideoNode &vn);

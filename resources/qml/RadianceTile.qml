@@ -6,6 +6,7 @@ import "."
 
 Item {
     property real oversample: 1
+    property bool frozen: false;
     property alias inputArrows: canvas.inputArrows
     property alias outputArrow: canvas.outputArrow
     property alias arrowWidth: canvas.arrowWidth
@@ -30,7 +31,7 @@ Item {
         property bool selected: false;
         property bool highlight: false;
         property color bottomColor: selected ? RadianceStyle.tileBackgroundHighlightColor : RadianceStyle.tileBackgroundColor;
-        property color topColor: Qt.lighter(bottomColor, 1.75);
+        property color topColor: Qt.lighter(bottomColor, frozen ? 3.5 : 1.75);
         property real borderWidth: 1;
         property color borderColor: highlight ? RadianceStyle.tileLineHighlightColor : RadianceStyle.tileLineColor;
         property int padding: 3;

@@ -65,6 +65,10 @@ Item {
             }
         }
 
+        AutoDJ {
+            context: defaultContext
+        }
+
         Item {
             Layout.fillHeight: true
         }

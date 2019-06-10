@@ -443,6 +443,8 @@ void View::onGraphChanged() {
     qDeleteAll(m_dropAreas.begin(), m_dropAreas.end());
     m_dropAreas = dropAreas;
 
+    qInfo() << "refreshing selection";
+    addToSelection(selection());
     selectionChanged();
 }
 
@@ -500,7 +502,8 @@ void View::qml_setDelegates(QVariantMap value) {
     emit qml_delegatesChanged(qml_delegates());
 }
 
-void View::select(QVariantList tiles) {
+void View::select(QVariantList _tiles) {
+    QVariantList tiles = frozenConnectedComponents(_tiles);
     m_selection.clear();
     for (int i=0; i<tiles.count(); i++) {
         auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
@@ -509,7 +512,8 @@ void View::select(QVariantList tiles) {
     selectionChanged();
 }
 
-void View::addToSelection(QVariantList tiles) {
+void View::addToSelection(QVariantList _tiles) {
+    QVariantList tiles = frozenConnectedComponents(_tiles);
     for (int i=0; i<tiles.count(); i++) {
         auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
         m_selection.insert(tile);
@@ -517,7 +521,8 @@ void View::addToSelection(QVariantList tiles) {
     selectionChanged();
 }
 
-void View::removeFromSelection(QVariantList tiles) {
+void View::removeFromSelection(QVariantList _tiles) {
+    QVariantList tiles = frozenConnectedComponents(_tiles);
     for (int i=0; i<tiles.count(); i++) {
         auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
         m_selection.remove(tile);
@@ -525,7 +530,8 @@ void View::removeFromSelection(QVariantList tiles) {
     selectionChanged();
 }
 
-void View::toggleSelection(QVariantList tiles) {
+void View::toggleSelection(QVariantList _tiles) {
+    QVariantList tiles = frozenConnectedComponents(_tiles);
     bool allSelected = true;
     for (int i=0; i<tiles.count(); i++) {
         auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
@@ -537,14 +543,6 @@ void View::toggleSelection(QVariantList tiles) {
         removeFromSelection(tiles);
     } else {
         addToSelection(tiles);
-    }
-}
-
-void View::ensureSelected(BaseVideoNodeTile *tile) {
-    if (!m_selection.contains(tile)) {
-        m_selection.clear();
-        m_selection.insert(tile);
-        selectionChanged();
     }
 }
 
@@ -592,6 +590,48 @@ static void findColoredInputs(const QVector<QVector<int>> &revEdges, const QVect
             findColoredInputs(revEdges, colors, parent, color, inputNodes, inputPorts);
         }
     }
+}
+
+QVariantList View::frozenConnectedComponents(QVariantList tiles) {
+    QList<VideoNodeSP *> queuedTiles;
+    QSet<VideoNodeSP *> connectedTiles;
+
+    for (int i=0; i<tiles.count(); i++) {
+        auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
+        Q_ASSERT(tile != nullptr);
+        VideoNodeSP *vertex = tile->videoNode();
+        queuedTiles.append(vertex);
+        connectedTiles.insert(vertex);
+    }
+
+    auto edges = (*m_model)->edges();
+    while (!queuedTiles.isEmpty()) {
+        VideoNodeSP *vertex = queuedTiles.takeLast();
+        if (!(*vertex)->frozenInput() && !(*vertex)->frozenOutput()) {
+            continue;
+        }
+        for (auto edge : edges) {
+            VideoNodeSP *adjVertex = nullptr;
+            if ((*vertex)->frozenInput() && edge.toVertex == (vertex)) {
+                adjVertex = edge.fromVertex;
+            } else if ((*vertex)->frozenOutput() && edge.fromVertex == (vertex)) {
+                adjVertex = edge.toVertex;
+            } else {
+                continue;
+            }
+            Q_ASSERT(adjVertex != nullptr);
+            if (!connectedTiles.contains(adjVertex)) {
+                connectedTiles.insert(adjVertex);
+                queuedTiles.append(adjVertex);
+            }
+        }
+    }
+
+    QVariantList output;
+    for (auto node : connectedTiles) { // TODO: This is secretly O(n^2) because of tileForVideoNode
+        output.append(QVariant::fromValue(tileForVideoNode(node)));
+    }
+    return output;
 }
 
 QVariantList View::selectedConnectedComponents() {

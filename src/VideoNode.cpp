@@ -73,6 +73,57 @@ void VideoNode::setChains(QList<QSharedPointer<Chain>> chains) {
     }
 }
 
+bool VideoNode::frozenInput() {
+    QMutexLocker locker(&m_stateLock);
+    return m_frozenInput;
+}
+
+void VideoNode::setFrozenInput(bool value) {
+    bool changed = false;
+    {
+        QMutexLocker locker(&m_stateLock);
+        if (value != m_frozenInput) { 
+            m_frozenInput = value;
+            changed = true;
+        }
+    }
+    if (changed) emit frozenInputChanged(value);
+}
+
+bool VideoNode::frozenOutput() {
+    QMutexLocker locker(&m_stateLock);
+    return m_frozenOutput;
+}
+
+void VideoNode::setFrozenOutput(bool value) {
+    bool changed = false;
+    {
+        QMutexLocker locker(&m_stateLock);
+        if (value != m_frozenOutput) { 
+            m_frozenOutput = value;
+            changed = true;
+        }
+    }
+    if (changed) emit frozenOutputChanged(value);
+}
+
+bool VideoNode::frozenParameters() {
+    QMutexLocker locker(&m_stateLock);
+    return m_frozenParameters;
+}
+
+void VideoNode::setFrozenParameters(bool value) {
+    bool changed = false;
+    {
+        QMutexLocker locker(&m_stateLock);
+        if (value != m_frozenParameters) { 
+            m_frozenParameters = value;
+            changed = true;
+        }
+    }
+    if (changed) emit frozenParametersChanged(value);
+}
+
 Context *VideoNode::context() {
     // Not mutable, so no need to lock
     return m_context;

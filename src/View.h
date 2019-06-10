@@ -33,14 +33,13 @@ public slots:
     void addToSelection(QVariantList tiles);
     void removeFromSelection(QVariantList tiles);
     void toggleSelection(QVariantList tiles);
-    void ensureSelected(BaseVideoNodeTile *tile);
     QVariantList selection();
 
     // Finds the connected components of the selection
     // Each connected component will have zero or more inputs and one output
     // (though possibly multiple output edges.)
     // This is useful because it may be treated as a single tile.
-    // Returns a list of objects with three keys:
+    // Returns a list of objects with these keys:
     // * tiles = A QVariantList of tiles contained within the connected component
     // * vertices = A QVariantList of vertices (VideoNodes) contained within the connected component
     // * edges = A QVariantList of edges contained within the connected component
@@ -49,6 +48,9 @@ public slots:
     // * inputPorts = A QVariantList of QVariantMaps of {vertex, input}
     // * outputNode = The output VideoNode
     QVariantList selectedConnectedComponents();
+
+    // Finds all tiles that are connected by frozen edges to the original tile set
+    QVariantList frozenConnectedComponents(QVariantList tiles);
 
     // Finds all tiles in between tile1 and tile2
     // Returns a QVariantList of tiles

@@ -10,6 +10,7 @@ class PlaceholderNodePrivate;
 class PlaceholderNode
     : public VideoNode {
     Q_OBJECT
+    Q_PROPERTY(QString role READ role WRITE setRole NOTIFY roleChanged);
 
 public:
     PlaceholderNode(Context *context, VideoNodeSP *wrapped=nullptr);
@@ -47,12 +48,17 @@ public slots:
 
     void chainsEdited(QList<QSharedPointer<Chain>> added, QList<QSharedPointer<Chain>> removed) override;
 
+    QString role();
+    void setRole(QString value);
+
 signals:
     void wrappedVideoNodeChanged(VideoNodeSP *videoNode);
+    void roleChanged(QString value);
 
 protected:
     // m_wrappedVideoNode needs to be a VideoNodeSP since there are QML properties that fetch it
     VideoNodeSP *m_wrappedVideoNode{};
+    QString m_role;
 };
 
 typedef QmlSharedPointer<PlaceholderNode, VideoNodeSP> PlaceholderNodeSP;

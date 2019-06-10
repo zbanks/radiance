@@ -189,13 +189,21 @@ BaseVideoNodeTile {
             if (ccs.length == 0) break;
             var deleteCC = ccs[0];
 
-            // Step 1. Delete nodes
+            // Step 1. Check if any nodes are frozen, then do nothing
+            for (var i=0; i<deleteCC.vertices.length; i++) {
+                var e = deleteCC.vertices[i];
+                if (e.frozenInput || e.frozenOutput || e.frozenParameters) {
+                    return;
+                }
+            }
+
+            // Step 2. Delete nodes
             for (var i=0; i<deleteCC.vertices.length; i++) {
                 var e = deleteCC.vertices[i];
                 model.removeVideoNode(e);
             }
 
-            // Step 2. Stitch the surrounding blocks back together
+            // Step 3. Stitch the surrounding blocks back together
             if (deleteCC.inputEdges.length >= 1) {
                 for (var i=0; i<deleteCC.outputEdges.length; i++) {
                     var f = deleteCC.inputEdges[0];
@@ -254,8 +262,8 @@ BaseVideoNodeTile {
         view.parent.lastClickedTile = tile;
     }
 
-    KeyNavigation.tab: tab;
-    KeyNavigation.backtab: backtab;
+    KeyNavigation.tab: tab || null;
+    KeyNavigation.backtab: backtab || null;
 
     onActiveFocusChanged: {
         if (activeFocus) {
@@ -275,7 +283,7 @@ BaseVideoNodeTile {
         }
 
         drag.onActiveChanged: {
-            view.ensureSelected(tile);
+            view.addToSelection([tile]);
             if (drag.active) {
                 dragLift();
             } else {
@@ -293,6 +301,7 @@ BaseVideoNodeTile {
         focus: true;
         inputArrows: parent.inputArrows
         outputArrow: parent.outputArrow
+        frozen: videoNode && (videoNode.frozenInput || videoNode.frozenOutput);
     }
 
     Behavior on x {
