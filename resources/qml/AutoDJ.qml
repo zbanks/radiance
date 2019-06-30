@@ -25,23 +25,10 @@ RowLayout {
 
         // Motion
         // Always set to 0.5 frequency
-        ["fly", "tunnel", "warble", "flowing", "flow", "fractalzoom", "life", "scramble", "tesselate", "bespeckle", "bespecklep", "coin", "shake", "solitare", "id", "id", "id"],
+        ["fly", "tunnel", "warble", "flowing", "flow", "fractalzoom", "life", "scramble", "tesselate", "bespeckle", "bespecklep", "coin", "shake", "solitaire", "id", "id", "id"],
 
         // Low-pass
         ["lpf", "diodelpf", "crt", "posterize", "melt", "life", "smoky", "speckle", "stripey", "rolling", "still", "swipe"],
-        ["rekt"],
-        ["bespeckle"],
-        ["fly"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
-        ["rekt"],
     ];
     /*
     // Setup for working with light strips and pixels
@@ -173,7 +160,7 @@ RowLayout {
 
     function waitRandomTime(cb) {
         this.t = timer();
-        t.interval = 100; // Math.floor(1000 + Math.random() * 5000);
+        t.interval = Math.floor(1000 + Math.random() * 5000);
         t.repeat = false;
         t.triggered.connect(function () {
             if (running.checked) cb();
@@ -198,7 +185,7 @@ RowLayout {
         }
 
         this.t = null;
-        console.log("Start!");
+        console.log("Starting AutoDJ");
         var placeholders = getOrMakePlaceholders('AutoDJ');
         var head = placeholders[0];
         var tail = placeholders[1];
@@ -240,14 +227,16 @@ RowLayout {
             if (fraction > 1) fraction = 1;
             from.intensity = start * (1. - fraction);
             to.intensity = end * fraction;
+            if (fraction == 1) {
                 cb();
+            } else {
+                waitShortTime(function() {fade(from, to, start, end, fraction + 0.01, cb)});
+            }
         }
 
         waitRandomTime(function() {
-          for (var i = 0; i < choices.length; i++) {
-            replace(i);
-          }
-          });
+            replace(randomIndex());
+        });
     }
 
     function stopAutoDJ() {
@@ -258,7 +247,7 @@ RowLayout {
             nodes[i].setFrozenInput(false);
             nodes[i].setFrozenParameters(false);
         }
-        console.log("Stop!", this.t);
+        console.log("Stopping AutoDJ", this.t);
     }
 
     ColumnLayout {

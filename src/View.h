@@ -33,6 +33,7 @@ public slots:
     void addToSelection(QVariantList tiles);
     void removeFromSelection(QVariantList tiles);
     void toggleSelection(QVariantList tiles);
+    void ensureSelected(QVariantList tiles);
     QVariantList selection();
 
     // Finds the connected components of the selection
