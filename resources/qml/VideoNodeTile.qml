@@ -283,7 +283,7 @@ BaseVideoNodeTile {
         }
 
         drag.onActiveChanged: {
-            view.addToSelection([tile]);
+            view.ensureSelected([tile]);
             if (drag.active) {
                 dragLift();
             } else {

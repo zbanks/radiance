@@ -443,7 +443,6 @@ void View::onGraphChanged() {
     qDeleteAll(m_dropAreas.begin(), m_dropAreas.end());
     m_dropAreas = dropAreas;
 
-    qInfo() << "refreshing selection";
     addToSelection(selection());
     selectionChanged();
 }
@@ -542,6 +541,21 @@ void View::toggleSelection(QVariantList _tiles) {
     if (allSelected) {
         removeFromSelection(tiles);
     } else {
+        addToSelection(tiles);
+    }
+}
+
+void View::ensureSelected(QVariantList _tiles) {
+    QVariantList tiles = frozenConnectedComponents(_tiles);
+    bool allSelected = true;
+    for (int i=0; i<tiles.count(); i++) {
+        auto tile = qvariant_cast<BaseVideoNodeTile*>(tiles[i]);
+        if (!m_selection.contains(tile)) {
+            allSelected = false;
+        }
+    }
+    if (!allSelected) {
+        m_selection.clear();
         addToSelection(tiles);
     }
 }
