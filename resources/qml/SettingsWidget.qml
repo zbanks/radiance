@@ -6,8 +6,6 @@ import "."
 Item {
     id: settingsWidget
     property alias modelName: modelNameTextField.text
-    property var model;
-    property var registry;
 
     ColumnLayout {
         anchors.fill: parent

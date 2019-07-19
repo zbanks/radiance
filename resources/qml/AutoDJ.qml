@@ -7,7 +7,6 @@ RowLayout {
     id: autoDJ;
 
     property var context;
-    property var t;
 
     // Setup for working with full 2D video art (e.g. projector, livestream)
     property var choices: [
@@ -157,7 +156,7 @@ RowLayout {
     }
 
     function waitRandomTime(cb) {
-        this.t = timer();
+        var t = timer();
         t.interval = Math.floor(1000 + Math.random() * 5000);
         t.repeat = false;
         t.triggered.connect(function () {
@@ -182,7 +181,6 @@ RowLayout {
             } });
         }
 
-        this.t = null;
         console.log("Starting AutoDJ");
         var placeholders = getOrMakePlaceholders('AutoDJ');
         var head = placeholders[0];
@@ -238,14 +236,12 @@ RowLayout {
     }
 
     function stopAutoDJ() {
-        this.t.stop();
         var nodes = model.vertices;
         for (var i = 0; i < nodes.length; i++) {
             nodes[i].setFrozenOutput(false);
             nodes[i].setFrozenInput(false);
             nodes[i].setFrozenParameters(false);
         }
-        console.log("Stopping AutoDJ", this.t);
     }
 
     ColumnLayout {
