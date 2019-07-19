@@ -7,7 +7,7 @@ Button {
     id: control
     property color colorDark: RadianceStyle.tileBackgroundColor
     property color colorLight: Qt.lighter(colorDark, 1.75)
-    font.pointSize: 10
+    font.pixelSize: 16
 
     contentItem: Text {
         text: control.text

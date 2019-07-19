@@ -84,6 +84,7 @@ Item {
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
                 Text {
+                    font.pixelSize: 16
                     textFormat: Text.RichText
                     color: RadianceStyle.mainTextColor
                     id: t
@@ -98,12 +99,13 @@ Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.rightMargin: 10
-                width: 12
-                height: 12
+                width: 14
+                height: 14
                 color: "transparent"
                 border.color: RadianceStyle.mainLineColor
                 border.width: 1
                 Text {
+                    font.pixelSize: 10
                     text: "X"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter

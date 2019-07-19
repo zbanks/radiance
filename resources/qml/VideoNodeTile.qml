@@ -20,8 +20,8 @@ BaseVideoNodeTile {
     property var inputArrows
     property real outputArrow
 
-    normalHeight: 130
-    normalWidth: 80
+    normalHeight: 200
+    normalWidth: 120
     minInputHeight: normalHeight
     blockWidth: normalWidth
     blockHeight: normalHeight
@@ -286,6 +286,7 @@ BaseVideoNodeTile {
             view.ensureSelected([tile]);
             if (drag.active) {
                 dragLift();
+                tile.forceActiveFocus();
             } else {
                 dragDrop();
             }

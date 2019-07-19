@@ -7,10 +7,11 @@ CheckBox {
     spacing: 4
     padding: 1
 
-    font.pointSize: 10
+    font.pixelSize: 16
 
-    property color colorDark: RadianceStyle.tileBackgroundColor
+    property color colorDark: RadianceStyle.mainBackgroundColor
     property color colorLight: Qt.lighter(colorDark, 1.75)
+    property color colorText: RadianceStyle.mainTextColor
 
     indicator: Rectangle {
         implicitHeight: 12
@@ -39,7 +40,7 @@ CheckBox {
     contentItem: Text {
         text: control.text
         font: control.font
-        color: RadianceStyle.tileTextColor
+        color: control.colorText
         verticalAlignment: Text.AlignVCenter
         leftPadding: control.indicator.width + control.spacing
     }

@@ -11,7 +11,7 @@ ComboBox {
     property real extraWidth: 18
     implicitWidth: modelWidth + leftPadding + rightPadding + extraWidth
 
-    font.pointSize: 10
+    font.pixelSize: 14
 
     rightPadding: 3
 

@@ -63,7 +63,7 @@ VideoNodeTile {
                     id: comboBox
                     background: Rectangle {
                         id: rectCategory
-                        implicitWidth: textMetrics.width * 4
+                        implicitWidth: textMetrics.width * 5
                         implicitHeight: textMetrics.height * 1.3
                         color: "transparent"
                         border.width: 1
@@ -72,7 +72,7 @@ VideoNodeTile {
                         TextMetrics {
                             id: textMetrics
                             text: "X"
-                            font.pointSize: 6
+                            font.pixelSize: 16
                         }
                     }
                     label: Text {
@@ -81,7 +81,7 @@ VideoNodeTile {
                         horizontalAlignment: Text.AlignHCenter
                         color: "white"
                         text: control.currentText
-                        font.pointSize: 6
+                        font.pixelSize: 16
                     }
                 }
             }*/

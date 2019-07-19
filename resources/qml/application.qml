@@ -70,8 +70,13 @@ ApplicationWindow {
                 RowLayout {
                     spacing: 20
 
-                    Item {
-                        width: 1
+                    Image {
+                        source: "../images/logo.png"
+                        fillMode: Image.PreserveAspectFit
+                        Layout.preferredWidth: 65
+                        Layout.preferredHeight: 65
+                        Layout.margins: 10
+                        opacity: .9
                     }
                     Waveform {
                         opacity: .9
@@ -94,7 +99,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     PopOut {
                         id: libraryContainer
-                        openSize: 150
+                        openSize: 260
                         side: "left"
                         open: true
 
@@ -117,6 +122,7 @@ ApplicationWindow {
                     PopOut {
                         id: settingsContainer
                         side: "right"
+                        openSize: 460
 
                         SettingsWidget {
                             id: settings
@@ -126,7 +132,7 @@ ApplicationWindow {
                     PopOut {
                         id: consoleContainer
                         side: "bottom"
-                        openSize: 80
+                        openSize: 120
                         opacity: errorConsole.count > 0 ? 1 : 0
                         active: errorConsole.count > 0
                         Behavior on opacity {

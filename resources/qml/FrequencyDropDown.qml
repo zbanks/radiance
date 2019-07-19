@@ -6,8 +6,8 @@ import "."
 
 ComboBox {
     id: control
-    implicitHeight: 12
-    implicitWidth: 30
+    implicitHeight: 18
+    implicitWidth: 45
 
     property real value: 0
 

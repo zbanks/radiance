@@ -38,6 +38,7 @@ QJsonObject EffectNode::serialize() {
     QJsonObject o = VideoNode::serialize();
     o.insert("file", file());
     o.insert("intensity", intensity());
+    o.insert("frequency", frequency());
     return o;
 }
 
@@ -470,6 +471,10 @@ VideoNodeSP *EffectNode::deserialize(Context *context, QJsonObject obj) {
     (*node)->init(file);
     double intensity = obj.value("intensity").toDouble();
     (*node)->setIntensity(intensity);
+    auto frequencyJson = obj.value("frequency");
+    if (frequencyJson.isDouble()) {
+        (*node)->setFrequency(frequencyJson.toDouble());
+    }
     return node;
 }
 

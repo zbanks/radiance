@@ -7,7 +7,7 @@ Text {
     color: RadianceStyle.tileTextColor
     elide: Text.ElideMiddle
     horizontalAlignment: Text.AlignHCenter
-    font.pointSize: 10
+    font.pixelSize: 16
     Rectangle {
         color: RadianceStyle.tileLineColor
         anchors.left: parent.left
