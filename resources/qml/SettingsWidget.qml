@@ -1,13 +1,13 @@
 import QtQuick 2.7
 import QtQuick.Layouts 1.2
-import QtQuick.Controls 1.4
-import QtQml.Models 2.2
 import radiance 1.0
 import "."
 
 Item {
     id: settingsWidget
-    property alias modelName: modelNameTextInput.text
+    property alias modelName: modelNameTextField.text
+    property var model;
+    property var registry;
 
     ColumnLayout {
         anchors.fill: parent
@@ -36,12 +36,12 @@ Item {
 
             Label {
                 text: "Model File:"
-                color: RadianceStyle.mainTextColor
             }
 
-            TextInput {
-                id: modelNameTextInput
+            TextField {
+                id: modelNameTextField
                 text: "model.json"
+                Layout.fillWidth: true
             }
         }
 

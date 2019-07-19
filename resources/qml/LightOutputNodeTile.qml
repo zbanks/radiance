@@ -7,8 +7,8 @@ import "."
 VideoNodeTile {
     id: tile;
 
-    normalHeight: 260;
-    normalWidth: 200;
+    normalHeight: 300;
+    normalWidth: 220;
 
     ColumnLayout {
         anchors.fill: parent;

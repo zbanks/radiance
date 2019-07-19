@@ -7,8 +7,8 @@ import "."
 VideoNodeTile {
     id: tile;
 
-    normalHeight: 260;
-    normalWidth: 200;
+    normalHeight: 300;
+    normalWidth: 220;
     property bool updatingResolutionSelector: false;
     property bool updatingScreenSelector: false;
 
@@ -142,6 +142,8 @@ VideoNodeTile {
             CheckBox {
                 id: visibleCheck
                 text: "Visible"
+                colorDark: RadianceStyle.tileBackgroundColor
+                colorText: RadianceStyle.tileTextColor
             }
         }
     }

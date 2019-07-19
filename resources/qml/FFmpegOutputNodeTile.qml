@@ -48,7 +48,7 @@ VideoNodeTile {
 
         Label {
             Layout.fillWidth: true
-            font.pointSize: 8
+            font.pixelSize: 14
             text: "Args:" + tile.videoNode.ffmpegArguments.join(" ")
             color: RadianceStyle.tileTextColor;
             elide: Text.ElideRight;
