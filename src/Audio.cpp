@@ -317,7 +317,7 @@ void Audio::renderGraphics() {
         m_spectrumTexture->setWrapMode(QOpenGLTexture::ClampToEdge);
         m_spectrumTexture->allocateStorage();
     }
-    m_waveformTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformGL[waveformPtr * 4]);
-    m_waveformBeatsTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &waveformBeatsGL[waveformPtr * 4]);
-    m_spectrumTexture->setData(QOpenGLTexture::Red, QOpenGLTexture::Float32, spectrumGL.data());
+    m_waveformTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, (const void*)&waveformGL[waveformPtr * 4]);
+    m_waveformBeatsTexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, (const void*)&waveformBeatsGL[waveformPtr * 4]);
+    m_spectrumTexture->setData(QOpenGLTexture::Red, QOpenGLTexture::Float32, (const void*)spectrumGL.data());
 }

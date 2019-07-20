@@ -52,7 +52,7 @@ GLuint Chain::noiseTexture() {
             return (xsr() >> 11) * div;
         };
         std::generate(&data[0],&data[compCount],xsrd);
-        m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, &data[0]);
+        m_noiseTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::Float32, (const void*)&data[0]);
         glFlush();
     }
 
@@ -68,7 +68,7 @@ GLuint Chain::blankTexture() {
         m_blankTexture.setWrapMode(QOpenGLTexture::Repeat);
 
         auto data = std::array<uint8_t,4>();
-        m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+        m_blankTexture.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, (const void*)&data[0]);
     }
 
     return m_blankTexture.textureId();

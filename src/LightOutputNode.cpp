@@ -460,7 +460,7 @@ void LightOutputNodeOpenGLWorker::initialize() {
         p->m_geometry2D.setWrapMode(QOpenGLTexture::Repeat);
 
         auto data = std::array<uint8_t,4>();
-        p->m_geometry2D.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, &data[0]);
+        p->m_geometry2D.setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, (const void*)&data[0]);
         p->m_displayMode = LightOutputNode::DisplayLookup2D;
     }
 
