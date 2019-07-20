@@ -9,7 +9,6 @@ VideoNodeTile {
     id: tile;
     property alias intensity: slider.value;
     property alias slider: slider;
-    //property alias sliderGhost: sliderGhost;
     property int attachedParameter: -1
 
     onVideoNodeChanged: {
@@ -54,65 +53,11 @@ VideoNodeTile {
             FrequencyDropDown {
                 id: frequencyCombo;
             }
-            /*
-            ComboBox {
-                visible: false
-                id: frequencyCombo;
-                model: [0, 0.25, 0.5, 1, 2, 4, 8, 16, 32]
-                style: ComboBoxStyle {
-                    id: comboBox
-                    background: Rectangle {
-                        id: rectCategory
-                        implicitWidth: textMetrics.width * 5
-                        implicitHeight: textMetrics.height * 1.3
-                        color: "transparent"
-                        border.width: 1
-                        border.color: "white"
-                        radius: 15
-                        TextMetrics {
-                            id: textMetrics
-                            text: "X"
-                            font.pixelSize: 16
-                        }
-                    }
-                    label: Text {
-                        id: labelText
-                        verticalAlignment: Text.AlignVCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        color: "white"
-                        text: control.currentText
-                        font.pixelSize: 16
-                    }
-                }
-            }*/
-
             Label {
                 text: attachedParameter >= 0 ? "#" + attachedParameter : "";
                 color: RadianceStyle.tileTextColor;
             }
         }
-
-        /*
-        ProgressBar {
-            id: sliderGhost;
-            Layout.fillWidth: true;
-            minimumValue: 0;
-            maximumValue: 1;
-        }
-        */
-
-        /* No MIDI indicator until we actually need it
-        Slider {
-            // TODO: How do we make this indicator-only?
-            id: sliderGhost;
-            Layout.fillWidth: true;
-            minimumValue: 0;
-            maximumValue: 1;
-            style: SliderStyle {
-                handle: Rectangle {}
-            }
-        }
-        */
     }
 
     Loader {
