@@ -26,8 +26,6 @@ DropArea {
     x: posX - width / 2
     y: posY
 
-    keys: [ "videonode" ]
-
     ShaderEffect {
         id: dropRectangle
         property color highlightColor: RadianceStyle.dropTargetColor
@@ -67,5 +65,31 @@ DropArea {
                 }
             }
         ]
+    }
+
+    onDropped: {
+        if (drop.urls) {
+            var graph = parent.parent.graph;
+            var model = parent.model;
+            console.log("Graph is " + graph);
+            var url = drop.urls[0];
+            var videoNode = graph.registry.createFromFile(defaultContext, url);
+            model.addVideoNode(videoNode);
+            if (videoNode) Qt.callLater(function() {
+                var fn = fromNode;
+                var tn = toNode;
+                var ti = toInput;
+
+                if (fn !== null && tn !== null) model.removeEdge(fn, tn, ti);
+
+                if (fn !== null && videoNode.inputCount != 0) {
+                    model.addEdge(fn, videoNode, 0);
+                }
+                if (tn !== null) {
+                    model.addEdge(videoNode, tn, ti);
+                }
+                model.flush();
+            });
+        }
     }
 }

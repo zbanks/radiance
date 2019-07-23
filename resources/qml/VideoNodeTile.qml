@@ -248,8 +248,8 @@ BaseVideoNodeTile {
     function selectMe() {
         var modifiers = Controls.keyboardModifiers();
         var tiles = [tile];
-        if (modifiers & Qt.ShiftModifier && view.parent.lastClickedTile) {
-            tiles = view.tilesBetween(view.parent.lastClickedTile, tile);
+        if (modifiers & Qt.ShiftModifier && view.parent.graph.lastClickedTile) {
+            tiles = view.tilesBetween(view.parent.graph.lastClickedTile, tile);
             if (tiles.length == 0) tiles = [tile];
         }
         if (modifiers & Qt.ControlModifier) {
@@ -259,7 +259,7 @@ BaseVideoNodeTile {
         } else {
             view.select(tiles);
         }
-        view.parent.lastClickedTile = tile;
+        view.parent.graph.lastClickedTile = tile;
     }
 
     KeyNavigation.tab: tab || null;

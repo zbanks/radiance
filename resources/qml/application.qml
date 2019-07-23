@@ -61,6 +61,7 @@ ApplicationWindow {
             Graph {
                 id: graph
                 model: model
+                registry: registry
                 anchors.fill: parent
             }
 

@@ -660,6 +660,7 @@ VideoNodeSP *MovieNode::deserialize(Context *context, QJsonObject obj) {
 }
 
 bool MovieNode::canCreateFromFile(QString filename) {
+    return true;
     QStringList extensions({".mp4", ".mkv"});
     for (auto extension = extensions.begin(); extension != extensions.end(); extension++) {
         if (filename.endsWith(*extension, Qt::CaseInsensitive)) return true;

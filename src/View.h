@@ -3,6 +3,8 @@
 #include "Model.h"
 #include "Controls.h"
 
+class Registry;
+
 struct Child {
     VideoNodeSP *videoNode;
     BaseVideoNodeTile *item;
@@ -67,7 +69,7 @@ public slots:
 protected:
     // m_model needs to be a ModelSP since there are QML properties that fetch it
     // This one ModelSP pointer can be shared by all of the UI and not cause problems
-    ModelSP *m_model;
+    ModelSP *m_model{};
     QMap<QString, QString> m_delegates;
     QList<Child> m_children;
     QList<QQuickItem *> m_dropAreas;
