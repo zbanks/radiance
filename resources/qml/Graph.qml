@@ -4,10 +4,11 @@ import QtQuick.Controls 1.4
 import radiance 1.0
 
 Item {
+    id: graph
     property alias model: view.model
     property alias view: view
-    property alias currentOutputName: viewWrapper.currentOutputName
-    property alias lastClickedTile: viewWrapper.lastClickedTile
+    property var registry
+    property var lastClickedTile
     Layout.fillWidth: true;
     Layout.fillHeight: true;
 
@@ -41,8 +42,7 @@ Item {
 
         Item {
             id: viewWrapper
-            property var lastClickedTile
-            property string currentOutputName: ""
+            property var graph: graph
             width: Math.max(view.width * view.scale + 400, flickable.width)
             height: Math.max(view.height * view.scale + 400, flickable.height)
 
