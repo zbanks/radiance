@@ -32,12 +32,11 @@ Item {
         property bool highlight: false;
         property color bottomColor: selected ? RadianceStyle.tileBackgroundHighlightColor : RadianceStyle.tileBackgroundColor;
         property color topColor: Qt.lighter(bottomColor, frozen ? 3.5 : 1.75);
-        property real borderWidth: 1;
+        property real borderWidth: 1.5;
         property color borderColor: highlight ? RadianceStyle.tileLineHighlightColor : RadianceStyle.tileLineColor;
         property int padding: 3;
         property int blockWidth: 65;
         property int blockHeight: 110;
-        layer.enabled: true;
 
         property var inputArrows: []
         property real outputArrow: parent.height / 2;
