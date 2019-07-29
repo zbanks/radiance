@@ -9,8 +9,9 @@ ApplicationWindow {
     id: window;
     visible: true
     color: RadianceStyle.mainBackgroundColor
-    width: 800
-    height: 530
+    width: 1800
+    height: 900
+    visibility: Window.Maximized
     title: "Radiance"
     property bool hasMidi: false
     property string modelName: settings.modelName
