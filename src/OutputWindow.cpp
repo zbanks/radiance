@@ -16,7 +16,6 @@ OutputWindow::OutputWindow(QSharedPointer<OutputNode> videoNode)
     connect(this, &QWindow::screenChanged, this, &OutputWindow::onScreenChanged);
 
     setFlags(Qt::Dialog);
-    setWindowState(Qt::WindowFullScreen);
     putOnScreen();
     connect(this, &QWindow::screenChanged, this, &OutputWindow::putOnScreen);
     setScreenName(screen()->name());
@@ -30,6 +29,7 @@ OutputWindow::OutputWindow(QSharedPointer<OutputNode> videoNode)
 }
 
 void OutputWindow::putOnScreen() {
+    setWindowState(Qt::WindowFullScreen);
     setGeometry(screen()->geometry());
 }
 
@@ -77,6 +77,7 @@ void OutputWindow::reload() {
 
     if (found != m_found) {
         m_found = found;
+        if (m_shown && m_found) putOnScreen();
         setVisible(m_shown && m_found);
         emit foundChanged(found);
     }
@@ -94,6 +95,7 @@ void OutputWindow::setShown(bool shown) {
     if (shown != m_shown) {
         m_shown = shown;
 
+        if (m_shown && m_found) putOnScreen();
         setVisible(m_shown && m_found);
 
         emit shownChanged(shown);
