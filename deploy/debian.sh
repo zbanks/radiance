@@ -17,16 +17,29 @@ if [ -e "$2" ]; then
     exit 1
 fi
 
+if [ -z "$3" ]; then
+    echo "You must specify an upstream version (e.g. 0.6.1) as the third argument" >&2
+    exit 1
+fi
+
+if [ -z "$4" ]; then
+    echo "You must specify a packaging version (e.g. 1) as the fourth argument" >&2
+    exit 1
+fi
+
 mkdir -p "$2"
 
 SOURCE_DIR=$(readlink -e "$1")
 BUILD_DIR=$(readlink -e "$2")
+UPSTREAM_VERSION=$3
+PKG_VERSION=$4
+SIGNING_KEY=$5
 
 echo "Source dir: $SOURCE_DIR"
 echo "Build dir: $BUILD_DIR"
-
-UPSTREAM_VERSION=0.6.1
-PKG_VERSION=1
+echo "Upstream version: $UPSTREAM_VERSION"
+echo "Packaging version: $PKG_VERSION"
+echo "Signing key: $SIGNING_KEY"
 
 set -x
 
@@ -46,5 +59,11 @@ radiance ($UPSTREAM_VERSION-$PKG_VERSION) unstable; urgency=medium
  -- Eric Van Albert <eric@van.al>  $(date -R)
 EOF
 
-(cd "$BUILD_DIR/radiance_$UPSTREAM_VERSION" && debuild -i -us -uc -S)
-(cd "$BUILD_DIR/radiance_$UPSTREAM_VERSION" && debuild -i -us -uc -b)
+if [ -z "$SIGNING_KEY" ]; then
+	KEYOPTS="-us -uc"
+else
+	KEYOPTS="-k$SIGNING_KEY"
+fi
+
+(cd "$BUILD_DIR/radiance_$UPSTREAM_VERSION" && debuild -i $KEYOPTS -S)
+(cd "$BUILD_DIR/radiance_$UPSTREAM_VERSION" && debuild -i $KEYOPTS -b)
