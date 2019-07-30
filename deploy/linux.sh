@@ -27,7 +27,7 @@ mkdir -p "$APP"
 echo "Copying executable and desktop file..."
 cp -r "$BINARY" "$APP/radiance"
 cp -r "$SOURCE_DIR/deploy/radiance.desktop" "$APP/radiance.desktop"
-cp -r "$SOURCE_DIR/deploy/icon.png" "$APP/radiance.png"
+cp -r "$SOURCE_DIR/deploy/radiance.png" "$APP/radiance.png"
 
 echo "Copying resources..."
 mkdir -p "$APP/resources"

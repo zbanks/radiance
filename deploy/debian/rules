@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DRADIANCE_SYSTEM_RESOURCES=/usr/share/radiance/
