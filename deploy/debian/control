@@ -1,0 +1,19 @@
+Source: radiance
+Section: video
+Priority: optional
+Maintainer: Eric Van Albert <eric@van.al>
+Build-depends: debhelper (>= 9), cmake, qtbase5-dev, qtdeclarative5-dev,
+  qtquickcontrols2-5-dev, libfftw3-dev, libsamplerate0-dev, portaudio19-dev, libmpv-dev, librtmidi-dev
+Standards-version: 4.1.14
+Homepage: https://radiance.video
+
+Package: radiance
+Architecture: any
+Depends: libqt5core5a, libqt5qml5, libqt5quick5,
+  libfftw3-3, libsamplerate0, libportaudio2, libmpv1, librtmidi4,
+  libopengl0, qtdeclarative5-models-plugin, qml-module-qt-labs-folderlistmodel,
+  qml-module-qtquick-controls, qml-module-qtquick-controls2, qml-module-qtquick-layouts,
+  ${shlibs:Depends}, ${misc:Depends}
+Description: video art software designed for live performance
+  Radiance is video art software for VJs. It supports beat detection,
+  animated GIFs, YouTube videos, and OpenGL shader effects.

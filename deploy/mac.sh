@@ -55,7 +55,7 @@ for file in $(ls "$APP"/Contents/Frameworks/*.dylib); do
 done
 
 echo "Generating icon set..."
-"$SOURCE_DIR/deploy/png2icns.sh" "$SOURCE_DIR/deploy/icon.png"
+"$SOURCE_DIR/deploy/png2icns.sh" "$SOURCE_DIR/deploy/radiance.png"
 mv icon.icns "$APP/Contents/Resources/"
 
 echo "Bundle is done."
