@@ -27,5 +27,5 @@ void main(void) {
     //float a_out = 1. - (1. - rgb.r) * (1. - rgb.g) * (1. - rgb.b);
     float a_out = yImage.a;
 
-    gl_FragColor = premultiply(vec4(rgb, a_out));
+    fragColor = premultiply(vec4(rgb, a_out));
 }
