@@ -2,7 +2,7 @@ os:
     - linux
     - osx
 language: cpp
-dist: trusty
+dist: bionic
 sudo: required
 
 before_install:
