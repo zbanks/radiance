@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -ex
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]
 then
