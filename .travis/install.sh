@@ -2,7 +2,6 @@
 
 if [[ $TRAVIS_OS_NAME == 'osx' ]]
 then
-    brew install cmake
     brew install qt
     brew install fftw
     brew install libsamplerate
