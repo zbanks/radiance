@@ -18,10 +18,9 @@ before_script:
 
 script: make
 
-after_success: 
-    - make doxygen-doc
-    - make bundle
-    #- ./radiance_cli -a
+after_success:
+    - cd ..
+    - ./.travis/after_success.sh 
 
 deploy:
   - provider: pages
@@ -35,7 +34,7 @@ deploy:
   - provider: releases
     skip_cleanup: true
     api_key: $GITHUB_TOKEN
-    file: "Radiance.AppDir.tar.gz"
+    file: "build/Radiance.AppDir.tar.gz"
     on:
         tags: true
         all_branches: true
@@ -45,9 +44,19 @@ deploy:
   - provider: releases
     skip_cleanup: true
     api_key: $GITHUB_TOKEN
-    file: "Radiance.dmg"
+    file: "build/Radiance.dmg"
     on:
         condition: "$TRAVIS_OS_NAME == osx"
         tags: true
         all_branches: true
+    overwrite: true
+
+  - provider: releases
+    skip_cleanup: true
+    api_key: $GITHUB_TOKEN
+    file: "deploy/build/radiance_$TRAVIS_TAG-1_amd64.deb"
+    on:
+        tags: true
+        all_branches: true
+        condition: "$TRAVIS_OS_NAME == linux"
     overwrite: true
