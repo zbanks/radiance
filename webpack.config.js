@@ -14,7 +14,6 @@ module.exports = (env, argv) => {
     output: {
       path: distPath,
       filename: "todomvc.js",
-      publicPath: '/static/',
       webassemblyModuleFilename: "todomvc.wasm"
     },
     plugins: [

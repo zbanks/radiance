@@ -5,7 +5,7 @@
   <strong>A template for kick starting a Rust and WebAssembly project using <a href="https://github.com/rustwasm/wasm-pack">wasm-pack</a>.</strong>
 
   <p>
-    <a href="https://travis-ci.org/rustwasm/wasm-pack-template"><img src="https://img.shields.io/travis/rustwasm/wasm-pack-template.svg?style=flat-square" alt="Build Status" /></a>
+    [![Netlify Status](https://api.netlify.com/api/v1/badges/5ba03ba7-ff8b-4c54-94e7-cd5fd76a6737/deploy-status)](https://app.netlify.com/sites/yew-todomvc/deploys)
   </p>
 
   <h3>
