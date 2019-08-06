@@ -76,6 +76,9 @@ DropArea {
             var graph = parent.parent.graph;
             var model = parent.model;
             var url = drop.urls[0];
+            if (url.startsWith("file://")) {
+                url = url.slice(7);
+            }
             var videoNode = graph.registry.createFromFile(defaultContext, url);
             model.addVideoNode(videoNode);
             if (videoNode) Qt.callLater(function() {
