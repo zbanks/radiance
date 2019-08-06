@@ -88,8 +88,6 @@ BaseVideoNodeTile {
     Drag.keys: [ "videonode" ]
     Drag.hotSpot: Qt.point(width / 2, height / 2)
     Drag.active: dragArea.drag.active
-    //Drag.dragType: Drag.Automatic
-    //Drag.supportedActions: Qt.CopyAction
 
     states: [
         State {
@@ -127,7 +125,6 @@ BaseVideoNodeTile {
         for (var i=0; i<dragCC.tiles.length; i++) {
             dragCC.tiles[i].dragging = true;
         }
-        Drag.mimeData = {"text/plain": "hello, world!"};
     }
 
     function dragDrop() {
