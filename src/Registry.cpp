@@ -21,14 +21,14 @@ Registry::Registry()
     // This can be done with some black magic fuckery in the future
     registerType<EffectNode>();
     registerType<ImageNode>();
-#ifdef USE_MPV
-    registerType<MovieNode>();
-#endif
     registerType<ScreenOutputNode>();
     registerType<FFmpegOutputNode>();
     registerType<PlaceholderNode>();
     registerType<ConsoleOutputNode>();
     registerType<LightOutputNode>();
+#ifdef USE_MPV
+    registerType<MovieNode>();
+#endif
 
     m_library = new Library(this);
     m_library->setParent(this);
