@@ -69,9 +69,12 @@ DropArea {
 
     onDropped: {
         if (drop.urls) {
+            // Handle dropping of external content.
+            // TODO: I am annoyed that this is handled in a separate place from
+            // drag/drop of internal content (i.e. selected tiles) using largely duplicated code.
+            // (That code is in dragDrop in VideoNodeTile.qml)
             var graph = parent.parent.graph;
             var model = parent.model;
-            console.log("Graph is " + graph);
             var url = drop.urls[0];
             var videoNode = graph.registry.createFromFile(defaultContext, url);
             model.addVideoNode(videoNode);
