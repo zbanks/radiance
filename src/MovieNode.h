@@ -187,6 +187,7 @@ protected:
     QSize m_videoSize;
     QSize m_chainSize;
     QSharedPointer<MovieNodeRenderState> m_state;
+    QString m_lastError;
 
 protected slots:
     void onEvent();

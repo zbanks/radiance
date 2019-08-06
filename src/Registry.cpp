@@ -83,7 +83,6 @@ bool Registry::canCreateFromFile(QString filename) {
 }
 
 VideoNodeSP *Registry::createFromFile(Context *context, QString filename) {
-    qDebug() << "Registry: create from file" << filename;
     for (auto f = m_factories.begin(); f != m_factories.end(); f++) {
         if (f->canCreateFromFile(Paths::expandLibraryPath(filename))) {
             return f->fromFile(context, filename);

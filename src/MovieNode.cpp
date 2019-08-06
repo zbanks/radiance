@@ -387,6 +387,9 @@ void MovieNodeOpenGLWorker::initialize(QString filename) {
     mpv_observe_property(m_mpv, 0, "mute", MPV_FORMAT_FLAG);
     mpv_observe_property(m_mpv, 0, "pause", MPV_FORMAT_FLAG);
 
+    // Request log messages (for error handling)
+    mpv_request_log_messages(m_mpv, "error");
+
     int r = mpv_opengl_cb_init_gl(m_mpv_gl, NULL, get_proc_address, NULL);
     if (r < 0)
         throw std::runtime_error("could not initialize OpenGL");
@@ -536,7 +539,23 @@ void MovieNodeOpenGLWorker::handleEvent(mpv_event *event) {
         }
         break;
     }
-    default: ;
+    case MPV_EVENT_END_FILE: {
+        auto p = m_p.toStrongRef();
+        if (!p.isNull()) {
+            p->setNodeState(VideoNode::Broken);
+            if (!m_lastError.isEmpty()) {
+                emit error(m_lastError);
+            }
+        }
+        break;
+    }
+    case MPV_EVENT_LOG_MESSAGE: {
+        struct mpv_event_log_message *msg = (struct mpv_event_log_message *)event->data;
+        m_lastError = QString(msg->text).trimmed();
+        break;
+    }
+    default:
+        ;
         // Ignore uninteresting or unknown events.
     }
 }
@@ -660,12 +679,7 @@ VideoNodeSP *MovieNode::deserialize(Context *context, QJsonObject obj) {
 }
 
 bool MovieNode::canCreateFromFile(QString filename) {
-    return true;
-    QStringList extensions({".mp4", ".mkv"});
-    for (auto extension = extensions.begin(); extension != extensions.end(); extension++) {
-        if (filename.endsWith(*extension, Qt::CaseInsensitive)) return true;
-    }
-    return false;
+    return true; // MPV is the fallback for all content
 }
 
 VideoNodeSP *MovieNode::fromFile(Context *context, QString filename) {
