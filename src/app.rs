@@ -210,7 +210,7 @@ fn view_entry((idx, entry): (usize, &Entry)) -> Html<App> {
 }
 
 fn view_entry_edit_input((idx, entry): (usize, &Entry)) -> Html<App> {
-    if entry.editing == true {
+    if entry.editing {
         html! {
             <input class="edit"
                    type="text"
