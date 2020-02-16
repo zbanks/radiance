@@ -114,8 +114,8 @@ private:
     QSharedPointer<QOpenGLShaderProgram> loadLightShader() {
         auto vertexString = QString{
             "#version 150\n"
-            "attribute vec2 posAttr;\n"
-            "attribute vec4 colAttr;\n"
+            "in vec2 posAttr;\n"
+            "in vec4 colAttr;\n"
             "out vec4 col;\n"
             "uniform mat4 mvp;\n"
             "uniform float dpr;\n"
