@@ -9,6 +9,7 @@
 #include <QSharedPointer>
 #include <QMetaMethod>
 #include <QDebug>
+#include <QtGlobal>
 
 template <class T, class B>
 class QmlSharedPointer;
@@ -297,7 +298,11 @@ const QByteArrayData *QmlSharedPointer<T, B>::gen_stringdata()
     static QByteArrayData new_stringdata[MAX_N_STRINGS];
 
     for (int i=0; i<MAX_N_STRINGS; i++) {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+        new_stringdata[i].ref.atomic.store(-1); // Don't attempt to free
+#else
         new_stringdata[i].ref.atomic.storeRelaxed(-1); // Don't attempt to free
+#endif
     }
 
     for (int i=0; i<n_strings; i++) {
