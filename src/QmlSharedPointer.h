@@ -102,11 +102,7 @@ private:
             QMetaObject::disconnect(data(), i, this, i);
         }
     }
-    static const QMetaObject *gen_superdata();
     static const QByteArrayData *gen_stringdata();
-    static const uint *gen_data();
-    static const QMetaObject::SuperData *gen_relatedMetaObjects();
-    static void *gen_extradata();
     static void findAndActivateSignal(QObject *_o, int _id, void **_a);
 
 public:
@@ -287,12 +283,6 @@ template <typename T, typename B> void QmlSharedPointer<T, B>::qt_static_metacal
 }
 
 template<typename T, typename B>
-const QMetaObject *QmlSharedPointer<T, B>::gen_superdata()
-{
-    return &B::staticMetaObject;
-}
-
-template<typename T, typename B>
 const QByteArrayData *QmlSharedPointer<T, B>::gen_stringdata()
 {
     // The MOC always places the strings right after the QByteArrayDatas,
@@ -330,29 +320,11 @@ const QByteArrayData *QmlSharedPointer<T, B>::gen_stringdata()
     return new_stringdata;
 }
 
-template<typename T, typename B>
-const uint *QmlSharedPointer<T, B>::gen_data()
-{
-    return T::staticMetaObject.d.data;
-}
-
-template<typename T, typename B>
-const QMetaObject::SuperData *QmlSharedPointer<T, B>::gen_relatedMetaObjects()
-{
-    return T::staticMetaObject.d.relatedMetaObjects;
-}
-
-template<typename T, typename B>
-void *QmlSharedPointer<T, B>::gen_extradata()
-{
-    return T::staticMetaObject.d.extradata;
-}
-
 template<typename T, typename B> const QMetaObject QmlSharedPointer<T, B>::staticMetaObject = { {
-    QmlSharedPointer<T, B>::gen_superdata(),
+    &B::staticMetaObject,
     QmlSharedPointer<T, B>::gen_stringdata(),
-    QmlSharedPointer<T, B>::gen_data(),
+    T::staticMetaObject.d.data,
     QmlSharedPointer<T, B>::qt_static_metacall,
-    QmlSharedPointer<T, B>::gen_relatedMetaObjects(),
-    QmlSharedPointer<T, B>::gen_extradata(),
+    T::staticMetaObject.d.relatedMetaObjects,
+    T::staticMetaObject.d.extradata,
 } };
