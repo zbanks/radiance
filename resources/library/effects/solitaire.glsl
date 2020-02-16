@@ -8,7 +8,7 @@ void main(void) {
 
     // Closed-form bouncing behavior
     // I think this is periodic over [0.0, 16.] to prevent discontinuities
-    float phase = iStep * iFrequency / 32.;
+    float phase = iTime * iFrequency / 32.;
     vec2 xy = vec2(sawtooth(phase * 5.0, 0.5), 1.0 - abs(sin(phase * 9.0 * M_PI)));
 
     xy = (xy - 0.5) * (1.0 - scale);
