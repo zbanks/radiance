@@ -1,0 +1,8 @@
+<map id="OutputNode" name="OutputNode">
+<area shape="rect" id="node5" href="$a02197.html" title="FFmpegOutputNode" alt="" coords="5,244,156,271"/>
+<area shape="rect" id="node6" href="$a02245.html" title="LightOutputNode" alt="" coords="180,244,312,271"/>
+<area shape="rect" id="node7" href="$a02349.html" title="ScreenOutputNode" alt="" coords="337,244,481,271"/>
+<area shape="rect" id="node8" href="$a02353.html" title="SelfTimedReadBackOutputNode" alt="" coords="505,244,736,271"/>
+<area shape="rect" id="node2" href="$a02365.html" title="VideoNode" alt="" coords="281,95,374,121"/>
+<area shape="rect" id="node9" href="$a02165.html" title="ConsoleOutputNode" alt="" coords="545,319,697,345"/>
+</map>
