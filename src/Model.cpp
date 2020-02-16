@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QtGlobal>
 
 static QString vnp(VideoNodeSP *videoNode) {
     if (videoNode) return QString("%1(%2)").arg((*videoNode)->metaObject()->className()).arg((qintptr)videoNode->data());
@@ -361,8 +362,13 @@ void Model::flush() {
 
     // Compute the changeset
     {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
         auto v = QSet<VideoNodeSP *>::fromList(m_vertices);
         auto v4r = QSet<VideoNodeSP *>::fromList(m_verticesForRendering);
+#else
+        auto v = QSet<VideoNodeSP *>(m_vertices.begin(), m_vertices.end());
+        auto v4r = QSet<VideoNodeSP *>(m_verticesForRendering.begin(), m_verticesForRendering.end());
+#endif
         // TODO Can't use QSet without implementing qHash
         //auto e = QSet<Edge>::fromList(m_edges);
         //auto e4r = QSet<Edge>::fromList(m_edgesForRendering);

@@ -1,10 +1,11 @@
 #include "View.h"
+#include "VideoNode.h"
+#include "Paths.h"
 #include <QQmlContext>
 #include <QQmlProperty>
 #include <QFileInfo>
 #include <QQueue>
-#include "VideoNode.h"
-#include "Paths.h"
+#include <QtGlobal>
 
 View::View()
     : m_model(nullptr)
@@ -668,7 +669,11 @@ QVariantList View::selectedConnectedComponents() {
     QSet<VideoNodeSP *> selectedVerticesSet;
     QVector<VideoNodeSP *> selectedVertices;
     {
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
         auto vSet = QSet<VideoNodeSP *>::fromList(vertices);
+#else
+        auto vSet = QSet<VideoNodeSP *>(vertices.begin(), vertices.end());
+#endif
         for (int i=0; i<m_children.count(); i++) {
             if (m_selection.contains(m_children.at(i).item)
              && vSet.contains(m_children.at(i).videoNode)) {

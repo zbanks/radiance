@@ -3,6 +3,7 @@
 #include "Registry.h"
 #include <QDir>
 #include <QDebug>
+#include <QtGlobal>
 
 LibraryItem::LibraryItem(const QString &name, const QString &fileToInstantiate, LibraryItem *parent)
 {
@@ -98,7 +99,12 @@ void Library::populate(LibraryItem *item, QString currentDirectory = ".") {
     QDir userDir(Paths::userLibrary() + "/" + currentDirectory);
     auto systemLs = systemDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
     auto userLs = userDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
-    auto ls = (systemLs + userLs).toSet().toList();
+    auto lsList = systemLs + userLs;
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+    auto ls = lsList.toSet().toList();
+#else
+    auto ls = QSet<QString>(lsList.begin(), lsList.end()).values();
+#endif
     ls.sort(Qt::CaseInsensitive);
     for (auto f = ls.begin(); f != ls.end(); f++) {
         auto path = currentDirectory + "/" + *f;
