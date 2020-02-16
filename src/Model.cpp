@@ -361,8 +361,8 @@ void Model::flush() {
 
     // Compute the changeset
     {
-        auto v = QSet<VideoNodeSP *>::fromList(m_vertices);
-        auto v4r = QSet<VideoNodeSP *>::fromList(m_verticesForRendering);
+        auto v = QSet<VideoNodeSP *>(m_vertices.begin(), m_vertices.end());
+        auto v4r = QSet<VideoNodeSP *>(m_verticesForRendering.begin(), m_verticesForRendering.end());
         // TODO Can't use QSet without implementing qHash
         //auto e = QSet<Edge>::fromList(m_edges);
         //auto e4r = QSet<Edge>::fromList(m_edgesForRendering);

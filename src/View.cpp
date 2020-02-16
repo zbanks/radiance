@@ -668,7 +668,7 @@ QVariantList View::selectedConnectedComponents() {
     QSet<VideoNodeSP *> selectedVerticesSet;
     QVector<VideoNodeSP *> selectedVertices;
     {
-        auto vSet = QSet<VideoNodeSP *>::fromList(vertices);
+        auto vSet = QSet<VideoNodeSP *>(vertices.begin(), vertices.end());
         for (int i=0; i<m_children.count(); i++) {
             if (m_selection.contains(m_children.at(i).item)
              && vSet.contains(m_children.at(i).videoNode)) {

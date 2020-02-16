@@ -98,7 +98,8 @@ void Library::populate(LibraryItem *item, QString currentDirectory = ".") {
     QDir userDir(Paths::userLibrary() + "/" + currentDirectory);
     auto systemLs = systemDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
     auto userLs = userDir.entryList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
-    auto ls = (systemLs + userLs).toSet().toList();
+    auto lsList = systemLs + userLs;
+    auto ls = QSet<QString>(lsList.begin(), lsList.end()).values();
     ls.sort(Qt::CaseInsensitive);
     for (auto f = ls.begin(); f != ls.end(); f++) {
         auto path = currentDirectory + "/" + *f;

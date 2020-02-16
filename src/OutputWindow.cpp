@@ -2,6 +2,7 @@
 
 #include <QScreen>
 #include <QGuiApplication>
+#include <QKeyEvent>
 
 // OutputWindow
 
