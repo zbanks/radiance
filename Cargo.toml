@@ -12,13 +12,13 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 log = "0.4"
-strum = "0.13"
-strum_macros = "0.13"
+strum = "0.17"
+strum_macros = "0.17"
 serde = "1"
 serde_derive = "1"
-wasm-bindgen = "=0.2.42"
+wasm-bindgen = "0.2"
 web_logger = "0.2"
-yew = "0.7"
+yew = "0.12"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -32,4 +32,4 @@ console_error_panic_hook = { version = "0.1.6", optional = true }
 wee_alloc = { version = "0.4.4", optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.2"
+wasm-bindgen-test = "0.3"
