@@ -6,7 +6,7 @@ use yew::format::Json;
 use yew::services::storage::{Area, StorageService};
 use yew::prelude::*;
 
-const KEY: &'static str = "yew.todomvc.self";
+const KEY: &str = "yew.todomvc.self";
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -48,7 +48,7 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let storage = StorageService::new(Area::Local);
+        let storage = StorageService::new(Area::Local).unwrap();
         let entries = {
             if let Json(Ok(restored_entries)) = storage.restore(KEY) {
                 restored_entries
@@ -159,7 +159,7 @@ impl Component for App {
 impl App {
     fn view_filter(&self, filter: Filter) -> Html {
         let flt = filter.clone();
-        
+
         html! {
             <li>
                 <a class=if self.state.filter == flt { "selected" } else { "not-selected" }
@@ -179,7 +179,7 @@ impl App {
                    placeholder="What needs to be done?"
                    value=&self.state.value
                    oninput=self.link.callback(|e: InputData| Msg::Update(e.value))
-                   onkeypress=self.link.callback(|e: KeyPressEvent| {
+                   onkeypress=self.link.callback(|e: KeyboardEvent| {
                        if e.key() == "Enter" { Msg::Add } else { Msg::Nope }
                    }) />
             /* Or multiline:
@@ -210,7 +210,7 @@ impl App {
             </li>
         }
     }
-    
+
     fn view_entry_edit_input(&self, (idx, entry): (&usize, &Entry)) -> Html {
         let idx = *idx;
         if entry.editing {
@@ -220,7 +220,7 @@ impl App {
                        value=&entry.description
                        oninput=self.link.callback(move |e: InputData| Msg::UpdateEdit(e.value))
                        onblur=self.link.callback(move |_| Msg::Edit(idx))
-                       onkeypress=self.link.callback(move |e: KeyPressEvent| {
+                       onkeypress=self.link.callback(move |e: KeyboardEvent| {
                           if e.key() == "Enter" { Msg::Edit(idx) } else { Msg::Nope }
                        }) />
             }
