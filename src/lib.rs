@@ -1,6 +1,7 @@
 #![recursion_limit = "512"]
 
 mod app;
+mod graphics;
 mod utils;
 
 use wasm_bindgen::prelude::*;
