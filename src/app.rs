@@ -8,6 +8,8 @@ use yew::prelude::*;
 use yew::services::{RenderService, Task};
 
 use crate::graphics::RenderChain;
+use crate::resources;
+use crate::video_node::VideoNode;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -18,6 +20,7 @@ pub struct App {
     model: Option<RenderChain>,
     node_ref: NodeRef,
     render_loop: Option<Box<dyn Task>>,
+    nodes: Vec<VideoNode>,
 }
 
 pub enum Msg {
@@ -29,11 +32,17 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let nodes = vec![
+            VideoNode::new_effect(resources::effects::PURPLE),
+            VideoNode::new_effect(resources::effects::TEST),
+            VideoNode::new_effect(resources::effects::RESAT),
+        ];
         App {
             link,
             model: None,
             node_ref: Default::default(),
             render_loop: None,
+            nodes: nodes,
         }
     }
 
@@ -74,8 +83,10 @@ impl Component for App {
 impl App {
     fn render_gl(&mut self, time: f64) -> () {
         let model = self.model.as_mut().unwrap();
-        model.update_time(time / 1e3);
-        model.paint();
+        for node in &mut self.nodes {
+            node.update_time(time / 1e3);
+        }
+        model.paint(&self.nodes);
 
         self.schedule_next_render();
     }

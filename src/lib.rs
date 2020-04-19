@@ -4,6 +4,7 @@ mod app;
 mod graphics;
 mod resources;
 mod utils;
+mod video_node;
 
 use wasm_bindgen::prelude::*;
 

@@ -1,4 +1,5 @@
 use crate::resources;
+use crate::video_node::*;
 use log::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -9,52 +10,36 @@ use web_sys::{
     WebGlUniformLocation,
 };
 
-struct Fbo {
+pub type ChainSize = (i32, i32);
+
+pub struct Fbo {
     context: Rc<WebGlRenderingContext>,
     texture: WebGlTexture,
     framebuffer: WebGlFramebuffer,
 }
 
-struct Shader {
+pub struct Shader {
     context: Rc<WebGlRenderingContext>,
     program: WebGlProgram,
     fragment_shader: WebGlShader,
     vertex_shader: WebGlShader,
-    fbo: RefCell<Fbo>,
+    pub fbo: RefCell<Fbo>,
 }
 
-struct ActiveShader<'a> {
+pub struct ActiveShader<'a> {
     shader: &'a Shader,
 }
 
-struct EffectNode {
-    context: Rc<WebGlRenderingContext>,
-    shader_passes: Vec<Shader>,
-    properties: HashMap<String, String>,
-    intensity: RefCell<f64>,
-    time: RefCell<f64>,
-    intensity_integral: RefCell<f64>,
-}
-
 pub struct RenderChain {
-    context: Rc<WebGlRenderingContext>,
-    size: (i32, i32),
+    pub context: Rc<WebGlRenderingContext>,
+    size: ChainSize,
     blit_shader: Shader,
     blank_texture: WebGlTexture,
     //noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
-    extra_fbo: RefCell<Fbo>,
+    pub extra_fbo: RefCell<Fbo>,
 
-    // XXX This goes elsewhere
-    effect_list: Vec<EffectNode>,
-}
-
-trait VideoNode {
-    fn paint<'a>(
-        &'a self,
-        chain: &'a RenderChain,
-        on_fbo: Option<&'a RefCell<Fbo>>,
-    ) -> Option<&'a RefCell<Fbo>>;
+    artists: RefCell<HashMap<usize, VideoArtist>>,
 }
 
 impl Fbo {
@@ -103,7 +88,7 @@ impl Drop for Fbo {
 }
 
 impl Shader {
-    fn from_fragment_shader(context: Rc<WebGlRenderingContext>, shader_code: &str) -> Shader {
+    pub fn from_fragment_shader(context: Rc<WebGlRenderingContext>, shader_code: &str) -> Shader {
         info!("Compiling shaders");
         let vertex_shader = Self::compile_shader(
             &context,
@@ -179,12 +164,7 @@ impl Shader {
         }
     }
 
-    fn render(&self, chain: &RenderChain, fbo: Option<&Fbo>) -> () {
-        let loc = self.context.get_uniform_location(&self.program, "iInputs");
-        self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
-    }
-
-    fn begin_render<'a>(&'a self, chain: &RenderChain, fbo: Option<&Fbo>) -> ActiveShader<'a> {
+    pub fn begin_render<'a>(&'a self, chain: &RenderChain, fbo: Option<&Fbo>) -> ActiveShader<'a> {
         self.context.use_program(Some(&self.program));
 
         let loc = self.context.get_attrib_location(&self.program, "vPosition");
@@ -202,121 +182,18 @@ impl Shader {
 }
 
 impl<'a> ActiveShader<'a> {
-    fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
+    pub fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
         return self
             .shader
             .context
             .get_uniform_location(&self.shader.program, uniform);
     }
 
-    fn finish_render(self) -> () {
+    pub fn finish_render(self) -> () {
         self.shader.context.draw_arrays(GL::TRIANGLE_STRIP, 0, 4);
         self.shader.context.use_program(None);
         self.shader.context.bind_framebuffer(GL::FRAMEBUFFER, None);
         self.shader.context.active_texture(GL::TEXTURE0); // This resets the scene graph?
-    }
-}
-
-impl EffectNode {
-    fn new(context: Rc<WebGlRenderingContext>, program: &str) -> EffectNode {
-        let mut shader_passes = Vec::new();
-        let mut header_source = String::from(resources::glsl::EFFECT_HEADER);
-        let mut source = String::new();
-        let mut properties = HashMap::new();
-
-        source.push_str(&header_source);
-        source.push_str("\n#line 1\n");
-
-        for line in program.split('\n') {
-            let mut terms = line.trim().splitn(3, ' ');
-            let head = terms.next();
-            match head {
-                Some("#property") => {
-                    let key = terms.next().unwrap().to_string();
-                    let value = terms.next().unwrap().to_string();
-                    properties.insert(key, value);
-                }
-                Some("#buffershader") => {
-                    shader_passes.push(Shader::from_fragment_shader(Rc::clone(&context), &source));
-                    source = String::new();
-                    source.push_str(&header_source);
-                    source.push_str("\n#line 1\n"); // XXX
-                }
-                _ => {
-                    source.push_str(&line);
-                }
-            }
-            source.push_str("\n");
-        }
-        shader_passes.push(Shader::from_fragment_shader(Rc::clone(&context), &source));
-        info!("Loaded effect: {:?}", properties);
-
-        EffectNode {
-            context,
-            shader_passes,
-            properties,
-            time: RefCell::new(0.0),
-            intensity: RefCell::new(0.8),
-            intensity_integral: RefCell::new(0.0),
-        }
-    }
-
-    fn update_time(&self, time: f64) -> () {
-        let mut t = self.time.borrow_mut();
-        *t = time;
-    }
-}
-
-impl VideoNode for EffectNode {
-    fn paint<'a>(
-        &'a self,
-        chain: &'a RenderChain,
-        on_fbo: Option<&'a RefCell<Fbo>>,
-    ) -> Option<&'a RefCell<Fbo>> {
-        let mut last_fbo = on_fbo;
-
-        for shader in self.shader_passes.iter().rev() {
-            {
-                let active_shader = shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
-
-                chain.bind_fbo_to_texture(GL::TEXTURE0, on_fbo);
-                let loc = active_shader.get_uniform_location("iInputs");
-                self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
-
-                let mut channels: Vec<i32> = vec![];
-                for (i, shader) in self.shader_passes.iter().enumerate() {
-                    chain.bind_fbo_to_texture(GL::TEXTURE0 + 1 + i as u32, Some(&shader.fbo));
-                    channels.push(1 + i as i32);
-                }
-                let loc = active_shader.get_uniform_location("iChannel");
-                self.context
-                    .uniform1iv_with_i32_array(loc.as_ref(), &channels);
-
-                let loc = active_shader.get_uniform_location("iIntensity");
-                self.context
-                    .uniform1f(loc.as_ref(), *self.intensity.borrow() as f32);
-
-                let loc = self.context.get_uniform_location(&shader.program, "iTime");
-                self.context
-                    .uniform1f(loc.as_ref(), *self.time.borrow() as f32);
-
-                let loc = self
-                    .context
-                    .get_uniform_location(&shader.program, "iResolution");
-                self.context.uniform2f(
-                    loc.as_ref(),
-                    self.context.drawing_buffer_width() as f32,
-                    self.context.drawing_buffer_height() as f32,
-                );
-
-                active_shader.finish_render();
-            }
-
-            chain.extra_fbo.swap(&shader.fbo);
-            last_fbo = Some(&shader.fbo);
-        }
-
-        last_fbo
     }
 }
 
@@ -335,11 +212,6 @@ impl RenderChain {
             context.drawing_buffer_height(),
         );
         let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context)));
-        let effect_list = vec![
-            EffectNode::new(Rc::clone(&context), resources::effects::PURPLE),
-            EffectNode::new(Rc::clone(&context), resources::effects::TEST),
-            EffectNode::new(Rc::clone(&context), resources::effects::RESAT),
-        ];
 
         let blit_shader =
             Shader::from_fragment_shader(Rc::clone(&context), resources::glsl::PLAIN_FRAGMENT);
@@ -384,6 +256,8 @@ impl RenderChain {
 
         info!("New RenderChain: ({}, {})", size.0, size.1);
 
+        let artists = Default::default();
+
         RenderChain {
             context,
             extra_fbo,
@@ -391,19 +265,28 @@ impl RenderChain {
             blank_texture,
             square_vertex_buffer,
             size,
-            effect_list,
+            artists,
         }
     }
 
-    pub fn paint(&self) -> () {
+    pub fn paint(&self, nodes: &Vec<VideoNode>) -> () {
         self.context.disable(GL::DEPTH_TEST);
         self.context.disable(GL::BLEND);
         self.context.clear_color(0.0, 0.0, 0.0, 0.0);
         self.context.clear(GL::COLOR_BUFFER_BIT);
 
-        let mut last_fbo = None;
-        for effect in &self.effect_list {
-            last_fbo = effect.paint(&self, last_fbo);
+        for node in nodes {
+            self.artists
+                .borrow_mut()
+                .entry(node.id())
+                .or_insert_with(|| node.new_artist(&self));
+        }
+
+        let artists = self.artists.borrow();
+        let mut last_fbo: Option<&RefCell<Fbo>> = None;
+        for node in nodes {
+            let artist = artists.get(&node.id()).unwrap();
+            last_fbo = artist.paint(&self, node, last_fbo);
         }
 
         {
@@ -417,7 +300,7 @@ impl RenderChain {
         }
     }
 
-    fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&RefCell<Fbo>>) {
+    pub fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&RefCell<Fbo>>) {
         self.context.active_texture(tex);
         if let Some(fbo) = fbo_ref {
             self.context
@@ -429,9 +312,11 @@ impl RenderChain {
     }
 
     pub fn update_time(&self, time: f64) {
+        /*
         for effect in &self.effect_list {
             effect.update_time(time);
         }
+        */
     }
 }
 
