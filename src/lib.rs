@@ -2,6 +2,7 @@
 
 mod app;
 mod graphics;
+mod resources;
 mod utils;
 
 use wasm_bindgen::prelude::*;

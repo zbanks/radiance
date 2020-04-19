@@ -7,13 +7,15 @@ use log::*;
 use yew::prelude::*;
 use yew::services::{RenderService, Task};
 
-use crate::graphics::Model;
+use crate::graphics::RenderChain;
+use std::rc::Rc;
+use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::WebGlRenderingContext;
 
 pub struct App {
     link: ComponentLink<Self>,
-    model: Option<Model>,
+    model: Option<RenderChain>,
     node_ref: NodeRef,
     render_loop: Option<Box<dyn Task>>,
 }
@@ -37,13 +39,15 @@ impl Component for App {
 
     fn mounted(&mut self) -> ShouldRender {
         let canvas: web_sys::HtmlCanvasElement = self.node_ref.cast().unwrap();
-        let gl_context = canvas
-            .get_context("webgl")
-            .expect("WebGL not supported")
-            .unwrap()
-            .dyn_into::<WebGlRenderingContext>()
-            .unwrap();
-        self.model = Some(Model::new(gl_context));
+        let context = Rc::new(
+            canvas
+                .get_context("webgl")
+                .expect("WebGL not supported")
+                .unwrap()
+                .dyn_into::<WebGlRenderingContext>()
+                .unwrap(),
+        );
+        self.model = Some(RenderChain::new(Rc::clone(&context)));
 
         self.schedule_next_render();
 
@@ -54,24 +58,23 @@ impl Component for App {
         match msg {
             Msg::Render(timestamp) => self.render_gl(timestamp),
         };
-
         false
     }
 
     fn view(&self) -> Html {
-        info!("rendered!");
         html! {
             <div class="hello">
                 <h1>{"Radiance"}</h1>
-                <canvas ref={self.node_ref.clone()} />
+                <canvas ref={self.node_ref.clone()} width=512 height=512 />
             </div>
         }
     }
 }
 
 impl App {
-    fn render_gl(&mut self, _time: f64) -> () {
+    fn render_gl(&mut self, time: f64) -> () {
         let model = self.model.as_mut().unwrap();
+        model.update_time(time / 1e3);
         model.paint();
 
         self.schedule_next_render();
@@ -85,3 +88,20 @@ impl App {
         self.render_loop = Some(Box::new(handle));
     }
 }
+
+/*
+async fn fetch_resource(resource: &str) -> Result<String, JsValue> {
+    let mut opts = RequestInit::new();
+    opts.method("GET");
+    //opts.mode(RequestMode::Cors);
+    let request = Request::new_with_str_and_init(resource, &opts)?;
+    let window = web_sys::window().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+
+    // `resp_value` is a `Response` object.
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+    let text = JsFuture::from(resp.text()?).await?;
+    Ok(text.as_string().unwrap())
+}
+*/

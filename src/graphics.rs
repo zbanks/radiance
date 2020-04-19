@@ -1,9 +1,12 @@
+use crate::resources;
 use log::*;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use web_sys::WebGlRenderingContext as GL;
 use web_sys::{
     WebGlBuffer, WebGlFramebuffer, WebGlProgram, WebGlRenderingContext, WebGlShader, WebGlTexture,
+    WebGlUniformLocation,
 };
 
 struct Fbo {
@@ -20,82 +23,82 @@ struct Shader {
     fbo: RefCell<Fbo>,
 }
 
-struct Effect {
+struct ActiveShader<'a> {
+    shader: &'a Shader,
+}
+
+struct EffectNode {
     context: Rc<WebGlRenderingContext>,
     shader_passes: Vec<Shader>,
+    properties: HashMap<String, String>,
+    intensity: RefCell<f64>,
+    time: RefCell<f64>,
+    intensity_integral: RefCell<f64>,
 }
 
-pub struct Model {
+pub struct RenderChain {
     context: Rc<WebGlRenderingContext>,
-    effect_chain: Vec<Effect>,
+    size: (i32, i32),
     blit_shader: Shader,
     blank_texture: WebGlTexture,
-    extra_fbo: RefCell<Fbo>,
+    //noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
+    extra_fbo: RefCell<Fbo>,
+
+    // XXX This goes elsewhere
+    effect_list: Vec<EffectNode>,
 }
 
-impl Effect {
-    fn new(context: Rc<WebGlRenderingContext>) -> Effect {
-        let mut shader_passes = Vec::new();
+trait VideoNode {
+    fn paint<'a>(
+        &'a self,
+        chain: &'a RenderChain,
+        on_fbo: Option<&'a RefCell<Fbo>>,
+    ) -> Option<&'a RefCell<Fbo>>;
+}
 
-        shader_passes.push(Shader::from_fragment_shader(
-            Rc::clone(&context),
-            r#"
-            precision mediump float;
-            varying highp vec2 uv;
+impl Fbo {
+    fn new(context: Rc<WebGlRenderingContext>) -> Fbo {
+        let texture = context.create_texture().unwrap();
+        context.bind_texture(GL::TEXTURE_2D, Some(&texture));
+        context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+            GL::TEXTURE_2D,                  // target
+            0,                               // level
+            GL::RGBA as i32,                 // internal format
+            context.drawing_buffer_width(),  // width
+            context.drawing_buffer_height(), // height
+            0,                               // border
+            GL::RGBA,                        // format
+            GL::UNSIGNED_BYTE,               // _type
+            None,                            // pixels
+        );
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
 
-            void main() {
-                vec2 normCoord = 2. * (uv - 0.5);
-                gl_FragColor = vec4(abs(normCoord), 0., 1.);
-            }
-        "#,
-        ));
+        let framebuffer = context.create_framebuffer().unwrap();
+        context.bind_framebuffer(GL::FRAMEBUFFER, Some(&framebuffer));
+        context.framebuffer_texture_2d(
+            GL::FRAMEBUFFER,
+            GL::COLOR_ATTACHMENT0,
+            GL::TEXTURE_2D,
+            Some(&texture),
+            0, // level
+        );
 
-        shader_passes.push(Shader::from_fragment_shader(Rc::clone(&context), r#"
-            varying highp vec2 uv;
-            uniform sampler2D iInput;
-            precision mediump float;
-
-            vec4 composite(vec4 under, vec4 over) {
-                float a_out = 1. - (1. - over.a) * (1. - under.a);
-                return clamp(vec4((over.rgb + under.rgb * (1. - over.a)), a_out), vec4(0.), vec4(1.));
-            }
-
-            void main() {
-                float iIntensity = 0.8;
-                vec4 c;
-                vec2 normCoord = 2. * (uv - 0.5);
-
-                c = vec4(1.) * (1. - smoothstep(iIntensity - 0.1, iIntensity, length(normCoord)));
-                gl_FragColor = c;
-
-                c = texture2D(iInput, (uv - 0.5) / iIntensity + 0.5);
-                c *= 1. - smoothstep(iIntensity - 0.2, iIntensity - 0.1, length(normCoord));
-                gl_FragColor = composite(gl_FragColor, c);
-                //gl_FragColor.rgb *= gl_FragColor.a;
-                //gl_FragColor.a = 1.0;
-            }
-
-        "#));
-
-        Effect {
+        Fbo {
             context,
-            shader_passes,
+            texture,
+            framebuffer,
         }
     }
+}
 
-    fn paint<'a>(&'a self, model: &'a Model) -> Option<&'a RefCell<Fbo>> {
-        let mut last_fbo: Option<&'a RefCell<Fbo>> = None;
-
-        for shader in &self.shader_passes {
-            model.bind_fbo_to_texture(GL::TEXTURE0, last_fbo);
-            shader.paint(model, Some(&model.extra_fbo.borrow()));
-
-            model.extra_fbo.swap(&shader.fbo);
-            last_fbo = Some(&shader.fbo);
-        }
-
-        last_fbo
+impl Drop for Fbo {
+    fn drop(&mut self) -> () {
+        self.context.delete_texture(Some(&self.texture));
+        self.context.delete_framebuffer(Some(&self.framebuffer));
     }
 }
 
@@ -105,15 +108,7 @@ impl Shader {
         let vertex_shader = Self::compile_shader(
             &context,
             WebGlRenderingContext::VERTEX_SHADER,
-            r#"
-            attribute vec4 vPosition;
-            varying highp vec2 uv;
-
-            void main() {
-                gl_Position = vec4(vPosition.xy, 0., 1.);
-                uv = vPosition.zw;
-            }
-        "#,
+            resources::glsl::PLAIN_VERTEX,
         )
         .unwrap();
         let fragment_shader = Self::compile_shader(
@@ -184,25 +179,144 @@ impl Shader {
         }
     }
 
-    fn paint(&self, model: &Model, fbo: Option<&Fbo>) -> () {
+    fn render(&self, chain: &RenderChain, fbo: Option<&Fbo>) -> () {
+        let loc = self.context.get_uniform_location(&self.program, "iInputs");
+        self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+    }
+
+    fn begin_render<'a>(&'a self, chain: &RenderChain, fbo: Option<&Fbo>) -> ActiveShader<'a> {
+        self.context.use_program(Some(&self.program));
+
+        let loc = self.context.get_attrib_location(&self.program, "vPosition");
+        self.context
+            .bind_buffer(GL::ARRAY_BUFFER, Some(&chain.square_vertex_buffer));
+        self.context.enable_vertex_attrib_array(loc as u32);
+        self.context
+            .vertex_attrib_pointer_with_i32(loc as u32, 4, GL::FLOAT, false, 0, 0);
+
         self.context
             .bind_framebuffer(GL::FRAMEBUFFER, fbo.map(|f| &f.framebuffer));
 
-        self.context.use_program(Some(&self.program));
+        ActiveShader { shader: &self }
+    }
+}
 
-        let position_loc = self.context.get_attrib_location(&self.program, "vPosition");
+impl<'a> ActiveShader<'a> {
+    fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
+        return self
+            .shader
+            .context
+            .get_uniform_location(&self.shader.program, uniform);
+    }
 
-        self.context
-            .bind_buffer(GL::ARRAY_BUFFER, Some(&model.square_vertex_buffer));
-        self.context.enable_vertex_attrib_array(position_loc as u32);
-        self.context
-            .vertex_attrib_pointer_with_i32(position_loc as u32, 4, GL::FLOAT, false, 0, 0);
+    fn finish_render(self) -> () {
+        self.shader.context.draw_arrays(GL::TRIANGLE_STRIP, 0, 4);
+        self.shader.context.use_program(None);
+        self.shader.context.bind_framebuffer(GL::FRAMEBUFFER, None);
+        self.shader.context.active_texture(GL::TEXTURE0); // This resets the scene graph?
+    }
+}
 
-        let texture_loc = self.context.get_uniform_location(&self.program, "iInput");
-        self.context.uniform1i(texture_loc.as_ref(), 0);
+impl EffectNode {
+    fn new(context: Rc<WebGlRenderingContext>, program: &str) -> EffectNode {
+        let mut shader_passes = Vec::new();
+        let mut header_source = String::from(resources::glsl::EFFECT_HEADER);
+        let mut source = String::new();
+        let mut properties = HashMap::new();
 
-        self.context.draw_arrays(GL::TRIANGLE_STRIP, 0, 4);
-        self.context.use_program(None);
+        source.push_str(&header_source);
+        source.push_str("\n#line 1\n");
+
+        for line in program.split('\n') {
+            let mut terms = line.trim().splitn(3, ' ');
+            let head = terms.next();
+            match head {
+                Some("#property") => {
+                    let key = terms.next().unwrap().to_string();
+                    let value = terms.next().unwrap().to_string();
+                    properties.insert(key, value);
+                }
+                Some("#buffershader") => {
+                    shader_passes.push(Shader::from_fragment_shader(Rc::clone(&context), &source));
+                    source = String::new();
+                    source.push_str(&header_source);
+                    source.push_str("\n#line 1\n"); // XXX
+                }
+                _ => {
+                    source.push_str(&line);
+                }
+            }
+            source.push_str("\n");
+        }
+        shader_passes.push(Shader::from_fragment_shader(Rc::clone(&context), &source));
+        info!("Loaded effect: {:?}", properties);
+
+        EffectNode {
+            context,
+            shader_passes,
+            properties,
+            time: RefCell::new(0.0),
+            intensity: RefCell::new(0.8),
+            intensity_integral: RefCell::new(0.0),
+        }
+    }
+
+    fn update_time(&self, time: f64) -> () {
+        let mut t = self.time.borrow_mut();
+        *t = time;
+    }
+}
+
+impl VideoNode for EffectNode {
+    fn paint<'a>(
+        &'a self,
+        chain: &'a RenderChain,
+        on_fbo: Option<&'a RefCell<Fbo>>,
+    ) -> Option<&'a RefCell<Fbo>> {
+        let mut last_fbo = on_fbo;
+
+        for shader in self.shader_passes.iter().rev() {
+            {
+                let active_shader = shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
+
+                chain.bind_fbo_to_texture(GL::TEXTURE0, on_fbo);
+                let loc = active_shader.get_uniform_location("iInputs");
+                self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+
+                let mut channels: Vec<i32> = vec![];
+                for (i, shader) in self.shader_passes.iter().enumerate() {
+                    chain.bind_fbo_to_texture(GL::TEXTURE0 + 1 + i as u32, Some(&shader.fbo));
+                    channels.push(1 + i as i32);
+                }
+                let loc = active_shader.get_uniform_location("iChannel");
+                self.context
+                    .uniform1iv_with_i32_array(loc.as_ref(), &channels);
+
+                let loc = active_shader.get_uniform_location("iIntensity");
+                self.context
+                    .uniform1f(loc.as_ref(), *self.intensity.borrow() as f32);
+
+                let loc = self.context.get_uniform_location(&shader.program, "iTime");
+                self.context
+                    .uniform1f(loc.as_ref(), *self.time.borrow() as f32);
+
+                let loc = self
+                    .context
+                    .get_uniform_location(&shader.program, "iResolution");
+                self.context.uniform2f(
+                    loc.as_ref(),
+                    self.context.drawing_buffer_width() as f32,
+                    self.context.drawing_buffer_height() as f32,
+                );
+
+                active_shader.finish_render();
+            }
+
+            chain.extra_fbo.swap(&shader.fbo);
+            last_fbo = Some(&shader.fbo);
+        }
+
+        last_fbo
     }
 }
 
@@ -214,86 +328,34 @@ impl Drop for Shader {
     }
 }
 
-impl Fbo {
-    fn new(context: Rc<WebGlRenderingContext>) -> Fbo {
-        let texture = context.create_texture().unwrap();
-        context.bind_texture(GL::TEXTURE_2D, Some(&texture));
-        context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-            GL::TEXTURE_2D,                  // target
-            0,                               // level
-            GL::RGBA as i32,                 // internal format
-            context.drawing_buffer_width(),  // width
-            context.drawing_buffer_height(), // height
-            0,                               // border
-            GL::RGBA,                        // format
-            GL::UNSIGNED_BYTE,               // _type
-            None,                            // pixels
+impl RenderChain {
+    pub fn new(context: Rc<WebGlRenderingContext>) -> RenderChain {
+        let size = (
+            context.drawing_buffer_width(),
+            context.drawing_buffer_height(),
         );
-        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
-        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
-        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
-        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
-
-        let framebuffer = context.create_framebuffer().unwrap();
-        context.bind_framebuffer(GL::FRAMEBUFFER, Some(&framebuffer));
-        context.framebuffer_texture_2d(
-            GL::FRAMEBUFFER,
-            GL::COLOR_ATTACHMENT0,
-            GL::TEXTURE_2D,
-            Some(&texture),
-            0, /* level */
-        );
-
-        Fbo {
-            context,
-            texture,
-            framebuffer,
-        }
-    }
-
-    fn bind(&self) -> () {
-        self.context
-            .bind_framebuffer(GL::FRAMEBUFFER, Some(&self.framebuffer));
-    }
-}
-
-impl Drop for Fbo {
-    fn drop(&mut self) -> () {
-        self.context.delete_texture(Some(&self.texture));
-        self.context.delete_framebuffer(Some(&self.framebuffer));
-    }
-}
-
-impl Model {
-    pub fn new(context: WebGlRenderingContext) -> Model {
-        info!("New model & context!");
-        let context = Rc::new(context);
         let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context)));
-        let effect_chain = vec![Effect::new(Rc::clone(&context))];
+        let effect_list = vec![
+            EffectNode::new(Rc::clone(&context), resources::effects::PURPLE),
+            EffectNode::new(Rc::clone(&context), resources::effects::TEST),
+            EffectNode::new(Rc::clone(&context), resources::effects::RESAT),
+        ];
 
-        let blit_shader = Shader::from_fragment_shader(
-            Rc::clone(&context),
-            r#"
-            varying highp vec2 uv;
-            uniform sampler2D uSampler;
-            void main() {
-                gl_FragColor = texture2D(uSampler, uv);
-            }
-        "#,
-        );
+        let blit_shader =
+            Shader::from_fragment_shader(Rc::clone(&context), resources::glsl::PLAIN_FRAGMENT);
 
         let blank_texture = context.create_texture().unwrap();
         context.bind_texture(GL::TEXTURE_2D, Some(&blank_texture));
         context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-            GL::TEXTURE_2D,      // target
-            0,                   // level
-            GL::RGBA as i32,     // internal format
-            1,                   // width
-            1,                   // height
-            0,                   // border
-            GL::RGBA,            // format
-            GL::UNSIGNED_BYTE,   // _type
-            Some(&[0, 0, 0, 0]), // pixels
+            GL::TEXTURE_2D,        // target
+            0,                     // level
+            GL::RGBA as i32,       // internal format
+            1,                     // width
+            1,                     // height
+            0,                     // border
+            GL::RGBA,              // format
+            GL::UNSIGNED_BYTE,     // _type
+            Some(&[0, 0, 0, 255]), // pixels
         );
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
@@ -320,13 +382,16 @@ impl Model {
             GL::STATIC_DRAW,
         );
 
-        Model {
+        info!("New RenderChain: ({}, {})", size.0, size.1);
+
+        RenderChain {
             context,
-            effect_chain,
             extra_fbo,
             blit_shader,
             blank_texture,
             square_vertex_buffer,
+            size,
+            effect_list,
         }
     }
 
@@ -337,12 +402,19 @@ impl Model {
         self.context.clear(GL::COLOR_BUFFER_BIT);
 
         let mut last_fbo = None;
-        for effect in &self.effect_chain {
-            last_fbo = effect.paint(&self);
+        for effect in &self.effect_list {
+            last_fbo = effect.paint(&self, last_fbo);
         }
 
-        self.bind_fbo_to_texture(GL::TEXTURE0, last_fbo);
-        self.blit_shader.paint(self, None);
+        {
+            let active_shader = self.blit_shader.begin_render(self, None);
+
+            self.bind_fbo_to_texture(GL::TEXTURE0, last_fbo);
+            let loc = active_shader.get_uniform_location("iInputs");
+            self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+
+            active_shader.finish_render();
+        }
     }
 
     fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&RefCell<Fbo>>) {
@@ -355,9 +427,15 @@ impl Model {
                 .bind_texture(GL::TEXTURE_2D, Some(&self.blank_texture));
         }
     }
+
+    pub fn update_time(&self, time: f64) {
+        for effect in &self.effect_list {
+            effect.update_time(time);
+        }
+    }
 }
 
-impl Drop for Model {
+impl Drop for RenderChain {
     fn drop(&mut self) -> () {
         self.context.delete_buffer(Some(&self.square_vertex_buffer));
         self.context.delete_texture(Some(&self.blank_texture));
