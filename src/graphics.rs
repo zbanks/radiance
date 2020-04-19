@@ -305,16 +305,24 @@ impl RenderChain {
             last_fbo = artist.paint(&self, node, last_fbo);
         }
 
-        {
-            let active_shader = self.blit_shader.begin_render(self, None);
+        Ok(())
+    }
 
-            self.bind_fbo_to_texture(GL::TEXTURE0, last_fbo);
-            let loc = active_shader.get_uniform_location("iInputs");
-            self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+    pub fn render(&self, node: &VideoNode) -> Result<()> {
+        self.context.disable(GL::DEPTH_TEST);
+        self.context.disable(GL::BLEND);
+        self.context.clear_color(0.0, 0.0, 0.0, 0.0);
+        self.context.clear(GL::COLOR_BUFFER_BIT);
 
-            active_shader.finish_render();
-        }
+        let artists = self.artists.borrow();
+        let artist = artists.get(&node.id()).ok_or("No artist for node")?;
 
+        let active_shader = self.blit_shader.begin_render(self, None);
+        self.bind_fbo_to_texture(GL::TEXTURE0, artist.fbo());
+        let loc = active_shader.get_uniform_location("iInputs");
+        self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+
+        active_shader.finish_render();
         Ok(())
     }
 

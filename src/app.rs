@@ -22,12 +22,14 @@ pub struct App {
     render_loop: Option<Box<dyn Task>>,
     nodes: HashMap<usize, VideoNode>,
     graph: Vec<usize>,
+    show: Option<usize>
 }
 
 pub enum Msg {
     Render(f64),
     SetIntensity(usize, f64),
     Raise(usize),
+    Show(usize),
 }
 
 impl Component for App {
@@ -43,6 +45,7 @@ impl Component for App {
             render_loop: None,
             nodes: Default::default(),
             graph: Default::default(),
+            show: None,
         }
     }
 
@@ -82,6 +85,10 @@ impl Component for App {
                 self.graph.push(id);
                 true
             }
+            Msg::Show(id) => {
+                self.show = Some(id);
+                false
+            }
         }
     }
 
@@ -112,6 +119,11 @@ impl App {
         //let nodes = self.graph.iter().map(move |i| self.nodes.get(i).unwrap()).collect::<Vec<_>>();
         let model = self.model.as_mut().unwrap();
         model.paint(&nodes).unwrap();
+
+        if let Some(id) = self.show {
+            let node = self.nodes.get(&id).unwrap();
+            model.render(&node).unwrap();
+        }
 
         self.schedule_next_render();
     }
@@ -151,6 +163,12 @@ impl App {
                         self.link.callback(move |_| Msg::Raise(id))
                     }
                 >{"Raise"}</button>
+                <button
+                    onclick={
+                        let id = node.id;
+                        self.link.callback(move |_| Msg::Show(id))
+                    }
+                >{"Show"}</button>
             </div>
         }
     }

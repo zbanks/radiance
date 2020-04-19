@@ -181,4 +181,12 @@ impl VideoArtist {
 
         last_fbo
     }
+
+    pub fn fbo<'a> (&'a self) -> Option<&'a RefCell<Fbo>> {
+        match self {
+            VideoArtist::Effect { shader_passes } => {
+                Some(&shader_passes.first()?.fbo)
+            }
+        }
+    }
 }
