@@ -1,9 +1,9 @@
-use crate::graphics::{ChainSize, Fbo, RenderChain, Shader};
+use crate::err::Result;
+use crate::graphics::{Fbo, RenderChain, Shader};
 use crate::resources;
 use log::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use web_sys::WebGlRenderingContext as GL;
 
 pub struct VideoNode {
@@ -34,7 +34,7 @@ impl VideoNode {
             NEXT_ID
         };
 
-        let mut header_source = String::from(resources::glsl::EFFECT_HEADER);
+        let header_source = String::from(resources::glsl::EFFECT_HEADER);
         let mut source = String::new();
         let mut properties = HashMap::new();
 
@@ -80,7 +80,7 @@ impl VideoNode {
         }
     }
 
-    pub fn update_time(&mut self, time: f64) -> () {
+    pub fn update_time(&mut self, time: f64) {
         self.time = time;
     }
 
@@ -88,18 +88,17 @@ impl VideoNode {
         self.id
     }
 
-    pub fn new_artist(&self, chain: &RenderChain) -> VideoArtist {
+    pub fn new_artist(&self, chain: &RenderChain) -> Result<VideoArtist> {
         info!("New artist! {:?}", self.kind);
         match self.kind {
             VideoNodeKind::Effect {
-                ref shader_sources,
-                ref properties,
+                ref shader_sources, ..
             } => {
                 let shader_passes = shader_sources
                     .iter()
-                    .map(|s| Shader::from_fragment_shader(Rc::clone(&chain.context), &s))
-                    .collect();
-                VideoArtist::Effect { shader_passes }
+                    .map(|s| chain.compile_fragment_shader(&s))
+                    .collect::<Result<_>>()?;
+                Ok(VideoArtist::Effect { shader_passes })
             }
         }
     }
@@ -141,6 +140,11 @@ impl VideoArtist {
 
                         let loc = active_shader.get_uniform_location("iIntensity");
                         chain.context.uniform1f(loc.as_ref(), node.intensity as f32);
+
+                        let loc = active_shader.get_uniform_location("iIntensityIntegral");
+                        chain
+                            .context
+                            .uniform1f(loc.as_ref(), node.intensity_integral as f32);
 
                         let loc = active_shader.get_uniform_location("iTime");
                         chain.context.uniform1f(loc.as_ref(), node.time as f32);

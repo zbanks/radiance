@@ -7,3 +7,5 @@ dist/
 wasm-pack.log
 node_modules
 .*.sw?
+
+static/effects/*.glsl

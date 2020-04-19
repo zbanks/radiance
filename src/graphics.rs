@@ -1,3 +1,4 @@
+use crate::err::{Error, Result};
 use crate::resources;
 use crate::video_node::*;
 use log::*;
@@ -43,26 +44,28 @@ pub struct RenderChain {
 }
 
 impl Fbo {
-    fn new(context: Rc<WebGlRenderingContext>) -> Fbo {
-        let texture = context.create_texture().unwrap();
+    fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<Fbo> {
+        let texture = context.create_texture().ok_or("Unable to create texture")?;
         context.bind_texture(GL::TEXTURE_2D, Some(&texture));
         context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-            GL::TEXTURE_2D,                  // target
-            0,                               // level
-            GL::RGBA as i32,                 // internal format
-            context.drawing_buffer_width(),  // width
-            context.drawing_buffer_height(), // height
-            0,                               // border
-            GL::RGBA,                        // format
-            GL::UNSIGNED_BYTE,               // _type
-            None,                            // pixels
-        );
+            GL::TEXTURE_2D,    // target
+            0,                 // level
+            GL::RGBA as i32,   // internal format
+            size.0,            // width
+            size.1,            // height
+            0,                 // border
+            GL::RGBA,          // format
+            GL::UNSIGNED_BYTE, // _type
+            None,              // pixels
+        )?;
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
 
-        let framebuffer = context.create_framebuffer().unwrap();
+        let framebuffer = context
+            .create_framebuffer()
+            .ok_or("Unable to create framebuffer")?;
         context.bind_framebuffer(GL::FRAMEBUFFER, Some(&framebuffer));
         context.framebuffer_texture_2d(
             GL::FRAMEBUFFER,
@@ -72,56 +75,58 @@ impl Fbo {
             0, // level
         );
 
-        Fbo {
+        Ok(Fbo {
             context,
             texture,
             framebuffer,
-        }
+        })
     }
 }
 
 impl Drop for Fbo {
-    fn drop(&mut self) -> () {
+    fn drop(&mut self) {
         self.context.delete_texture(Some(&self.texture));
         self.context.delete_framebuffer(Some(&self.framebuffer));
     }
 }
 
 impl Shader {
-    pub fn from_fragment_shader(context: Rc<WebGlRenderingContext>, shader_code: &str) -> Shader {
+    fn from_fragment_shader(
+        context: Rc<WebGlRenderingContext>,
+        size: ChainSize,
+        shader_code: &str,
+    ) -> Result<Shader> {
         info!("Compiling shaders");
         let vertex_shader = Self::compile_shader(
             &context,
             WebGlRenderingContext::VERTEX_SHADER,
             resources::glsl::PLAIN_VERTEX,
-        )
-        .unwrap();
+        )?;
         let fragment_shader = Self::compile_shader(
             &context,
             WebGlRenderingContext::FRAGMENT_SHADER,
             shader_code,
-        )
-        .unwrap();
-        let program = Self::link_program(&context, &vertex_shader, &fragment_shader).unwrap();
-        let fbo = RefCell::new(Fbo::new(Rc::clone(&context)));
+        )?;
+        let program = Self::link_program(&context, &vertex_shader, &fragment_shader)?;
+        let fbo = RefCell::new(Fbo::new(Rc::clone(&context), size)?);
 
-        Shader {
+        Ok(Shader {
             context,
             program,
             fragment_shader,
             vertex_shader,
             fbo,
-        }
+        })
     }
 
     fn compile_shader(
         context: &WebGlRenderingContext,
         shader_type: u32,
         source: &str,
-    ) -> Result<WebGlShader, String> {
+    ) -> Result<WebGlShader> {
         let shader = context
             .create_shader(shader_type)
-            .ok_or_else(|| String::from("Unable to create shader object"))?;
+            .ok_or("Unable to create shader object")?;
         context.shader_source(&shader, source);
         context.compile_shader(&shader);
 
@@ -132,9 +137,11 @@ impl Shader {
         {
             Ok(shader)
         } else {
-            Err(context
-                .get_shader_info_log(&shader)
-                .unwrap_or_else(|| String::from("Unknown error creating shader")))
+            Err(Error::new_glsl(
+                context
+                    .get_shader_info_log(&shader)
+                    .unwrap_or_else(|| String::from("Unknown error creating shader")),
+            ))
         }
     }
 
@@ -142,10 +149,10 @@ impl Shader {
         context: &WebGlRenderingContext,
         vert_shader: &WebGlShader,
         frag_shader: &WebGlShader,
-    ) -> Result<WebGlProgram, String> {
+    ) -> Result<WebGlProgram> {
         let program = context
             .create_program()
-            .ok_or_else(|| String::from("Unable to create shader object"))?;
+            .ok_or("Unable to create shader object")?;
 
         context.attach_shader(&program, vert_shader);
         context.attach_shader(&program, frag_shader);
@@ -158,9 +165,11 @@ impl Shader {
         {
             Ok(program)
         } else {
-            Err(context
-                .get_program_info_log(&program)
-                .unwrap_or_else(|| String::from("Unknown error creating program object")))
+            Err(Error::new_glsl(
+                context
+                    .get_program_info_log(&program)
+                    .unwrap_or_else(|| String::from("Unknown error creating program object")),
+            ))
         }
     }
 
@@ -183,13 +192,12 @@ impl Shader {
 
 impl<'a> ActiveShader<'a> {
     pub fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
-        return self
-            .shader
+        self.shader
             .context
-            .get_uniform_location(&self.shader.program, uniform);
+            .get_uniform_location(&self.shader.program, uniform)
     }
 
-    pub fn finish_render(self) -> () {
+    pub fn finish_render(self) {
         self.shader.context.draw_arrays(GL::TRIANGLE_STRIP, 0, 4);
         self.shader.context.use_program(None);
         self.shader.context.bind_framebuffer(GL::FRAMEBUFFER, None);
@@ -198,7 +206,7 @@ impl<'a> ActiveShader<'a> {
 }
 
 impl Drop for Shader {
-    fn drop(&mut self) -> () {
+    fn drop(&mut self) {
         self.context.delete_shader(Some(&self.fragment_shader));
         self.context.delete_shader(Some(&self.vertex_shader));
         self.context.delete_program(Some(&self.program));
@@ -206,17 +214,20 @@ impl Drop for Shader {
 }
 
 impl RenderChain {
-    pub fn new(context: Rc<WebGlRenderingContext>) -> RenderChain {
+    pub fn new(context: Rc<WebGlRenderingContext>) -> Result<RenderChain> {
         let size = (
             context.drawing_buffer_width(),
             context.drawing_buffer_height(),
         );
-        let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context)));
+        let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context), size)?);
 
-        let blit_shader =
-            Shader::from_fragment_shader(Rc::clone(&context), resources::glsl::PLAIN_FRAGMENT);
+        let blit_shader = Shader::from_fragment_shader(
+            Rc::clone(&context),
+            size,
+            resources::glsl::PLAIN_FRAGMENT,
+        )?;
 
-        let blank_texture = context.create_texture().unwrap();
+        let blank_texture = context.create_texture().ok_or("Unable to create texture")?;
         context.bind_texture(GL::TEXTURE_2D, Some(&blank_texture));
         context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
             GL::TEXTURE_2D,        // target
@@ -228,7 +239,7 @@ impl RenderChain {
             GL::RGBA,              // format
             GL::UNSIGNED_BYTE,     // _type
             Some(&[0, 0, 0, 255]), // pixels
-        );
+        )?;
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
@@ -238,10 +249,7 @@ impl RenderChain {
             1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 0.0, 1.0, 1.0, -1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 0.0,
         ];
 
-        let square_vertex_buffer = context
-            .create_buffer()
-            .ok_or("failed to create buffer")
-            .unwrap();
+        let square_vertex_buffer = context.create_buffer().ok_or("failed to create buffer")?;
         context.bind_buffer(GL::ARRAY_BUFFER, Some(&square_vertex_buffer));
 
         // Note: there is an alternate way to do this with Float32Array::view
@@ -258,7 +266,7 @@ impl RenderChain {
 
         let artists = Default::default();
 
-        RenderChain {
+        Ok(RenderChain {
             context,
             extra_fbo,
             blit_shader,
@@ -266,26 +274,32 @@ impl RenderChain {
             square_vertex_buffer,
             size,
             artists,
-        }
+        })
     }
 
-    pub fn paint(&self, nodes: &Vec<VideoNode>) -> () {
+    pub fn compile_fragment_shader(&self, source: &str) -> Result<Shader> {
+        Shader::from_fragment_shader(Rc::clone(&self.context), self.size, source)
+    }
+
+    pub fn paint(&self, nodes: &[VideoNode]) -> Result<()> {
         self.context.disable(GL::DEPTH_TEST);
         self.context.disable(GL::BLEND);
         self.context.clear_color(0.0, 0.0, 0.0, 0.0);
         self.context.clear(GL::COLOR_BUFFER_BIT);
 
-        for node in nodes {
-            self.artists
-                .borrow_mut()
-                .entry(node.id())
-                .or_insert_with(|| node.new_artist(&self));
+        {
+            let mut artists = self.artists.borrow_mut();
+            for node in nodes {
+                if !artists.contains_key(&node.id()) {
+                    artists.insert(node.id(), node.new_artist(&self)?);
+                }
+            }
         }
 
         let artists = self.artists.borrow();
         let mut last_fbo: Option<&RefCell<Fbo>> = None;
         for node in nodes {
-            let artist = artists.get(&node.id()).unwrap();
+            let artist = artists.get(&node.id()).ok_or("No artist for node")?;
             last_fbo = artist.paint(&self, node, last_fbo);
         }
 
@@ -298,6 +312,8 @@ impl RenderChain {
 
             active_shader.finish_render();
         }
+
+        Ok(())
     }
 
     pub fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&RefCell<Fbo>>) {
@@ -310,18 +326,10 @@ impl RenderChain {
                 .bind_texture(GL::TEXTURE_2D, Some(&self.blank_texture));
         }
     }
-
-    pub fn update_time(&self, time: f64) {
-        /*
-        for effect in &self.effect_list {
-            effect.update_time(time);
-        }
-        */
-    }
 }
 
 impl Drop for RenderChain {
-    fn drop(&mut self) -> () {
+    fn drop(&mut self) {
         self.context.delete_buffer(Some(&self.square_vertex_buffer));
         self.context.delete_texture(Some(&self.blank_texture));
     }

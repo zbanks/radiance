@@ -11,7 +11,6 @@ use crate::graphics::RenderChain;
 use crate::resources;
 use crate::video_node::VideoNode;
 use std::rc::Rc;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::WebGlRenderingContext;
 
@@ -32,6 +31,7 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        info!("App started");
         let nodes = vec![
             VideoNode::new_effect(resources::effects::PURPLE),
             VideoNode::new_effect(resources::effects::TEST),
@@ -42,7 +42,7 @@ impl Component for App {
             model: None,
             node_ref: Default::default(),
             render_loop: None,
-            nodes: nodes,
+            nodes,
         }
     }
 
@@ -56,7 +56,7 @@ impl Component for App {
                 .dyn_into::<WebGlRenderingContext>()
                 .unwrap(),
         );
-        self.model = Some(RenderChain::new(Rc::clone(&context)));
+        self.model = Some(RenderChain::new(Rc::clone(&context)).unwrap());
 
         self.schedule_next_render();
 
@@ -81,18 +81,18 @@ impl Component for App {
 }
 
 impl App {
-    fn render_gl(&mut self, time: f64) -> () {
+    fn render_gl(&mut self, time: f64) {
         let model = self.model.as_mut().unwrap();
         for node in &mut self.nodes {
             node.update_time(time / 1e3);
         }
-        model.paint(&self.nodes);
+        model.paint(&self.nodes).unwrap();
 
         self.schedule_next_render();
     }
 
-    fn schedule_next_render(&mut self) -> () {
-        let render_frame = self.link.callback(|time: f64| Msg::Render(time));
+    fn schedule_next_render(&mut self) {
+        let render_frame = self.link.callback(Msg::Render);
         let handle = RenderService::new().request_animation_frame(render_frame);
 
         // A reference to the new handle must be retained for the next render to run.
