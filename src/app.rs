@@ -7,9 +7,10 @@ use log::*;
 use yew::prelude::*;
 use yew::services::{RenderService, Task};
 
+use crate::err::Result;
 use crate::graphics::RenderChain;
-use crate::resources;
 use crate::video_node::VideoNode;
+use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::WebGlRenderingContext;
@@ -19,11 +20,14 @@ pub struct App {
     model: Option<RenderChain>,
     node_ref: NodeRef,
     render_loop: Option<Box<dyn Task>>,
-    nodes: Vec<VideoNode>,
+    nodes: HashMap<usize, VideoNode>,
+    graph: Vec<usize>,
 }
 
 pub enum Msg {
     Render(f64),
+    SetIntensity(usize, f64),
+    Raise(usize),
 }
 
 impl Component for App {
@@ -32,17 +36,13 @@ impl Component for App {
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         info!("App started");
-        let nodes = vec![
-            VideoNode::new_effect(resources::effects::PURPLE),
-            VideoNode::new_effect(resources::effects::TEST),
-            VideoNode::new_effect(resources::effects::RESAT),
-        ];
         App {
             link,
             model: None,
             node_ref: Default::default(),
             render_loop: None,
-            nodes,
+            nodes: Default::default(),
+            graph: Default::default(),
         }
     }
 
@@ -58,23 +58,42 @@ impl Component for App {
         );
         self.model = Some(RenderChain::new(Rc::clone(&context)).unwrap());
 
+        self.append_node("purple").unwrap();
+        self.append_node("test").unwrap();
+        self.append_node("resat").unwrap();
+
         self.schedule_next_render();
 
-        false
+        true
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Render(timestamp) => self.render_gl(timestamp),
-        };
-        false
+            Msg::Render(timestamp) => {
+                self.render_gl(timestamp);
+                false
+            }
+            Msg::SetIntensity(id, intensity) => {
+                self.nodes.get_mut(&id).unwrap().set_intensity(intensity);
+                true
+            }
+            Msg::Raise(id) => {
+                self.graph.retain(|x| *x != id);
+                self.graph.push(id);
+                true
+            }
+        }
     }
 
     fn view(&self) -> Html {
+        info!("calling view");
         html! {
             <div class="hello">
                 <h1>{"Radiance"}</h1>
                 <canvas ref={self.node_ref.clone()} width=512 height=512 />
+                <div>
+                    { self.graph.iter().map(|n| self.view_node(*n)).collect::<Html>() }
+                </div>
             </div>
         }
     }
@@ -82,11 +101,17 @@ impl Component for App {
 
 impl App {
     fn render_gl(&mut self, time: f64) {
-        let model = self.model.as_mut().unwrap();
-        for node in &mut self.nodes {
-            node.update_time(time / 1e3);
+        for node in &mut self.nodes.values_mut() {
+            node.set_time(time / 1e3);
         }
-        model.paint(&self.nodes).unwrap();
+        let mut nodes = Vec::new();
+        for id in &self.graph {
+            nodes.push(self.nodes.get(id).unwrap());
+        }
+        let nodes = nodes;
+        //let nodes = self.graph.iter().map(move |i| self.nodes.get(i).unwrap()).collect::<Vec<_>>();
+        let model = self.model.as_mut().unwrap();
+        model.paint(&nodes).unwrap();
 
         self.schedule_next_render();
     }
@@ -97,6 +122,37 @@ impl App {
 
         // A reference to the new handle must be retained for the next render to run.
         self.render_loop = Some(Box::new(handle));
+    }
+
+    fn append_node(&mut self, name: &str) -> Result<()> {
+        let node = VideoNode::effect(name)?;
+        let id = node.id;
+        self.nodes.insert(id, node);
+        self.graph.push(id);
+        Ok(())
+    }
+
+    fn view_node(&self, id: usize) -> Html {
+        let node = self.nodes.get(&id).unwrap();
+        html! {
+            <div>
+                { &node.name } {": "}
+                <input
+                    oninput={
+                        let id = node.id;
+                        let old_intensity = node.intensity;
+                        self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().unwrap_or(old_intensity)))
+                    }
+                    value=node.intensity
+                />
+                <button
+                    onclick={
+                        let id = node.id;
+                        self.link.callback(move |_| Msg::Raise(id))
+                    }
+                >{"Raise"}</button>
+            </div>
+        }
     }
 }
 

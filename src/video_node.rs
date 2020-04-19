@@ -7,8 +7,9 @@ use std::collections::HashMap;
 use web_sys::WebGlRenderingContext as GL;
 
 pub struct VideoNode {
-    id: usize,
-    intensity: f64,
+    pub id: usize,
+    pub name: String,
+    pub intensity: f64,
     time: f64,
     intensity_integral: f64,
     kind: VideoNodeKind,
@@ -27,7 +28,8 @@ pub enum VideoArtist {
 }
 
 impl VideoNode {
-    pub fn new_effect(program: &str) -> VideoNode {
+    pub fn effect(name: &str) -> Result<VideoNode> {
+        let program = resources::effects::lookup(name).ok_or("Unknown effect name")?;
         let id = unsafe {
             static mut NEXT_ID: usize = 0;
             NEXT_ID += 1;
@@ -47,9 +49,14 @@ impl VideoNode {
             let head = terms.next();
             match head {
                 Some("#property") => {
-                    // XXX
-                    let key = terms.next().unwrap().to_string();
-                    let value = terms.next().unwrap().to_string();
+                    let key = terms
+                        .next()
+                        .ok_or("Parse error in #property line")?
+                        .to_string();
+                    let value = terms
+                        .next()
+                        .ok_or("Parse error in #property line")?
+                        .to_string();
                     properties.insert(key, value);
                 }
                 Some("#buffershader") => {
@@ -68,8 +75,9 @@ impl VideoNode {
 
         info!("Loaded effect: {:?}", properties);
 
-        VideoNode {
+        Ok(VideoNode {
             id,
+            name: String::from(name),
             time: 0.0,
             intensity: 0.8,
             intensity_integral: 0.0,
@@ -77,18 +85,24 @@ impl VideoNode {
                 shader_sources,
                 properties,
             },
-        }
+        })
     }
 
-    pub fn update_time(&mut self, time: f64) {
+    pub fn set_time(&mut self, time: f64) {
+        let dt = time - self.time;
+        self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
         self.time = time;
+    }
+
+    pub fn set_intensity(&mut self, intensity: f64) {
+        self.intensity = intensity;
     }
 
     pub fn id(&self) -> usize {
         self.id
     }
 
-    pub fn new_artist(&self, chain: &RenderChain) -> Result<VideoArtist> {
+    pub fn artist(&self, chain: &RenderChain) -> Result<VideoArtist> {
         info!("New artist! {:?}", self.kind);
         match self.kind {
             VideoNodeKind::Effect {
@@ -152,8 +166,8 @@ impl VideoArtist {
                         let loc = active_shader.get_uniform_location("iResolution");
                         chain.context.uniform2f(
                             loc.as_ref(),
-                            chain.context.drawing_buffer_width() as f32,
-                            chain.context.drawing_buffer_height() as f32,
+                            chain.size.0 as f32,
+                            chain.size.1 as f32,
                         );
 
                         active_shader.finish_render();

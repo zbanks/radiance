@@ -16,7 +16,7 @@ impl Error {
         Error::Runtime(String::from(details))
     }
 
-    pub fn new_glsl(details: String) -> Error {
+    pub fn glsl(details: String) -> Error {
         Error::Glsl(details)
     }
 

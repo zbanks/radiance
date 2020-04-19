@@ -33,12 +33,13 @@ pub struct ActiveShader<'a> {
 
 pub struct RenderChain {
     pub context: Rc<WebGlRenderingContext>,
-    size: ChainSize,
+    pub size: ChainSize,
+    pub extra_fbo: RefCell<Fbo>,
+
     blit_shader: Shader,
     blank_texture: WebGlTexture,
-    //noise_texture: WebGlTexture,
+    //pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
-    pub extra_fbo: RefCell<Fbo>,
 
     artists: RefCell<HashMap<usize, VideoArtist>>,
 }
@@ -137,7 +138,7 @@ impl Shader {
         {
             Ok(shader)
         } else {
-            Err(Error::new_glsl(
+            Err(Error::glsl(
                 context
                     .get_shader_info_log(&shader)
                     .unwrap_or_else(|| String::from("Unknown error creating shader")),
@@ -165,7 +166,7 @@ impl Shader {
         {
             Ok(program)
         } else {
-            Err(Error::new_glsl(
+            Err(Error::glsl(
                 context
                     .get_program_info_log(&program)
                     .unwrap_or_else(|| String::from("Unknown error creating program object")),
@@ -281,17 +282,18 @@ impl RenderChain {
         Shader::from_fragment_shader(Rc::clone(&self.context), self.size, source)
     }
 
-    pub fn paint(&self, nodes: &[VideoNode]) -> Result<()> {
+    pub fn paint(&self, nodes: &[&VideoNode]) -> Result<()> {
         self.context.disable(GL::DEPTH_TEST);
         self.context.disable(GL::BLEND);
         self.context.clear_color(0.0, 0.0, 0.0, 0.0);
         self.context.clear(GL::COLOR_BUFFER_BIT);
 
         {
+            // TODO: Remove artists which are no longer referenced by any nodes
             let mut artists = self.artists.borrow_mut();
             for node in nodes {
                 if !artists.contains_key(&node.id()) {
-                    artists.insert(node.id(), node.new_artist(&self)?);
+                    artists.insert(node.id(), node.artist(&self)?);
                 }
             }
         }
