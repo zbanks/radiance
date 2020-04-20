@@ -41,7 +41,7 @@ pub struct RenderChain {
     //pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
 
-    artists: RefCell<HashMap<usize, VideoArtist>>,
+    artists: HashMap<usize, VideoArtist>,
 }
 
 impl Fbo {
@@ -228,6 +228,10 @@ impl RenderChain {
             resources::glsl::PLAIN_FRAGMENT,
         )?;
 
+        context.disable(GL::DEPTH_TEST);
+        context.disable(GL::BLEND);
+        context.clear_color(0.0, 0.0, 0.0, 0.0);
+
         let blank_texture = context.create_texture().ok_or("Unable to create texture")?;
         context.bind_texture(GL::TEXTURE_2D, Some(&blank_texture));
         context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
@@ -282,40 +286,29 @@ impl RenderChain {
         Shader::from_fragment_shader(Rc::clone(&self.context), self.size, source)
     }
 
-    pub fn paint(&self, nodes: &[&VideoNode]) -> Result<()> {
-        self.context.disable(GL::DEPTH_TEST);
-        self.context.disable(GL::BLEND);
-        self.context.clear_color(0.0, 0.0, 0.0, 0.0);
-        self.context.clear(GL::COLOR_BUFFER_BIT);
-
-        {
-            // TODO: Remove artists which are no longer referenced by any nodes
-            let mut artists = self.artists.borrow_mut();
-            for node in nodes {
-                if !artists.contains_key(&node.id()) {
-                    artists.insert(node.id(), node.artist(&self)?);
-                }
+    #[allow(clippy::map_entry)]
+    pub fn ensure_node_artists<'a, I>(&'a mut self, nodes: I) -> Result<()>
+    where
+        I: Iterator<Item = &'a mut VideoNode>,
+    {
+        for node in nodes {
+            if !self.artists.contains_key(&node.id()) {
+                self.artists.insert(node.id(), node.artist(&self)?);
             }
         }
-
-        let artists = self.artists.borrow();
-        let mut last_fbo: Option<&RefCell<Fbo>> = None;
-        for node in nodes {
-            let artist = artists.get(&node.id()).ok_or("No artist for node")?;
-            last_fbo = artist.paint(&self, node, last_fbo);
-        }
-
         Ok(())
     }
 
-    pub fn render(&self, node: &VideoNode) -> Result<()> {
-        self.context.disable(GL::DEPTH_TEST);
-        self.context.disable(GL::BLEND);
-        self.context.clear_color(0.0, 0.0, 0.0, 0.0);
+    pub fn node_artist<'a>(&'a self, node: &'a VideoNode) -> Result<&'a VideoArtist> {
+        self.artists
+            .get(&node.id())
+            .ok_or_else(|| "No artist for node".into())
+    }
+
+    pub fn paint(&self, node: &VideoNode) -> Result<()> {
         self.context.clear(GL::COLOR_BUFFER_BIT);
 
-        let artists = self.artists.borrow();
-        let artist = artists.get(&node.id()).ok_or("No artist for node")?;
+        let artist = self.artists.get(&node.id()).ok_or("No artist for node")?;
 
         let active_shader = self.blit_shader.begin_render(self, None);
         self.bind_fbo_to_texture(GL::TEXTURE0, artist.fbo());

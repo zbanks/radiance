@@ -94,10 +94,6 @@ impl VideoNode {
         self.time = time;
     }
 
-    pub fn set_intensity(&mut self, intensity: f64) {
-        self.intensity = intensity;
-    }
-
     pub fn id(&self) -> usize {
         self.id
     }
@@ -119,74 +115,78 @@ impl VideoNode {
 }
 
 impl VideoArtist {
-    pub fn paint<'a>(
+    pub fn render<'a>(
         &'a self,
         chain: &'a RenderChain,
         node: &'a VideoNode,
-        input_fbos: Option<&'a RefCell<Fbo>>,
-    ) -> Option<&'a RefCell<Fbo>> {
-        let on_fbo = input_fbos;
-        let mut last_fbo = on_fbo;
-
+        //input_fbos: Option<&'a RefCell<Fbo>>,
+        input_fbos: &[Option<&'a RefCell<Fbo>>],
+    ) {
         match self {
             VideoArtist::Effect { shader_passes } => {
                 for shader in shader_passes.iter().rev() {
-                    {
-                        let active_shader =
-                            shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
+                    let active_shader = shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
 
-                        chain.bind_fbo_to_texture(GL::TEXTURE0, on_fbo);
-                        let loc = active_shader.get_uniform_location("iInputs");
-                        chain.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
-
-                        let mut channels: Vec<i32> = vec![];
-                        for (i, shader) in shader_passes.iter().enumerate() {
-                            chain.bind_fbo_to_texture(
-                                GL::TEXTURE0 + 1 + i as u32,
-                                Some(&shader.fbo),
-                            );
-                            channels.push(1 + i as i32);
-                        }
-                        let loc = active_shader.get_uniform_location("iChannel");
-                        chain
-                            .context
-                            .uniform1iv_with_i32_array(loc.as_ref(), &channels);
-
-                        let loc = active_shader.get_uniform_location("iIntensity");
-                        chain.context.uniform1f(loc.as_ref(), node.intensity as f32);
-
-                        let loc = active_shader.get_uniform_location("iIntensityIntegral");
-                        chain
-                            .context
-                            .uniform1f(loc.as_ref(), node.intensity_integral as f32);
-
-                        let loc = active_shader.get_uniform_location("iTime");
-                        chain.context.uniform1f(loc.as_ref(), node.time as f32);
-
-                        let loc = active_shader.get_uniform_location("iResolution");
-                        chain.context.uniform2f(
-                            loc.as_ref(),
-                            chain.size.0 as f32,
-                            chain.size.1 as f32,
-                        );
-
-                        active_shader.finish_render();
+                    let mut inputs: Vec<i32> = vec![];
+                    for (i, fbo) in input_fbos.iter().enumerate() {
+                        chain.bind_fbo_to_texture(GL::TEXTURE0 + i as u32, *fbo);
+                        inputs.push(i as i32);
                     }
+                    let loc = active_shader.get_uniform_location("iInputs");
+                    chain
+                        .context
+                        .uniform1iv_with_i32_array(loc.as_ref(), &inputs);
 
+                    let mut channels: Vec<i32> = vec![];
+                    for (i, shader) in shader_passes.iter().enumerate() {
+                        chain.bind_fbo_to_texture(
+                            GL::TEXTURE0 + (inputs.len() + i) as u32,
+                            Some(&shader.fbo),
+                        );
+                        channels.push((inputs.len() + i) as i32);
+                    }
+                    let loc = active_shader.get_uniform_location("iChannel");
+                    chain
+                        .context
+                        .uniform1iv_with_i32_array(loc.as_ref(), &channels);
+
+                    let loc = active_shader.get_uniform_location("iIntensity");
+                    chain.context.uniform1f(loc.as_ref(), node.intensity as f32);
+
+                    let loc = active_shader.get_uniform_location("iIntensityIntegral");
+                    chain
+                        .context
+                        .uniform1f(loc.as_ref(), node.intensity_integral as f32);
+
+                    let loc = active_shader.get_uniform_location("iTime");
+                    chain.context.uniform1f(loc.as_ref(), node.time as f32);
+
+                    let loc = active_shader.get_uniform_location("iStep");
+                    chain.context.uniform1f(loc.as_ref(), node.time as f32);
+
+                    let loc = active_shader.get_uniform_location("iFPS");
+                    chain.context.uniform1f(loc.as_ref(), 60.);
+
+                    let loc = active_shader.get_uniform_location("iAudio");
+                    chain
+                        .context
+                        .uniform4fv_with_f32_array(loc.as_ref(), &[0.1, 0.2, 0.3, 0.4]);
+
+                    let loc = active_shader.get_uniform_location("iResolution");
+                    chain
+                        .context
+                        .uniform2f(loc.as_ref(), chain.size.0 as f32, chain.size.1 as f32);
+
+                    active_shader.finish_render();
                     chain.extra_fbo.swap(&shader.fbo);
-                    last_fbo = Some(&shader.fbo);
                 }
             }
         };
-
-        last_fbo
     }
 
-    pub fn fbo<'a> (&'a self) -> Option<&'a RefCell<Fbo>> {
+    pub fn fbo<'a>(&'a self) -> Option<&'a RefCell<Fbo>> {
         match self {
-            VideoArtist::Effect { shader_passes } => {
-                Some(&shader_passes.first()?.fbo)
-            }
+            VideoArtist::Effect { shader_passes } => Some(&shader_passes.first()?.fbo),
         }
     }
 }

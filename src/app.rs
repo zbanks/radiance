@@ -17,12 +17,16 @@ use web_sys::WebGlRenderingContext;
 
 pub struct App {
     link: ComponentLink<Self>,
-    model: Option<RenderChain>,
     node_ref: NodeRef,
     render_loop: Option<Box<dyn Task>>,
+    chain: Option<RenderChain>,
+    model: Model,
+}
+
+struct Model {
     nodes: HashMap<usize, VideoNode>,
     graph: Vec<usize>,
-    show: Option<usize>
+    show: Option<usize>,
 }
 
 pub enum Msg {
@@ -37,15 +41,12 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        info!("App started");
         App {
             link,
-            model: None,
             node_ref: Default::default(),
             render_loop: None,
-            nodes: Default::default(),
-            graph: Default::default(),
-            show: None,
+            chain: None,
+            model: Model::new(),
         }
     }
 
@@ -59,34 +60,30 @@ impl Component for App {
                 .dyn_into::<WebGlRenderingContext>()
                 .unwrap(),
         );
-        self.model = Some(RenderChain::new(Rc::clone(&context)).unwrap());
+        self.chain = Some(RenderChain::new(Rc::clone(&context)).unwrap());
 
-        self.append_node("purple").unwrap();
-        self.append_node("test").unwrap();
-        self.append_node("resat").unwrap();
-
-        self.schedule_next_render();
-
+        self.schedule_next_paint();
         true
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Render(timestamp) => {
-                self.render_gl(timestamp);
+                self.model.paint(self.chain.as_mut().unwrap(), timestamp);
+                self.schedule_next_paint();
                 false
             }
             Msg::SetIntensity(id, intensity) => {
-                self.nodes.get_mut(&id).unwrap().set_intensity(intensity);
+                self.model.nodes.get_mut(&id).unwrap().intensity = intensity;
                 true
             }
             Msg::Raise(id) => {
-                self.graph.retain(|x| *x != id);
-                self.graph.push(id);
+                self.model.graph.retain(|x| *x != id);
+                self.model.graph.push(id);
                 true
             }
             Msg::Show(id) => {
-                self.show = Some(id);
+                self.model.show = Some(id);
                 false
             }
         }
@@ -99,7 +96,7 @@ impl Component for App {
                 <h1>{"Radiance"}</h1>
                 <canvas ref={self.node_ref.clone()} width=512 height=512 />
                 <div>
-                    { self.graph.iter().map(|n| self.view_node(*n)).collect::<Html>() }
+                    { self.model.graph.iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
             </div>
         }
@@ -107,28 +104,7 @@ impl Component for App {
 }
 
 impl App {
-    fn render_gl(&mut self, time: f64) {
-        for node in &mut self.nodes.values_mut() {
-            node.set_time(time / 1e3);
-        }
-        let mut nodes = Vec::new();
-        for id in &self.graph {
-            nodes.push(self.nodes.get(id).unwrap());
-        }
-        let nodes = nodes;
-        //let nodes = self.graph.iter().map(move |i| self.nodes.get(i).unwrap()).collect::<Vec<_>>();
-        let model = self.model.as_mut().unwrap();
-        model.paint(&nodes).unwrap();
-
-        if let Some(id) = self.show {
-            let node = self.nodes.get(&id).unwrap();
-            model.render(&node).unwrap();
-        }
-
-        self.schedule_next_render();
-    }
-
-    fn schedule_next_render(&mut self) {
+    fn schedule_next_paint(&mut self) {
         let render_frame = self.link.callback(Msg::Render);
         let handle = RenderService::new().request_animation_frame(render_frame);
 
@@ -136,26 +112,21 @@ impl App {
         self.render_loop = Some(Box::new(handle));
     }
 
-    fn append_node(&mut self, name: &str) -> Result<()> {
-        let node = VideoNode::effect(name)?;
-        let id = node.id;
-        self.nodes.insert(id, node);
-        self.graph.push(id);
-        Ok(())
-    }
-
     fn view_node(&self, id: usize) -> Html {
-        let node = self.nodes.get(&id).unwrap();
+        let node = self.model.nodes.get(&id).unwrap();
+        const M: f64 = 1000.;
         html! {
             <div>
-                { &node.name } {": "}
                 <input
                     oninput={
                         let id = node.id;
                         let old_intensity = node.intensity;
-                        self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().unwrap_or(old_intensity)))
+                        self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().map_or(old_intensity, |x: f64| x / M)))
                     }
-                    value=node.intensity
+                    value=node.intensity * M
+                    type="range"
+                    min=0
+                    max=M
                 />
                 <button
                     onclick={
@@ -169,7 +140,63 @@ impl App {
                         self.link.callback(move |_| Msg::Show(id))
                     }
                 >{"Show"}</button>
+
+                { &node.name }
             </div>
+        }
+    }
+}
+
+impl Model {
+    fn new() -> Model {
+        let mut model = Model {
+            nodes: Default::default(),
+            graph: Default::default(),
+            show: None,
+        };
+
+        model.append_node("oscope", 1.0).unwrap();
+        model.append_node("spin", 0.2).unwrap();
+        model.append_node("zoomin", 0.3).unwrap();
+        model.append_node("rjump", 0.9).unwrap();
+        model.append_node("lpf", 0.3).unwrap();
+        model.append_node("tunnel", 0.3).unwrap();
+        model.append_node("melt", 0.4).unwrap();
+        model.show = model.graph.last().copied();
+
+        model
+    }
+
+    fn append_node(&mut self, name: &str, intensity: f64) -> Result<()> {
+        let mut node = VideoNode::effect(name)?;
+        node.intensity = intensity;
+        let id = node.id;
+        self.nodes.insert(id, node);
+        self.graph.push(id);
+        Ok(())
+    }
+
+    fn paint(&mut self, chain: &mut RenderChain, time: f64) {
+        for node in &mut self.nodes.values_mut() {
+            node.set_time(time / 1e3);
+        }
+        chain.ensure_node_artists(self.nodes.values_mut()).unwrap();
+
+        let mut last_id = None;
+        for id in self.graph.iter() {
+            let node = self.nodes.get(id).unwrap();
+            let artist = chain.node_artist(node).unwrap();
+            let last_fbo = last_id
+                .and_then(|id| self.nodes.get(id))
+                .and_then(|node| chain.node_artist(node).ok())
+                .and_then(|artist| artist.fbo());
+            artist.render(chain, node, &[last_fbo]);
+            last_id = Some(id);
+        }
+
+        if let Some(id) = self.show {
+            let node = self.nodes.get(&id).unwrap();
+            chain.paint(&node).unwrap();
         }
     }
 }
