@@ -215,11 +215,13 @@ impl Drop for Shader {
 }
 
 impl RenderChain {
-    pub fn new(context: Rc<WebGlRenderingContext>) -> Result<RenderChain> {
+    pub fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<RenderChain> {
+        /*
         let size = (
             context.drawing_buffer_width(),
             context.drawing_buffer_height(),
         );
+        */
         let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context), size)?);
 
         let blit_shader = Shader::from_fragment_shader(
@@ -306,8 +308,6 @@ impl RenderChain {
     }
 
     pub fn paint(&self, node: &VideoNode) -> Result<()> {
-        self.context.clear(GL::COLOR_BUFFER_BIT);
-
         let artist = self.artists.get(&node.id()).ok_or("No artist for node")?;
 
         let active_shader = self.blit_shader.begin_render(self, None);

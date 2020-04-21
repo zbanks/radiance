@@ -9,33 +9,49 @@ use web_sys::WebGlRenderingContext as GL;
 pub struct VideoNode {
     pub id: usize,
     pub name: String,
-    pub intensity: f64,
     pub n_inputs: usize,
+    pub kind: VideoNodeKind,
     time: f64,
-    intensity_integral: f64,
-    kind: VideoNodeKind,
 }
 
 #[derive(Debug)]
-enum VideoNodeKind {
+pub enum VideoNodeKind {
     Effect {
+        intensity: f64,
+        intensity_integral: f64,
         shader_sources: Vec<String>,
         properties: HashMap<String, String>,
     },
+    Output,
 }
 
 pub enum VideoArtist {
     Effect { shader_passes: Vec<Shader> },
+    Output { blit_shader: Shader },
 }
 
 impl VideoNode {
-    pub fn effect(name: &str) -> Result<VideoNode> {
-        let program = resources::effects::lookup(name).ok_or("Unknown effect name")?;
-        let id = unsafe {
+    fn generate_id() -> usize {
+        unsafe {
             static mut NEXT_ID: usize = 0;
             NEXT_ID += 1;
             NEXT_ID
-        };
+        }
+    }
+
+    pub fn output() -> Result<VideoNode> {
+        let id = Self::generate_id();
+        Ok(VideoNode {
+            id,
+            name: String::from("Output"),
+            n_inputs: 1,
+            time: 0.0,
+            kind: VideoNodeKind::Output,
+        })
+    }
+
+    pub fn effect(name: &str) -> Result<VideoNode> {
+        let program = resources::effects::lookup(name).ok_or("Unknown effect name")?;
 
         let header_source = String::from(resources::glsl::EFFECT_HEADER);
         let mut source = String::new();
@@ -74,18 +90,21 @@ impl VideoNode {
         }
         shader_sources.push(source);
 
-        let n_inputs: usize = properties.get("inputCount").map_or(Ok(1), |x| x.parse().map_err(|_| "Invalid inputCount"))?;
+        let n_inputs: usize = properties
+            .get("inputCount")
+            .map_or(Ok(1), |x| x.parse().map_err(|_| "Invalid inputCount"))?;
 
         info!("Loaded effect: {:?}", name);
 
+        let id = Self::generate_id();
         Ok(VideoNode {
             id,
             name: String::from(name),
             n_inputs,
             time: 0.0,
-            intensity: 0.8,
-            intensity_integral: 0.0,
             kind: VideoNodeKind::Effect {
+                intensity: 0.0,
+                intensity_integral: 0.0,
                 shader_sources,
                 properties,
             },
@@ -94,7 +113,17 @@ impl VideoNode {
 
     pub fn set_time(&mut self, time: f64) {
         let dt = time - self.time;
-        self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
+        match self.kind {
+            VideoNodeKind::Effect {
+                intensity,
+                ref mut intensity_integral,
+                ..
+            } => {
+                *intensity_integral = (*intensity_integral + dt * intensity) % 1024.0;
+            }
+            VideoNodeKind::Output => (),
+        }
+        //self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
         self.time = time;
     }
 
@@ -114,6 +143,10 @@ impl VideoNode {
                     .collect::<Result<_>>()?;
                 Ok(VideoArtist::Effect { shader_passes })
             }
+            VideoNodeKind::Output => {
+                let blit_shader = chain.compile_fragment_shader(resources::glsl::PLAIN_FRAGMENT)?;
+                Ok(VideoArtist::Output { blit_shader })
+            }
         }
     }
 }
@@ -128,6 +161,14 @@ impl VideoArtist {
     ) {
         match self {
             VideoArtist::Effect { shader_passes } => {
+                let (intensity, intensity_integral) = match node.kind {
+                    VideoNodeKind::Effect {
+                        intensity,
+                        intensity_integral,
+                        ..
+                    } => (intensity, intensity_integral),
+                    _ => (0.0, 0.0),
+                };
                 for shader in shader_passes.iter().rev() {
                     let active_shader = shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
 
@@ -155,12 +196,12 @@ impl VideoArtist {
                         .uniform1iv_with_i32_array(loc.as_ref(), &channels);
 
                     let loc = active_shader.get_uniform_location("iIntensity");
-                    chain.context.uniform1f(loc.as_ref(), node.intensity as f32);
+                    chain.context.uniform1f(loc.as_ref(), intensity as f32);
 
                     let loc = active_shader.get_uniform_location("iIntensityIntegral");
                     chain
                         .context
-                        .uniform1f(loc.as_ref(), node.intensity_integral as f32);
+                        .uniform1f(loc.as_ref(), intensity_integral as f32);
 
                     let loc = active_shader.get_uniform_location("iTime");
                     chain.context.uniform1f(loc.as_ref(), node.time as f32);
@@ -185,12 +226,31 @@ impl VideoArtist {
                     chain.extra_fbo.swap(&shader.fbo);
                 }
             }
+            VideoArtist::Output { blit_shader } => {
+                // TODO: An unfortunate part about this implementation is that the Output kind
+                // requires an extra Shader (with associated FBO) & blit operation
+                // Ideally this artist could just return its first input (this is how it was
+                // implemented in C++) -- however, it's hard to make the lifetime of the input
+                // sufficient. From a high level, it's hard to guarantee that the input FBO still
+                // holds the same contents when `artist.fbo()` is called as when
+                // `artist.render(...)` was originally called.
+                let active_shader =
+                    blit_shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
+
+                chain.bind_fbo_to_texture(GL::TEXTURE0, input_fbos[0]);
+                let loc = active_shader.get_uniform_location("iInputs");
+                chain.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+
+                active_shader.finish_render();
+                chain.extra_fbo.swap(&blit_shader.fbo);
+            }
         };
     }
 
     pub fn fbo<'a>(&'a self) -> Option<&'a RefCell<Fbo>> {
         match self {
             VideoArtist::Effect { shader_passes } => Some(&shader_passes.first()?.fbo),
+            VideoArtist::Output { blit_shader } => Some(&blit_shader.fbo),
         }
     }
 }

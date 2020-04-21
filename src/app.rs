@@ -9,7 +9,7 @@ use yew::services::{RenderService, Task};
 
 use crate::err::Result;
 use crate::graphics::RenderChain;
-use crate::video_node::VideoNode;
+use crate::video_node::{VideoNode, VideoNodeKind};
 use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -33,7 +33,6 @@ pub enum Msg {
     Render(f64),
     SetIntensity(usize, f64),
     Raise(usize),
-    Show(usize),
 }
 
 impl Component for App {
@@ -60,7 +59,8 @@ impl Component for App {
                 .dyn_into::<WebGlRenderingContext>()
                 .unwrap(),
         );
-        self.chain = Some(RenderChain::new(Rc::clone(&context)).unwrap());
+        let chain_size = (256, 256);
+        self.chain = Some(RenderChain::new(Rc::clone(&context), chain_size).unwrap());
 
         self.schedule_next_paint();
         true
@@ -74,7 +74,15 @@ impl Component for App {
                 false
             }
             Msg::SetIntensity(id, intensity) => {
-                self.model.graph.nodes.get_mut(&id).unwrap().intensity = intensity;
+                let node = self.model.graph.nodes.get_mut(&id).unwrap();
+                if let VideoNodeKind::Effect {
+                    intensity: ref mut node_intensity,
+                    ..
+                } = node.kind
+                {
+                    *node_intensity = intensity;
+                };
+                //self.model.graph.nodes.get_mut(&id).unwrap().intensity = intensity;
                 true
             }
             Msg::Raise(id) => {
@@ -82,14 +90,10 @@ impl Component for App {
                     if show_id != id {
                         self.model.graph.disconnect_node(id).unwrap();
                         self.model.graph.add_edge_by_ids(show_id, id, 0).unwrap();
-                        self.model.show = Some(id);
+                        //self.model.show = Some(id);
                     }
                 }
                 true
-            }
-            Msg::Show(id) => {
-                self.model.show = Some(id);
-                false
             }
         }
     }
@@ -100,7 +104,7 @@ impl Component for App {
             <div class="hello">
                 <h1>{"Radiance"}</h1>
                 <canvas ref={self.node_ref.clone()} width=512 height=512 />
-                <div>
+                <div class={"node-list"}>
                     { self.model.graph.toposort().iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
             </div>
@@ -120,30 +124,31 @@ impl App {
     fn view_node(&self, node: &VideoNode) -> Html {
         const M: f64 = 1000.;
         html! {
-            <div>
-                <input
-                    oninput={
-                        let id = node.id;
-                        let old_intensity = node.intensity;
-                        self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().map_or(old_intensity, |x: f64| x / M)))
+            <div class={"node"}>
+                {
+                    match node.kind {
+                        VideoNodeKind::Effect{intensity, ..} => html! {
+                            <input
+                                oninput={
+                                    let id = node.id;
+                                    let old_intensity = intensity;
+                                    self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().map_or(old_intensity, |x: f64| x / M)))
+                                }
+                                value=intensity * M
+                                type="range"
+                                min=0
+                                max=M
+                            />
+                        },
+                        VideoNodeKind::Output => html! {},
                     }
-                    value=node.intensity * M
-                    type="range"
-                    min=0
-                    max=M
-                />
+                }
                 <button
                     onclick={
                         let id = node.id;
                         self.link.callback(move |_| Msg::Raise(id))
                     }
                 >{"Raise"}</button>
-                <button
-                    onclick={
-                        let id = node.id;
-                        self.link.callback(move |_| Msg::Show(id))
-                    }
-                >{"Show"}</button>
 
                 { &node.name }
             </div>
@@ -184,7 +189,7 @@ impl Graph {
         // TODO: safety check
         if src_id == dst_id {
             return Err("Adding self edge would cause cycle".into());
-        } 
+        }
         self.digraph.add_edge(src_id, dst_id, input);
         self.assert_no_cycles();
         Ok(())
@@ -249,32 +254,52 @@ impl Model {
             show: None,
         };
 
-        let mut ids = vec![];
-        ids.push(model.append_node("oscope", 1.0).unwrap());
-        ids.push(model.append_node("spin", 0.2).unwrap());
-        ids.push(model.append_node("zoomin", 0.3).unwrap());
-        ids.push(model.append_node("rjump", 0.9).unwrap());
-        ids.push(model.append_node("lpf", 0.3).unwrap());
-        ids.push(model.append_node("tunnel", 0.3).unwrap());
-        ids.push(model.append_node("melt", 0.4).unwrap());
-        ids.push(model.append_node("composite", 0.5).unwrap());
-
-        for (a, b) in ids.iter().zip(ids.iter().skip(1)) {
-            model.graph.add_edge_by_ids(*a, *b, 0).unwrap();
-        }
-
-        model.show = ids.last().copied();
-
-        let id = model.append_node("test", 0.7).unwrap();
-        model.graph.add_edge_by_ids(id, model.show.unwrap(), 1).unwrap();
-
+        model.setup().unwrap();
         model
     }
 
     /// This is a temporary utility function that will get refactored
-    fn append_node(&mut self, name: &str, intensity: f64) -> Result<usize> {
+    fn setup(&mut self) -> Result<()> {
+        let mut ids = vec![];
+        ids.push(self.append_node("oscope", 1.0)?);
+        ids.push(self.append_node("spin", 0.2)?);
+        ids.push(self.append_node("zoomin", 0.3)?);
+        ids.push(self.append_node("rjump", 0.9)?);
+        ids.push(self.append_node("lpf", 0.3)?);
+        ids.push(self.append_node("tunnel", 0.3)?);
+        ids.push(self.append_node("melt", 0.4)?);
+        ids.push(self.append_node("composite", 0.5)?);
+
+        for (a, b) in ids.iter().zip(ids.iter().skip(1)) {
+            self.graph.add_edge_by_ids(*a, *b, 0)?;
+        }
+
+        self.show = ids.last().copied();
+
+        let id = self.append_node("test", 0.7)?;
+        self.graph.add_edge_by_ids(id, *ids.last().unwrap(), 1)?;
+
+        let output_node = VideoNode::output()?;
+        let output_id = output_node.id;
+        self.graph.add_videonode(output_node);
+        self.graph
+            .add_edge_by_ids(*ids.last().unwrap(), output_id, 0)?;
+
+        self.show = Some(output_id);
+
+        Ok(())
+    }
+
+    /// This is a temporary utility function that will get refactored
+    fn append_node(&mut self, name: &str, value: f64) -> Result<usize> {
         let mut node = VideoNode::effect(name)?;
-        node.intensity = intensity;
+        if let VideoNodeKind::Effect {
+            ref mut intensity, ..
+        } = node.kind
+        {
+            *intensity = value;
+        }
+
         let id = node.id;
         self.graph.add_videonode(node);
         /*
@@ -294,6 +319,7 @@ impl Model {
             .ensure_node_artists(self.graph.nodes.values_mut())
             .unwrap();
 
+        chain.context.viewport(0, 0, chain.size.0, chain.size.1);
         for node in self.graph.toposort() {
             let artist = chain.node_artist(node).unwrap();
             let fbos = self
@@ -308,9 +334,23 @@ impl Model {
             artist.render(chain, node, &fbos);
         }
 
+        let canvas_size = (
+            chain.context.drawing_buffer_width(),
+            chain.context.drawing_buffer_height(),
+        );
+        chain.context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
         if let Some(id) = self.show {
+            chain.context.viewport(0, canvas_size.1 - 300, 300, 300);
+
             let node = self.graph.nodes.get(&id).unwrap();
             chain.paint(&node).unwrap();
+        }
+
+        for (i, node) in self.graph.toposort().iter().enumerate() {
+            chain
+                .context
+                .viewport(310, canvas_size.1 - (50 * i) as i32 - 50, 48, 48);
+            chain.paint(node).unwrap();
         }
     }
 }
