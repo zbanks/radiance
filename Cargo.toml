@@ -9,10 +9,11 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 log = "0.4"
-strum = "0.17"
-strum_macros = "0.17"
-serde = "1"
-serde_derive = "1"
+#strum = "0.17"
+#strum_macros = "0.17"
+#serde = "1"
+#serde_derive = "1"
+petgraph = "0.5"
 wasm-bindgen = "0.2.60"
 wasm-bindgen-futures = "0.4.10"
 web_logger = "0.2"

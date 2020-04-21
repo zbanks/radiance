@@ -10,6 +10,7 @@ use yew::services::{RenderService, Task};
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::video_node::VideoNode;
+use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
@@ -24,8 +25,7 @@ pub struct App {
 }
 
 struct Model {
-    nodes: HashMap<usize, VideoNode>,
-    graph: Vec<usize>,
+    graph: Graph,
     show: Option<usize>,
 }
 
@@ -74,12 +74,17 @@ impl Component for App {
                 false
             }
             Msg::SetIntensity(id, intensity) => {
-                self.model.nodes.get_mut(&id).unwrap().intensity = intensity;
+                self.model.graph.nodes.get_mut(&id).unwrap().intensity = intensity;
                 true
             }
             Msg::Raise(id) => {
-                self.model.graph.retain(|x| *x != id);
-                self.model.graph.push(id);
+                if let Some(show_id) = self.model.show {
+                    if show_id != id {
+                        self.model.graph.disconnect_node(id).unwrap();
+                        self.model.graph.add_edge_by_ids(show_id, id, 0).unwrap();
+                        self.model.show = Some(id);
+                    }
+                }
                 true
             }
             Msg::Show(id) => {
@@ -96,7 +101,7 @@ impl Component for App {
                 <h1>{"Radiance"}</h1>
                 <canvas ref={self.node_ref.clone()} width=512 height=512 />
                 <div>
-                    { self.model.graph.iter().map(|n| self.view_node(*n)).collect::<Html>() }
+                    { self.model.graph.toposort().iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
             </div>
         }
@@ -112,8 +117,7 @@ impl App {
         self.render_loop = Some(Box::new(handle));
     }
 
-    fn view_node(&self, id: usize) -> Html {
-        let node = self.model.nodes.get(&id).unwrap();
+    fn view_node(&self, node: &VideoNode) -> Html {
         const M: f64 = 1000.;
         html! {
             <div>
@@ -147,55 +151,165 @@ impl App {
     }
 }
 
+/// Directed graph abstraction that owns VideoNodes
+/// - Enforces that there are no cycles
+/// - Each VideoNode can have up to `node.n_inputs` incoming edges,
+///     which must all have unique edge weights in [0..node.n_inputs)
+struct Graph {
+    nodes: HashMap<usize, VideoNode>,
+    digraph: DiGraphMap<usize, usize>,
+}
+
+impl Graph {
+    fn new() -> Graph {
+        Graph {
+            digraph: DiGraphMap::new(),
+            nodes: Default::default(),
+        }
+    }
+
+    fn add_videonode(&mut self, node: VideoNode) {
+        self.digraph.add_node(node.id);
+        self.nodes.insert(node.id, node);
+    }
+
+    /*
+    fn remove_videonode(&mut self, node: &VideoNode) {
+        self.digraph.remove_node(node.id);
+        self.nodes.remove(&node.id);
+    }
+    */
+
+    fn add_edge_by_ids(&mut self, src_id: usize, dst_id: usize, input: usize) -> Result<()> {
+        // TODO: safety check
+        if src_id == dst_id {
+            return Err("Adding self edge would cause cycle".into());
+        } 
+        self.digraph.add_edge(src_id, dst_id, input);
+        self.assert_no_cycles();
+        Ok(())
+    }
+
+    fn toposort(&self) -> Vec<&VideoNode> {
+        petgraph::algo::toposort(&self.digraph, None)
+            .unwrap()
+            .iter()
+            .map(|id| self.nodes.get(id).unwrap())
+            .collect()
+    }
+
+    fn node_inputs(&self, node: &VideoNode) -> Vec<Option<&VideoNode>> {
+        let mut inputs = Vec::new();
+        inputs.resize(node.n_inputs, None);
+
+        for src_id in self
+            .digraph
+            .neighbors_directed(node.id, petgraph::Direction::Incoming)
+        {
+            let src_index = *self.digraph.edge_weight(src_id, node.id).unwrap();
+            if src_index < node.n_inputs {
+                inputs[src_index] = self.nodes.get(&src_id);
+            }
+        }
+
+        inputs
+    }
+
+    fn disconnect_node(&mut self, id: usize) -> Result<()> {
+        let node = self.nodes.get(&id).unwrap();
+        let inputs = self.node_inputs(node);
+        let src_id = inputs.first().unwrap_or(&None).map(|n| n.id);
+        let edges_to_remove: Vec<(usize, usize)> = self
+            .digraph
+            .neighbors_directed(node.id, petgraph::Direction::Outgoing)
+            .map(|dst_id| {
+                let dst_index = *self.digraph.edge_weight(node.id, dst_id).unwrap();
+                (dst_id, dst_index)
+            })
+            .collect();
+        for (dst_id, dst_index) in edges_to_remove {
+            self.digraph.remove_edge(node.id, dst_id);
+            if let Some(id) = src_id {
+                self.digraph.add_edge(id, dst_id, dst_index);
+            }
+        }
+        self.assert_no_cycles();
+        Ok(())
+    }
+
+    fn assert_no_cycles(&self) {
+        petgraph::algo::toposort(&self.digraph, None).unwrap();
+    }
+}
+
 impl Model {
     fn new() -> Model {
         let mut model = Model {
-            nodes: Default::default(),
-            graph: Default::default(),
+            graph: Graph::new(),
             show: None,
         };
 
-        model.append_node("oscope", 1.0).unwrap();
-        model.append_node("spin", 0.2).unwrap();
-        model.append_node("zoomin", 0.3).unwrap();
-        model.append_node("rjump", 0.9).unwrap();
-        model.append_node("lpf", 0.3).unwrap();
-        model.append_node("tunnel", 0.3).unwrap();
-        model.append_node("melt", 0.4).unwrap();
-        model.show = model.graph.last().copied();
+        let mut ids = vec![];
+        ids.push(model.append_node("oscope", 1.0).unwrap());
+        ids.push(model.append_node("spin", 0.2).unwrap());
+        ids.push(model.append_node("zoomin", 0.3).unwrap());
+        ids.push(model.append_node("rjump", 0.9).unwrap());
+        ids.push(model.append_node("lpf", 0.3).unwrap());
+        ids.push(model.append_node("tunnel", 0.3).unwrap());
+        ids.push(model.append_node("melt", 0.4).unwrap());
+        ids.push(model.append_node("composite", 0.5).unwrap());
+
+        for (a, b) in ids.iter().zip(ids.iter().skip(1)) {
+            model.graph.add_edge_by_ids(*a, *b, 0).unwrap();
+        }
+
+        model.show = ids.last().copied();
+
+        let id = model.append_node("test", 0.7).unwrap();
+        model.graph.add_edge_by_ids(id, model.show.unwrap(), 1).unwrap();
 
         model
     }
 
-    fn append_node(&mut self, name: &str, intensity: f64) -> Result<()> {
+    /// This is a temporary utility function that will get refactored
+    fn append_node(&mut self, name: &str, intensity: f64) -> Result<usize> {
         let mut node = VideoNode::effect(name)?;
         node.intensity = intensity;
         let id = node.id;
-        self.nodes.insert(id, node);
-        self.graph.push(id);
-        Ok(())
+        self.graph.add_videonode(node);
+        /*
+        if let Some(prev_id) = self.show {
+            self.graph.add_edge_by_ids(prev_id, id, 0)?;
+        }
+        self.show = Some(id);
+        */
+        Ok(id)
     }
 
     fn paint(&mut self, chain: &mut RenderChain, time: f64) {
-        for node in &mut self.nodes.values_mut() {
+        for node in &mut self.graph.nodes.values_mut() {
             node.set_time(time / 1e3);
         }
-        chain.ensure_node_artists(self.nodes.values_mut()).unwrap();
+        chain
+            .ensure_node_artists(self.graph.nodes.values_mut())
+            .unwrap();
 
-        let mut last_id = None;
-        for id in self.graph.iter() {
-            let node = self.nodes.get(id).unwrap();
+        for node in self.graph.toposort() {
             let artist = chain.node_artist(node).unwrap();
-            let last_fbo = last_id
-                .and_then(|id| self.nodes.get(id))
-                .and_then(|node| chain.node_artist(node).ok())
-                .and_then(|artist| artist.fbo());
-            artist.render(chain, node, &[last_fbo]);
-            last_id = Some(id);
+            let fbos = self
+                .graph
+                .node_inputs(node)
+                .iter()
+                .map(|n| {
+                    n.and_then(|node| chain.node_artist(node).ok())
+                        .and_then(|artist| artist.fbo())
+                })
+                .collect::<Vec<_>>();
+            artist.render(chain, node, &fbos);
         }
 
         if let Some(id) = self.show {
-            let node = self.nodes.get(&id).unwrap();
+            let node = self.graph.nodes.get(&id).unwrap();
             chain.paint(&node).unwrap();
         }
     }

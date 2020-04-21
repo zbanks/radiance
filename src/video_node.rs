@@ -10,6 +10,7 @@ pub struct VideoNode {
     pub id: usize,
     pub name: String,
     pub intensity: f64,
+    pub n_inputs: usize,
     time: f64,
     intensity_integral: f64,
     kind: VideoNodeKind,
@@ -73,11 +74,14 @@ impl VideoNode {
         }
         shader_sources.push(source);
 
-        info!("Loaded effect: {:?}", properties);
+        let n_inputs: usize = properties.get("inputCount").map_or(Ok(1), |x| x.parse().map_err(|_| "Invalid inputCount"))?;
+
+        info!("Loaded effect: {:?}", name);
 
         Ok(VideoNode {
             id,
             name: String::from(name),
+            n_inputs,
             time: 0.0,
             intensity: 0.8,
             intensity_integral: 0.0,
