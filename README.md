@@ -1,17 +1,5 @@
-## About
+# HTML5 Radiance
 
-This template shows how to create a web app using Yew and wasm-pack. 
+Radiance for the web, written in Rust.
 
-## Usage
-
-### Build with `yarn run build`
-
-```
-yarn run build
-```
-
-### Serve locally with `yarn run start:dev`
-
-```
-yarn run start:dev
-```
+[Run it!](https://zbanks.github.io/radiance-web/dist/index.html)
