@@ -1,6 +1,7 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain, Shader};
 use crate::resources;
+
 use log::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -123,7 +124,6 @@ impl VideoNode {
             }
             VideoNodeKind::Output => (),
         }
-        //self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
         self.time = time;
     }
 
@@ -132,7 +132,6 @@ impl VideoNode {
     }
 
     pub fn artist(&self, chain: &RenderChain) -> Result<VideoArtist> {
-        info!("New artist! {:?}", self.kind);
         match self.kind {
             VideoNodeKind::Effect {
                 ref shader_sources, ..
@@ -156,7 +155,6 @@ impl VideoArtist {
         &'a self,
         chain: &'a RenderChain,
         node: &'a VideoNode,
-        //input_fbos: Option<&'a RefCell<Fbo>>,
         input_fbos: &[Option<&'a RefCell<Fbo>>],
     ) {
         match self {
@@ -171,11 +169,21 @@ impl VideoArtist {
                 };
                 for shader in shader_passes.iter().rev() {
                     let active_shader = shader.begin_render(chain, Some(&chain.extra_fbo.borrow()));
+                    let mut tex_index: u32 = 0;
+
+                    chain.context.active_texture(GL::TEXTURE0 + tex_index);
+                    chain
+                        .context
+                        .bind_texture(GL::TEXTURE_2D, Some(&chain.noise_texture));
+                    let loc = active_shader.get_uniform_location("iNoise");
+                    chain.context.uniform1i(loc.as_ref(), tex_index as i32);
+                    tex_index += 1;
 
                     let mut inputs: Vec<i32> = vec![];
-                    for (i, fbo) in input_fbos.iter().enumerate() {
-                        chain.bind_fbo_to_texture(GL::TEXTURE0 + i as u32, *fbo);
-                        inputs.push(i as i32);
+                    for fbo in input_fbos {
+                        chain.bind_fbo_to_texture(GL::TEXTURE0 + tex_index, *fbo);
+                        inputs.push(tex_index as i32);
+                        tex_index += 1;
                     }
                     let loc = active_shader.get_uniform_location("iInputs");
                     chain
@@ -183,12 +191,10 @@ impl VideoArtist {
                         .uniform1iv_with_i32_array(loc.as_ref(), &inputs);
 
                     let mut channels: Vec<i32> = vec![];
-                    for (i, shader) in shader_passes.iter().enumerate() {
-                        chain.bind_fbo_to_texture(
-                            GL::TEXTURE0 + (inputs.len() + i) as u32,
-                            Some(&shader.fbo),
-                        );
-                        channels.push((inputs.len() + i) as i32);
+                    for shader in shader_passes {
+                        chain.bind_fbo_to_texture(GL::TEXTURE0 + tex_index, Some(&shader.fbo));
+                        channels.push(tex_index as i32);
+                        tex_index += 1;
                     }
                     let loc = active_shader.get_uniform_location("iChannel");
                     chain

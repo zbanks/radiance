@@ -1,20 +1,15 @@
-use log::*;
-//use serde_derive::{Deserialize, Serialize};
-//use strum::IntoEnumIterator;
-//use strum_macros::{EnumIter, ToString};
-//use yew::format::Json;
-//use yew::services::storage::{Area, StorageService};
-use yew::prelude::*;
-use yew::services::{RenderService, Task};
-
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::video_node::{VideoNode, VideoNodeKind};
+
+use log::*;
 use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
 use web_sys::WebGlRenderingContext;
+use yew::prelude::*;
+use yew::services::{RenderService, Task};
 
 pub struct App {
     link: ComponentLink<Self>,
@@ -34,6 +29,8 @@ struct Model {
 pub enum Msg {
     Render(f64),
     SetIntensity(usize, f64),
+    SetChainSize(i32),
+    AddEffectNode(String),
     //Raise(usize),
 }
 
@@ -80,7 +77,20 @@ impl Component for App {
         match msg {
             Msg::Render(timestamp) => {
                 let chain = self.chain.as_mut().unwrap();
-                let canvas = self.canvas_ref.cast::<web_sys::Element>().unwrap();
+
+                // Force the canvas to be the same size as the viewport
+                let canvas = self
+                    .canvas_ref
+                    .cast::<web_sys::HtmlCanvasElement>()
+                    .unwrap();
+                let canvas_width = canvas.client_width() as u32;
+                let canvas_height = canvas.client_height() as u32;
+                if canvas.width() != canvas_width {
+                    canvas.set_width(canvas_width);
+                }
+                if canvas.height() != canvas_height {
+                    canvas.set_height(canvas_height);
+                }
 
                 // Render the chain to textures
                 self.model.render(chain, timestamp);
@@ -111,34 +121,59 @@ impl Component for App {
                 {
                     *node_intensity = intensity;
                 };
-                //self.model.graph.nodes.get_mut(&id).unwrap().intensity = intensity;
                 true
-            } /*
-              Msg::Raise(id) => {
-                  if let Some(show_id) = self.model.show {
-                      if show_id != id {
-                          self.model.graph.disconnect_node(id).unwrap();
-                          self.model.graph.add_edge_by_ids(show_id, id, 0).unwrap();
-                          //self.model.show = Some(id);
-                      }
-                  }
-                  true
-              }
-              */
+            }
+            Msg::SetChainSize(size) => {
+                let chain_size = (size, size);
+                self.chain = Some(
+                    RenderChain::new(Rc::clone(&self.chain.as_ref().unwrap().context), chain_size)
+                        .unwrap(),
+                );
+                false
+            }
+            Msg::AddEffectNode(ref name) => {
+                if let Ok(id) = self.model.append_node(name, 0.0) {
+                    let output_id = self.model.show.unwrap();
+                    self.model.graph.add_edge_by_ids(id, output_id, 0).unwrap();
+                    self.node_refs.insert(id, Default::default());
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 
     fn view(&self) -> Html {
         info!("calling view");
         html! {
-            <div class="hello">
+            <>
+                <canvas ref={self.canvas_ref.clone()} width=10 height=10 />
+
                 <h1>{"Radiance"}</h1>
-                <canvas ref={self.canvas_ref.clone()} width=1024 height=1024 />
+                <div>
+                    {"Shader Resolution"}
+                    <input
+                        type="range"
+                        min=1
+                        max=1024
+                        value=256
+                        oninput={
+                            self.link.callback(move |e: InputData| Msg::SetChainSize(e.value.parse().unwrap_or(256)))
+                        } />
+                </div>
+                <div>
+                    {"Add shader"}
+                    <input
+                        type="text"
+                        oninput=self.link.callback(move |e: InputData| Msg::AddEffectNode(e.value))
+                    />
+                </div>
                 <div class={"output"} ref={self.output_ref.clone()} />
                 <div class={"node-list"}>
                     { self.model.graph.toposort().iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
-            </div>
+            </>
         }
     }
 }
@@ -146,7 +181,7 @@ impl Component for App {
 impl App {
     fn schedule_next_paint(&mut self) {
         let render_frame = self.link.callback(Msg::Render);
-        // TODO: requestPostAnimationFrame
+        // TODO: Use requestPostAnimationFrame instead of requestAnimationFrame
         let handle = RenderService::new().request_animation_frame(render_frame);
 
         // A reference to the new handle must be retained for the next render to run.
@@ -154,10 +189,9 @@ impl App {
     }
 
     fn view_node(&self, node: &VideoNode) -> Html {
-        const M: f64 = 1000.;
         html! {
             <div class={"node"}>
-                <div class={"node-preview"} ref={self.node_refs.get(&node.id).unwrap().clone()} />
+                <div class={"node-preview"} ref={self.node_refs.get(&node.id).map_or(Default::default(), |x| x.clone())} />
                 {
                     match node.kind {
                         VideoNodeKind::Effect{intensity, ..} => html! {
@@ -165,27 +199,18 @@ impl App {
                                 oninput={
                                     let id = node.id;
                                     let old_intensity = intensity;
-                                    self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().map_or(old_intensity, |x: f64| x / M)))
+                                    self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().unwrap_or(old_intensity)))
                                 }
-                                value=intensity * M
+                                value=intensity
                                 type="range"
-                                min=0
-                                max=M
-                                step=(M/10.)
+                                min=0.
+                                max=1.
+                                step=0.01
                             />
                         },
                         VideoNodeKind::Output => html! {},
                     }
                 }
-                /*
-                <button
-                    onclick={
-                        let id = node.id;
-                        self.link.callback(move |_| Msg::Raise(id))
-                    }
-                >{"Raise"}</button>
-                */
-
                 { &node.name }
             </div>
         }
@@ -214,21 +239,36 @@ impl Graph {
         self.nodes.insert(node.id, node);
     }
 
-    /*
+    #[allow(dead_code)]
     fn remove_videonode(&mut self, node: &VideoNode) {
         self.digraph.remove_node(node.id);
         self.nodes.remove(&node.id);
     }
-    */
 
     fn add_edge_by_ids(&mut self, src_id: usize, dst_id: usize, input: usize) -> Result<()> {
         // TODO: safety check
         if src_id == dst_id {
             return Err("Adding self edge would cause cycle".into());
         }
+        if let Some(old_src_id) = self.input_for_id(dst_id, input) {
+            self.digraph.remove_edge(old_src_id, dst_id);
+            self.digraph.add_edge(old_src_id, src_id, 0);
+        }
         self.digraph.add_edge(src_id, dst_id, input);
         self.assert_no_cycles();
         Ok(())
+    }
+
+    fn input_for_id(&self, dst_id: usize, input: usize) -> Option<usize> {
+        for src_id in self
+            .digraph
+            .neighbors_directed(dst_id, petgraph::Direction::Incoming)
+        {
+            if *self.digraph.edge_weight(src_id, dst_id).unwrap() == input {
+                return Some(src_id);
+            }
+        }
+        None
     }
 
     fn toposort(&self) -> Vec<&VideoNode> {

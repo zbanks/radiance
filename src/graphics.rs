@@ -1,6 +1,7 @@
 use crate::err::{Error, Result};
 use crate::resources;
 use crate::video_node::*;
+
 use log::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -38,7 +39,7 @@ pub struct RenderChain {
 
     blit_shader: Shader,
     blank_texture: WebGlTexture,
-    //pub noise_texture: WebGlTexture,
+    pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
 
     artists: HashMap<usize, VideoArtist>,
@@ -216,12 +217,6 @@ impl Drop for Shader {
 
 impl RenderChain {
     pub fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<RenderChain> {
-        /*
-        let size = (
-            context.drawing_buffer_width(),
-            context.drawing_buffer_height(),
-        );
-        */
         let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context), size)?);
 
         let blit_shader = Shader::from_fragment_shader(
@@ -252,6 +247,27 @@ impl RenderChain {
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE as i32);
 
+        let noise_pixels: Vec<u8> = (0..(size.0 * size.1 * 4))
+            .map(|_| (js_sys::Math::random() * 256.) as u8)
+            .collect();
+        let noise_texture = context.create_texture().ok_or("Unable to create texture")?;
+        context.bind_texture(GL::TEXTURE_2D, Some(&noise_texture));
+        context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+            GL::TEXTURE_2D,      // target
+            0,                   // level
+            GL::RGBA as i32,     // internal format
+            size.0,              // width
+            size.1,              // height
+            0,                   // border
+            GL::RGBA,            // format
+            GL::UNSIGNED_BYTE,   // _type
+            Some(&noise_pixels), // pixels
+        )?;
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::REPEAT as i32);
+        context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_T, GL::REPEAT as i32);
+
         let vertices: [f32; 16] = [
             1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 0.0, 1.0, 1.0, -1.0, 1.0, 0.0, -1.0, -1.0, 0.0, 0.0,
         ];
@@ -278,6 +294,7 @@ impl RenderChain {
             extra_fbo,
             blit_shader,
             blank_texture,
+            noise_texture,
             square_vertex_buffer,
             size,
             artists,
@@ -293,6 +310,7 @@ impl RenderChain {
     where
         I: Iterator<Item = &'a mut VideoNode>,
     {
+        // TODO: Also delete artists for nodes that are no longer valid
         for node in nodes {
             if !self.artists.contains_key(&node.id()) {
                 self.artists.insert(node.id(), node.artist(&self)?);
@@ -338,6 +356,7 @@ impl RenderChain {
 
 impl Drop for RenderChain {
     fn drop(&mut self) {
+        info!("Destroyed render chain {:?}", self.size);
         self.context.delete_buffer(Some(&self.square_vertex_buffer));
         self.context.delete_texture(Some(&self.blank_texture));
     }
