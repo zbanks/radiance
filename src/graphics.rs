@@ -319,6 +319,11 @@ impl RenderChain {
         Ok(())
     }
 
+    pub fn clear(&self) {
+        self.context.bind_framebuffer(GL::FRAMEBUFFER, None);
+        self.context.clear(GL::COLOR_BUFFER_BIT);
+    }
+
     pub fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&RefCell<Fbo>>) {
         self.context.active_texture(tex);
         if let Some(fbo) = fbo_ref {

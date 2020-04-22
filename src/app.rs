@@ -18,7 +18,9 @@ use web_sys::WebGlRenderingContext;
 
 pub struct App {
     link: ComponentLink<Self>,
-    node_ref: NodeRef,
+    canvas_ref: NodeRef,
+    output_ref: NodeRef,
+    node_refs: HashMap<usize, NodeRef>,
     render_loop: Option<Box<dyn Task>>,
     chain: Option<RenderChain>,
     model: Model,
@@ -32,7 +34,7 @@ struct Model {
 pub enum Msg {
     Render(f64),
     SetIntensity(usize, f64),
-    Raise(usize),
+    //Raise(usize),
 }
 
 impl Component for App {
@@ -40,17 +42,25 @@ impl Component for App {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let model = Model::new();
+        let mut node_refs = HashMap::new();
+        for id in model.graph.nodes.keys() {
+            node_refs.insert(*id, Default::default());
+        }
+
         App {
             link,
-            node_ref: Default::default(),
             render_loop: None,
+            canvas_ref: Default::default(),
+            output_ref: Default::default(),
+            node_refs,
+            model,
             chain: None,
-            model: Model::new(),
         }
     }
 
     fn mounted(&mut self) -> ShouldRender {
-        let canvas: web_sys::HtmlCanvasElement = self.node_ref.cast().unwrap();
+        let canvas: web_sys::HtmlCanvasElement = self.canvas_ref.cast().unwrap();
         let context = Rc::new(
             canvas
                 .get_context("webgl")
@@ -69,7 +79,26 @@ impl Component for App {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Render(timestamp) => {
-                self.model.paint(self.chain.as_mut().unwrap(), timestamp);
+                let chain = self.chain.as_mut().unwrap();
+                let canvas = self.canvas_ref.cast::<web_sys::Element>().unwrap();
+
+                // Render the chain to textures
+                self.model.render(chain, timestamp);
+
+                // Clear the screen
+                chain.clear();
+
+                // Paint the previews for each node
+                for (id, node_ref) in self.node_refs.iter() {
+                    let element = node_ref.cast::<web_sys::Element>().unwrap();
+                    self.model.paint_node(chain, *id, &canvas, &element);
+                }
+
+                // Paint the (big) output node
+                let element = self.output_ref.cast::<web_sys::Element>().unwrap();
+                self.model
+                    .paint_node(chain, self.model.show.unwrap(), &canvas, &element);
+
                 self.schedule_next_paint();
                 false
             }
@@ -84,17 +113,18 @@ impl Component for App {
                 };
                 //self.model.graph.nodes.get_mut(&id).unwrap().intensity = intensity;
                 true
-            }
-            Msg::Raise(id) => {
-                if let Some(show_id) = self.model.show {
-                    if show_id != id {
-                        self.model.graph.disconnect_node(id).unwrap();
-                        self.model.graph.add_edge_by_ids(show_id, id, 0).unwrap();
-                        //self.model.show = Some(id);
-                    }
-                }
-                true
-            }
+            } /*
+              Msg::Raise(id) => {
+                  if let Some(show_id) = self.model.show {
+                      if show_id != id {
+                          self.model.graph.disconnect_node(id).unwrap();
+                          self.model.graph.add_edge_by_ids(show_id, id, 0).unwrap();
+                          //self.model.show = Some(id);
+                      }
+                  }
+                  true
+              }
+              */
         }
     }
 
@@ -103,7 +133,8 @@ impl Component for App {
         html! {
             <div class="hello">
                 <h1>{"Radiance"}</h1>
-                <canvas ref={self.node_ref.clone()} width=512 height=512 />
+                <canvas ref={self.canvas_ref.clone()} width=1024 height=1024 />
+                <div class={"output"} ref={self.output_ref.clone()} />
                 <div class={"node-list"}>
                     { self.model.graph.toposort().iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
@@ -115,6 +146,7 @@ impl Component for App {
 impl App {
     fn schedule_next_paint(&mut self) {
         let render_frame = self.link.callback(Msg::Render);
+        // TODO: requestPostAnimationFrame
         let handle = RenderService::new().request_animation_frame(render_frame);
 
         // A reference to the new handle must be retained for the next render to run.
@@ -125,6 +157,7 @@ impl App {
         const M: f64 = 1000.;
         html! {
             <div class={"node"}>
+                <div class={"node-preview"} ref={self.node_refs.get(&node.id).unwrap().clone()} />
                 {
                     match node.kind {
                         VideoNodeKind::Effect{intensity, ..} => html! {
@@ -138,17 +171,20 @@ impl App {
                                 type="range"
                                 min=0
                                 max=M
+                                step=(M/10.)
                             />
                         },
                         VideoNodeKind::Output => html! {},
                     }
                 }
+                /*
                 <button
                     onclick={
                         let id = node.id;
                         self.link.callback(move |_| Msg::Raise(id))
                     }
                 >{"Raise"}</button>
+                */
 
                 { &node.name }
             </div>
@@ -220,6 +256,7 @@ impl Graph {
         inputs
     }
 
+    #[allow(dead_code)]
     fn disconnect_node(&mut self, id: usize) -> Result<()> {
         let node = self.nodes.get(&id).unwrap();
         let inputs = self.node_inputs(node);
@@ -302,16 +339,10 @@ impl Model {
 
         let id = node.id;
         self.graph.add_videonode(node);
-        /*
-        if let Some(prev_id) = self.show {
-            self.graph.add_edge_by_ids(prev_id, id, 0)?;
-        }
-        self.show = Some(id);
-        */
         Ok(id)
     }
 
-    fn paint(&mut self, chain: &mut RenderChain, time: f64) {
+    fn render(&mut self, chain: &mut RenderChain, time: f64) {
         for node in &mut self.graph.nodes.values_mut() {
             node.set_time(time / 1e3);
         }
@@ -333,25 +364,39 @@ impl Model {
                 .collect::<Vec<_>>();
             artist.render(chain, node, &fbos);
         }
+    }
+
+    fn paint_node(
+        &mut self,
+        chain: &RenderChain,
+        id: usize,
+        canvas_ref: &web_sys::Element,
+        node_ref: &web_sys::Element,
+    ) {
+        // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
+        let node = self.graph.nodes.get(&id).unwrap();
 
         let canvas_size = (
             chain.context.drawing_buffer_width(),
             chain.context.drawing_buffer_height(),
         );
-        chain.context.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
-        if let Some(id) = self.show {
-            chain.context.viewport(0, canvas_size.1 - 300, 300, 300);
+        let canvas_rect = canvas_ref.get_bounding_client_rect();
+        let node_rect = node_ref.get_bounding_client_rect();
 
-            let node = self.graph.nodes.get(&id).unwrap();
-            chain.paint(&node).unwrap();
-        }
+        let x_ratio = canvas_rect.width() / canvas_size.0 as f64;
+        let y_ratio = canvas_rect.height() / canvas_size.1 as f64;
+        let left = (node_rect.left() / x_ratio).ceil();
+        let right = (node_rect.right() / x_ratio).floor();
+        let top = (node_rect.top() / y_ratio).ceil();
+        let bottom = (node_rect.bottom() / y_ratio).floor();
 
-        for (i, node) in self.graph.toposort().iter().enumerate() {
-            chain
-                .context
-                .viewport(310, canvas_size.1 - (50 * i) as i32 - 50, 48, 48);
-            chain.paint(node).unwrap();
-        }
+        chain.context.viewport(
+            left as i32,
+            canvas_size.1 - bottom as i32,
+            (right - left) as i32,
+            (bottom - top) as i32,
+        );
+        chain.paint(node).unwrap();
     }
 }
 

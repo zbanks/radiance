@@ -32,6 +32,9 @@ wasm-bindgen-test = "0.3"
 version = "0.3.4"
 features = [
   'KeyboardEvent',
+  'Element',
+  'DomRect',
+  'HtmlElement',
   'HtmlCanvasElement',
   'WebGlBuffer',
   'WebGlRenderingContext',

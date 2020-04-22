@@ -204,10 +204,14 @@ impl VideoArtist {
                         .uniform1f(loc.as_ref(), intensity_integral as f32);
 
                     let loc = active_shader.get_uniform_location("iTime");
-                    chain.context.uniform1f(loc.as_ref(), node.time as f32);
+                    chain
+                        .context
+                        .uniform1f(loc.as_ref(), (node.time % 2048.) as f32);
 
                     let loc = active_shader.get_uniform_location("iStep");
-                    chain.context.uniform1f(loc.as_ref(), node.time as f32);
+                    chain
+                        .context
+                        .uniform1f(loc.as_ref(), (node.time % 2048.) as f32);
 
                     let loc = active_shader.get_uniform_location("iFPS");
                     chain.context.uniform1f(loc.as_ref(), 60.);
