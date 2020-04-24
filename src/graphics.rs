@@ -1,6 +1,6 @@
 use crate::err::{Error, Result};
 use crate::resources;
-use crate::video_node::*;
+use crate::video_node::{VideoArtist, VideoNode, VideoNodeId};
 
 use log::*;
 use std::cell::RefCell;
@@ -42,7 +42,7 @@ pub struct RenderChain {
     pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
 
-    artists: HashMap<usize, VideoArtist>,
+    artists: HashMap<VideoNodeId, VideoArtist>,
 }
 
 impl Fbo {
@@ -200,7 +200,10 @@ impl<'a> ActiveShader<'a> {
     }
 
     pub fn finish_render(self) {
+        // Perform the render
         self.shader.context.draw_arrays(GL::TRIANGLE_STRIP, 0, 4);
+
+        // Clean up
         self.shader.context.use_program(None);
         self.shader.context.bind_framebuffer(GL::FRAMEBUFFER, None);
         self.shader.context.active_texture(GL::TEXTURE0); // This resets the scene graph?

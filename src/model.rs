@@ -1,6 +1,5 @@
 use crate::err::Result;
-use crate::video_node::VideoNode;
-use log::*;
+use crate::video_node::{VideoNode, VideoNodeId};
 use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 
@@ -9,8 +8,8 @@ use std::collections::HashMap;
 /// - Each VideoNode can have up to `node.n_inputs` incoming edges,
 ///     which must all have unique edge weights in [0..node.n_inputs)
 pub struct Graph {
-    nodes: HashMap<usize, VideoNode>,
-    digraph: DiGraphMap<usize, usize>,
+    nodes: HashMap<VideoNodeId, VideoNode>,
+    digraph: DiGraphMap<VideoNodeId, usize>,
 }
 
 impl Graph {
@@ -21,11 +20,11 @@ impl Graph {
         }
     }
 
-    pub fn node(&self, id: usize) -> Option<&VideoNode> {
+    pub fn node(&self, id: VideoNodeId) -> Option<&VideoNode> {
         self.nodes.get(&id)
     }
 
-    pub fn node_mut(&mut self, id: usize) -> Option<&mut VideoNode> {
+    pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut VideoNode> {
         self.nodes.get_mut(&id)
     }
 
@@ -37,7 +36,7 @@ impl Graph {
         self.nodes.values_mut()
     }
 
-    pub fn ids(&self) -> impl Iterator<Item = &usize> {
+    pub fn ids(&self) -> impl Iterator<Item = &VideoNodeId> {
         self.nodes.keys()
     }
 
@@ -66,7 +65,12 @@ impl Graph {
         self.nodes.remove(&node.id);
     }
 
-    pub fn add_edge_by_ids(&mut self, src_id: usize, dst_id: usize, input: usize) -> Result<()> {
+    pub fn add_edge_by_ids(
+        &mut self,
+        src_id: VideoNodeId,
+        dst_id: VideoNodeId,
+        input: usize,
+    ) -> Result<()> {
         // TODO: safety check
         if src_id == dst_id {
             return Err("Adding self edge would cause cycle".into());
@@ -80,7 +84,7 @@ impl Graph {
         Ok(())
     }
 
-    pub fn input_for_id(&self, dst_id: usize, input: usize) -> Option<usize> {
+    pub fn input_for_id(&self, dst_id: VideoNodeId, input: usize) -> Option<VideoNodeId> {
         for src_id in self
             .digraph
             .neighbors_directed(dst_id, petgraph::Direction::Incoming)
@@ -117,15 +121,13 @@ impl Graph {
         inputs
     }
 
-    pub fn disconnect_node(&mut self, id: usize) -> Result<()> {
-        // XXX There is a bug here
+    pub fn disconnect_node(&mut self, id: VideoNodeId) -> Result<()> {
         let node = self.nodes.get(&id).unwrap();
-        let src_id = self
-            .node_inputs(node)
-            .first()
-            .unwrap_or(&None)
-            .map(|n| n.id);
-        let edges_to_remove: Vec<(usize, usize)> = self
+        let inputs = self.node_inputs(node);
+        let src_id = inputs.first().unwrap_or(&None).map(|n| n.id);
+        let src_edges: Vec<VideoNodeId> = inputs.into_iter().flatten().map(|n| n.id).collect();
+
+        let edges_to_remove: Vec<(VideoNodeId, usize)> = self
             .digraph
             .neighbors_directed(node.id, petgraph::Direction::Outgoing)
             .map(|dst_id| {
@@ -134,15 +136,14 @@ impl Graph {
             })
             .collect();
         for (dst_id, dst_index) in edges_to_remove {
-            info!(
-                "disconnect {} remove -> {}; add {:?} -> {}, {}",
-                node.id, dst_id, src_id, dst_id, dst_index
-            );
             self.digraph.remove_edge(node.id, dst_id);
             if let Some(id) = src_id {
                 self.digraph.add_edge(id, dst_id, dst_index);
             }
         }
+        src_edges.iter().for_each(|src| {
+            self.digraph.remove_edge(*src, id);
+        });
         self.assert_no_cycles();
         Ok(())
     }

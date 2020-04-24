@@ -1,7 +1,7 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Graph;
-use crate::video_node::{VideoNode, VideoNodeKind};
+use crate::video_node::{VideoNode, VideoNodeId, VideoNodeKind};
 
 use log::*;
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ pub struct App {
     link: ComponentLink<Self>,
     canvas_ref: NodeRef,
     output_ref: NodeRef,
-    node_refs: HashMap<usize, NodeRef>,
+    node_refs: HashMap<VideoNodeId, NodeRef>,
     render_loop: Option<Box<dyn Task>>,
     chain: Option<RenderChain>,
     model: Model,
@@ -23,17 +23,17 @@ pub struct App {
 
 struct Model {
     graph: Graph,
-    show: Option<usize>,
-    drop_target: Option<(usize, usize)>,
+    show: Option<VideoNodeId>,
+    drop_target: Option<(VideoNodeId, usize)>,
 }
 
 pub enum Msg {
     Render(f64),
-    SetIntensity(usize, f64),
+    SetIntensity(VideoNodeId, f64),
     SetChainSize(i32),
     AddEffectNode(String),
-    SetDropTarget(usize, usize),
-    Reorder(usize),
+    SetDropTarget(VideoNodeId, usize),
+    Reorder(VideoNodeId),
     //Raise(usize),
 }
 
@@ -156,7 +156,6 @@ impl Component for App {
                 if let Some(drop_target) = self.model.drop_target {
                     if id != drop_target.0 {
                         if let Some(_node) = self.model.graph.node(id) {
-                            // XXX There is a bug here
                             self.model.graph.disconnect_node(id).unwrap();
                             self.model
                                 .graph
@@ -320,7 +319,7 @@ impl Model {
     }
 
     /// This is a temporary utility function that will get refactored
-    fn append_node(&mut self, name: &str, value: f64) -> Result<usize> {
+    fn append_node(&mut self, name: &str, value: f64) -> Result<VideoNodeId> {
         let mut node = VideoNode::effect(name)?;
         if let VideoNodeKind::Effect {
             ref mut intensity, ..
@@ -359,7 +358,7 @@ impl Model {
     fn paint_node(
         &mut self,
         chain: &RenderChain,
-        id: usize,
+        id: VideoNodeId,
         canvas_ref: &web_sys::Element,
         node_ref: &web_sys::Element,
     ) {
@@ -375,10 +374,10 @@ impl Model {
 
         let x_ratio = canvas_rect.width() / canvas_size.0 as f64;
         let y_ratio = canvas_rect.height() / canvas_size.1 as f64;
-        let left = (node_rect.left() / x_ratio).ceil();
-        let right = (node_rect.right() / x_ratio).floor();
-        let top = (node_rect.top() / y_ratio).ceil();
-        let bottom = (node_rect.bottom() / y_ratio).floor();
+        let left = ((node_rect.left() - canvas_rect.left()) / x_ratio).ceil();
+        let right = ((node_rect.right() - canvas_rect.left()) / x_ratio).floor();
+        let top = ((node_rect.top() - canvas_rect.top()) / y_ratio).ceil();
+        let bottom = ((node_rect.bottom() - canvas_rect.top()) / y_ratio).floor();
 
         chain.context.viewport(
             left as i32,

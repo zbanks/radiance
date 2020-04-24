@@ -7,8 +7,13 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use web_sys::WebGlRenderingContext as GL;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct VideoNodeId {
+    id: usize,
+}
+
 pub struct VideoNode {
-    pub id: usize,
+    pub id: VideoNodeId,
     pub name: String,
     pub n_inputs: usize,
     pub kind: VideoNodeKind,
@@ -31,17 +36,20 @@ pub enum VideoArtist {
     Output { blit_shader: Shader },
 }
 
-impl VideoNode {
-    fn generate_id() -> usize {
-        unsafe {
+impl VideoNodeId {
+    fn new() -> VideoNodeId {
+        let id = unsafe {
             static mut NEXT_ID: usize = 0;
             NEXT_ID += 1;
             NEXT_ID
-        }
+        };
+        VideoNodeId { id }
     }
+}
 
+impl VideoNode {
     pub fn output() -> Result<VideoNode> {
-        let id = Self::generate_id();
+        let id = VideoNodeId::new();
         Ok(VideoNode {
             id,
             name: String::from("Output"),
@@ -97,7 +105,7 @@ impl VideoNode {
 
         info!("Loaded effect: {:?}", name);
 
-        let id = Self::generate_id();
+        let id = VideoNodeId::new();
         Ok(VideoNode {
             id,
             name: String::from(name),
@@ -127,7 +135,7 @@ impl VideoNode {
         self.time = time;
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(&self) -> VideoNodeId {
         self.id
     }
 
