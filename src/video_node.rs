@@ -16,8 +16,13 @@ pub struct VideoNode {
     pub id: VideoNodeId,
     pub name: String,
     pub n_inputs: usize,
-    pub kind: VideoNodeKind,
+    pub kind: Box<dyn VNK>,
     time: f64,
+}
+
+pub trait VNK {
+    pub fn set_time(&mut self, f64 time);
+    pub fn artist(&self, chain: &RenderChain) -> Result<VideoArtist>;
 }
 
 #[derive(Debug)]
