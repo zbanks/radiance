@@ -1,9 +1,9 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
+use crate::model::Graph;
 use crate::video_node::{VideoNode, VideoNodeKind};
 
 use log::*;
-use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::JsCast;
@@ -24,6 +24,7 @@ pub struct App {
 struct Model {
     graph: Graph,
     show: Option<usize>,
+    drop_target: Option<(usize, usize)>,
 }
 
 pub enum Msg {
@@ -31,6 +32,8 @@ pub enum Msg {
     SetIntensity(usize, f64),
     SetChainSize(i32),
     AddEffectNode(String),
+    SetDropTarget(usize, usize),
+    Reorder(usize),
     //Raise(usize),
 }
 
@@ -41,7 +44,7 @@ impl Component for App {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let model = Model::new();
         let mut node_refs = HashMap::new();
-        for id in model.graph.nodes.keys() {
+        for id in model.graph.ids() {
             node_refs.insert(*id, Default::default());
         }
 
@@ -113,7 +116,7 @@ impl Component for App {
                 false
             }
             Msg::SetIntensity(id, intensity) => {
-                let node = self.model.graph.nodes.get_mut(&id).unwrap();
+                let node = self.model.graph.node_mut(id).unwrap();
                 if let VideoNodeKind::Effect {
                     intensity: ref mut node_intensity,
                     ..
@@ -132,14 +135,37 @@ impl Component for App {
                 false
             }
             Msg::AddEffectNode(ref name) => {
-                if let Ok(id) = self.model.append_node(name, 0.0) {
-                    let output_id = self.model.show.unwrap();
-                    self.model.graph.add_edge_by_ids(id, output_id, 0).unwrap();
-                    self.node_refs.insert(id, Default::default());
-                    true
-                } else {
-                    false
+                if let Some(drop_target) = self.model.drop_target {
+                    if let Ok(id) = self.model.append_node(name, 0.0) {
+                        if id != drop_target.0 {
+                            self.model
+                                .graph
+                                .add_edge_by_ids(id, drop_target.0, drop_target.1)
+                                .unwrap();
+                            self.node_refs.insert(id, Default::default());
+                        }
+                    }
                 }
+                true
+            }
+            Msg::SetDropTarget(id, input) => {
+                self.model.drop_target = Some((id, input));
+                false
+            }
+            Msg::Reorder(id) => {
+                if let Some(drop_target) = self.model.drop_target {
+                    if id != drop_target.0 {
+                        if let Some(_node) = self.model.graph.node(id) {
+                            // XXX There is a bug here
+                            self.model.graph.disconnect_node(id).unwrap();
+                            self.model
+                                .graph
+                                .add_edge_by_ids(id, drop_target.0, drop_target.1)
+                                .unwrap();
+                        }
+                    }
+                }
+                true
             }
         }
     }
@@ -171,7 +197,7 @@ impl Component for App {
                 </div>
                 <div class={"output"} ref={self.output_ref.clone()} />
                 <div class={"node-list"}>
-                    { self.model.graph.toposort().iter().map(|n| self.view_node(*n)).collect::<Html>() }
+                    { self.model.graph.root_nodes().iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
             </>
         }
@@ -190,137 +216,62 @@ impl App {
 
     fn view_node(&self, node: &VideoNode) -> Html {
         html! {
-            <div class={"node"}>
-                <div class={"node-preview"} ref={self.node_refs.get(&node.id).map_or(Default::default(), |x| x.clone())} />
-                {
-                    match node.kind {
-                        VideoNodeKind::Effect{intensity, ..} => html! {
-                            <input
-                                oninput={
-                                    let id = node.id;
-                                    let old_intensity = intensity;
-                                    self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().unwrap_or(old_intensity)))
-                                }
-                                value=intensity
-                                type="range"
-                                min=0.
-                                max=1.
-                                step=0.01
-                            />
-                        },
-                        VideoNodeKind::Output => html! {},
+            <div class={"node-container"}>
+                <div class={"node-inputs"}>
+                    {
+                        self.model.graph.node_inputs(&node).iter().map(|child| html! {
+                            <div class={"node-input-row"}>
+                                { child.map_or(Default::default(), |c| self.view_node(c)) }
+                            </div>
+                        }).collect::<Html>()
                     }
-                }
-                { &node.name }
+                </div>
+                <div class={"node"}>
+                    <div class={"node-preview"} ref={self.node_refs.get(&node.id).map_or(Default::default(), |x| x.clone())} />
+                    {
+                        match node.kind {
+                            VideoNodeKind::Effect{intensity, ..} => html! {
+                                <input
+                                    oninput={
+                                        let id = node.id;
+                                        let old_intensity = intensity;
+                                        self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().unwrap_or(old_intensity)))
+                                    }
+                                    value=intensity
+                                    type="range"
+                                    min=0.
+                                    max=1.
+                                    step=0.01
+                                />
+                            },
+                            VideoNodeKind::Output => html! {},
+                        }
+                    }
+                    {
+                        (0..node.n_inputs).map(|input|
+                            html! {
+                                <input
+                                    type="radio"
+                                    checked={ Some((node.id, input)) == self.model.drop_target }
+                                    name="drop-target"
+                                    oninput={
+                                        let id = node.id;
+                                        self.link.callback(move |_| Msg::SetDropTarget(id, input))
+                                    }
+                                />
+                            }
+                        ).collect::<Html>()
+                    }
+                    <button
+                        onclick={
+                            let id = node.id;
+                            self.link.callback(move |_| Msg::Reorder(id))
+                        }
+                    >{"Move"}</button>
+                    { &node.name }
+                </div>
             </div>
         }
-    }
-}
-
-/// Directed graph abstraction that owns VideoNodes
-/// - Enforces that there are no cycles
-/// - Each VideoNode can have up to `node.n_inputs` incoming edges,
-///     which must all have unique edge weights in [0..node.n_inputs)
-struct Graph {
-    nodes: HashMap<usize, VideoNode>,
-    digraph: DiGraphMap<usize, usize>,
-}
-
-impl Graph {
-    fn new() -> Graph {
-        Graph {
-            digraph: DiGraphMap::new(),
-            nodes: Default::default(),
-        }
-    }
-
-    fn add_videonode(&mut self, node: VideoNode) {
-        self.digraph.add_node(node.id);
-        self.nodes.insert(node.id, node);
-    }
-
-    #[allow(dead_code)]
-    fn remove_videonode(&mut self, node: &VideoNode) {
-        self.digraph.remove_node(node.id);
-        self.nodes.remove(&node.id);
-    }
-
-    fn add_edge_by_ids(&mut self, src_id: usize, dst_id: usize, input: usize) -> Result<()> {
-        // TODO: safety check
-        if src_id == dst_id {
-            return Err("Adding self edge would cause cycle".into());
-        }
-        if let Some(old_src_id) = self.input_for_id(dst_id, input) {
-            self.digraph.remove_edge(old_src_id, dst_id);
-            self.digraph.add_edge(old_src_id, src_id, 0);
-        }
-        self.digraph.add_edge(src_id, dst_id, input);
-        self.assert_no_cycles();
-        Ok(())
-    }
-
-    fn input_for_id(&self, dst_id: usize, input: usize) -> Option<usize> {
-        for src_id in self
-            .digraph
-            .neighbors_directed(dst_id, petgraph::Direction::Incoming)
-        {
-            if *self.digraph.edge_weight(src_id, dst_id).unwrap() == input {
-                return Some(src_id);
-            }
-        }
-        None
-    }
-
-    fn toposort(&self) -> Vec<&VideoNode> {
-        petgraph::algo::toposort(&self.digraph, None)
-            .unwrap()
-            .iter()
-            .map(|id| self.nodes.get(id).unwrap())
-            .collect()
-    }
-
-    fn node_inputs(&self, node: &VideoNode) -> Vec<Option<&VideoNode>> {
-        let mut inputs = Vec::new();
-        inputs.resize(node.n_inputs, None);
-
-        for src_id in self
-            .digraph
-            .neighbors_directed(node.id, petgraph::Direction::Incoming)
-        {
-            let src_index = *self.digraph.edge_weight(src_id, node.id).unwrap();
-            if src_index < node.n_inputs {
-                inputs[src_index] = self.nodes.get(&src_id);
-            }
-        }
-
-        inputs
-    }
-
-    #[allow(dead_code)]
-    fn disconnect_node(&mut self, id: usize) -> Result<()> {
-        let node = self.nodes.get(&id).unwrap();
-        let inputs = self.node_inputs(node);
-        let src_id = inputs.first().unwrap_or(&None).map(|n| n.id);
-        let edges_to_remove: Vec<(usize, usize)> = self
-            .digraph
-            .neighbors_directed(node.id, petgraph::Direction::Outgoing)
-            .map(|dst_id| {
-                let dst_index = *self.digraph.edge_weight(node.id, dst_id).unwrap();
-                (dst_id, dst_index)
-            })
-            .collect();
-        for (dst_id, dst_index) in edges_to_remove {
-            self.digraph.remove_edge(node.id, dst_id);
-            if let Some(id) = src_id {
-                self.digraph.add_edge(id, dst_id, dst_index);
-            }
-        }
-        self.assert_no_cycles();
-        Ok(())
-    }
-
-    fn assert_no_cycles(&self) {
-        petgraph::algo::toposort(&self.digraph, None).unwrap();
     }
 }
 
@@ -329,6 +280,7 @@ impl Model {
         let mut model = Model {
             graph: Graph::new(),
             show: None,
+            drop_target: None,
         };
 
         model.setup().unwrap();
@@ -383,12 +335,10 @@ impl Model {
     }
 
     fn render(&mut self, chain: &mut RenderChain, time: f64) {
-        for node in &mut self.graph.nodes.values_mut() {
+        for node in &mut self.graph.nodes_mut() {
             node.set_time(time / 1e3);
         }
-        chain
-            .ensure_node_artists(self.graph.nodes.values_mut())
-            .unwrap();
+        chain.ensure_node_artists(self.graph.nodes_mut()).unwrap();
 
         chain.context.viewport(0, 0, chain.size.0, chain.size.1);
         for node in self.graph.toposort() {
@@ -414,7 +364,7 @@ impl Model {
         node_ref: &web_sys::Element,
     ) {
         // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
-        let node = self.graph.nodes.get(&id).unwrap();
+        let node = self.graph.node(id).unwrap();
 
         let canvas_size = (
             chain.context.drawing_buffer_width(),

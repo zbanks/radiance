@@ -1,0 +1,31 @@
+#property description Lorenz attractor
+
+vec3 lorenz(vec3 xyz, vec3 srb) {
+    // Compute the derivative of the Lorenz system at point `xyz` given parameters `srb`
+    // srb.xyz --> sigma, rho, beta
+    // https://en.wikipedia.org/wiki/Lorenz_system
+
+    return vec3(
+        srb.x * (xyz.y - xyz.x),
+        xyz.x * (srb.y - xyz.z) - xyz.y,
+        xyz.x * xyz.y - srb.z * xyz.z);
+}
+
+void main(void) {
+    vec3 xyz = vec3(uv - 0.5, sin(iTime));
+    xyz *= mix(vec3(1.), vec3( 90.,  80., 20), smoothstep(0., 0.4, iIntensity));
+    xyz += vec3(0., 0., 30.);
+
+    vec3 srb = vec3(10., 28., 8. / 3.); // sigma, rho, beta paramaters
+
+    #define N_STEPS 20
+    #define STEP_SIZE 0.01
+    vec3 start = xyz;
+    for (int i = 0; i < N_STEPS; i++) {
+        // euler
+        xyz += lorenz(xyz, srb) * STEP_SIZE;
+    }
+
+    vec2 newUV = uv + (xyz - start).xy  * iIntensity * 0.04; // smoothstep(0.0, 0.2, iIntensity);
+    fragColor = texture(iInput, newUV) * box(newUV);
+}

@@ -3,6 +3,7 @@
 mod app;
 mod err;
 mod graphics;
+mod model;
 mod resources;
 mod utils;
 mod video_node;
