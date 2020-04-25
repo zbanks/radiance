@@ -10,10 +10,25 @@ module.exports = (env, argv) => {
       compress: argv.mode === 'production',
       port: 8000
     },
-    entry: './bootstrap.js',
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          use: 'ts-loader',
+          exclude: /node_modules/,
+        },
+      ],
+    },
+    resolve: {
+      extensions: ['.tsx', '.ts', '.js'],
+    },
+    entry: {
+      libradiance: './libradiance.js',
+      radianceui: './radianceui.js',
+    },
     output: {
       path: distPath,
-      filename: "radiance.js",
+      filename: "[name].js",
       webassemblyModuleFilename: "radiance.wasm"
     },
     plugins: [
