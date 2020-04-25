@@ -1,7 +1,7 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Graph;
-use crate::video_node::{VideoNode, VideoNodeId, VideoNodeKind};
+use crate::video_node::{VideoNode, VideoNodeId};
 
 use log::*;
 use std::collections::HashMap;
@@ -117,13 +117,7 @@ impl Component for App {
             }
             Msg::SetIntensity(id, intensity) => {
                 let node = self.model.graph.node_mut(id).unwrap();
-                if let VideoNodeKind::Effect {
-                    intensity: ref mut node_intensity,
-                    ..
-                } = node.kind
-                {
-                    *node_intensity = intensity;
-                };
+                node.kind.set_intensity(intensity);
                 true
             }
             Msg::SetChainSize(size) => {
@@ -228,8 +222,8 @@ impl App {
                 <div class={"node"}>
                     <div class={"node-preview"} ref={self.node_refs.get(&node.id).map_or(Default::default(), |x| x.clone())} />
                     {
-                        match node.kind {
-                            VideoNodeKind::Effect{intensity, ..} => html! {
+                        if let Some(intensity) = node.kind.intensity() {
+                            html! {
                                 <input
                                     oninput={
                                         let id = node.id;
@@ -242,8 +236,9 @@ impl App {
                                     max=1.
                                     step=0.01
                                 />
-                            },
-                            VideoNodeKind::Output => html! {},
+                            }
+                        } else {
+                            html! {}
                         }
                     }
                     {
@@ -321,12 +316,7 @@ impl Model {
     /// This is a temporary utility function that will get refactored
     fn append_node(&mut self, name: &str, value: f64) -> Result<VideoNodeId> {
         let mut node = VideoNode::effect(name)?;
-        if let VideoNodeKind::Effect {
-            ref mut intensity, ..
-        } = node.kind
-        {
-            *intensity = value;
-        }
+        node.kind.set_intensity(value);
 
         let id = node.id;
         self.graph.add_videonode(node);

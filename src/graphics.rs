@@ -3,6 +3,7 @@ use crate::resources;
 use crate::video_node::{VideoArtist, VideoNode, VideoNodeId};
 
 use log::*;
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -42,7 +43,7 @@ pub struct RenderChain {
     pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
 
-    artists: HashMap<VideoNodeId, VideoArtist>,
+    artists: HashMap<VideoNodeId, Box<dyn VideoArtist>>,
 }
 
 impl Fbo {
@@ -316,16 +317,17 @@ impl RenderChain {
         // TODO: Also delete artists for nodes that are no longer valid
         for node in nodes {
             if !self.artists.contains_key(&node.id()) {
-                self.artists.insert(node.id(), node.artist(&self)?);
+                self.artists.insert(node.id(), node.kind.artist(&self)?);
             }
         }
         Ok(())
     }
 
-    pub fn node_artist<'a>(&'a self, node: &'a VideoNode) -> Result<&'a VideoArtist> {
+    pub fn node_artist<'a>(&'a self, node: &'a VideoNode) -> Result<&'a dyn VideoArtist> {
         self.artists
             .get(&node.id())
             .ok_or_else(|| "No artist for node".into())
+            .map(|b| b.borrow())
     }
 
     pub fn paint(&self, node: &VideoNode) -> Result<()> {
