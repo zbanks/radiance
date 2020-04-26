@@ -9,6 +9,7 @@ pub enum Error {
     Runtime(String),
     Glsl(String),
     Js(wasm_bindgen::JsValue),
+    Serde(serde_json::error::Error),
 }
 
 impl Error {
@@ -34,6 +35,7 @@ impl fmt::Display for Error {
             Error::Runtime(ref details) => write!(f, "Runtime Error: {}", details),
             Error::Glsl(ref details) => write!(f, "GLSL Error:\n{}", details),
             Error::Js(ref e) => write!(f, "Javascript Error: {:?}", e), // XXX use of Debug
+            Error::Serde(ref e) => write!(f, "Serde Error: {}", e),
         }
     }
 }
@@ -45,6 +47,7 @@ impl error::Error for Error {
             Error::Runtime(_) => None,
             Error::Glsl(_) => None,
             Error::Js(_) => None, // XXX propagate JsValue errors?
+            Error::Serde(ref e) => Some(e),
         }
     }
 }
@@ -58,5 +61,11 @@ impl From<wasm_bindgen::JsValue> for Error {
 impl From<&str> for Error {
     fn from(err: &str) -> Error {
         Error::new(err)
+    }
+}
+
+impl From<serde_json::error::Error> for Error {
+    fn from(err: serde_json::error::Error) -> Error {
+        Error::Serde(err)
     }
 }

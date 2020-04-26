@@ -12,6 +12,7 @@ pub mod effects {
     pub static PURPLE: &str = include_str!("../static/effects/purple.glsl");
     pub static RESAT: &str = include_str!("../static/effects/resat.glsl");
     pub static RJUMP: &str = include_str!("../static/effects/rjump.glsl");
+    pub static SETHUE: &str = include_str!("../static/effects/sethue.glsl");
     pub static SPIN: &str = include_str!("../static/effects/spin.glsl");
     pub static TEST: &str = include_str!("../static/effects/test.glsl");
     pub static TUNNEL: &str = include_str!("../static/effects/tunnel.glsl");
@@ -26,6 +27,7 @@ pub mod effects {
             "purple" => Some(PURPLE),
             "resat" => Some(RESAT),
             "rjump" => Some(RJUMP),
+            "sethue" => Some(SETHUE),
             "spin" => Some(SPIN),
             "test" => Some(TEST),
             "tunnel" => Some(TUNNEL),

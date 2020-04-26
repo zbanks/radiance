@@ -1,5 +1,8 @@
+use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain};
 
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::rc::Rc;
 
 mod effect_node;
@@ -9,7 +12,7 @@ pub use effect_node::EffectNode;
 pub use media_node::MediaNode;
 pub use output_node::OutputNode;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VideoNodeId(usize);
 
 impl VideoNodeId {
@@ -65,6 +68,14 @@ pub trait VideoNode {
         input_fbos: &[Option<Rc<Fbo>>],
         buffer_fbos: &mut [Rc<Fbo>],
     ) -> Option<Rc<Fbo>>;
+
+    fn state(&self) -> JsonValue {
+        JsonValue::Null
+    }
+
+    fn set_state(&mut self, _state: JsonValue) -> Result<()> {
+        Ok(())
+    }
 
     // See TODO about VideoNodeKind
     fn downcast(&self) -> Option<VideoNodeKind> {

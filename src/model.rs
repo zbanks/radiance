@@ -3,6 +3,8 @@ use crate::video_node::{VideoNode, VideoNodeId};
 use petgraph::graphmap::DiGraphMap;
 use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 
 /// Directed graph abstraction that owns VideoNodes
 /// - Enforces that there are no cycles
@@ -11,6 +13,12 @@ use std::collections::HashMap;
 pub struct Graph {
     nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
     digraph: DiGraphMap<VideoNodeId, usize>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct State {
+    nodes: HashMap<VideoNodeId, serde_json::Value>,
+    edges: Vec<(VideoNodeId, VideoNodeId, usize)>,
 }
 
 impl Graph {
@@ -153,5 +161,19 @@ impl Graph {
 
     fn assert_no_cycles(&self) {
         assert!(petgraph::algo::toposort(&self.digraph, None).is_ok());
+    }
+
+    pub fn state(&self) -> JsonValue {
+        let nodes = self.nodes.iter().map(|(k, v)| (*k, v.state())).collect();
+        let edges = self.digraph.all_edges().map(|(a, b, i)| (a, b, *i)).collect();
+        let state = State {
+            nodes,
+            edges,
+        };
+        serde_json::to_value(&state).unwrap_or(JsonValue::Null)
+    }
+
+    pub fn set_state(&mut self, _state: JsonValue) -> Result<()> {
+        Ok(())
     }
 }

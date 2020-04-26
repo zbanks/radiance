@@ -356,6 +356,7 @@ impl Model {
             .add_edge_by_ids(*ids.last().unwrap(), output_id, 0)?;
 
         self.show = Some(output_id);
+        info!("State: {}", self.graph.state().to_string());
 
         Ok(())
     }

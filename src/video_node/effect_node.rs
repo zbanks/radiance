@@ -4,6 +4,8 @@ use crate::resources;
 use crate::video_node::{VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut};
 
 use log::*;
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -11,14 +13,20 @@ use web_sys::WebGlRenderingContext as GL;
 
 pub struct EffectNode {
     id: VideoNodeId,
-    name: String,
-    n_inputs: usize,
+    state: State,
     time: f64,
-    intensity: f64,
     intensity_integral: f64,
     shader_sources: Vec<String>,
     shader_passes: Vec<Option<Shader>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct State {
+    name: String,
+    n_inputs: usize,
+    #[serde(skip_deserializing)]
     properties: HashMap<String, String>,
+    intensity: f64,
 }
 
 impl EffectNode {
@@ -71,25 +79,28 @@ impl EffectNode {
         info!("Loaded effect: {:?}", name);
 
         let id = VideoNodeId::new();
+        let state = State {
+            name: name.to_string(),
+            n_inputs,
+            properties,
+            intensity: 0.0,
+        };
         Ok(EffectNode {
             id,
-            name: String::from(name),
-            n_inputs,
+            state,
             time: 0.0,
-            intensity: 0.0,
             intensity_integral: 0.0,
             shader_sources,
             shader_passes,
-            properties,
         })
     }
 
     pub fn set_intensity(&mut self, intensity: f64) {
-        self.intensity = intensity;
+        self.state.intensity = intensity;
     }
 
     pub fn intensity(&self) -> f64 {
-        self.intensity
+        self.state.intensity
     }
 }
 
@@ -99,11 +110,11 @@ impl VideoNode for EffectNode {
     }
 
     fn name(&self) -> &str {
-        &self.name
+        &self.state.name
     }
 
     fn n_inputs(&self) -> usize {
-        self.n_inputs
+        self.state.n_inputs
     }
 
     fn n_buffers(&self) -> usize {
@@ -112,7 +123,7 @@ impl VideoNode for EffectNode {
 
     fn pre_render(&mut self, chain: &RenderChain, time: f64) {
         let dt = time - self.time;
-        self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
+        self.intensity_integral = (self.intensity_integral + dt * self.intensity()) % 1024.0;
         self.time = time;
 
         for (src, shader) in self
@@ -167,7 +178,7 @@ impl VideoNode for EffectNode {
                 tex_index += 1;
             }
             active_shader.set_uniform1iv("iChannel", &channels);
-            active_shader.set_uniform1f("iIntensity", self.intensity as f32);
+            active_shader.set_uniform1f("iIntensity", self.intensity() as f32);
             active_shader.set_uniform1f("iIntensityIntegral", self.intensity_integral as f32);
             active_shader.set_uniform1f("iTime", (self.time % 2048.) as f32);
             active_shader.set_uniform1f("iStep", (self.time % 2048.) as f32);
@@ -179,6 +190,18 @@ impl VideoNode for EffectNode {
             std::mem::swap(&mut *chain.extra_fbo.borrow_mut(), &mut buffer_fbos[i]);
         }
         Some(Rc::clone(&buffer_fbos.first().unwrap()))
+    }
+
+    fn state(&self) -> JsonValue {
+        serde_json::to_value(&self.state).unwrap_or(JsonValue::Null)
+    }
+
+    fn set_state(&mut self, raw_state: JsonValue) -> Result<()> {
+        let state: State = serde_json::from_value(raw_state)?;
+        self.state.name = state.name;
+        self.state.n_inputs = state.n_inputs;
+        self.set_intensity(state.intensity);
+        Ok(())
     }
 
     fn downcast(&self) -> Option<VideoNodeKind> {
