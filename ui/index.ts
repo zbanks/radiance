@@ -17,6 +17,9 @@ class Flickable extends HTMLElement {
 
     constructor() {
         super();
+    }
+
+    connectedCallback() {
         const shadow = this.attachShadow({mode: 'open'});
         shadow.innerHTML = `
             <style>
@@ -155,17 +158,179 @@ class Flickable extends HTMLElement {
     }
 }
 
-class Graph extends HTMLElement {
-    outer: HTMLElement;
-    inner: HTMLElement;
+class VideoNodeTile extends HTMLElement {
+    minHeight: 150;
 
     constructor() {
         super();
-        let shadow = this.attachShadow({mode: 'open'});
+    }
+
+    connectedCallback() {
+        const shadow = this.attachShadow({mode: 'open'});
         shadow.innerHTML = `
+            <style>
+            :host {
+                display: block;
+                width: 110px;
+                height: 180px;
+                background-color: black;
+                border: 2px solid gray;
+                text-align: center;
+                color: white;
+                padding: 5px;
+            }
+            </style>
+            <slot></slot>
         `;
     }
 }
 
-customElements.define('radiance-graph', Graph);
+class VideoNodePreview extends HTMLElement {
+    constructor() {
+        super();
+    }
+
+
+    connectedCallback() {
+        const shadow = this.attachShadow({mode: 'open'});
+        shadow.innerHTML = `
+            <style>
+            :host {
+                display: block;
+                width: 80%;
+                margin: 10px auto;
+            }
+            #square {
+                position: relative;
+                width: 100%;
+            }
+            #square:after {
+                content: "";
+                display: block;
+                padding-bottom: 100%;
+            }
+            #content {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border: 1px solid white;
+                background-color: gray;
+            }
+            </style>
+            <div id="square">
+                <div id="content">
+                </div>
+            </div>
+        `;
+    }
+}
+
+class EffectNodeTile extends VideoNodeTile {
+    constructor() {
+        super();
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+
+        this.innerHTML = `
+            <div style="font-family: sans-serif;">Title</div>
+            <hr style="margin: 3px;"></hr>
+            <radiance-videonodepreview></radiance-videonodepreview>
+            <input type="range" min="0" max="1" step="0.01"></input>
+        `;
+    }
+}
+
+interface VertexInGraph {
+    tile: VideoNodeTile;
+}
+interface EdgeInGraph {
+    fromVertex: string;
+    toInput: number;
+    toVertex: string;
+}
+
+class Graph extends HTMLElement {
+    mutationObserver: MutationObserver;
+    vertices: {[uid: number]: VertexInGraph};
+    edges: [];
+    nextUID: number;
+
+    constructor() {
+        super();
+
+        this.nextUID = 0;
+        this.vertices = {};
+        this.edges = [];
+    }
+
+    connectedCallback() {
+        let shadow = this.attachShadow({mode: 'open'});
+        shadow.innerHTML = `
+            <style>
+            :host {
+                display: block;
+                background-color: #ffccff;
+            }
+            </style>
+            <slot></slot>
+        `;
+
+        this.addEventListener('mousedown', event => {
+            this.addVertex(this.nextUID);
+        });
+    }
+
+    loadGraph() {
+    }
+
+    addVertex(uid: number) {
+        if (uid in this.vertices) {
+            throw `UID {} already exists`;
+        }
+        if (uid >= this.nextUID) {
+            this.nextUID = uid + 1;
+        }
+
+        let tile = <EffectNodeTile>document.createElement("radiance-effectnodetile");
+        this.appendChild(tile);
+        tile.style.position = "absolute";
+        tile.style.top = "0px";
+        tile.style.left = "0px";
+
+        let vertex: VertexInGraph = {
+            tile: tile,
+        };
+        this.vertices[uid] = vertex;
+        this.redrawGraph();
+    }
+
+    removeVertex(uid: number) {
+        if (!(uid in this.vertices)) {
+            throw `UID {} not found in graph`;
+        }
+        let vertex = this.vertices[uid];
+
+        this.removeChild(vertex.tile);
+        delete this.vertices[uid]
+        // TODO: remove edges
+    }
+
+    redrawGraph() {
+        for (let uid in this.vertices) {
+            let vertex = this.vertices[uid];
+            this.updateVertex(vertex);
+        };
+    }
+
+    updateVertex(vertex: VertexInGraph) {
+        vertex.tile.style.transform = `translate(${Math.random() * 100}px, ${Math.random() * 100}px)`;
+    }
+}
+
 customElements.define('radiance-flickable', Flickable);
+customElements.define('radiance-videonodetile', VideoNodeTile);
+customElements.define('radiance-videonodepreview', VideoNodePreview);
+customElements.define('radiance-effectnodetile', EffectNodeTile);
+customElements.define('radiance-graph', Graph);
