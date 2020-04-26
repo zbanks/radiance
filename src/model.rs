@@ -173,7 +173,22 @@ impl Graph {
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
-    pub fn set_state(&mut self, _state: JsonValue) -> Result<()> {
+    pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
+        let mut state: State = serde_json::from_value(state)?;
+        let mut new_graph = DiGraphMap::new();
+        self.digraph.clear();
+        for (id, state) in state.nodes.drain() {
+            if let Some(node) = self.nodes.get_mut(&id) {
+                node.set_state(state)?;
+            }
+            new_graph.add_node(id);
+        }
+        for (a, b, i) in state.edges {
+            new_graph.add_edge(a, b, i);
+        }
+        self.digraph = new_graph;
+        self.assert_no_cycles();
+        
         Ok(())
     }
 }
