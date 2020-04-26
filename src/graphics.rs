@@ -1,6 +1,6 @@
 use crate::err::{Error, Result};
 use crate::resources;
-use crate::video_node::{VideoArtist, VideoNode, VideoNodeId};
+use crate::video_node::{VideoNode, VideoNodeId};
 
 use log::*;
 use std::borrow::Borrow;
@@ -26,7 +26,6 @@ pub struct Shader {
     program: WebGlProgram,
     fragment_shader: WebGlShader,
     vertex_shader: WebGlShader,
-    pub fbo: RefCell<Fbo>,
 }
 
 pub struct ActiveShader<'a> {
@@ -36,16 +35,19 @@ pub struct ActiveShader<'a> {
 pub struct RenderChain {
     pub context: Rc<WebGlRenderingContext>,
     pub size: ChainSize,
-    pub extra_fbo: RefCell<Fbo>,
+    pub extra_fbo: RefCell<Rc<Fbo>>,
 
-    blit_shader: Shader,
+    pub blit_shader: Shader,
     blank_texture: WebGlTexture,
     pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
 
-    artists: HashMap<VideoNodeId, Box<dyn VideoArtist>>,
+    buffer_fbos: RefCell<HashMap<VideoNodeId, Vec<Rc<Fbo>>>>,
+    output_fbos: RefCell<HashMap<VideoNodeId, Rc<Fbo>>>,
 }
 
+/// This represents a WebGL framebuffer + texture pair, where the
+/// texture is the render target of the framebuffer
 impl Fbo {
     fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<Fbo> {
         let texture = context.create_texture().ok_or("Unable to create texture")?;
@@ -96,7 +98,6 @@ impl Drop for Fbo {
 impl Shader {
     fn from_fragment_shader(
         context: Rc<WebGlRenderingContext>,
-        size: ChainSize,
         shader_code: &str,
     ) -> Result<Shader> {
         info!("Compiling shaders");
@@ -111,14 +112,12 @@ impl Shader {
             shader_code,
         )?;
         let program = Self::link_program(&context, &vertex_shader, &fragment_shader)?;
-        let fbo = RefCell::new(Fbo::new(Rc::clone(&context), size)?);
 
         Ok(Shader {
             context,
             program,
             fragment_shader,
             vertex_shader,
-            fbo,
         })
     }
 
@@ -194,6 +193,7 @@ impl Shader {
 }
 
 impl<'a> ActiveShader<'a> {
+    // TODO: Encapsulate functions for updating uniforms
     pub fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
         self.shader
             .context
@@ -221,13 +221,10 @@ impl Drop for Shader {
 
 impl RenderChain {
     pub fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<RenderChain> {
-        let extra_fbo = RefCell::new(Fbo::new(Rc::clone(&context), size)?);
+        let extra_fbo = RefCell::new(Rc::new(Fbo::new(Rc::clone(&context), size)?));
 
-        let blit_shader = Shader::from_fragment_shader(
-            Rc::clone(&context),
-            size,
-            resources::glsl::PLAIN_FRAGMENT,
-        )?;
+        let blit_shader =
+            Shader::from_fragment_shader(Rc::clone(&context), resources::glsl::PLAIN_FRAGMENT)?;
 
         context.disable(GL::DEPTH_TEST);
         context.disable(GL::BLEND);
@@ -291,8 +288,6 @@ impl RenderChain {
 
         info!("New RenderChain: ({}, {})", size.0, size.1);
 
-        let artists = Default::default();
-
         Ok(RenderChain {
             context,
             extra_fbo,
@@ -301,14 +296,16 @@ impl RenderChain {
             noise_texture,
             square_vertex_buffer,
             size,
-            artists,
+            buffer_fbos: Default::default(),
+            output_fbos: Default::default(),
         })
     }
 
     pub fn compile_fragment_shader(&self, source: &str) -> Result<Shader> {
-        Shader::from_fragment_shader(Rc::clone(&self.context), self.size, source)
+        Shader::from_fragment_shader(Rc::clone(&self.context), source)
     }
 
+    /*
     #[allow(clippy::map_entry)]
     pub fn ensure_node_artists<'a, I>(&'a mut self, nodes: I) -> Result<()>
     where
@@ -329,12 +326,81 @@ impl RenderChain {
             .ok_or_else(|| "No artist for node".into())
             .map(|b| b.borrow())
     }
+    */
+    pub fn node_fbo(&self, node: &dyn VideoNode) -> Option<Rc<Fbo>> {
+        self.output_fbos
+            .borrow()
+            .get(&node.id())
+            .map(|n| Rc::clone(n))
+    }
 
-    pub fn paint(&self, node: &VideoNode) -> Result<()> {
-        let artist = self.artists.get(&node.id()).ok_or("No artist for node")?;
+    pub fn resize(&mut self, size: ChainSize) {
+        // TODO: This doesn't seem to quite work? It's more of an archetectural proof-of-concept
+        // TODO: Better error handling (unwrap)
+        let mut new_chain = RenderChain::new(Rc::clone(&self.context), size).unwrap();
+        for (id, old_fbos) in self.buffer_fbos.borrow().iter() {
+            let new_fbos = old_fbos
+                .iter()
+                .map(|old_fbo| {
+                    let new_fbo = Fbo::new(Rc::clone(&new_chain.context), size).unwrap();
+                    let active_shader = new_chain
+                        .blit_shader
+                        .begin_render(&new_chain, Some(&new_fbo));
+                    self.bind_fbo_to_texture(GL::TEXTURE0, Some(old_fbo));
+                    let loc = active_shader.get_uniform_location("iInputs");
+                    self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
+                    active_shader.finish_render();
 
+                    Rc::new(new_fbo)
+                })
+                .collect();
+            new_chain.buffer_fbos.borrow_mut().insert(*id, new_fbos);
+        }
+        std::mem::swap(self, &mut new_chain);
+    }
+
+    pub fn pre_render<'a, I>(&'a self, nodes: I, time: f64)
+    where
+        I: Iterator<Item = &'a mut (dyn VideoNode + 'static)>,
+    {
+        self.output_fbos.borrow_mut().clear();
+        for node in nodes {
+            self.buffer_fbos
+                .borrow_mut()
+                .entry(node.id())
+                .or_default()
+                .resize_with(node.n_buffers(), || {
+                    Rc::new(Fbo::new(Rc::clone(&self.context), self.size).unwrap())
+                });
+            node.pre_render(self, time / 1e3);
+        }
+    }
+
+    pub fn render_node(&self, node: &dyn VideoNode, inputs: &[Option<Rc<Fbo>>]) {
+        assert!(inputs.len() == node.n_inputs());
+        let output_fbo = node.render(
+            self,
+            inputs,
+            self.buffer_fbos
+                .borrow_mut()
+                .get_mut(&node.id())
+                .unwrap()
+                .as_mut_slice(),
+        );
+        if let Some(output) = output_fbo {
+            self.output_fbos.borrow_mut().insert(node.id(), output);
+        }
+    }
+
+    pub fn paint(&self, node: &dyn VideoNode) -> Result<()> {
         let active_shader = self.blit_shader.begin_render(self, None);
-        self.bind_fbo_to_texture(GL::TEXTURE0, artist.fbo());
+        self.bind_fbo_to_texture(
+            GL::TEXTURE0,
+            self.output_fbos
+                .borrow()
+                .get(&node.id())
+                .map(|x| x.borrow()),
+        );
         let loc = active_shader.get_uniform_location("iInputs");
         self.context.uniform1iv_with_i32_array(loc.as_ref(), &[0]);
 
@@ -347,11 +413,11 @@ impl RenderChain {
         self.context.clear(GL::COLOR_BUFFER_BIT);
     }
 
-    pub fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&RefCell<Fbo>>) {
+    pub fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&Fbo>) {
         self.context.active_texture(tex);
         if let Some(fbo) = fbo_ref {
             self.context
-                .bind_texture(GL::TEXTURE_2D, Some(&fbo.borrow().texture));
+                .bind_texture(GL::TEXTURE_2D, Some(&fbo.texture));
         } else {
             self.context
                 .bind_texture(GL::TEXTURE_2D, Some(&self.blank_texture));

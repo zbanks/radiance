@@ -1,7 +1,9 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Graph;
-use crate::video_node::{VideoNode, VideoNodeId};
+use crate::video_node::{
+    EffectNode, OutputNode, VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut,
+};
 
 use log::*;
 use std::collections::HashMap;
@@ -116,16 +118,15 @@ impl Component for App {
                 false
             }
             Msg::SetIntensity(id, intensity) => {
-                let node = self.model.graph.node_mut(id).unwrap();
-                node.kind.set_intensity(intensity);
+                match self.model.graph.node_mut(id).and_then(|n| n.downcast_mut()) {
+                    Some(VideoNodeKindMut::Effect(node)) => node.set_intensity(intensity),
+                    _ => (),
+                }
                 true
             }
             Msg::SetChainSize(size) => {
                 let chain_size = (size, size);
-                self.chain = Some(
-                    RenderChain::new(Rc::clone(&self.chain.as_ref().unwrap().context), chain_size)
-                        .unwrap(),
-                );
+                self.chain.as_mut().unwrap().resize(chain_size);
                 false
             }
             Msg::AddEffectNode(ref name) => {
@@ -207,12 +208,12 @@ impl App {
         self.render_loop = Some(Box::new(handle));
     }
 
-    fn view_node(&self, node: &VideoNode) -> Html {
+    fn view_node(&self, node: &dyn VideoNode) -> Html {
         html! {
             <div class={"node-container"}>
                 <div class={"node-inputs"}>
                     {
-                        self.model.graph.node_inputs(&node).iter().map(|child| html! {
+                        self.model.graph.node_inputs(node).iter().map(|child| html! {
                             <div class={"node-input-row"}>
                                 { child.map_or(Default::default(), |c| self.view_node(c)) }
                             </div>
@@ -220,36 +221,35 @@ impl App {
                     }
                 </div>
                 <div class={"node"}>
-                    <div class={"node-preview"} ref={self.node_refs.get(&node.id).map_or(Default::default(), |x| x.clone())} />
+                    <div class={"node-preview"} ref={self.node_refs.get(&node.id()).map_or(Default::default(), |x| x.clone())} />
                     {
-                        if let Some(intensity) = node.kind.intensity() {
-                            html! {
+                        match node.downcast() {
+                            Some(VideoNodeKind::Effect(node)) => html! {
                                 <input
                                     oninput={
-                                        let id = node.id;
-                                        let old_intensity = intensity;
+                                        let id = node.id();
+                                        let old_intensity = node.intensity();
                                         self.link.callback(move |e: InputData| Msg::SetIntensity(id, e.value.parse().unwrap_or(old_intensity)))
                                     }
-                                    value=intensity
+                                    value=node.intensity()
                                     type="range"
                                     min=0.
                                     max=1.
                                     step=0.01
                                 />
-                            }
-                        } else {
-                            html! {}
+                            },
+                            _ => html! {}
                         }
                     }
                     {
-                        (0..node.n_inputs).map(|input|
+                        (0..node.n_inputs()).map(|input|
                             html! {
                                 <input
                                     type="radio"
-                                    checked={ Some((node.id, input)) == self.model.drop_target }
+                                    checked={ Some((node.id(), input)) == self.model.drop_target }
                                     name="drop-target"
                                     oninput={
-                                        let id = node.id;
+                                        let id = node.id();
                                         self.link.callback(move |_| Msg::SetDropTarget(id, input))
                                     }
                                 />
@@ -258,11 +258,11 @@ impl App {
                     }
                     <button
                         onclick={
-                            let id = node.id;
+                            let id = node.id();
                             self.link.callback(move |_| Msg::Reorder(id))
                         }
                     >{"Move"}</button>
-                    { &node.name }
+                    { node.name() }
                 </div>
             </div>
         }
@@ -302,8 +302,8 @@ impl Model {
         let id = self.append_node("test", 0.7)?;
         self.graph.add_edge_by_ids(id, *ids.last().unwrap(), 1)?;
 
-        let output_node = VideoNode::output()?;
-        let output_id = output_node.id;
+        let output_node = OutputNode::new();
+        let output_id = output_node.id();
         self.graph.add_videonode(output_node);
         self.graph
             .add_edge_by_ids(*ids.last().unwrap(), output_id, 0)?;
@@ -315,33 +315,26 @@ impl Model {
 
     /// This is a temporary utility function that will get refactored
     fn append_node(&mut self, name: &str, value: f64) -> Result<VideoNodeId> {
-        let mut node = VideoNode::effect(name)?;
-        node.kind.set_intensity(value);
+        let mut node = EffectNode::new(name)?;
+        node.set_intensity(value);
 
-        let id = node.id;
+        let id = node.id();
         self.graph.add_videonode(node);
         Ok(id)
     }
 
     fn render(&mut self, chain: &mut RenderChain, time: f64) {
-        for node in &mut self.graph.nodes_mut() {
-            node.set_time(time / 1e3);
-        }
-        chain.ensure_node_artists(self.graph.nodes_mut()).unwrap();
+        chain.pre_render(self.graph.nodes_mut(), time);
 
         chain.context.viewport(0, 0, chain.size.0, chain.size.1);
         for node in self.graph.toposort() {
-            let artist = chain.node_artist(node).unwrap();
             let fbos = self
                 .graph
                 .node_inputs(node)
                 .iter()
-                .map(|n| {
-                    n.and_then(|node| chain.node_artist(node).ok())
-                        .and_then(|artist| artist.fbo())
-                })
+                .map(|n| n.and_then(|node| chain.node_fbo(node)))
                 .collect::<Vec<_>>();
-            artist.render(chain, node, &fbos);
+            chain.render_node(node, &fbos);
         }
     }
 

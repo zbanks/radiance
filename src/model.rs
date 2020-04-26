@@ -1,6 +1,7 @@
 use crate::err::Result;
 use crate::video_node::{VideoNode, VideoNodeId};
 use petgraph::graphmap::DiGraphMap;
+use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
 
 /// Directed graph abstraction that owns VideoNodes
@@ -8,7 +9,7 @@ use std::collections::HashMap;
 /// - Each VideoNode can have up to `node.n_inputs` incoming edges,
 ///     which must all have unique edge weights in [0..node.n_inputs)
 pub struct Graph {
-    nodes: HashMap<VideoNodeId, VideoNode>,
+    nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
     digraph: DiGraphMap<VideoNodeId, usize>,
 }
 
@@ -20,49 +21,51 @@ impl Graph {
         }
     }
 
-    pub fn node(&self, id: VideoNodeId) -> Option<&VideoNode> {
-        self.nodes.get(&id)
+    pub fn node(&self, id: VideoNodeId) -> Option<&dyn VideoNode> {
+        self.nodes.get(&id).map(|n| n.borrow())
     }
 
-    pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut VideoNode> {
-        self.nodes.get_mut(&id)
+    pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut (dyn VideoNode + 'static)> {
+        self.nodes.get_mut(&id).map(|n| n.borrow_mut())
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = &VideoNode> {
-        self.nodes.values()
+    pub fn nodes(&self) -> impl Iterator<Item = &dyn VideoNode> {
+        self.nodes.values().map(|n| n.borrow())
     }
 
-    pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut VideoNode> {
-        self.nodes.values_mut()
+    pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut (dyn VideoNode + 'static)> {
+        // TODO: How to return Iterator<Item = &mut dyn VideoNode> instead?
+        self.nodes.values_mut().map(|n| (*n).borrow_mut())
     }
 
     pub fn ids(&self) -> impl Iterator<Item = &VideoNodeId> {
         self.nodes.keys()
     }
 
-    pub fn root_nodes(&self) -> Vec<&VideoNode> {
+    pub fn root_nodes(&self) -> Vec<&dyn VideoNode> {
         let mut nodes: Vec<_> = self
             .nodes()
             .filter(|n| {
                 self.digraph
-                    .neighbors_directed(n.id, petgraph::Direction::Outgoing)
+                    .neighbors_directed(n.id(), petgraph::Direction::Outgoing)
                     .next()
                     .is_none()
             })
             .collect();
-        nodes.sort_by_key(|n| n.id);
+        nodes.sort_by_key(|n| n.id());
         nodes
     }
 
-    pub fn add_videonode(&mut self, node: VideoNode) {
-        self.digraph.add_node(node.id);
-        self.nodes.insert(node.id, node);
+    pub fn add_videonode<VN: VideoNode + 'static>(&mut self, node: VN) {
+        self.digraph.add_node(node.id());
+        let n = Box::new(node);
+        self.nodes.insert(n.id(), n);
     }
 
     #[allow(dead_code)]
-    pub fn remove_videonode(&mut self, node: &VideoNode) {
-        self.digraph.remove_node(node.id);
-        self.nodes.remove(&node.id);
+    pub fn remove_videonode<VN: VideoNode>(&mut self, node: &VN) {
+        self.digraph.remove_node(node.id());
+        self.nodes.remove(&node.id());
     }
 
     pub fn add_edge_by_ids(
@@ -96,25 +99,25 @@ impl Graph {
         None
     }
 
-    pub fn toposort(&self) -> Vec<&VideoNode> {
+    pub fn toposort(&self) -> Vec<&dyn VideoNode> {
         petgraph::algo::toposort(&self.digraph, None)
             .unwrap()
             .iter()
-            .map(|id| self.nodes.get(id).unwrap())
+            .map(|id| self.nodes.get(id).unwrap().borrow())
             .collect()
     }
 
-    pub fn node_inputs(&self, node: &VideoNode) -> Vec<Option<&VideoNode>> {
+    pub fn node_inputs(&self, node: &dyn VideoNode) -> Vec<Option<&dyn VideoNode>> {
         let mut inputs = Vec::new();
-        inputs.resize(node.n_inputs, None);
+        inputs.resize(node.n_inputs(), None);
 
         for src_id in self
             .digraph
-            .neighbors_directed(node.id, petgraph::Direction::Incoming)
+            .neighbors_directed(node.id(), petgraph::Direction::Incoming)
         {
-            let src_index = *self.digraph.edge_weight(src_id, node.id).unwrap();
-            if src_index < node.n_inputs {
-                inputs[src_index] = self.nodes.get(&src_id);
+            let src_index = *self.digraph.edge_weight(src_id, node.id()).unwrap();
+            if src_index < node.n_inputs() {
+                inputs[src_index] = self.nodes.get(&src_id).map(|n| n.borrow());
             }
         }
 
@@ -123,20 +126,20 @@ impl Graph {
 
     pub fn disconnect_node(&mut self, id: VideoNodeId) -> Result<()> {
         let node = self.nodes.get(&id).unwrap();
-        let inputs = self.node_inputs(node);
-        let src_id = inputs.first().unwrap_or(&None).map(|n| n.id);
-        let src_edges: Vec<VideoNodeId> = inputs.into_iter().flatten().map(|n| n.id).collect();
+        let inputs = self.node_inputs(node.borrow());
+        let src_id = inputs.first().unwrap_or(&None).map(|n| n.id());
+        let src_edges: Vec<VideoNodeId> = inputs.into_iter().flatten().map(|n| n.id()).collect();
 
         let edges_to_remove: Vec<(VideoNodeId, usize)> = self
             .digraph
-            .neighbors_directed(node.id, petgraph::Direction::Outgoing)
+            .neighbors_directed(node.id(), petgraph::Direction::Outgoing)
             .map(|dst_id| {
-                let dst_index = *self.digraph.edge_weight(node.id, dst_id).unwrap();
+                let dst_index = *self.digraph.edge_weight(node.id(), dst_id).unwrap();
                 (dst_id, dst_index)
             })
             .collect();
         for (dst_id, dst_index) in edges_to_remove {
-            self.digraph.remove_edge(node.id, dst_id);
+            self.digraph.remove_edge(node.id(), dst_id);
             if let Some(id) = src_id {
                 self.digraph.add_edge(id, dst_id, dst_index);
             }
