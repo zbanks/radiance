@@ -146,8 +146,7 @@ impl VideoNode for EffectNode {
             chain
                 .context
                 .bind_texture(GL::TEXTURE_2D, Some(&chain.noise_texture));
-            let loc = active_shader.get_uniform_location("iNoise");
-            chain.context.uniform1i(loc.as_ref(), tex_index as i32);
+            active_shader.set_uniform1i("iNoise", tex_index as i32);
             tex_index += 1;
 
             let mut inputs: Vec<i32> = vec![];
@@ -159,10 +158,7 @@ impl VideoNode for EffectNode {
                 inputs.push(tex_index as i32);
                 tex_index += 1;
             }
-            let loc = active_shader.get_uniform_location("iInputs");
-            chain
-                .context
-                .uniform1iv_with_i32_array(loc.as_ref(), &inputs);
+            active_shader.set_uniform1iv("iInputs", &inputs);
 
             let mut channels: Vec<i32> = vec![];
             for fbo in buffer_fbos.iter() {
@@ -170,43 +166,16 @@ impl VideoNode for EffectNode {
                 channels.push(tex_index as i32);
                 tex_index += 1;
             }
-            let loc = active_shader.get_uniform_location("iChannel");
-            chain
-                .context
-                .uniform1iv_with_i32_array(loc.as_ref(), &channels);
-
-            let loc = active_shader.get_uniform_location("iIntensity");
-            chain.context.uniform1f(loc.as_ref(), self.intensity as f32);
-
-            let loc = active_shader.get_uniform_location("iIntensityIntegral");
-            chain
-                .context
-                .uniform1f(loc.as_ref(), self.intensity_integral as f32);
-
-            let loc = active_shader.get_uniform_location("iTime");
-            chain
-                .context
-                .uniform1f(loc.as_ref(), (self.time % 2048.) as f32);
-
-            let loc = active_shader.get_uniform_location("iStep");
-            chain
-                .context
-                .uniform1f(loc.as_ref(), (self.time % 2048.) as f32);
-
-            let loc = active_shader.get_uniform_location("iFPS");
-            chain.context.uniform1f(loc.as_ref(), 60.);
-
-            let loc = active_shader.get_uniform_location("iAudio");
-            chain
-                .context
-                .uniform4fv_with_f32_array(loc.as_ref(), &[0.1, 0.2, 0.3, 0.4]);
-
-            let loc = active_shader.get_uniform_location("iResolution");
-            chain
-                .context
-                .uniform2f(loc.as_ref(), chain.size.0 as f32, chain.size.1 as f32);
-
+            active_shader.set_uniform1iv("iChannel", &channels);
+            active_shader.set_uniform1f("iIntensity", self.intensity as f32);
+            active_shader.set_uniform1f("iIntensityIntegral", self.intensity_integral as f32);
+            active_shader.set_uniform1f("iTime", (self.time % 2048.) as f32);
+            active_shader.set_uniform1f("iStep", (self.time % 2048.) as f32);
+            active_shader.set_uniform1f("iFPS", 60.);
+            active_shader.set_uniform4fv("iAudio", &[0.1, 0.2, 0.3, 0.4]);
+            active_shader.set_uniform2f("iResolution", (chain.size.0 as f32, chain.size.1 as f32));
             active_shader.finish_render();
+
             std::mem::swap(&mut *chain.extra_fbo.borrow_mut(), &mut buffer_fbos[i]);
         }
         Some(Rc::clone(&buffer_fbos.first().unwrap()))

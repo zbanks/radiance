@@ -152,6 +152,6 @@ impl Graph {
     }
 
     fn assert_no_cycles(&self) {
-        petgraph::algo::toposort(&self.digraph, None).unwrap();
+        assert!(petgraph::algo::toposort(&self.digraph, None).is_ok());
     }
 }

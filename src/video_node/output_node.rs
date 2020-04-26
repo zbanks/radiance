@@ -33,7 +33,7 @@ impl VideoNode for OutputNode {
         assert!(input_fbos.len() == self.n_inputs());
         assert!(buffer_fbos.len() == self.n_buffers());
 
-        input_fbos.first().unwrap().as_ref().map(|b| Rc::clone(b))
+        input_fbos.first().unwrap().as_ref().cloned()
     }
 
     fn downcast(&self) -> Option<VideoNodeKind> {

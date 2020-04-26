@@ -193,11 +193,41 @@ impl Shader {
 }
 
 impl<'a> ActiveShader<'a> {
-    // TODO: Encapsulate functions for updating uniforms
     pub fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
         self.shader
             .context
             .get_uniform_location(&self.shader.program, uniform)
+    }
+
+    pub fn set_uniform1f(&self, uniform: &str, value: f32) {
+        let loc = self.get_uniform_location(uniform);
+        self.shader.context.uniform1f(loc.as_ref(), value);
+    }
+
+    pub fn set_uniform2f(&self, uniform: &str, value: (f32, f32)) {
+        let loc = self.get_uniform_location(uniform);
+        self.shader
+            .context
+            .uniform2f(loc.as_ref(), value.0, value.1);
+    }
+
+    pub fn set_uniform4fv(&self, uniform: &str, value: &[f32]) {
+        let loc = self.get_uniform_location(uniform);
+        self.shader
+            .context
+            .uniform4fv_with_f32_array(loc.as_ref(), value);
+    }
+
+    pub fn set_uniform1i(&self, uniform: &str, value: i32) {
+        let loc = self.get_uniform_location(uniform);
+        self.shader.context.uniform1i(loc.as_ref(), value);
+    }
+
+    pub fn set_uniform1iv(&self, uniform: &str, value: &[i32]) {
+        let loc = self.get_uniform_location(uniform);
+        self.shader
+            .context
+            .uniform1iv_with_i32_array(loc.as_ref(), value);
     }
 
     pub fn finish_render(self) {

@@ -21,7 +21,10 @@ impl VideoNodeId {
     }
 }
 
-// TODO: It's gross to have *both* an enum and a trait object; make up your mind
+// TODO: It's gross to have *both* an enum and a trait object (make up your mind)
+// This is currently only used by the UI; I think a reasonable goal is to create
+// a (new?) trait for UI methods -- but it's unclear what the UI archetecture will be
+// It's possible the UI boundary will just be a set of key-value properties?
 pub enum VideoNodeKind<'a> {
     Effect(&'a EffectNode),
     Output(&'a OutputNode),
@@ -35,15 +38,23 @@ pub enum VideoNodeKindMut<'a> {
 pub trait VideoNode {
     fn id(&self) -> VideoNodeId;
     fn name(&self) -> &str;
+
+    /// Number of input FBOs
     fn n_inputs(&self) -> usize {
         1
     }
+
+    /// Number of internal FBOs needed during rendering
     fn n_buffers(&self) -> usize {
         0
     }
 
+    /// Set up the VideoNode for rendering. `pre_render` takes a mut reference,
+    /// whereas `render` only gets an immutable reference. Perform any actions that require
+    /// modifying the VideoNode in this method.
     fn pre_render(&mut self, _chain: &RenderChain, _time: f64) {}
 
+    /// Perform the render operation, returning the rendered result
     fn render<'a>(
         &'a self,
         chain: &'a RenderChain,
@@ -51,7 +62,7 @@ pub trait VideoNode {
         buffer_fbos: &mut [Rc<Fbo>],
     ) -> Option<Rc<Fbo>>;
 
-    // See TODO
+    // See TODO about VideoNodeKind
     fn downcast(&self) -> Option<VideoNodeKind> {
         None
     }
