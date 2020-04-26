@@ -7,22 +7,22 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use web_sys::WebGlRenderingContext as GL;
+use web_sys::WebGl2RenderingContext as GL;
 use web_sys::{
-    WebGlBuffer, WebGlFramebuffer, WebGlProgram, WebGlRenderingContext, WebGlShader, WebGlTexture,
+    WebGl2RenderingContext, WebGlBuffer, WebGlFramebuffer, WebGlProgram, WebGlShader, WebGlTexture,
     WebGlUniformLocation,
 };
 
 pub type ChainSize = (i32, i32);
 
 pub struct Fbo {
-    context: Rc<WebGlRenderingContext>,
-    texture: WebGlTexture,
+    context: Rc<WebGl2RenderingContext>,
+    pub texture: WebGlTexture,
     framebuffer: WebGlFramebuffer,
 }
 
 pub struct Shader {
-    context: Rc<WebGlRenderingContext>,
+    context: Rc<WebGl2RenderingContext>,
     program: WebGlProgram,
     fragment_shader: WebGlShader,
     vertex_shader: WebGlShader,
@@ -33,7 +33,7 @@ pub struct ActiveShader<'a> {
 }
 
 pub struct RenderChain {
-    pub context: Rc<WebGlRenderingContext>,
+    pub context: Rc<WebGl2RenderingContext>,
     pub size: ChainSize,
     pub extra_fbo: RefCell<Rc<Fbo>>,
 
@@ -49,7 +49,7 @@ pub struct RenderChain {
 /// This represents a WebGL framebuffer + texture pair, where the
 /// texture is the render target of the framebuffer
 impl Fbo {
-    fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<Fbo> {
+    fn new(context: Rc<WebGl2RenderingContext>, size: ChainSize) -> Result<Fbo> {
         let texture = context.create_texture().ok_or("Unable to create texture")?;
         context.bind_texture(GL::TEXTURE_2D, Some(&texture));
         context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
@@ -86,6 +86,24 @@ impl Fbo {
             framebuffer,
         })
     }
+
+    pub fn image_video_element(&self, video: &web_sys::HtmlVideoElement) -> Result<()> {
+        self.context.bind_framebuffer(GL::FRAMEBUFFER, None);
+        self.context
+            .bind_texture(GL::TEXTURE_2D, Some(&self.texture));
+        self.context.pixel_storei(GL::UNPACK_FLIP_Y_WEBGL, 1);
+        self.context
+            .tex_image_2d_with_u32_and_u32_and_html_video_element(
+                GL::TEXTURE_2D,    // target
+                0,                 // level
+                GL::RGBA as i32,   // internal format
+                GL::RGBA,          // format
+                GL::UNSIGNED_BYTE, // type
+                video,             // source
+            )?;
+        self.context.bind_texture(GL::TEXTURE_2D, None);
+        Ok(())
+    }
 }
 
 impl Drop for Fbo {
@@ -97,18 +115,18 @@ impl Drop for Fbo {
 
 impl Shader {
     fn from_fragment_shader(
-        context: Rc<WebGlRenderingContext>,
+        context: Rc<WebGl2RenderingContext>,
         shader_code: &str,
     ) -> Result<Shader> {
         info!("Compiling shaders");
         let vertex_shader = Self::compile_shader(
             &context,
-            WebGlRenderingContext::VERTEX_SHADER,
+            WebGl2RenderingContext::VERTEX_SHADER,
             resources::glsl::PLAIN_VERTEX,
         )?;
         let fragment_shader = Self::compile_shader(
             &context,
-            WebGlRenderingContext::FRAGMENT_SHADER,
+            WebGl2RenderingContext::FRAGMENT_SHADER,
             shader_code,
         )?;
         let program = Self::link_program(&context, &vertex_shader, &fragment_shader)?;
@@ -122,7 +140,7 @@ impl Shader {
     }
 
     fn compile_shader(
-        context: &WebGlRenderingContext,
+        context: &WebGl2RenderingContext,
         shader_type: u32,
         source: &str,
     ) -> Result<WebGlShader> {
@@ -133,7 +151,7 @@ impl Shader {
         context.compile_shader(&shader);
 
         if context
-            .get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
+            .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
             .as_bool()
             .unwrap_or(false)
         {
@@ -148,7 +166,7 @@ impl Shader {
     }
 
     fn link_program(
-        context: &WebGlRenderingContext,
+        context: &WebGl2RenderingContext,
         vert_shader: &WebGlShader,
         frag_shader: &WebGlShader,
     ) -> Result<WebGlProgram> {
@@ -161,7 +179,7 @@ impl Shader {
         context.link_program(&program);
 
         if context
-            .get_program_parameter(&program, WebGlRenderingContext::LINK_STATUS)
+            .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
             .as_bool()
             .unwrap_or(false)
         {
@@ -250,7 +268,7 @@ impl Drop for Shader {
 }
 
 impl RenderChain {
-    pub fn new(context: Rc<WebGlRenderingContext>, size: ChainSize) -> Result<RenderChain> {
+    pub fn new(context: Rc<WebGl2RenderingContext>, size: ChainSize) -> Result<RenderChain> {
         let extra_fbo = RefCell::new(Rc::new(Fbo::new(Rc::clone(&context), size)?));
 
         let blit_shader =
@@ -389,6 +407,7 @@ impl RenderChain {
         std::mem::swap(self, &mut new_chain);
     }
 
+    #[allow(clippy::needless_lifetimes)]
     pub fn pre_render<'a, I>(&'a self, nodes: I, time: f64)
     where
         I: Iterator<Item = &'a mut (dyn VideoNode + 'static)>,

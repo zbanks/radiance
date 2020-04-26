@@ -3,8 +3,10 @@ use crate::graphics::{Fbo, RenderChain};
 use std::rc::Rc;
 
 mod effect_node;
+mod media_node;
 mod output_node;
 pub use effect_node::EffectNode;
+pub use media_node::MediaNode;
 pub use output_node::OutputNode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -28,11 +30,13 @@ impl VideoNodeId {
 pub enum VideoNodeKind<'a> {
     Effect(&'a EffectNode),
     Output(&'a OutputNode),
+    Media(&'a MediaNode),
 }
 
 pub enum VideoNodeKindMut<'a> {
     Effect(&'a mut EffectNode),
     Output(&'a mut OutputNode),
+    Media(&'a mut MediaNode),
 }
 
 pub trait VideoNode {

@@ -2,14 +2,15 @@ use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Graph;
 use crate::video_node::{
-    EffectNode, OutputNode, VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut,
+    EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut,
 };
 
 use log::*;
 use std::collections::HashMap;
 use std::rc::Rc;
-use wasm_bindgen::JsCast;
-use web_sys::WebGlRenderingContext;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::WebGl2RenderingContext;
 use yew::prelude::*;
 use yew::services::{RenderService, Task};
 
@@ -18,6 +19,8 @@ pub struct App {
     canvas_ref: NodeRef,
     output_ref: NodeRef,
     node_refs: HashMap<VideoNodeId, NodeRef>,
+    video_ref: NodeRef,
+    video_promise: Option<Box<Closure<dyn FnMut(JsValue)>>>,
     render_loop: Option<Box<dyn Task>>,
     chain: Option<RenderChain>,
     model: Model,
@@ -54,6 +57,8 @@ impl Component for App {
             link,
             render_loop: None,
             canvas_ref: Default::default(),
+            video_ref: Default::default(),
+            video_promise: None,
             output_ref: Default::default(),
             node_refs,
             model,
@@ -65,14 +70,49 @@ impl Component for App {
         let canvas: web_sys::HtmlCanvasElement = self.canvas_ref.cast().unwrap();
         let context = Rc::new(
             canvas
-                .get_context("webgl")
-                .expect("WebGL not supported")
+                .get_context("webgl2")
+                .expect("WebGL2 not supported")
                 .unwrap()
-                .dyn_into::<WebGlRenderingContext>()
+                .dyn_into::<WebGl2RenderingContext>()
                 .unwrap(),
         );
         let chain_size = (256, 256);
         self.chain = Some(RenderChain::new(Rc::clone(&context), chain_size).unwrap());
+
+        {
+            let video: web_sys::HtmlVideoElement = self.video_ref.cast().unwrap();
+            video.set_autoplay(true);
+
+            self.video_promise = Some(Box::new(Closure::once(move |result: JsValue| {
+                info!("MediaStream: {:?}", result);
+                let media: web_sys::MediaStream = result.dyn_into().unwrap();
+                video.set_src_object(Some(&media));
+            })));
+        }
+
+        {
+            let video: web_sys::HtmlVideoElement = self.video_ref.cast().unwrap();
+            let node = MediaNode::new(video);
+            let node_id = node.id();
+            self.node_refs.insert(node_id, Default::default());
+            self.model.graph.add_videonode(node);
+            let dt = self.model.drop_target.unwrap();
+            self.model
+                .graph
+                .add_edge_by_ids(node_id, dt.0, dt.1)
+                .unwrap();
+        }
+
+        let mut constraints = web_sys::MediaStreamConstraints::new();
+        constraints.audio(&JsValue::FALSE).video(&JsValue::TRUE);
+        web_sys::window()
+            .unwrap()
+            .navigator()
+            .media_devices()
+            .unwrap()
+            .get_user_media_with_constraints(&constraints)
+            .unwrap()
+            .then(&*self.video_promise.as_ref().unwrap());
 
         self.schedule_next_paint();
         true
@@ -193,6 +233,12 @@ impl Component for App {
                 <div class={"node-list"}>
                     { self.model.graph.root_nodes().iter().map(|n| self.view_node(*n)).collect::<Html>() }
                 </div>
+
+                <video
+                    ref={self.video_ref.clone()}
+                    width=256
+                    height=256
+                />
             </>
         }
     }
@@ -291,7 +337,7 @@ impl Model {
         ids.push(self.append_node("lpf", 0.3)?);
         ids.push(self.append_node("tunnel", 0.3)?);
         ids.push(self.append_node("melt", 0.4)?);
-        ids.push(self.append_node("composite", 0.5)?);
+        ids.push(self.append_node("composite", 0.9)?);
 
         for (a, b) in ids.iter().zip(ids.iter().skip(1)) {
             self.graph.add_edge_by_ids(*a, *b, 0)?;
@@ -301,6 +347,7 @@ impl Model {
 
         let id = self.append_node("test", 0.7)?;
         self.graph.add_edge_by_ids(id, *ids.last().unwrap(), 1)?;
+        self.drop_target = Some((id, 0));
 
         let output_node = OutputNode::new();
         let output_id = output_node.id();

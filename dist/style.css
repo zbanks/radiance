@@ -8,6 +8,10 @@ canvas {
     height: 100%;
 }
 
+video {
+    display: none;
+}
+
 div.node-list {
     float: left;
 }
