@@ -158,11 +158,20 @@ class Flickable extends HTMLElement {
     }
 }
 
+type UID = number;
+
 class VideoNodeTile extends HTMLElement {
-    minHeight: 150;
+    nInputs: number;
+    inputHeights: number[];
+    uid: UID;
+    x: number;
+    y: number;
 
     constructor() {
         super();
+        this.nInputs = 0;
+        this.inputHeights = [];
+        this.uid = null;
     }
 
     connectedCallback() {
@@ -171,8 +180,6 @@ class VideoNodeTile extends HTMLElement {
             <style>
             :host {
                 display: block;
-                width: 110px;
-                height: 180px;
                 background-color: black;
                 border: 2px solid gray;
                 text-align: center;
@@ -182,6 +189,32 @@ class VideoNodeTile extends HTMLElement {
             </style>
             <slot></slot>
         `;
+    }
+
+    width() {
+        // Tile width
+        // Override this method to specify width, e.g. as a function of height
+        return 110;
+    }
+
+    minInputHeight(input: number) {
+        // Minimum height of the given input.
+        // An input's height may be expanded if upstream blocks are tall.
+        // Override this method to specify minimum input heights for your node type.
+        // This method will be called at least once, even if there are no inputs, to get the
+        // height of the node. So implement it even if your node has zero inputs.
+        return 180;
+    }
+
+    height() {
+        // Total height = sum of inputHeights
+        // Do not override this method.
+        return this.inputHeights.reduce((a, b) => a + b, 0);
+    }
+
+    updateSize() {
+        this.style.height = `${this.height()}px`;
+        this.style.width = `${this.width()}px`;
     }
 }
 
@@ -242,26 +275,25 @@ class EffectNodeTile extends VideoNodeTile {
     }
 }
 
-interface VertexInGraph {
-    tile: VideoNodeTile;
-}
 interface EdgeInGraph {
-    fromVertex: string;
+    fromVertex: number;
     toInput: number;
-    toVertex: string;
+    toVertex: number;
 }
 
 class Graph extends HTMLElement {
+    // This custom element creates the visual context for displaying connected nodes.
+
     mutationObserver: MutationObserver;
-    vertices: {[uid: number]: VertexInGraph};
-    edges: [];
+    vertices: VideoNodeTile[];
+    edges: EdgeInGraph[];
     nextUID: number;
 
     constructor() {
         super();
 
         this.nextUID = 0;
-        this.vertices = {};
+        this.vertices = [];
         this.edges = [];
     }
 
@@ -278,54 +310,173 @@ class Graph extends HTMLElement {
         `;
 
         this.addEventListener('mousedown', event => {
-            this.addVertex(this.nextUID);
+            this.addTile();
         });
     }
 
-    loadGraph() {
-    }
-
-    addVertex(uid: number) {
-        if (uid in this.vertices) {
-            throw `UID {} already exists`;
-        }
-        if (uid >= this.nextUID) {
-            this.nextUID = uid + 1;
-        }
-
+    // Gonna need some arguments one day...
+    addTile() {
         let tile = <EffectNodeTile>document.createElement("radiance-effectnodetile");
         this.appendChild(tile);
         tile.style.position = "absolute";
         tile.style.top = "0px";
         tile.style.left = "0px";
 
-        let vertex: VertexInGraph = {
-            tile: tile,
-        };
-        this.vertices[uid] = vertex;
+        this.vertices.push(tile);
         this.redrawGraph();
     }
 
-    removeVertex(uid: number) {
-        if (!(uid in this.vertices)) {
-            throw `UID {} not found in graph`;
-        }
-        let vertex = this.vertices[uid];
-
-        this.removeChild(vertex.tile);
-        delete this.vertices[uid]
-        // TODO: remove edges
-    }
-
     redrawGraph() {
+        // This method resizes and repositions all tiles
+        // according to the graph structure.
+
+        // TODO: probably want to compute a tree-like vertices and edges here, based on the DAG.
+
+        // Precompute some useful things
+        let downstreamVertex: number[] = []; // Parallel to vertices. The downstream vertex index, or null.
+        let downstreamInput: number[] = []; // Parallel to vertices. The downstream input index, or null.
+        let upstreamVertices: number[][] = []; // Parallel to vertices. The upstream vertex index on each input, or null.
+        this.vertices.forEach((tile, index) => {
+            downstreamVertex[index] = null;
+            downstreamInput[index] = null;
+            upstreamVertices[index] = [];
+            for (let i = 0; i < tile.nInputs; i++) {
+                upstreamVertices[index].push(null);
+            }
+        });
+        for (let edge of this.edges) {
+            if (downstreamVertex[edge.fromVertex] !== null) {
+                throw `Vertex ${edge.fromVertex} has multiple downstream vertices`;
+            }
+            downstreamVertex[edge.fromVertex] = edge.toVertex;
+            downstreamInput[edge.fromVertex] = edge.toInput;
+            if (edge.toInput >= upstreamVertices[edge.toVertex].length !== null) {
+                throw `Edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
+            }
+            if (upstreamVertices[edge.toVertex][edge.toInput] !== null) {
+                throw `Vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
+            }
+            upstreamVertices[edge.toVertex][edge.toInput] = edge.fromVertex;
+        }
+
+        // 1. Find root vertices
+        // (root vertices have no downstream nodes)
+        let roots = [];
+        this.vertices.forEach((tile, index) => {
+            if (downstreamVertex[index] === null) {
+                roots.push(index);
+            }
+        });
+
+        // 2. From each root, set downstream nodes to be at least as tall as their upstream nodes.
+        const setInputHeightsFwd = (index: number) => {
+            let tile = this.vertices[index];
+            tile.inputHeights = [];
+            for (let i = 0; i < tile.nInputs; i++) {
+                let height = tile.minInputHeight(i);
+                let upstream = upstreamVertices[index][i];
+                if (upstream !== null) {
+                    setInputHeightsFwd(upstream);
+                    height = Math.max(height, this.vertices[upstream].height());
+                }
+                tile.inputHeights.push(height);
+            }
+            if (tile.nInputs == 0) {
+                // Push one inputheight even if there are no inputs, to set the overall height
+                tile.inputHeights.push(tile.minInputHeight(0));
+            }
+        };
+
+        for (let index of roots) {
+            setInputHeightsFwd(index);
+        }
+
+        // 3. From each root, set upstream nodes to be at least as tall as their downstream nodes' inputs.
+        const setInputHeightsRev = (index: number) => {
+            let tile = this.vertices[index];
+            let height = tile.height();
+
+            let downstream = downstreamVertex[index];
+            if (downstream !== null) {
+                let downstreamHeight = this.vertices[downstream].height();
+                let ratio = downstreamHeight / height;
+                if (ratio > 1) {
+                    // Scale all inputs proportionally to get the node sufficiently tall
+                    for (let i = 0; i < tile.nInputs; i++) {
+                        tile.inputHeights[i] *= ratio;
+                    }
+                }
+            }
+        };
+
+        for (let index of roots) {
+            setInputHeightsRev(index);
+        }
+
+        // 4. From the heights, calculate the Y-coordinates
+        const setYCoordinate = (index: number, y: number) => {
+            let tile = this.vertices[index];
+            tile.y = y;
+
+            for (let i = 0; i < tile.nInputs; i++) {
+                let upstream = upstreamVertices[index][i];
+                if (upstream !== null) {
+                    setYCoordinate(upstream, y);
+                }
+                y += tile.inputHeights[i];
+            }
+        }
+
+        let y = 0;
+        for (let index of roots) {
+            setYCoordinate(index, y);
+            y += this.vertices[index].height();
+        }
+        let height = y;
+
+        // 5. From the widths, calculate the X-coordinates
+        const setXCoordinate = (index: number, x: number) => {
+            let tile = this.vertices[index];
+            tile.x = x;
+
+            x -= tile.width();
+
+            for (let i = 0; i < tile.nInputs; i++) {
+                let upstream = upstreamVertices[index][i];
+                if (upstream !== null) {
+                    setXCoordinate(upstream, x);
+                }
+            }
+        }
+
+        for (let index of roots) {
+            setXCoordinate(index, -this.vertices[index].width());
+        }
+
+        // 6. Compute total width & height, and offset all coordinates
+        let smallestX = 0;
+        this.vertices.forEach(tile => {
+            if (tile.x < smallestX) {
+                smallestX = tile.x;
+            }
+        });
+        this.vertices.forEach(tile => {
+            tile.x -= smallestX;
+        });
+        let width = -smallestX;
+        this.style.width = `${width}px`;
+        this.style.height = `${height}px`;
+
         for (let uid in this.vertices) {
             let vertex = this.vertices[uid];
             this.updateVertex(vertex);
         };
     }
 
-    updateVertex(vertex: VertexInGraph) {
-        vertex.tile.style.transform = `translate(${Math.random() * 100}px, ${Math.random() * 100}px)`;
+    updateVertex(tile: VideoNodeTile) {
+        tile.style.width = `${tile.width()}px`;
+        tile.style.height = `${tile.height()}px`;
+        tile.style.transform = `translate(${tile.x}px, ${tile.y}px)`;
     }
 }
 
