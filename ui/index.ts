@@ -223,7 +223,6 @@ class VideoNodePreview extends HTMLElement {
         super();
     }
 
-
     connectedCallback() {
         const shadow = this.attachShadow({mode: 'open'});
         shadow.innerHTML = `
@@ -275,7 +274,7 @@ class EffectNodeTile extends VideoNodeTile {
     }
 }
 
-interface EdgeInGraph {
+interface Edge {
     fromVertex: number;
     toInput: number;
     toVertex: number;
@@ -286,8 +285,9 @@ class Graph extends HTMLElement {
 
     mutationObserver: MutationObserver;
     vertices: VideoNodeTile[];
-    edges: EdgeInGraph[];
+    edges: Edge[];
     nextUID: number;
+    model; // TODO: type
 
     constructor() {
         super();
@@ -323,14 +323,54 @@ class Graph extends HTMLElement {
         tile.style.left = "0px";
 
         this.vertices.push(tile);
-        this.redrawGraph();
+        this.relayoutGraph();
     }
 
-    redrawGraph() {
+    // Model looks like:
+    // {"vertices": [{"file", "intensity", "type", "uid"},...], "edges": [{from, tovertex, toinput},...]}
+
+    modelChanged() {
+        // Convert the model DAG into a tree
+
+        // Precompute some useful things
+        let upstreamVertices: number[][] = []; // Parallel to vertices. The upstream vertex index on each input, or null.
+        this.model.vertices.forEach((tile, index) => {
+            upstreamVertices[index] = [];
+            for (let i = 0; i < tile.nInputs; i++) {
+                upstreamVertices[index].push(null);
+            }
+        });
+        for (let edge of this.model.edges) {
+            if (edge.toInput >= upstreamVertices[edge.toVertex].length !== null) {
+                throw `Edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
+            }
+            if (upstreamVertices[edge.toVertex][edge.toInput] !== null) {
+                throw `Vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
+            }
+            upstreamVertices[edge.toVertex][edge.toInput] = edge.fromVertex;
+        }
+
+        // TODO:
+        // Do a DFS from the root nodes to convert the DAG into a tree.
+        // At each step of the way, see if the edge and/or node exists in this.vertices and this.nodes already.
+        // If it does, do not mark it for deletion. If it does not, mark it for addition.
+
+        // Note: Traversal will have to keep track of tiles as well as nodes.
+
+        //let deletedTreeVertices = this.vertices.dd;
+        //let deletedTreeEdges = [];
+
+        // Do a DFS
+        //const traverse = (vertex: number, edge: Edge) => {
+        //    treeVertices.
+        //};
+
+        this.relayoutGraph();
+    }
+
+    relayoutGraph() {
         // This method resizes and repositions all tiles
         // according to the graph structure.
-
-        // TODO: probably want to compute a tree-like vertices and edges here, based on the DAG.
 
         // Precompute some useful things
         let downstreamVertex: number[] = []; // Parallel to vertices. The downstream vertex index, or null.
