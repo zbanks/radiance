@@ -344,6 +344,9 @@ class Graph extends HTMLElement {
     modelChanged() {
         // Convert the model DAG into a tree
 
+        const origNumTileVertices = this.tileVertices.length;
+        const origNumTileEdges = this.tileEdges.length;
+
         // Precompute some useful things
         let upstreamNodeVertices: number[][] = []; // Parallel to vertices. The upstream vertex index on each input, or null.
         // Even in a DAG, each input should have at most one connection.
@@ -478,9 +481,44 @@ class Graph extends HTMLElement {
         console.log("Vertices to remove:", tileVerticesToDelete);
         console.log("Edges to remove:", tileEdgesToDelete);
 
-        // TODO: Actually delete nodes, and relayout if the graph has changed.
+        const changed = (this.tileVertices.length > origNumTileVertices
+                      || this.tileEdges.length > origNumTileEdges
+                      || tileVerticesToDelete.length > 0
+                      || tileEdgesToDelete.length > 0);
 
-        this.relayoutGraph();
+        // Compute a mapping of old vertex indices -> new vertex indices, post-deletion
+        let vertexTileMapping: number[] = [];
+        let newIndex = 0;
+        this.tileVertices.forEach((_, oldIndex) => {
+            if (tileVerticesToDelete.indexOf(oldIndex) < 0) {
+                // Index was not deleted
+                vertexTileMapping.push(newIndex);
+                newIndex++;
+            } else {
+                // Index was deleted
+                vertexTileMapping.push(null);
+            }
+        });
+
+        // Perform deletion
+        tileVerticesToDelete.forEach(index => {
+            // TODO: delete the node from the DOM
+            delete this.tileVertices[index];
+        });
+        tileEdgesToDelete.forEach(index => {
+            delete this.tileEdges[index];
+        });
+        // Remap indices
+        this.tileEdges.forEach(edge => {
+            edge.fromVertex = vertexTileMapping[edge.fromVertex];
+            edge.toVertex = vertexTileMapping[edge.toVertex];
+        });
+
+        console.log("Changed: " + changed);
+
+        if (changed) {
+            this.relayoutGraph();
+        }
     }
 
     relayoutGraph() {
