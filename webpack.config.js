@@ -43,7 +43,8 @@ module.exports = (env, argv) => {
     ],
     watch: argv.mode !== 'production',
     loader: {
-        exclude: /\.sw[a-z]$/,
-      }
+      exclude: /\.sw[a-z]$/,
+    },
+    devtool: 'inline-source-map',
   };
 };
