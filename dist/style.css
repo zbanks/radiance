@@ -57,13 +57,13 @@ div.node-preview {
     margin: 1px;
 }
 
-div.output {
+div#output {
     width: 300px;
     height: 300px;
     display: inline-block;
     border: 1px solid pink;
     margin: 5px;
-    float: left;
+    float: right;
 }
 
 
