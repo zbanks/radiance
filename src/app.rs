@@ -13,7 +13,6 @@ use web_sys::{HtmlCanvasElement, HtmlElement, WebGl2RenderingContext};
 
 #[wasm_bindgen]
 pub struct Model {
-    container_el: HtmlElement,
     canvas_el: HtmlCanvasElement,
     graph: Graph,
     chain: RenderChain,
@@ -22,8 +21,7 @@ pub struct Model {
 #[wasm_bindgen]
 impl Model {
     #[wasm_bindgen(constructor)]
-    pub fn new(container: JsValue, canvas: JsValue) -> Option<Model> {
-        let container_el = container.dyn_into::<HtmlElement>().ok()?;
+    pub fn new(canvas: JsValue, size: i32) -> Option<Model> {
         let canvas_el = canvas.dyn_into::<HtmlCanvasElement>().ok()?;
         let context = Rc::new(
             canvas_el
@@ -33,11 +31,10 @@ impl Model {
                 .dyn_into::<WebGl2RenderingContext>()
                 .unwrap(),
         );
-        let chain_size = (256, 256);
+        let chain_size = (size, size);
         let chain = RenderChain::new(context, chain_size).unwrap();
         Some(Model {
             graph: Graph::new(),
-            container_el,
             canvas_el,
             chain,
         })
@@ -56,9 +53,26 @@ impl Model {
     }
 
     #[wasm_bindgen]
-    pub fn render(&mut self, time: f64) {
+    pub fn render(&mut self, time: f64) -> std::result::Result<(), JsValue> {
+        self.render_internal(time).map_err(|e| e.into())
+    }
+
+    fn render_internal(&mut self, time: f64) -> Result<()> {
+        // Resize the canvas to if it changed size
+        // This doesn't need to happen before rendering; just before calling `paint_node()`
+        let canvas_width = self.canvas_el.client_width() as u32;
+        let canvas_height = self.canvas_el.client_height() as u32;
+        if self.canvas_el.width() != canvas_width {
+            self.canvas_el.set_width(canvas_width);
+        }
+        if self.canvas_el.height() != canvas_height {
+            self.canvas_el.set_height(canvas_height);
+        }
+
+        // Perform pre-render operations that may modify each node
         self.chain.pre_render(self.graph.nodes_mut(), time);
 
+        // Render each node sequentially in topological order
         self.chain
             .context
             .viewport(0, 0, self.chain.size.0, self.chain.size.1);
@@ -71,20 +85,26 @@ impl Model {
                 .collect::<Vec<_>>();
             self.chain.render_node(node, &fbos);
         }
+        Ok(())
     }
 
     #[wasm_bindgen]
-    pub fn paint_node(&mut self, id: VideoNodeId, node_el: JsValue) {
-        let node_ref = node_el.dyn_into::<HtmlElement>().unwrap();
+    pub fn paint_node(&mut self, id: JsValue, node_el: JsValue) -> std::result::Result<(), JsValue> {
+        let node_ref = node_el.dyn_into::<HtmlElement>()?;
+        let id: VideoNodeId = id.into_serde().map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
+        self.paint_node_internal(id, node_ref).map_err(|e| e.into())
+    }
+
+    fn paint_node_internal(&mut self, id: VideoNodeId, node_ref: HtmlElement) -> Result<()> {
         // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
-        let node = self.graph.node(id).unwrap();
+        let node = self.graph.node(id).ok_or("Invalid node id")?;
 
         let canvas_size = (
             self.chain.context.drawing_buffer_width(),
             self.chain.context.drawing_buffer_height(),
         );
-        let canvas_rect = self.canvas_el.get_bounding_client_rect();
         let node_rect = node_ref.get_bounding_client_rect();
+        let canvas_rect = self.canvas_el.get_bounding_client_rect();
 
         let x_ratio = canvas_rect.width() / canvas_size.0 as f64;
         let y_ratio = canvas_rect.height() / canvas_size.1 as f64;
@@ -100,6 +120,7 @@ impl Model {
             (bottom - top) as i32,
         );
         self.chain.paint(node).unwrap();
+        Ok(())
     }
 
     #[wasm_bindgen]

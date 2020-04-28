@@ -211,19 +211,17 @@ impl Graph {
         self.digraph.clear();
         let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
         for (i, s) in state.nodes.drain(0..).enumerate() {
-            let n: StateNode = serde_json::from_value(s.clone()).unwrap();
+            let n: StateNode = serde_json::from_value(s.clone())?;
             if let Some(node) = self.nodes.get_mut(&n.id) {
-                //info!("node {:?} = {:?}", n.id, s);
                 node.set_state(s)?;
             }
             new_graph.add_node(n.id);
             id_map.insert(i, n.id);
         }
-        info!("id_map: {:?}", id_map);
         for edge in state.edges {
             new_graph.add_edge(
-                *id_map.get(&edge.from_node).unwrap(),
-                *id_map.get(&edge.to_node).unwrap(),
+                *id_map.get(&edge.from_node).ok_or("invalid from_node")?,
+                *id_map.get(&edge.to_node).ok_or("invalid to_node")?,
                 edge.to_input,
             );
         }

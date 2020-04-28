@@ -20,7 +20,7 @@ pub struct VideoNodeId(usize);
 impl VideoNodeId {
     fn new() -> VideoNodeId {
         let id = unsafe {
-            static mut NEXT_ID: usize = 0;
+            static mut NEXT_ID: usize = 100;
             NEXT_ID += 1;
             NEXT_ID
         };

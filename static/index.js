@@ -1,19 +1,19 @@
 import { Model } from "radiance";
 import "./ui";
 
-var canvas = document.getElementById("canvas");
-var container = document.getElementById("container");
-var model = new Model(container, canvas);
+var canvas = document.querySelector("#canvas");
+var model = new Model(canvas, 512);
 
+// TODO: The model doesn't yet support adding nodes through `model.set_state(...)`
 model.append_node("test", 0.7);
-model.append_node("oscope", 0.4);
-model.append_node("spin", 0.2);
+model.append_node("oscope", 0.8);
+model.append_node("spin", 0.5);
 model.append_node("zoomin", 0.3);
 model.append_node("rjump", 0.9);
 model.append_node("lpf", 0.3);
-model.append_node("tunnel", 0.3);
+model.append_node("tunnel", 0.7);
 model.append_node("melt", 0.4);
-model.append_node("composite", 0.9);
+var outputUid = model.append_node("composite", 0.1);
 
 var state = model.state();
 state.edges = [
@@ -26,11 +26,17 @@ state.edges = [
     {fromVertex: 6, toVertex: 7, toInput: 0},
     {fromVertex: 7, toVertex: 8, toInput: 0},
 ];
-
-console.log(state);
 model.set_state(state);
-
 console.log(model.state());
+
+var outputDiv = document.querySelector("#output");
+let render = function(t) {
+    model.render(t);
+    model.paint_node(Math.floor(((t / 1000) % 8)) + 101, outputDiv);
+    window.requestAnimationFrame(render);
+};
+window.requestAnimationFrame(render);
+
 
 let graph = document.querySelector("#graph");
 customElements.whenDefined("radiance-graph").then(() => {

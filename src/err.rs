@@ -69,3 +69,9 @@ impl From<serde_json::error::Error> for Error {
         Error::Serde(err)
     }
 }
+
+impl Into<wasm_bindgen::JsValue> for Error {
+    fn into(self) -> wasm_bindgen::JsValue {
+        wasm_bindgen::JsValue::NULL
+    }
+}
