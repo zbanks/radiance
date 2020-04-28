@@ -4,6 +4,7 @@ use crate::graphics::{Fbo, RenderChain};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::rc::Rc;
+use wasm_bindgen::prelude::*;
 
 mod effect_node;
 mod media_node;
@@ -12,6 +13,7 @@ pub use effect_node::EffectNode;
 pub use media_node::MediaNode;
 pub use output_node::OutputNode;
 
+#[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct VideoNodeId(usize);
 

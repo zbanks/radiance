@@ -5,6 +5,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use log::*;
 
 /// Directed graph abstraction that owns VideoNodes
 /// - Enforces that there are no cycles
@@ -174,12 +175,14 @@ impl Graph {
     }
 
     pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
+        info!("whole state: {:?}", state);
         let mut state: State = serde_json::from_value(state)?;
         let mut new_graph = DiGraphMap::new();
         self.digraph.clear();
-        for (id, state) in state.nodes.drain() {
+        for (id, s) in state.nodes.drain() {
             if let Some(node) = self.nodes.get_mut(&id) {
-                node.set_state(state)?;
+                info!("node {:?} = {:?}", id, s);
+                node.set_state(s)?;
             }
             new_graph.add_node(id);
         }

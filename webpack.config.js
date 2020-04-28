@@ -24,13 +24,11 @@ module.exports = (env, argv) => {
       extensions: ['.tsx', '.ts', '.js'],
     },
     entry: {
-      libradiance: './libradiance.js',
-      radianceui: './radianceui.js',
+      bootstrap: './static/bootstrap.js',
     },
     output: {
       path: distPath,
-      filename: "[name].js",
-      webassemblyModuleFilename: "radiance.wasm"
+      filename: "bootstrap.js",
     },
     plugins: [
       new CopyWebpackPlugin([
@@ -41,9 +39,6 @@ module.exports = (env, argv) => {
         extraArgs: "--no-typescript",
       })
     ],
-    watch: argv.mode !== 'production',
-    loader: {
-        exclude: /\.sw[a-z]$/,
-      }
+    watch: argv.mode !== 'production'
   };
 };

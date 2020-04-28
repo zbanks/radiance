@@ -7,6 +7,9 @@
     "start:dev": "webpack-dev-server --mode development"
   },
   "types": "ui/typing.d.ts",
+  "dependencies": {
+    "radiance": "file:pkg"
+  },
   "devDependencies": {
     "@wasm-tool/wasm-pack-plugin": "^1.1.0",
     "copy-webpack-plugin": "^5.1.1",
