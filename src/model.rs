@@ -16,10 +16,27 @@ pub struct Graph {
     digraph: DiGraphMap<VideoNodeId, usize>,
 }
 
+#[serde(rename_all="camelCase")]
+#[derive(Debug, Serialize, Deserialize)]
+struct StateEdge {
+    #[serde(rename="fromVertex")]
+    from_node: usize,
+    #[serde(rename="toVertex")]
+    to_node: usize,
+    to_input: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct StateNode {
+    #[serde(rename="uid")]
+    id: VideoNodeId,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct State {
-    nodes: HashMap<VideoNodeId, serde_json::Value>,
-    edges: Vec<(VideoNodeId, VideoNodeId, usize)>,
+    #[serde(rename="vertices")]
+    nodes: Vec<serde_json::Value>,
+    edges: Vec<StateEdge>,
 }
 
 impl Graph {
@@ -165,8 +182,16 @@ impl Graph {
     }
 
     pub fn state(&self) -> JsonValue {
-        let nodes = self.nodes.iter().map(|(k, v)| (*k, v.state())).collect();
-        let edges = self.digraph.all_edges().map(|(a, b, i)| (a, b, *i)).collect();
+        let mut id_map: HashMap<VideoNodeId, usize> = HashMap::new();
+        let nodes = self.nodes().enumerate().map(|(i, n)| {
+            id_map.insert(n.id(), i);
+            n.state()
+        }).collect();
+        let edges = self.digraph.all_edges().map(|(a, b, i)| StateEdge{
+            from_node: *id_map.get(&a).unwrap(), 
+            to_node: *id_map.get(&b).unwrap(), 
+            to_input: *i
+        }).collect();
         let state = State {
             nodes,
             edges,
@@ -179,15 +204,21 @@ impl Graph {
         let mut state: State = serde_json::from_value(state)?;
         let mut new_graph = DiGraphMap::new();
         self.digraph.clear();
-        for (id, s) in state.nodes.drain() {
-            if let Some(node) = self.nodes.get_mut(&id) {
-                info!("node {:?} = {:?}", id, s);
+        let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
+        for (i, s) in state.nodes.drain(0..).enumerate() {
+            let n: StateNode = serde_json::from_value(s.clone()).unwrap();
+            if let Some(node) = self.nodes.get_mut(&n.id) {
+                //info!("node {:?} = {:?}", n.id, s);
                 node.set_state(s)?;
             }
-            new_graph.add_node(id);
+            new_graph.add_node(n.id);
+            id_map.insert(i, n.id);
         }
-        for (a, b, i) in state.edges {
-            new_graph.add_edge(a, b, i);
+        for edge in state.edges {
+            new_graph.add_edge(
+                *id_map.get(&edge.from_node).unwrap(),
+                *id_map.get(&edge.to_node).unwrap(),
+                edge.to_input);
         }
         self.digraph = new_graph;
         self.assert_no_cycles();

@@ -7,3 +7,4 @@ Radiance for the web, written in Rust.
 ## Running locally
 
     npm run start:dev
+    xdg-open http://localhost:8000/

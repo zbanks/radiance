@@ -12,7 +12,6 @@ use std::rc::Rc;
 use web_sys::WebGlRenderingContext as GL;
 
 pub struct EffectNode {
-    id: VideoNodeId,
     state: State,
     time: f64,
     intensity_integral: f64,
@@ -20,8 +19,11 @@ pub struct EffectNode {
     shader_passes: Vec<Option<Shader>>,
 }
 
+#[serde(rename_all="camelCase")]
 #[derive(Debug, Serialize, Deserialize)]
 struct State {
+    #[serde(rename="uid")]
+    id: VideoNodeId,
     name: String,
     n_inputs: usize,
     #[serde(skip_deserializing)]
@@ -80,13 +82,13 @@ impl EffectNode {
 
         let id = VideoNodeId::new();
         let state = State {
+            id,
             name: name.to_string(),
             n_inputs,
             properties,
             intensity: 0.0,
         };
         Ok(EffectNode {
-            id,
             state,
             time: 0.0,
             intensity_integral: 0.0,
@@ -106,7 +108,7 @@ impl EffectNode {
 
 impl VideoNode for EffectNode {
     fn id(&self) -> VideoNodeId {
-        self.id
+        self.state.id
     }
 
     fn name(&self) -> &str {
