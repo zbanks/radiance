@@ -5,11 +5,11 @@ use crate::video_node::{
     EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut,
 };
 
-use std::rc::Rc;
 use log::*;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{WebGl2RenderingContext, HtmlElement, HtmlCanvasElement};
+use web_sys::{HtmlCanvasElement, HtmlElement, WebGl2RenderingContext};
 
 #[wasm_bindgen]
 pub struct Model {
@@ -59,7 +59,9 @@ impl Model {
     pub fn render(&mut self, time: f64) {
         self.chain.pre_render(self.graph.nodes_mut(), time);
 
-        self.chain.context.viewport(0, 0, self.chain.size.0, self.chain.size.1);
+        self.chain
+            .context
+            .viewport(0, 0, self.chain.size.0, self.chain.size.1);
         for node in self.graph.toposort() {
             let fbos = self
                 .graph
@@ -72,11 +74,7 @@ impl Model {
     }
 
     #[wasm_bindgen]
-    pub fn paint_node(
-        &mut self,
-        id: VideoNodeId,
-        node_el: JsValue,
-    ) {
+    pub fn paint_node(&mut self, id: VideoNodeId, node_el: JsValue) {
         let node_ref = node_el.dyn_into::<HtmlElement>().unwrap();
         // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
         let node = self.graph.node(id).unwrap();

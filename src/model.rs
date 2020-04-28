@@ -1,11 +1,11 @@
 use crate::err::Result;
 use crate::video_node::{VideoNode, VideoNodeId};
+use log::*;
 use petgraph::graphmap::DiGraphMap;
-use std::borrow::{Borrow, BorrowMut};
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use log::*;
+use std::borrow::{Borrow, BorrowMut};
+use std::collections::HashMap;
 
 /// Directed graph abstraction that owns VideoNodes
 /// - Enforces that there are no cycles
@@ -16,25 +16,25 @@ pub struct Graph {
     digraph: DiGraphMap<VideoNodeId, usize>,
 }
 
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Serialize, Deserialize)]
 struct StateEdge {
-    #[serde(rename="fromVertex")]
+    #[serde(rename = "fromVertex")]
     from_node: usize,
-    #[serde(rename="toVertex")]
+    #[serde(rename = "toVertex")]
     to_node: usize,
     to_input: usize,
 }
 
 #[derive(Debug, Deserialize)]
 struct StateNode {
-    #[serde(rename="uid")]
+    #[serde(rename = "uid")]
     id: VideoNodeId,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct State {
-    #[serde(rename="vertices")]
+    #[serde(rename = "vertices")]
     nodes: Vec<serde_json::Value>,
     edges: Vec<StateEdge>,
 }
@@ -182,20 +182,25 @@ impl Graph {
     }
 
     pub fn state(&self) -> JsonValue {
-        let mut id_map: HashMap<VideoNodeId, usize> = HashMap::new();
-        let nodes = self.nodes().enumerate().map(|(i, n)| {
-            id_map.insert(n.id(), i);
-            n.state()
-        }).collect();
-        let edges = self.digraph.all_edges().map(|(a, b, i)| StateEdge{
-            from_node: *id_map.get(&a).unwrap(), 
-            to_node: *id_map.get(&b).unwrap(), 
-            to_input: *i
-        }).collect();
-        let state = State {
-            nodes,
-            edges,
-        };
+        let mut nodes_vec = self.nodes().collect::<Vec<_>>();
+        nodes_vec.sort_by_key(|n| n.id());
+        let id_map: HashMap<VideoNodeId, usize> = nodes_vec
+            .iter()
+            .enumerate()
+            .map(|(i, n)| (n.id(), i))
+            .collect();
+
+        let nodes = nodes_vec.iter().map(|n| n.state()).collect();
+        let edges = self
+            .digraph
+            .all_edges()
+            .map(|(a, b, i)| StateEdge {
+                from_node: *id_map.get(&a).unwrap(),
+                to_node: *id_map.get(&b).unwrap(),
+                to_input: *i,
+            })
+            .collect();
+        let state = State { nodes, edges };
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
@@ -214,15 +219,17 @@ impl Graph {
             new_graph.add_node(n.id);
             id_map.insert(i, n.id);
         }
+        info!("id_map: {:?}", id_map);
         for edge in state.edges {
             new_graph.add_edge(
                 *id_map.get(&edge.from_node).unwrap(),
                 *id_map.get(&edge.to_node).unwrap(),
-                edge.to_input);
+                edge.to_input,
+            );
         }
         self.digraph = new_graph;
         self.assert_no_cycles();
-        
+
         Ok(())
     }
 }

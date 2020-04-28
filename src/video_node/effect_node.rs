@@ -19,10 +19,10 @@ pub struct EffectNode {
     shader_passes: Vec<Option<Shader>>,
 }
 
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Serialize, Deserialize)]
 struct State {
-    #[serde(rename="uid")]
+    #[serde(rename = "uid")]
     id: VideoNodeId,
     name: String,
     n_inputs: usize,

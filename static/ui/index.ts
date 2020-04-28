@@ -384,6 +384,7 @@ class Graph extends HTMLElement {
         let startNodeVertices: number[] = Array.from(this.model.vertices.keys());
 
         for (let edge of this.model.edges) {
+            console.log(edge);
             if (edge.toInput >= upstreamNodeVertices[edge.toVertex].length) {
                 throw `Model edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
             }
