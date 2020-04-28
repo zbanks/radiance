@@ -9,11 +9,34 @@
     <body>
         <!--<script src="./libradiance.js"></script>-->
         <radiance-flickable style="border: 1px dashed black; background-color: #ccccff;">
-            <radiance-graph>
-                <span style="background-color: yellow; border: 2px solid blue;">a word</span>
-                <p>Line breaks</p>
-                <span style="background-color: yellow; border: 2px solid blue;">another word</span>
-            </radiance-graph>
+            <radiance-graph id="graph"></radiance-graph>
         </radiance-flickable>
+        <script>
+            let graph = document.querySelector("#graph");
+            customElements.whenDefined("radiance-graph").then(() => {
+                let graph = document.querySelector("#graph");
+                console.log(typeof graph);
+                graph.model = {
+                    vertices: [
+                        {uid: 100, nInputs: 1},
+                        {uid: 200, nInputs: 1},
+                        {uid: 300, nInputs: 1},
+                        {uid: 400, nInputs: 1},
+                        {uid: 500, nInputs: 2},
+                        {uid: 600, nInputs: 1},
+                        {uid: 700, nInputs: 1},
+                    ],
+                    edges: [
+                        {fromVertex: 0, toVertex: 1, toInput: 0},
+                        {fromVertex: 1, toVertex: 2, toInput: 0},
+                        {fromVertex: 2, toVertex: 4, toInput: 0},
+                        {fromVertex: 3, toVertex: 4, toInput: 1},
+                        {fromVertex: 4, toVertex: 5, toInput: 0},
+                        {fromVertex: 5, toVertex: 6, toInput: 0},
+                    ],
+                };
+                graph.modelChanged();
+            });
+        </script>
     </body>
 </html>

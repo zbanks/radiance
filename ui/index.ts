@@ -37,7 +37,7 @@ class Flickable extends HTMLElement {
                 overflow: hidden;
             }
             #inner {
-                padding: 30px;
+                border: 30px solid transparent;
             }
             </style> 
             <div id='outer'>
@@ -180,14 +180,33 @@ class VideoNodeTile extends HTMLElement {
             <style>
             :host {
                 display: block;
+                padding: 15px 0px;
+            }
+
+            #inner {
+                box-sizing: border-box;
+                width: 100%;
+                height: 100%;
                 background-color: black;
-                border: 2px solid gray;
                 text-align: center;
                 color: white;
                 padding: 5px;
             }
+
+            #outline {
+                pointer-events: none;
+                position: absolute;
+                left: -1px;
+                right: -1px;
+                top: 14px;
+                bottom: 14px;
+                border: 2px solid gray;
+            }
             </style>
-            <slot></slot>
+            <div id="inner">
+                <slot></slot>
+                <div id="outline"></div>
+            </div>
         `;
     }
 
@@ -203,7 +222,7 @@ class VideoNodeTile extends HTMLElement {
         // Override this method to specify minimum input heights for your node type.
         // This method will be called at least once, even if there are no inputs, to get the
         // height of the node. So implement it even if your node has zero inputs.
-        return 180;
+        return 200;
     }
 
     height() {
@@ -281,6 +300,16 @@ interface Edge {
     toVertex: number;
 }
 
+interface ModelVertex {
+    uid: number;
+    nInputs: number; // TODO remove me
+}
+
+interface Model {
+    vertices: ModelVertex[];
+    edges: Edge[];
+}
+
 class Graph extends HTMLElement {
     // This custom element creates the visual context for displaying connected nodes.
 
@@ -288,7 +317,7 @@ class Graph extends HTMLElement {
     tileVertices: VideoNodeTile[];
     tileEdges: Edge[];
     nextUID: number;
-    model; // TODO: type
+    model: Model;
 
     constructor() {
         super();
@@ -304,28 +333,14 @@ class Graph extends HTMLElement {
             <style>
             :host {
                 display: block;
-                background-color: #ffccff;
+                pointer-events: none;
+            }
+            * {
+                pointer-events: auto;
             }
             </style>
             <slot></slot>
         `;
-
-        this.addEventListener('mousedown', event => {
-            //this.tileVertices.push(this.addTile());
-            //this.relayoutGraph();
-            this.model = {
-                vertices: [
-                    {uid: 100, nInputs: 1},
-                    {uid: 200, nInputs: 1},
-                    {uid: 300, nInputs: 1},
-                ],
-                edges: [
-                    {fromVertex: 0, toVertex: 1, toInput: 0},
-                    {fromVertex: 1, toVertex: 2, toInput: 0},
-                ],
-            };
-            this.modelChanged();
-        });
     }
 
     // Gonna need some arguments one day...
@@ -335,7 +350,12 @@ class Graph extends HTMLElement {
         tile.style.position = "absolute";
         tile.style.top = "0px";
         tile.style.left = "0px";
+        tile.style.boxSizing = "border-box";
         return tile;
+    }
+
+    removeTile(tile: EffectNodeTile) {
+        this.removeChild(tile);
     }
 
     // Model looks like:
@@ -414,9 +434,11 @@ class Graph extends HTMLElement {
         // TODO: This algorithm is a little aggressive, and will treat "moves" as deletion + creation
 
         const traverse = (nodeVertex: number, tileVertex: number) => {
+            console.log(`traverse on node ${nodeVertex}, tile ${tileVertex}`);
             const tile = this.tileVertices[tileVertex];
 
             for (let input = 0; input < tile.nInputs; input++) {
+                console.log(`Input ${input} of ${tile.nInputs}`);
                 let upstreamNode = upstreamNodeVertices[nodeVertex][input];
                 if (upstreamNode !== null) {
                     // Get the upstream node UID for the given input
@@ -440,6 +462,7 @@ class Graph extends HTMLElement {
                     } else {
                         // However, we do need to add a new tile and edge.
                         upstreamTile = this.addTile(); // TODO: Arguments...
+                        upstreamTile.nInputs = this.model.vertices[upstreamNode].nInputs; // XXX should be taken care of in above line
                         upstreamTile.uid = nodeUID;
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
@@ -463,6 +486,7 @@ class Graph extends HTMLElement {
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
                 let tile = this.addTile(); // TODO: Arguments...
+                tile.nInputs = this.model.vertices[startNodeIndex].nInputs; // XXX should be taken care of in above line
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
                 this.tileVertices.push(tile);
@@ -502,7 +526,7 @@ class Graph extends HTMLElement {
 
         // Perform deletion
         tileVerticesToDelete.forEach(index => {
-            // TODO: delete the node from the DOM
+            this.removeTile(this.tileVertices[index]);
             delete this.tileVertices[index];
         });
         tileEdgesToDelete.forEach(index => {
