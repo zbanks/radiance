@@ -191,6 +191,10 @@ class VideoNodeTile extends HTMLElement {
                 text-align: center;
                 color: white;
                 padding: 5px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
             }
 
             #outline {
@@ -249,11 +253,11 @@ class VideoNodePreview extends HTMLElement {
             :host {
                 display: block;
                 width: 80%;
-                margin: 10px auto;
             }
             #square {
                 position: relative;
                 width: 100%;
+                margin: 10px auto;
             }
             #square:after {
                 content: "";
@@ -287,8 +291,8 @@ class EffectNodeTile extends VideoNodeTile {
 
         this.innerHTML = `
             <div style="font-family: sans-serif;">Title</div>
-            <hr style="margin: 3px;"></hr>
-            <radiance-videonodepreview></radiance-videonodepreview>
+            <hr style="margin: 3px; width: 80%;"></hr>
+            <radiance-videonodepreview style="flex: 1 1 auto;"></radiance-videonodepreview>
             <input type="range" min="0" max="1" step="0.01"></input>
         `;
     }
