@@ -2,4 +2,8 @@
 
 Radiance for the web, written in Rust.
 
-[Run it!](https://zbanks.github.io/radiance-web/dist/index.html)
+[See it online!](https://zbanks.github.io/radiance-web/dist/index.html)
+
+## Running locally
+
+    npm run start:dev

@@ -39,6 +39,7 @@ module.exports = (env, argv) => {
         extraArgs: "--no-typescript",
       })
     ],
-    watch: argv.mode !== 'production'
+    watch: argv.mode !== 'production',
+    devtool: 'inline-source-map',
   };
 };
