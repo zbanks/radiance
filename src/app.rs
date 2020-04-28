@@ -89,9 +89,15 @@ impl Model {
     }
 
     #[wasm_bindgen]
-    pub fn paint_node(&mut self, id: JsValue, node_el: JsValue) -> std::result::Result<(), JsValue> {
+    pub fn paint_node(
+        &mut self,
+        id: JsValue,
+        node_el: JsValue,
+    ) -> std::result::Result<(), JsValue> {
         let node_ref = node_el.dyn_into::<HtmlElement>()?;
-        let id: VideoNodeId = id.into_serde().map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
+        let id: VideoNodeId = id
+            .into_serde()
+            .map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
         self.paint_node_internal(id, node_ref).map_err(|e| e.into())
     }
 
