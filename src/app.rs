@@ -1,7 +1,7 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Graph;
-use crate::video_node::{VideoNode, VideoNodeId};
+use crate::video_node::VideoNodeId;
 
 use log::*;
 use std::rc::Rc;
@@ -16,6 +16,7 @@ pub struct Model {
     chain: RenderChain,
 }
 
+#[allow(clippy::suspicious_else_formatting)]
 #[wasm_bindgen]
 impl Model {
     #[wasm_bindgen(constructor)]
@@ -38,7 +39,6 @@ impl Model {
         })
     }
 
-    #[wasm_bindgen]
     pub fn render(&mut self, time: f64) -> std::result::Result<(), JsValue> {
         self.render_internal(time).map_err(|e| e.into())
     }
@@ -74,7 +74,6 @@ impl Model {
         Ok(())
     }
 
-    #[wasm_bindgen]
     pub fn paint_node(
         &mut self,
         id: JsValue,
@@ -115,12 +114,10 @@ impl Model {
         Ok(())
     }
 
-    #[wasm_bindgen]
     pub fn state(&self) -> JsValue {
         JsValue::from_serde(&self.graph.state()).unwrap()
     }
 
-    #[wasm_bindgen]
     pub fn set_state(&mut self, state: JsValue) {
         info!("raw: {:?}", state);
         let v: serde_json::Value = state.into_serde().unwrap();

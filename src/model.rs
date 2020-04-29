@@ -1,4 +1,4 @@
-use crate::err::Result;
+use crate::err::{Error, Result};
 use crate::video_node::{EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeType};
 use log::*;
 use petgraph::graphmap::DiGraphMap;
@@ -54,6 +54,7 @@ impl Graph {
         self.nodes.get(&id).map(|n| n.borrow())
     }
 
+    #[allow(dead_code)]
     pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut (dyn VideoNode + 'static)> {
         self.nodes.get_mut(&id).map(|n| n.borrow_mut())
     }
@@ -69,63 +70,6 @@ impl Graph {
 
     pub fn ids(&self) -> impl Iterator<Item = &VideoNodeId> {
         self.nodes.keys()
-    }
-
-    pub fn root_nodes(&self) -> Vec<&dyn VideoNode> {
-        let mut nodes: Vec<_> = self
-            .nodes()
-            .filter(|n| {
-                self.digraph
-                    .neighbors_directed(n.id(), petgraph::Direction::Outgoing)
-                    .next()
-                    .is_none()
-            })
-            .collect();
-        nodes.sort_by_key(|n| n.id());
-        nodes
-    }
-
-    pub fn add_videonode<VN: VideoNode + 'static>(&mut self, node: VN) {
-        self.digraph.add_node(node.id());
-        let n = Box::new(node);
-        self.nodes.insert(n.id(), n);
-    }
-
-    #[allow(dead_code)]
-    pub fn remove_videonode<VN: VideoNode>(&mut self, node: &VN) {
-        self.digraph.remove_node(node.id());
-        self.nodes.remove(&node.id());
-    }
-
-    pub fn add_edge_by_ids(
-        &mut self,
-        src_id: VideoNodeId,
-        dst_id: VideoNodeId,
-        input: usize,
-    ) -> Result<()> {
-        // TODO: safety check
-        if src_id == dst_id {
-            return Err("Adding self edge would cause cycle".into());
-        }
-        if let Some(old_src_id) = self.input_for_id(dst_id, input) {
-            self.digraph.remove_edge(old_src_id, dst_id);
-            self.digraph.add_edge(old_src_id, src_id, 0);
-        }
-        self.digraph.add_edge(src_id, dst_id, input);
-        self.assert_no_cycles();
-        Ok(())
-    }
-
-    pub fn input_for_id(&self, dst_id: VideoNodeId, input: usize) -> Option<VideoNodeId> {
-        for src_id in self
-            .digraph
-            .neighbors_directed(dst_id, petgraph::Direction::Incoming)
-        {
-            if *self.digraph.edge_weight(src_id, dst_id).unwrap() == input {
-                return Some(src_id);
-            }
-        }
-        None
     }
 
     pub fn toposort(&self) -> Vec<&dyn VideoNode> {
@@ -153,35 +97,12 @@ impl Graph {
         inputs
     }
 
-    pub fn disconnect_node(&mut self, id: VideoNodeId) -> Result<()> {
-        let node = self.nodes.get(&id).unwrap();
-        let inputs = self.node_inputs(node.borrow());
-        let src_id = inputs.first().unwrap_or(&None).map(|n| n.id());
-        let src_edges: Vec<VideoNodeId> = inputs.into_iter().flatten().map(|n| n.id()).collect();
-
-        let edges_to_remove: Vec<(VideoNodeId, usize)> = self
-            .digraph
-            .neighbors_directed(node.id(), petgraph::Direction::Outgoing)
-            .map(|dst_id| {
-                let dst_index = *self.digraph.edge_weight(node.id(), dst_id).unwrap();
-                (dst_id, dst_index)
-            })
-            .collect();
-        for (dst_id, dst_index) in edges_to_remove {
-            self.digraph.remove_edge(node.id(), dst_id);
-            if let Some(id) = src_id {
-                self.digraph.add_edge(id, dst_id, dst_index);
-            }
+    fn digraph_check_cycles(digraph: &DiGraphMap<VideoNodeId, usize>) -> Result<()> {
+        if petgraph::algo::toposort(digraph, None).is_err() {
+            Err(Error::new("Cycle detected"))
+        } else {
+            Ok(())
         }
-        src_edges.iter().for_each(|src| {
-            self.digraph.remove_edge(*src, id);
-        });
-        self.assert_no_cycles();
-        Ok(())
-    }
-
-    fn assert_no_cycles(&self) {
-        assert!(petgraph::algo::toposort(&self.digraph, None).is_ok());
     }
 
     pub fn state(&self) -> JsonValue {
@@ -213,7 +134,7 @@ impl Graph {
         let mut new_graph = DiGraphMap::new();
         self.digraph.clear();
         let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
-        let mut unseen_ids: HashMap<VideoNodeId, _> = self.nodes().map(|n| (n.id(), ())).collect();
+        let mut unseen_ids: HashMap<VideoNodeId, _> = self.ids().map(|id| (*id, ())).collect();
         let mut nodes_to_insert: Vec<Box<dyn VideoNode>> = vec![];
 
         // Lookup or create all of the nodes
@@ -250,6 +171,7 @@ impl Graph {
                 edge.to_input,
             );
         }
+        Self::digraph_check_cycles(&new_graph)?;
 
         // Remove nodes not referenced
         for (id, _) in unseen_ids {
@@ -262,7 +184,6 @@ impl Graph {
             self.nodes.insert(id, node);
         }
         self.digraph = new_graph;
-        self.assert_no_cycles();
 
         Ok(())
     }

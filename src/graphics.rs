@@ -382,6 +382,7 @@ impl RenderChain {
             .map(|n| Rc::clone(n))
     }
 
+    #[allow(dead_code)]
     pub fn resize(&mut self, size: ChainSize) {
         // TODO: This doesn't seem to quite work? It's more of an archetectural proof-of-concept
         // TODO: Better error handling (unwrap)
@@ -455,11 +456,6 @@ impl RenderChain {
 
         active_shader.finish_render();
         Ok(())
-    }
-
-    pub fn clear(&self) {
-        self.context.bind_framebuffer(GL::FRAMEBUFFER, None);
-        self.context.clear(GL::COLOR_BUFFER_BIT);
     }
 
     pub fn bind_fbo_to_texture(&self, tex: u32, fbo_ref: Option<&Fbo>) {
