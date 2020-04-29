@@ -24,7 +24,7 @@ class Flickable extends HTMLElement {
         shadow.innerHTML = `
             <style>
             :host {
-                display: block;
+                display: inline-block;
                 width: 640px;
                 height: 480px;
             }
@@ -336,7 +336,7 @@ class Graph extends HTMLElement {
         shadow.innerHTML = `
             <style>
             :host {
-                display: block;
+                display: inline-block;
                 pointer-events: none;
             }
             * {
