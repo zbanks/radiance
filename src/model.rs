@@ -1,5 +1,5 @@
 use crate::err::Result;
-use crate::video_node::{VideoNode, VideoNodeId};
+use crate::video_node::{EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeType};
 use log::*;
 use petgraph::graphmap::DiGraphMap;
 use serde::{Deserialize, Serialize};
@@ -26,12 +26,15 @@ struct StateEdge {
     to_input: usize,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Deserialize)]
 struct StateNode {
     #[serde(rename = "uid")]
-    id: VideoNodeId,
+    id: Option<VideoNodeId>,
+    node_type: VideoNodeType,
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Debug, Serialize, Deserialize)]
 struct State {
     #[serde(rename = "vertices")]
@@ -210,20 +213,53 @@ impl Graph {
         let mut new_graph = DiGraphMap::new();
         self.digraph.clear();
         let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
+        let mut unseen_ids: HashMap<VideoNodeId, _> = self.nodes().map(|n| (n.id(), ())).collect();
+        let mut nodes_to_insert: Vec<Box<dyn VideoNode>> = vec![];
+
+        // Lookup or create all of the nodes
         for (i, s) in state.nodes.drain(0..).enumerate() {
             let n: StateNode = serde_json::from_value(s.clone())?;
-            if let Some(node) = self.nodes.get_mut(&n.id) {
-                node.set_state(s)?;
-            }
-            new_graph.add_node(n.id);
-            id_map.insert(i, n.id);
+            let (id, node) = if let Some(id) = n.id {
+                // UID was specified, so find the node
+                let node = self.nodes.get_mut(&id).ok_or("Invalid node ID")?;
+                (id, node)
+            } else {
+                // The node doesn't exist, so create it
+                let boxed_node: Box<dyn VideoNode> = match n.node_type {
+                    VideoNodeType::Effect => Box::new(EffectNode::new()?),
+                    VideoNodeType::Output => Box::new(OutputNode::new()),
+                    VideoNodeType::Media => Box::new(MediaNode::new()),
+                };
+                let id = boxed_node.id();
+                info!("Added node type {:?} with id {:?}", n.node_type, id);
+                nodes_to_insert.push(boxed_node);
+                (id, nodes_to_insert.last_mut().unwrap())
+            };
+
+            node.set_state(s)?;
+            new_graph.add_node(id);
+            id_map.insert(i, id);
+            unseen_ids.remove(&id);
         }
+
+        // Calculate the new set of edges
         for edge in state.edges {
             new_graph.add_edge(
                 *id_map.get(&edge.from_node).ok_or("invalid from_node")?,
                 *id_map.get(&edge.to_node).ok_or("invalid to_node")?,
                 edge.to_input,
             );
+        }
+
+        // Remove nodes not referenced
+        for (id, _) in unseen_ids {
+            self.nodes.remove(&id);
+        }
+
+        // Add newly created nodes
+        for node in nodes_to_insert {
+            let id = node.id();
+            self.nodes.insert(id, node);
         }
         self.digraph = new_graph;
         self.assert_no_cycles();

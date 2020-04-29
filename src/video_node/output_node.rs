@@ -1,5 +1,5 @@
 use crate::graphics::{Fbo, RenderChain};
-use crate::video_node::{VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut};
+use crate::video_node::{VideoNode, VideoNodeId};
 
 use std::rc::Rc;
 
@@ -34,12 +34,5 @@ impl VideoNode for OutputNode {
         assert!(buffer_fbos.len() == self.n_buffers());
 
         input_fbos.first().unwrap().as_ref().cloned()
-    }
-
-    fn downcast(&self) -> Option<VideoNodeKind> {
-        Some(VideoNodeKind::Output(self))
-    }
-    fn downcast_mut(&mut self) -> Option<VideoNodeKindMut> {
-        Some(VideoNodeKindMut::Output(self))
     }
 }

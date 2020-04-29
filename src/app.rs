@@ -1,9 +1,7 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Graph;
-use crate::video_node::{
-    EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeKind, VideoNodeKindMut,
-};
+use crate::video_node::{VideoNode, VideoNodeId};
 
 use log::*;
 use std::rc::Rc;
@@ -38,18 +36,6 @@ impl Model {
             canvas_el,
             chain,
         })
-    }
-
-    /// This is a temporary utility function that will get refactored
-    #[wasm_bindgen]
-    pub fn append_node(&mut self, name: &str, value: f64) -> JsValue {
-        let mut node = EffectNode::new(name).ok().unwrap();
-        node.set_intensity(value);
-
-        let id = node.id();
-        self.graph.add_videonode(node);
-
-        JsValue::from_serde(&serde_json::to_value(id).unwrap()).unwrap()
     }
 
     #[wasm_bindgen]

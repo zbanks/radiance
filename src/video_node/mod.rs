@@ -28,20 +28,12 @@ impl VideoNodeId {
     }
 }
 
-// TODO: It's gross to have *both* an enum and a trait object (make up your mind)
-// This is currently only used by the UI; I think a reasonable goal is to create
-// a (new?) trait for UI methods -- but it's unclear what the UI archetecture will be
-// It's possible the UI boundary will just be a set of key-value properties?
-pub enum VideoNodeKind<'a> {
-    Effect(&'a EffectNode),
-    Output(&'a OutputNode),
-    Media(&'a MediaNode),
-}
-
-pub enum VideoNodeKindMut<'a> {
-    Effect(&'a mut EffectNode),
-    Output(&'a mut OutputNode),
-    Media(&'a mut MediaNode),
+#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize)]
+pub enum VideoNodeType {
+    Effect,
+    Output,
+    Media,
 }
 
 pub trait VideoNode {
@@ -77,13 +69,5 @@ pub trait VideoNode {
 
     fn set_state(&mut self, _state: JsonValue) -> Result<()> {
         Ok(())
-    }
-
-    // See TODO about VideoNodeKind
-    fn downcast(&self) -> Option<VideoNodeKind> {
-        None
-    }
-    fn downcast_mut(&mut self) -> Option<VideoNodeKindMut> {
-        None
     }
 }
