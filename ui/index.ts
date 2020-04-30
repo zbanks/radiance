@@ -1,6 +1,6 @@
 "use strict";
 
-import {Model as BackendModel} from "bootstrap.js";
+import {Model as BackendModel} from "../pkg/index.js";
 
 class Flickable extends HTMLElement {
     outer: HTMLElement; // Outer div (for clipping and mouse events)
@@ -368,6 +368,10 @@ class Graph extends HTMLElement {
             <slot></slot>
         `;
 
+        const canvas = document.createElement("canvas"); // For some reason, the canvas doesn't work in the shadow DOM.
+        this.appendChild(canvas);
+        this.backendModel = new BackendModel(canvas, 512);
+
         window.requestAnimationFrame(this.render.bind(this));
     }
 
@@ -724,7 +728,8 @@ class Graph extends HTMLElement {
         tile.style.transform = `translate(${tile.x}px, ${tile.y}px)`;
     }
 
-    render() {
+    render(t: number) {
+        this.backendModel.render(t);
         this.tileVertices.forEach(tile => {
             tile.render();
         });
