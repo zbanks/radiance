@@ -19,7 +19,7 @@ customElements.whenDefined("radiance-graph").then(() => {
             {nodeType: "effect", name: "composite", intensity: 0.5},
         ],
         edges: [
-            {fromVertex: 0, toVertex: 1, toInput: 0},
+            {fromVertex: 5, toVertex: 1, toInput: 0},
             {fromVertex: 1, toVertex: 9, toInput: 1},
             {fromVertex: 2, toVertex: 3, toInput: 0},
             {fromVertex: 3, toVertex: 4, toInput: 0},
