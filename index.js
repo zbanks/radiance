@@ -23,7 +23,6 @@ var state = {
     edges: [
         {fromVertex: 0, toVertex: 1, toInput: 0},
         {fromVertex: 1, toVertex: 9, toInput: 1},
-        {fromVertex: 1, toVertex: 2, toInput: 0},
         {fromVertex: 2, toVertex: 3, toInput: 0},
         {fromVertex: 3, toVertex: 4, toInput: 0},
         {fromVertex: 4, toVertex: 5, toInput: 0},
