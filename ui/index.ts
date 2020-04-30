@@ -27,8 +27,6 @@ class Flickable extends HTMLElement {
             <style>
             :host {
                 display: inline-block;
-                width: 640px;
-                height: 480px;
             }
             #outer {
                 display: flex;
@@ -168,8 +166,7 @@ class VideoNodeTile extends HTMLElement {
     uid: UID;
     x: number;
     y: number;
-    model: Model;
-    backendModel: BackendModel;
+    graph: Graph;
 
     constructor() {
         super();
@@ -246,6 +243,13 @@ class VideoNodeTile extends HTMLElement {
 
     render() {
     }
+
+    updateFromModel(data: ModelVertex) {
+        if (data.nInputs != this.nInputs) {
+            this.nInputs = data.nInputs;
+            this.graph.requestRelayout();
+        }
+    }
 }
 
 class VideoNodePreview extends HTMLElement {
@@ -290,32 +294,55 @@ class VideoNodePreview extends HTMLElement {
     }
 
     render(tile: VideoNodeTile) {
-        tile.backendModel.paint_node(tile.uid, this.content);
+        tile.graph.backendModel.paint_node(tile.uid, this.content);
     }
 }
 
 class EffectNodeTile extends VideoNodeTile {
     preview: VideoNodePreview;
+    intensitySlider: HTMLInputElement;
+    titleDiv: HTMLDivElement;
+    intensitySliderBlocked: boolean;
 
     constructor() {
         super();
         this.nInputs = 1; // XXX Temporary, should be set by GLSL
+        this.intensitySliderBlocked = false;
     }
 
     connectedCallback() {
         super.connectedCallback();
 
         this.innerHTML = `
-            <div style="font-family: sans-serif;">Title</div>
+            <div style="font-family: sans-serif;" id="title"></div>
             <hr style="margin: 3px; width: 80%;"></hr>
             <radiance-videonodepreview style="flex: 1 1 auto;" id="preview"></radiance-videonodepreview>
-            <input type="range" min="0" max="1" step="0.01"></input>
+            <input type="range" min="0" max="1" step="0.01" id="intensitySlider"></input>
         `;
         this.preview = this.querySelector("#preview");
+        this.intensitySlider = this.querySelector("#intensitySlider");
+        this.titleDiv = this.querySelector("#title");
+        this.intensitySlider.addEventListener("input", this.intensitySliderChanged.bind(this));
     }
 
     render() {
         this.preview.render(this);
+    }
+
+    updateFromModel(data: any) {
+        super.updateFromModel(data);
+        this.intensitySliderBlocked = true;
+        this.intensitySlider.value = data.intensity;
+        this.intensitySliderBlocked = false;
+        this.titleDiv.textContent = data.name;
+    }
+
+    intensitySliderChanged(event: InputEvent) {
+        if (this.intensitySliderBlocked) {
+            return;
+        }
+        const newIntensity = parseFloat(this.intensitySlider.value);
+        this.graph.mutateModel(this.uid, {"intensity": newIntensity});
     }
 }
 
@@ -344,6 +371,7 @@ class Graph extends HTMLElement {
     nextUID: number;
     model: Model;
     backendModel: BackendModel;
+    relayoutRequested: boolean;
 
     constructor() {
         super();
@@ -351,6 +379,7 @@ class Graph extends HTMLElement {
         this.nextUID = 0;
         this.tileVertices = [];
         this.tileEdges = [];
+        this.relayoutRequested = false;
     }
 
     connectedCallback() {
@@ -364,19 +393,30 @@ class Graph extends HTMLElement {
             * {
                 pointer-events: auto;
             }
+            #canvas {
+                position: fixed;
+                left: 0px;
+                top: 0px;
+                z-index: 9999;
+                pointer-events: none;
+                width: 100%;
+                height: 100%;
+            }
             </style>
+            <canvas id="canvas">
+            </canvas>
             <slot></slot>
         `;
 
-        const canvas = document.createElement("canvas"); // For some reason, the canvas doesn't work in the shadow DOM.
-        this.appendChild(canvas);
+        const canvas = shadow.querySelector("#canvas");
+        //this.appendChild(canvas);
         this.backendModel = new BackendModel(canvas, 512);
 
         window.requestAnimationFrame(this.render.bind(this));
     }
 
-    // Gonna need some arguments one day...
-    addTile(nInputs: number, uid: number, backendModel: BackendModel) {
+    addTile(uid: number, backendModel: BackendModel) {
+        // Gonna need to do more than just EffectNodes one day...
         let tile = <EffectNodeTile>document.createElement("radiance-effectnodetile");
         this.appendChild(tile);
         tile.style.position = "absolute";
@@ -384,8 +424,7 @@ class Graph extends HTMLElement {
         tile.style.left = "0px";
         tile.style.boxSizing = "border-box";
         tile.uid = uid;
-        tile.nInputs = nInputs;
-        tile.backendModel = backendModel;
+        tile.graph = this;
         return tile;
     }
 
@@ -395,6 +434,19 @@ class Graph extends HTMLElement {
 
     // Model looks like:
     // {"vertices": [{"file", "intensity", "type", "uid"},...], "edges": [{from, tovertex, toinput},...]}
+
+    mutateModel(uid: number, newState: object) {
+        for (let node of this.model.vertices) {
+            if (node.uid == uid) {
+                for (let prop in newState) {
+                    node[prop] = newState[prop];
+                }
+                break;
+            }
+        }
+        this.backendModel.set_state(this.model);
+        this.modelChanged();
+    }
 
     modelChanged() {
         // Convert the model DAG into a tree
@@ -469,11 +521,9 @@ class Graph extends HTMLElement {
         // TODO: This algorithm is a little aggressive, and will treat "moves" as deletion + creation
 
         const traverse = (nodeVertex: number, tileVertex: number) => {
-            console.log(`traverse on node ${nodeVertex}, tile ${tileVertex}`);
             const tile = this.tileVertices[tileVertex];
 
             for (let input = 0; input < tile.nInputs; input++) {
-                console.log(`Input ${input} of ${tile.nInputs}`);
                 let upstreamNode = upstreamNodeVertices[nodeVertex][input];
                 if (upstreamNode !== null) {
                     // Get the upstream node UID for the given input
@@ -496,7 +546,7 @@ class Graph extends HTMLElement {
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     } else {
                         // However, we do need to add a new tile and edge.
-                        upstreamTile = this.addTile(this.model.vertices[upstreamNode].nInputs, nodeUID, this.backendModel); // TODO: Arguments...
+                        upstreamTile = this.addTile(nodeUID, this.backendModel); // TODO: Arguments...
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
                         addUpstreamEntries(upstreamTile.nInputs);
@@ -506,6 +556,7 @@ class Graph extends HTMLElement {
                             toInput: input,
                         });
                     }
+                    upstreamTile.updateFromModel(this.model.vertices[upstreamNode]);
                     // TODO: update tile properties here from model, such as intensity...
                     traverse(upstreamNode, upstreamTileVertexIndex);
                 }
@@ -518,7 +569,8 @@ class Graph extends HTMLElement {
             let startTileIndex = null;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
-                let tile = this.addTile(this.model.vertices[startNodeIndex].nInputs, uid, this.backendModel); // TODO: Arguments...
+                let tile = this.addTile(uid, this.backendModel); // TODO: Arguments...
+                tile.updateFromModel(this.model.vertices[startNodeIndex]);
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
                 this.tileVertices.push(tile);
@@ -531,11 +583,6 @@ class Graph extends HTMLElement {
             }
             traverse(startNodeIndex, startTileIndex);
         });
-
-        console.log("New tile vertices:", this.tileVertices);
-        console.log("New tile edges:", this.tileEdges);
-        console.log("Vertices to remove:", tileVerticesToDelete);
-        console.log("Edges to remove:", tileEdgesToDelete);
 
         const changed = (this.tileVertices.length > origNumTileVertices
                       || this.tileEdges.length > origNumTileEdges
@@ -570,9 +617,12 @@ class Graph extends HTMLElement {
             edge.toVertex = vertexTileMapping[edge.toVertex];
         });
 
-        console.log("Changed: " + changed);
-
         if (changed) {
+            console.log("New tile vertices:", this.tileVertices);
+            console.log("New tile edges:", this.tileEdges);
+            console.log("Vertices to remove:", tileVerticesToDelete);
+            console.log("Edges to remove:", tileEdgesToDelete);
+
             this.relayoutGraph();
         }
     }
@@ -728,7 +778,16 @@ class Graph extends HTMLElement {
         tile.style.transform = `translate(${tile.x}px, ${tile.y}px)`;
     }
 
+    requestRelayout() {
+        this.relayoutRequested = true;
+    }
+
     render(t: number) {
+        if (this.relayoutRequested) {
+            this.relayoutRequested = false;
+            this.relayoutGraph();
+        }
+
         this.backendModel.render(t);
         this.tileVertices.forEach(tile => {
             tile.render();

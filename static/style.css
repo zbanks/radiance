@@ -1,15 +1,10 @@
-canvas {
-    position: fixed;
-    left: 0px;
-    top: 0px;
-    z-index: 9999;
-    pointer-events: none;
-    width: 100%;
-    height: 100%;
-}
-
-video {
-    display: none;
+#flickable {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #333333;
 }
 
 div.node-list {
