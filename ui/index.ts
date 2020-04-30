@@ -302,10 +302,12 @@ class EffectNodeTile extends VideoNodeTile {
     preview: VideoNodePreview;
     intensitySlider: HTMLInputElement;
     titleDiv: HTMLDivElement;
+    intensitySliderBlocked: boolean;
 
     constructor() {
         super();
         this.nInputs = 1; // XXX Temporary, should be set by GLSL
+        this.intensitySliderBlocked = false;
     }
 
     connectedCallback() {
@@ -320,6 +322,7 @@ class EffectNodeTile extends VideoNodeTile {
         this.preview = this.querySelector("#preview");
         this.intensitySlider = this.querySelector("#intensitySlider");
         this.titleDiv = this.querySelector("#title");
+        this.intensitySlider.addEventListener("input", this.intensitySliderChanged.bind(this));
     }
 
     render() {
@@ -328,8 +331,18 @@ class EffectNodeTile extends VideoNodeTile {
 
     updateFromModel(data: any) {
         super.updateFromModel(data);
+        this.intensitySliderBlocked = true;
         this.intensitySlider.value = data.intensity;
+        this.intensitySliderBlocked = false;
         this.titleDiv.textContent = data.name;
+    }
+
+    intensitySliderChanged(event: InputEvent) {
+        if (this.intensitySliderBlocked) {
+            return;
+        }
+        const newIntensity = parseFloat(this.intensitySlider.value);
+        this.graph.mutateModel(this.uid, {"intensity": newIntensity});
     }
 }
 
@@ -402,8 +415,8 @@ class Graph extends HTMLElement {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
-    // Gonna need some arguments one day...
     addTile(uid: number, backendModel: BackendModel) {
+        // Gonna need to do more than just EffectNodes one day...
         let tile = <EffectNodeTile>document.createElement("radiance-effectnodetile");
         this.appendChild(tile);
         tile.style.position = "absolute";
@@ -421,6 +434,19 @@ class Graph extends HTMLElement {
 
     // Model looks like:
     // {"vertices": [{"file", "intensity", "type", "uid"},...], "edges": [{from, tovertex, toinput},...]}
+
+    mutateModel(uid: number, newState: object) {
+        for (let node of this.model.vertices) {
+            if (node.uid == uid) {
+                for (let prop in newState) {
+                    node[prop] = newState[prop];
+                }
+                break;
+            }
+        }
+        this.backendModel.set_state(this.model);
+        this.modelChanged();
+    }
 
     modelChanged() {
         // Convert the model DAG into a tree
@@ -495,11 +521,9 @@ class Graph extends HTMLElement {
         // TODO: This algorithm is a little aggressive, and will treat "moves" as deletion + creation
 
         const traverse = (nodeVertex: number, tileVertex: number) => {
-            console.log(`traverse on node ${nodeVertex}, tile ${tileVertex}`);
             const tile = this.tileVertices[tileVertex];
 
             for (let input = 0; input < tile.nInputs; input++) {
-                console.log(`Input ${input} of ${tile.nInputs}`);
                 let upstreamNode = upstreamNodeVertices[nodeVertex][input];
                 if (upstreamNode !== null) {
                     // Get the upstream node UID for the given input
@@ -560,11 +584,6 @@ class Graph extends HTMLElement {
             traverse(startNodeIndex, startTileIndex);
         });
 
-        console.log("New tile vertices:", this.tileVertices);
-        console.log("New tile edges:", this.tileEdges);
-        console.log("Vertices to remove:", tileVerticesToDelete);
-        console.log("Edges to remove:", tileEdgesToDelete);
-
         const changed = (this.tileVertices.length > origNumTileVertices
                       || this.tileEdges.length > origNumTileEdges
                       || tileVerticesToDelete.length > 0
@@ -598,9 +617,12 @@ class Graph extends HTMLElement {
             edge.toVertex = vertexTileMapping[edge.toVertex];
         });
 
-        console.log("Changed: " + changed);
-
         if (changed) {
+            console.log("New tile vertices:", this.tileVertices);
+            console.log("New tile edges:", this.tileEdges);
+            console.log("Vertices to remove:", tileVerticesToDelete);
+            console.log("Edges to remove:", tileEdgesToDelete);
+
             this.relayoutGraph();
         }
     }
