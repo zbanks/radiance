@@ -1,7 +1,7 @@
+use crate::audio::Audio;
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Model as Graph;
-use crate::audio::Audio;
 use crate::video_node::VideoNodeId;
 
 use log::*;
@@ -125,7 +125,6 @@ impl Model {
     }
 
     pub fn set_state(&mut self, state: JsValue) {
-        info!("raw: {:?}", state);
         let v: serde_json::Value = state.into_serde().unwrap();
         self.graph.set_state(v).unwrap();
     }

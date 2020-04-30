@@ -1,7 +1,7 @@
+use crate::audio::AudioAnalysis;
 use crate::err::{Error, Result};
 use crate::resources;
 use crate::video_node::{VideoNode, VideoNodeId};
-use crate::audio::AudioAnalysis;
 
 use log::*;
 use std::borrow::Borrow;

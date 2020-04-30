@@ -2,7 +2,7 @@ use crate::err::Result;
 
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{AudioContext, AnalyserNode};
+use web_sys::{AnalyserNode, AudioContext};
 
 pub struct Audio {
     context: AudioContext,

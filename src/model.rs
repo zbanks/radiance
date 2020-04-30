@@ -129,7 +129,6 @@ impl Model {
     }
 
     pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
-        info!("whole state: {:?}", state);
         let mut state: State = serde_json::from_value(state)?;
         let mut new_graph = DiGraphMap::new();
         self.graph.clear();
