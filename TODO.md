@@ -1,0 +1,11 @@
+- Use audio
+    - BTrack
+    - Highs/Mids/Lows
+- Add tempo parameter to effects
+- Support image nodes
+- Support arbitrary video nodes, not just webacam
+    - Add play/pause
+    - Youtube
+- Re-import effects from radiance master
+- Fetch effects 
+- Edit effect GLSL

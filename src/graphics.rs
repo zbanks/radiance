@@ -284,15 +284,15 @@ impl RenderChain {
         let blank_texture = context.create_texture().ok_or("Unable to create texture")?;
         context.bind_texture(GL::TEXTURE_2D, Some(&blank_texture));
         context.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-            GL::TEXTURE_2D,        // target
-            0,                     // level
-            GL::RGBA as i32,       // internal format
-            1,                     // width
-            1,                     // height
-            0,                     // border
-            GL::RGBA,              // format
-            GL::UNSIGNED_BYTE,     // _type
-            Some(&[0, 0, 0, 255]), // pixels
+            GL::TEXTURE_2D,      // target
+            0,                   // level
+            GL::RGBA as i32,     // internal format
+            1,                   // width
+            1,                   // height
+            0,                   // border
+            GL::RGBA,            // format
+            GL::UNSIGNED_BYTE,   // _type
+            Some(&[0, 0, 0, 0]), // pixels
         )?;
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
         context.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
