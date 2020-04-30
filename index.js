@@ -71,6 +71,7 @@ customElements.whenDefined("radiance-graph").then(() => {
         ],
     };
     */
+    graph.backendModel = model;
     graph.model = model.state();
     console.log(graph.model);
     graph.modelChanged();
