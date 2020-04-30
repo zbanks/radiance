@@ -70,11 +70,6 @@ impl MediaNode {
 
         Ok(node)
     }
-
-    fn media_stream_callback(&self, result: JsValue) {
-        let media: web_sys::MediaStream = result.dyn_into().unwrap();
-        self.video.set_src_object(Some(&media));
-    }
 }
 
 impl VideoNode for MediaNode {

@@ -1,6 +1,7 @@
 use crate::err::Result;
 use crate::graphics::RenderChain;
-use crate::model::Graph;
+use crate::model::Model as Graph;
+use crate::audio::Audio;
 use crate::video_node::VideoNodeId;
 
 use log::*;
@@ -12,6 +13,7 @@ use web_sys::{HtmlCanvasElement, HtmlElement, WebGl2RenderingContext};
 #[wasm_bindgen]
 pub struct Model {
     canvas_el: HtmlCanvasElement,
+    audio: Audio,
     graph: Graph,
     chain: RenderChain,
 }
@@ -32,8 +34,10 @@ impl Model {
         );
         let chain_size = (size, size);
         let chain = RenderChain::new(context, chain_size).unwrap();
+        let audio = Audio::new().ok()?;
         Some(Model {
             graph: Graph::new(),
+            audio,
             canvas_el,
             chain,
         })
@@ -54,6 +58,8 @@ impl Model {
         if self.canvas_el.height() != canvas_height {
             self.canvas_el.set_height(canvas_height);
         }
+
+        self.chain.set_audio(self.audio.analyze());
 
         // Perform pre-render operations that may modify each node
         self.chain.pre_render(self.graph.nodes_mut(), time);

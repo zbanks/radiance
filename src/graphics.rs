@@ -1,6 +1,7 @@
 use crate::err::{Error, Result};
 use crate::resources;
 use crate::video_node::{VideoNode, VideoNodeId};
+use crate::audio::AudioAnalysis;
 
 use log::*;
 use std::borrow::Borrow;
@@ -41,6 +42,8 @@ pub struct RenderChain {
     blank_texture: WebGlTexture,
     pub noise_texture: WebGlTexture,
     square_vertex_buffer: WebGlBuffer,
+
+    audio: AudioAnalysis,
 
     buffer_fbos: RefCell<HashMap<VideoNodeId, Vec<Rc<Fbo>>>>,
     output_fbos: RefCell<HashMap<VideoNodeId, Rc<Fbo>>>,
@@ -343,6 +346,7 @@ impl RenderChain {
             blank_texture,
             noise_texture,
             square_vertex_buffer,
+            audio: Default::default(),
             size,
             buffer_fbos: Default::default(),
             output_fbos: Default::default(),
@@ -358,6 +362,14 @@ impl RenderChain {
             .borrow()
             .get(&node.id())
             .map(|n| Rc::clone(n))
+    }
+
+    pub fn audio(&self) -> &AudioAnalysis {
+        &self.audio
+    }
+
+    pub fn set_audio(&mut self, audio: AudioAnalysis) {
+        self.audio = audio
     }
 
     #[allow(dead_code)]

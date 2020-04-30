@@ -1,6 +1,7 @@
 #![recursion_limit = "512"]
 
 mod app;
+mod audio;
 mod err;
 mod graphics;
 mod model;

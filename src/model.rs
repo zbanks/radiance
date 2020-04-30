@@ -11,9 +11,9 @@ use std::collections::HashMap;
 /// - Enforces that there are no cycles
 /// - Each VideoNode can have up to `node.n_inputs` incoming edges,
 ///     which must all have unique edge weights in [0..node.n_inputs)
-pub struct Graph {
+pub struct Model {
     nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
-    digraph: DiGraphMap<VideoNodeId, usize>,
+    graph: DiGraphMap<VideoNodeId, usize>,
 }
 
 #[serde(rename_all = "camelCase")]
@@ -42,10 +42,10 @@ struct State {
     edges: Vec<StateEdge>,
 }
 
-impl Graph {
-    pub fn new() -> Graph {
-        Graph {
-            digraph: DiGraphMap::new(),
+impl Model {
+    pub fn new() -> Model {
+        Model {
+            graph: DiGraphMap::new(),
             nodes: Default::default(),
         }
     }
@@ -73,7 +73,7 @@ impl Graph {
     }
 
     pub fn toposort(&self) -> Vec<&dyn VideoNode> {
-        petgraph::algo::toposort(&self.digraph, None)
+        petgraph::algo::toposort(&self.graph, None)
             .unwrap()
             .iter()
             .map(|id| self.nodes.get(id).unwrap().borrow())
@@ -85,10 +85,10 @@ impl Graph {
         inputs.resize(node.n_inputs(), None);
 
         for src_id in self
-            .digraph
+            .graph
             .neighbors_directed(node.id(), petgraph::Direction::Incoming)
         {
-            let src_index = *self.digraph.edge_weight(src_id, node.id()).unwrap();
+            let src_index = *self.graph.edge_weight(src_id, node.id()).unwrap();
             if src_index < node.n_inputs() {
                 inputs[src_index] = self.nodes.get(&src_id).map(|n| n.borrow());
             }
@@ -97,8 +97,8 @@ impl Graph {
         inputs
     }
 
-    fn digraph_check_cycles(digraph: &DiGraphMap<VideoNodeId, usize>) -> Result<()> {
-        if petgraph::algo::toposort(digraph, None).is_err() {
+    fn digraph_check_cycles(graph: &DiGraphMap<VideoNodeId, usize>) -> Result<()> {
+        if petgraph::algo::toposort(graph, None).is_err() {
             Err(Error::new("Cycle detected"))
         } else {
             Ok(())
@@ -116,7 +116,7 @@ impl Graph {
 
         let nodes = nodes_vec.iter().map(|n| n.state()).collect();
         let edges = self
-            .digraph
+            .graph
             .all_edges()
             .map(|(a, b, i)| StateEdge {
                 from_node: *id_map.get(&a).unwrap(),
@@ -132,7 +132,7 @@ impl Graph {
         info!("whole state: {:?}", state);
         let mut state: State = serde_json::from_value(state)?;
         let mut new_graph = DiGraphMap::new();
-        self.digraph.clear();
+        self.graph.clear();
         let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
         let mut unseen_ids: HashMap<VideoNodeId, _> = self.ids().map(|id| (*id, ())).collect();
         let mut nodes_to_insert: Vec<Box<dyn VideoNode>> = vec![];
@@ -183,7 +183,7 @@ impl Graph {
             let id = node.id();
             self.nodes.insert(id, node);
         }
-        self.digraph = new_graph;
+        self.graph = new_graph;
 
         Ok(())
     }

@@ -28,6 +28,9 @@ wasm-bindgen-test = "0.3"
 [dependencies.web-sys]
 version = "0.3.4"
 features = [
+    'AnalyserNode',
+    'AudioContext',
+    'AudioNode',
     'Document',
     'DomRect',
     'Element',
@@ -38,6 +41,7 @@ features = [
     'MediaDevices',
     'MediaStream',
     'MediaStreamConstraints',
+    'MediaStreamAudioSourceNode',
     'Navigator',
     'WebGlBuffer',
     'WebGlFramebuffer',
