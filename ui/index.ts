@@ -412,7 +412,7 @@ class Graph extends HTMLElement {
         //this.appendChild(canvas);
         this.backendModel = new BackendModel(canvas, 512);
 
-        window.requestPostAnimationFrame(this.render.bind(this));
+        window.requestAnimationFrame(this.render.bind(this));
     }
 
     addTile(uid: number, backendModel: BackendModel) {
@@ -792,7 +792,7 @@ class Graph extends HTMLElement {
         this.tileVertices.forEach(tile => {
             tile.render();
         });
-        window.requestPostAnimationFrame(this.render.bind(this));
+        window.requestAnimationFrame(this.render.bind(this));
     }
 }
 
