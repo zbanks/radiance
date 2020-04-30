@@ -149,7 +149,7 @@ impl Graph {
                 let boxed_node: Box<dyn VideoNode> = match n.node_type {
                     VideoNodeType::Effect => Box::new(EffectNode::new()?),
                     VideoNodeType::Output => Box::new(OutputNode::new()),
-                    VideoNodeType::Media => Box::new(MediaNode::new()),
+                    VideoNodeType::Media => Box::new(MediaNode::new()?),
                 };
                 let id = boxed_node.id();
                 info!("Added node type {:?} with id {:?}", n.node_type, id);

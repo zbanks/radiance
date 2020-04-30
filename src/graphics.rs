@@ -353,28 +353,6 @@ impl RenderChain {
         Shader::from_fragment_shader(Rc::clone(&self.context), source)
     }
 
-    /*
-    #[allow(clippy::map_entry)]
-    pub fn ensure_node_artists<'a, I>(&'a mut self, nodes: I) -> Result<()>
-    where
-        I: Iterator<Item = &'a mut VideoNode>,
-    {
-        // TODO: Also delete artists for nodes that are no longer valid
-        for node in nodes {
-            if !self.artists.contains_key(&node.id()) {
-                self.artists.insert(node.id(), node.kind.artist(&self)?);
-            }
-        }
-        Ok(())
-    }
-
-    pub fn node_artist<'a>(&'a self, node: &'a VideoNode) -> Result<&'a dyn VideoArtist> {
-        self.artists
-            .get(&node.id())
-            .ok_or_else(|| "No artist for node".into())
-            .map(|b| b.borrow())
-    }
-    */
     pub fn node_fbo(&self, node: &dyn VideoNode) -> Option<Rc<Fbo>> {
         self.output_fbos
             .borrow()
