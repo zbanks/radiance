@@ -1,5 +1,8 @@
-import { Model } from "radiance";
-import "./ui";
+import("./ui")
+import("./pkg")
+
+import {Model} from "./pkg";
+//import {Model} from "radiance"; // ?
 
 var canvas = document.querySelector("#canvas");
 var model = new Model(canvas, 512);

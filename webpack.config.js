@@ -24,7 +24,7 @@ module.exports = (env, argv) => {
       extensions: ['.tsx', '.ts', '.js'],
     },
     entry: {
-      bootstrap: './static/bootstrap.js',
+      bootstrap: './bootstrap.js',
     },
     output: {
       path: distPath,
