@@ -27,8 +27,6 @@ class Flickable extends HTMLElement {
             <style>
             :host {
                 display: inline-block;
-                width: 640px;
-                height: 480px;
             }
             #outer {
                 display: flex;
@@ -364,12 +362,23 @@ class Graph extends HTMLElement {
             * {
                 pointer-events: auto;
             }
+            #canvas {
+                position: fixed;
+                left: 0px;
+                top: 0px;
+                z-index: 9999;
+                pointer-events: none;
+                width: 100%;
+                height: 100%;
+            }
             </style>
+            <canvas id="canvas">
+            </canvas>
             <slot></slot>
         `;
 
-        const canvas = document.createElement("canvas"); // For some reason, the canvas doesn't work in the shadow DOM.
-        this.appendChild(canvas);
+        const canvas = shadow.querySelector("#canvas");
+        //this.appendChild(canvas);
         this.backendModel = new BackendModel(canvas, 512);
 
         window.requestAnimationFrame(this.render.bind(this));
