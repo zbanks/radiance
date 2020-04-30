@@ -1,5 +1,7 @@
 "use strict";
 
+import {Model as BackendModel} from "bootstrap.js";
+
 class Flickable extends HTMLElement {
     outer: HTMLElement; // Outer div (for clipping and mouse events)
     inner: HTMLElement; // Inner div (the one that is transformed)
@@ -166,6 +168,8 @@ class VideoNodeTile extends HTMLElement {
     uid: UID;
     x: number;
     y: number;
+    model: Model;
+    backendModel: BackendModel;
 
     constructor() {
         super();
@@ -239,9 +243,14 @@ class VideoNodeTile extends HTMLElement {
         this.style.height = `${this.height()}px`;
         this.style.width = `${this.width()}px`;
     }
+
+    render() {
+    }
 }
 
 class VideoNodePreview extends HTMLElement {
+    content: HTMLElement;
+
     constructor() {
         super();
     }
@@ -277,10 +286,17 @@ class VideoNodePreview extends HTMLElement {
                 </div>
             </div>
         `;
+        this.content = shadow.querySelector("#content");
+    }
+
+    render(tile: VideoNodeTile) {
+        tile.backendModel.paint_node(tile.uid, this.content);
     }
 }
 
 class EffectNodeTile extends VideoNodeTile {
+    preview: VideoNodePreview;
+
     constructor() {
         super();
         this.nInputs = 1; // XXX Temporary, should be set by GLSL
@@ -292,9 +308,14 @@ class EffectNodeTile extends VideoNodeTile {
         this.innerHTML = `
             <div style="font-family: sans-serif;">Title</div>
             <hr style="margin: 3px; width: 80%;"></hr>
-            <radiance-videonodepreview style="flex: 1 1 auto;"></radiance-videonodepreview>
+            <radiance-videonodepreview style="flex: 1 1 auto;" id="preview"></radiance-videonodepreview>
             <input type="range" min="0" max="1" step="0.01"></input>
         `;
+        this.preview = this.querySelector("#preview");
+    }
+
+    render() {
+        this.preview.render(this);
     }
 }
 
@@ -322,6 +343,7 @@ class Graph extends HTMLElement {
     tileEdges: Edge[];
     nextUID: number;
     model: Model;
+    backendModel: BackendModel;
 
     constructor() {
         super();
@@ -345,20 +367,25 @@ class Graph extends HTMLElement {
             </style>
             <slot></slot>
         `;
+
+        window.requestAnimationFrame(this.render.bind(this));
     }
 
     // Gonna need some arguments one day...
-    addTile() {
+    addTile(nInputs: number, uid: number, backendModel: BackendModel) {
         let tile = <EffectNodeTile>document.createElement("radiance-effectnodetile");
         this.appendChild(tile);
         tile.style.position = "absolute";
         tile.style.top = "0px";
         tile.style.left = "0px";
         tile.style.boxSizing = "border-box";
+        tile.uid = uid;
+        tile.nInputs = nInputs;
+        tile.backendModel = backendModel;
         return tile;
     }
 
-    removeTile(tile: EffectNodeTile) {
+    removeTile(tile: VideoNodeTile) {
         this.removeChild(tile);
     }
 
@@ -465,9 +492,7 @@ class Graph extends HTMLElement {
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     } else {
                         // However, we do need to add a new tile and edge.
-                        upstreamTile = this.addTile(); // TODO: Arguments...
-                        upstreamTile.nInputs = this.model.vertices[upstreamNode].nInputs; // XXX should be taken care of in above line
-                        upstreamTile.uid = nodeUID;
+                        upstreamTile = this.addTile(this.model.vertices[upstreamNode].nInputs, nodeUID, this.backendModel); // TODO: Arguments...
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
                         addUpstreamEntries(upstreamTile.nInputs);
@@ -489,8 +514,7 @@ class Graph extends HTMLElement {
             let startTileIndex = null;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
-                let tile = this.addTile(); // TODO: Arguments...
-                tile.nInputs = this.model.vertices[startNodeIndex].nInputs; // XXX should be taken care of in above line
+                let tile = this.addTile(this.model.vertices[startNodeIndex].nInputs, uid, this.backendModel); // TODO: Arguments...
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
                 this.tileVertices.push(tile);
@@ -698,6 +722,13 @@ class Graph extends HTMLElement {
         tile.style.width = `${tile.width()}px`;
         tile.style.height = `${tile.height()}px`;
         tile.style.transform = `translate(${tile.x}px, ${tile.y}px)`;
+    }
+
+    render() {
+        this.tileVertices.forEach(tile => {
+            tile.render();
+        });
+        window.requestAnimationFrame(this.render.bind(this));
     }
 }
 
