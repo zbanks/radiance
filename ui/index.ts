@@ -143,8 +143,6 @@ class Flickable extends HTMLElement {
         this.dragging = true;
         this.startDragX = ptX;
         this.startDragY = ptY;
-        this.startDragOffsetX = this.offsetX;
-        this.startDragOffsetY = this.offsetY;
     }
 
     endDrag() {
@@ -168,12 +166,27 @@ class VideoNodeTile extends HTMLElement {
     y: number;
     graph: Graph;
     preview: VideoNodePreview;
+    inner: HTMLElement;
+
+    // Properties relating to drag
+    offsetX: number; // Current X offset of the surface
+    offsetY: number; // Current Y offset of the surface
+    dragging: boolean; // Whether or not the surface is being dragged
+    mouseDrag: boolean; // Whether or not the surface is being dragged due to the mouse
+    touchDrag: boolean; // Whether or not the surface is being dragged due to a touch
+    startDragX: number; // X coordinate of the start of the drag
+    startDragY: number; // Y coordinate of the start of the drag
+    touchId; // The identifier of the touchevent causing the drag
 
     constructor() {
         super();
         this.nInputs = 0;
         this.inputHeights = [];
         this.uid = null;
+
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.dragging = false;
     }
 
     connectedCallback() {
@@ -183,6 +196,11 @@ class VideoNodeTile extends HTMLElement {
             :host {
                 display: block;
                 padding: 15px 0px;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                box-sizing: border-box;
+                z-index: 0;
             }
 
             #inner {
@@ -214,6 +232,15 @@ class VideoNodeTile extends HTMLElement {
                 <div id="outline"></div>
             </div>
         `;
+
+        this.inner = shadow.querySelector("#inner");
+
+        this.inner.addEventListener('mousedown', this.mouseDown.bind(this));
+        document.addEventListener('mouseup', this.mouseUp.bind(this));
+        document.addEventListener('mousemove', this.mouseMove.bind(this));
+        this.inner.addEventListener('touchstart', this.touchStart.bind(this), { passive: false });
+        document.addEventListener('touchend', this.touchEnd.bind(this));
+        document.addEventListener('touchmove', this.touchMove.bind(this));
     }
 
     width() {
@@ -254,6 +281,95 @@ class VideoNodeTile extends HTMLElement {
             this.graph.requestRelayout();
         }
     }
+
+    touchStart(event: TouchEvent) {
+        for (let i = 0; i < event.changedTouches.length; i++) {
+            let touch = event.changedTouches.item(i);
+            if (touch.target != this.inner && touch.target != this.inner) {
+                // Only accept clicks onto this surface, not its child (inner)
+                continue;
+            }
+            if (!this.dragging) {
+                this.touchDrag = true;
+                this.touchId = touch.identifier
+                this.startDrag(touch.pageX, touch.pageY);
+                event.preventDefault();
+            }
+        }
+    }
+
+    mouseDown(event: MouseEvent) {
+        if (event.target != this.inner && event.target != this.inner) {
+            // Only accept clicks onto this surface, not its child (inner)
+            return;
+        }
+        if (!this.dragging && (event.buttons & 1)) {
+            this.mouseDrag = true;
+            this.startDrag(event.pageX, event.pageY);
+            event.preventDefault();
+        }
+    }
+
+    touchEnd(event: TouchEvent) {
+        for (let i = 0; i < event.changedTouches.length; i++) {
+            let touch = event.changedTouches.item(i);
+            if (this.dragging && this.touchDrag && this.touchId == touch.identifier) {
+                this.touchDrag = false;
+                this.endDrag();
+            }
+        }
+    }
+
+    mouseUp(event: MouseEvent) {
+        if (this.dragging && this.mouseDrag && !(event.buttons & 1)) {
+            this.mouseDrag = false;
+            this.endDrag();
+            event.preventDefault();
+        }
+    }
+
+    touchMove(event: TouchEvent) {
+        for (let i = 0; i < event.changedTouches.length; i++) {
+            let touch = event.changedTouches.item(i);
+            if (this.dragging && this.touchDrag && this.touchId == touch.identifier) {
+                this.drag(touch.pageX, touch.pageY);
+            }
+        }
+    }
+
+    mouseMove(event: MouseEvent) {
+        if (this.dragging && this.mouseDrag) {
+            this.drag(event.pageX, event.pageY);
+            event.preventDefault();
+        }
+    }
+
+    startDrag(ptX: number, ptY: number) {
+        this.dragging = true;
+        this.startDragX = ptX;
+        this.startDragY = ptY;
+        this.style.zIndex = "10";
+    }
+
+    endDrag() {
+        this.dragging = false;
+        this.offsetX = 0;
+        this.offsetY = 0;
+        this.updateLocation();
+        this.style.zIndex = "0";
+    }
+
+    drag(ptX: number, ptY: number) {
+        this.offsetX = ptX - this.startDragX;
+        this.offsetY = ptY - this.startDragY;
+        this.updateLocation();
+    }
+
+    updateLocation() {
+        this.style.width = `${this.width()}px`;
+        this.style.height = `${this.height()}px`;
+        this.style.transform = `translate(${this.x + this.offsetX}px, ${this.y + this.offsetY}px)`;
+    }
 }
 
 class VideoNodePreview extends HTMLElement {
@@ -270,6 +386,7 @@ class VideoNodePreview extends HTMLElement {
             :host {
                 display: block;
                 width: 80%;
+                pointer-events: none;
             }
             #square {
                 position: relative;
@@ -317,6 +434,11 @@ class EffectNodeTile extends VideoNodeTile {
         super.connectedCallback();
 
         this.innerHTML = `
+            <style>
+                hr, div {
+                    pointer-events: none;
+                }
+            </style>
             <div style="font-family: sans-serif;" id="title"></div>
             <hr style="margin: 3px; width: 80%;"></hr>
             <radiance-videonodepreview style="flex: 1 1 auto;" id="preview"></radiance-videonodepreview>
@@ -443,10 +565,6 @@ class Graph extends HTMLElement {
             tile = <VideoNodeTile>document.createElement("radiance-videonodetile");
         }
         this.appendChild(tile);
-        tile.style.position = "absolute";
-        tile.style.top = "0px";
-        tile.style.left = "0px";
-        tile.style.boxSizing = "border-box";
         tile.uid = uid;
         tile.graph = this;
         return tile;
@@ -792,14 +910,8 @@ class Graph extends HTMLElement {
 
         for (let uid in this.tileVertices) {
             let vertex = this.tileVertices[uid];
-            this.updateVertex(vertex);
+            vertex.updateLocation();
         };
-    }
-
-    updateVertex(tile: VideoNodeTile) {
-        tile.style.width = `${tile.width()}px`;
-        tile.style.height = `${tile.height()}px`;
-        tile.style.transform = `translate(${tile.x}px, ${tile.y}px)`;
     }
 
     requestRelayout() {
