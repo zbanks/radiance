@@ -178,6 +178,9 @@ class VideoNodeTile extends HTMLElement {
     startDragY: number; // Y coordinate of the start of the drag
     touchId; // The identifier of the touchevent causing the drag
 
+    // Properties relating to selection
+    _selected: boolean;
+
     constructor() {
         super();
         this.nInputs = 0;
@@ -187,6 +190,8 @@ class VideoNodeTile extends HTMLElement {
         this.offsetX = 0;
         this.offsetY = 0;
         this.dragging = false;
+
+        this._selected = false;
     }
 
     connectedCallback() {
@@ -201,6 +206,7 @@ class VideoNodeTile extends HTMLElement {
                 left: 0px;
                 box-sizing: border-box;
                 z-index: 0;
+                outline: none;
             }
 
             #inner {
@@ -241,6 +247,7 @@ class VideoNodeTile extends HTMLElement {
         this.inner.addEventListener('touchstart', this.touchStart.bind(this), { passive: false });
         document.addEventListener('touchend', this.touchEnd.bind(this));
         document.addEventListener('touchmove', this.touchMove.bind(this));
+        this.tabIndex = 0;
     }
 
     width() {
@@ -345,6 +352,8 @@ class VideoNodeTile extends HTMLElement {
     }
 
     startDrag(ptX: number, ptY: number) {
+        this.focus();
+        this.graph.ensureSelected(this);
         this.dragging = true;
         this.startDragX = ptX;
         this.startDragY = ptY;
@@ -370,6 +379,20 @@ class VideoNodeTile extends HTMLElement {
         this.style.height = `${this.height()}px`;
         this.style.transform = `translate(${this.x + this.offsetX}px, ${this.y + this.offsetY}px)`;
     }
+
+    get selected() {
+        return this._selected;
+    }
+
+    set selected(value: boolean) {
+        this._selected = value;
+        if (this._selected) {
+            this.inner.style.backgroundColor = "#000066";
+        } else {
+            this.inner.style.backgroundColor = "black";
+        }
+    }
+
 }
 
 class VideoNodePreview extends HTMLElement {
@@ -932,6 +955,19 @@ class Graph extends HTMLElement {
             tile.render();
         });
         window.requestAnimationFrame(this.render.bind(this));
+    }
+
+    ensureSelected(tile: VideoNodeTile) {
+        if (!tile.selected) {
+            this.deselectAll();
+            tile.selected = true;
+        }
+    }
+
+    deselectAll() {
+        this.tileVertices.forEach(tile => {
+            tile.selected = false;
+        });
     }
 }
 
