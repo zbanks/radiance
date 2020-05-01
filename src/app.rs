@@ -131,8 +131,11 @@ impl Model {
 
     #[wasm_bindgen(js_name=addNode)]
     pub fn add_node(&mut self, state: JsValue) -> std::result::Result<VideoNodeId, JsValue> {
-        let v: serde_json::Value = state.into_serde().unwrap();
-        self.graph.add_node(v).map_err(|e| e.into())
+        state
+            .into_serde()
+            .map_err(|e| e.into())
+            .and_then(|s| self.graph.add_node(s))
+            .map_err(|e| e.to_string().into())
     }
 
     #[wasm_bindgen(js_name=nodeState)]
@@ -151,8 +154,10 @@ impl Model {
     ) -> std::result::Result<(), JsValue> {
         let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
         let v: serde_json::Value = state.into_serde().map_err(|e| e.to_string())?;
-        let node = self.graph.node_mut(id).ok_or("invalid id")?;
-        node.set_state(v).map_err(|e| e.to_string())?;
-        Ok(())
+        self.graph
+            .node_mut(id)
+            .ok_or("invalid id")?
+            .set_state(v)
+            .map_err(|e| e.to_string().into())
     }
 }
