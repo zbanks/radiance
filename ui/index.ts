@@ -167,6 +167,7 @@ class VideoNodeTile extends HTMLElement {
     x: number;
     y: number;
     graph: Graph;
+    preview: VideoNodePreview;
 
     constructor() {
         super();
@@ -242,6 +243,9 @@ class VideoNodeTile extends HTMLElement {
     }
 
     render() {
+        if (this.preview) {
+            this.preview.render(this);
+        }
     }
 
     updateFromModel(data: ModelVertex) {
@@ -299,7 +303,6 @@ class VideoNodePreview extends HTMLElement {
 }
 
 class EffectNodeTile extends VideoNodeTile {
-    preview: VideoNodePreview;
     intensitySlider: HTMLInputElement;
     titleDiv: HTMLDivElement;
     intensitySliderBlocked: boolean;
@@ -325,10 +328,6 @@ class EffectNodeTile extends VideoNodeTile {
         this.intensitySlider.addEventListener("input", this.intensitySliderChanged.bind(this));
     }
 
-    render() {
-        this.preview.render(this);
-    }
-
     updateFromModel(data: any) {
         super.updateFromModel(data);
         this.intensitySliderBlocked = true;
@@ -343,6 +342,24 @@ class EffectNodeTile extends VideoNodeTile {
         }
         const newIntensity = parseFloat(this.intensitySlider.value);
         this.graph.mutateModel(this.uid, {"intensity": newIntensity});
+    }
+}
+
+class MediaNodeTile extends VideoNodeTile {
+    constructor() {
+        super();
+        this.nInputs = 1;
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+
+        this.innerHTML = `
+            <div style="font-family: sans-serif;" id="title">Media</div>
+            <hr style="margin: 3px; width: 80%;"></hr>
+            <radiance-videonodepreview style="flex: 1 1 auto;" id="preview"></radiance-videonodepreview>
+        `;
+        this.preview = this.querySelector("#preview");
     }
 }
 
@@ -415,9 +432,16 @@ class Graph extends HTMLElement {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
-    addTile(uid: number, backendModel: BackendModel) {
-        // Gonna need to do more than just EffectNodes one day...
-        let tile = <EffectNodeTile>document.createElement("radiance-effectnodetile");
+    addTile(uid: number, state) {
+        const type = state.nodeType;
+        let tile: VideoNodeTile;
+        if (type == "effect") {
+            tile = <VideoNodeTile>document.createElement("radiance-effectnodetile");
+        } else if (type == "media") {
+            tile = <VideoNodeTile>document.createElement("radiance-medianodetile");
+        } else {
+            tile = <VideoNodeTile>document.createElement("radiance-videonodetile");
+        }
         this.appendChild(tile);
         tile.style.position = "absolute";
         tile.style.top = "0px";
@@ -546,7 +570,7 @@ class Graph extends HTMLElement {
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     } else {
                         // However, we do need to add a new tile and edge.
-                        upstreamTile = this.addTile(nodeUID, this.backendModel); // TODO: Arguments...
+                        upstreamTile = this.addTile(nodeUID, this.model.vertices[upstreamNode]); // TODO: Arguments...
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
                         addUpstreamEntries(upstreamTile.nInputs);
@@ -569,7 +593,7 @@ class Graph extends HTMLElement {
             let startTileIndex = null;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
-                let tile = this.addTile(uid, this.backendModel); // TODO: Arguments...
+                let tile = this.addTile(uid, this.model.vertices[startNodeIndex]);
                 tile.updateFromModel(this.model.vertices[startNodeIndex]);
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
@@ -800,4 +824,5 @@ customElements.define('radiance-flickable', Flickable);
 customElements.define('radiance-videonodetile', VideoNodeTile);
 customElements.define('radiance-videonodepreview', VideoNodePreview);
 customElements.define('radiance-effectnodetile', EffectNodeTile);
+customElements.define('radiance-medianodetile', MediaNodeTile);
 customElements.define('radiance-graph', Graph);
