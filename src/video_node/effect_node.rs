@@ -1,7 +1,7 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain, Shader};
 use crate::resources;
-use crate::video_node::{VideoNode, VideoNodeId, VideoNodeType};
+use crate::video_node::{DetailLevel, VideoNode, VideoNodeId, VideoNodeType};
 
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -11,43 +11,49 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use web_sys::WebGlRenderingContext as GL;
 
+#[serde(rename_all = "camelCase")]
+#[derive(Serialize)]
 pub struct EffectNode {
-    state: State,
+    #[serde(rename = "uid")]
+    id: VideoNodeId,
+    node_type: VideoNodeType,
+
+    name: String,
+    n_inputs: usize,
+    properties: HashMap<String, String>,
+
     time: f64,
+    intensity: f64,
+
+    #[serde(skip)]
     intensity_integral: f64,
+    #[serde(skip)]
     shader_sources: Vec<String>,
+    #[serde(skip)]
     shader_passes: Vec<Option<Shader>>,
 }
 
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, Serialize, Deserialize)]
-struct State {
-    #[serde(rename = "uid")]
-    id: Option<VideoNodeId>,
-    node_type: VideoNodeType,
+#[derive(Debug, Deserialize)]
+struct LocalState {
     name: String,
-    #[serde(skip_deserializing)]
-    n_inputs: usize,
-    #[serde(skip_deserializing)]
-    properties: HashMap<String, String>,
-    #[serde(default)]
-    intensity: f64,
+    intensity: Option<f64>,
 }
 
 impl EffectNode {
     pub fn new() -> Result<EffectNode> {
         let id = VideoNodeId::new();
-        let state = State {
-            id: Some(id),
+        Ok(EffectNode {
+            id,
             node_type: VideoNodeType::Effect,
+
             name: String::from("-"),
             n_inputs: 1,
             properties: Default::default(),
-            intensity: 0.0,
-        };
-        Ok(EffectNode {
-            state,
+
             time: 0.0,
+            intensity: 0.0,
+
             intensity_integral: 0.0,
             shader_sources: Default::default(),
             shader_passes: Default::default(),
@@ -102,9 +108,9 @@ impl EffectNode {
 
         info!("Loaded effect: {:?}, n_inputs: {:?}", name, n_inputs);
 
-        self.state.name = name.to_string();
-        self.state.n_inputs = n_inputs;
-        self.state.properties = properties;
+        self.name = name.to_string();
+        self.n_inputs = n_inputs;
+        self.properties = properties;
         self.shader_sources = shader_sources;
         self.shader_passes = shader_passes;
 
@@ -114,15 +120,15 @@ impl EffectNode {
 
 impl VideoNode for EffectNode {
     fn id(&self) -> VideoNodeId {
-        self.state.id.unwrap()
+        self.id
     }
 
     fn name(&self) -> &str {
-        &self.state.name
+        &self.name
     }
 
     fn n_inputs(&self) -> usize {
-        self.state.n_inputs
+        self.n_inputs
     }
 
     fn n_buffers(&self) -> usize {
@@ -131,7 +137,7 @@ impl VideoNode for EffectNode {
 
     fn pre_render(&mut self, chain: &RenderChain, time: f64) {
         let dt = time - self.time;
-        self.intensity_integral = (self.intensity_integral + dt * self.state.intensity) % 1024.0;
+        self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
         self.time = time;
 
         for (src, shader) in self
@@ -188,7 +194,7 @@ impl VideoNode for EffectNode {
             let sample = chain.audio();
             let audio: [f32; 4] = [sample.lows, sample.mids, sample.highs, sample.envelope];
             active_shader.set_uniform1iv("iChannel", &channels);
-            active_shader.set_uniform1f("iIntensity", self.state.intensity as f32);
+            active_shader.set_uniform1f("iIntensity", self.intensity as f32);
             active_shader.set_uniform1f("iIntensityIntegral", self.intensity_integral as f32);
             active_shader.set_uniform1f("iTime", (self.time % 2048.) as f32);
             active_shader.set_uniform1f("iStep", (self.time % 2048.) as f32);
@@ -202,16 +208,18 @@ impl VideoNode for EffectNode {
         buffer_fbos.first().map(|fbo| Rc::clone(&fbo))
     }
 
-    fn state(&self) -> JsonValue {
-        serde_json::to_value(&self.state).unwrap_or(JsonValue::Null)
+    fn state(&self, _level: DetailLevel) -> JsonValue {
+        serde_json::to_value(&self).unwrap_or(JsonValue::Null)
     }
 
     fn set_state(&mut self, raw_state: JsonValue) -> Result<()> {
-        let state: State = serde_json::from_value(raw_state)?;
-        if self.state.name != state.name {
+        let state: LocalState = serde_json::from_value(raw_state)?;
+        if self.name != state.name {
             self.set_name(&state.name)?;
         }
-        self.state.intensity = state.intensity;
+        if let Some(intensity) = state.intensity {
+            self.intensity = intensity;
+        }
         Ok(())
     }
 }

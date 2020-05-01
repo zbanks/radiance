@@ -1,5 +1,7 @@
 use crate::err::{Error, Result};
-use crate::video_node::{EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeType};
+use crate::video_node::{
+    DetailLevel, EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeType,
+};
 use log::*;
 use petgraph::graphmap::DiGraphMap;
 use serde::{Deserialize, Serialize};
@@ -39,6 +41,8 @@ struct StateNode {
 struct State {
     #[serde(rename = "vertices")]
     nodes: Vec<serde_json::Value>,
+    #[serde(rename = "newVertices", default)]
+    node_ids: Vec<VideoNodeId>,
     edges: Vec<StateEdge>,
 }
 
@@ -64,7 +68,6 @@ impl Model {
     }
 
     pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut (dyn VideoNode + 'static)> {
-        // TODO: How to return Iterator<Item = &mut dyn VideoNode> instead?
         self.nodes.values_mut().map(|n| (*n).borrow_mut())
     }
 
@@ -105,16 +108,36 @@ impl Model {
         }
     }
 
+    pub fn add_node(&mut self, state: JsonValue) -> Result<VideoNodeId> {
+        let node_state: StateNode = serde_json::from_value(state.clone())?;
+        let mut boxed_node: Box<dyn VideoNode> = match node_state.node_type {
+            VideoNodeType::Effect => Box::new(EffectNode::new()?),
+            VideoNodeType::Output => Box::new(OutputNode::new()),
+            VideoNodeType::Media => Box::new(MediaNode::new()?),
+        };
+        boxed_node.set_state(state)?;
+
+        let id = boxed_node.id();
+        self.graph.add_node(id);
+        self.nodes.insert(id, boxed_node);
+
+        Ok(id)
+    }
+
     pub fn state(&self) -> JsonValue {
         let mut nodes_vec = self.nodes().collect::<Vec<_>>();
         nodes_vec.sort_by_key(|n| n.id());
+        let node_ids = nodes_vec.iter().map(|n| n.id()).collect();
         let id_map: HashMap<VideoNodeId, usize> = nodes_vec
             .iter()
             .enumerate()
             .map(|(i, n)| (n.id(), i))
             .collect();
 
-        let nodes = nodes_vec.iter().map(|n| n.state()).collect();
+        let nodes = nodes_vec
+            .iter()
+            .map(|n| n.state(DetailLevel::All))
+            .collect();
         let edges = self
             .graph
             .all_edges()
@@ -124,7 +147,11 @@ impl Model {
                 to_input: *i,
             })
             .collect();
-        let state = State { nodes, edges };
+        let state = State {
+            nodes,
+            node_ids,
+            edges,
+        };
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
@@ -151,7 +178,6 @@ impl Model {
                     VideoNodeType::Media => Box::new(MediaNode::new()?),
                 };
                 let id = boxed_node.id();
-                info!("Added node type {:?} with id {:?}", n.node_type, id);
                 nodes_to_insert.push(boxed_node);
                 (id, nodes_to_insert.last_mut().unwrap())
             };

@@ -1,9 +1,9 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain};
-use crate::video_node::{VideoNode, VideoNodeId, VideoNodeType};
+use crate::video_node::{DetailLevel, VideoNode, VideoNodeId, VideoNodeType};
 
 use log::*;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
@@ -11,21 +11,18 @@ use wasm_bindgen::{JsCast, JsValue};
 use web_sys::HtmlVideoElement;
 
 /// TODO: Add support for HtmlImageElement
-pub struct MediaNode {
-    video: HtmlVideoElement,
-    video_promise: Option<Box<Closure<dyn FnMut(JsValue)>>>,
-
-    state: State,
-}
-
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, Serialize, Deserialize)]
-struct State {
+#[derive(Serialize)]
+pub struct MediaNode {
     #[serde(rename = "uid")]
-    id: Option<VideoNodeId>,
+    id: VideoNodeId,
     node_type: VideoNodeType,
     n_inputs: usize,
-    video_element_id: Option<String>,
+
+    #[serde(skip)]
+    video: HtmlVideoElement,
+    #[serde(skip)]
+    video_promise: Option<Box<Closure<dyn FnMut(JsValue)>>>,
 }
 
 impl MediaNode {
@@ -45,16 +42,12 @@ impl MediaNode {
             video_clone.set_src_object(Some(&media));
         })));
 
-        let state = State {
-            id: Some(VideoNodeId::new()),
+        let node = MediaNode {
+            id: VideoNodeId::new(),
             node_type: VideoNodeType::Media,
             n_inputs: 1,
-            video_element_id: None,
-        };
-        let node = MediaNode {
             video,
             video_promise,
-            state,
         };
 
         let mut constraints = web_sys::MediaStreamConstraints::new();
@@ -74,7 +67,7 @@ impl MediaNode {
 
 impl VideoNode for MediaNode {
     fn id(&self) -> VideoNodeId {
-        self.state.id.unwrap()
+        self.id
     }
 
     fn name(&self) -> &str {
@@ -104,7 +97,7 @@ impl VideoNode for MediaNode {
         }
     }
 
-    fn state(&self) -> JsonValue {
-        serde_json::to_value(&self.state).unwrap_or(JsonValue::Null)
+    fn state(&self, _level: DetailLevel) -> JsonValue {
+        serde_json::to_value(&self).unwrap_or(JsonValue::Null)
     }
 }

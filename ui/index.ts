@@ -412,6 +412,9 @@ class Graph extends HTMLElement {
         //this.appendChild(canvas);
         this.backendModel = new BackendModel(canvas, 512);
 
+        // XXX @zbanks - I added this so I can hack on backendModel from the console
+        window["backendModel"] = this.backendModel;
+
         window.requestAnimationFrame(this.render.bind(this));
     }
 

@@ -36,6 +36,18 @@ pub enum VideoNodeType {
     Media,
 }
 
+#[wasm_bindgen]
+#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize)]
+pub enum DetailLevel {
+    /// All of the state, including read-only properties. Used for updating the UI.
+    All,
+    /// Most or all of the writable state. Used to cut, copy, or duplicate a node within the localized content of a session. Should include things like video timestamp.
+    Local,
+    /// Some of the writable state. Used for long-term storage of models, such as in save files.
+    Export,
+}
+
 pub trait VideoNode {
     fn id(&self) -> VideoNodeId;
     fn name(&self) -> &str;
@@ -63,7 +75,7 @@ pub trait VideoNode {
         buffer_fbos: &mut [Rc<Fbo>],
     ) -> Option<Rc<Fbo>>;
 
-    fn state(&self) -> JsonValue {
+    fn state(&self, _level: DetailLevel) -> JsonValue {
         JsonValue::Null
     }
 

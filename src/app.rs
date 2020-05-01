@@ -2,7 +2,7 @@ use crate::audio::Audio;
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Model as Graph;
-use crate::video_node::VideoNodeId;
+use crate::video_node::{DetailLevel, VideoNodeId};
 
 use log::*;
 use std::rc::Rc;
@@ -127,5 +127,32 @@ impl Model {
     pub fn set_state(&mut self, state: JsValue) {
         let v: serde_json::Value = state.into_serde().unwrap();
         self.graph.set_state(v).unwrap();
+    }
+
+    #[wasm_bindgen(js_name=addNode)]
+    pub fn add_node(&mut self, state: JsValue) -> std::result::Result<VideoNodeId, JsValue> {
+        let v: serde_json::Value = state.into_serde().unwrap();
+        self.graph.add_node(v).map_err(|e| e.into())
+    }
+
+    #[wasm_bindgen(js_name=nodeState)]
+    pub fn node_state(&self, id: JsValue, level: JsValue) -> std::result::Result<JsValue, JsValue> {
+        let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
+        let level: DetailLevel = level.into_serde().map_err(|e| e.to_string())?;
+        let node = self.graph.node(id).ok_or("invalid id")?;
+        JsValue::from_serde(&node.state(level)).map_err(|_| "unserializable state".into())
+    }
+
+    #[wasm_bindgen(js_name=setNodeState)]
+    pub fn set_node_state(
+        &mut self,
+        id: JsValue,
+        state: JsValue,
+    ) -> std::result::Result<(), JsValue> {
+        let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
+        let v: serde_json::Value = state.into_serde().map_err(|e| e.to_string())?;
+        let node = self.graph.node_mut(id).ok_or("invalid id")?;
+        node.set_state(v).map_err(|e| e.to_string())?;
+        Ok(())
     }
 }
