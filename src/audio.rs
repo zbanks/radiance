@@ -1,9 +1,9 @@
 use crate::err::Result;
 
+use log::*;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{AnalyserNode, AudioContext};
-use log::*;
 
 pub struct Audio {
     // Need to keep the `context` variable around to prevent it from being GC'd
@@ -32,7 +32,7 @@ impl Audio {
         let context = AudioContext::new()?;
         let analyser = context.create_analyser()?;
         analyser.set_fft_size(2048);
-        analyser.set_smoothing_time_constant(0.85);
+        analyser.set_smoothing_time_constant(0.30);
         analyser.set_min_decibels(-300.);
         analyser.set_max_decibels(300.);
 
@@ -71,7 +71,6 @@ impl Audio {
         if self.context.state() == web_sys::AudioContextState::Suspended {
             // Even if resume succeeds, we won't yet have data to analyze on this iteration
             self.context.resume();
-
         }
 
         let mut analysis: AudioAnalysis = Default::default();
@@ -120,15 +119,27 @@ impl Audio {
                     analysis.mid += *v;
                 }
             }
-            const scale: fn(f32) -> f32 = |x: f32| f32::min(1.0, x * 150.0);
             analysis.low /= low_count as f32;
             analysis.mid /= mid_count as f32;
             analysis.high /= high_count as f32;
-            analysis.level = scale(analysis.low + analysis.mid + analysis.high);
-            analysis.low = scale(analysis.low);
-            analysis.mid = scale(analysis.mid);
-            analysis.high = scale(analysis.high);
-            analysis.spectrum.iter_mut().zip(spectrum.iter()).for_each(|(s, x)| {*s = scale(*x);});
+            analysis.level = analysis.low + analysis.mid + analysis.high;
+
+            // Convert all linear magnitudes into log magnitudes, with some arbitrary scale
+            // to clamp between [0.0, 1.0]
+            // XXX this SCALE function is arbitrary
+            const SCALE: fn(f32) -> f32 =
+                |x: f32| f32::max(0.0, f32::min(1.0, f32::log10(x) * 0.15 + 0.8));
+            analysis.level = SCALE(analysis.level);
+            analysis.low = SCALE(analysis.low);
+            analysis.mid = SCALE(analysis.mid);
+            analysis.high = SCALE(analysis.high);
+            analysis
+                .spectrum
+                .iter_mut()
+                .zip(spectrum.iter())
+                .for_each(|(s, x)| {
+                    *s = SCALE(*x);
+                });
         }
         analysis
     }

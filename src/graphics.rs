@@ -205,9 +205,16 @@ impl Shader {
 
         self.context
             .bind_buffer(GL::ARRAY_BUFFER, Some(&chain.square_vertex_buffer));
-        self.context.enable_vertex_attrib_array(self.vposition_location);
         self.context
-            .vertex_attrib_pointer_with_i32(self.vposition_location, 4, GL::FLOAT, false, 0, 0);
+            .enable_vertex_attrib_array(self.vposition_location);
+        self.context.vertex_attrib_pointer_with_i32(
+            self.vposition_location,
+            4,
+            GL::FLOAT,
+            false,
+            0,
+            0,
+        );
 
         self.context
             .bind_framebuffer(GL::FRAMEBUFFER, fbo.map(|f| &f.framebuffer));
@@ -216,8 +223,7 @@ impl Shader {
     }
 
     pub fn get_uniform_location(&self, uniform: &str) -> Option<WebGlUniformLocation> {
-        self
-            .uniform_locations
+        self.uniform_locations
             .borrow_mut()
             .entry(uniform.to_string())
             .or_insert_with(|| self.context.get_uniform_location(&self.program, uniform))
@@ -233,12 +239,16 @@ impl<'a> ActiveShader<'a> {
 
     pub fn set_uniform2f(&self, uniform: &str, value: (f32, f32)) {
         let loc = self.shader.get_uniform_location(uniform);
-        self.shader.context.uniform2f(loc.as_ref(), value.0, value.1);
+        self.shader
+            .context
+            .uniform2f(loc.as_ref(), value.0, value.1);
     }
 
     pub fn set_uniform4fv(&self, uniform: &str, value: &[f32]) {
         let loc = self.shader.get_uniform_location(uniform);
-        self.shader.context.uniform4fv_with_f32_array(loc.as_ref(), value);
+        self.shader
+            .context
+            .uniform4fv_with_f32_array(loc.as_ref(), value);
     }
 
     pub fn set_uniform1i(&self, uniform: &str, value: i32) {
