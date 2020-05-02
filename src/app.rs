@@ -102,7 +102,6 @@ impl Context {
 
     #[wasm_bindgen(js_name=clearElement)]
     pub fn clear_element(&mut self, element: JsValue) -> std::result::Result<(), JsValue> {
-        info!("element: {:?}", element);
         element
             .dyn_into::<HtmlElement>()
             .and_then(|el| self.set_canvas_rect(el).map_err(|e| e.to_string().into()))?;

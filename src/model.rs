@@ -1,21 +1,21 @@
-use crate::err::{Error, Result};
+use crate::err::Result;
 use crate::video_node::{
     DetailLevel, EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeType,
 };
 use log::*;
-use petgraph::graphmap::DiGraphMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::borrow::{Borrow, BorrowMut};
-use std::collections::{BTreeMap, HashMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-struct Graph<T: Copy + Eq + Ord + std::fmt::Debug> {
+// Graph is absracted over T to facilitate testing; but is practically for VideoNodeId
+struct Graph<T: Copy + Ord + std::fmt::Debug> {
     /// Map of to_vertex -> [from_vertex_0, from_vertex_1, ...]
     edges: BTreeMap<T, Vec<Option<T>>>,
 }
 
-#[allow(dead_code,unused_variables)]
-impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
+#[allow(dead_code, unused_variables)]
+impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
     pub fn new() -> Graph<T> {
         Graph {
             edges: Default::default(),
@@ -48,7 +48,12 @@ impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
 
     /// Add, modify, or remove an edge
     /// If `to_input` is `None`, remove the edge
-    pub fn set_edge(&mut self, from_vertex: Option<T>, to_vertex: T, to_input: usize) -> Result<()> {
+    pub fn set_edge(
+        &mut self,
+        from_vertex: Option<T>,
+        to_vertex: T,
+        to_input: usize,
+    ) -> Result<()> {
         // Check that both verticies in the proposed edge exist
         if let Some(fv) = from_vertex {
             if !self.edges.contains_key(&fv) {
@@ -56,21 +61,39 @@ impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
             }
         }
         if !self.edges.contains_key(&to_vertex) {
-            return Err(format!("to_vertex {:?} not in graph", to_vertex).as_str().into());
+            return Err(format!("to_vertex {:?} not in graph", to_vertex)
+                .as_str()
+                .into());
         }
 
         // TODO validation that this won't create a cycle
 
         // Remove the previous edge that went to `(to_vertex, to_input)` & insert from_vertex
         let inputs = self.edges.get_mut(&to_vertex).unwrap();
-        *inputs.get_mut(to_input).ok_or("invalid to_input; too large")? = from_vertex;
+        *inputs
+            .get_mut(to_input)
+            .ok_or("invalid to_input; too large")? = from_vertex;
 
         Ok(())
     }
 
+    /// Return a Vec with every edge: (from, to, input)
+    pub fn all_edges(&self) -> impl Iterator<Item = (T, T, usize)> + '_ {
+        self.edges.iter().flat_map(|(to, inputs)| {
+            inputs
+                .iter()
+                .enumerate()
+                .filter_map(move |(i, from)| from.map(|f| (f, *to, i)))
+        })
+    }
+
     /// Return a Vec of verticies in topological order
     pub fn toposort(&self) -> Result<Vec<T>> {
-        let mut rev_edges: BTreeMap<T, BTreeSet<T>> = self.edges.keys().map(|v| (*v, Default::default())).collect();
+        let mut rev_edges: BTreeMap<T, BTreeSet<T>> = self
+            .edges
+            .keys()
+            .map(|v| (*v, Default::default()))
+            .collect();
         for (to_vertex, inputs) in &self.edges {
             for from_vertex in inputs {
                 if let Some(from_vertex) = from_vertex {
@@ -78,17 +101,22 @@ impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
                 }
             }
         }
-        println!("_edges: {:?}", self.edges);
-        println!("rev_edges: {:?}", rev_edges);
+        let mut fwd_edges: BTreeMap<T, BTreeSet<T>> = self
+            .edges
+            .iter()
+            .map(|(to, inputs)| (*to, inputs.iter().flatten().copied().collect()))
+            .collect();
 
         // Kahn's Algorithm from Wikipedia's pseudocode
         // https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
-        // NB: The direction is inverted from the pseudocode description
         //
         // L ← Empty list that will contain the sorted elements
         let mut l: Vec<T> = Default::default();
         // S ← Set of all nodes with no incoming edge
-        let mut s: Vec<T> = rev_edges.iter().filter_map(|(v, outs)| if outs.is_empty() { Some(*v) } else { None }).collect();
+        let mut s: Vec<T> = fwd_edges
+            .iter()
+            .filter_map(|(v, outs)| if outs.is_empty() { Some(*v) } else { None })
+            .collect();
 
         // while S is non-empty do
         //     remove a node n from S
@@ -96,9 +124,10 @@ impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
             // add n to tail of L
             l.push(n);
             // for each node m with an edge e from n to m do
-            for m in self.edges.get(&n).unwrap().iter().filter_map(|x| x.as_ref()) {
+            for m in rev_edges.get(&n).unwrap().clone().iter() {
                 // remove edge e from the graph
-                let m_edges = rev_edges.get_mut(m).unwrap();
+                rev_edges.get_mut(&n).unwrap().remove(&m);
+                let m_edges = fwd_edges.get_mut(m).unwrap();
                 m_edges.remove(&n);
                 // if m has no other incoming edges then
                 if m_edges.is_empty() {
@@ -108,12 +137,11 @@ impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
             }
         }
         // if graph has edges then
-        if !rev_edges.values().all(|outs| outs.is_empty()) {
+        if !fwd_edges.values().all(|outs| outs.is_empty()) {
             // return error   (graph has at least one cycle)
-            println!("{:?}", rev_edges);
-            //Err("Cycle detected".into())
-            Ok(l)
-        // else 
+            info!("Cycle found: {:?}", fwd_edges);
+            Err("Cycle detected".into())
+        // else
         } else {
             // return L   (a topologically sorted order)
             Ok(l)
@@ -122,7 +150,9 @@ impl<T: Copy + Eq + Ord + std::fmt::Debug> Graph<T> {
 
     /// Return a Vec of input edges for a given vertex
     pub fn vertex_inputs(&self, vertex: T) -> Result<&Vec<Option<T>>> {
-        self.edges.get(&vertex).ok_or_else(|| format!("Invalid vertex {:?}", vertex).as_str().into())
+        self.edges
+            .get(&vertex)
+            .ok_or_else(|| format!("Invalid vertex {:?}", vertex).as_str().into())
     }
 
     /// Check for cycles or other malformed representations
@@ -174,7 +204,7 @@ mod tests {
 ///     which must all have unique edge weights in [0..node.n_inputs)
 pub struct Model {
     nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
-    graph: DiGraphMap<VideoNodeId, usize>,
+    graph: Graph<VideoNodeId>,
     dirty: bool,
 }
 
@@ -209,7 +239,7 @@ struct State {
 impl Model {
     pub fn new() -> Model {
         Model {
-            graph: DiGraphMap::new(),
+            graph: Graph::new(),
             nodes: Default::default(),
             dirty: false,
         }
@@ -237,7 +267,8 @@ impl Model {
     }
 
     pub fn toposort(&self) -> Vec<&dyn VideoNode> {
-        petgraph::algo::toposort(&self.graph, None)
+        self.graph
+            .toposort()
             .unwrap()
             .iter()
             .map(|id| self.nodes.get(id).unwrap().borrow())
@@ -245,28 +276,16 @@ impl Model {
     }
 
     pub fn node_inputs(&self, node: &dyn VideoNode) -> Vec<Option<&dyn VideoNode>> {
-        let mut inputs = Vec::new();
-        inputs.resize(node.n_inputs(), None);
-
-        for src_id in self
-            .graph
-            .neighbors_directed(node.id(), petgraph::Direction::Incoming)
-        {
-            let src_index = *self.graph.edge_weight(src_id, node.id()).unwrap();
-            if src_index < node.n_inputs() {
-                inputs[src_index] = self.nodes.get(&src_id).map(|n| n.borrow());
-            }
-        }
-
-        inputs
-    }
-
-    fn digraph_check_cycles(graph: &DiGraphMap<VideoNodeId, usize>) -> Result<()> {
-        if petgraph::algo::toposort(graph, None).is_err() {
-            Err(Error::new("Cycle detected"))
-        } else {
-            Ok(())
-        }
+        self.graph
+            .vertex_inputs(node.id())
+            .unwrap()
+            .iter()
+            .map(|input| {
+                input
+                    .as_ref()
+                    .map(|id| self.nodes.get(id).unwrap().borrow())
+            })
+            .collect()
     }
 
     pub fn add_node(&mut self, state: JsonValue) -> Result<VideoNodeId> {
@@ -279,7 +298,7 @@ impl Model {
         boxed_node.set_state(state)?;
 
         let id = boxed_node.id();
-        self.graph.add_node(id);
+        self.graph.set_vertex(id, Some(boxed_node.n_inputs()));
         self.nodes.insert(id, boxed_node);
         self.dirty = true;
 
@@ -287,7 +306,7 @@ impl Model {
     }
 
     pub fn remove_node(&mut self, id: VideoNodeId) -> Result<()> {
-        self.graph.remove_node(id);
+        self.graph.set_vertex(id, None);
         self.nodes.remove(&id);
         self.dirty = true;
         Ok(())
@@ -300,17 +319,13 @@ impl Model {
     }
 
     pub fn add_edge(&mut self, from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
-        // TODO: Enforce that the new graph is valid
-        self.graph.add_edge(from, to, input);
+        self.graph.set_edge(Some(from), to, input)?;
         self.dirty = true;
         Ok(())
     }
 
-    pub fn remove_edge(&mut self, from: VideoNodeId, to: VideoNodeId, _input: usize) -> Result<()> {
-        // TODO: Check harder if the old edge existed
-        self.graph
-            .remove_edge(from, to)
-            .ok_or("edge does not exist")?;
+    pub fn remove_edge(&mut self, _from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
+        self.graph.set_edge(None, to, input)?;
         self.dirty = true;
         Ok(())
     }
@@ -335,7 +350,7 @@ impl Model {
             .map(|(a, b, i)| StateEdge {
                 from_node: *id_map.get(&a).unwrap(),
                 to_node: *id_map.get(&b).unwrap(),
-                to_input: *i,
+                to_input: i,
             })
             .collect();
         let state = State {
@@ -349,7 +364,7 @@ impl Model {
     /// Deprecated
     pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
         let mut state: State = serde_json::from_value(state)?;
-        let mut new_graph = DiGraphMap::new();
+        let mut new_graph = Graph::new();
         self.graph.clear();
         let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
         let mut unseen_ids: HashMap<VideoNodeId, _> = self.ids().map(|id| (*id, ())).collect();
@@ -375,20 +390,20 @@ impl Model {
             };
 
             node.set_state(s)?;
-            new_graph.add_node(id);
+            new_graph.set_vertex(id, Some(node.n_inputs()));
             id_map.insert(i, id);
             unseen_ids.remove(&id);
         }
 
         // Calculate the new set of edges
         for edge in state.edges {
-            new_graph.add_edge(
-                *id_map.get(&edge.from_node).ok_or("invalid from_node")?,
+            new_graph.set_edge(
+                Some(*id_map.get(&edge.from_node).ok_or("invalid from_node")?),
                 *id_map.get(&edge.to_node).ok_or("invalid to_node")?,
                 edge.to_input,
-            );
+            )?;
         }
-        Self::digraph_check_cycles(&new_graph)?;
+        new_graph.validate()?;
 
         // Remove nodes not referenced
         for (id, _) in unseen_ids {

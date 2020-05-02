@@ -11,7 +11,6 @@ crate-type = ["cdylib", "rlib"]
 log = "0.4"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
-petgraph = "0.5"
 wasm-bindgen-futures = "0.4.10"
 wasm-bindgen = {version = "0.2.60", features = ["serde-serialize"]}
 web_logger = "0.2"
