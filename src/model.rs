@@ -16,6 +16,7 @@ use std::collections::HashMap;
 pub struct Model {
     nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
     graph: DiGraphMap<VideoNodeId, usize>,
+    dirty: bool,
 }
 
 #[serde(rename_all = "camelCase")]
@@ -51,6 +52,7 @@ impl Model {
         Model {
             graph: DiGraphMap::new(),
             nodes: Default::default(),
+            dirty: false,
         }
     }
 
@@ -120,8 +122,38 @@ impl Model {
         let id = boxed_node.id();
         self.graph.add_node(id);
         self.nodes.insert(id, boxed_node);
+        self.dirty = true;
 
         Ok(id)
+    }
+
+    pub fn remove_node(&mut self, id: VideoNodeId) -> Result<()> {
+        self.graph.remove_node(id);
+        self.nodes.remove(&id);
+        self.dirty = true;
+        Ok(())
+    }
+
+    pub fn clear(&mut self) {
+        self.nodes.clear();
+        self.graph.clear();
+        self.dirty = true;
+    }
+
+    pub fn add_edge(&mut self, from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
+        // TODO: Enforce that the new graph is valid
+        self.graph.add_edge(from, to, input);
+        self.dirty = true;
+        Ok(())
+    }
+
+    pub fn remove_edge(&mut self, from: VideoNodeId, to: VideoNodeId, _input: usize) -> Result<()> {
+        // TODO: Check harder if the old edge existed
+        self.graph
+            .remove_edge(from, to)
+            .ok_or("edge does not exist")?;
+        self.dirty = true;
+        Ok(())
     }
 
     pub fn state(&self) -> JsonValue {
@@ -155,6 +187,7 @@ impl Model {
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
+    /// Deprecated
     pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
         let mut state: State = serde_json::from_value(state)?;
         let mut new_graph = DiGraphMap::new();
@@ -211,5 +244,13 @@ impl Model {
         self.graph = new_graph;
 
         Ok(())
+    }
+
+    pub fn flush(&mut self) -> bool {
+        let old_dirty = self.dirty;
+        info!("Flushing: {}", old_dirty);
+        self.dirty = false;
+
+        old_dirty
     }
 }

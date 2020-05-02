@@ -5,8 +5,11 @@ use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{AnalyserNode, AudioContext};
 
 pub struct Audio {
+    // Need to keep the `context` variable around to prevent it from being GC'd
+    #[allow(dead_code)]
     context: AudioContext,
     analyser: AnalyserNode,
+    #[allow(clippy::type_complexity)]
     source_promise: Option<Box<Closure<dyn FnMut(JsValue)>>>,
 }
 

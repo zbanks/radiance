@@ -1,7 +1,7 @@
 use crate::audio::Audio;
 use crate::err::Result;
 use crate::graphics::RenderChain;
-use crate::model::Model as Graph;
+use crate::model::Model;
 use crate::video_node::{DetailLevel, VideoNodeId};
 
 use log::*;
@@ -11,18 +11,18 @@ use wasm_bindgen::JsCast;
 use web_sys::{HtmlCanvasElement, HtmlElement, WebGlRenderingContext};
 
 #[wasm_bindgen]
-pub struct Model {
+pub struct Context {
     canvas_el: HtmlCanvasElement,
     audio: Audio,
-    graph: Graph,
+    model: Model,
     chain: RenderChain,
 }
 
 #[allow(clippy::suspicious_else_formatting)]
 #[wasm_bindgen]
-impl Model {
+impl Context {
     #[wasm_bindgen(constructor)]
-    pub fn new(canvas: JsValue, size: i32) -> Option<Model> {
+    pub fn new(canvas: JsValue, size: i32) -> Option<Context> {
         let canvas_el = canvas.dyn_into::<HtmlCanvasElement>().ok()?;
         let context = Rc::new(
             canvas_el
@@ -35,13 +35,17 @@ impl Model {
         let chain_size = (size, size);
         let chain = RenderChain::new(context, chain_size).unwrap();
         let audio = Audio::new().ok()?;
-        Some(Model {
-            graph: Graph::new(),
+        Some(Context {
+            model: Model::new(),
             audio,
             canvas_el,
             chain,
         })
     }
+
+    //
+    // Render functions
+    //
 
     pub fn render(&mut self, time: f64) -> std::result::Result<(), JsValue> {
         self.render_internal(time).map_err(|e| e.into())
@@ -62,14 +66,14 @@ impl Model {
         self.chain.set_audio(self.audio.analyze());
 
         // Perform pre-render operations that may modify each node
-        self.chain.pre_render(self.graph.nodes_mut(), time);
+        self.chain.pre_render(self.model.nodes_mut(), time);
 
         // Render each node sequentially in topological order
         self.chain
             .set_drawing_rect(0, 0, self.chain.size.0, self.chain.size.1);
-        for node in self.graph.toposort() {
+        for node in self.model.toposort() {
             let fbos = self
-                .graph
+                .model
                 .node_inputs(node)
                 .iter()
                 .map(|n| n.and_then(|node| self.chain.node_fbo(node)))
@@ -89,10 +93,9 @@ impl Model {
         let id: VideoNodeId = id
             .into_serde()
             .map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
-        let node = self.graph.node(id).ok_or("Invalid node id")?;
+        let node = self.model.node(id).ok_or("Invalid node id")?;
 
-        self.set_canvas_viewport(node_ref)
-            .map_err(|e| e.to_string())?;
+        self.set_canvas_rect(node_ref).map_err(|e| e.to_string())?;
         self.chain.paint(node).unwrap();
         Ok(())
     }
@@ -100,15 +103,15 @@ impl Model {
     #[wasm_bindgen(js_name=clearElement)]
     pub fn clear_element(&mut self, element: JsValue) -> std::result::Result<(), JsValue> {
         info!("element: {:?}", element);
-        element.dyn_into::<HtmlElement>().and_then(|el| {
-            self.set_canvas_viewport(el)
-                .map_err(|e| e.to_string().into())
-        })?;
+        element
+            .dyn_into::<HtmlElement>()
+            .and_then(|el| self.set_canvas_rect(el).map_err(|e| e.to_string().into()))?;
         self.chain.clear();
         Ok(())
     }
 
-    fn set_canvas_viewport(&self, el_ref: HtmlElement) -> Result<()> {
+    /// Set the context's viewport & scissor to the bounding box of an HtmlElement
+    fn set_canvas_rect(&self, el_ref: HtmlElement) -> Result<()> {
         // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
         let canvas_size = (
             self.chain.context.drawing_buffer_width(),
@@ -133,29 +136,81 @@ impl Model {
         Ok(())
     }
 
+    //
+    // Graph/Edge Functions
+    //
+
     pub fn state(&self) -> JsValue {
-        JsValue::from_serde(&self.graph.state()).unwrap()
+        JsValue::from_serde(&self.model.state()).unwrap()
     }
 
+    /// Deprecated
     pub fn set_state(&mut self, state: JsValue) {
         let v: serde_json::Value = state.into_serde().unwrap();
-        self.graph.set_state(v).unwrap();
+        self.model.set_state(v).unwrap();
     }
+
+    #[wasm_bindgen(js_name=addEdge)]
+    pub fn add_edge(
+        &mut self,
+        from_vertex: JsValue,
+        to_vertex: JsValue,
+        to_input: usize,
+    ) -> std::result::Result<(), JsValue> {
+        let from_id = from_vertex.into_serde().map_err(|e| e.to_string())?;
+        let to_id = to_vertex.into_serde().map_err(|e| e.to_string())?;
+        self.model
+            .add_edge(from_id, to_id, to_input)
+            .map_err(|e| e.to_string().into())
+    }
+
+    #[wasm_bindgen(js_name=removeEdge)]
+    pub fn remove_edge(
+        &mut self,
+        from_vertex: JsValue,
+        to_vertex: JsValue,
+        to_input: usize,
+    ) -> std::result::Result<(), JsValue> {
+        let from_id = from_vertex.into_serde().map_err(|e| e.to_string())?;
+        let to_id = to_vertex.into_serde().map_err(|e| e.to_string())?;
+        self.model
+            .remove_edge(from_id, to_id, to_input)
+            .map_err(|e| e.to_string().into())
+    }
+
+    pub fn clear(&mut self) {
+        self.model.clear();
+    }
+
+    pub fn flush(&mut self) -> bool {
+        self.model.flush()
+    }
+
+    //
+    // Node functions
+    //
 
     #[wasm_bindgen(js_name=addNode)]
     pub fn add_node(&mut self, state: JsValue) -> std::result::Result<VideoNodeId, JsValue> {
         state
             .into_serde()
             .map_err(|e| e.into())
-            .and_then(|s| self.graph.add_node(s))
+            .and_then(|s| self.model.add_node(s))
             .map_err(|e| e.to_string().into())
+    }
+
+    #[wasm_bindgen(js_name=removeNode)]
+    pub fn remove_node(&mut self, id: JsValue) -> std::result::Result<(), JsValue> {
+        id.into_serde()
+            .map_err(|e| e.to_string().into())
+            .and_then(|id| self.model.remove_node(id).map_err(|e| e.to_string().into()))
     }
 
     #[wasm_bindgen(js_name=nodeState)]
     pub fn node_state(&self, id: JsValue, level: JsValue) -> std::result::Result<JsValue, JsValue> {
         let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
         let level: DetailLevel = level.into_serde().map_err(|e| e.to_string())?;
-        let node = self.graph.node(id).ok_or("invalid id")?;
+        let node = self.model.node(id).ok_or("invalid id")?;
         JsValue::from_serde(&node.state(level)).map_err(|_| "unserializable state".into())
     }
 
@@ -167,7 +222,7 @@ impl Model {
     ) -> std::result::Result<(), JsValue> {
         let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
         let v: serde_json::Value = state.into_serde().map_err(|e| e.to_string())?;
-        self.graph
+        self.model
             .node_mut(id)
             .ok_or("invalid id")?
             .set_state(v)

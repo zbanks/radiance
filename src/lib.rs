@@ -17,7 +17,7 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-pub use app::Model;
+pub use app::Context;
 
 #[wasm_bindgen(start)]
 pub fn setup_hooks() -> Result<(), JsValue> {

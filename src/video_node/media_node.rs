@@ -22,6 +22,7 @@ pub struct MediaNode {
     #[serde(skip)]
     video: HtmlVideoElement,
     #[serde(skip)]
+    #[allow(clippy::type_complexity)]
     video_promise: Option<Box<Closure<dyn FnMut(JsValue)>>>,
 }
 

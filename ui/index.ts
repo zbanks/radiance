@@ -1,6 +1,6 @@
 "use strict";
 
-import {Model as BackendModel} from "../pkg/index.js";
+import {Context as BackendContext} from "../pkg/index.js";
 
 class Flickable extends HTMLElement {
     outer: HTMLElement; // Outer div (for clipping and mouse events)
@@ -439,9 +439,9 @@ class VideoNodePreview extends HTMLElement {
 
     render(tile: VideoNodeTile) {
         if (tile.dragging) {
-            tile.graph.backendModel.clearElement(tile.inner);
+            tile.graph.backendContext.clearElement(tile.inner);
         }
-        tile.graph.backendModel.paintNode(tile.uid, this.content);
+        tile.graph.backendContext.paintNode(tile.uid, this.content);
     }
 }
 
@@ -535,7 +535,7 @@ class Graph extends HTMLElement {
     tileEdges: Edge[];
     nextUID: number;
     model: Model;
-    backendModel: BackendModel;
+    backendContext: BackendContext;
     relayoutRequested: boolean;
 
     constructor() {
@@ -575,10 +575,10 @@ class Graph extends HTMLElement {
 
         const canvas = shadow.querySelector("#canvas");
         //this.appendChild(canvas);
-        this.backendModel = new BackendModel(canvas, 512);
+        this.backendContext = new BackendContext(canvas, 512);
 
-        // XXX @zbanks - I added this so I can hack on backendModel from the console
-        window["backendModel"] = this.backendModel;
+        // XXX @zbanks - I added this so I can hack on backendContext from the console
+        window["backendContext"] = this.backendContext;
 
         window.requestAnimationFrame(this.render.bind(this));
     }
@@ -615,7 +615,7 @@ class Graph extends HTMLElement {
                 break;
             }
         }
-        this.backendModel.set_state(this.model);
+        this.backendContext.set_state(this.model);
         this.modelChanged();
     }
 
@@ -953,7 +953,7 @@ class Graph extends HTMLElement {
             this.relayoutGraph();
         }
 
-        this.backendModel.render(t);
+        this.backendContext.render(t);
         this.tileVertices.forEach(tile => {
             tile.render();
         });

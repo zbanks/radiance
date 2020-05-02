@@ -31,10 +31,10 @@ customElements.whenDefined("radiance-graph").then(() => {
             {fromVertex: 8, toVertex: 9, toInput: 0},
         ],
     };
-    graph.backendModel.set_state(state);
-    console.log(graph.backendModel.state());
+    graph.backendContext.set_state(state);
+    console.log(graph.backendContext.state());
 
-    graph.model = graph.backendModel.state();
+    graph.model = graph.backendContext.state();
     console.log(graph.model);
     graph.modelChanged();
 });
