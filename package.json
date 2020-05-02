@@ -4,7 +4,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack --mode development",
     "build": "webpack --mode production",
-    "start:dev": "webpack-dev-server --mode development"
+    "start:dev": "webpack-dev-server --mode development",
+    "start:prod": "webpack-dev-server --mode production"
   },
   "types": "ui/typing.d.ts",
   "devDependencies": {

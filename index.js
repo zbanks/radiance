@@ -7,7 +7,7 @@ customElements.whenDefined("radiance-graph").then(() => {
 
     var state = {
         vertices: [
-            {nodeType: "media"},
+            {nodeType: "effect", name: "test", intensity: 0.7},
             {nodeType: "effect", name: "resat", intensity: 0.3},
             {nodeType: "effect", name: "oscope", intensity: 0.8},
             {nodeType: "effect", name: "spin", intensity: 0.5},

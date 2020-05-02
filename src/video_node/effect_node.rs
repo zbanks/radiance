@@ -3,12 +3,12 @@ use crate::graphics::{Fbo, RenderChain, Shader};
 use crate::resources;
 use crate::video_node::{DetailLevel, VideoNode, VideoNodeId, VideoNodeType};
 
-use log::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::rc::Rc;
+use strum_macros::EnumString;
 use web_sys::WebGlRenderingContext as GL;
 
 #[serde(rename_all = "camelCase")]
@@ -20,6 +20,7 @@ pub struct EffectNode {
 
     name: String,
     n_inputs: usize,
+    header: EffectHeader,
     properties: HashMap<String, String>,
 
     time: f64,
@@ -33,11 +34,29 @@ pub struct EffectNode {
     shader_passes: Vec<Option<Shader>>,
 }
 
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+#[derive(EnumString, Serialize)]
+enum EffectHeader {
+    /// Default WebGL Radiance
+    Radiance17,
+    // /// Matches Qt Radiance v0.5.0, adds frequency
+    // Radiance18,
+    // /// ShaderToy
+    // Shadertoy,
+}
+
 #[serde(rename_all = "camelCase")]
 #[derive(Debug, Deserialize)]
 struct LocalState {
     name: String,
     intensity: Option<f64>,
+}
+
+impl Default for EffectHeader {
+    fn default() -> EffectHeader {
+        EffectHeader::Radiance17
+    }
 }
 
 impl EffectNode {
@@ -49,6 +68,7 @@ impl EffectNode {
 
             name: String::from("-"),
             n_inputs: 1,
+            header: Default::default(),
             properties: Default::default(),
 
             time: 0.0,
@@ -60,21 +80,21 @@ impl EffectNode {
         })
     }
 
+    /// Change the EffectNode's name, which also recompiles the shader source
     fn set_name(&mut self, name: &str) -> Result<()> {
         let program = resources::effects::lookup(name).ok_or("Unknown effect name")?;
 
-        let header_source = String::from(resources::glsl::EFFECT_HEADER);
-        let mut source = String::new();
         let mut properties = HashMap::new();
-
-        source.push_str(&header_source);
+        let mut shader_sources: Vec<String> = Vec::new();
+        let mut source = String::new();
         source.push_str("\n#line 1\n");
 
-        let mut shader_sources: Vec<String> = Vec::new();
         for (i, line) in program.split('\n').enumerate() {
             let mut terms = line.trim().splitn(3, ' ');
             let head = terms.next();
             match head {
+                // Syntax: `#property <key> <value>`
+                // Inserts `(key, value)` into the properties map
                 Some("#property") => {
                     let key = terms
                         .next()
@@ -86,10 +106,11 @@ impl EffectNode {
                         .to_string();
                     properties.insert(key, value);
                 }
+                // Syntax: `#buffershader`
+                // Separates shaders into multiple passses
                 Some("#buffershader") => {
                     shader_sources.push(source);
                     source = String::new();
-                    source.push_str(&header_source);
                     source.push_str(&format!("\n#line {}\n", i + 1));
                 }
                 _ => {
@@ -100,16 +121,30 @@ impl EffectNode {
         }
         shader_sources.push(source);
 
-        let shader_passes = shader_sources.iter().map(|_| None).collect();
-
         let n_inputs: usize = properties
             .get("inputCount")
             .map_or(Ok(1), |x| x.parse().map_err(|_| "Invalid inputCount"))?;
 
-        info!("Loaded effect: {:?}, n_inputs: {:?}", name, n_inputs);
+        let header: EffectHeader = properties
+            .get("header")
+            .map_or(Ok(Default::default()), |x| {
+                x.parse().map_err(|_| "Invalid header")
+            })?;
+
+        // Prepend the appropriate header to every shader source
+        let header_source = match header {
+            EffectHeader::Radiance17 => String::from(resources::glsl::EFFECT_HEADER),
+        };
+        for src in shader_sources.iter_mut() {
+            *src = format!("{}{}", header_source, src);
+        }
+
+        // Create an empty Vec to hold shader_passes; these are compiled in pre_render
+        let shader_passes = shader_sources.iter().map(|_| None).collect();
 
         self.name = name.to_string();
         self.n_inputs = n_inputs;
+        self.header = header;
         self.properties = properties;
         self.shader_sources = shader_sources;
         self.shader_passes = shader_passes;
@@ -201,7 +236,9 @@ impl VideoNode for EffectNode {
             active_shader.set_uniform1f("iFPS", 60.);
             active_shader.set_uniform4fv("iAudio", &audio);
             active_shader.set_uniform2f("iResolution", (chain.size.0 as f32, chain.size.1 as f32));
+            //web_sys::console::time_with_label("render_finish");
             active_shader.finish_render();
+            //web_sys::console::time_end_with_label("render_finish");
 
             std::mem::swap(&mut *chain.extra_fbo.borrow_mut(), &mut buffer_fbos[i]);
         }

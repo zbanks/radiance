@@ -4,7 +4,6 @@ use crate::graphics::RenderChain;
 use crate::model::Model;
 use crate::video_node::{DetailLevel, VideoNodeId};
 
-use log::*;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -48,6 +47,8 @@ impl Context {
     //
 
     pub fn render(&mut self, time: f64) -> std::result::Result<(), JsValue> {
+        //web_sys::console::time_with_label("render");
+        //web_sys::console::time_end_with_label("render");
         self.render_internal(time).map_err(|e| e.into())
     }
 
@@ -78,7 +79,9 @@ impl Context {
                 .iter()
                 .map(|n| n.and_then(|node| self.chain.node_fbo(node)))
                 .collect::<Vec<_>>();
+            //web_sys::console::time_with_label("render_node");
             self.chain.render_node(node, &fbos);
+            //web_sys::console::time_end_with_label("render_node");
         }
         Ok(())
     }
