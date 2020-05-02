@@ -438,7 +438,10 @@ class VideoNodePreview extends HTMLElement {
     }
 
     render(tile: VideoNodeTile) {
-        tile.graph.backendModel.paint_node(tile.uid, this.content);
+        if (tile.dragging) {
+            tile.graph.backendModel.clearElement(tile.inner);
+        }
+        tile.graph.backendModel.paintNode(tile.uid, this.content);
     }
 }
 

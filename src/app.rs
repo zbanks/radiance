@@ -66,8 +66,7 @@ impl Model {
 
         // Render each node sequentially in topological order
         self.chain
-            .context
-            .viewport(0, 0, self.chain.size.0, self.chain.size.1);
+            .set_drawing_rect(0, 0, self.chain.size.0, self.chain.size.1);
         for node in self.graph.toposort() {
             let fbos = self
                 .graph
@@ -80,6 +79,7 @@ impl Model {
         Ok(())
     }
 
+    #[wasm_bindgen(js_name=paintNode)]
     pub fn paint_node(
         &mut self,
         id: JsValue,
@@ -89,18 +89,32 @@ impl Model {
         let id: VideoNodeId = id
             .into_serde()
             .map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
-        self.paint_node_internal(id, node_ref).map_err(|e| e.into())
-    }
-
-    fn paint_node_internal(&mut self, id: VideoNodeId, node_ref: HtmlElement) -> Result<()> {
-        // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
         let node = self.graph.node(id).ok_or("Invalid node id")?;
 
+        self.set_canvas_viewport(node_ref)
+            .map_err(|e| e.to_string())?;
+        self.chain.paint(node).unwrap();
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name=clearElement)]
+    pub fn clear_element(&mut self, element: JsValue) -> std::result::Result<(), JsValue> {
+        info!("element: {:?}", element);
+        element.dyn_into::<HtmlElement>().and_then(|el| {
+            self.set_canvas_viewport(el)
+                .map_err(|e| e.to_string().into())
+        })?;
+        self.chain.clear();
+        Ok(())
+    }
+
+    fn set_canvas_viewport(&self, el_ref: HtmlElement) -> Result<()> {
+        // This assumes that the canvas has style: "position: fixed; left: 0; right: 0;"
         let canvas_size = (
             self.chain.context.drawing_buffer_width(),
             self.chain.context.drawing_buffer_height(),
         );
-        let node_rect = node_ref.get_bounding_client_rect();
+        let node_rect = el_ref.get_bounding_client_rect();
         let canvas_rect = self.canvas_el.get_bounding_client_rect();
 
         let x_ratio = canvas_rect.width() / canvas_size.0 as f64;
@@ -110,13 +124,12 @@ impl Model {
         let top = ((node_rect.top() - canvas_rect.top()) / y_ratio).ceil();
         let bottom = ((node_rect.bottom() - canvas_rect.top()) / y_ratio).floor();
 
-        self.chain.context.viewport(
+        self.chain.set_drawing_rect(
             left as i32,
             canvas_size.1 - bottom as i32,
             (right - left) as i32,
             (bottom - top) as i32,
         );
-        self.chain.paint(node).unwrap();
         Ok(())
     }
 

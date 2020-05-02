@@ -278,6 +278,7 @@ impl RenderChain {
 
         context.disable(GL::DEPTH_TEST);
         context.disable(GL::BLEND);
+        context.enable(GL::SCISSOR_TEST);
         context.clear_color(0.0, 0.0, 0.0, 0.0);
 
         let blank_texture = context.create_texture().ok_or("Unable to create texture")?;
@@ -429,6 +430,15 @@ impl RenderChain {
         if let Some(output) = output_fbo {
             self.output_fbos.borrow_mut().insert(node.id(), output);
         }
+    }
+
+    pub fn set_drawing_rect(&self, x: i32, y: i32, w: i32, h: i32) {
+        self.context.viewport(x, y, w, h);
+        self.context.scissor(x, y, w, h);
+    }
+
+    pub fn clear(&self) {
+        self.context.clear(GL::COLOR_BUFFER_BIT);
     }
 
     pub fn paint(&self, node: &dyn VideoNode) -> Result<()> {
