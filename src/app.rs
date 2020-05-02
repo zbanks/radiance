@@ -8,7 +8,7 @@ use log::*;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlCanvasElement, HtmlElement, WebGl2RenderingContext};
+use web_sys::{HtmlCanvasElement, HtmlElement, WebGlRenderingContext};
 
 #[wasm_bindgen]
 pub struct Model {
@@ -26,10 +26,10 @@ impl Model {
         let canvas_el = canvas.dyn_into::<HtmlCanvasElement>().ok()?;
         let context = Rc::new(
             canvas_el
-                .get_context("webgl2")
-                .expect("WebGL2 not supported")
+                .get_context("webgl")
+                .expect("WebGL not supported")
                 .unwrap()
-                .dyn_into::<WebGl2RenderingContext>()
+                .dyn_into::<WebGlRenderingContext>()
                 .unwrap(),
         );
         let chain_size = (size, size);
