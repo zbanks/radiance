@@ -5,6 +5,7 @@ pub mod glsl {
 }
 
 pub mod effects {
+    pub static AUDIOTEST: &str = include_str!("../static/effects/audiotest.glsl");
     pub static COMPOSITE: &str = include_str!("../static/effects/composite.glsl");
     pub static LPF: &str = include_str!("../static/effects/lpf.glsl");
     pub static MELT: &str = include_str!("../static/effects/melt.glsl");
@@ -20,6 +21,7 @@ pub mod effects {
 
     pub fn lookup(name: &str) -> Option<&'static str> {
         match name {
+            "audiotest" => Some(AUDIOTEST),
             "composite" => Some(COMPOSITE),
             "lpf" => Some(LPF),
             "melt" => Some(MELT),

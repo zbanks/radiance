@@ -6,12 +6,14 @@ use log::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 // Graph is absracted over T to facilitate testing; but is practically for VideoNodeId
 struct Graph<T: Copy + Ord + std::fmt::Debug> {
     /// Map of to_vertex -> [from_vertex_0, from_vertex_1, ...]
     edges: BTreeMap<T, Vec<Option<T>>>,
+    toposort_cache: RefCell<Option<Vec<T>>>,
 }
 
 #[allow(dead_code, unused_variables)]
@@ -19,17 +21,20 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
     pub fn new() -> Graph<T> {
         Graph {
             edges: Default::default(),
+            toposort_cache: RefCell::new(None),
         }
     }
 
     /// Completely remove all graph state
     pub fn clear(&mut self) {
         self.edges.clear();
+        self.toposort_cache.replace(None);
     }
 
     /// Add, modify, or remove a vertex
     /// If `n_inputs` is `None`, remove the vertex and any associated edges
     pub fn set_vertex(&mut self, vertex: T, n_inputs: Option<usize>) {
+        self.toposort_cache.replace(None);
         if let Some(n_inputs) = n_inputs {
             self.edges.entry(vertex).or_default().resize(n_inputs, None);
         } else {
@@ -54,6 +59,7 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
         to_vertex: T,
         to_input: usize,
     ) -> Result<()> {
+        self.toposort_cache.replace(None);
         // Check that both verticies in the proposed edge exist
         if let Some(fv) = from_vertex {
             if !self.edges.contains_key(&fv) {
@@ -89,6 +95,10 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
 
     /// Return a Vec of verticies in topological order
     pub fn toposort(&self) -> Result<Vec<T>> {
+        if let Some(cache) = &*self.toposort_cache.borrow() {
+            return Ok(cache.clone());
+        }
+
         let mut rev_edges: BTreeMap<T, BTreeSet<T>> = self
             .edges
             .keys()
@@ -144,6 +154,7 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
         // else
         } else {
             // return L   (a topologically sorted order)
+            self.toposort_cache.replace(Some(l.clone()));
             Ok(l)
         }
     }
@@ -160,7 +171,7 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
     /// hold malformed or cyclic graphs.
     fn validate(&self) -> Result<()> {
         // TODO
-        self.toposort().map(|_| ())
+        Ok(())
     }
 }
 

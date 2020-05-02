@@ -27,6 +27,7 @@ version = "0.3.4"
 features = [
     'AnalyserNode',
     'AudioContext',
+    'AudioContextState',
     'AudioNode',
     'Document',
     'DomRect',

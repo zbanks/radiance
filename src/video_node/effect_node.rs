@@ -227,7 +227,7 @@ impl VideoNode for EffectNode {
                 tex_index += 1;
             }
             let sample = chain.audio();
-            let audio: [f32; 4] = [sample.lows, sample.mids, sample.highs, sample.envelope];
+            let audio: [f32; 4] = [sample.low, sample.mid, sample.high, sample.level];
             active_shader.set_uniform1iv("iChannel", &channels);
             active_shader.set_uniform1f("iIntensity", self.intensity as f32);
             active_shader.set_uniform1f("iIntensityIntegral", self.intensity_integral as f32);
