@@ -53,7 +53,7 @@ impl MediaNode {
 
         let mut constraints = web_sys::MediaStreamConstraints::new();
         constraints.audio(&JsValue::FALSE).video(&JsValue::TRUE);
-        web_sys::window()
+        let _ = web_sys::window()
             .unwrap()
             .navigator()
             .media_devices()

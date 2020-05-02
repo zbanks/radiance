@@ -1,6 +1,6 @@
 [package]
 name = "radiance"
-version = "0.1.0"
+version = "0.7.0"
 authors = ["Zach Banks <zjbanks@gmail.com>", "Eric Van Albert <eric@van.al>"]
 edition = "2018"
 

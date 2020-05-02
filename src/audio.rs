@@ -1,6 +1,5 @@
 use crate::err::Result;
 
-use log::*;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{AnalyserNode, AudioContext};
@@ -52,7 +51,7 @@ impl Audio {
 
         let mut constraints = web_sys::MediaStreamConstraints::new();
         constraints.audio(&JsValue::TRUE).video(&JsValue::FALSE);
-        web_sys::window()
+        let _ = web_sys::window()
             .unwrap()
             .navigator()
             .media_devices()
@@ -70,7 +69,7 @@ impl Audio {
         // If we're suspended, forcibly try to resume
         if self.context.state() == web_sys::AudioContextState::Suspended {
             // Even if resume succeeds, we won't yet have data to analyze on this iteration
-            self.context.resume();
+            let _ = self.context.resume();
         }
 
         let mut analysis: AudioAnalysis = Default::default();

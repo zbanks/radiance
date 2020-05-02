@@ -25,6 +25,7 @@ pub struct EffectNode {
 
     time: f64,
     intensity: f64,
+    frequency: f64,
 
     #[serde(skip)]
     intensity_integral: f64,
@@ -51,6 +52,7 @@ enum EffectHeader {
 struct LocalState {
     name: String,
     intensity: Option<f64>,
+    frequency: Option<f64>,
 }
 
 impl Default for EffectHeader {
@@ -73,6 +75,7 @@ impl EffectNode {
 
             time: 0.0,
             intensity: 0.0,
+            frequency: 0.0,
 
             intensity_integral: 0.0,
             shader_sources: Default::default(),
@@ -256,6 +259,9 @@ impl VideoNode for EffectNode {
         }
         if let Some(intensity) = state.intensity {
             self.intensity = intensity;
+        }
+        if let Some(frequency) = state.frequency {
+            self.frequency = frequency;
         }
         Ok(())
     }

@@ -4,6 +4,7 @@ use crate::graphics::RenderChain;
 use crate::model::Model;
 use crate::video_node::{DetailLevel, VideoNodeId};
 
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -15,6 +16,9 @@ pub struct Context {
     audio: Audio,
     model: Model,
     chain: RenderChain,
+
+    graph_changed: Option<js_sys::Function>,
+    node_changed: HashMap<VideoNodeId, js_sys::Function>,
 }
 
 #[allow(clippy::suspicious_else_formatting)]
@@ -39,6 +43,8 @@ impl Context {
             audio,
             canvas_el,
             chain,
+            graph_changed: Default::default(),
+            node_changed: Default::default(),
         })
     }
 
@@ -150,6 +156,7 @@ impl Context {
     pub fn set_state(&mut self, state: JsValue) {
         let v: serde_json::Value = state.into_serde().unwrap();
         self.model.set_state(v).unwrap();
+        self.flush();
     }
 
     #[wasm_bindgen(js_name=addEdge)]
@@ -184,8 +191,44 @@ impl Context {
         self.model.clear();
     }
 
+    //
+    // Callbacks & Flushing
+    //
+
     pub fn flush(&mut self) -> bool {
-        self.model.flush()
+        let dirt = self.model.flush();
+        if dirt.graph {
+            if let Some(callback) = &self.graph_changed {
+                let state = self.state();
+                let _ = callback.call1(&JsValue::NULL, &state);
+            }
+        }
+        // Prune callbacks for nodes that no longer exist
+        let node_ids: HashSet<VideoNodeId> = self.model.ids().copied().collect();
+        self.node_changed.retain(|k, _v| node_ids.contains(k));
+        for node_id in &dirt.nodes {
+            if let Some(callback) = self.node_changed.get(&node_id) {
+                self.model
+                    .node(*node_id)
+                    .and_then(|node| JsValue::from_serde(&node.state(DetailLevel::Local)).ok())
+                    .as_ref()
+                    .and_then(|state| callback.call1(&JsValue::NULL, state).ok());
+            }
+        }
+        dirt.graph || !dirt.nodes.is_empty()
+    }
+
+    #[wasm_bindgen(js_name=onGraphChanged)]
+    pub fn set_graph_changed(&mut self, callback: js_sys::Function) {
+        self.graph_changed = Some(callback);
+    }
+
+    #[wasm_bindgen(js_name=onNodeChanged)]
+    pub fn set_node_changed(&mut self, id: JsValue, callback: js_sys::Function) {
+        let _ = id
+            .into_serde()
+            .ok()
+            .and_then(|id: VideoNodeId| self.node_changed.insert(id, callback));
     }
 
     //

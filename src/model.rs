@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 // Graph is absracted over T to facilitate testing; but is practically for VideoNodeId
 struct Graph<T: Copy + Ord + std::fmt::Debug> {
@@ -216,7 +216,13 @@ mod tests {
 pub struct Model {
     nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
     graph: Graph<VideoNodeId>,
-    dirty: bool,
+    dirt: ModelDirt,
+}
+
+#[derive(Default, Debug)]
+pub struct ModelDirt {
+    pub graph: bool,
+    pub nodes: HashSet<VideoNodeId>,
 }
 
 #[serde(rename_all = "camelCase")]
@@ -252,7 +258,7 @@ impl Model {
         Model {
             graph: Graph::new(),
             nodes: Default::default(),
-            dirty: false,
+            dirt: Default::default(),
         }
     }
 
@@ -311,7 +317,9 @@ impl Model {
         let id = boxed_node.id();
         self.graph.set_vertex(id, Some(boxed_node.n_inputs()));
         self.nodes.insert(id, boxed_node);
-        self.dirty = true;
+
+        self.dirt.graph = true;
+        self.dirt.nodes.insert(id);
 
         Ok(id)
     }
@@ -319,25 +327,25 @@ impl Model {
     pub fn remove_node(&mut self, id: VideoNodeId) -> Result<()> {
         self.graph.set_vertex(id, None);
         self.nodes.remove(&id);
-        self.dirty = true;
+        self.dirt.graph = true;
         Ok(())
     }
 
     pub fn clear(&mut self) {
         self.nodes.clear();
         self.graph.clear();
-        self.dirty = true;
+        self.dirt.graph = true;
     }
 
     pub fn add_edge(&mut self, from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
         self.graph.set_edge(Some(from), to, input)?;
-        self.dirty = true;
+        self.dirt.graph = true;
         Ok(())
     }
 
     pub fn remove_edge(&mut self, _from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
         self.graph.set_edge(None, to, input)?;
-        self.dirty = true;
+        self.dirt.graph = true;
         Ok(())
     }
 
@@ -372,7 +380,7 @@ impl Model {
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
-    /// Deprecated
+    /// Deprecated; doesn't trigger dirty
     pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
         let mut state: State = serde_json::from_value(state)?;
         let mut new_graph = Graph::new();
@@ -404,7 +412,9 @@ impl Model {
             new_graph.set_vertex(id, Some(node.n_inputs()));
             id_map.insert(i, id);
             unseen_ids.remove(&id);
+            self.dirt.nodes.insert(id);
         }
+        self.dirt.graph = true;
 
         // Calculate the new set of edges
         for edge in state.edges {
@@ -431,11 +441,9 @@ impl Model {
         Ok(())
     }
 
-    pub fn flush(&mut self) -> bool {
-        let old_dirty = self.dirty;
-        info!("Flushing: {}", old_dirty);
-        self.dirty = false;
-
-        old_dirty
+    pub fn flush(&mut self) -> ModelDirt {
+        let mut dirt = Default::default();
+        std::mem::swap(&mut dirt, &mut self.dirt);
+        dirt
     }
 }
