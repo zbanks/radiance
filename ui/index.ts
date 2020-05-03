@@ -425,7 +425,9 @@ class VideoNodeTile extends HTMLElement {
     }
 
     keyPress(event: KeyboardEvent) {
-        this.graph.deleteSelected();
+        if (event.code == "Delete") {
+            this.graph.deleteSelected();
+        }
     }
 }
 
