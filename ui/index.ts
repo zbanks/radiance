@@ -564,15 +564,55 @@ interface Edge {
     toVertex: number;
 }
 
-interface Model {
-    vertices: UID[];
-    edges: Edge[];
+class Model {
+    vertices: any[]; // Array of graph vertices (passed into constructor)
+    edges: Edge[]; // Array of edges (passed into constructor)
+    startVertices: number[]; // Which vertex indices have no outgoing edges
+    upstreamEdges: number[][]; // Parallel to vertices. Second index is which input, and the result is the upstream edge index.
+    downstreamEdges: number[][]; // Parallel to vertices. Each entry is unsorted list of downstream edge indices.
+
+    constructor(vertices: any[], edges: Edge[]) {
+        this.vertices = vertices;
+        this.edges = edges;
+
+        // Precompute some useful things
+        this.upstreamEdges = []; // Parallel to vertices. The upstream vertex index on each input, or null.
+        this.downstreamEdges = []; // Parallel to vertices. The upstream vertex index on each input, or null.
+        // Each input should have at most one connection.
+        this.vertices.forEach((node, index) => {
+            this.upstreamEdges[index] = [];
+            this.downstreamEdges[index] = [];
+        });
+
+        this.startVertices = Array.from(this.vertices.keys());
+
+        this.edges.forEach((edge, index) => {
+            if (this.upstreamEdges[edge.toVertex][edge.toInput] !== undefined) {
+                throw `Model vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
+            }
+            this.upstreamEdges[edge.toVertex][edge.toInput] = index;
+            this.downstreamEdges[edge.fromVertex].push(index);
+
+            let ix = this.startVertices.indexOf(edge.fromVertex);
+            if (ix >= 0) {
+                this.startVertices.splice(ix, 1);
+            }
+        });
+    }
+
+    upstreamVertexIndex(vertexIndex: number, input: number) {
+        const edge = this.upstreamEdges[vertexIndex][input];
+        if (edge === undefined) {
+            return undefined;
+        } else {
+            return this.edges[edge].fromVertex;
+        }
+    }
 }
 
 class Graph extends HTMLElement {
     // This custom element creates the visual context for displaying connected nodes.
 
-    mutationObserver: MutationObserver;
     tileVertices: VideoNodeTile[];
     tileEdges: Edge[];
     nextUID: number;
@@ -641,65 +681,26 @@ class Graph extends HTMLElement {
 
     modelChanged() {
         let model = this.context.state();
-        model.vertices = model.newVertices; // XXX butterflymeme.jpg is this a ... polyfill?
-        this.model = model;
-        console.log("ModelChanged!");
-        console.log(this.model);
+        this.model = new Model(model.newVertices, model.edges); // XXX rename newVertices
+
         // Convert the model DAG into a tree
 
         const origNumTileVertices = this.tileVertices.length;
         const origNumTileEdges = this.tileEdges.length;
 
-        // Precompute some useful things
-        let upstreamNodeVertices: number[][] = []; // Parallel to vertices. The upstream vertex index on each input, or null.
-        // Even in a DAG, each input should have at most one connection.
-        this.model.vertices.forEach((node, index) => {
-            upstreamNodeVertices[index] = [];
-            const nInputs = this.context.nodeState(node, "all").nInputs;
-            for (let i = 0; i < nInputs; i++) {
-                upstreamNodeVertices[index].push(null);
-            }
-        });
-
-        let startNodeVertices: number[] = Array.from(this.model.vertices.keys());
-
-        for (let edge of this.model.edges) {
-            if (edge.toInput >= upstreamNodeVertices[edge.toVertex].length) {
-                throw `Model edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
-            }
-            if (upstreamNodeVertices[edge.toVertex][edge.toInput] !== null) {
-                throw `Model vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
-            }
-            upstreamNodeVertices[edge.toVertex][edge.toInput] = edge.fromVertex;
-
-            let ix = startNodeVertices.indexOf(edge.fromVertex);
-            if (ix >= 0) {
-                startNodeVertices.splice(ix, 1);
-            }
-        }
-
         let startTileVertices = Array.from(this.tileVertices.keys());
         let startTileForUID : {[uid: number]: number} = {};
-        let upstreamTileEdges: number[][] = []; // Parallel to vertices. The upstream edge index on each input, or null.
+        let upstreamTileEdges: number[][] = []; // Parallel to vertices. The upstream edge index on each input, or undefined.
 
-        // Helper function for making sure upstreamTileEdges doesn't get out of date when we add new tiles
-
-        const addUpstreamEntries = (nInputs: number) => {
-            upstreamTileEdges.push([]);
-            for (let i = 0; i < nInputs; i++) {
-                upstreamTileEdges[upstreamTileEdges.length - 1].push(null);
-            }
-        };
-
-        this.tileVertices.forEach((tile, index) => {
-            addUpstreamEntries(tile.nInputs);
+        this.tileVertices.forEach((_, index) => {
+            upstreamTileEdges[index] = [];
         });
 
         this.tileEdges.forEach((edge, index) => {
             if (edge.toInput >= upstreamTileEdges[edge.toVertex].length) {
                 throw `Tile edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
             }
-            if (upstreamTileEdges[edge.toVertex][edge.toInput] !== null) {
+            if (upstreamTileEdges[edge.toVertex][edge.toInput] !== undefined) {
                 throw `Tile vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
             }
             upstreamTileEdges[edge.toVertex][edge.toInput] = index;
@@ -708,6 +709,7 @@ class Graph extends HTMLElement {
                 startTileVertices.splice(ix, 1);
             }
         });
+
         startTileVertices.forEach(startTileVertex => {
             startTileForUID[this.tileVertices[startTileVertex].uid] = startTileVertex;
         });
@@ -723,17 +725,18 @@ class Graph extends HTMLElement {
             const tile = this.tileVertices[tileVertex];
 
             for (let input = 0; input < tile.nInputs; input++) {
-                let upstreamNode = upstreamNodeVertices[nodeVertex][input];
-                if (upstreamNode !== null) {
+                let upstreamNode = this.model.upstreamVertexIndex(nodeVertex, input);
+                if (upstreamNode !== undefined) {
                     // Get the upstream node UID for the given input
                     const nodeUID = this.model.vertices[upstreamNode];
                     // See if the connection exists on the tile
                     const upstreamTileEdgeIndex = upstreamTileEdges[tileVertex][input];
 
-                    let upstreamTileVertexIndex = null;
-                    let upstreamTile = null;
+                    let upstreamTileVertexIndex;
+                    let upstreamTile;
+                    let reuse = false;
 
-                    if (upstreamTileEdgeIndex !== null) {
+                    if (upstreamTileEdgeIndex !== undefined) {
                         upstreamTileVertexIndex = this.tileEdges[upstreamTileEdgeIndex].fromVertex;
                         upstreamTile = this.tileVertices[upstreamTileVertexIndex];
                         const upstreamTileUID = upstreamTile.uid;
@@ -741,32 +744,34 @@ class Graph extends HTMLElement {
                             // If the tile matches, don't delete the edge or node.
                             tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(upstreamTileVertexIndex), 1);
                             tileEdgesToDelete.splice(tileEdgesToDelete.indexOf(upstreamTileEdgeIndex), 1);
+                            upstreamTile.updateFromState(this.context.nodeState(this.model.vertices[upstreamNode], "all"));
+                            reuse = true;
                         }
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
-                    } else {
+                    }
+
+                    if (!reuse) {
                         // However, we do need to add a new tile and edge.
                         const state = this.context.nodeState(this.model.vertices[upstreamNode], "all");
                         upstreamTile = this.addTile(nodeUID, state);
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
-                        addUpstreamEntries(upstreamTile.nInputs);
+                        upstreamTileEdges.push([]);
                         this.tileEdges.push({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
                             toInput: input,
                         });
                     }
-                    upstreamTile.updateFromState(this.context.nodeState(this.model.vertices[upstreamNode], "all"));
-                    // TODO: update tile properties here from model, such as intensity...
                     traverse(upstreamNode, upstreamTileVertexIndex);
                 }
             }
         };
 
         // For each start node, make a tile or use an existing tile
-        startNodeVertices.forEach(startNodeIndex => {
+        this.model.startVertices.forEach(startNodeIndex => {
             const uid = this.model.vertices[startNodeIndex];
-            let startTileIndex = null;
+            let startTileIndex;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
                 const state = this.context.nodeState(this.model.vertices[startNodeIndex], "all");
@@ -774,7 +779,7 @@ class Graph extends HTMLElement {
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
                 this.tileVertices.push(tile);
-                addUpstreamEntries(tile.nInputs);
+                upstreamTileEdges.push([]);
             } else {
                 startTileIndex = startTileForUID[uid];
                 // Don't delete the tile we found
@@ -794,11 +799,8 @@ class Graph extends HTMLElement {
         this.tileVertices.forEach((_, oldIndex) => {
             if (tileVerticesToDelete.indexOf(oldIndex) < 0) {
                 // Index was not deleted
-                vertexTileMapping.push(newIndex);
+                vertexTileMapping[oldIndex] = newIndex;
                 newIndex++;
-            } else {
-                // Index was deleted
-                vertexTileMapping.push(null);
             }
         });
 
