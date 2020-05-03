@@ -35,15 +35,13 @@ customElements.whenDefined("radiance-graph").then(() => {
     };
 
     const context = new Context(document.querySelector("#canvas"), 512);
-    graph.context = context;
+    graph.attachContext(context);
     // XXX @zbanks - I added this so I can hack on context from the console
     window["context"] = context;
 
     graph.context.set_state(state);
     console.log(graph.context.state());
 
-    graph.model = graph.context.state();
-    graph.model.vertices = graph.model.newVertices; // XXX butterflymeme.jpg is this a ... polyfill?
     console.log(graph.model);
-    graph.modelChanged();
+    graph.modelChanged(); // XXX Shouldn't need this
 });

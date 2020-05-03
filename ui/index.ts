@@ -250,6 +250,8 @@ class VideoNodeTile extends HTMLElement {
         document.addEventListener('touchend', this.touchEnd.bind(this));
         document.addEventListener('touchmove', this.touchMove.bind(this));
         this.tabIndex = 0;
+
+        this.addEventListener('keypress', this.keyPress.bind(this));
     }
 
     width() {
@@ -395,6 +397,9 @@ class VideoNodeTile extends HTMLElement {
         }
     }
 
+    keyPress(event: KeyboardEvent) {
+        this.graph.deleteSelected();
+    }
 }
 
 class VideoNodePreview extends HTMLElement {
@@ -526,11 +531,6 @@ interface Edge {
     toVertex: number;
 }
 
-//interface ModelVertex {
-//    uid: number;
-//    nInputs: number; // TODO remove me
-//}
-
 interface Model {
     vertices: UID[];
     edges: Edge[];
@@ -568,11 +568,17 @@ class Graph extends HTMLElement {
                 pointer-events: auto;
             }
             </style>
-            <canvas id="canvas">
-            </canvas>
             <slot></slot>
         `;
+    }
 
+    attachContext(context: Context) {
+        if (this.context !== undefined) {
+            throw "Cannot call attachContext more than once!";
+        }
+
+        this.context = context;
+        this.context.onGraphChanged(this.modelChanged.bind(this));
         window.requestAnimationFrame(this.render.bind(this));
     }
 
@@ -601,6 +607,11 @@ class Graph extends HTMLElement {
     // {"vertices": [{"file", "intensity", "type", "uid"},...], "edges": [{from, tovertex, toinput},...]}
 
     modelChanged() {
+        let model = this.context.state();
+        model.vertices = model.newVertices; // XXX butterflymeme.jpg is this a ... polyfill?
+        this.model = model;
+        console.log("ModelChanged!");
+        console.log(this.model);
         // Convert the model DAG into a tree
 
         const origNumTileVertices = this.tileVertices.length;
@@ -696,7 +707,7 @@ class Graph extends HTMLElement {
                         if (upstreamTileUID == nodeUID) {
                             // If the tile matches, don't delete the edge or node.
                             tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(upstreamTileVertexIndex), 1);
-                            tileEdgesToDelete.splice(tileEdgesToDelete.indexOf(this.tileEdges[upstreamTileEdgeIndex].fromVertex), 1);
+                            tileEdgesToDelete.splice(tileEdgesToDelete.indexOf(upstreamTileEdgeIndex), 1);
                         }
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     } else {
@@ -731,7 +742,6 @@ class Graph extends HTMLElement {
                 startTileIndex = this.tileVertices.length;
                 this.tileVertices.push(tile);
                 addUpstreamEntries(tile.nInputs);
-                // TODO Update tile properties here from model
             } else {
                 startTileIndex = startTileForUID[uid];
                 // Don't delete the tile we found
@@ -760,12 +770,16 @@ class Graph extends HTMLElement {
         });
 
         // Perform deletion
+        let count = 0;
         tileVerticesToDelete.forEach(index => {
-            this.removeTile(this.tileVertices[index]);
-            delete this.tileVertices[index];
+            this.removeTile(this.tileVertices[index - count]);
+            this.tileVertices.splice(index - count, 1);
+            count++;
         });
+        count = 0;
         tileEdgesToDelete.forEach(index => {
-            delete this.tileEdges[index];
+            this.tileEdges.splice(index - count, 1);
+            count++;
         });
         // Remap indices
         this.tileEdges.forEach(edge => {
@@ -956,6 +970,22 @@ class Graph extends HTMLElement {
         this.tileVertices.forEach(tile => {
             tile.selected = false;
         });
+    }
+
+    deleteSelected() {
+        let uidsToDelete: number[] = [];
+        this.tileVertices.forEach(tile => {
+            if (tile.selected && !(tile.uid in uidsToDelete)) {
+                uidsToDelete.push(tile.uid);
+            }
+        });
+        uidsToDelete.forEach(uid => {
+            this.context.removeNode(uid);
+        });
+        this.context.flush();
+
+        // XXX this should be unnecessary
+        this.modelChanged();
     }
 }
 
