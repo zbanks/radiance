@@ -35,6 +35,7 @@ customElements.whenDefined("radiance-graph").then(() => {
     console.log(graph.backendContext.state());
 
     graph.model = graph.backendContext.state();
+    graph.model.vertices = graph.model.newVertices; // XXX butterflymeme.jpg is this a ... polyfill?
     console.log(graph.model);
     graph.modelChanged();
 });

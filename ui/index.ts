@@ -282,8 +282,8 @@ class VideoNodeTile extends HTMLElement {
         }
     }
 
-    updateFromModel(data: ModelVertex) {
-        if (data.nInputs != this.nInputs) {
+    updateFromState(data: any) {
+        if ("nInputs" in data && data.nInputs != this.nInputs) {
             this.nInputs = data.nInputs;
             this.graph.requestRelayout();
         }
@@ -476,12 +476,17 @@ class EffectNodeTile extends VideoNodeTile {
         this.intensitySlider.addEventListener("input", this.intensitySliderChanged.bind(this));
     }
 
-    updateFromModel(data: any) {
-        super.updateFromModel(data);
-        this.intensitySliderBlocked = true;
-        this.intensitySlider.value = data.intensity;
-        this.intensitySliderBlocked = false;
-        this.titleDiv.textContent = data.name;
+    updateFromState(data: any) {
+        super.updateFromState(data);
+        if ("intensity" in data) {
+            this.intensitySliderBlocked = true;
+            this.intensitySlider.value = data.intensity;
+            this.intensitySliderBlocked = false;
+        }
+
+        if ("name" in data) {
+            this.titleDiv.textContent = data.name;
+        }
     }
 
     intensitySliderChanged(event: InputEvent) {
@@ -489,7 +494,9 @@ class EffectNodeTile extends VideoNodeTile {
             return;
         }
         const newIntensity = parseFloat(this.intensitySlider.value);
-        this.graph.mutateModel(this.uid, {"intensity": newIntensity});
+        let state = this.graph.backendContext.nodeState(this.uid, "local");
+        state.intensity = newIntensity;
+        this.graph.backendContext.setNodeState(this.uid, state);
     }
 }
 
@@ -517,13 +524,13 @@ interface Edge {
     toVertex: number;
 }
 
-interface ModelVertex {
-    uid: number;
-    nInputs: number; // TODO remove me
-}
+//interface ModelVertex {
+//    uid: number;
+//    nInputs: number; // TODO remove me
+//}
 
 interface Model {
-    vertices: ModelVertex[];
+    vertices: UID[];
     edges: Edge[];
 }
 
@@ -583,7 +590,7 @@ class Graph extends HTMLElement {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
-    addTile(uid: number, state) {
+    addTile(uid: number, state) { // TODO add type to state
         const type = state.nodeType;
         let tile: VideoNodeTile;
         if (type == "effect") {
@@ -596,6 +603,7 @@ class Graph extends HTMLElement {
         this.appendChild(tile);
         tile.uid = uid;
         tile.graph = this;
+        tile.updateFromState(state);
         return tile;
     }
 
@@ -605,19 +613,6 @@ class Graph extends HTMLElement {
 
     // Model looks like:
     // {"vertices": [{"file", "intensity", "type", "uid"},...], "edges": [{from, tovertex, toinput},...]}
-
-    mutateModel(uid: number, newState: object) {
-        for (let node of this.model.vertices) {
-            if (node.uid == uid) {
-                for (let prop in newState) {
-                    node[prop] = newState[prop];
-                }
-                break;
-            }
-        }
-        this.backendContext.set_state(this.model);
-        this.modelChanged();
-    }
 
     modelChanged() {
         // Convert the model DAG into a tree
@@ -630,7 +625,8 @@ class Graph extends HTMLElement {
         // Even in a DAG, each input should have at most one connection.
         this.model.vertices.forEach((node, index) => {
             upstreamNodeVertices[index] = [];
-            for (let i = 0; i < node.nInputs; i++) { // TODO get rid of need for model to contain nInputs
+            const nInputs = this.backendContext.nodeState(node, "all").nInputs;
+            for (let i = 0; i < nInputs; i++) {
                 upstreamNodeVertices[index].push(null);
             }
         });
@@ -657,6 +653,7 @@ class Graph extends HTMLElement {
         let upstreamTileEdges: number[][] = []; // Parallel to vertices. The upstream edge index on each input, or null.
 
         // Helper function for making sure upstreamTileEdges doesn't get out of date when we add new tiles
+
         const addUpstreamEntries = (nInputs: number) => {
             upstreamTileEdges.push([]);
             for (let i = 0; i < nInputs; i++) {
@@ -667,6 +664,7 @@ class Graph extends HTMLElement {
         this.tileVertices.forEach((tile, index) => {
             addUpstreamEntries(tile.nInputs);
         });
+
         this.tileEdges.forEach((edge, index) => {
             if (edge.toInput >= upstreamTileEdges[edge.toVertex].length) {
                 throw `Tile edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
@@ -698,7 +696,7 @@ class Graph extends HTMLElement {
                 let upstreamNode = upstreamNodeVertices[nodeVertex][input];
                 if (upstreamNode !== null) {
                     // Get the upstream node UID for the given input
-                    const nodeUID = this.model.vertices[upstreamNode].uid;
+                    const nodeUID = this.model.vertices[upstreamNode];
                     // See if the connection exists on the tile
                     const upstreamTileEdgeIndex = upstreamTileEdges[tileVertex][input];
 
@@ -717,7 +715,8 @@ class Graph extends HTMLElement {
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     } else {
                         // However, we do need to add a new tile and edge.
-                        upstreamTile = this.addTile(nodeUID, this.model.vertices[upstreamNode]); // TODO: Arguments...
+                        const state = this.backendContext.nodeState(this.model.vertices[upstreamNode], "all");
+                        upstreamTile = this.addTile(nodeUID, state);
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
                         addUpstreamEntries(upstreamTile.nInputs);
@@ -727,7 +726,7 @@ class Graph extends HTMLElement {
                             toInput: input,
                         });
                     }
-                    upstreamTile.updateFromModel(this.model.vertices[upstreamNode]);
+                    upstreamTile.updateFromState(this.backendContext.nodeState(this.model.vertices[upstreamNode], "all"));
                     // TODO: update tile properties here from model, such as intensity...
                     traverse(upstreamNode, upstreamTileVertexIndex);
                 }
@@ -736,12 +735,12 @@ class Graph extends HTMLElement {
 
         // For each start node, make a tile or use an existing tile
         startNodeVertices.forEach(startNodeIndex => {
-            const uid = this.model.vertices[startNodeIndex].uid;
+            const uid = this.model.vertices[startNodeIndex];
             let startTileIndex = null;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
-                let tile = this.addTile(uid, this.model.vertices[startNodeIndex]);
-                tile.updateFromModel(this.model.vertices[startNodeIndex]);
+                const state = this.backendContext.nodeState(this.model.vertices[startNodeIndex], "all");
+                let tile = this.addTile(uid, state);
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
                 this.tileVertices.push(tile);
