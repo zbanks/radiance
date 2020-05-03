@@ -179,6 +179,10 @@ class VideoNodeTile extends HTMLElement {
     startDragX: number; // X coordinate of the start of the drag
     startDragY: number; // Y coordinate of the start of the drag
     touchId; // The identifier of the touchevent causing the drag
+    dragCtrl: boolean; // Whether or not shift-key was held at start of drag
+    dragShift: boolean; // Whether or not ctrl-key was held at start of drag
+    dragSelected: boolean; // Whether or not tile was selected at start of drag
+    wasClick: boolean; // Whether or not a drag event should be interpreted as a click instead
 
     // Properties relating to selection
     _selected: boolean;
@@ -209,6 +213,15 @@ class VideoNodeTile extends HTMLElement {
                 box-sizing: border-box;
                 z-index: 0;
                 outline: none;
+                pointer-events: none;
+            }
+
+            :host(:focus), :host([dragging]) {
+                z-index: 10;
+            }
+
+            :host(:focus) #outline {
+                border: 2px solid white;
             }
 
             #inner {
@@ -223,6 +236,7 @@ class VideoNodeTile extends HTMLElement {
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
+                pointer-events: all;
             }
 
             #outline {
@@ -302,7 +316,12 @@ class VideoNodeTile extends HTMLElement {
             }
             if (!this.dragging) {
                 this.touchDrag = true;
-                this.touchId = touch.identifier
+                this.touchId = touch.identifier;
+                this.dragCtrl = event.ctrlKey;
+                this.dragShift = event.shiftKey;
+                this.dragSelected = this.selected;
+                this.graph.ensureSelected(this, this.dragCtrl, this.dragShift);
+                this.focus();
                 this.startDrag(touch.pageX, touch.pageY);
                 event.preventDefault();
             }
@@ -316,6 +335,11 @@ class VideoNodeTile extends HTMLElement {
         }
         if (!this.dragging && (event.buttons & 1)) {
             this.mouseDrag = true;
+            this.dragCtrl = event.ctrlKey;
+            this.dragShift = event.shiftKey;
+            this.dragSelected = this.selected;
+            this.graph.ensureSelected(this, this.dragCtrl, this.dragShift);
+            this.focus();
             this.startDrag(event.pageX, event.pageY);
             event.preventDefault();
         }
@@ -356,12 +380,11 @@ class VideoNodeTile extends HTMLElement {
     }
 
     startDrag(ptX: number, ptY: number) {
-        this.focus();
-        this.graph.ensureSelected(this);
         this.dragging = true;
         this.startDragX = ptX;
         this.startDragY = ptY;
-        this.style.zIndex = "10";
+        this.setAttribute("dragging", "true");
+        this.wasClick = true;
     }
 
     endDrag() {
@@ -369,10 +392,14 @@ class VideoNodeTile extends HTMLElement {
         this.offsetX = 0;
         this.offsetY = 0;
         this.updateLocation();
-        this.style.zIndex = "0";
+        this.removeAttribute("dragging");
+        if (this.wasClick) {
+            this.graph.select(this, this.dragSelected, this.dragCtrl, this.dragShift);
+        }
     }
 
     drag(ptX: number, ptY: number) {
+        this.wasClick = false;
         this.offsetX = ptX - this.startDragX;
         this.offsetY = ptY - this.startDragY;
         this.updateLocation();
@@ -959,9 +986,27 @@ class Graph extends HTMLElement {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
-    ensureSelected(tile: VideoNodeTile) {
+    ensureSelected(tile: VideoNodeTile, ctrlKey: boolean, shiftKey: boolean) {
         if (!tile.selected) {
-            this.deselectAll();
+            if (!ctrlKey && !shiftKey) {
+                this.deselectAll();
+            }
+            tile.selected = true;
+        }
+    }
+
+    select(tile: VideoNodeTile, selected: boolean, ctrlKey: boolean, shiftKey: boolean) {
+        if (selected) {
+            if (ctrlKey) {
+                tile.selected = false;
+            } else {
+                this.deselectAll();
+                tile.selected = true;
+            }
+        } else {
+            if (!ctrlKey && !shiftKey) {
+                this.deselectAll();
+            }
             tile.selected = true;
         }
     }
