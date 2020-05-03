@@ -624,6 +624,74 @@ class GraphData<T> {
             this.rootVertices.splice(ix, 1);
         }
     }
+
+    removeVertices(indices: number[]) {
+        // Note: this function does not remove edges,
+        // but will set their to/from to undefined.
+
+        // Compute a mapping of old vertex indices -> new vertex indices, post-deletion
+        let mapping: number[] = [];
+        let newIndex = 0;
+        this.vertices.forEach((_, oldIndex) => {
+            if (indices.indexOf(oldIndex) < 0) {
+                // Index was not deleted
+                mapping[oldIndex] = newIndex;
+                newIndex++;
+            }
+        });
+
+        // Perform deletion
+        this.vertices = this.vertices.filter((_, index) => indices.indexOf(index) < 0);
+        this.rootVertices = this.rootVertices.filter(v => indices.indexOf(v) < 0);
+        this.upstreamEdges = this.upstreamEdges.filter((_, index) => indices.indexOf(index) < 0);
+        this.downstreamEdges = this.downstreamEdges.filter((_, index) => indices.indexOf(index) < 0);
+
+        // Remap indices
+        this.edges.forEach(edge => {
+            edge.fromVertex = mapping[edge.fromVertex];
+            edge.toVertex = mapping[edge.toVertex];
+        });
+        this.rootVertices.forEach((v, i) => {
+            this.rootVertices[i] = mapping[v];
+        });
+    }
+
+    removeEdges(indices: number[]) {
+        let indices_sorted = indices.slice();
+        indices_sorted.sort((a, b) => b - a);
+        indices_sorted.forEach(index => {
+            this.removeEdge(index);
+        });
+    }
+
+    removeEdge(index: number) {
+        const edge = this.edges[index];
+        this.edges.splice(index, 1);
+
+        if (edge.toVertex !== undefined) {
+            delete this.upstreamEdges[edge.toVertex][edge.toInput];
+        }
+        if (edge.fromVertex !== undefined) {
+            this.downstreamEdges[edge.fromVertex].splice(this.downstreamEdges[edge.fromVertex].indexOf(index), 1);
+        }
+
+        if (edge.fromVertex !== undefined && this.downstreamEdges[edge.fromVertex].length == 0) {
+            this.rootVertices.push(edge.fromVertex);
+        }
+
+        this.vertices.forEach((_, v) => {
+            this.upstreamEdges[v].forEach((e, i) => {
+                if (e > index) {
+                    this.upstreamEdges[v][i] = e - 1;
+                }
+            });
+            this.downstreamEdges[v].forEach((e, i) => {
+                if (e > index) {
+                    this.downstreamEdges[v][i] = e - 1;
+                }
+            });
+        });
+    }
 }
 
 class Graph extends HTMLElement {
@@ -780,34 +848,14 @@ class Graph extends HTMLElement {
                       || tileVerticesToDelete.length > 0
                       || tileEdgesToDelete.length > 0);
 
-        // Compute a mapping of old vertex indices -> new vertex indices, post-deletion
-        let vertexTileMapping: number[] = [];
-        let newIndex = 0;
-        this.tiles.vertices.forEach((_, oldIndex) => {
-            if (tileVerticesToDelete.indexOf(oldIndex) < 0) {
-                // Index was not deleted
-                vertexTileMapping[oldIndex] = newIndex;
-                newIndex++;
-            }
+        // Delete old tiles
+
+        tileVerticesToDelete.forEach(index => {
+            this.removeTile(this.tiles.vertices[index]);
         });
 
-        // Perform deletion
-        let count = 0;
-        tileVerticesToDelete.forEach(index => {
-            this.removeTile(this.tiles.vertices[index - count]);
-            this.tiles.vertices.splice(index - count, 1);
-            count++;
-        });
-        count = 0;
-        tileEdgesToDelete.forEach(index => {
-            this.tiles.edges.splice(index - count, 1);
-            count++;
-        });
-        // Remap indices
-        this.tiles.edges.forEach(edge => {
-            edge.fromVertex = vertexTileMapping[edge.fromVertex];
-            edge.toVertex = vertexTileMapping[edge.toVertex];
-        });
+        this.tiles.removeEdges(tileEdgesToDelete);
+        this.tiles.removeVertices(tileVerticesToDelete);
 
         if (changed) {
             console.log("New tile vertices:", this.tiles.vertices);
