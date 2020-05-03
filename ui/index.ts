@@ -224,6 +224,10 @@ class VideoNodeTile extends HTMLElement {
                 border: 2px solid white;
             }
 
+            :host([selected]) #inner {
+                background-color: #000066;
+            }
+
             #inner {
                 box-sizing: border-box;
                 width: 100%;
@@ -417,10 +421,10 @@ class VideoNodeTile extends HTMLElement {
 
     set selected(value: boolean) {
         this._selected = value;
-        if (this._selected) {
-            this.inner.style.backgroundColor = "#000066";
+        if (value) {
+            this.setAttribute("selected", "true");
         } else {
-            this.inner.style.backgroundColor = "black";
+            this.removeAttribute("selected");
         }
     }
 
