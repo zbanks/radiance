@@ -564,14 +564,14 @@ interface Edge {
     toVertex: number;
 }
 
-class Model {
-    vertices: any[]; // Array of graph vertices (passed into constructor)
+class GraphData<T> {
+    vertices: T[]; // Array of graph vertices (passed into constructor)
     edges: Edge[]; // Array of edges (passed into constructor)
     startVertices: number[]; // Which vertex indices have no outgoing edges
     upstreamEdges: number[][]; // Parallel to vertices. Second index is which input, and the result is the upstream edge index.
     downstreamEdges: number[][]; // Parallel to vertices. Each entry is unsorted list of downstream edge indices.
 
-    constructor(vertices: any[], edges: Edge[]) {
+    constructor(vertices: T[], edges: Edge[]) {
         this.vertices = vertices;
         this.edges = edges;
 
@@ -613,10 +613,9 @@ class Model {
 class Graph extends HTMLElement {
     // This custom element creates the visual context for displaying connected nodes.
 
-    tileVertices: VideoNodeTile[];
-    tileEdges: Edge[];
     nextUID: number;
-    model: Model;
+    nodes: GraphData<UID>; // Vertices are node UIDs
+    tiles: GraphData<VideoNodeTile>; // Vertices are tiles
     context: Context;
     relayoutRequested: boolean;
 
@@ -624,8 +623,6 @@ class Graph extends HTMLElement {
         super();
 
         this.nextUID = 0;
-        this.tileVertices = [];
-        this.tileEdges = [];
         this.relayoutRequested = false;
     }
 
@@ -643,6 +640,7 @@ class Graph extends HTMLElement {
             </style>
             <slot></slot>
         `;
+        this.tiles = new GraphData([], []);
     }
 
     attachContext(context: Context) {
@@ -651,7 +649,7 @@ class Graph extends HTMLElement {
         }
 
         this.context = context;
-        this.context.onGraphChanged(this.modelChanged.bind(this));
+        this.context.onGraphChanged(this.nodesChanged.bind(this));
         window.requestAnimationFrame(this.render.bind(this));
     }
 
@@ -676,27 +674,24 @@ class Graph extends HTMLElement {
         this.removeChild(tile);
     }
 
-    // Model looks like:
-    // {"vertices": [{"file", "intensity", "type", "uid"},...], "edges": [{from, tovertex, toinput},...]}
+    nodesChanged() {
+        let nodes = this.context.state();
+        this.nodes = new GraphData(nodes.newVertices, nodes.edges); // XXX rename newVertices
 
-    modelChanged() {
-        let model = this.context.state();
-        this.model = new Model(model.newVertices, model.edges); // XXX rename newVertices
+        // Convert the nodes DAG into a tree
 
-        // Convert the model DAG into a tree
+        const origNumTileVertices = this.tiles.vertices.length;
+        const origNumTileEdges = this.tiles.edges.length;
 
-        const origNumTileVertices = this.tileVertices.length;
-        const origNumTileEdges = this.tileEdges.length;
-
-        let startTileVertices = Array.from(this.tileVertices.keys());
+        let startTileVertices = Array.from(this.tiles.vertices.keys());
         let startTileForUID : {[uid: number]: number} = {};
         let upstreamTileEdges: number[][] = []; // Parallel to vertices. The upstream edge index on each input, or undefined.
 
-        this.tileVertices.forEach((_, index) => {
+        this.tiles.vertices.forEach((_, index) => {
             upstreamTileEdges[index] = [];
         });
 
-        this.tileEdges.forEach((edge, index) => {
+        this.tiles.edges.forEach((edge, index) => {
             if (edge.toInput >= upstreamTileEdges[edge.toVertex].length) {
                 throw `Tile edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
             }
@@ -711,24 +706,24 @@ class Graph extends HTMLElement {
         });
 
         startTileVertices.forEach(startTileVertex => {
-            startTileForUID[this.tileVertices[startTileVertex].uid] = startTileVertex;
+            startTileForUID[this.tiles.vertices[startTileVertex].uid] = startTileVertex;
         });
 
         // Create lists of tile indices to delete, pre-populated with all indices
-        let tileVerticesToDelete = Array.from(this.tileVertices.keys());
-        let tileEdgesToDelete = Array.from(this.tileEdges.keys());
+        let tileVerticesToDelete = Array.from(this.tiles.vertices.keys());
+        let tileEdgesToDelete = Array.from(this.tiles.edges.keys());
 
         // Note: Traversal will have to keep track of tiles as well as nodes.
         // TODO: This algorithm is a little aggressive, and will treat "moves" as deletion + creation
 
         const traverse = (nodeVertex: number, tileVertex: number) => {
-            const tile = this.tileVertices[tileVertex];
+            const tile = this.tiles.vertices[tileVertex];
 
             for (let input = 0; input < tile.nInputs; input++) {
-                let upstreamNode = this.model.upstreamVertexIndex(nodeVertex, input);
+                let upstreamNode = this.nodes.upstreamVertexIndex(nodeVertex, input);
                 if (upstreamNode !== undefined) {
                     // Get the upstream node UID for the given input
-                    const nodeUID = this.model.vertices[upstreamNode];
+                    const nodeUID = this.nodes.vertices[upstreamNode];
                     // See if the connection exists on the tile
                     const upstreamTileEdgeIndex = upstreamTileEdges[tileVertex][input];
 
@@ -737,14 +732,14 @@ class Graph extends HTMLElement {
                     let reuse = false;
 
                     if (upstreamTileEdgeIndex !== undefined) {
-                        upstreamTileVertexIndex = this.tileEdges[upstreamTileEdgeIndex].fromVertex;
-                        upstreamTile = this.tileVertices[upstreamTileVertexIndex];
+                        upstreamTileVertexIndex = this.tiles.edges[upstreamTileEdgeIndex].fromVertex;
+                        upstreamTile = this.tiles.vertices[upstreamTileVertexIndex];
                         const upstreamTileUID = upstreamTile.uid;
                         if (upstreamTileUID == nodeUID) {
                             // If the tile matches, don't delete the edge or node.
                             tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(upstreamTileVertexIndex), 1);
                             tileEdgesToDelete.splice(tileEdgesToDelete.indexOf(upstreamTileEdgeIndex), 1);
-                            upstreamTile.updateFromState(this.context.nodeState(this.model.vertices[upstreamNode], "all"));
+                            upstreamTile.updateFromState(this.context.nodeState(this.nodes.vertices[upstreamNode], "all"));
                             reuse = true;
                         }
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
@@ -752,12 +747,12 @@ class Graph extends HTMLElement {
 
                     if (!reuse) {
                         // However, we do need to add a new tile and edge.
-                        const state = this.context.nodeState(this.model.vertices[upstreamNode], "all");
+                        const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
                         upstreamTile = this.addTile(nodeUID, state);
-                        upstreamTileVertexIndex = this.tileVertices.length;
-                        this.tileVertices.push(upstreamTile);
+                        upstreamTileVertexIndex = this.tiles.vertices.length;
+                        this.tiles.vertices.push(upstreamTile);
                         upstreamTileEdges.push([]);
-                        this.tileEdges.push({
+                        this.tiles.edges.push({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
                             toInput: input,
@@ -769,16 +764,16 @@ class Graph extends HTMLElement {
         };
 
         // For each start node, make a tile or use an existing tile
-        this.model.startVertices.forEach(startNodeIndex => {
-            const uid = this.model.vertices[startNodeIndex];
+        this.nodes.startVertices.forEach(startNodeIndex => {
+            const uid = this.nodes.vertices[startNodeIndex];
             let startTileIndex;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
-                const state = this.context.nodeState(this.model.vertices[startNodeIndex], "all");
+                const state = this.context.nodeState(this.nodes.vertices[startNodeIndex], "all");
                 let tile = this.addTile(uid, state);
                 tile.uid = uid;
-                startTileIndex = this.tileVertices.length;
-                this.tileVertices.push(tile);
+                startTileIndex = this.tiles.vertices.length;
+                this.tiles.vertices.push(tile);
                 upstreamTileEdges.push([]);
             } else {
                 startTileIndex = startTileForUID[uid];
@@ -788,15 +783,15 @@ class Graph extends HTMLElement {
             traverse(startNodeIndex, startTileIndex);
         });
 
-        const changed = (this.tileVertices.length > origNumTileVertices
-                      || this.tileEdges.length > origNumTileEdges
+        const changed = (this.tiles.vertices.length > origNumTileVertices
+                      || this.tiles.edges.length > origNumTileEdges
                       || tileVerticesToDelete.length > 0
                       || tileEdgesToDelete.length > 0);
 
         // Compute a mapping of old vertex indices -> new vertex indices, post-deletion
         let vertexTileMapping: number[] = [];
         let newIndex = 0;
-        this.tileVertices.forEach((_, oldIndex) => {
+        this.tiles.vertices.forEach((_, oldIndex) => {
             if (tileVerticesToDelete.indexOf(oldIndex) < 0) {
                 // Index was not deleted
                 vertexTileMapping[oldIndex] = newIndex;
@@ -807,24 +802,24 @@ class Graph extends HTMLElement {
         // Perform deletion
         let count = 0;
         tileVerticesToDelete.forEach(index => {
-            this.removeTile(this.tileVertices[index - count]);
-            this.tileVertices.splice(index - count, 1);
+            this.removeTile(this.tiles.vertices[index - count]);
+            this.tiles.vertices.splice(index - count, 1);
             count++;
         });
         count = 0;
         tileEdgesToDelete.forEach(index => {
-            this.tileEdges.splice(index - count, 1);
+            this.tiles.edges.splice(index - count, 1);
             count++;
         });
         // Remap indices
-        this.tileEdges.forEach(edge => {
+        this.tiles.edges.forEach(edge => {
             edge.fromVertex = vertexTileMapping[edge.fromVertex];
             edge.toVertex = vertexTileMapping[edge.toVertex];
         });
 
         if (changed) {
-            console.log("New tile vertices:", this.tileVertices);
-            console.log("New tile edges:", this.tileEdges);
+            console.log("New tile vertices:", this.tiles.vertices);
+            console.log("New tile edges:", this.tiles.edges);
             console.log("Vertices to remove:", tileVerticesToDelete);
             console.log("Edges to remove:", tileEdgesToDelete);
 
@@ -840,7 +835,7 @@ class Graph extends HTMLElement {
         let downstreamTileVertex: number[] = []; // Parallel to vertices. The downstream vertex index, or null.
         let downstreamTileInput: number[] = []; // Parallel to vertices. The downstream input index, or null.
         let upstreamTileVertices: number[][] = []; // Parallel to vertices. The upstream vertex index on each input, or null.
-        this.tileVertices.forEach((tile, index) => {
+        this.tiles.vertices.forEach((tile, index) => {
             downstreamTileVertex[index] = null;
             downstreamTileInput[index] = null;
             upstreamTileVertices[index] = [];
@@ -848,7 +843,7 @@ class Graph extends HTMLElement {
                 upstreamTileVertices[index].push(null);
             }
         });
-        for (let edge of this.tileEdges) {
+        for (let edge of this.tiles.edges) {
             if (downstreamTileVertex[edge.fromVertex] !== null) {
                 throw `Vertex ${edge.fromVertex} has multiple downstream vertices`;
             }
@@ -866,7 +861,7 @@ class Graph extends HTMLElement {
         // 1. Find root vertices
         // (root vertices have no downstream nodes)
         let roots = [];
-        this.tileVertices.forEach((tile, index) => {
+        this.tiles.vertices.forEach((tile, index) => {
             if (downstreamTileVertex[index] === null) {
                 roots.push(index);
             }
@@ -874,14 +869,14 @@ class Graph extends HTMLElement {
 
         // 2. From each root, set downstream nodes to be at least as tall as their upstream nodes.
         const setInputHeightsFwd = (index: number) => {
-            let tile = this.tileVertices[index];
+            let tile = this.tiles.vertices[index];
             tile.inputHeights = [];
             for (let i = 0; i < tile.nInputs; i++) {
                 let height = tile.minInputHeight(i);
                 let upstream = upstreamTileVertices[index][i];
                 if (upstream !== null) {
                     setInputHeightsFwd(upstream);
-                    height = Math.max(height, this.tileVertices[upstream].height());
+                    height = Math.max(height, this.tiles.vertices[upstream].height());
                 }
                 tile.inputHeights.push(height);
             }
@@ -897,12 +892,12 @@ class Graph extends HTMLElement {
 
         // 3. From each root, set upstream nodes to be at least as tall as their downstream nodes' inputs.
         const setInputHeightsRev = (index: number) => {
-            let tile = this.tileVertices[index];
+            let tile = this.tiles.vertices[index];
             let height = tile.height();
 
             let downstream = downstreamTileVertex[index];
             if (downstream !== null) {
-                let downstreamHeight = this.tileVertices[downstream].height();
+                let downstreamHeight = this.tiles.vertices[downstream].height();
                 let ratio = downstreamHeight / height;
                 if (ratio > 1) {
                     // Scale all inputs proportionally to get the node sufficiently tall
@@ -919,7 +914,7 @@ class Graph extends HTMLElement {
 
         // 4. From the heights, calculate the Y-coordinates
         const setYCoordinate = (index: number, y: number) => {
-            let tile = this.tileVertices[index];
+            let tile = this.tiles.vertices[index];
             tile.y = y;
 
             for (let i = 0; i < tile.nInputs; i++) {
@@ -934,13 +929,13 @@ class Graph extends HTMLElement {
         let y = 0;
         for (let index of roots) {
             setYCoordinate(index, y);
-            y += this.tileVertices[index].height();
+            y += this.tiles.vertices[index].height();
         }
         let height = y;
 
         // 5. From the widths, calculate the X-coordinates
         const setXCoordinate = (index: number, x: number) => {
-            let tile = this.tileVertices[index];
+            let tile = this.tiles.vertices[index];
             tile.x = x;
 
             x -= tile.width();
@@ -954,25 +949,25 @@ class Graph extends HTMLElement {
         }
 
         for (let index of roots) {
-            setXCoordinate(index, -this.tileVertices[index].width());
+            setXCoordinate(index, -this.tiles.vertices[index].width());
         }
 
         // 6. Compute total width & height, and offset all coordinates
         let smallestX = 0;
-        this.tileVertices.forEach(tile => {
+        this.tiles.vertices.forEach(tile => {
             if (tile.x < smallestX) {
                 smallestX = tile.x;
             }
         });
-        this.tileVertices.forEach(tile => {
+        this.tiles.vertices.forEach(tile => {
             tile.x -= smallestX;
         });
         let width = -smallestX;
         this.style.width = `${width}px`;
         this.style.height = `${height}px`;
 
-        for (let uid in this.tileVertices) {
-            let vertex = this.tileVertices[uid];
+        for (let uid in this.tiles.vertices) {
+            let vertex = this.tiles.vertices[uid];
             vertex.updateLocation();
         };
     }
@@ -988,7 +983,7 @@ class Graph extends HTMLElement {
         }
 
         this.context.render(t);
-        this.tileVertices.forEach(tile => {
+        this.tiles.vertices.forEach(tile => {
             tile.render();
         });
         window.requestAnimationFrame(this.render.bind(this));
@@ -1020,14 +1015,14 @@ class Graph extends HTMLElement {
     }
 
     deselectAll() {
-        this.tileVertices.forEach(tile => {
+        this.tiles.vertices.forEach(tile => {
             tile.selected = false;
         });
     }
 
     deleteSelected() {
         let uidsToDelete: number[] = [];
-        this.tileVertices.forEach(tile => {
+        this.tiles.vertices.forEach(tile => {
             if (tile.selected && !(tile.uid in uidsToDelete)) {
                 uidsToDelete.push(tile.uid);
             }
@@ -1038,7 +1033,7 @@ class Graph extends HTMLElement {
         this.context.flush();
 
         // XXX this should be unnecessary
-        this.modelChanged();
+        this.nodesChanged();
     }
 }
 

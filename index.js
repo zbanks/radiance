@@ -43,5 +43,5 @@ customElements.whenDefined("radiance-graph").then(() => {
     console.log(graph.context.state());
 
     console.log(graph.model);
-    graph.modelChanged(); // XXX Shouldn't need this
+    graph.nodesChanged(); // XXX Shouldn't need this
 });
