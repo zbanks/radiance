@@ -683,29 +683,9 @@ class Graph extends HTMLElement {
         const origNumTileVertices = this.tiles.vertices.length;
         const origNumTileEdges = this.tiles.edges.length;
 
-        let startTileVertices = Array.from(this.tiles.vertices.keys());
         let startTileForUID : {[uid: number]: number} = {};
-        let upstreamTileEdges: number[][] = []; // Parallel to vertices. The upstream edge index on each input, or undefined.
 
-        this.tiles.vertices.forEach((_, index) => {
-            upstreamTileEdges[index] = [];
-        });
-
-        this.tiles.edges.forEach((edge, index) => {
-            if (edge.toInput >= upstreamTileEdges[edge.toVertex].length) {
-                throw `Tile edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
-            }
-            if (upstreamTileEdges[edge.toVertex][edge.toInput] !== undefined) {
-                throw `Tile vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
-            }
-            upstreamTileEdges[edge.toVertex][edge.toInput] = index;
-            let ix = startTileVertices.indexOf(edge.fromVertex);
-            if (ix >= 0) {
-                startTileVertices.splice(ix, 1);
-            }
-        });
-
-        startTileVertices.forEach(startTileVertex => {
+        this.tiles.startVertices.forEach(startTileVertex => {
             startTileForUID[this.tiles.vertices[startTileVertex].uid] = startTileVertex;
         });
 
@@ -725,7 +705,7 @@ class Graph extends HTMLElement {
                     // Get the upstream node UID for the given input
                     const nodeUID = this.nodes.vertices[upstreamNode];
                     // See if the connection exists on the tile
-                    const upstreamTileEdgeIndex = upstreamTileEdges[tileVertex][input];
+                    const upstreamTileEdgeIndex = this.tiles.upstreamEdges[tileVertex][input];
 
                     let upstreamTileVertexIndex;
                     let upstreamTile;
@@ -751,7 +731,7 @@ class Graph extends HTMLElement {
                         upstreamTile = this.addTile(nodeUID, state);
                         upstreamTileVertexIndex = this.tiles.vertices.length;
                         this.tiles.vertices.push(upstreamTile);
-                        upstreamTileEdges.push([]);
+                        this.tiles.upstreamEdges.push([]);
                         this.tiles.edges.push({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
@@ -774,7 +754,7 @@ class Graph extends HTMLElement {
                 tile.uid = uid;
                 startTileIndex = this.tiles.vertices.length;
                 this.tiles.vertices.push(tile);
-                upstreamTileEdges.push([]);
+                this.tiles.upstreamEdges.push([]);
             } else {
                 startTileIndex = startTileForUID[uid];
                 // Don't delete the tile we found
