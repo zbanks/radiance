@@ -567,14 +567,14 @@ interface Edge {
 class GraphData<T> {
     vertices: T[]; // Array of graph vertices (passed into constructor)
     edges: Edge[]; // Array of edges (passed into constructor)
-    startVertices: number[]; // Which vertex indices have no outgoing edges
+    rootVertices: number[]; // Which vertex indices have no outgoing edges
     upstreamEdges: number[][]; // Parallel to vertices. Second index is which input, and the result is the upstream edge index.
     downstreamEdges: number[][]; // Parallel to vertices. Each entry is unsorted list of downstream edge indices.
 
     constructor(vertices: T[], edges: Edge[]) {
         this.vertices = [];
         this.edges = [];
-        this.startVertices = [];
+        this.rootVertices = [];
         this.upstreamEdges = [];
         this.downstreamEdges = [];
 
@@ -595,12 +595,17 @@ class GraphData<T> {
         }
     }
 
+    downstreamVertexIndices(vertexIndex: number) {
+        const edges = this.downstreamEdges[vertexIndex];
+        return edges.map(edge => this.edges[edge].toVertex);
+    }
+
     addVertex(vertex: T) {
         const index = this.vertices.length;
         this.vertices.push(vertex);
         this.upstreamEdges.push([]);
         this.downstreamEdges.push([]);
-        this.startVertices.push(index);
+        this.rootVertices.push(index);
         return index;
     }
 
@@ -614,9 +619,9 @@ class GraphData<T> {
         this.upstreamEdges[edge.toVertex][edge.toInput] = index;
         this.downstreamEdges[edge.fromVertex].push(index);
 
-        let ix = this.startVertices.indexOf(edge.fromVertex);
+        let ix = this.rootVertices.indexOf(edge.fromVertex);
         if (ix >= 0) {
-            this.startVertices.splice(ix, 1);
+            this.rootVertices.splice(ix, 1);
         }
     }
 }
@@ -696,7 +701,7 @@ class Graph extends HTMLElement {
 
         let startTileForUID : {[uid: number]: number} = {};
 
-        this.tiles.startVertices.forEach(startTileVertex => {
+        this.tiles.rootVertices.forEach(startTileVertex => {
             startTileForUID[this.tiles.vertices[startTileVertex].uid] = startTileVertex;
         });
 
@@ -753,7 +758,7 @@ class Graph extends HTMLElement {
         };
 
         // For each start node, make a tile or use an existing tile
-        this.nodes.startVertices.forEach(startNodeIndex => {
+        this.nodes.rootVertices.forEach(startNodeIndex => {
             const uid = this.nodes.vertices[startNodeIndex];
             let startTileIndex;
             if (!(uid in startTileForUID)) {
@@ -818,52 +823,16 @@ class Graph extends HTMLElement {
         // This method resizes and repositions all tiles
         // according to the graph structure.
 
-        // Precompute some useful things
-        let downstreamTileVertex: number[] = []; // Parallel to vertices. The downstream vertex index, or null.
-        let downstreamTileInput: number[] = []; // Parallel to vertices. The downstream input index, or null.
-        let upstreamTileVertices: number[][] = []; // Parallel to vertices. The upstream vertex index on each input, or null.
-        this.tiles.vertices.forEach((tile, index) => {
-            downstreamTileVertex[index] = null;
-            downstreamTileInput[index] = null;
-            upstreamTileVertices[index] = [];
-            for (let i = 0; i < tile.nInputs; i++) {
-                upstreamTileVertices[index].push(null);
-            }
-        });
-        for (let edge of this.tiles.edges) {
-            if (downstreamTileVertex[edge.fromVertex] !== null) {
-                throw `Vertex ${edge.fromVertex} has multiple downstream vertices`;
-            }
-            downstreamTileVertex[edge.fromVertex] = edge.toVertex;
-            downstreamTileInput[edge.fromVertex] = edge.toInput;
-            if (edge.toInput >= upstreamTileVertices[edge.toVertex].length) {
-                throw `Edge to nonexistant input ${edge.toInput} of vertex ${edge.toVertex}`;
-            }
-            if (upstreamTileVertices[edge.toVertex][edge.toInput] !== null) {
-                throw `Vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
-            }
-            upstreamTileVertices[edge.toVertex][edge.toInput] = edge.fromVertex;
-        }
-
-        // 1. Find root vertices
-        // (root vertices have no downstream nodes)
-        let roots = [];
-        this.tiles.vertices.forEach((tile, index) => {
-            if (downstreamTileVertex[index] === null) {
-                roots.push(index);
-            }
-        });
-
-        // 2. From each root, set downstream nodes to be at least as tall as their upstream nodes.
+        // 1. From each root, set downstream nodes to be at least as tall as their upstream nodes.
         const setInputHeightsFwd = (index: number) => {
             let tile = this.tiles.vertices[index];
             tile.inputHeights = [];
             for (let i = 0; i < tile.nInputs; i++) {
                 let height = tile.minInputHeight(i);
-                let upstream = upstreamTileVertices[index][i];
-                if (upstream !== null) {
-                    setInputHeightsFwd(upstream);
-                    height = Math.max(height, this.tiles.vertices[upstream].height());
+                let upstreamVertexIndex = this.tiles.upstreamVertexIndex(index, i);
+                if (upstreamVertexIndex !== undefined) {
+                    setInputHeightsFwd(upstreamVertexIndex);
+                    height = Math.max(height, this.tiles.vertices[upstreamVertexIndex].height());
                 }
                 tile.inputHeights.push(height);
             }
@@ -873,18 +842,18 @@ class Graph extends HTMLElement {
             }
         };
 
-        for (let index of roots) {
+        for (let index of this.tiles.rootVertices) {
             setInputHeightsFwd(index);
         }
 
-        // 3. From each root, set upstream nodes to be at least as tall as their downstream nodes' inputs.
+        // 2. From each root, set upstream nodes to be at least as tall as their downstream nodes' inputs.
         const setInputHeightsRev = (index: number) => {
             let tile = this.tiles.vertices[index];
             let height = tile.height();
 
-            let downstream = downstreamTileVertex[index];
-            if (downstream !== null) {
-                let downstreamHeight = this.tiles.vertices[downstream].height();
+            let downstreamVertexIndex = this.tiles.downstreamVertexIndices(index)[0];
+            if (downstreamVertexIndex !== undefined) {
+                let downstreamHeight = this.tiles.vertices[downstreamVertexIndex].height();
                 let ratio = downstreamHeight / height;
                 if (ratio > 1) {
                     // Scale all inputs proportionally to get the node sufficiently tall
@@ -895,32 +864,32 @@ class Graph extends HTMLElement {
             }
         };
 
-        for (let index of roots) {
+        for (let index of this.tiles.rootVertices) {
             setInputHeightsRev(index);
         }
 
-        // 4. From the heights, calculate the Y-coordinates
+        // 3. From the heights, calculate the Y-coordinates
         const setYCoordinate = (index: number, y: number) => {
             let tile = this.tiles.vertices[index];
             tile.y = y;
 
             for (let i = 0; i < tile.nInputs; i++) {
-                let upstream = upstreamTileVertices[index][i];
-                if (upstream !== null) {
-                    setYCoordinate(upstream, y);
+                let upstreamVertexIndex = this.tiles.upstreamVertexIndex(index, i);
+                if (upstreamVertexIndex !== undefined) {
+                    setYCoordinate(upstreamVertexIndex, y);
                 }
                 y += tile.inputHeights[i];
             }
         }
 
         let y = 0;
-        for (let index of roots) {
+        for (let index of this.tiles.rootVertices) {
             setYCoordinate(index, y);
             y += this.tiles.vertices[index].height();
         }
         let height = y;
 
-        // 5. From the widths, calculate the X-coordinates
+        // 4. From the widths, calculate the X-coordinates
         const setXCoordinate = (index: number, x: number) => {
             let tile = this.tiles.vertices[index];
             tile.x = x;
@@ -928,18 +897,18 @@ class Graph extends HTMLElement {
             x -= tile.width();
 
             for (let i = 0; i < tile.nInputs; i++) {
-                let upstream = upstreamTileVertices[index][i];
-                if (upstream !== null) {
+                let upstream = this.tiles.upstreamVertexIndex(index, i);
+                if (upstream !== undefined) {
                     setXCoordinate(upstream, x);
                 }
             }
         }
 
-        for (let index of roots) {
+        for (let index of this.tiles.rootVertices) {
             setXCoordinate(index, -this.tiles.vertices[index].width());
         }
 
-        // 6. Compute total width & height, and offset all coordinates
+        // 5. Compute total width & height, and offset all coordinates
         let smallestX = 0;
         this.tiles.vertices.forEach(tile => {
             if (tile.x < smallestX) {
