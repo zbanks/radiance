@@ -1,6 +1,8 @@
 import("./ui")
 import("./pkg")
 
+import {Context} from "./pkg/index.js";
+
 let graph = document.querySelector("#graph");
 customElements.whenDefined("radiance-graph").then(() => {
     let graph = document.querySelector("#graph");
@@ -31,10 +33,16 @@ customElements.whenDefined("radiance-graph").then(() => {
             {fromVertex: 8, toVertex: 9, toInput: 0},
         ],
     };
-    graph.backendContext.set_state(state);
-    console.log(graph.backendContext.state());
 
-    graph.model = graph.backendContext.state();
+    const context = new Context(document.querySelector("#canvas"), 512);
+    graph.context = context;
+    // XXX @zbanks - I added this so I can hack on context from the console
+    window["context"] = context;
+
+    graph.context.set_state(state);
+    console.log(graph.context.state());
+
+    graph.model = graph.context.state();
     graph.model.vertices = graph.model.newVertices; // XXX butterflymeme.jpg is this a ... polyfill?
     console.log(graph.model);
     graph.modelChanged();

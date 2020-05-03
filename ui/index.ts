@@ -1,6 +1,6 @@
 "use strict";
 
-import {Context as BackendContext} from "../pkg/index.js";
+import {Context} from "../pkg/index.js";
 
 class Flickable extends HTMLElement {
     outer: HTMLElement; // Outer div (for clipping and mouse events)
@@ -143,6 +143,8 @@ class Flickable extends HTMLElement {
         this.dragging = true;
         this.startDragX = ptX;
         this.startDragY = ptY;
+        this.startDragOffsetX = this.offsetX;
+        this.startDragOffsetY = this.offsetY;
     }
 
     endDrag() {
@@ -439,9 +441,9 @@ class VideoNodePreview extends HTMLElement {
 
     render(tile: VideoNodeTile) {
         if (tile.dragging) {
-            tile.graph.backendContext.clearElement(tile.inner);
+            tile.graph.context.clearElement(tile.inner);
         }
-        tile.graph.backendContext.paintNode(tile.uid, this.content);
+        tile.graph.context.paintNode(tile.uid, this.content);
     }
 }
 
@@ -494,9 +496,9 @@ class EffectNodeTile extends VideoNodeTile {
             return;
         }
         const newIntensity = parseFloat(this.intensitySlider.value);
-        let state = this.graph.backendContext.nodeState(this.uid, "local");
+        let state = this.graph.context.nodeState(this.uid, "local");
         state.intensity = newIntensity;
-        this.graph.backendContext.setNodeState(this.uid, state);
+        this.graph.context.setNodeState(this.uid, state);
     }
 }
 
@@ -542,7 +544,7 @@ class Graph extends HTMLElement {
     tileEdges: Edge[];
     nextUID: number;
     model: Model;
-    backendContext: BackendContext;
+    context: Context;
     relayoutRequested: boolean;
 
     constructor() {
@@ -565,27 +567,11 @@ class Graph extends HTMLElement {
             * {
                 pointer-events: auto;
             }
-            #canvas {
-                position: fixed;
-                left: 0px;
-                top: 0px;
-                z-index: 9999;
-                pointer-events: none;
-                width: 100%;
-                height: 100%;
-            }
             </style>
             <canvas id="canvas">
             </canvas>
             <slot></slot>
         `;
-
-        const canvas = shadow.querySelector("#canvas");
-        //this.appendChild(canvas);
-        this.backendContext = new BackendContext(canvas, 512);
-
-        // XXX @zbanks - I added this so I can hack on backendContext from the console
-        window["backendContext"] = this.backendContext;
 
         window.requestAnimationFrame(this.render.bind(this));
     }
@@ -625,7 +611,7 @@ class Graph extends HTMLElement {
         // Even in a DAG, each input should have at most one connection.
         this.model.vertices.forEach((node, index) => {
             upstreamNodeVertices[index] = [];
-            const nInputs = this.backendContext.nodeState(node, "all").nInputs;
+            const nInputs = this.context.nodeState(node, "all").nInputs;
             for (let i = 0; i < nInputs; i++) {
                 upstreamNodeVertices[index].push(null);
             }
@@ -715,7 +701,7 @@ class Graph extends HTMLElement {
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     } else {
                         // However, we do need to add a new tile and edge.
-                        const state = this.backendContext.nodeState(this.model.vertices[upstreamNode], "all");
+                        const state = this.context.nodeState(this.model.vertices[upstreamNode], "all");
                         upstreamTile = this.addTile(nodeUID, state);
                         upstreamTileVertexIndex = this.tileVertices.length;
                         this.tileVertices.push(upstreamTile);
@@ -726,7 +712,7 @@ class Graph extends HTMLElement {
                             toInput: input,
                         });
                     }
-                    upstreamTile.updateFromState(this.backendContext.nodeState(this.model.vertices[upstreamNode], "all"));
+                    upstreamTile.updateFromState(this.context.nodeState(this.model.vertices[upstreamNode], "all"));
                     // TODO: update tile properties here from model, such as intensity...
                     traverse(upstreamNode, upstreamTileVertexIndex);
                 }
@@ -739,7 +725,7 @@ class Graph extends HTMLElement {
             let startTileIndex = null;
             if (!(uid in startTileForUID)) {
                 // Create tile for start node
-                const state = this.backendContext.nodeState(this.model.vertices[startNodeIndex], "all");
+                const state = this.context.nodeState(this.model.vertices[startNodeIndex], "all");
                 let tile = this.addTile(uid, state);
                 tile.uid = uid;
                 startTileIndex = this.tileVertices.length;
@@ -952,7 +938,7 @@ class Graph extends HTMLElement {
             this.relayoutGraph();
         }
 
-        this.backendContext.render(t);
+        this.context.render(t);
         this.tileVertices.forEach(tile => {
             tile.render();
         });
