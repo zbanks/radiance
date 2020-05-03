@@ -572,31 +572,17 @@ class GraphData<T> {
     downstreamEdges: number[][]; // Parallel to vertices. Each entry is unsorted list of downstream edge indices.
 
     constructor(vertices: T[], edges: Edge[]) {
-        this.vertices = vertices;
-        this.edges = edges;
+        this.vertices = [];
+        this.edges = [];
+        this.startVertices = [];
+        this.upstreamEdges = [];
+        this.downstreamEdges = [];
 
-        // Precompute some useful things
-        this.upstreamEdges = []; // Parallel to vertices. The upstream vertex index on each input, or null.
-        this.downstreamEdges = []; // Parallel to vertices. The upstream vertex index on each input, or null.
-        // Each input should have at most one connection.
-        this.vertices.forEach((node, index) => {
-            this.upstreamEdges[index] = [];
-            this.downstreamEdges[index] = [];
+        vertices.forEach(vertex => {
+            this.addVertex(vertex);
         });
-
-        this.startVertices = Array.from(this.vertices.keys());
-
-        this.edges.forEach((edge, index) => {
-            if (this.upstreamEdges[edge.toVertex][edge.toInput] !== undefined) {
-                throw `Model vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
-            }
-            this.upstreamEdges[edge.toVertex][edge.toInput] = index;
-            this.downstreamEdges[edge.fromVertex].push(index);
-
-            let ix = this.startVertices.indexOf(edge.fromVertex);
-            if (ix >= 0) {
-                this.startVertices.splice(ix, 1);
-            }
+        edges.forEach(edge => {
+            this.addEdge(edge);
         });
     }
 
@@ -606,6 +592,31 @@ class GraphData<T> {
             return undefined;
         } else {
             return this.edges[edge].fromVertex;
+        }
+    }
+
+    addVertex(vertex: T) {
+        const index = this.vertices.length;
+        this.vertices.push(vertex);
+        this.upstreamEdges.push([]);
+        this.downstreamEdges.push([]);
+        this.startVertices.push(index);
+        return index;
+    }
+
+    addEdge(edge: Edge) {
+        const index = this.edges.length;
+        this.edges.push(edge);
+
+        if (this.upstreamEdges[edge.toVertex][edge.toInput] !== undefined) {
+            throw `Vertex ${edge.toVertex} input ${edge.toInput} has multiple upstream vertices`;
+        }
+        this.upstreamEdges[edge.toVertex][edge.toInput] = index;
+        this.downstreamEdges[edge.fromVertex].push(index);
+
+        let ix = this.startVertices.indexOf(edge.fromVertex);
+        if (ix >= 0) {
+            this.startVertices.splice(ix, 1);
         }
     }
 }
@@ -729,10 +740,8 @@ class Graph extends HTMLElement {
                         // However, we do need to add a new tile and edge.
                         const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
                         upstreamTile = this.addTile(nodeUID, state);
-                        upstreamTileVertexIndex = this.tiles.vertices.length;
-                        this.tiles.vertices.push(upstreamTile);
-                        this.tiles.upstreamEdges.push([]);
-                        this.tiles.edges.push({
+                        upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
+                        this.tiles.addEdge({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
                             toInput: input,
@@ -752,9 +761,7 @@ class Graph extends HTMLElement {
                 const state = this.context.nodeState(this.nodes.vertices[startNodeIndex], "all");
                 let tile = this.addTile(uid, state);
                 tile.uid = uid;
-                startTileIndex = this.tiles.vertices.length;
-                this.tiles.vertices.push(tile);
-                this.tiles.upstreamEdges.push([]);
+                startTileIndex = this.tiles.addVertex(tile);
             } else {
                 startTileIndex = startTileForUID[uid];
                 // Don't delete the tile we found
