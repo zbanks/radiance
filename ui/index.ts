@@ -740,9 +740,9 @@ class Graph extends HTMLElement {
     addTile(uid: number, state) { // TODO add type to state
         const type = state.nodeType;
         let tile: VideoNodeTile;
-        if (type == "effect") {
+        if (type == "EffectNode") {
             tile = <VideoNodeTile>document.createElement("radiance-effectnodetile");
-        } else if (type == "media") {
+        } else if (type == "MediaNode") {
             tile = <VideoNodeTile>document.createElement("radiance-medianodetile");
         } else {
             tile = <VideoNodeTile>document.createElement("radiance-videonodetile");

@@ -30,6 +30,8 @@ impl Audio {
     pub fn new() -> Result<Audio> {
         let context = AudioContext::new()?;
         let analyser = context.create_analyser()?;
+        // 44100Hz / 60FPS = 735 Samples / Frame
+        // It's strange to have our audio system be tied to the render rate
         analyser.set_fft_size(2048);
         analyser.set_smoothing_time_constant(0.30);
         analyser.set_min_decibels(-300.);

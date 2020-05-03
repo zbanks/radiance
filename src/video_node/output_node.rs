@@ -1,21 +1,27 @@
 use crate::graphics::{Fbo, RenderChain};
-use crate::video_node::{VideoNode, VideoNodeId};
+use crate::video_node::{DetailLevel, IVideoNode, VideoNodeDiscriminants, VideoNodeId};
+use serde::Serialize;
+use serde_json::Value as JsonValue;
 
 use std::rc::Rc;
 
+#[serde(rename_all = "camelCase")]
+#[derive(Serialize)]
 pub struct OutputNode {
     id: VideoNodeId,
+    node_type: VideoNodeDiscriminants,
 }
 
 impl OutputNode {
     pub fn new() -> OutputNode {
         OutputNode {
             id: VideoNodeId::new(),
+            node_type: VideoNodeDiscriminants::OutputNode,
         }
     }
 }
 
-impl VideoNode for OutputNode {
+impl IVideoNode for OutputNode {
     fn id(&self) -> VideoNodeId {
         self.id
     }
@@ -34,5 +40,9 @@ impl VideoNode for OutputNode {
         assert!(buffer_fbos.len() == self.n_buffers());
 
         input_fbos.first().unwrap().as_ref().cloned()
+    }
+
+    fn state(&self, _level: DetailLevel) -> JsonValue {
+        serde_json::to_value(&self).unwrap_or(JsonValue::Null)
     }
 }

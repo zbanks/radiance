@@ -1,7 +1,7 @@
 use crate::audio::AudioAnalysis;
 use crate::err::{Error, Result};
 use crate::resources;
-use crate::video_node::{VideoNode, VideoNodeId};
+use crate::video_node::{IVideoNode, VideoNode, VideoNodeId};
 
 use log::*;
 use std::borrow::Borrow;
@@ -370,7 +370,7 @@ impl RenderChain {
         Shader::from_fragment_shader(Rc::clone(&self.context), source)
     }
 
-    pub fn node_fbo(&self, node: &dyn VideoNode) -> Option<Rc<Fbo>> {
+    pub fn node_fbo(&self, node: &VideoNode) -> Option<Rc<Fbo>> {
         self.output_fbos
             .borrow()
             .get(&node.id())
@@ -413,7 +413,7 @@ impl RenderChain {
     #[allow(clippy::needless_lifetimes)]
     pub fn pre_render<'a, I>(&'a self, nodes: I, time: f64)
     where
-        I: Iterator<Item = &'a mut (dyn VideoNode + 'static)>,
+        I: Iterator<Item = &'a mut VideoNode>,
     {
         self.output_fbos.borrow_mut().clear();
         for node in nodes {
@@ -428,7 +428,7 @@ impl RenderChain {
         }
     }
 
-    pub fn render_node(&self, node: &dyn VideoNode, inputs: &[Option<Rc<Fbo>>]) {
+    pub fn render_node(&self, node: &VideoNode, inputs: &[Option<Rc<Fbo>>]) {
         assert!(inputs.len() == node.n_inputs());
         let output_fbo = node.render(
             self,
@@ -453,7 +453,7 @@ impl RenderChain {
         self.context.clear(GL::COLOR_BUFFER_BIT);
     }
 
-    pub fn paint(&self, node: &dyn VideoNode) -> Result<()> {
+    pub fn paint(&self, node: &VideoNode) -> Result<()> {
         let active_shader = self.blit_shader.begin_render(self, None);
         self.bind_fbo_to_texture(
             GL::TEXTURE0,

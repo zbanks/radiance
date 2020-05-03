@@ -1,6 +1,6 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain};
-use crate::video_node::{DetailLevel, VideoNode, VideoNodeId, VideoNodeType};
+use crate::video_node::{DetailLevel, IVideoNode, VideoNodeDiscriminants, VideoNodeId};
 
 use log::*;
 use serde::Serialize;
@@ -16,7 +16,7 @@ use web_sys::HtmlVideoElement;
 pub struct MediaNode {
     #[serde(rename = "uid")]
     id: VideoNodeId,
-    node_type: VideoNodeType,
+    node_type: VideoNodeDiscriminants,
     n_inputs: usize,
 
     #[serde(skip)]
@@ -45,7 +45,7 @@ impl MediaNode {
 
         let node = MediaNode {
             id: VideoNodeId::new(),
-            node_type: VideoNodeType::Media,
+            node_type: VideoNodeDiscriminants::MediaNode,
             n_inputs: 1,
             video,
             video_promise,
@@ -66,7 +66,7 @@ impl MediaNode {
     }
 }
 
-impl VideoNode for MediaNode {
+impl IVideoNode for MediaNode {
     fn id(&self) -> VideoNodeId {
         self.id
     }

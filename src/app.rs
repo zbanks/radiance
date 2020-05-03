@@ -2,7 +2,7 @@ use crate::audio::Audio;
 use crate::err::Result;
 use crate::graphics::RenderChain;
 use crate::model::Model;
-use crate::video_node::{DetailLevel, VideoNodeId};
+use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;

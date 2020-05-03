@@ -9,16 +9,16 @@ customElements.whenDefined("radiance-graph").then(() => {
 
     var state = {
         vertices: [
-            {nodeType: "effect", name: "test", intensity: 0.7},
-            {nodeType: "effect", name: "resat", intensity: 0.3},
-            {nodeType: "effect", name: "oscope", intensity: 0.8},
-            {nodeType: "effect", name: "spin", intensity: 0.5},
-            {nodeType: "effect", name: "zoomin", intensity: 0.3},
-            {nodeType: "effect", name: "rjump", intensity: 0.9},
-            {nodeType: "effect", name: "lpf", intensity: 0.3},
-            {nodeType: "effect", name: "tunnel", intensity: 0.7},
-            {nodeType: "effect", name: "melt", intensity: 0.4},
-            {nodeType: "effect", name: "composite", intensity: 0.5},
+            {nodeType: "EffectNode", name: "test", intensity: 0.7},
+            {nodeType: "EffectNode", name: "resat", intensity: 0.3},
+            {nodeType: "EffectNode", name: "oscope", intensity: 0.8},
+            {nodeType: "EffectNode", name: "spin", intensity: 0.5},
+            {nodeType: "EffectNode", name: "zoomin", intensity: 0.3},
+            {nodeType: "EffectNode", name: "rjump", intensity: 0.9},
+            {nodeType: "EffectNode", name: "lpf", intensity: 0.3},
+            {nodeType: "EffectNode", name: "tunnel", intensity: 0.7},
+            {nodeType: "EffectNode", name: "melt", intensity: 0.4},
+            {nodeType: "EffectNode", name: "composite", intensity: 0.5},
         ],
         edges: [
             {fromVertex: 0, toVertex: 2, toInput: 0},

@@ -1,9 +1,11 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain};
 
+use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::rc::Rc;
+use strum_macros::{EnumDiscriminants, EnumString};
 use wasm_bindgen::prelude::*;
 
 mod effect_node;
@@ -28,12 +30,13 @@ impl VideoNodeId {
     }
 }
 
-#[serde(rename_all = "camelCase")]
-#[derive(Debug, Serialize, Deserialize)]
-pub enum VideoNodeType {
-    Effect,
-    Output,
-    Media,
+#[enum_dispatch]
+#[strum_discriminants(derive(EnumString, Serialize, Deserialize))]
+#[derive(EnumDiscriminants)]
+pub enum VideoNode {
+    EffectNode,
+    OutputNode,
+    MediaNode,
 }
 
 #[wasm_bindgen]
@@ -48,7 +51,8 @@ pub enum DetailLevel {
     Export,
 }
 
-pub trait VideoNode {
+#[enum_dispatch(VideoNode)]
+pub trait IVideoNode {
     fn id(&self) -> VideoNodeId;
     fn name(&self) -> &str;
 
@@ -81,5 +85,18 @@ pub trait VideoNode {
 
     fn set_state(&mut self, _state: JsonValue) -> Result<()> {
         Ok(())
+    }
+}
+
+impl VideoNode {
+    pub fn from_serde(state: JsonValue) -> Result<VideoNode> {
+        let node_type = state.get("nodeType").ok_or("missing 'nodeType'")?;
+        let mut node = match serde_json::from_value(node_type.clone())? {
+            VideoNodeDiscriminants::EffectNode => VideoNode::EffectNode(EffectNode::new()?),
+            VideoNodeDiscriminants::OutputNode => VideoNode::OutputNode(OutputNode::new()),
+            VideoNodeDiscriminants::MediaNode => VideoNode::MediaNode(MediaNode::new()?),
+        };
+        node.set_state(state)?;
+        Ok(node)
     }
 }

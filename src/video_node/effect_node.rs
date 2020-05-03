@@ -1,7 +1,7 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain, Shader};
 use crate::resources;
-use crate::video_node::{DetailLevel, VideoNode, VideoNodeId, VideoNodeType};
+use crate::video_node::{DetailLevel, IVideoNode, VideoNodeDiscriminants, VideoNodeId};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -16,7 +16,7 @@ use web_sys::WebGlRenderingContext as GL;
 pub struct EffectNode {
     #[serde(rename = "uid")]
     id: VideoNodeId,
-    node_type: VideoNodeType,
+    node_type: VideoNodeDiscriminants,
 
     name: String,
     n_inputs: usize,
@@ -66,7 +66,7 @@ impl EffectNode {
         let id = VideoNodeId::new();
         Ok(EffectNode {
             id,
-            node_type: VideoNodeType::Effect,
+            node_type: VideoNodeDiscriminants::EffectNode,
 
             name: String::from("-"),
             n_inputs: 1,
@@ -156,7 +156,7 @@ impl EffectNode {
     }
 }
 
-impl VideoNode for EffectNode {
+impl IVideoNode for EffectNode {
     fn id(&self) -> VideoNodeId {
         self.id
     }

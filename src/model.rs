@@ -1,7 +1,5 @@
 use crate::err::Result;
-use crate::video_node::{
-    DetailLevel, EffectNode, MediaNode, OutputNode, VideoNode, VideoNodeId, VideoNodeType,
-};
+use crate::video_node::{DetailLevel, IVideoNode, VideoNode, VideoNodeId};
 use log::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -214,7 +212,7 @@ mod tests {
 /// - Each VideoNode can have up to `node.n_inputs` incoming edges,
 ///     which must all have unique edge weights in [0..node.n_inputs)
 pub struct Model {
-    nodes: HashMap<VideoNodeId, Box<dyn VideoNode>>,
+    nodes: HashMap<VideoNodeId, VideoNode>,
     graph: Graph<VideoNodeId>,
     dirt: ModelDirt,
 }
@@ -240,7 +238,6 @@ struct StateEdge {
 struct StateNode {
     #[serde(rename = "uid")]
     id: Option<VideoNodeId>,
-    node_type: VideoNodeType,
 }
 
 #[serde(rename_all = "camelCase")]
@@ -262,22 +259,21 @@ impl Model {
         }
     }
 
-    pub fn node(&self, id: VideoNodeId) -> Option<&dyn VideoNode> {
+    pub fn node(&self, id: VideoNodeId) -> Option<&VideoNode> {
         self.nodes.get(&id).map(|n| n.borrow())
     }
 
     #[allow(dead_code)]
-    pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut (dyn VideoNode + 'static)> {
-        // XXX this shouldn't be here
+    pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut VideoNode> {
         self.dirt.nodes.insert(id);
         self.nodes.get_mut(&id).map(|n| n.borrow_mut())
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = &dyn VideoNode> {
+    pub fn nodes(&self) -> impl Iterator<Item = &VideoNode> {
         self.nodes.values().map(|n| n.borrow())
     }
 
-    pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut (dyn VideoNode + 'static)> {
+    pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut VideoNode> {
         self.nodes.values_mut().map(|n| (*n).borrow_mut())
     }
 
@@ -285,7 +281,7 @@ impl Model {
         self.nodes.keys()
     }
 
-    pub fn toposort(&self) -> Vec<&dyn VideoNode> {
+    pub fn toposort(&self) -> Vec<&VideoNode> {
         self.graph
             .toposort()
             .unwrap()
@@ -294,7 +290,7 @@ impl Model {
             .collect()
     }
 
-    pub fn node_inputs(&self, node: &dyn VideoNode) -> Vec<Option<&dyn VideoNode>> {
+    pub fn node_inputs(&self, node: &VideoNode) -> Vec<Option<&VideoNode>> {
         self.graph
             .vertex_inputs(node.id())
             .unwrap()
@@ -308,17 +304,10 @@ impl Model {
     }
 
     pub fn add_node(&mut self, state: JsonValue) -> Result<VideoNodeId> {
-        let node_state: StateNode = serde_json::from_value(state.clone())?;
-        let mut boxed_node: Box<dyn VideoNode> = match node_state.node_type {
-            VideoNodeType::Effect => Box::new(EffectNode::new()?),
-            VideoNodeType::Output => Box::new(OutputNode::new()),
-            VideoNodeType::Media => Box::new(MediaNode::new()?),
-        };
-        boxed_node.set_state(state)?;
-
-        let id = boxed_node.id();
-        self.graph.set_vertex(id, Some(boxed_node.n_inputs()));
-        self.nodes.insert(id, boxed_node);
+        let node = VideoNode::from_serde(state)?;
+        let id = node.id();
+        self.graph.set_vertex(id, Some(node.n_inputs()));
+        self.nodes.insert(id, node);
 
         self.dirt.graph = true;
         self.dirt.nodes.insert(id);
@@ -389,7 +378,7 @@ impl Model {
         self.graph.clear();
         let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
         let mut unseen_ids: HashMap<VideoNodeId, _> = self.ids().map(|id| (*id, ())).collect();
-        let mut nodes_to_insert: Vec<Box<dyn VideoNode>> = vec![];
+        let mut nodes_to_insert: Vec<VideoNode> = vec![];
 
         // Lookup or create all of the nodes
         for (i, s) in state.nodes.drain(0..).enumerate() {
@@ -400,13 +389,9 @@ impl Model {
                 (id, node)
             } else {
                 // The node doesn't exist, so create it
-                let boxed_node: Box<dyn VideoNode> = match n.node_type {
-                    VideoNodeType::Effect => Box::new(EffectNode::new()?),
-                    VideoNodeType::Output => Box::new(OutputNode::new()),
-                    VideoNodeType::Media => Box::new(MediaNode::new()?),
-                };
-                let id = boxed_node.id();
-                nodes_to_insert.push(boxed_node);
+                let node = VideoNode::from_serde(s.clone())?;
+                let id = node.id();
+                nodes_to_insert.push(node);
                 (id, nodes_to_insert.last_mut().unwrap())
             };
 
