@@ -224,7 +224,8 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=onNodeChanged)]
-    pub fn set_node_changed(&mut self, id: JsValue, callback: js_sys::Function) {
+    pub fn set_node_changed(&mut self, id: JsValue, _detail: &str, callback: js_sys::Function) {
+        // TODO: use detail
         let _ = id
             .into_serde()
             .ok()
