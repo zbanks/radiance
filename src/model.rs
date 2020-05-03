@@ -268,6 +268,8 @@ impl Model {
 
     #[allow(dead_code)]
     pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut (dyn VideoNode + 'static)> {
+        // XXX this shouldn't be here
+        self.dirt.nodes.insert(id);
         self.nodes.get_mut(&id).map(|n| n.borrow_mut())
     }
 

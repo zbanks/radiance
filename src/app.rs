@@ -224,12 +224,16 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=onNodeChanged)]
-    pub fn set_node_changed(&mut self, id: JsValue, _detail: &str, callback: js_sys::Function) {
+    pub fn set_node_changed(
+        &mut self,
+        id: JsValue,
+        _detail: &str,
+        callback: js_sys::Function,
+    ) -> std::result::Result<(), JsValue> {
         // TODO: use detail
-        let _ = id
-            .into_serde()
-            .ok()
-            .and_then(|id: VideoNodeId| self.node_changed.insert(id, callback));
+        let id = id.into_serde::<VideoNodeId>().map_err(|e| e.to_string())?;
+        self.node_changed.insert(id, callback);
+        Ok(())
     }
 
     //
