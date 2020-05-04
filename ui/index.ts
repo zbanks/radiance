@@ -733,7 +733,8 @@ class Graph extends HTMLElement {
         }
 
         this.context = context;
-        this.context.onGraphChanged(this.nodesChanged.bind(this));
+        // XXX "Error: recursive use of an object detected which would lead to unsafe aliasing"
+        //this.context.onGraphChanged(this.nodesChanged.bind(this));
         window.requestAnimationFrame(this.render.bind(this));
     }
 
@@ -760,7 +761,7 @@ class Graph extends HTMLElement {
 
     nodesChanged() {
         let nodes = this.context.state();
-        this.nodes = new GraphData(nodes.newVertices, nodes.edges); // XXX rename newVertices
+        this.nodes = new GraphData(nodes.newVertices, nodes.edges);
 
         // Convert the nodes DAG into a tree
 
