@@ -4,6 +4,7 @@ use crate::graphics::RenderChain;
 use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
+use log::*;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -188,17 +189,18 @@ impl Context {
     // Callbacks & Flushing
     //
 
-    pub fn flush(&mut self) -> std::result::Result<bool, JsValue> {
+    pub fn flush(&self) -> std::result::Result<bool, JsValue> {
         let dirt = self.model.flush();
+        info!("flushing: {:?}", dirt);
         if dirt.graph {
             if let Some(callback) = &self.graph_changed {
                 let state = self.state();
                 callback.call1(&JsValue::NULL, &state)?;
             }
         }
-        // Prune callbacks for nodes that no longer exist
-        let node_ids: HashSet<VideoNodeId> = self.model.ids().copied().collect();
-        self.node_changed.retain(|k, _v| node_ids.contains(k));
+        // TODO: Prune callbacks for nodes that no longer exist
+        //let node_ids: HashSet<VideoNodeId> = self.model.ids().copied().collect();
+        //self.node_changed.retain(|k, _v| node_ids.contains(k));
         for node_id in &dirt.nodes {
             if let Some(callback) = self.node_changed.get(&node_id) {
                 self.model

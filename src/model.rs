@@ -214,10 +214,10 @@ mod tests {
 pub struct Model {
     nodes: HashMap<VideoNodeId, VideoNode>,
     graph: Graph<VideoNodeId>,
-    dirt: ModelDirt,
+    dirt: RefCell<ModelDirt>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct ModelDirt {
     pub graph: bool,
     pub nodes: HashSet<VideoNodeId>,
@@ -263,7 +263,7 @@ impl Model {
 
     #[allow(dead_code)]
     pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut VideoNode> {
-        self.dirt.nodes.insert(id);
+        self.dirt.borrow_mut().nodes.insert(id);
         self.nodes.get_mut(&id).map(|n| n.borrow_mut())
     }
 
@@ -307,8 +307,8 @@ impl Model {
         self.graph.set_vertex(id, Some(node.n_inputs()));
         self.nodes.insert(id, node);
 
-        self.dirt.graph = true;
-        self.dirt.nodes.insert(id);
+        self.dirt.borrow_mut().graph = true;
+        self.dirt.borrow_mut().nodes.insert(id);
 
         Ok(id)
     }
@@ -316,25 +316,25 @@ impl Model {
     pub fn remove_node(&mut self, id: VideoNodeId) -> Result<()> {
         self.graph.set_vertex(id, None);
         self.nodes.remove(&id);
-        self.dirt.graph = true;
+        self.dirt.borrow_mut().graph = true;
         Ok(())
     }
 
     pub fn clear(&mut self) {
         self.nodes.clear();
         self.graph.clear();
-        self.dirt.graph = true;
+        self.dirt.borrow_mut().graph = true;
     }
 
     pub fn add_edge(&mut self, from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
         self.graph.set_edge(Some(from), to, input)?;
-        self.dirt.graph = true;
+        self.dirt.borrow_mut().graph = true;
         Ok(())
     }
 
     pub fn remove_edge(&mut self, _from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
         self.graph.set_edge(None, to, input)?;
-        self.dirt.graph = true;
+        self.dirt.borrow_mut().graph = true;
         Ok(())
     }
 
@@ -361,9 +361,9 @@ impl Model {
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
-    pub fn flush(&mut self) -> ModelDirt {
-        let mut dirt = Default::default();
-        std::mem::swap(&mut dirt, &mut self.dirt);
-        dirt
+    pub fn flush(&self) -> ModelDirt {
+        let dirt = RefCell::new(Default::default());
+        self.dirt.swap(&dirt);
+        dirt.into_inner()
     }
 }

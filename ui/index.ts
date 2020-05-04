@@ -734,7 +734,7 @@ class Graph extends HTMLElement {
 
         this.context = context;
         // XXX "Error: recursive use of an object detected which would lead to unsafe aliasing"
-        //this.context.onGraphChanged(this.nodesChanged.bind(this));
+        this.context.onGraphChanged(this.nodesChanged.bind(this));
         window.requestAnimationFrame(this.render.bind(this));
     }
 
