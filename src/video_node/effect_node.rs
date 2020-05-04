@@ -50,7 +50,7 @@ enum EffectHeader {
 #[serde(rename_all = "camelCase")]
 #[derive(Debug, Deserialize)]
 struct LocalState {
-    name: String,
+    name: Option<String>,
     intensity: Option<f64>,
     frequency: Option<f64>,
 }
@@ -85,6 +85,10 @@ impl EffectNode {
 
     /// Change the EffectNode's name, which also recompiles the shader source
     fn set_name(&mut self, name: &str) -> Result<()> {
+        if name == self.name.as_str() {
+            return Ok(());
+        }
+
         let program = resources::effects::lookup(name).ok_or("Unknown effect name")?;
 
         let mut properties = HashMap::new();
@@ -254,8 +258,8 @@ impl IVideoNode for EffectNode {
 
     fn set_state(&mut self, raw_state: JsonValue) -> Result<()> {
         let state: LocalState = serde_json::from_value(raw_state)?;
-        if self.name != state.name {
-            self.set_name(&state.name)?;
+        if let Some(name) = state.name {
+            self.set_name(&name)?;
         }
         if let Some(intensity) = state.intensity {
             self.intensity = intensity;
