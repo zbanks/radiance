@@ -243,12 +243,14 @@ impl Context {
     //
 
     #[wasm_bindgen(js_name=addNode)]
-    pub fn add_node(&mut self, state: JsValue) -> std::result::Result<VideoNodeId, JsValue> {
-        state
+    pub fn add_node(&mut self, state: JsValue) -> std::result::Result<JsValue, JsValue> {
+        // TODO: re-write this to be less disjointed
+        let id = state
             .into_serde()
             .map_err(|e| e.into())
             .and_then(|s| self.model.add_node(s))
-            .map_err(|e| e.to_string().into())
+            .map_err(|e| e.to_string())?;
+        Ok(JsValue::from_serde(&serde_json::to_value(&id).unwrap()).unwrap())
     }
 
     #[wasm_bindgen(js_name=removeNode)]
