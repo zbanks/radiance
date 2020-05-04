@@ -153,10 +153,11 @@ impl Context {
     }
 
     /// Deprecated
-    pub fn set_state(&mut self, state: JsValue) {
+    pub fn set_state(&mut self, state: JsValue) -> std::result::Result<(), JsValue> {
         let v: serde_json::Value = state.into_serde().unwrap();
         self.model.set_state(v).unwrap();
-        self.flush();
+        self.flush()?;
+        Ok(())
     }
 
     #[wasm_bindgen(js_name=addEdge)]
@@ -195,12 +196,12 @@ impl Context {
     // Callbacks & Flushing
     //
 
-    pub fn flush(&mut self) -> bool {
+    pub fn flush(&mut self) -> std::result::Result<bool, JsValue> {
         let dirt = self.model.flush();
         if dirt.graph {
             if let Some(callback) = &self.graph_changed {
                 let state = self.state();
-                let _ = callback.call1(&JsValue::NULL, &state);
+                callback.call1(&JsValue::NULL, &state)?;
             }
         }
         // Prune callbacks for nodes that no longer exist
@@ -212,10 +213,11 @@ impl Context {
                     .node(*node_id)
                     .and_then(|node| JsValue::from_serde(&node.state(DetailLevel::Local)).ok())
                     .as_ref()
-                    .and_then(|state| callback.call1(&JsValue::NULL, state).ok());
+                    .ok_or_else(|| "unable to get state".into())
+                    .and_then(|state| callback.call1(&JsValue::NULL, state))?;
             }
         }
-        dirt.graph || !dirt.nodes.is_empty()
+        Ok(dirt.graph || !dirt.nodes.is_empty())
     }
 
     #[wasm_bindgen(js_name=onGraphChanged)]
