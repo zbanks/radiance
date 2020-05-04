@@ -244,8 +244,6 @@ struct StateNode {
 #[derive(Debug, Serialize, Deserialize)]
 struct State {
     #[serde(rename = "vertices")]
-    nodes: Vec<serde_json::Value>,
-    #[serde(rename = "newVertices", default)]
     node_ids: Vec<VideoNodeId>,
     edges: Vec<StateEdge>,
 }
@@ -350,10 +348,6 @@ impl Model {
             .map(|(i, n)| (n.id(), i))
             .collect();
 
-        let nodes = nodes_vec
-            .iter()
-            .map(|n| n.state(DetailLevel::All))
-            .collect();
         let edges = self
             .graph
             .all_edges()
@@ -363,11 +357,7 @@ impl Model {
                 to_input: i,
             })
             .collect();
-        let state = State {
-            nodes,
-            node_ids,
-            edges,
-        };
+        let state = State { node_ids, edges };
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 

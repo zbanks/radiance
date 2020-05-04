@@ -761,7 +761,7 @@ class Graph extends HTMLElement {
 
     nodesChanged() {
         let nodes = this.context.state();
-        this.nodes = new GraphData(nodes.newVertices, nodes.edges);
+        this.nodes = new GraphData(nodes.vertices, nodes.edges);
 
         // Convert the nodes DAG into a tree
 
