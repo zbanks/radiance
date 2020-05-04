@@ -152,14 +152,6 @@ impl Context {
         JsValue::from_serde(&self.model.state()).unwrap()
     }
 
-    /// Deprecated
-    pub fn set_state(&mut self, state: JsValue) -> std::result::Result<(), JsValue> {
-        let v: serde_json::Value = state.into_serde().unwrap();
-        self.model.set_state(v).unwrap();
-        self.flush()?;
-        Ok(())
-    }
-
     #[wasm_bindgen(js_name=addEdge)]
     pub fn add_edge(
         &mut self,

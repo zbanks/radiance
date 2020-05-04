@@ -371,63 +371,6 @@ impl Model {
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
-    /// Deprecated; doesn't trigger dirty
-    pub fn set_state(&mut self, state: JsonValue) -> Result<()> {
-        let mut state: State = serde_json::from_value(state)?;
-        let mut new_graph = Graph::new();
-        self.graph.clear();
-        let mut id_map: HashMap<usize, VideoNodeId> = HashMap::new();
-        let mut unseen_ids: HashMap<VideoNodeId, _> = self.ids().map(|id| (*id, ())).collect();
-        let mut nodes_to_insert: Vec<VideoNode> = vec![];
-
-        // Lookup or create all of the nodes
-        for (i, s) in state.nodes.drain(0..).enumerate() {
-            let n: StateNode = serde_json::from_value(s.clone())?;
-            let (id, node) = if let Some(id) = n.id {
-                // UID was specified, so find the node
-                let node = self.nodes.get_mut(&id).ok_or("Invalid node ID")?;
-                (id, node)
-            } else {
-                // The node doesn't exist, so create it
-                let node = VideoNode::from_serde(s.clone())?;
-                let id = node.id();
-                nodes_to_insert.push(node);
-                (id, nodes_to_insert.last_mut().unwrap())
-            };
-
-            node.set_state(s)?;
-            new_graph.set_vertex(id, Some(node.n_inputs()));
-            id_map.insert(i, id);
-            unseen_ids.remove(&id);
-            self.dirt.nodes.insert(id);
-        }
-        self.dirt.graph = true;
-
-        // Calculate the new set of edges
-        for edge in state.edges {
-            new_graph.set_edge(
-                Some(*id_map.get(&edge.from_node).ok_or("invalid from_node")?),
-                *id_map.get(&edge.to_node).ok_or("invalid to_node")?,
-                edge.to_input,
-            )?;
-        }
-        new_graph.validate()?;
-
-        // Remove nodes not referenced
-        for (id, _) in unseen_ids {
-            self.nodes.remove(&id);
-        }
-
-        // Add newly created nodes
-        for node in nodes_to_insert {
-            let id = node.id();
-            self.nodes.insert(id, node);
-        }
-        self.graph = new_graph;
-
-        Ok(())
-    }
-
     pub fn flush(&mut self) -> ModelDirt {
         let mut dirt = Default::default();
         std::mem::swap(&mut dirt, &mut self.dirt);
