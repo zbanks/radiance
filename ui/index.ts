@@ -761,15 +761,23 @@ class GraphData<T> {
         });
     }
 
-    bypassEdge(cc: ConnectedComponent): Edge {
-        if (cc.inputEdges.length >= 1 && cc.outputEdges.length >= 1) {
-            return {
-                fromVertex: this.edges[cc.inputEdges[0]].fromVertex,
-                toVertex: this.edges[cc.outputEdges[0]].toVertex,
-                toInput: this.edges[cc.outputEdges[0]].toInput,
-            };
+    // Returns the list of new edges that would need to be added to "bypass"
+    // the given connected component.
+    bypassEdges(cc: ConnectedComponent): Edge[] {
+        let result = [];
+        if (cc.inputEdges.length >= 1) {
+            cc.outputEdges.forEach(outputEdgeIndex => {
+                const outputEdge = this.edges[outputEdgeIndex];
+                if (outputEdge.fromVertex == cc.rootVertex) {
+                    result.push({
+                        fromVertex: this.edges[cc.inputEdges[0]].fromVertex,
+                        toVertex: outputEdge.toVertex,
+                        toInput: outputEdge.toInput,
+                    });
+                }
+            });
         }
-        return undefined;
+        return result;
     }
 
 }
@@ -845,7 +853,6 @@ class Graph extends HTMLElement {
         // Convert the nodes DAG into a tree
 
         const origNumTileVertices = this.tiles.vertices.length;
-        const origNumTileEdges = this.tiles.edges.length;
 
         let startTileForUID : {[uid: number]: number} = {};
 
@@ -854,8 +861,9 @@ class Graph extends HTMLElement {
         });
 
         // Create lists of tile indices to delete, pre-populated with all indices
-        let tileVerticesToDelete = Array.from(this.tiles.vertices.keys());
-        let tileEdgesToDelete = Array.from(this.tiles.edges.keys());
+        let tileVerticesToDelete: number[] = Array.from(this.tiles.vertices.keys());
+        let tileEdgesToDelete: number[] = Array.from(this.tiles.edges.keys());
+        let tileEdgesToCreate: Edge[] = [];
 
         // Note: Traversal will have to keep track of tiles as well as nodes.
         // TODO: This algorithm is a little aggressive, and will treat "moves" as deletion + creation
@@ -894,7 +902,7 @@ class Graph extends HTMLElement {
                         const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
                         upstreamTile = this.addTile(nodeUID, state);
                         upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
-                        this.tiles.addEdge({
+                        tileEdgesToCreate.push({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
                             toInput: input,
@@ -924,7 +932,7 @@ class Graph extends HTMLElement {
         });
 
         const changed = (this.tiles.vertices.length > origNumTileVertices
-                      || this.tiles.edges.length > origNumTileEdges
+                      || tileEdgesToCreate.length > 0
                       || tileVerticesToDelete.length > 0
                       || tileEdgesToDelete.length > 0);
 
@@ -935,6 +943,9 @@ class Graph extends HTMLElement {
         });
 
         this.tiles.removeEdges(tileEdgesToDelete);
+        tileEdgesToCreate.forEach(edge => {
+            this.tiles.addEdge(edge);
+        });
         this.tiles.removeVertices(tileVerticesToDelete);
 
         if (changed) {
@@ -1105,8 +1116,6 @@ class Graph extends HTMLElement {
     }
 
     addEdge(edge: Edge) {
-        // XXX debug addEdge
-        console.log("addEdge", this.nodes.vertices[edge.fromVertex], this.nodes.vertices[edge.toVertex], edge.toInput);
         this.context.addEdge(this.nodes.vertices[edge.fromVertex], this.nodes.vertices[edge.toVertex], edge.toInput);
     }
 
@@ -1129,16 +1138,17 @@ class Graph extends HTMLElement {
         });
         const ccs = this.nodes.connectedComponents(selection);
 
-        const bypassEdges = ccs.map(cc => this.nodes.bypassEdge(cc));
+        let bypassEdges: Edge[] = [];
+        ccs.forEach(cc => {
+            bypassEdges.push(...this.nodes.bypassEdges(cc));
+        });
 
         uidsToDelete.forEach(uid => {
             this.context.removeNode(uid);
         });
 
         bypassEdges.forEach(edge => {
-            if (edge !== undefined) {
-                this.addEdge(edge);
-            }
+            this.addEdge(edge);
         });
 
         this.context.flush();
