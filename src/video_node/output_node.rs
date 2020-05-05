@@ -10,6 +10,7 @@ use std::rc::Rc;
 pub struct OutputNode {
     id: VideoNodeId,
     node_type: VideoNodeDiscriminants,
+    n_inputs: usize,
 }
 
 impl OutputNode {
@@ -17,6 +18,7 @@ impl OutputNode {
         OutputNode {
             id: VideoNodeId::new(),
             node_type: VideoNodeDiscriminants::OutputNode,
+            n_inputs: 1,
         }
     }
 }
@@ -44,5 +46,9 @@ impl IVideoNode for OutputNode {
 
     fn state(&self, _level: DetailLevel) -> JsonValue {
         serde_json::to_value(&self).unwrap_or(JsonValue::Null)
+    }
+
+    fn flush(&self) -> Option<DetailLevel> {
+        None
     }
 }

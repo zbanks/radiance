@@ -6,6 +6,7 @@ use crate::video_node::{DetailLevel, IVideoNode, VideoNodeDiscriminants, VideoNo
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use strum_macros::EnumString;
@@ -17,6 +18,7 @@ pub struct EffectNode {
     #[serde(rename = "uid")]
     id: VideoNodeId,
     node_type: VideoNodeDiscriminants,
+    dirty: RefCell<Option<DetailLevel>>,
 
     name: String,
     n_inputs: usize,
@@ -67,8 +69,9 @@ impl EffectNode {
         Ok(EffectNode {
             id,
             node_type: VideoNodeDiscriminants::EffectNode,
+            dirty: RefCell::new(None),
 
-            name: String::from("-"),
+            name: String::from(""),
             n_inputs: 1,
             header: Default::default(),
             properties: Default::default(),
@@ -267,6 +270,13 @@ impl IVideoNode for EffectNode {
         if let Some(frequency) = state.frequency {
             self.frequency = frequency;
         }
+        *self.dirty.borrow_mut() = Some(DetailLevel::All);
         Ok(())
+    }
+
+    fn flush(&self) -> Option<DetailLevel> {
+        let dirty = RefCell::new(None);
+        self.dirty.swap(&dirty);
+        dirty.into_inner()
     }
 }

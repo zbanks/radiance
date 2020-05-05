@@ -41,14 +41,14 @@ pub enum VideoNode {
 
 #[wasm_bindgen]
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
 pub enum DetailLevel {
-    /// All of the state, including read-only properties. Used for updating the UI.
-    All,
-    /// Most or all of the writable state. Used to cut, copy, or duplicate a node within the localized content of a session. Should include things like video timestamp.
-    Local,
     /// Some of the writable state. Used for long-term storage of models, such as in save files.
     Export,
+    /// Most or all of the writable state. Used to cut, copy, or duplicate a node within the localized content of a session. Should include things like video timestamp.
+    Local,
+    /// All of the state, including read-only properties. Used for updating the UI.
+    All,
 }
 
 #[enum_dispatch(VideoNode)]
@@ -85,6 +85,12 @@ pub trait IVideoNode {
 
     fn set_state(&mut self, _state: JsonValue) -> Result<()> {
         Ok(())
+    }
+
+    /// Return the maximum level of detail that has changed, if any, since the last `flush()` call
+    fn flush(&self) -> Option<DetailLevel> {
+        // A conservative default implementation, which always says everything has changed
+        Some(DetailLevel::All)
     }
 }
 

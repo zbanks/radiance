@@ -101,4 +101,8 @@ impl IVideoNode for MediaNode {
     fn state(&self, _level: DetailLevel) -> JsonValue {
         serde_json::to_value(&self).unwrap_or(JsonValue::Null)
     }
+
+    fn flush(&self) -> Option<DetailLevel> {
+        None
+    }
 }
