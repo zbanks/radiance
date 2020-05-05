@@ -1,11 +1,11 @@
 use crate::audio::Audio;
-use crate::err::Result;
+use crate::err::{Result, JsResult};
 use crate::graphics::RenderChain;
 use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
 use log::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -53,7 +53,7 @@ impl Context {
     // Render functions
     //
 
-    pub fn render(&mut self, time: f64) -> std::result::Result<(), JsValue> {
+    pub fn render(&mut self, time: f64) -> JsResult<()> {
         //web_sys::console::time_with_label("render");
         //web_sys::console::time_end_with_label("render");
         self.render_internal(time).map_err(|e| e.into())
@@ -98,12 +98,12 @@ impl Context {
         &mut self,
         id: JsValue,
         node_el: JsValue,
-    ) -> std::result::Result<(), JsValue> {
+    ) -> JsResult<()> {
         let node_ref = node_el.dyn_into::<HtmlElement>()?;
         let id: VideoNodeId = id
             .into_serde()
             .map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
-        let node = self.model.node(id).ok_or("Invalid node id")?;
+        let node = self.model.node(id).map_err(|e| e.to_string())?;
 
         self.set_canvas_rect(node_ref).map_err(|e| e.to_string())?;
         self.chain.paint(node).unwrap();
@@ -111,7 +111,7 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=clearElement)]
-    pub fn clear_element(&mut self, element: JsValue) -> std::result::Result<(), JsValue> {
+    pub fn clear_element(&mut self, element: JsValue) -> JsResult<()> {
         element
             .dyn_into::<HtmlElement>()
             .and_then(|el| self.set_canvas_rect(el).map_err(|e| e.to_string().into()))?;
@@ -159,7 +159,7 @@ impl Context {
         from_vertex: JsValue,
         to_vertex: JsValue,
         to_input: usize,
-    ) -> std::result::Result<(), JsValue> {
+    ) -> JsResult<()> {
         let from_id = from_vertex.into_serde().map_err(|e| e.to_string())?;
         let to_id = to_vertex.into_serde().map_err(|e| e.to_string())?;
         self.model
@@ -173,7 +173,7 @@ impl Context {
         from_vertex: JsValue,
         to_vertex: JsValue,
         to_input: usize,
-    ) -> std::result::Result<(), JsValue> {
+    ) -> JsResult<()> {
         let from_id = from_vertex.into_serde().map_err(|e| e.to_string())?;
         let to_id = to_vertex.into_serde().map_err(|e| e.to_string())?;
         self.model
@@ -189,7 +189,7 @@ impl Context {
     // Callbacks & Flushing
     //
 
-    pub fn flush(&self) -> std::result::Result<bool, JsValue> {
+    pub fn flush(&self) -> JsResult<bool> {
         let dirt = self.model.flush();
         info!("flushing: {:?}", dirt);
         if dirt.graph {
@@ -203,9 +203,9 @@ impl Context {
         //self.node_changed.retain(|k, _v| node_ids.contains(k));
         for node_id in &dirt.nodes {
             if let Some(callback) = self.node_changed.get(&node_id) {
-                self.model
-                    .node(*node_id)
-                    .and_then(|node| JsValue::from_serde(&node.state(DetailLevel::Local)).ok())
+                let node = self.model.node(*node_id).map_err(|e| e.to_string())?;
+                JsValue::from_serde(&node.state(DetailLevel::Local))
+                    .ok()
                     .as_ref()
                     .ok_or_else(|| "unable to get state".into())
                     .and_then(|state| callback.call1(&JsValue::NULL, state))?;
@@ -225,7 +225,7 @@ impl Context {
         id: JsValue,
         _detail: &str,
         callback: js_sys::Function,
-    ) -> std::result::Result<(), JsValue> {
+    ) -> JsResult<()> {
         // TODO: use detail
         let id = id.into_serde::<VideoNodeId>().map_err(|e| e.to_string())?;
         self.node_changed.insert(id, callback);
@@ -237,7 +237,7 @@ impl Context {
     //
 
     #[wasm_bindgen(js_name=addNode)]
-    pub fn add_node(&mut self, state: JsValue) -> std::result::Result<JsValue, JsValue> {
+    pub fn add_node(&mut self, state: JsValue) -> JsResult<JsValue> {
         // TODO: re-write this to be less disjointed
         let id = state
             .into_serde()
@@ -248,17 +248,17 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=removeNode)]
-    pub fn remove_node(&mut self, id: JsValue) -> std::result::Result<(), JsValue> {
+    pub fn remove_node(&mut self, id: JsValue) -> JsResult<()> {
         id.into_serde()
             .map_err(|e| e.to_string().into())
             .and_then(|id| self.model.remove_node(id).map_err(|e| e.to_string().into()))
     }
 
     #[wasm_bindgen(js_name=nodeState)]
-    pub fn node_state(&self, id: JsValue, level: JsValue) -> std::result::Result<JsValue, JsValue> {
+    pub fn node_state(&self, id: JsValue, level: JsValue) -> JsResult<JsValue> {
         let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
         let level: DetailLevel = level.into_serde().map_err(|e| e.to_string())?;
-        let node = self.model.node(id).ok_or("invalid id")?;
+        let node = self.model.node(id).map_err(|e| e.to_string())?;
         JsValue::from_serde(&node.state(level)).map_err(|_| "unserializable state".into())
     }
 
@@ -267,12 +267,12 @@ impl Context {
         &mut self,
         id: JsValue,
         state: JsValue,
-    ) -> std::result::Result<(), JsValue> {
+    ) -> JsResult<()> {
         let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
         let v: serde_json::Value = state.into_serde().map_err(|e| e.to_string())?;
         self.model
             .node_mut(id)
-            .ok_or("invalid id")?
+            .map_err(|e| e.to_string())?
             .set_state(v)
             .map_err(|e| e.to_string().into())
     }

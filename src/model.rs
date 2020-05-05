@@ -1,5 +1,5 @@
-use crate::err::Result;
-use crate::video_node::{DetailLevel, IVideoNode, VideoNode, VideoNodeId};
+use crate::err::{Error, Result};
+use crate::video_node::{IVideoNode, VideoNode, VideoNodeId};
 use log::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -257,14 +257,19 @@ impl Model {
         }
     }
 
-    pub fn node(&self, id: VideoNodeId) -> Option<&VideoNode> {
-        self.nodes.get(&id).map(|n| n.borrow())
+    pub fn node(&self, id: VideoNodeId) -> Result<&VideoNode> {
+        self.nodes
+            .get(&id)
+            .map(|n| n.borrow())
+            .ok_or_else(|| Error::invalid_node_id(id))
     }
 
-    #[allow(dead_code)]
-    pub fn node_mut(&mut self, id: VideoNodeId) -> Option<&mut VideoNode> {
+    pub fn node_mut(&mut self, id: VideoNodeId) -> Result<&mut VideoNode> {
         self.dirt.borrow_mut().nodes.insert(id);
-        self.nodes.get_mut(&id).map(|n| n.borrow_mut())
+        self.nodes
+            .get_mut(&id)
+            .map(|n| n.borrow_mut())
+            .ok_or_else(|| Error::invalid_node_id(id))
     }
 
     pub fn nodes(&self) -> impl Iterator<Item = &VideoNode> {
@@ -273,10 +278,6 @@ impl Model {
 
     pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut VideoNode> {
         self.nodes.values_mut().map(|n| (*n).borrow_mut())
-    }
-
-    pub fn ids(&self) -> impl Iterator<Item = &VideoNodeId> {
-        self.nodes.keys()
     }
 
     pub fn toposort(&self) -> Vec<&VideoNode> {
