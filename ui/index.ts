@@ -895,12 +895,11 @@ class Graph extends HTMLElement {
                     const upstreamTileEdgeIndex = this.tiles.upstreamEdges[tileVertex][input];
 
                     let upstreamTileVertexIndex;
-                    let upstreamTile;
                     let reuse = false;
 
                     if (upstreamTileEdgeIndex !== undefined) {
                         upstreamTileVertexIndex = this.tiles.edges[upstreamTileEdgeIndex].fromVertex;
-                        upstreamTile = this.tiles.vertices[upstreamTileVertexIndex];
+                        const upstreamTile = this.tiles.vertices[upstreamTileVertexIndex];
                         const upstreamTileUID = upstreamTile.uid;
                         if (upstreamTileUID == nodeUID) {
                             // If the tile matches, don't delete the edge or node.
@@ -913,10 +912,22 @@ class Graph extends HTMLElement {
                     }
 
                     if (!reuse) {
-                        // However, we do need to add a new tile and edge.
-                        const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
-                        upstreamTile = this.addTile(nodeUID, state);
-                        upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
+                        // See if there's an unused tile with the correct UID we can re-use.
+                        // This is sort of naive and may lead to weird tile-rearranging behavior visually.
+                        for (let index of tileVerticesToDelete) {
+                            if (this.tiles.vertices[index].uid == nodeUID) {
+                                upstreamTileVertexIndex = index;
+                                tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(upstreamTileVertexIndex), 1);
+                                this.tiles.vertices[upstreamTileVertexIndex].updateFromState(this.context.nodeState(this.nodes.vertices[upstreamNode], "all"));
+                                break;
+                            }
+                        }
+                        if (upstreamTileVertexIndex === undefined) {
+                            // No suitable node was found. Create a new one.
+                            const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
+                            const upstreamTile = this.addTile(nodeUID, state);
+                            upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
+                        }
                         tileEdgesToCreate.push({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
