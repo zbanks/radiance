@@ -183,6 +183,8 @@ class VideoNodeTile extends HTMLElement {
     dragShift: boolean; // Whether or not ctrl-key was held at start of drag
     dragSelected: boolean; // Whether or not tile was selected at start of drag
     wasClick: boolean; // Whether or not a drag event should be interpreted as a click instead
+    oldWidth: number; // State to avoid unnecessary CSS width changes
+    oldHeight: number; // State to avoid unnecessary CSS height changes
 
     // Properties relating to selection
     _selected: boolean;
@@ -214,10 +216,13 @@ class VideoNodeTile extends HTMLElement {
                 z-index: 0;
                 outline: none;
                 pointer-events: none;
+                transition: transform 1s, width 1s, height 1s;
             }
 
             :host(:focus), :host([dragging]) {
                 z-index: 10;
+                will-change: transform;
+                transition: transform 0s, width 0s, height 0s;
             }
 
             :host(:focus) #outline {
@@ -395,8 +400,8 @@ class VideoNodeTile extends HTMLElement {
         this.dragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
-        this.updateLocation();
         this.removeAttribute("dragging");
+        this.updateLocation();
         if (this.wasClick) {
             this.graph.select(this, this.dragSelected, this.dragCtrl, this.dragShift);
         }
@@ -410,8 +415,16 @@ class VideoNodeTile extends HTMLElement {
     }
 
     updateLocation() {
-        this.style.width = `${this.width()}px`;
-        this.style.height = `${this.height()}px`;
+        const newWidth = this.width();
+        const newHeight = this.height();
+        if (newWidth != this.oldWidth) {
+            this.style.width = `${newWidth}px`;
+            this.oldWidth = newWidth;
+        }
+        if (newHeight != this.oldHeight) {
+            this.style.height = `${newHeight}px`;
+            this.oldHeight = newHeight;
+        }
         this.style.transform = `translate(${this.x + this.offsetX}px, ${this.y + this.offsetY}px)`;
     }
 
@@ -790,6 +803,8 @@ class Graph extends HTMLElement {
     tiles: GraphData<VideoNodeTile>; // Vertices are tiles
     context: Context;
     relayoutRequested: boolean;
+    oldWidth: number;
+    oldHeight: number;
 
     constructor() {
         super();
@@ -805,6 +820,7 @@ class Graph extends HTMLElement {
             :host {
                 display: inline-block;
                 pointer-events: none;
+                transition: width 1s, height 1s;
             }
             * {
                 pointer-events: auto;
@@ -839,6 +855,8 @@ class Graph extends HTMLElement {
         tile.uid = uid;
         tile.graph = this;
         tile.updateFromState(state);
+        // XXX needs RefCell wrapper
+        //this.context.onNodeChanged(uid, "all", tile.updateFromState.bind(tile));
         return tile;
     }
 
@@ -880,12 +898,11 @@ class Graph extends HTMLElement {
                     const upstreamTileEdgeIndex = this.tiles.upstreamEdges[tileVertex][input];
 
                     let upstreamTileVertexIndex;
-                    let upstreamTile;
                     let reuse = false;
 
                     if (upstreamTileEdgeIndex !== undefined) {
                         upstreamTileVertexIndex = this.tiles.edges[upstreamTileEdgeIndex].fromVertex;
-                        upstreamTile = this.tiles.vertices[upstreamTileVertexIndex];
+                        const upstreamTile = this.tiles.vertices[upstreamTileVertexIndex];
                         const upstreamTileUID = upstreamTile.uid;
                         if (upstreamTileUID == nodeUID) {
                             // If the tile matches, don't delete the edge or node.
@@ -898,10 +915,22 @@ class Graph extends HTMLElement {
                     }
 
                     if (!reuse) {
-                        // However, we do need to add a new tile and edge.
-                        const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
-                        upstreamTile = this.addTile(nodeUID, state);
-                        upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
+                        // See if there's an unused tile with the correct UID we can re-use.
+                        // This is sort of naive and may lead to weird tile-rearranging behavior visually.
+                        for (let index of tileVerticesToDelete) {
+                            if (this.tiles.vertices[index].uid == nodeUID) {
+                                upstreamTileVertexIndex = index;
+                                tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(upstreamTileVertexIndex), 1);
+                                this.tiles.vertices[upstreamTileVertexIndex].updateFromState(this.context.nodeState(this.nodes.vertices[upstreamNode], "all"));
+                                break;
+                            }
+                        }
+                        if (upstreamTileVertexIndex === undefined) {
+                            // No suitable node was found. Create a new one.
+                            const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
+                            const upstreamTile = this.addTile(nodeUID, state);
+                            upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
+                        }
                         tileEdgesToCreate.push({
                             fromVertex: upstreamTileVertexIndex,
                             toVertex: tileVertex,
@@ -1058,8 +1087,14 @@ class Graph extends HTMLElement {
             tile.x -= smallestX;
         });
         let width = -smallestX;
-        this.style.width = `${width}px`;
-        this.style.height = `${height}px`;
+        if (this.oldWidth != width) {
+            this.style.width = `${width}px`;
+            this.oldWidth = width;
+        }
+        if (this.oldHeight != height) {
+            this.style.height = `${height}px`;
+            this.oldHeight = height;
+        }
 
         for (let uid in this.tiles.vertices) {
             let vertex = this.tiles.vertices[uid];
