@@ -26,20 +26,20 @@ pub struct Context {
 #[wasm_bindgen]
 impl Context {
     #[wasm_bindgen(constructor)]
-    pub fn new(canvas: JsValue, size: i32) -> Option<Context> {
-        let canvas_el = canvas.dyn_into::<HtmlCanvasElement>().ok()?;
+    pub fn new(canvas: JsValue, size: i32) -> JsResult<Context> {
+        let canvas_el = canvas.dyn_into::<HtmlCanvasElement>()?;
         let context = Rc::new(
             canvas_el
                 .get_context("webgl")
-                .expect("WebGL not supported")
-                .unwrap()
-                .dyn_into::<WebGlRenderingContext>()
-                .unwrap(),
+                .ok()
+                .flatten()
+                .ok_or_else(|| Error::missing_feature("WebGL"))?
+                .dyn_into::<WebGlRenderingContext>()?,
         );
         let chain_size = (size, size);
-        let chain = RenderChain::new(context, chain_size).unwrap();
-        let audio = Audio::new().ok()?;
-        Some(Context {
+        let chain = RenderChain::new(context, chain_size)?;
+        let audio = Audio::new()?;
+        Ok(Context {
             model: Model::new(),
             audio,
             canvas_el,
@@ -52,14 +52,7 @@ impl Context {
     //
     // Render functions
     //
-
     pub fn render(&mut self, time: f64) -> JsResult<()> {
-        //web_sys::console::time_with_label("render");
-        //web_sys::console::time_end_with_label("render");
-        self.render_internal(time).map_err(|e| e.into())
-    }
-
-    fn render_internal(&mut self, time: f64) -> Result<()> {
         // Resize the canvas to if it changed size
         // This doesn't need to happen before rendering; just before calling `paint_node()`
         let canvas_width = self.canvas_el.client_width() as u32;
@@ -100,7 +93,7 @@ impl Context {
         let node = self.model.node(id)?;
 
         self.set_canvas_rect(node_ref)?;
-        self.chain.paint(node).unwrap();
+        self.chain.paint(node)?;
         Ok(())
     }
 
@@ -141,8 +134,10 @@ impl Context {
     // Graph/Edge Functions
     //
 
-    pub fn state(&self) -> JsValue {
-        JsValue::from_serde(&self.model.state()).unwrap()
+    pub fn state(&self) -> JsResult<JsValue> {
+        JsValue::from_serde(&self.model.state())
+            .map_err(Error::serde)
+            .map_err(|e| e.into())
     }
 
     #[wasm_bindgen(js_name=addEdge)]
@@ -173,8 +168,9 @@ impl Context {
             .map_err(|e| e.into())
     }
 
-    pub fn clear(&mut self) {
+    pub fn clear(&mut self) -> JsResult<()> {
         self.model.clear();
+        Ok(())
     }
 
     //
@@ -186,7 +182,7 @@ impl Context {
         info!("flushing: {:?}", dirt);
         if dirt.graph {
             if let Some(callback) = &self.graph_changed {
-                let state = self.state();
+                let state = self.state()?;
                 callback.call1(&JsValue::NULL, &state)?;
             }
         }
@@ -206,8 +202,9 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=onGraphChanged)]
-    pub fn set_graph_changed(&mut self, callback: js_sys::Function) {
+    pub fn set_graph_changed(&mut self, callback: js_sys::Function) -> JsResult<()> {
         self.graph_changed = Some(callback);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name=onNodeChanged)]

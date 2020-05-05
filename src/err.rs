@@ -8,7 +8,7 @@ pub type JsResult<T> = std::result::Result<T, wasm_bindgen::JsValue>;
 
 #[derive(Debug)]
 pub enum Error {
-    //MissingFeature(String),
+    MissingFeature(String),
     Runtime(String),
     InvalidVideoNode(VideoNodeId),
     Glsl(String),
@@ -33,19 +33,17 @@ impl Error {
         Error::Serde(details)
     }
 
-    /*
-    pub fn new_missing_feature(name: &str) -> Error {
+    pub fn missing_feature(name: &str) -> Error {
         Error::MissingFeature(String::from(name))
     }
-    */
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            //Error::MissingFeature(ref name) => write!(f, "Missing required feature: {}", name),
+            Error::MissingFeature(ref name) => write!(f, "Missing required feature: {}", name),
             Error::Runtime(ref details) => write!(f, "Runtime Error: {}", details),
-            Error::InvalidVideoNode(ref details) => write!(f, "Invalid VideoNodeId: {:?}", details),
+            Error::InvalidVideoNode(ref details) => write!(f, "Invalid VideoNodeId: {:?}", details), // XXX use of Debug
             Error::Glsl(ref details) => write!(f, "GLSL Error:\n{}", details),
             Error::Js(ref e) => write!(f, "Javascript Error: {:?}", e), // XXX use of Debug
             Error::Serde(ref e) => write!(f, "Serde Error: {}", e),
@@ -56,7 +54,7 @@ impl fmt::Display for Error {
 impl error::Error for Error {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
-            //Error::MissingFeature(ref name) => None,
+            Error::MissingFeature(_) => None,
             Error::Runtime(_) => None,
             Error::InvalidVideoNode(_) => None,
             Error::Glsl(_) => None,
