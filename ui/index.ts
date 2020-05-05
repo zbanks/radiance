@@ -431,6 +431,15 @@ class VideoNodeTile extends HTMLElement {
     keyPress(event: KeyboardEvent) {
         if (event.code == "Delete") {
             this.graph.deleteSelected();
+        } else if (event.code == "Space") {
+            // XXX for debugging
+            const selection = Array.from(this.graph.tiles.vertices.keys()).filter((index) => {
+                return this.graph.tiles.vertices[index].selected;
+            });
+            console.log("Connected components:");
+            this.graph.tiles.connectedComponents(selection).forEach(component => {
+                console.log(component);
+            });
         }
     }
 }
@@ -492,7 +501,7 @@ class EffectNodeTile extends VideoNodeTile {
 
     constructor() {
         super();
-        this.nInputs = 1; // XXX Temporary, should be set by GLSL
+        this.nInputs = 0;
         this.intensitySliderBlocked = false;
     }
 
@@ -562,6 +571,14 @@ interface Edge {
     fromVertex: number;
     toInput: number;
     toVertex: number;
+}
+
+interface ConnectedComponent {
+    vertices: number[];
+    rootVertex: number;
+    internalEdges: number[];
+    inputEdges: number[];
+    outputEdges: number[];
 }
 
 class GraphData<T> {
@@ -690,6 +707,57 @@ class GraphData<T> {
                     this.downstreamEdges[v][i] = e - 1;
                 }
             });
+        });
+    }
+
+    // Enumerate the connected components of the subgraph containing the given vertices
+    connectedComponents(vertexIndices: number[]): ConnectedComponent[] {
+        const componentRootVertices = vertexIndices.filter(vertexIndex => {
+            return this.downstreamEdges[vertexIndex].reduce((isRoot, edge) => {
+                return isRoot && vertexIndices.indexOf(this.edges[edge].toVertex) < 0;
+            }, true);
+        });
+
+        return componentRootVertices.map((vertexIndex: number): ConnectedComponent => {
+            let connectedComponent: ConnectedComponent = {
+                vertices: [],
+                rootVertex: vertexIndex,
+                internalEdges: [],
+                inputEdges: [],
+                outputEdges: [],
+            };
+
+            // Recursive function to traverse the subgraph and populate connectedComponent
+            const traverse = (vertexIndex: number) => {
+                // Add this vertex to the included vertices
+                connectedComponent.vertices.push(vertexIndex);
+
+                // Add any downstream edges to non-component vertices to the outputEdges list
+                const newOutputEdges = this.downstreamEdges[vertexIndex].filter(downstreamEdgeIndex => {
+                    return vertexIndices.indexOf(this.edges[downstreamEdgeIndex].toVertex) < 0;
+                });
+                connectedComponent.outputEdges.push(...newOutputEdges);
+
+                // Add any upstream edges to non-component vertices to the inputEdges list
+                const newInputEdges = this.upstreamEdges[vertexIndex].filter(upstreamEdgeIndex => {
+                    return vertexIndices.indexOf(this.edges[upstreamEdgeIndex].fromVertex) < 0;
+                });
+                connectedComponent.inputEdges.push(...newInputEdges);
+
+                // Add and Recurse on upstream edges to component vertices
+                const newInternalEdges = this.upstreamEdges[vertexIndex].filter(upstreamEdgeIndex => {
+                    return vertexIndices.indexOf(this.edges[upstreamEdgeIndex].fromVertex) >= 0;
+                });
+                connectedComponent.internalEdges.push(...newInternalEdges);
+                let upstreamVertices = newInternalEdges.map(edgeIndex => this.edges[edgeIndex].fromVertex);
+                upstreamVertices = upstreamVertices.filter((value, index, self) => self.indexOf(value) == index);
+                upstreamVertices.forEach(upstreamVertexIndex => {
+                    traverse(upstreamVertexIndex);
+                });
+            };
+
+            traverse(vertexIndex);
+            return connectedComponent;
         });
     }
 }
