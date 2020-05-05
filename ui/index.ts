@@ -221,6 +221,7 @@ class VideoNodeTile extends HTMLElement {
 
             :host(:focus), :host([dragging]) {
                 z-index: 10;
+                will-change: transform;
                 transition: transform 0s, width 0s, height 0s;
             }
 
@@ -802,6 +803,8 @@ class Graph extends HTMLElement {
     tiles: GraphData<VideoNodeTile>; // Vertices are tiles
     context: Context;
     relayoutRequested: boolean;
+    oldWidth: number;
+    oldHeight: number;
 
     constructor() {
         super();
@@ -1084,8 +1087,14 @@ class Graph extends HTMLElement {
             tile.x -= smallestX;
         });
         let width = -smallestX;
-        this.style.width = `${width}px`;
-        this.style.height = `${height}px`;
+        if (this.oldWidth != width) {
+            this.style.width = `${width}px`;
+            this.oldWidth = width;
+        }
+        if (this.oldHeight != height) {
+            this.style.height = `${height}px`;
+            this.oldHeight = height;
+        }
 
         for (let uid in this.tiles.vertices) {
             let vertex = this.tiles.vertices[uid];
