@@ -1,5 +1,5 @@
 use crate::audio::Audio;
-use crate::err::{Result, JsResult};
+use crate::err::{Error, JsResult, Result};
 use crate::graphics::RenderChain;
 use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
@@ -94,27 +94,19 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=paintNode)]
-    pub fn paint_node(
-        &mut self,
-        id: JsValue,
-        node_el: JsValue,
-    ) -> JsResult<()> {
+    pub fn paint_node(&mut self, id: JsValue, node_el: JsValue) -> JsResult<()> {
         let node_ref = node_el.dyn_into::<HtmlElement>()?;
-        let id: VideoNodeId = id
-            .into_serde()
-            .map_err(|_| JsValue::from_str("Invalid id, expected Number"))?;
-        let node = self.model.node(id).map_err(|e| e.to_string())?;
+        let id: VideoNodeId = id.into_serde().map_err(Error::serde)?;
+        let node = self.model.node(id)?;
 
-        self.set_canvas_rect(node_ref).map_err(|e| e.to_string())?;
+        self.set_canvas_rect(node_ref)?;
         self.chain.paint(node).unwrap();
         Ok(())
     }
 
     #[wasm_bindgen(js_name=clearElement)]
     pub fn clear_element(&mut self, element: JsValue) -> JsResult<()> {
-        element
-            .dyn_into::<HtmlElement>()
-            .and_then(|el| self.set_canvas_rect(el).map_err(|e| e.to_string().into()))?;
+        self.set_canvas_rect(element.dyn_into::<HtmlElement>()?)?;
         self.chain.clear();
         Ok(())
     }
@@ -160,11 +152,11 @@ impl Context {
         to_vertex: JsValue,
         to_input: usize,
     ) -> JsResult<()> {
-        let from_id = from_vertex.into_serde().map_err(|e| e.to_string())?;
-        let to_id = to_vertex.into_serde().map_err(|e| e.to_string())?;
+        let from_id = from_vertex.into_serde().map_err(Error::serde)?;
+        let to_id = to_vertex.into_serde().map_err(Error::serde)?;
         self.model
             .add_edge(from_id, to_id, to_input)
-            .map_err(|e| e.to_string().into())
+            .map_err(|e| e.into())
     }
 
     #[wasm_bindgen(js_name=removeEdge)]
@@ -174,11 +166,11 @@ impl Context {
         to_vertex: JsValue,
         to_input: usize,
     ) -> JsResult<()> {
-        let from_id = from_vertex.into_serde().map_err(|e| e.to_string())?;
-        let to_id = to_vertex.into_serde().map_err(|e| e.to_string())?;
+        let from_id = from_vertex.into_serde().map_err(Error::serde)?;
+        let to_id = to_vertex.into_serde().map_err(Error::serde)?;
         self.model
             .remove_edge(from_id, to_id, to_input)
-            .map_err(|e| e.to_string().into())
+            .map_err(|e| e.into())
     }
 
     pub fn clear(&mut self) {
@@ -203,11 +195,10 @@ impl Context {
         //self.node_changed.retain(|k, _v| node_ids.contains(k));
         for node_id in &dirt.nodes {
             if let Some(callback) = self.node_changed.get(&node_id) {
-                let node = self.model.node(*node_id).map_err(|e| e.to_string())?;
+                let node = self.model.node(*node_id)?;
                 JsValue::from_serde(&node.state(DetailLevel::Local))
-                    .ok()
                     .as_ref()
-                    .ok_or_else(|| "unable to get state".into())
+                    .map_err(|e| e.to_string().into())
                     .and_then(|state| callback.call1(&JsValue::NULL, state))?;
             }
         }
@@ -227,7 +218,7 @@ impl Context {
         callback: js_sys::Function,
     ) -> JsResult<()> {
         // TODO: use detail
-        let id = id.into_serde::<VideoNodeId>().map_err(|e| e.to_string())?;
+        let id = id.into_serde::<VideoNodeId>().map_err(Error::serde)?;
         self.node_changed.insert(id, callback);
         Ok(())
     }
@@ -238,42 +229,37 @@ impl Context {
 
     #[wasm_bindgen(js_name=addNode)]
     pub fn add_node(&mut self, state: JsValue) -> JsResult<JsValue> {
-        // TODO: re-write this to be less disjointed
         let id = state
             .into_serde()
             .map_err(|e| e.into())
-            .and_then(|s| self.model.add_node(s))
-            .map_err(|e| e.to_string())?;
-        Ok(JsValue::from_serde(&serde_json::to_value(&id).unwrap()).unwrap())
+            .and_then(|s| self.model.add_node(s))?;
+
+        serde_json::to_value(&id)
+            .and_then(|v| JsValue::from_serde(&v))
+            .map_err(Error::serde)
+            .map_err(|e| e.into())
     }
 
     #[wasm_bindgen(js_name=removeNode)]
     pub fn remove_node(&mut self, id: JsValue) -> JsResult<()> {
         id.into_serde()
-            .map_err(|e| e.to_string().into())
-            .and_then(|id| self.model.remove_node(id).map_err(|e| e.to_string().into()))
+            .map_err(|e| e.into())
+            .and_then(|id| self.model.remove_node(id))
+            .map_err(|e| e.into())
     }
 
     #[wasm_bindgen(js_name=nodeState)]
     pub fn node_state(&self, id: JsValue, level: JsValue) -> JsResult<JsValue> {
-        let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
-        let level: DetailLevel = level.into_serde().map_err(|e| e.to_string())?;
-        let node = self.model.node(id).map_err(|e| e.to_string())?;
-        JsValue::from_serde(&node.state(level)).map_err(|_| "unserializable state".into())
+        let id: VideoNodeId = id.into_serde().map_err(Error::serde)?;
+        let level: DetailLevel = level.into_serde().map_err(Error::serde)?;
+        let node = self.model.node(id)?;
+        JsValue::from_serde(&node.state(level)).map_err(|e| Error::serde(e).into())
     }
 
     #[wasm_bindgen(js_name=setNodeState)]
-    pub fn set_node_state(
-        &mut self,
-        id: JsValue,
-        state: JsValue,
-    ) -> JsResult<()> {
-        let id: VideoNodeId = id.into_serde().map_err(|e| e.to_string())?;
-        let v: serde_json::Value = state.into_serde().map_err(|e| e.to_string())?;
-        self.model
-            .node_mut(id)
-            .map_err(|e| e.to_string())?
-            .set_state(v)
-            .map_err(|e| e.to_string().into())
+    pub fn set_node_state(&mut self, id: JsValue, state: JsValue) -> JsResult<()> {
+        let id: VideoNodeId = id.into_serde().map_err(Error::serde)?;
+        let v: serde_json::Value = state.into_serde().map_err(Error::serde)?;
+        self.model.node_mut(id)?.set_state(v).map_err(|e| e.into())
     }
 }

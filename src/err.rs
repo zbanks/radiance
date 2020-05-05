@@ -29,6 +29,10 @@ impl Error {
         Error::InvalidVideoNode(details)
     }
 
+    pub fn serde(details: serde_json::error::Error) -> Error {
+        Error::Serde(details)
+    }
+
     /*
     pub fn new_missing_feature(name: &str) -> Error {
         Error::MissingFeature(String::from(name))
@@ -82,13 +86,12 @@ impl From<serde_json::error::Error> for Error {
 
 impl Into<js_sys::Error> for Error {
     fn into(self) -> js_sys::Error {
-        js_sys::Error::new(&self.to_string()) 
+        js_sys::Error::new(&self.to_string())
     }
 }
 
-impl Into<wasm_bindgen::JsValue> for Error {
-    fn into(self) -> wasm_bindgen::JsValue {
-        let e: js_sys::Error = self.into();
-        e.into()
+impl From<Error> for wasm_bindgen::JsValue {
+    fn from(e: Error) -> wasm_bindgen::JsValue {
+        e.to_string().into()
     }
 }
