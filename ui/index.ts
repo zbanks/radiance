@@ -760,6 +760,18 @@ class GraphData<T> {
             return connectedComponent;
         });
     }
+
+    bypassEdge(cc: ConnectedComponent): Edge {
+        if (cc.inputEdges.length >= 1 && cc.outputEdges.length >= 1) {
+            return {
+                fromVertex: this.edges[cc.inputEdges[0]].fromVertex,
+                toVertex: this.edges[cc.outputEdges[0]].toVertex,
+                toInput: this.edges[cc.outputEdges[0]].toInput,
+            };
+        }
+        return undefined;
+    }
+
 }
 
 class Graph extends HTMLElement {
@@ -1092,16 +1104,43 @@ class Graph extends HTMLElement {
         });
     }
 
+    addEdge(edge: Edge) {
+        // XXX debug addEdge
+        console.log("addEdge", this.nodes.vertices[edge.fromVertex], this.nodes.vertices[edge.toVertex], edge.toInput);
+        this.context.addEdge(this.nodes.vertices[edge.fromVertex], this.nodes.vertices[edge.toVertex], edge.toInput);
+    }
+
+    removeEdgeByIndex(index: number) {
+        const edge = this.nodes.edges[index];
+        this.context.removeEdge(this.nodes.vertices[edge.fromVertex], this.nodes.vertices[edge.toVertex], edge.toInput);
+    }
+
     deleteSelected() {
         let uidsToDelete: number[] = [];
         this.tiles.vertices.forEach(tile => {
-            if (tile.selected && !(tile.uid in uidsToDelete)) {
+            if (tile.selected && uidsToDelete.indexOf(tile.uid) < 0) {
                 uidsToDelete.push(tile.uid);
             }
         });
+
+        // Deletion is done in node space. May want to attempt to do it in tile space first.
+        const selection = Array.from(this.nodes.vertices.keys()).filter((index) => {
+            return uidsToDelete.indexOf(this.nodes.vertices[index]) >= 0;
+        });
+        const ccs = this.nodes.connectedComponents(selection);
+
+        const bypassEdges = ccs.map(cc => this.nodes.bypassEdge(cc));
+
         uidsToDelete.forEach(uid => {
             this.context.removeNode(uid);
         });
+
+        bypassEdges.forEach(edge => {
+            if (edge !== undefined) {
+                this.addEdge(edge);
+            }
+        });
+
         this.context.flush();
     }
 }
