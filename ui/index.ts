@@ -183,6 +183,8 @@ class VideoNodeTile extends HTMLElement {
     dragShift: boolean; // Whether or not ctrl-key was held at start of drag
     dragSelected: boolean; // Whether or not tile was selected at start of drag
     wasClick: boolean; // Whether or not a drag event should be interpreted as a click instead
+    oldWidth: number; // State to avoid unnecessary CSS width changes
+    oldHeight: number; // State to avoid unnecessary CSS height changes
 
     // Properties relating to selection
     _selected: boolean;
@@ -214,10 +216,12 @@ class VideoNodeTile extends HTMLElement {
                 z-index: 0;
                 outline: none;
                 pointer-events: none;
+                transition: transform 1s, width 1s, height 1s;
             }
 
             :host(:focus), :host([dragging]) {
                 z-index: 10;
+                transition: transform 0s, width 0s, height 0s;
             }
 
             :host(:focus) #outline {
@@ -395,8 +399,8 @@ class VideoNodeTile extends HTMLElement {
         this.dragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
-        this.updateLocation();
         this.removeAttribute("dragging");
+        this.updateLocation();
         if (this.wasClick) {
             this.graph.select(this, this.dragSelected, this.dragCtrl, this.dragShift);
         }
@@ -410,8 +414,16 @@ class VideoNodeTile extends HTMLElement {
     }
 
     updateLocation() {
-        this.style.width = `${this.width()}px`;
-        this.style.height = `${this.height()}px`;
+        const newWidth = this.width();
+        const newHeight = this.height();
+        if (newWidth != this.oldWidth) {
+            this.style.width = `${newWidth}px`;
+            this.oldWidth = newWidth;
+        }
+        if (newHeight != this.oldHeight) {
+            this.style.height = `${newHeight}px`;
+            this.oldHeight = newHeight;
+        }
         this.style.transform = `translate(${this.x + this.offsetX}px, ${this.y + this.offsetY}px)`;
     }
 
@@ -805,6 +817,7 @@ class Graph extends HTMLElement {
             :host {
                 display: inline-block;
                 pointer-events: none;
+                transition: width 1s, height 1s;
             }
             * {
                 pointer-events: auto;
@@ -839,6 +852,8 @@ class Graph extends HTMLElement {
         tile.uid = uid;
         tile.graph = this;
         tile.updateFromState(state);
+        // XXX needs RefCell wrapper
+        //this.context.onNodeChanged(uid, "all", tile.updateFromState.bind(tile));
         return tile;
     }
 
