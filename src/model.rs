@@ -214,7 +214,7 @@ mod tests {
 pub struct Model {
     nodes: HashMap<VideoNodeId, VideoNode>,
     graph: Graph<VideoNodeId>,
-    dirt: RefCell<ModelDirt>,
+    graph_dirty: RefCell<bool>,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -253,7 +253,7 @@ impl Model {
         Model {
             graph: Graph::new(),
             nodes: Default::default(),
-            dirt: Default::default(),
+            graph_dirty: Default::default(),
         }
     }
 
@@ -265,7 +265,6 @@ impl Model {
     }
 
     pub fn node_mut(&mut self, id: VideoNodeId) -> Result<&mut VideoNode> {
-        self.dirt.borrow_mut().nodes.insert(id);
         self.nodes
             .get_mut(&id)
             .map(|n| n.borrow_mut())
@@ -278,6 +277,10 @@ impl Model {
 
     pub fn nodes_mut(&mut self) -> impl Iterator<Item = &mut VideoNode> {
         self.nodes.values_mut().map(|n| (*n).borrow_mut())
+    }
+
+    pub fn ids(&self) -> impl Iterator<Item = VideoNodeId> + '_ {
+        self.nodes.keys().copied()
     }
 
     pub fn toposort(&self) -> Vec<&VideoNode> {
@@ -308,8 +311,7 @@ impl Model {
         self.graph.set_vertex(id, Some(node.n_inputs()));
         self.nodes.insert(id, node);
 
-        self.dirt.borrow_mut().graph = true;
-        self.dirt.borrow_mut().nodes.insert(id);
+        *self.graph_dirty.borrow_mut() = true;
 
         Ok(id)
     }
@@ -317,25 +319,25 @@ impl Model {
     pub fn remove_node(&mut self, id: VideoNodeId) -> Result<()> {
         self.graph.set_vertex(id, None);
         self.nodes.remove(&id);
-        self.dirt.borrow_mut().graph = true;
+        *self.graph_dirty.borrow_mut() = true;
         Ok(())
     }
 
     pub fn clear(&mut self) {
         self.nodes.clear();
         self.graph.clear();
-        self.dirt.borrow_mut().graph = true;
+        *self.graph_dirty.borrow_mut() = true;
     }
 
     pub fn add_edge(&mut self, from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
         self.graph.set_edge(Some(from), to, input)?;
-        self.dirt.borrow_mut().graph = true;
+        *self.graph_dirty.borrow_mut() = true;
         Ok(())
     }
 
     pub fn remove_edge(&mut self, _from: VideoNodeId, to: VideoNodeId, input: usize) -> Result<()> {
         self.graph.set_edge(None, to, input)?;
-        self.dirt.borrow_mut().graph = true;
+        *self.graph_dirty.borrow_mut() = true;
         Ok(())
     }
 
@@ -362,9 +364,9 @@ impl Model {
         serde_json::to_value(&state).unwrap_or(JsonValue::Null)
     }
 
-    pub fn flush(&self) -> ModelDirt {
-        let dirt = RefCell::new(Default::default());
-        self.dirt.swap(&dirt);
-        dirt.into_inner()
+    pub fn flush(&self) -> bool {
+        let dirty = RefCell::new(false);
+        self.graph_dirty.swap(&dirty);
+        dirty.into_inner()
     }
 }

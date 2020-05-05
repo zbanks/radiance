@@ -5,7 +5,8 @@ use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
 use log::*;
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -19,7 +20,7 @@ pub struct Context {
     chain: RenderChain,
 
     graph_changed: Option<js_sys::Function>,
-    node_changed: HashMap<VideoNodeId, js_sys::Function>,
+    node_changed: RefCell<HashMap<VideoNodeId, (DetailLevel, js_sys::Function)>>,
 }
 
 #[allow(clippy::suspicious_else_formatting)]
@@ -27,6 +28,7 @@ pub struct Context {
 impl Context {
     #[wasm_bindgen(constructor)]
     pub fn new(canvas: JsValue, size: i32) -> JsResult<Context> {
+        info!("Initializing Backend Context");
         let canvas_el = canvas.dyn_into::<HtmlCanvasElement>()?;
         let context = Rc::new(
             canvas_el
@@ -83,6 +85,9 @@ impl Context {
             self.chain.render_node(node, &fbos);
             //web_sys::console::time_end_with_label("render_node");
         }
+
+        // Trigger any node change events
+        self.flush_nodes()?;
         Ok(())
     }
 
@@ -178,27 +183,35 @@ impl Context {
     //
 
     pub fn flush(&self) -> JsResult<bool> {
-        let dirt = self.model.flush();
-        info!("flushing: {:?}", dirt);
-        if dirt.graph {
+        if self.model.flush() {
             if let Some(callback) = &self.graph_changed {
                 let state = self.state()?;
                 callback.call1(&JsValue::NULL, &state)?;
             }
+            Ok(true)
+        } else {
+            Ok(false)
         }
-        // TODO: Prune callbacks for nodes that no longer exist
-        //let node_ids: HashSet<VideoNodeId> = self.model.ids().copied().collect();
-        //self.node_changed.retain(|k, _v| node_ids.contains(k));
-        for node_id in &dirt.nodes {
-            if let Some(callback) = self.node_changed.get(&node_id) {
-                let node = self.model.node(*node_id)?;
-                JsValue::from_serde(&node.state(DetailLevel::Local))
-                    .as_ref()
-                    .map_err(|e| e.to_string().into())
-                    .and_then(|state| callback.call1(&JsValue::NULL, state))?;
+    }
+
+    fn flush_nodes(&self) -> JsResult<()> {
+        let node_ids: HashSet<VideoNodeId> = self.model.ids().collect();
+        self.node_changed
+            .borrow_mut()
+            .retain(|k, _v| node_ids.contains(k));
+        for node in self.model.nodes() {
+            if let Some(dirty_level) = node.flush() {
+                if let Some((level, callback)) = self.node_changed.borrow().get(&node.id()) {
+                    if *level >= dirty_level {
+                        JsValue::from_serde(&node.state(*level))
+                            .as_ref()
+                            .map_err(|e| e.to_string().into())
+                            .and_then(|state| callback.call1(&JsValue::NULL, state))?;
+                    }
+                }
             }
         }
-        Ok(dirt.graph || !dirt.nodes.is_empty())
+        Ok(())
     }
 
     #[wasm_bindgen(js_name=onGraphChanged)]
@@ -211,12 +224,13 @@ impl Context {
     pub fn set_node_changed(
         &mut self,
         id: JsValue,
-        _detail: &str,
+        detail_level: JsValue,
         callback: js_sys::Function,
     ) -> JsResult<()> {
         // TODO: use detail
         let id = id.into_serde::<VideoNodeId>().map_err(Error::serde)?;
-        self.node_changed.insert(id, callback);
+        let level: DetailLevel = detail_level.into_serde().map_err(Error::serde)?;
+        self.node_changed.borrow_mut().insert(id, (level, callback));
         Ok(())
     }
 
@@ -246,9 +260,9 @@ impl Context {
     }
 
     #[wasm_bindgen(js_name=nodeState)]
-    pub fn node_state(&self, id: JsValue, level: JsValue) -> JsResult<JsValue> {
+    pub fn node_state(&self, id: JsValue, detail_level: JsValue) -> JsResult<JsValue> {
         let id: VideoNodeId = id.into_serde().map_err(Error::serde)?;
-        let level: DetailLevel = level.into_serde().map_err(Error::serde)?;
+        let level: DetailLevel = detail_level.into_serde().map_err(Error::serde)?;
         let node = self.model.node(id)?;
         JsValue::from_serde(&node.state(level)).map_err(|e| Error::serde(e).into())
     }

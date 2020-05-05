@@ -41,7 +41,7 @@ pub enum VideoNode {
 
 #[wasm_bindgen]
 #[serde(rename_all = "camelCase")]
-#[derive(Debug, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialOrd, Ord, PartialEq, Eq, Copy, Clone)]
 pub enum DetailLevel {
     /// Some of the writable state. Used for long-term storage of models, such as in save files.
     Export,
