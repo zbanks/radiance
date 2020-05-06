@@ -171,11 +171,11 @@ class VideoNodeTile extends HTMLElement {
     inner: HTMLElement;
 
     // Properties relating to drag
-    offsetX: number; // Current X offset of the surface
-    offsetY: number; // Current Y offset of the surface
-    dragging: boolean; // Whether or not the surface is being dragged
-    mouseDrag: boolean; // Whether or not the surface is being dragged due to the mouse
-    touchDrag: boolean; // Whether or not the surface is being dragged due to a touch
+    offsetX: number; // Current X offset of the tile
+    offsetY: number; // Current Y offset of the tile
+    dragging: boolean; // Whether or not the tile is being dragged
+    mouseDrag: boolean; // Whether or not the tile is being dragged due to the mouse
+    touchDrag: boolean; // Whether or not the tile is being dragged due to a touch
     startDragX: number; // X coordinate of the start of the drag
     startDragY: number; // Y coordinate of the start of the drag
     touchId; // The identifier of the touchevent causing the drag
@@ -185,6 +185,7 @@ class VideoNodeTile extends HTMLElement {
     wasClick: boolean; // Whether or not a drag event should be interpreted as a click instead
     oldWidth: number; // State to avoid unnecessary CSS width changes
     oldHeight: number; // State to avoid unnecessary CSS height changes
+    ccDrag: boolean; // Whether or not the tile is being dragged due to being part of a connected component
 
     // Properties relating to selection
     _selected: boolean;
@@ -198,6 +199,9 @@ class VideoNodeTile extends HTMLElement {
         this.offsetX = 0;
         this.offsetY = 0;
         this.dragging = false;
+        this.mouseDrag = false;
+        this.touchDrag = false;
+        this.ccDrag = false;
 
         this._selected = false;
     }
@@ -216,13 +220,17 @@ class VideoNodeTile extends HTMLElement {
                 z-index: 0;
                 outline: none;
                 pointer-events: none;
-                transition: transform 1s, width 1s, height 1s;
+                will-change: transform;
+                transition: transform 1s, width 1s, height 1s, opacity 0.5s;
             }
 
             :host(:focus), :host([dragging]) {
                 z-index: 10;
-                will-change: transform;
-                transition: transform 0s, width 0s, height 0s;
+            }
+
+            :host([dragging]) {
+                opacity: 0.5;
+                transition: transform 0s, width 0s, height 0s, opacity 0.5s;
             }
 
             :host(:focus) #outline {
@@ -389,10 +397,12 @@ class VideoNodeTile extends HTMLElement {
     }
 
     startDrag(ptX: number, ptY: number) {
+        if (this.dragging) {
+            throw "Cannot start drag while drag in progress";
+        }
         this.dragging = true;
         this.startDragX = ptX;
         this.startDragY = ptY;
-        this.setAttribute("dragging", "true");
         this.wasClick = true;
     }
 
@@ -404,11 +414,24 @@ class VideoNodeTile extends HTMLElement {
         this.updateLocation();
         if (this.wasClick) {
             this.graph.select(this, this.dragSelected, this.dragCtrl, this.dragShift);
+        } else {
+            if (!this.ccDrag) {
+                this.graph.endDragCC();
+            }
         }
     }
 
     drag(ptX: number, ptY: number) {
-        this.wasClick = false;
+        if (this.wasClick) {
+            this.wasClick = false;
+            this.setAttribute("dragging", "true");
+            if (!this.ccDrag) {
+                this.graph.startDragCC(this, this.startDragX, this.startDragY);
+            }
+        }
+        if (!this.ccDrag) {
+            this.graph.dragCC(ptX, ptY);
+        }
         this.offsetX = ptX - this.startDragX;
         this.offsetY = ptY - this.startDragY;
         this.updateLocation();
@@ -805,6 +828,7 @@ class Graph extends HTMLElement {
     relayoutRequested: boolean;
     oldWidth: number;
     oldHeight: number;
+    currentDragCC: ConnectedComponent; // The entity currently being dragged
 
     constructor() {
         super();
@@ -1188,6 +1212,56 @@ class Graph extends HTMLElement {
         });
 
         this.context.flush();
+    }
+
+    // Called by a tile to indicate that it is being dragged, and all of its connected component should also be dragged
+    startDragCC(tile: VideoNodeTile, ptX: number, ptY: number) {
+        const tileIndex = this.tiles.vertices.indexOf(tile);
+        if (tileIndex < 0) {
+            throw "Dragged tile not found in graph";
+        }
+
+        const selection = Array.from(this.tiles.vertices.keys()).filter((index) => {
+            return this.tiles.vertices[index].selected || index == tileIndex;
+        });
+
+        let dragCC;
+        for (const cc of this.tiles.connectedComponents(selection)) {
+            if (cc.vertices.indexOf(tileIndex) >= 0) {
+                dragCC = cc;
+                break;
+            }
+        }
+        if (dragCC === undefined) {
+            throw "No connected component contains the chosen tile";
+        }
+        this.currentDragCC = dragCC;
+
+        this.currentDragCC.vertices.forEach(vertex => {
+            if (vertex != tileIndex) {
+                this.tiles.vertices[vertex].ccDrag = true;
+                this.tiles.vertices[vertex].startDrag(ptX, ptY);
+            }
+        });
+        // May want to hold off graph changes until the drag is complete...
+    }
+
+    dragCC(ptX: number, ptY: number) {
+        this.tiles.vertices.forEach(vertex => {
+            if (vertex.ccDrag) {
+                vertex.drag(ptX, ptY);
+            }
+        });
+    }
+
+    endDragCC() {
+        console.log("End drag of CC")
+        this.tiles.vertices.forEach(vertex => {
+            if (vertex.ccDrag) {
+                vertex.endDrag();
+                vertex.ccDrag = false;
+            }
+        });
     }
 }
 
