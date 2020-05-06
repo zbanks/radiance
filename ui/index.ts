@@ -872,10 +872,11 @@ class Graph extends HTMLElement {
 
         const origNumTileVertices = this.tiles.vertices.length;
 
-        let startTileForUID : {[uid: number]: number} = {};
+        let tileForUID : {[uid: number]: number} = {};
 
-        this.tiles.rootVertices.forEach(startTileVertex => {
-            startTileForUID[this.tiles.vertices[startTileVertex].uid] = startTileVertex;
+        // There can be multiple tiles for one UID... this takes the last one. Probably not always the best option.
+        this.tiles.vertices.forEach((vertex, index) => {
+            tileForUID[vertex.uid] = index;
         });
 
         // Create lists of tile indices to delete, pre-populated with all indices
@@ -946,14 +947,14 @@ class Graph extends HTMLElement {
         this.nodes.rootVertices.forEach(startNodeIndex => {
             const uid = this.nodes.vertices[startNodeIndex];
             let startTileIndex;
-            if (!(uid in startTileForUID)) {
+            if (!(uid in tileForUID)) {
                 // Create tile for start node
                 const state = this.context.nodeState(this.nodes.vertices[startNodeIndex], "all");
                 let tile = this.addTile(uid, state);
                 tile.uid = uid;
                 startTileIndex = this.tiles.addVertex(tile);
             } else {
-                startTileIndex = startTileForUID[uid];
+                startTileIndex = tileForUID[uid];
                 // Don't delete the tile we found
                 tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(startTileIndex), 1);
             }
