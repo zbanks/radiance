@@ -221,16 +221,16 @@ class VideoNodeTile extends HTMLElement {
                 outline: none;
                 pointer-events: none;
                 will-change: transform;
-                transition: transform 1s, width 1s, height 1s, opacity 0.5s;
-            }
-
-            :host(:focus), :host([dragging]) {
-                z-index: 10;
+                transition: transform 1s, width 1s, height 1s, opacity 0.5s, z-index 1s;
             }
 
             :host([dragging]) {
                 opacity: 0.5;
-                transition: transform 0s, width 0s, height 0s, opacity 0.5s;
+                transition: transform 0s, width 0s, height 0s, opacity 0.5s, z-index 0s;
+            }
+
+            :host(:focus), :host([dragging]) {
+                z-index: 1000;
             }
 
             :host(:focus) #outline {
