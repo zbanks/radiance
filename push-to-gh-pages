@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+BASEDIR=$(dirname "$0")
+cd $BASEDIR/dist
+rm -rf .git
+git init
+git add *
+git commit -m "gh-pages content"
+git remote add origin git@github.com:zbanks/radiance-web.git
+git push --force origin master -u
