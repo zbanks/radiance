@@ -480,6 +480,98 @@ class VideoNodeTile extends HTMLElement {
     }
 }
 
+class DropTarget extends HTMLElement {
+    inner: HTMLElement;
+    fromUID: number;
+    toUID: number;
+    toInput: number;
+    x: number;
+    y: number;
+    _active: boolean;
+    _dragging: boolean;
+
+    constructor() {
+        super();
+
+        this._active = false;
+        this._dragging = false;
+    }
+
+    connectedCallback() {
+        const shadow = this.attachShadow({mode: 'open'});
+        shadow.innerHTML = `
+            <style>
+            :host {
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                width: 0px;
+                height: 0px;
+                box-sizing: border-box;
+                z-index: 1;
+                outline: none;
+                pointer-events: all;
+                will-change: opacity;
+                transition: opacity 0.2s;
+                opacity: 0;
+            }
+
+            :host(:not([dragging])) {
+                display: none;
+            }
+
+            :host([active]) {
+                opacity: 1;
+            }
+
+            #inner {
+                position: absolute;
+                width: 50px;
+                height: 200px;
+                left: -25px;
+                top: -100px;
+                background-image: radial-gradient(closest-side, yellow, transparent);
+            }
+            </style>
+            <div id="inner">
+            </div>
+        `;
+
+        this.inner = shadow.querySelector("#inner");
+    }
+
+    updateLocation() {
+        this.style.transform = `translate(${this.x}px, ${this.y}px)`;
+    }
+
+    get active() {
+        return this._active;
+    }
+
+    set active(value: boolean) {
+        if (value && !this._active) {
+            this.setAttribute("active", "true");
+        } else if (!value && this._active) {
+            this.removeAttribute("active");
+        }
+        this._active = value;
+    }
+
+    get dragging() {
+        return this._dragging;
+    }
+
+    set dragging(value: boolean) {
+        if (value && !this._dragging) {
+            this.setAttribute("dragging", "true");
+        } else if (!value && this._dragging) {
+            this.removeAttribute("dragging");
+        }
+        this._dragging = value;
+    }
+}
+
 class VideoNodePreview extends HTMLElement {
     content: HTMLElement;
 
@@ -829,12 +921,16 @@ class Graph extends HTMLElement {
     oldWidth: number;
     oldHeight: number;
     currentDragCC: ConnectedComponent; // The entity currently being dragged
+    dropTargets: DropTarget[];
 
     constructor() {
         super();
 
         this.nextUID = 0;
         this.relayoutRequested = false;
+        this.dropTargets = [];
+        this.tiles = new GraphData([], []);
+        // A new GraphData is created for the nodes on every nodesChanged.
     }
 
     connectedCallback() {
@@ -852,7 +948,6 @@ class Graph extends HTMLElement {
             </style>
             <slot></slot>
         `;
-        this.tiles = new GraphData([], []);
     }
 
     attachContext(context: Context) {
@@ -886,6 +981,23 @@ class Graph extends HTMLElement {
 
     removeTile(tile: VideoNodeTile) {
         this.removeChild(tile);
+    }
+
+    addDropTarget(fromUID: number, toUID: number, toInput: number) {
+        const dropTarget = <DropTarget>document.createElement("radiance-droptarget");
+        dropTarget.fromUID = fromUID;
+        dropTarget.toUID = toUID;
+        dropTarget.toInput = toInput;
+        this.appendChild(dropTarget);
+        this.dropTargets.push(dropTarget);
+        return dropTarget;
+    }
+
+    removeDropTargets() {
+        this.dropTargets.forEach(dropTarget => {
+            this.removeChild(dropTarget);
+        });
+        this.dropTargets = [];
     }
 
     nodesChanged() {
@@ -1009,6 +1121,7 @@ class Graph extends HTMLElement {
             console.log("Edges to remove:", tileEdgesToDelete);
 
             this.relayoutGraph();
+            this.relayoutDropTargets();
         }
     }
 
@@ -1129,6 +1242,40 @@ class Graph extends HTMLElement {
 
     requestRelayout() {
         this.relayoutRequested = true;
+    }
+
+    relayoutDropTargets() {
+        this.removeDropTargets();
+
+        // Add drop tiles at the inputs of every node
+        this.tiles.vertices.forEach((tile, tileIndex) => {
+            let offsetHeight = 0;
+            for (let i = 0; i < tile.nInputs; i++) {
+                const fromIndex = this.tiles.upstreamVertexIndex(tileIndex, i);
+                let fromUID = null;
+                if (fromIndex !== undefined) {
+                    fromUID = this.tiles.vertices[fromIndex].uid;
+                }
+                const toUID = tile.uid;
+                const toInput = i;
+                const dt = this.addDropTarget(fromUID, toUID, toInput);
+                dt.x = tile.x;
+                dt.y = tile.y + offsetHeight + 0.5 * tile.inputHeights[i];
+                offsetHeight += tile.inputHeights[i];
+            }
+        });
+
+        // Add drop tiles to the outputs of every root node
+        this.tiles.rootVertices.forEach(tileIndex => {
+            const tile = this.tiles.vertices[tileIndex];
+            const dt = this.addDropTarget(tile.uid, null, null);
+            dt.x = tile.x + tile.width();
+            dt.y = tile.y + 0.5 * tile.height();
+        });
+
+        this.dropTargets.forEach(dt => {
+            dt.updateLocation();
+        });
     }
 
     render(t: number) {
@@ -1252,6 +1399,7 @@ class Graph extends HTMLElement {
                 vertex.drag(ptX, ptY);
             }
         });
+        this.activateDropTarget(ptX, ptY);
     }
 
     endDragCC() {
@@ -1262,6 +1410,34 @@ class Graph extends HTMLElement {
                 vertex.ccDrag = false;
             }
         });
+        this.deactivateDropTargets();
+    }
+
+    activateDropTarget(ptX: number, ptY: number) {
+        // The currently lifted tile is usually the topmost element at this point
+        // so we scan down the list until we find the first element that is not a tile
+        // (which will be a drop target if we are over one)
+        const elements = document.elementsFromPoint(ptX, ptY);
+        let element;
+        for (const e of elements) {
+            if (!(e instanceof VideoNodeTile)) {
+                element = e;
+                break;
+            }
+        }
+
+        const activeDropTargetIndex = (<Element[]>this.dropTargets).indexOf(element);
+        this.dropTargets.forEach((dt, index) => {
+            dt.active = (index == activeDropTargetIndex);
+            dt.dragging = true;
+        });
+    }
+
+    deactivateDropTargets() {
+        this.dropTargets.forEach((dt, index) => {
+            dt.active = false;
+            dt.dragging = false;
+        });
     }
 }
 
@@ -1271,3 +1447,4 @@ customElements.define('radiance-videonodepreview', VideoNodePreview);
 customElements.define('radiance-effectnodetile', EffectNodeTile);
 customElements.define('radiance-medianodetile', MediaNodeTile);
 customElements.define('radiance-graph', Graph);
+customElements.define('radiance-droptarget', DropTarget);
