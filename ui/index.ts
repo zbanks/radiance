@@ -1403,14 +1403,13 @@ class Graph extends HTMLElement {
     }
 
     endDragCC() {
-        console.log("End drag of CC")
         this.tiles.vertices.forEach(vertex => {
             if (vertex.ccDrag) {
                 vertex.endDrag();
                 vertex.ccDrag = false;
             }
         });
-        this.deactivateDropTargets();
+        this.drop();
     }
 
     activateDropTarget(ptX: number, ptY: number) {
@@ -1433,11 +1432,95 @@ class Graph extends HTMLElement {
         });
     }
 
-    deactivateDropTargets() {
+    drop() {
+        let activeDropTarget: DropTarget;
         this.dropTargets.forEach((dt, index) => {
+            if (dt.active) {
+                activeDropTarget = dt;
+            }
             dt.active = false;
             dt.dragging = false;
         });
+
+        if (activeDropTarget === undefined) {
+            return; // Tiles were not moved anywhere
+        }
+
+        let uidsToMove: number[] = [];
+        this.currentDragCC.vertices.forEach(tileIndex => {
+            const uid = this.tiles.vertices[tileIndex].uid;
+            if (uidsToMove.indexOf(uid) < 0) {
+                uidsToMove.push(uid);
+            }
+        });
+
+        const selection = Array.from(this.nodes.vertices.keys()).filter((index) => {
+            return uidsToMove.indexOf(this.nodes.vertices[index]) >= 0;
+        });
+        const ccs = this.nodes.connectedComponents(selection);
+
+        if (ccs.length != 1) {
+            throw "Conversion of CC in tilespace to nodespace resulted in more than one CC";
+        }
+
+        const cc = ccs[0];
+
+        // See if the edge we dropped on is in the CC
+        const allEdges = cc.internalEdges.concat(cc.inputEdges).concat(cc.outputEdges);
+        for (let ei of allEdges) {
+            const edge = this.nodes.edges[ei];
+            const fromUID = this.nodes.vertices[edge.fromVertex];
+            const toUID = this.nodes.vertices[edge.toVertex];
+            if (activeDropTarget.fromUID == fromUID && activeDropTarget.toUID == toUID && activeDropTarget.toInput == edge.toInput) {
+                // Can't drop onto an edge that is part of the CC
+                console.log("Can't drop onto an edge that is part of the lifted CC");
+                return;
+            }
+        }
+
+        // Remove incoming and outgoing edges
+        cc.inputEdges.forEach(edge => {
+            this.removeEdgeByIndex(edge);
+        });
+        cc.outputEdges.forEach(edge => {
+            this.removeEdgeByIndex(edge);
+        });
+
+        // See if the edge we dropped on is in the graph
+        //let dropEI;
+        //for (let ei = 0; ei < this.nodes.edges.length; ei++) {
+        //    const edge = this.nodes.edges[ei];
+        //    const fromUID = this.nodes.vertices[edge.fromVertex];
+        //    const toUID = this.nodes.vertices[edge.toVertex];
+        //    if (fromUID == activeDropTarget.fromUID && toUID == activeDropTarget.toUID && edge.toInput == activeDropTarget.toInput) {
+        //        dropEI = ei;
+        //        break;
+        //    }
+        //}
+
+        // Try to remove the edge we dropped onto (should exist, but might not?? see above code)
+        if (activeDropTarget.fromUID !== null && activeDropTarget.toUID !== null && activeDropTarget.toInput !== null) {
+            this.context.removeEdge(activeDropTarget.fromUID, activeDropTarget.toUID, activeDropTarget.toInput);
+        }
+
+        // Add in edges necessary to bypass the lifted CC
+        this.nodes.bypassEdges(cc).forEach(edge => {
+            this.addEdge(edge);
+        });
+
+        // Add incoming edge
+        if (activeDropTarget.fromUID !== null && cc.inputEdges[0] !== undefined) {
+            const edge = this.nodes.edges[cc.inputEdges[0]];
+            this.context.addEdge(activeDropTarget.fromUID, this.nodes.vertices[edge.toVertex], edge.toInput);
+        }
+
+        // Add outgoing edge
+        if (activeDropTarget.toUID !== null && activeDropTarget.toInput !== null) {
+            const fromUID = this.nodes.vertices[cc.rootVertex];
+            this.context.addEdge(fromUID, activeDropTarget.toUID, activeDropTarget.toInput);
+        }
+
+        this.context.flush();
     }
 }
 
