@@ -222,12 +222,11 @@ impl Context {
 
     #[wasm_bindgen(js_name=onNodeChanged)]
     pub fn set_node_changed(
-        &mut self,
+        &self,
         id: JsValue,
         detail_level: JsValue,
         callback: js_sys::Function,
     ) -> JsResult<()> {
-        // TODO: use detail
         let id = id.into_serde::<VideoNodeId>().map_err(Error::serde)?;
         let level: DetailLevel = detail_level.into_serde().map_err(Error::serde)?;
         self.node_changed.borrow_mut().insert(id, (level, callback));

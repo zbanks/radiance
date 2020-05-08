@@ -975,7 +975,7 @@ class Graph extends HTMLElement {
         tile.graph = this;
         tile.updateFromState(state);
         // XXX needs RefCell wrapper
-        //this.context.onNodeChanged(uid, "all", tile.updateFromState.bind(tile));
+        this.context.onNodeChanged(uid, "all", tile.updateFromState.bind(tile));
         return tile;
     }
 
