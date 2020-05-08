@@ -1035,23 +1035,23 @@ class Graph extends HTMLElement {
                     const upstreamTileEdgeIndex = this.tiles.upstreamEdges[tileVertex][input];
 
                     let upstreamTileVertexIndex;
-                    let reuse = false;
 
                     if (upstreamTileEdgeIndex !== undefined) {
-                        upstreamTileVertexIndex = this.tiles.edges[upstreamTileEdgeIndex].fromVertex;
-                        const upstreamTile = this.tiles.vertices[upstreamTileVertexIndex];
+                        const trialUpstreamTileVertexIndex = this.tiles.edges[upstreamTileEdgeIndex].fromVertex;
+                        const upstreamTile = this.tiles.vertices[trialUpstreamTileVertexIndex];
                         const upstreamTileUID = upstreamTile.uid;
                         if (upstreamTileUID == nodeUID) {
                             // If the tile matches, don't delete the edge or node.
-                            tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(upstreamTileVertexIndex), 1);
+                            tileVerticesToDelete.splice(tileVerticesToDelete.indexOf(trialUpstreamTileVertexIndex), 1);
                             tileEdgesToDelete.splice(tileEdgesToDelete.indexOf(upstreamTileEdgeIndex), 1);
                             upstreamTile.updateFromState(this.context.nodeState(this.nodes.vertices[upstreamNode], "all"));
-                            reuse = true;
+                            // Trial was a success; use this tile and edge
+                            upstreamTileVertexIndex = trialUpstreamTileVertexIndex;
                         }
                         // No need to specifically request deletion of an edge; simply not preserving it will cause it to be deleted
                     }
 
-                    if (!reuse) {
+                    if (upstreamTileVertexIndex === undefined) {
                         // See if there's an unused tile with the correct UID we can re-use.
                         // This is sort of naive and may lead to weird tile-rearranging behavior visually.
                         for (let index of tileVerticesToDelete) {
@@ -1109,6 +1109,7 @@ class Graph extends HTMLElement {
         });
 
         this.tiles.removeEdges(tileEdgesToDelete);
+
         tileEdgesToCreate.forEach(edge => {
             this.tiles.addEdge(edge);
         });
