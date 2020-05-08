@@ -1509,13 +1509,25 @@ class Graph extends HTMLElement {
             this.addEdge(edge);
         });
 
-        // Add incoming edge
-        if (activeDropTarget.fromUID !== null && cc.inputEdges[0] !== undefined) {
-            const edge = this.nodes.edges[cc.inputEdges[0]];
-            this.context.addEdge(activeDropTarget.fromUID, this.nodes.vertices[edge.toVertex], edge.toInput);
+        // Add edge from model into CC
+        if (activeDropTarget.fromUID !== null) {
+            // We do this to the topmost disconnected input on the CC
+            let leafNode = cc.rootVertex;
+            while (true) {
+                if (this.context.nodeState(this.nodes.vertices[leafNode], "all").nInputs < 1) {
+                    // The topmost sequence of nodes ends with a zero-input node. Give up.
+                    break; // TODO: do a more elaborate DFS to find a valid input.
+                }
+                const next = this.nodes.upstreamVertexIndex(leafNode, 0);
+                if (next === undefined || cc.vertices.indexOf(next) < 0) {
+                    const edge = this.nodes.edges[cc.inputEdges[0]];
+                    this.context.addEdge(activeDropTarget.fromUID, this.nodes.vertices[leafNode], 0);
+                    break;
+                }
+            }
         }
 
-        // Add outgoing edge
+        // Add edge from CC back to model
         if (activeDropTarget.toUID !== null && activeDropTarget.toInput !== null) {
             const fromUID = this.nodes.vertices[cc.rootVertex];
             this.context.addEdge(fromUID, activeDropTarget.toUID, activeDropTarget.toInput);
