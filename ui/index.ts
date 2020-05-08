@@ -1524,6 +1524,7 @@ class Graph extends HTMLElement {
                     this.context.addEdge(activeDropTarget.fromUID, this.nodes.vertices[leafNode], 0);
                     break;
                 }
+                leafNode = next;
             }
         }
 
