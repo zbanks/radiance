@@ -3,38 +3,3 @@ pub mod glsl {
     pub static PLAIN_FRAGMENT: &str = include_str!("../static/glsl/plain_fragment.glsl");
     pub static PLAIN_VERTEX: &str = include_str!("../static/glsl/plain_vertex.glsl");
 }
-
-pub mod effects {
-    pub static AUDIOTEST: &str = include_str!("../static/effects/audiotest.glsl");
-    pub static COMPOSITE: &str = include_str!("../static/effects/composite.glsl");
-    pub static LPF: &str = include_str!("../static/effects/lpf.glsl");
-    pub static MELT: &str = include_str!("../static/effects/melt.glsl");
-    pub static OSCOPE: &str = include_str!("../static/effects/oscope.glsl");
-    pub static PURPLE: &str = include_str!("../static/effects/purple.glsl");
-    pub static RESAT: &str = include_str!("../static/effects/resat.glsl");
-    pub static RJUMP: &str = include_str!("../static/effects/rjump.glsl");
-    pub static SETHUE: &str = include_str!("../static/effects/sethue.glsl");
-    pub static SPIN: &str = include_str!("../static/effects/spin.glsl");
-    pub static TEST: &str = include_str!("../static/effects/test.glsl");
-    pub static TUNNEL: &str = include_str!("../static/effects/tunnel.glsl");
-    pub static ZOOMIN: &str = include_str!("../static/effects/zoomin.glsl");
-
-    pub fn lookup(name: &str) -> Option<&'static str> {
-        match name {
-            "audiotest" => Some(AUDIOTEST),
-            "composite" => Some(COMPOSITE),
-            "lpf" => Some(LPF),
-            "melt" => Some(MELT),
-            "oscope" => Some(OSCOPE),
-            "purple" => Some(PURPLE),
-            "resat" => Some(RESAT),
-            "rjump" => Some(RJUMP),
-            "sethue" => Some(SETHUE),
-            "spin" => Some(SPIN),
-            "test" => Some(TEST),
-            "tunnel" => Some(TUNNEL),
-            "zoomin" => Some(ZOOMIN),
-            _ => None,
-        }
-    }
-}

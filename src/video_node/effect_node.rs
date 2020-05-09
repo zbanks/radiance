@@ -1,5 +1,7 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain, Shader};
+use crate::library::Library;
+use crate::library::Status as LibraryStatus;
 use crate::resources;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeDiscriminants, VideoNodeId};
 
@@ -18,8 +20,10 @@ pub struct EffectNode {
     #[serde(rename = "uid")]
     id: VideoNodeId,
     node_type: VideoNodeDiscriminants,
+    #[serde(skip)]
     dirty: RefCell<Option<DetailLevel>>,
 
+    status: Status,
     name: String,
     n_inputs: usize,
     header: EffectHeader,
@@ -30,11 +34,21 @@ pub struct EffectNode {
     frequency: f64,
 
     #[serde(skip)]
+    library: Library,
+    #[serde(skip)]
     intensity_integral: f64,
     #[serde(skip)]
     shader_sources: Vec<String>,
     #[serde(skip)]
     shader_passes: Vec<Option<Shader>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+enum Status {
+    Running,
+    LoadingShader,
+    CompileError(String),
 }
 
 #[strum(serialize_all = "snake_case")]
@@ -55,6 +69,7 @@ struct LocalState {
     name: Option<String>,
     intensity: Option<f64>,
     frequency: Option<f64>,
+    n_inputs: Option<usize>,
 }
 
 impl Default for EffectHeader {
@@ -64,13 +79,14 @@ impl Default for EffectHeader {
 }
 
 impl EffectNode {
-    pub fn new() -> Result<EffectNode> {
+    pub fn new(library: &Library) -> Result<EffectNode> {
         let id = VideoNodeId::new();
         Ok(EffectNode {
             id,
             node_type: VideoNodeDiscriminants::EffectNode,
             dirty: RefCell::new(None),
 
+            status: Status::LoadingShader,
             name: String::from(""),
             n_inputs: 1,
             header: Default::default(),
@@ -80,10 +96,20 @@ impl EffectNode {
             intensity: 0.0,
             frequency: 0.0,
 
+            library: library.clone(),
             intensity_integral: 0.0,
             shader_sources: Default::default(),
             shader_passes: Default::default(),
         })
+    }
+
+    fn set_dirty(&self, level: DetailLevel) {
+        let mut dirty = self.dirty.borrow_mut();
+        if let Some(old_level) = *dirty {
+            *dirty = Some(old_level.max(level));
+        } else {
+            *dirty = Some(level);
+        }
     }
 
     /// Change the EffectNode's name, which also recompiles the shader source
@@ -91,9 +117,13 @@ impl EffectNode {
         if name == self.name.as_str() {
             return Ok(());
         }
+        self.name = name.to_string();
+        self.status = Status::LoadingShader;
+        self.poll_status();
+        Ok(())
+    }
 
-        let program = resources::effects::lookup(name).ok_or("Unknown effect name")?;
-
+    fn set_source(&mut self, program: String) -> Result<()> {
         let mut properties = HashMap::new();
         let mut shader_sources: Vec<String> = Vec::new();
         let mut source = String::new();
@@ -152,14 +182,29 @@ impl EffectNode {
         // Create an empty Vec to hold shader_passes; these are compiled in pre_render
         let shader_passes = shader_sources.iter().map(|_| None).collect();
 
-        self.name = name.to_string();
         self.n_inputs = n_inputs;
         self.header = header;
         self.properties = properties;
         self.shader_sources = shader_sources;
         self.shader_passes = shader_passes;
-
         Ok(())
+    }
+
+    fn poll_status(&mut self) {
+        match self.status {
+            Status::Running => (),
+            Status::CompileError(_) => (),
+            Status::LoadingShader => {
+                if let LibraryStatus::Done(program) = self.library.effect_source(&self.name) {
+                    if let Err(e) = self.set_source(program) {
+                        self.status = Status::CompileError(e.to_string());
+                    } else {
+                        self.status = Status::Running;
+                    }
+                    self.set_dirty(DetailLevel::All);
+                }
+            }
+        };
     }
 }
 
@@ -180,7 +225,9 @@ impl IVideoNode for EffectNode {
         self.shader_passes.len()
     }
 
-    fn pre_render(&mut self, chain: &RenderChain, time: f64) {
+    fn pre_render(&mut self, chain: &RenderChain) {
+        self.poll_status();
+        let time = chain.audio().time;
         let dt = time - self.time;
         self.intensity_integral = (self.intensity_integral + dt * self.intensity) % 1024.0;
         self.time = time;
@@ -270,7 +317,14 @@ impl IVideoNode for EffectNode {
         if let Some(frequency) = state.frequency {
             self.frequency = frequency;
         }
-        *self.dirty.borrow_mut() = Some(DetailLevel::All);
+        if let Some(n_inputs) = state.n_inputs {
+            // n_inputs can't be changed if the EffectNode is running
+            match self.status {
+                Status::Running => (),
+                _ => self.n_inputs = n_inputs,
+            }
+        }
+        self.set_dirty(DetailLevel::All);
         Ok(())
     }
 

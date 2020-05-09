@@ -1,6 +1,7 @@
 use crate::audio::Audio;
 use crate::err::{Error, JsResult, Result};
 use crate::graphics::RenderChain;
+use crate::library::Library;
 use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
@@ -18,6 +19,7 @@ pub struct Context {
     audio: Audio,
     model: Model,
     chain: RenderChain,
+    library: Library,
 
     graph_changed: Option<js_sys::Function>,
     node_changed: RefCell<HashMap<VideoNodeId, (DetailLevel, js_sys::Function)>>,
@@ -41,11 +43,15 @@ impl Context {
         let chain_size = (size, size);
         let chain = RenderChain::new(context, chain_size)?;
         let audio = Audio::new()?;
+        let library = Library::new();
+        library.load_all();
+
         Ok(Context {
             model: Model::new(),
             audio,
             canvas_el,
             chain,
+            library,
             graph_changed: Default::default(),
             node_changed: Default::default(),
         })
@@ -66,10 +72,11 @@ impl Context {
             self.canvas_el.set_height(canvas_height);
         }
 
-        self.chain.set_audio(self.audio.analyze());
+        self.chain.set_audio(self.audio.analyze(time / 1e3));
 
         // Perform pre-render operations that may modify each node
-        self.chain.pre_render(self.model.nodes_mut(), time);
+        self.chain.pre_render(self.model.nodes_mut());
+        self.model.check_nodes();
 
         // Render each node sequentially in topological order
         self.chain
@@ -242,7 +249,7 @@ impl Context {
         let id = state
             .into_serde()
             .map_err(|e| e.into())
-            .and_then(|s| self.model.add_node(s))?;
+            .and_then(|s| self.model.add_node(s, &self.library))?;
 
         serde_json::to_value(&id)
             .and_then(|v| JsValue::from_serde(&v))

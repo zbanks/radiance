@@ -1,5 +1,6 @@
 use crate::err::Result;
 use crate::graphics::{Fbo, RenderChain};
+use crate::library::Library;
 
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
@@ -69,7 +70,7 @@ pub trait IVideoNode {
     /// Set up the VideoNode for rendering. `pre_render` takes a mut reference,
     /// whereas `render` only gets an immutable reference. Perform any actions that require
     /// modifying the VideoNode in this method.
-    fn pre_render(&mut self, _chain: &RenderChain, _time: f64) {}
+    fn pre_render(&mut self, _chain: &RenderChain) {}
 
     /// Perform the render operation, returning the rendered result
     fn render<'a>(
@@ -95,10 +96,10 @@ pub trait IVideoNode {
 }
 
 impl VideoNode {
-    pub fn from_serde(state: JsonValue) -> Result<VideoNode> {
+    pub fn from_serde(state: JsonValue, library: &Library) -> Result<VideoNode> {
         let node_type = state.get("nodeType").ok_or("missing 'nodeType'")?;
         let mut node = match serde_json::from_value(node_type.clone())? {
-            VideoNodeDiscriminants::EffectNode => VideoNode::EffectNode(EffectNode::new()?),
+            VideoNodeDiscriminants::EffectNode => VideoNode::EffectNode(EffectNode::new(library)?),
             VideoNodeDiscriminants::OutputNode => VideoNode::OutputNode(OutputNode::new()),
             VideoNodeDiscriminants::MediaNode => VideoNode::MediaNode(MediaNode::new()?),
         };

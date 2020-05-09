@@ -1,11 +1,12 @@
 use crate::err::{Error, Result};
+use crate::library::Library;
 use crate::video_node::{IVideoNode, VideoNode, VideoNodeId};
 use log::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 // Graph is absracted over T to facilitate testing; but is practically for VideoNodeId
 struct Graph<T: Copy + Ord + std::fmt::Debug> {
@@ -32,6 +33,10 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
     /// Add, modify, or remove a vertex
     /// If `n_inputs` is `None`, remove the vertex and any associated edges
     pub fn set_vertex(&mut self, vertex: T, n_inputs: Option<usize>) {
+        if self.edges.get(&vertex).map(|x| x.len()) == n_inputs {
+            return;
+        }
+
         self.toposort_cache.replace(None);
         if let Some(n_inputs) = n_inputs {
             self.edges.entry(vertex).or_default().resize(n_inputs, None);
@@ -217,12 +222,6 @@ pub struct Model {
     graph_dirty: RefCell<bool>,
 }
 
-#[derive(Default, Debug, Clone)]
-pub struct ModelDirt {
-    pub graph: bool,
-    pub nodes: HashSet<VideoNodeId>,
-}
-
 #[serde(rename_all = "camelCase")]
 #[derive(Debug, Serialize, Deserialize)]
 struct StateEdge {
@@ -305,8 +304,8 @@ impl Model {
             .collect()
     }
 
-    pub fn add_node(&mut self, state: JsonValue) -> Result<VideoNodeId> {
-        let node = VideoNode::from_serde(state)?;
+    pub fn add_node(&mut self, state: JsonValue, library: &Library) -> Result<VideoNodeId> {
+        let node = VideoNode::from_serde(state, library)?;
         let id = node.id();
         self.graph.set_vertex(id, Some(node.n_inputs()));
         self.nodes.insert(id, node);
@@ -368,5 +367,12 @@ impl Model {
         let dirty = RefCell::new(false);
         self.graph_dirty.swap(&dirty);
         dirty.into_inner()
+    }
+
+    /// Check nodes for any changes to n_inputs
+    pub fn check_nodes(&mut self) {
+        for (id, node) in self.nodes.iter() {
+            self.graph.set_vertex(*id, Some(node.n_inputs()));
+        }
     }
 }

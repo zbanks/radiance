@@ -411,12 +411,13 @@ impl RenderChain {
     }
 
     #[allow(clippy::needless_lifetimes)]
-    pub fn pre_render<'a, I>(&'a self, nodes: I, time: f64)
+    pub fn pre_render<'a, I>(&'a self, nodes: I)
     where
         I: Iterator<Item = &'a mut VideoNode>,
     {
         self.output_fbos.borrow_mut().clear();
         for node in nodes {
+            node.pre_render(self);
             self.buffer_fbos
                 .borrow_mut()
                 .entry(node.id())
@@ -424,7 +425,6 @@ impl RenderChain {
                 .resize_with(node.n_buffers(), || {
                     Rc::new(Fbo::new(Rc::clone(&self.context), self.size).unwrap())
                 });
-            node.pre_render(self, time / 1e3);
         }
     }
 

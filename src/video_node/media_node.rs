@@ -94,7 +94,7 @@ impl IVideoNode for MediaNode {
                 .ok()
                 .map(|_| Rc::clone(&buffer_fbos[0]))
         } else {
-            None
+            input_fbos[0].as_ref().cloned()
         }
     }
 

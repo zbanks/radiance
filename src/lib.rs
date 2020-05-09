@@ -4,6 +4,7 @@ mod app;
 mod audio;
 mod err;
 mod graphics;
+mod library;
 mod model;
 mod resources;
 mod utils;

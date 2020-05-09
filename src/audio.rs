@@ -19,6 +19,7 @@ const HIGH_CUTOFF: f32 = 4000.0; // in Hz
 
 #[derive(Debug)]
 pub struct AudioAnalysis {
+    pub time: f64,
     pub low: f32,
     pub mid: f32,
     pub high: f32,
@@ -65,7 +66,7 @@ impl Audio {
         Ok(audio)
     }
 
-    pub fn analyze(&self) -> AudioAnalysis {
+    pub fn analyze(&self, time: f64) -> AudioAnalysis {
         // The AudioContext may have been prevented from starting if it loaded too quickly
         // It must be resumed (or created) after a user gesture on the page. https://goo.gl/7K7WLu
         // If we're suspended, forcibly try to resume
@@ -75,6 +76,8 @@ impl Audio {
         }
 
         let mut analysis: AudioAnalysis = Default::default();
+        analysis.time = time;
+
         if self.context.state() == web_sys::AudioContextState::Running {
             let sample_rate = self.context.sample_rate();
             let len = self.analyser.frequency_bin_count();
@@ -149,6 +152,7 @@ impl Audio {
 impl Default for AudioAnalysis {
     fn default() -> AudioAnalysis {
         AudioAnalysis {
+            time: 0.0,
             low: 0.0,
             mid: 0.0,
             high: 0.0,
