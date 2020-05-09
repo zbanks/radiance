@@ -54,6 +54,22 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
         }
     }
 
+    /// Test if there is a path from one vertex to another
+    /// Used in checking if adding a new edge would create a cycle
+    pub fn path_exists(&self, from_vertex: T, to_vertex: T) -> bool {
+        if from_vertex == to_vertex {
+            true
+        } else {
+            // XXX: Re-write to avoid recursion
+            self.edges
+                .get(&to_vertex)
+                .unwrap()
+                .iter()
+                .filter_map(|fv| *fv)
+                .any(|fv| self.path_exists(from_vertex, fv))
+        }
+    }
+
     /// Add, modify, or remove an edge
     /// If `to_input` is `None`, remove the edge
     pub fn set_edge(
@@ -64,18 +80,20 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
     ) -> Result<()> {
         self.toposort_cache.replace(None);
         // Check that both verticies in the proposed edge exist
-        if let Some(fv) = from_vertex {
-            if !self.edges.contains_key(&fv) {
-                return Err(format!("from_vertex {:?} not in graph", fv).as_str().into());
-            }
-        }
         if !self.edges.contains_key(&to_vertex) {
             return Err(format!("to_vertex {:?} not in graph", to_vertex)
                 .as_str()
                 .into());
         }
-
-        // TODO validation that this won't create a cycle
+        if let Some(fv) = from_vertex {
+            if !self.edges.contains_key(&fv) {
+                return Err(format!("from_vertex {:?} not in graph", fv).as_str().into());
+            }
+            // Validate that this edge won't create a cycle
+            if self.path_exists(to_vertex, fv) {
+                return Err(Error::GraphCycle);
+            }
+        }
 
         // Remove the previous edge that went to `(to_vertex, to_input)` & insert from_vertex
         let inputs = self.edges.get_mut(&to_vertex).unwrap();

@@ -12,6 +12,7 @@ pub enum Error {
     Runtime(String),
     InvalidVideoNode(VideoNodeId),
     Glsl(String),
+    GraphCycle,
     Js(wasm_bindgen::JsValue),
     Serde(serde_json::error::Error),
 }
@@ -47,6 +48,7 @@ impl fmt::Display for Error {
             Error::Glsl(ref details) => write!(f, "GLSL Error:\n{}", details),
             Error::Js(ref e) => write!(f, "Javascript Error: {:?}", e), // XXX use of Debug
             Error::Serde(ref e) => write!(f, "Serde Error: {}", e),
+            Error::GraphCycle => write!(f, "Graph Cycle"),
         }
     }
 }
@@ -60,6 +62,7 @@ impl error::Error for Error {
             Error::Glsl(_) => None,
             Error::Js(_) => None, // XXX propagate JsValue errors?
             Error::Serde(ref e) => Some(e),
+            Error::GraphCycle => None,
         }
     }
 }
