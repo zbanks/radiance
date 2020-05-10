@@ -303,7 +303,7 @@ impl IVideoNode for EffectNode {
     }
 
     fn state(&self, _level: DetailLevel) -> JsonValue {
-        serde_json::to_value(&self).unwrap_or(JsonValue::Null)
+        serde_json::to_value(&self).unwrap()
     }
 
     fn set_state(&mut self, raw_state: JsonValue) -> Result<()> {

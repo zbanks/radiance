@@ -15,6 +15,7 @@ pub enum Error {
     GraphCycle,
     Js(wasm_bindgen::JsValue),
     Serde(serde_json::error::Error),
+    Http(String),
 }
 
 impl Error {
@@ -49,6 +50,7 @@ impl fmt::Display for Error {
             Error::Js(ref e) => write!(f, "Javascript Error: {:?}", e), // XXX use of Debug
             Error::Serde(ref e) => write!(f, "Serde Error: {}", e),
             Error::GraphCycle => write!(f, "Graph Cycle"),
+            Error::Http(ref e) => write!(f, "HTTP Error: {}", e),
         }
     }
 }
@@ -63,6 +65,7 @@ impl error::Error for Error {
             Error::Js(_) => None, // XXX propagate JsValue errors?
             Error::Serde(ref e) => Some(e),
             Error::GraphCycle => None,
+            Error::Http(_) => None,
         }
     }
 }

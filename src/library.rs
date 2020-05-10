@@ -1,4 +1,4 @@
-use crate::err::Result;
+use crate::err::{Error, Result};
 
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ enum Entry {
 pub enum Status<T> {
     Pending,
     Loaded(T),
-    Failed(String),
+    Failed { error: String },
     Invalid,
 }
 
@@ -62,6 +62,10 @@ async fn fetch_url(url: &str) -> Result<String> {
     assert!(resp_value.is_instance_of::<Response>());
     let resp: Response = resp_value.dyn_into().unwrap();
 
+    if !resp.ok() {
+        return Err(Error::Http(resp.status_text()));
+    }
+
     // Convert this other `Promise` into a rust `Future`.
     let text = JsFuture::from(resp.text()?).await?.as_string().unwrap();
 
@@ -83,12 +87,17 @@ impl Library {
     pub fn load_all(&self) {
         let lib = Rc::clone(&self.library_ref);
         spawn_local(async move {
-            let list_text = fetch_url("./effect_list.txt").await.unwrap();
-            info!("{}", list_text);
-            let futs = list_text
-                .lines()
-                .map(|name| Self::load_effect(Rc::clone(&lib), name));
-            futures::future::join_all(futs).await;
+            match fetch_url("./effect_list.txt").await {
+                Ok(list_text) => {
+                    let futs = list_text
+                        .lines()
+                        .map(|name| Self::load_effect(Rc::clone(&lib), name));
+                    futures::future::join_all(futs).await;
+                },
+                Err(e) => {
+                    error!("Unable to fetch effects_list; no effects will load ({})", e);
+                }
+            }
         });
     }
 
@@ -104,10 +113,12 @@ impl Library {
                     lib.borrow_mut().set_effect_source(effect_name, source);
                 }
                 Err(e) => {
-                    error!("Failed to fetch {}: {}", url, e);
-                    lib.borrow_mut()
-                        .items
-                        .insert(effect_name, Status::Failed(e.to_string()));
+                    lib.borrow_mut().items.insert(
+                        effect_name,
+                        Status::Failed {
+                            error: e.to_string(),
+                        },
+                    );
                 }
             }
         }
@@ -126,11 +137,13 @@ impl Library {
                 if let Some(source) = lib.content.get(source_hash) {
                     Status::Loaded(source.clone())
                 } else {
-                    Status::Failed(format!("Invalid hash: {:?}", source_hash))
+                    Status::Failed {
+                        error: format!("Invalid hash: {:?}", source_hash),
+                    }
                 }
             }
             Status::Pending => Status::Pending,
-            Status::Failed(e) => Status::Failed(e),
+            Status::Failed { error } => Status::Failed { error },
             Status::Invalid => Status::Invalid,
         }
     }
@@ -143,7 +156,8 @@ impl Library {
 
     pub fn items(&self) -> JsonValue {
         let lib = self.library_ref.borrow();
-        serde_json::to_value(&lib.items).unwrap_or(JsonValue::Null)
+        //serde_json::to_value(&lib.items).unwrap_or(JsonValue::Null)
+        serde_json::to_value(&lib.items).unwrap()
     }
 
     pub fn content(&self, hash: &ContentHash) -> Option<String> {

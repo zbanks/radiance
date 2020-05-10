@@ -378,7 +378,7 @@ impl Model {
             })
             .collect();
         let state = State { node_ids, edges };
-        serde_json::to_value(&state).unwrap_or(JsonValue::Null)
+        serde_json::to_value(&state).unwrap()
     }
 
     pub fn flush(&self) -> bool {
