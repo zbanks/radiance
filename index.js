@@ -46,6 +46,4 @@ customElements.whenDefined("radiance-graph").then(() => {
 
     graph.context.flush();
     console.log(graph.context.state());
-
-    console.log(graph.model);
 });
