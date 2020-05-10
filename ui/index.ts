@@ -738,7 +738,7 @@ class GraphData<T> {
         });
     }
 
-    upstreamVertexIndex(vertexIndex: number, input: number) {
+    upstreamVertexIndex(vertexIndex: number, input: number): number {
         const edge = this.upstreamEdges[vertexIndex][input];
         if (edge === undefined) {
             return undefined;
@@ -747,7 +747,7 @@ class GraphData<T> {
         }
     }
 
-    downstreamVertexIndices(vertexIndex: number) {
+    downstreamVertexIndices(vertexIndex: number): number[] {
         const edges = this.downstreamEdges[vertexIndex];
         return edges.map(edge => this.edges[edge].toVertex);
     }
@@ -915,6 +915,32 @@ class GraphData<T> {
         return result;
     }
 
+    // Returns a list of indices representing the vertices between (and including)
+    // the two given vertices.
+    verticesBetween(vertex1: number, vertex2: number): number[] {
+        let result = [];
+        const traverse = (path: number[], target: number) => {
+            const vertex = path[path.length - 1];
+            if (vertex == target) {
+                result.push(...path);
+            } else {
+                this.downstreamVertexIndices(vertex).forEach(downstreamVertexIndex => {
+                    if (path.indexOf(downstreamVertexIndex) < 0) { // not visited
+                        traverse(path.concat([downstreamVertexIndex]), target);
+                    }
+                });
+            }
+        }
+
+        // Not sure which node is up/downstream. Traverse only looks downstream, so try both ways.
+        traverse([vertex1], vertex2);
+        traverse([vertex2], vertex1);
+
+        // Remove duplicates
+        result = result.filter((value, index, self) => self.indexOf(value) == index);
+
+        return result;
+    }
 }
 
 class Graph extends HTMLElement {
@@ -929,6 +955,7 @@ class Graph extends HTMLElement {
     oldHeight: number;
     currentDragCC: ConnectedComponent; // The entity currently being dragged
     dropTargets: DropTarget[];
+    lastTile: VideoNodeTile;
 
     constructor() {
         super();
@@ -1299,18 +1326,24 @@ class Graph extends HTMLElement {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
+    // Called when dragging. Don't want clicks without modifiers to clear selection.
     ensureSelected(tile: VideoNodeTile, ctrlKey: boolean, shiftKey: boolean) {
         if (!tile.selected) {
             if (!ctrlKey && !shiftKey) {
                 this.deselectAll();
+            } else if (shiftKey) {
+                this.selectBetween(this.lastTile, tile);
             }
             tile.selected = true;
         }
     }
 
+    // Called when clicking. Clicks without modifiers should clear selection.
     select(tile: VideoNodeTile, selected: boolean, ctrlKey: boolean, shiftKey: boolean) {
         if (selected) {
-            if (ctrlKey) {
+            if (shiftKey) {
+                this.selectBetween(this.lastTile, tile);
+            } else if (ctrlKey) {
                 tile.selected = false;
             } else {
                 this.deselectAll();
@@ -1322,6 +1355,7 @@ class Graph extends HTMLElement {
             }
             tile.selected = true;
         }
+        this.lastTile = tile;
     }
 
     deselectAll() {
@@ -1539,6 +1573,22 @@ class Graph extends HTMLElement {
         }
 
         this.context.flush();
+    }
+
+    selectBetween(tile1: VideoNodeTile, tile2: VideoNodeTile) {
+        const index1 = this.tiles.vertices.indexOf(tile1);
+        const index2 = this.tiles.vertices.indexOf(tile2);
+        console.log("Select between", index1, index2);
+        if (index1 >= 0 && index2 >= 0) {
+            this.tiles.verticesBetween(index1, index2).forEach(tileIndex => {
+                this.tiles.vertices[tileIndex].selected = true;
+            });
+        } else {
+            // One or both of the tiles is not present.
+            // Select the other one (no harm on calling this on deleted tiles)
+            tile1.selected = true;
+            tile2.selected = true;
+        }
     }
 }
 
