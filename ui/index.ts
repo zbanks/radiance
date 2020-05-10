@@ -1467,12 +1467,9 @@ class Graph extends HTMLElement {
         const cc = ccs[0];
 
         // See if the edge we dropped on is in the CC
-        const allEdges = cc.internalEdges.concat(cc.inputEdges).concat(cc.outputEdges);
-        for (let ei of allEdges) {
-            const edge = this.nodes.edges[ei];
-            const fromUID = this.nodes.vertices[edge.fromVertex];
-            const toUID = this.nodes.vertices[edge.toVertex];
-            if (activeDropTarget.fromUID == fromUID && activeDropTarget.toUID == toUID && activeDropTarget.toInput == edge.toInput) {
+        for (let v of cc.vertices) {
+            const uid = this.nodes.vertices[v];
+            if (activeDropTarget.fromUID == uid || activeDropTarget.toUID == uid) {
                 // Can't drop onto an edge that is part of the CC
                 console.log("Can't drop onto an edge that is part of the lifted CC");
                 return;
