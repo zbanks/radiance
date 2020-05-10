@@ -59,7 +59,7 @@ impl Library {
     pub fn load_all(&self) {
         let lib = Rc::clone(&self.library_ref);
         spawn_local(async move {
-            let list_text = fetch_url("/effect_list.txt").await.unwrap();
+            let list_text = fetch_url("./effect_list.txt").await.unwrap();
             info!("{}", list_text);
             let futs = list_text
                 .lines()
@@ -73,7 +73,7 @@ impl Library {
             .effects
             .insert(effect_name.to_string(), Status::Pending);
         async move {
-            let url = format!("/effects/{}.glsl", effect_name);
+            let url = format!("./effects/{}.glsl", effect_name);
             let text = match fetch_url(&url).await {
                 Ok(source) => Status::Done(source),
                 Err(e) => {
@@ -95,5 +95,10 @@ impl Library {
             .get(effect_name)
             .cloned()
             .unwrap_or(Status::Invalid)
+    }
+
+    pub fn effect_list(&self) -> Vec<String> {
+        let lib = self.library_ref.borrow();
+        lib.effects.keys().cloned().collect()
     }
 }
