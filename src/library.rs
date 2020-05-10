@@ -1,4 +1,4 @@
-use crate::err::{Error, Result};
+use crate::err::Result;
 
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,7 @@ struct LibraryRef {
 #[serde(rename_all = "camelCase", tag = "type")]
 #[derive(Clone, Serialize)]
 enum Entry {
+    #[serde(rename_all = "camelCase")]
     Effect { source_hash: ContentHash },
 }
 
@@ -97,21 +98,18 @@ impl Library {
             .insert(effect_name.to_string(), Status::Pending);
         async move {
             let url = format!("./effects/{}.glsl", effect_name);
-            let status = match fetch_url(&url).await {
+            let effect_name = effect_name.to_string();
+            match fetch_url(&url).await {
                 Ok(source) => {
-                    let entry = Entry::Effect {
-                        source_hash: lib.borrow_mut().content.insert(source),
-                    };
-                    Status::Loaded(entry)
+                    lib.borrow_mut().set_effect_source(effect_name, source);
                 }
                 Err(e) => {
                     error!("Failed to fetch {}: {}", url, e);
-                    Status::Failed(e.to_string())
+                    lib.borrow_mut()
+                        .items
+                        .insert(effect_name, Status::Failed(e.to_string()));
                 }
-            };
-            lib.borrow_mut()
-                .items
-                .insert(effect_name.to_string(), status);
+            }
         }
         .await
     }
@@ -137,6 +135,12 @@ impl Library {
         }
     }
 
+    pub fn set_effect_source(&self, name: String, source: String) {
+        self.library_ref
+            .borrow_mut()
+            .set_effect_source(name, source)
+    }
+
     pub fn items(&self) -> JsonValue {
         let lib = self.library_ref.borrow();
         serde_json::to_value(&lib.items).unwrap_or(JsonValue::Null)
@@ -145,6 +149,14 @@ impl Library {
     pub fn content(&self, hash: &ContentHash) -> Option<String> {
         let lib = self.library_ref.borrow();
         lib.content.get(hash).cloned()
+    }
+}
+
+impl LibraryRef {
+    fn set_effect_source(&mut self, name: String, source: String) {
+        let hash = self.content.insert(source);
+        let entry = Entry::Effect { source_hash: hash };
+        self.items.insert(name, Status::Loaded(entry));
     }
 }
 

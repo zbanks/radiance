@@ -293,4 +293,10 @@ impl Context {
             .map(|x| x.into())
             .ok_or_else(|| format!("Invalid hash: {:?}", hash).into())
     }
+
+    #[wasm_bindgen(js_name=setEffectSource)]
+    pub fn set_effect_source(&self, effect_name: String, effect_source: String) -> JsResult<()> {
+        self.library.set_effect_source(effect_name, effect_source);
+        Ok(())
+    }
 }
