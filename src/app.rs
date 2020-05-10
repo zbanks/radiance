@@ -299,4 +299,10 @@ impl Context {
         self.library.set_effect_source(effect_name, effect_source);
         Ok(())
     }
+
+    #[wasm_bindgen(js_name=onLibraryChanged)]
+    pub fn set_library_changed(&self, callback: js_sys::Function) -> JsResult<()> {
+        self.library.set_changed(callback);
+        Ok(())
+    }
 }

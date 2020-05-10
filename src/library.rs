@@ -8,7 +8,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
@@ -20,6 +20,7 @@ pub struct Library {
 struct LibraryRef {
     items: HashMap<String, Status<Entry>>,
     content: Content,
+    changed: Option<js_sys::Function>,
 }
 
 #[serde(rename_all = "camelCase", tag = "type")]
@@ -77,6 +78,7 @@ impl Library {
         let library_ref = LibraryRef {
             items: Default::default(),
             content: Default::default(),
+            changed: Default::default(),
         };
 
         Library {
@@ -93,7 +95,8 @@ impl Library {
                         .lines()
                         .map(|name| Self::load_effect(Rc::clone(&lib), name));
                     futures::future::join_all(futs).await;
-                },
+                    lib.borrow().changed_callback();
+                }
                 Err(e) => {
                     error!("Unable to fetch effects_list; no effects will load ({})", e);
                 }
@@ -151,26 +154,40 @@ impl Library {
     pub fn set_effect_source(&self, name: String, source: String) {
         self.library_ref
             .borrow_mut()
-            .set_effect_source(name, source)
+            .set_effect_source(name, source);
+        self.library_ref.borrow().changed_callback();
     }
 
     pub fn items(&self) -> JsonValue {
-        let lib = self.library_ref.borrow();
-        //serde_json::to_value(&lib.items).unwrap_or(JsonValue::Null)
-        serde_json::to_value(&lib.items).unwrap()
+        self.library_ref.borrow().items()
     }
 
     pub fn content(&self, hash: &ContentHash) -> Option<String> {
         let lib = self.library_ref.borrow();
         lib.content.get(hash).cloned()
     }
+
+    pub fn set_changed(&self, callback: js_sys::Function) {
+        self.library_ref.borrow_mut().changed = Some(callback);
+    }
 }
 
 impl LibraryRef {
+    fn items(&self) -> JsonValue {
+        serde_json::to_value(&self.items).unwrap()
+    }
+
     fn set_effect_source(&mut self, name: String, source: String) {
         let hash = self.content.insert(source);
         let entry = Entry::Effect { source_hash: hash };
         self.items.insert(name, Status::Loaded(entry));
+    }
+
+    fn changed_callback(&self) {
+        let items = JsValue::from_serde(&self.items()).unwrap();
+        if let Some(callback) = &self.changed {
+            let _ = callback.call1(&JsValue::NULL, &items);
+        }
     }
 }
 
