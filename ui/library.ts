@@ -22,7 +22,7 @@ export class Library extends HTMLElement {
         `;
         this.nodeNameInput = shadow.querySelector("#nodeName");
         document.addEventListener('keypress', this.onKeyPress.bind(this));
-        this.nodeNameInput.addEventListener('keypress', this.onTextBoxKeyPress.bind(this));
+        this.nodeNameInput.addEventListener('keydown', this.onTextBoxKeyPress.bind(this));
     }
 
     onKeyPress(event: KeyboardEvent) {
@@ -33,12 +33,17 @@ export class Library extends HTMLElement {
     }
 
     onTextBoxKeyPress(event: KeyboardEvent) {
+        console.log(event.code);
         if (event.code == "Enter") {
             let nodeName = this.nodeNameInput.value.trim();
             if (nodeName != "" && this.graph !== undefined) {
                 this.graph.addNode({nodeType: "EffectNode", name: nodeName});
             }
             this.nodeNameInput.value = "";
+            this.blur();
+        } else if (event.key == "Escape") {
+            this.nodeNameInput.value = "";
+            this.blur();
         }
     }
 }

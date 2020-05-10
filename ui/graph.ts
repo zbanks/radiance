@@ -1134,7 +1134,10 @@ export class Graph extends HTMLElement {
         }
 
         // Insert after last clicked tile
-        const nodeVertexIndex = this.nodes.vertices.indexOf(this.lastTile.uid);
+        let nodeVertexIndex = -1;
+        if (this.lastTile !== undefined) {
+            nodeVertexIndex = this.nodes.vertices.indexOf(this.lastTile.uid);
+        }
         if (nodeVertexIndex >= 0) {
             const edgesToRemove = this.nodes.downstreamEdges[nodeVertexIndex];
             const edgesToAdd = edgesToRemove.map(edgeIndex => {
