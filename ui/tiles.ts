@@ -1,4 +1,4 @@
-import {VideoNodeTile} from "./graph";
+import {VideoNodeTile, AdjustEventDetail} from "./graph";
 
 class EffectNodeTile extends VideoNodeTile {
     intensitySlider: HTMLInputElement;
@@ -30,7 +30,7 @@ class EffectNodeTile extends VideoNodeTile {
         this.titleDiv = this.querySelector("#title");
         this.intensitySlider.addEventListener("input", this.intensitySliderChanged.bind(this));
 
-        this.addEventListener("wheel", this.onScroll.bind(this));
+        this.addEventListener("adjust", this.onAdjust.bind(this));
     }
 
     updateFromState(data: any) {
@@ -56,8 +56,9 @@ class EffectNodeTile extends VideoNodeTile {
         this.graph.context.setNodeState(this.uid, state);
     }
 
-    onScroll(event: WheelEvent) {
-        this.intensitySlider.value = (parseFloat(this.intensitySlider.value) + event.deltaY * -0.0003).toString();
+    onAdjust(event: CustomEvent) {
+        const detail: AdjustEventDetail = event.detail;
+        this.intensitySlider.value = (parseFloat(this.intensitySlider.value) + detail.amountRelative).toString();
         this.intensitySliderChanged();
     }
 }

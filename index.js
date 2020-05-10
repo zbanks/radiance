@@ -46,4 +46,7 @@ customElements.whenDefined("radiance-graph").then(() => {
 
     graph.context.flush();
     console.log(graph.context.state());
+
+    let library = document.querySelector("#library");
+    library.graph = graph;
 });

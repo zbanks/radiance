@@ -1,3 +1,7 @@
+// Need to expose this to build the graph
 export {Graph} from "./graph";
-export {Flickable} from "./flickable";
+
+// Only need these to get their customElements
+import "./flickable";
 import "./tiles";
+import "./library";

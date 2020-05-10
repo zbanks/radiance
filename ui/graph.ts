@@ -3,6 +3,11 @@ import {GraphData, Edge, ConnectedComponent} from "./graph_data";
 
 type UID = number;
 
+export interface AdjustEventDetail {
+    control: number; // Which control to adjust (0 = primary, 1 = secondary, ...)
+    amountRelative: number; // How much to adjust it (relative to current value)
+}
+
 export class VideoNodeTile extends HTMLElement {
     nInputs: number;
     inputHeights: number[];
@@ -128,6 +133,7 @@ export class VideoNodeTile extends HTMLElement {
         this.tabIndex = 0;
 
         this.addEventListener('keypress', this.keyPress.bind(this));
+        this.addEventListener('wheel', this.onScroll.bind(this));
     }
 
     width() {
@@ -322,6 +328,11 @@ export class VideoNodeTile extends HTMLElement {
                 console.log(component);
             });
         }
+    }
+
+    onScroll(event: WheelEvent) {
+        this.graph.onScroll(event);
+        event.preventDefault();
     }
 }
 
@@ -1113,6 +1124,55 @@ export class Graph extends HTMLElement {
             tile1.selected = true;
             tile2.selected = true;
         }
+    }
+
+    addNode(nodeState: object) {
+        const uid = this.context.addNode(nodeState);
+        if (uid === undefined) {
+            console.log("Error adding node");
+            return;
+        }
+
+        // Insert after last clicked tile
+        const nodeVertexIndex = this.nodes.vertices.indexOf(this.lastTile.uid);
+        if (nodeVertexIndex >= 0) {
+            const edgesToRemove = this.nodes.downstreamEdges[nodeVertexIndex];
+            const edgesToAdd = edgesToRemove.map(edgeIndex => {
+                return {
+                    fromUID: uid,
+                    toUID: this.nodes.vertices[this.nodes.edges[edgeIndex].toVertex],
+                    toInput: this.nodes.edges[edgeIndex].toInput,
+                };
+            });
+            edgesToAdd.push({
+                fromUID: this.nodes.vertices[nodeVertexIndex],
+                toUID: uid,
+                toInput: 0,
+            });
+
+            edgesToRemove.forEach(edgeIndex => {
+                this.removeEdgeByIndex(edgeIndex);
+            });
+            edgesToAdd.forEach(edge => {
+                this.context.addEdge(edge.fromUID, edge.toUID, edge.toInput);
+            });
+        } // Last interacted tile was deleted, if < 0. Add as orphan in that case.
+
+        console.log(uid);
+        this.context.flush();
+    }
+
+    adjustSelected(detail: AdjustEventDetail) {
+        const newEvent = new CustomEvent("adjust", {detail: detail})
+        this.tiles.vertices.forEach(tile => {
+            if (tile.selected) {
+                tile.dispatchEvent(newEvent);
+            }
+        });
+    }
+
+    onScroll(event: WheelEvent) {
+        this.adjustSelected({control: 0, amountRelative: event.deltaY * -0.0003});
     }
 }
 
