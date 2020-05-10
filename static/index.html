@@ -17,12 +17,17 @@
             height: 100%;
         }
 
-        #library {
+        #libraryDrawer {
             position: fixed;
             left: 0px;
             top: 0px;
             bottom: 0px;
             width: 400px;
+        }
+
+        #library {
+            width: 100%;
+            height: 100%;
         }
         </style>
     </head>
@@ -31,6 +36,8 @@
         <radiance-flickable id="flickable">
             <radiance-graph id="graph"></radiance-graph>
         </radiance-flickable>
-        <radiance-library id="library"></radiance-library>
+        <radiance-drawer id="libraryDrawer" closed>
+            <radiance-library id="library"></radiance-library>
+        </radiance-drawer>
     </body>
 </html>

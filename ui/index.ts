@@ -5,3 +5,4 @@ export {Graph} from "./graph";
 import "./flickable";
 import "./tiles";
 import "./library";
+import "./drawer";

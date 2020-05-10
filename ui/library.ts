@@ -4,19 +4,13 @@ export class Library extends HTMLElement {
     nodeNameInput: HTMLInputElement;
     graph: Graph;
 
-    constructor() {
-        super();
-    }
-
     connectedCallback() {
         const shadow = this.attachShadow({mode: 'open'});
         shadow.innerHTML = `
             <style>
             :host {
                 display: flex;
-                padding: 10px;
                 flex-direction: column;
-                background-color: #333333CC;
             }
 
             #nodeName {
