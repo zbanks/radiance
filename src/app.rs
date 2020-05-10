@@ -1,7 +1,7 @@
 use crate::audio::Audio;
 use crate::err::{Error, JsResult, Result};
 use crate::graphics::RenderChain;
-use crate::library::Library;
+use crate::library::{ContentHash, Library};
 use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
@@ -278,5 +278,19 @@ impl Context {
         let id: VideoNodeId = id.into_serde().map_err(Error::serde)?;
         let v: serde_json::Value = state.into_serde().map_err(Error::serde)?;
         self.model.node_mut(id)?.set_state(v).map_err(|e| e.into())
+    }
+
+    #[wasm_bindgen(js_name=library)]
+    pub fn library(&self) -> JsResult<JsValue> {
+        JsValue::from_serde(&self.library.items()).map_err(|e| Error::serde(e).into())
+    }
+
+    #[wasm_bindgen(js_name=libraryContent)]
+    pub fn library_content(&self, hash: JsValue) -> JsResult<JsValue> {
+        let hash: ContentHash = hash.into_serde().map_err(Error::serde)?;
+        self.library
+            .content(&hash)
+            .map(|x| x.into())
+            .ok_or_else(|| format!("Invalid hash: {:?}", hash).into())
     }
 }

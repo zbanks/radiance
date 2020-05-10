@@ -195,7 +195,7 @@ impl EffectNode {
             Status::Running => (),
             Status::CompileError(_) => (),
             Status::LoadingShader => {
-                if let LibraryStatus::Done(program) = self.library.effect_source(&self.name) {
+                if let LibraryStatus::Loaded(program) = self.library.effect_source(&self.name) {
                     if let Err(e) = self.set_source(program) {
                         self.status = Status::CompileError(e.to_string());
                     } else {
