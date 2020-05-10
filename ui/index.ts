@@ -651,6 +651,8 @@ class EffectNodeTile extends VideoNodeTile {
         this.intensitySlider = this.querySelector("#intensitySlider");
         this.titleDiv = this.querySelector("#title");
         this.intensitySlider.addEventListener("input", this.intensitySliderChanged.bind(this));
+
+        this.addEventListener("wheel", this.onScroll.bind(this));
     }
 
     updateFromState(data: any) {
@@ -666,14 +668,19 @@ class EffectNodeTile extends VideoNodeTile {
         }
     }
 
-    intensitySliderChanged(event: InputEvent) {
+    intensitySliderChanged() {
         if (this.intensitySliderBlocked) {
             return;
         }
         const newIntensity = parseFloat(this.intensitySlider.value);
-        let state = this.graph.context.nodeState(this.uid, "local");
+        let state = this.graph.context.nodeState(this.uid, "local"); // XXX backend can do sparse updates?
         state.intensity = newIntensity;
         this.graph.context.setNodeState(this.uid, state);
+    }
+
+    onScroll(event: WheelEvent) {
+        this.intensitySlider.value = (parseFloat(this.intensitySlider.value) + event.deltaY * -0.0003).toString();
+        this.intensitySliderChanged();
     }
 }
 
