@@ -23,11 +23,14 @@ struct LibraryRef {
     changed: Option<js_sys::Function>,
 }
 
-#[serde(rename_all = "camelCase", tag = "type")]
+#[serde(tag = "nodeType")]
 #[derive(Clone, Serialize)]
 enum Entry {
     #[serde(rename_all = "camelCase")]
-    Effect { source_hash: ContentHash },
+    EffectNode {
+        name: String,
+        source_hash: ContentHash,
+    },
 }
 
 #[derive(Clone)]
@@ -136,7 +139,9 @@ impl Library {
             .cloned()
             .unwrap_or(Status::Invalid);
         match status {
-            Status::Loaded(Entry::Effect { ref source_hash }) => {
+            Status::Loaded(Entry::EffectNode {
+                ref source_hash, ..
+            }) => {
                 if let Some(source) = lib.content.get(source_hash) {
                     Status::Loaded(source.clone())
                 } else {
@@ -179,7 +184,10 @@ impl LibraryRef {
 
     fn set_effect_source(&mut self, name: String, source: String) {
         let hash = self.content.insert(source);
-        let entry = Entry::Effect { source_hash: hash };
+        let entry = Entry::EffectNode {
+            name: name.clone(),
+            source_hash: hash,
+        };
         self.items.insert(name, Status::Loaded(entry));
     }
 
