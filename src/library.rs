@@ -31,6 +31,10 @@ enum Entry {
         name: String,
         source_hash: ContentHash,
     },
+    #[serde(rename_all = "camelCase")]
+    OutputNode { name: String },
+    #[serde(rename_all = "camelCase")]
+    MediaNode { name: String },
 }
 
 #[derive(Clone)]
@@ -78,14 +82,26 @@ async fn fetch_url(url: &str) -> Result<String> {
 
 impl Library {
     pub fn new() -> Library {
-        let library_ref = LibraryRef {
+        let mut lib = LibraryRef {
             items: Default::default(),
             content: Default::default(),
             changed: Default::default(),
         };
+        lib.items.insert(
+            "media".to_string(),
+            Status::Loaded(Entry::MediaNode {
+                name: "media".to_string(),
+            }),
+        );
+        lib.items.insert(
+            "output".to_string(),
+            Status::Loaded(Entry::OutputNode {
+                name: "output".to_string(),
+            }),
+        );
 
         Library {
-            library_ref: Rc::new(RefCell::new(library_ref)),
+            library_ref: Rc::new(RefCell::new(lib)),
         }
     }
 
@@ -150,6 +166,7 @@ impl Library {
                     }
                 }
             }
+            Status::Loaded(_) => Status::Invalid,
             Status::Pending => Status::Pending,
             Status::Failed { error } => Status::Failed { error },
             Status::Invalid => Status::Invalid,
