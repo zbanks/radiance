@@ -491,6 +491,7 @@ export class Graph extends HTMLElement {
     currentDragCC: ConnectedComponent; // The entity currently being dragged
     dropTargets: DropTarget[];
     lastTile: VideoNodeTile;
+    selectUID: number; // Which tile to select after graph reconciliation
 
     constructor() {
         super();
@@ -636,6 +637,11 @@ export class Graph extends HTMLElement {
                             const state = this.context.nodeState(this.nodes.vertices[upstreamNode], "all");
                             const upstreamTile = this.addTile(nodeUID, state);
                             upstreamTileVertexIndex = this.tiles.addVertex(upstreamTile);
+                            if (upstreamTile.uid == this.selectUID) {
+                                this.select(upstreamTile, false, false, false);
+                                upstreamTile.focus();
+                                this.selectUID = undefined;
+                            }
                         }
                         tileEdgesToCreate.push({
                             fromVertex: upstreamTileVertexIndex,
@@ -1161,7 +1167,7 @@ export class Graph extends HTMLElement {
             });
         } // Last interacted tile was deleted, if < 0. Add as orphan in that case.
 
-        console.log(uid);
+        this.selectUID = uid;
         this.context.flush();
     }
 
