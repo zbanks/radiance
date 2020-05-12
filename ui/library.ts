@@ -7,6 +7,7 @@ export class Library extends HTMLElement {
     graph: Graph;
     context: Context;
     library: object;
+    bestMatch: string;
 
     connectedCallback() {
         const shadow = this.attachShadow({mode: 'open'});
@@ -35,6 +36,7 @@ export class Library extends HTMLElement {
         this.list = shadow.querySelector("#list");
         document.addEventListener('keypress', this.onKeyPress.bind(this));
         this.nodeNameInput.addEventListener('keydown', this.onTextBoxKeyPress.bind(this));
+        this.nodeNameInput.addEventListener('input', this.onTextBoxInput.bind(this));
     }
 
     attachGraph(graph: Graph) {
@@ -48,23 +50,47 @@ export class Library extends HTMLElement {
         this.libraryChanged();
     }
 
-    libraryChanged() {
-        this.library = this.context.library();
+    renderLibrary() {
+        const filterText = this.nodeNameInput.value;
+
+        let filteredLibrary;
+        if (filterText == "") {
+            filteredLibrary = this.library;
+            this.bestMatch = undefined;
+        } else {
+            filteredLibrary = {};
+            for (const k in this.library) {
+                const item = this.library[k];
+                if ("name" in item && item.name.startsWith(filterText)) {
+                    filteredLibrary[k] = item;
+                }
+            }
+            this.bestMatch = Object.keys(filteredLibrary)[0];
+        }
+
         const ul = document.createElement("ul");
         this.list.innerHTML = "";
         this.list.appendChild(ul);
-        for (const item in this.library) {
+        for (const item in filteredLibrary) {
             const li = document.createElement("li");
-            li.textContent = this.library[item].name;
+            li.textContent = filteredLibrary[item].name;
             li.addEventListener("click", event => {
-                this.instantiateFromLibrary(event, item);
+                this.instantiateFromLibrary(item);
+                this.done();
             });
             ul.appendChild(li);
         }
     }
 
-    instantiateFromLibrary(event: MouseEvent, item: string) {
-        this.graph.addNode(this.library[item]);
+    libraryChanged() {
+        this.library = this.context.library();
+        this.renderLibrary();
+    }
+
+    instantiateFromLibrary(item: string) {
+        if (this.graph !== undefined) {
+            this.graph.addNode(this.library[item]);
+        }
     }
 
     onKeyPress(event: KeyboardEvent) {
@@ -74,17 +100,24 @@ export class Library extends HTMLElement {
         }
     }
 
+    onTextBoxInput(event: InputEvent) {
+        this.renderLibrary();
+    }
+
+    done() {
+        this.nodeNameInput.value = "";
+        this.renderLibrary();
+        this.blur();
+    }
+
     onTextBoxKeyPress(event: KeyboardEvent) {
         if (event.code == "Enter") {
-            let nodeName = this.nodeNameInput.value.trim();
-            if (nodeName != "" && this.graph !== undefined) {
-                this.graph.addNode({nodeType: "EffectNode", name: nodeName});
+            if (this.bestMatch !== undefined) {
+                this.instantiateFromLibrary(this.bestMatch);
             }
-            this.nodeNameInput.value = "";
-            this.blur();
+            this.done();
         } else if (event.key == "Escape") {
-            this.nodeNameInput.value = "";
-            this.blur();
+            this.done();
         }
     }
 }
