@@ -6,3 +6,4 @@ import "./flickable";
 import "./tiles";
 import "./library";
 import "./drawer";
+import "./fps";

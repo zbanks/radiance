@@ -29,6 +29,14 @@
             height: 100%;
             color: white;
         }
+
+        #fps {
+            position: fixed;
+            top: 0px;
+            right: 0px;
+            font-size: small;
+            color: white;
+        }
         </style>
     </head>
     <body>
@@ -39,5 +47,6 @@
         <radiance-drawer id="libraryDrawer" closed>
             <radiance-library id="library"></radiance-library>
         </radiance-drawer>
+        <radiance-fps-counter id="fps"></radiance-fps-counter>
     </body>
 </html>
