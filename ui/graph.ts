@@ -527,6 +527,7 @@ export class Graph extends HTMLElement {
 
         this.context = context;
         this.context.onGraphChanged(this.nodesChanged.bind(this));
+        this.nodesChanged();
         window.requestAnimationFrame(this.render.bind(this));
     }
 

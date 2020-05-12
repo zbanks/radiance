@@ -3,8 +3,9 @@ import("./pkg")
 
 import {Context} from "./pkg/index.js";
 
-let graph = document.querySelector("#graph");
-customElements.whenDefined("radiance-graph").then(() => {
+Promise.all(["radiance-graph", "radiance-library"].map(el => customElements.whenDefined(el))).then(initialize);
+
+function initialize() {
     let graph = document.querySelector("#graph");
 
     const vertices = [
@@ -48,5 +49,5 @@ customElements.whenDefined("radiance-graph").then(() => {
     console.log(graph.context.state());
 
     let library = document.querySelector("#library");
-    library.graph = graph;
-});
+    library.attachGraph(graph);
+}
