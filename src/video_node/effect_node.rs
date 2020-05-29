@@ -113,14 +113,14 @@ impl EffectNode {
     }
 
     /// Change the EffectNode's name, which also recompiles the shader source
-    fn set_name(&mut self, name: &str) -> Result<()> {
+    fn set_name(&mut self, name: &str) -> Result<bool> {
         if name == self.name.as_str() {
-            return Ok(());
+            return Ok(false);
         }
         self.name = name.to_string();
         self.status = Status::LoadingShader;
         self.poll_status();
-        Ok(())
+        Ok(true)
     }
 
     fn set_source(&mut self, program: String) -> Result<()> {
@@ -309,22 +309,34 @@ impl IVideoNode for EffectNode {
     fn set_state(&mut self, raw_state: JsonValue) -> Result<()> {
         let state: LocalState = serde_json::from_value(raw_state)?;
         if let Some(name) = state.name {
-            self.set_name(&name)?;
+            if self.set_name(&name)? {
+                self.set_dirty(DetailLevel::All);
+            }
         }
         if let Some(intensity) = state.intensity {
-            self.intensity = intensity;
+            if self.intensity != intensity {
+                self.intensity = intensity;
+                self.set_dirty(DetailLevel::All);
+            }
         }
         if let Some(frequency) = state.frequency {
-            self.frequency = frequency;
+            if self.frequency != frequency {
+                self.frequency = frequency;
+                self.set_dirty(DetailLevel::All);
+            }
         }
         if let Some(n_inputs) = state.n_inputs {
             // n_inputs can't be changed if the EffectNode is running
             match self.status {
                 Status::Running => (),
-                _ => self.n_inputs = n_inputs,
+                _ => {
+                    if self.n_inputs != n_inputs {
+                        self.n_inputs = n_inputs;
+                        self.set_dirty(DetailLevel::All);
+                    }
+                }
             }
         }
-        self.set_dirty(DetailLevel::All);
         Ok(())
     }
 

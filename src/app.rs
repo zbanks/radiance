@@ -154,7 +154,8 @@ impl Context {
 
     #[wasm_bindgen(js_name=setState)]
     pub fn set_state(&mut self, new_state: JsValue) -> JsResult<()> {
-        self.model.set_state(new_state.into_serde().map_err(Error::serde)?)
+        self.model
+            .set_state(new_state.into_serde().map_err(Error::serde)?)
             .map_err(|e| e.into())
     }
 
