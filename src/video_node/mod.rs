@@ -18,7 +18,7 @@ pub use output_node::OutputNode;
 
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct VideoNodeId(usize);
+pub struct VideoNodeId(#[serde(with = "str_usize")] usize);
 
 impl VideoNodeId {
     fn new() -> VideoNodeId {
@@ -28,6 +28,25 @@ impl VideoNodeId {
             NEXT_ID
         };
         VideoNodeId(id)
+    }
+}
+
+mod str_usize {
+    use serde::{self, Deserialize, Deserializer, Serializer};
+    pub fn serialize<S>(x: &usize, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = format!("{}", x);
+        serializer.serialize_str(&s)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<usize, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
     }
 }
 

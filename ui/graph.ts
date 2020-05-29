@@ -1,7 +1,7 @@
 import {Context} from "../pkg/index.js";
 import {GraphData, Edge, ConnectedComponent} from "./graph_data";
 
-type UID = number;
+type UID = string;
 
 export interface AdjustEventDetail {
     control: number; // Which control to adjust (0 = primary, 1 = secondary, ...)
@@ -388,8 +388,8 @@ class VideoNodePreview extends HTMLElement {
 
 class DropTarget extends HTMLElement {
     inner: HTMLElement;
-    fromUID: number;
-    toUID: number;
+    fromUID: UID;
+    toUID: UID;
     toInput: number;
     x: number;
     y: number;
@@ -481,7 +481,6 @@ class DropTarget extends HTMLElement {
 export class Graph extends HTMLElement {
     // This custom element creates the visual context for displaying connected nodes.
 
-    nextUID: number;
     nodes: GraphData<UID>; // Vertices are node UIDs
     tiles: GraphData<VideoNodeTile>; // Vertices are tiles
     context: Context;
@@ -491,12 +490,11 @@ export class Graph extends HTMLElement {
     currentDragCC: ConnectedComponent; // The entity currently being dragged
     dropTargets: DropTarget[];
     lastTile: VideoNodeTile;
-    selectUID: number; // Which tile to select after graph reconciliation
+    selectUID: UID; // Which tile to select after graph reconciliation
 
     constructor() {
         super();
 
-        this.nextUID = 0;
         this.relayoutRequested = false;
         this.dropTargets = [];
         this.tiles = new GraphData([], []);
@@ -531,7 +529,7 @@ export class Graph extends HTMLElement {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
-    addTile(uid: number, state) { // TODO add type to state
+    addTile(uid: UID, state) { // TODO add type to state
         const type = state.nodeType;
         let tile: VideoNodeTile;
         if (type == "EffectNode") {
@@ -554,7 +552,7 @@ export class Graph extends HTMLElement {
         this.removeChild(tile);
     }
 
-    addDropTarget(fromUID: number, toUID: number, toInput: number) {
+    addDropTarget(fromUID: UID, toUID: UID, toInput: number) {
         const dropTarget = <DropTarget>document.createElement("radiance-droptarget");
         dropTarget.fromUID = fromUID;
         dropTarget.toUID = toUID;
@@ -572,14 +570,36 @@ export class Graph extends HTMLElement {
     }
 
     nodesChanged() {
-        let nodes = this.context.state();
-        this.nodes = new GraphData(nodes.vertices, nodes.edges);
+        let edge_graph: {[uid: string]: {[index: number]: string}} = this.context.state();
+
+        // Convert graph representation into lists of verticies & edges
+        let indexForUID: {[uid: string]: number} = {};
+        let vertices: UID[] = [];
+        Object.keys(edge_graph).forEach(uid => {
+            indexForUID[uid] = vertices.length;
+            vertices.push(uid);
+        });
+
+        let edges: Edge[] = [];
+        Object.entries(edge_graph).forEach(([uid, incoming]) => {
+            Object.entries(incoming).forEach(([index, fromUID]) => {
+                if (fromUID !== null) {
+                    edges.push({
+                        fromVertex: indexForUID[fromUID],
+                        toVertex: indexForUID[uid],
+                        toInput: +index,
+                    });
+                }
+            });
+        });
+
+        this.nodes = new GraphData(vertices, edges);
 
         // Convert the nodes DAG into a tree
 
         const origNumTileVertices = this.tiles.vertices.length;
 
-        let tileForUID : {[uid: number]: number} = {};
+        let tileForUID : {[uid: string]: number} = {};
 
         // There can be multiple tiles for one UID... this takes the last one. Probably not always the best option.
         this.tiles.vertices.forEach((vertex, index) => {
@@ -916,7 +936,7 @@ export class Graph extends HTMLElement {
     }
 
     deleteSelected() {
-        let uidsToDelete: number[] = [];
+        let uidsToDelete: UID[] = [];
         this.tiles.vertices.forEach(tile => {
             if (tile.selected && uidsToDelete.indexOf(tile.uid) < 0) {
                 uidsToDelete.push(tile.uid);
@@ -1030,7 +1050,7 @@ export class Graph extends HTMLElement {
             return; // Tiles were not moved anywhere
         }
 
-        let uidsToMove: number[] = [];
+        let uidsToMove: UID[] = [];
         this.currentDragCC.vertices.forEach(tileIndex => {
             const uid = this.tiles.vertices[tileIndex].uid;
             if (uidsToMove.indexOf(uid) < 0) {

@@ -9,14 +9,21 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 // Graph is absracted over T to facilitate testing; but is practically for VideoNodeId
-struct Graph<T: Copy + Ord + std::fmt::Debug> {
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Graph<T: Ord> {
     /// Map of to_vertex -> [from_vertex_0, from_vertex_1, ...]
     edges: BTreeMap<T, Vec<Option<T>>>,
+    #[serde(skip, default = "empty_refcell")]
     toposort_cache: RefCell<Option<Vec<T>>>,
 }
 
+fn empty_refcell<T>() -> RefCell<Option<T>> {
+    RefCell::new(None)
+}
+
 #[allow(dead_code, unused_variables)]
-impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
+impl<T: Copy + Ord + Eq + std::fmt::Debug> Graph<T> {
     pub fn new() -> Graph<T> {
         Graph {
             edges: Default::default(),
@@ -196,6 +203,12 @@ impl<T: Copy + Ord + std::fmt::Debug> Graph<T> {
     }
 }
 
+impl<T: PartialEq + Ord> PartialEq<Graph<T>> for Graph<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.edges == other.edges
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -359,26 +372,23 @@ impl Model {
     }
 
     pub fn state(&self) -> JsonValue {
-        let mut nodes_vec = self.nodes().collect::<Vec<_>>();
-        nodes_vec.sort_by_key(|n| n.id());
-        let node_ids = nodes_vec.iter().map(|n| n.id()).collect();
-        let id_map: HashMap<VideoNodeId, usize> = nodes_vec
-            .iter()
-            .enumerate()
-            .map(|(i, n)| (n.id(), i))
-            .collect();
+        serde_json::to_value(&self.graph).unwrap()
+    }
 
-        let edges = self
-            .graph
-            .all_edges()
-            .map(|(a, b, i)| StateEdge {
-                from_node: *id_map.get(&a).unwrap(),
-                to_node: *id_map.get(&b).unwrap(),
-                to_input: i,
-            })
-            .collect();
-        let state = State { node_ids, edges };
-        serde_json::to_value(&state).unwrap()
+    pub fn set_state(&mut self, state_obj: JsonValue) -> Result<()> {
+        let new_graph: Graph<VideoNodeId> = serde_json::from_value(state_obj)?;
+        if new_graph != self.graph {
+            if new_graph.toposort().is_ok() {
+                self.graph = new_graph;
+                *self.graph_dirty.borrow_mut() = true;
+                info!("Graph replaced");
+            } else {
+                info!("Graph not replaced; has cycle!");
+            }
+        } else {
+            info!("Graph not replaced; same");
+        }
+        Ok(())
     }
 
     pub fn flush(&self) -> bool {
