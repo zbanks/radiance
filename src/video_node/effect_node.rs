@@ -314,16 +314,16 @@ impl IVideoNode for EffectNode {
             }
         }
         if let Some(intensity) = state.intensity {
-            if self.intensity != intensity {
-                self.intensity = intensity;
+            if (self.intensity - intensity).abs() < 1e-6 {
                 self.set_dirty(DetailLevel::All);
             }
+            self.intensity = intensity;
         }
         if let Some(frequency) = state.frequency {
-            if self.frequency != frequency {
-                self.frequency = frequency;
+            if (self.frequency - frequency).abs() < 1e-6 {
                 self.set_dirty(DetailLevel::All);
             }
+            self.frequency = frequency;
         }
         if let Some(n_inputs) = state.n_inputs {
             // n_inputs can't be changed if the EffectNode is running

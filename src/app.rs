@@ -6,6 +6,8 @@ use crate::model::Model;
 use crate::video_node::{DetailLevel, IVideoNode, VideoNodeId};
 
 use log::*;
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -23,6 +25,13 @@ pub struct Context {
 
     graph_changed: Option<js_sys::Function>,
     node_changed: RefCell<HashMap<VideoNodeId, (DetailLevel, js_sys::Function)>>,
+    full_state_changed: Option<js_sys::Function>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FullState {
+    nodes: HashMap<VideoNodeId, JsonValue>,
+    graph: JsonValue,
 }
 
 #[allow(clippy::suspicious_else_formatting)]
@@ -54,6 +63,7 @@ impl Context {
             library,
             graph_changed: Default::default(),
             node_changed: Default::default(),
+            full_state_changed: Default::default(),
         })
     }
 
@@ -202,6 +212,10 @@ impl Context {
                 let state = self.state()?;
                 callback.call1(&JsValue::NULL, &state)?;
             }
+            if let Some(callback) = &self.full_state_changed {
+                let full_state = self.full_state()?;
+                callback.call1(&JsValue::NULL, &full_state)?;
+            }
             Ok(true)
         } else {
             Ok(false)
@@ -213,8 +227,10 @@ impl Context {
         self.node_changed
             .borrow_mut()
             .retain(|k, _v| node_ids.contains(k));
+        let mut any_dirty = false;
         for node in self.model.nodes() {
             if let Some(dirty_level) = node.flush() {
+                any_dirty = any_dirty || (dirty_level >= DetailLevel::Local);
                 if let Some((level, callback)) = self.node_changed.borrow().get(&node.id()) {
                     if *level >= dirty_level {
                         JsValue::from_serde(&node.state(*level))
@@ -223,6 +239,12 @@ impl Context {
                             .and_then(|state| callback.call1(&JsValue::NULL, state))?;
                     }
                 }
+            }
+        }
+        if any_dirty {
+            if let Some(callback) = &self.full_state_changed {
+                let full_state = self.full_state()?;
+                callback.call1(&JsValue::NULL, &full_state)?;
             }
         }
         Ok(())
@@ -310,6 +332,46 @@ impl Context {
     #[wasm_bindgen(js_name=onLibraryChanged)]
     pub fn set_library_changed(&self, callback: js_sys::Function) -> JsResult<()> {
         self.library.set_changed(callback);
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name=fullState)]
+    pub fn full_state(&self) -> JsResult<JsValue> {
+        let nodes = self
+            .model
+            .nodes()
+            .map(|node| (node.id(), node.state(DetailLevel::Local)))
+            .collect();
+        let graph = self.model.state();
+        let fs = FullState { nodes, graph };
+        serde_json::to_value(&fs)
+            .and_then(|v| JsValue::from_serde(&v))
+            .map_err(Error::serde)
+            .map_err(|e| e.into())
+    }
+
+    #[wasm_bindgen(js_name=setFullState)]
+    pub fn set_full_state(&mut self, new_full_state: JsValue) -> JsResult<()> {
+        let new_fs: FullState = new_full_state.into_serde().map_err(Error::serde)?;
+
+        new_fs
+            .nodes
+            .iter()
+            .map(|(id, state)| {
+                self.model
+                    .node_mut(*id)
+                    .and_then(|node| node.set_state(state.clone()))
+            })
+            .collect::<Result<_>>()?;
+
+        self.model.set_state(new_fs.graph)?;
+
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name=onFullStateChanged)]
+    pub fn set_full_state_changed(&mut self, callback: Option<js_sys::Function>) -> JsResult<()> {
+        self.full_state_changed = callback;
         Ok(())
     }
 }
