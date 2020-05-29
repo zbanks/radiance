@@ -302,8 +302,18 @@ impl IVideoNode for EffectNode {
         buffer_fbos.first().map(|fbo| Rc::clone(&fbo))
     }
 
-    fn state(&self, _level: DetailLevel) -> JsonValue {
-        serde_json::to_value(&self).unwrap()
+    fn state(&self, level: DetailLevel) -> JsonValue {
+        let mut state = serde_json::to_value(&self).unwrap();
+        if level < DetailLevel::All {
+            if let JsonValue::Object(ref mut state_map) = state {
+                state_map.remove("properties");
+                state_map.remove("time");
+                state_map.remove("status");
+                state_map.remove("header");
+                state_map.remove("uid");
+            }
+        }
+        state
     }
 
     fn set_state(&mut self, raw_state: JsonValue) -> Result<()> {
