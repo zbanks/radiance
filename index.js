@@ -20,9 +20,10 @@ function initialize() {
         {nodeType: "EffectNode", name: "melt", intensity: 0.4},
         {nodeType: "EffectNode", name: "composite", intensity: 0.5, nInputs: 2},
         {nodeType: "MediaNode"},
+        {nodeType: "OutputNode"},
     ];
     const edges = [
-        {fromVertex: 0, toVertex: 10, toInput: 0},
+        {fromVertex: 10, toVertex: 0, toInput: 0},
         {fromVertex: 5, toVertex: 1, toInput: 0},
         {fromVertex: 1, toVertex: 9, toInput: 1},
         {fromVertex: 2, toVertex: 3, toInput: 0},
@@ -32,7 +33,8 @@ function initialize() {
         {fromVertex: 6, toVertex: 7, toInput: 0},
         {fromVertex: 7, toVertex: 8, toInput: 0},
         {fromVertex: 8, toVertex: 9, toInput: 0},
-        {fromVertex: 10, toVertex: 2, toInput: 0},
+        {fromVertex: 0, toVertex: 2, toInput: 0},
+        {fromVertex: 9, toVertex: 11, toInput: 0},
     ];
 
     const context = new Context(document.querySelector("#canvas"), 512);

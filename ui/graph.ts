@@ -536,6 +536,8 @@ export class Graph extends HTMLElement {
             tile = <VideoNodeTile>document.createElement("radiance-effectnodetile");
         } else if (type == "MediaNode") {
             tile = <VideoNodeTile>document.createElement("radiance-medianodetile");
+        } else if (type == "OutputNode") {
+            tile = <VideoNodeTile>document.createElement("radiance-outputnodetile");
         } else {
             tile = <VideoNodeTile>document.createElement("radiance-videonodetile");
         }
@@ -795,9 +797,8 @@ export class Graph extends HTMLElement {
         // 4. From the widths, calculate the X-coordinates
         const setXCoordinate = (index: number, x: number) => {
             let tile = this.tiles.vertices[index];
-            tile.x = x;
-
             x -= tile.width();
+            tile.x = x;
 
             for (let i = 0; i < tile.nInputs; i++) {
                 let upstream = this.tiles.upstreamVertexIndex(index, i);
@@ -808,7 +809,7 @@ export class Graph extends HTMLElement {
         }
 
         for (let index of this.tiles.rootVertices) {
-            setXCoordinate(index, -this.tiles.vertices[index].width());
+            setXCoordinate(index, 0);
         }
 
         // 5. Compute total width & height, and offset all coordinates

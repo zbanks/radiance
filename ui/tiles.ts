@@ -81,5 +81,32 @@ class MediaNodeTile extends VideoNodeTile {
     }
 }
 
+class OutputNodeTile extends VideoNodeTile {
+    constructor() {
+        super();
+        this.nInputs = 1;
+    }
+
+    connectedCallback() {
+        super.connectedCallback();
+
+        this.innerHTML = `
+            <div style="font-family: sans-serif;" id="title">Output</div>
+            <hr style="margin: 3px; width: 80%;"></hr>
+            <radiance-videonodepreview style="flex: 1 1 auto;" id="preview"></radiance-videonodepreview>
+        `;
+        this.preview = this.querySelector("#preview");
+    }
+
+    width() {
+        return 300;
+    }
+
+    minInputHeight(input: number) {
+        return this.width() + 50;
+    }
+}
+
 customElements.define('radiance-effectnodetile', EffectNodeTile);
 customElements.define('radiance-medianodetile', MediaNodeTile);
+customElements.define('radiance-outputnodetile', OutputNodeTile);
