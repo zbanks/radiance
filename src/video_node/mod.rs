@@ -117,10 +117,15 @@ pub trait IVideoNode {
 impl VideoNode {
     pub fn from_serde(state: JsonValue, library: &Library) -> Result<VideoNode> {
         let node_type = state.get("nodeType").ok_or("missing 'nodeType'")?;
+        let id = if let Some(id_value) = state.get("uid") {
+            serde_json::from_value(id_value.clone())?
+        } else {
+            VideoNodeId::new()
+        };
         let mut node = match serde_json::from_value(node_type.clone())? {
-            VideoNodeDiscriminants::EffectNode => VideoNode::EffectNode(EffectNode::new(library)?),
-            VideoNodeDiscriminants::OutputNode => VideoNode::OutputNode(OutputNode::new()),
-            VideoNodeDiscriminants::MediaNode => VideoNode::MediaNode(MediaNode::new()?),
+            VideoNodeDiscriminants::EffectNode => VideoNode::EffectNode(EffectNode::new(id, library)?),
+            VideoNodeDiscriminants::OutputNode => VideoNode::OutputNode(OutputNode::new(id)),
+            VideoNodeDiscriminants::MediaNode => VideoNode::MediaNode(MediaNode::new(id)?),
         };
         node.set_state(state)?;
         Ok(node)

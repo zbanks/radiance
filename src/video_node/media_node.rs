@@ -27,7 +27,7 @@ pub struct MediaNode {
 }
 
 impl MediaNode {
-    pub fn new() -> Result<MediaNode> {
+    pub fn new(id: VideoNodeId) -> Result<MediaNode> {
         let video: HtmlVideoElement = web_sys::window()
             .ok_or("cannot get window")?
             .document()
@@ -44,7 +44,7 @@ impl MediaNode {
         })));
 
         let node = MediaNode {
-            id: VideoNodeId::new(),
+            id,
             node_type: VideoNodeDiscriminants::MediaNode,
             n_inputs: 1,
             video,

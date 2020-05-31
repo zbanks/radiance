@@ -79,8 +79,7 @@ impl Default for EffectHeader {
 }
 
 impl EffectNode {
-    pub fn new(library: &Library) -> Result<EffectNode> {
-        let id = VideoNodeId::new();
+    pub fn new(id: VideoNodeId, library: &Library) -> Result<EffectNode> {
         Ok(EffectNode {
             id,
             node_type: VideoNodeDiscriminants::EffectNode,
@@ -310,7 +309,6 @@ impl IVideoNode for EffectNode {
                 state_map.remove("time");
                 state_map.remove("status");
                 state_map.remove("header");
-                state_map.remove("uid");
             }
         }
         state

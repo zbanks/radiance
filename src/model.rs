@@ -323,16 +323,31 @@ impl Model {
     }
 
     pub fn node_inputs(&self, node: &VideoNode) -> Vec<Option<&VideoNode>> {
-        self.graph
-            .vertex_inputs(node.id())
-            .unwrap()
-            .iter()
-            .map(|input| {
-                input
-                    .as_ref()
-                    .map(|id| self.nodes.get(id).unwrap().borrow())
-            })
-            .collect()
+        if let Ok(inputs) = self.graph.vertex_inputs(node.id()) {
+            inputs.iter()
+                .map(|input| {
+                    input
+                        .as_ref()
+                        .map(|id| self.nodes.get(id))
+                        .flatten()
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn set_node_state(&mut self, id: VideoNodeId, state: JsonValue, library: &Library) -> Result<()> {
+        if let Some(node) = self.nodes.get_mut(&id) {
+            node.set_state(state)?;
+        } else {
+            let node = VideoNode::from_serde(state, library).unwrap();
+            self.graph.set_vertex(id, Some(node.n_inputs()));
+            self.nodes.insert(id, node);
+            *self.graph_dirty.borrow_mut() = true;
+        }
+
+        Ok(())
     }
 
     pub fn add_node(&mut self, state: JsonValue, library: &Library) -> Result<VideoNodeId> {

@@ -429,7 +429,9 @@ impl RenderChain {
     }
 
     pub fn render_node(&self, node: &VideoNode, inputs: &[Option<Rc<Fbo>>]) {
-        assert!(inputs.len() == node.n_inputs());
+        if inputs.len() != node.n_inputs() {
+            return;
+        }
         let output_fbo = node.render(
             self,
             inputs,

@@ -354,13 +354,12 @@ impl Context {
     pub fn set_full_state(&mut self, new_full_state: JsValue) -> JsResult<()> {
         let new_fs: FullState = new_full_state.into_serde().map_err(Error::serde)?;
 
+
         new_fs
             .nodes
             .iter()
             .map(|(id, state)| {
-                self.model
-                    .node_mut(*id)
-                    .and_then(|node| node.set_state(state.clone()))
+                self.model.set_node_state(*id, state.clone(), &self.library)
             })
             .collect::<Result<_>>()?;
 

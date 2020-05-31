@@ -2,10 +2,77 @@ import("./ui")
 import("./pkg")
 
 import {Context} from "./pkg/index.js";
+var crjson = require("crjson");
 
 Promise.all(["radiance-graph", "radiance-library"].map(el => customElements.whenDefined(el))).then(initialize);
 
+let state;
+let editState;
+
+// Quick and dirty UUID algorithm from stack overflow
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+let settingState = false;
+function stateChanged(model, json) {
+    if (!settingState) {
+        console.log("change", json);
+        window.context.setFullState(json);
+        window.context.flush();
+    }
+    editState = model;
+}
+
+function connect() {
+    console.log("Connecting...");
+
+    let room = location.hash.substr(1);
+    if (room.length < 1) {
+        room = "radiance";
+    }
+
+    state = new crjson.StateOverWebSocket(uuidv4());
+
+    // Listen for changes so we can update the textbox
+    state.addListener(stateChanged);
+    settingState = true;
+    state.setState([], window.context.fullState());
+    settingState = false;
+    //state.triggerListeners(stateChanged);
+
+    // Connect to websocket
+    const ws = new WebSocket("wss://goodplace.ddns.net/sandbox/ws/" + room);
+
+    ws.addEventListener("error", event => {
+        console.error(event);
+        state.detachWebSocket();
+    });
+    ws.addEventListener("close", () => {
+        console.error("connection closed");
+        state.detachWebSocket();
+    });
+    ws.addEventListener("open", () => {
+        console.info("connection established");
+
+        // Connect to peer
+        state.attachWebsocket(ws);
+    });
+    window.context.onFullStateChanged(s => {
+        settingState = true;
+        state.setState(editState, s)
+        settingState = false;
+    });
+}
+
+function hashChanged(event) {
+}
+
 function initialize() {
+
     let graph = document.querySelector("#graph");
 
     const vertices = [
@@ -41,6 +108,7 @@ function initialize() {
     graph.attachContext(context);
     // XXX @zbanks - I added this so I can hack on context from the console
     window["context"] = context;
+    connect();
 
     const uids = vertices.map(vertex => graph.context.addNode(vertex));
     edges.forEach(edge => {
@@ -52,4 +120,6 @@ function initialize() {
 
     let library = document.querySelector("#library");
     library.attachGraph(graph);
+
 }
+

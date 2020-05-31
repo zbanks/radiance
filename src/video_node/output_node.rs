@@ -8,15 +8,16 @@ use std::rc::Rc;
 #[serde(rename_all = "camelCase")]
 #[derive(Serialize)]
 pub struct OutputNode {
+    #[serde(rename = "uid")]
     id: VideoNodeId,
     node_type: VideoNodeDiscriminants,
     n_inputs: usize,
 }
 
 impl OutputNode {
-    pub fn new() -> OutputNode {
+    pub fn new(id: VideoNodeId) -> OutputNode {
         OutputNode {
-            id: VideoNodeId::new(),
+            id,
             node_type: VideoNodeDiscriminants::OutputNode,
             n_inputs: 1,
         }
