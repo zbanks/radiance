@@ -1,15 +1,15 @@
-use crate::context::GraphicsContext;
-use crate::context::Texture;
+use crate::types::{GraphicsContext, Texture, NoiseTextureProvider};
+use std::rc::Rc;
 use rand;
 
-pub struct Chain {
+pub struct DefaultChain {
     size: (usize, usize),
-    pub noise_texture: Texture, // XXX shouldn't be pub
+    noise_texture: Rc<Texture>,
 }
 
-impl Chain {
+impl DefaultChain {
     /// Construct a new chain for a given texture size
-    pub fn new(graphics_context: &GraphicsContext, size: (usize, usize)) -> Chain {
+    pub fn new(graphics_context: &GraphicsContext, size: (usize, usize)) -> DefaultChain {
         let texture_size = wgpu::Extent3d {
             width: size.0 as u32,
             height: size.1 as u32,
@@ -57,13 +57,19 @@ impl Chain {
             }
         );
 
-        Chain {
+        DefaultChain {
             size: size,
-            noise_texture: Texture {
+            noise_texture: Rc::new(Texture {
                 texture: texture,
                 view: view,
                 sampler: sampler,
-            }
+            }),
         }
+    }
+}
+
+impl NoiseTextureProvider for DefaultChain {
+    fn noise_texture(&self) -> Rc<Texture> {
+        self.noise_texture.clone()
     }
 }

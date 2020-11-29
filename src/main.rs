@@ -1,4 +1,5 @@
-use libradiance::Context;
+use libradiance::DefaultContext;
+use libradiance::NoiseTextureProvider;
 use futures::executor::block_on;
 
 fn main() {
@@ -12,7 +13,7 @@ fn main() {
     let (device, queue) = block_on(adapter.request_device(&Default::default(), None)).unwrap();
 
     // Create a radiance Context
-    let mut ctx = Context::new(&device, &queue);
+    let mut ctx = DefaultContext::new(&device, &queue);
 
     let texture_size = 256;
     let test_chain = ctx.add_chain((texture_size, texture_size));
@@ -40,7 +41,7 @@ fn main() {
 
     encoder.copy_texture_to_buffer(
         wgpu::TextureCopyView {
-            texture: &test_chain.noise_texture.texture,
+            texture: &test_chain.noise_texture().texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         }, 

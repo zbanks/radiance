@@ -1,26 +1,16 @@
-use crate::chain::Chain;
+use crate::types::{BlankTextureProvider, GraphicsContext, Texture};
+use crate::chain::DefaultChain;
 use wgpu;
 use std::rc::Rc;
 
-pub struct Texture {
-    pub texture: wgpu::Texture,
-    pub view: wgpu::TextureView,
-    pub sampler: wgpu::Sampler,
-}
-
-pub struct GraphicsContext<'a> {
-    pub device: &'a wgpu::Device,
-    pub queue: &'a wgpu::Queue,
-}
-
-pub struct Context<'a> {
-    chains: Vec<Rc<Chain>>,
+pub struct DefaultContext<'a> {
+    chains: Vec<Rc<DefaultChain>>,
     graphics_context: GraphicsContext<'a>,
-    blank_texture: Texture,
+    blank_texture: Rc<Texture>,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue) -> Context<'a> {
+impl<'a> DefaultContext<'a> {
+    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue) -> DefaultContext<'a> {
 
         // Create blank texture
         let texture_size = wgpu::Extent3d {
@@ -68,23 +58,29 @@ impl<'a> Context<'a> {
             }
         );
 
-        Context {
+        DefaultContext {
             chains: Vec::new(),
             graphics_context: GraphicsContext {
                 device: device,
                 queue: queue,
             },
-            blank_texture: Texture {
+            blank_texture: Rc::new(Texture {
                 texture: texture,
                 view: view,
                 sampler: sampler,
-            }
+            }),
         }
     }
 
-    pub fn add_chain(&mut self, size: (usize, usize)) -> Rc<Chain> {
-        let chain = Rc::new(Chain::new(&self.graphics_context, size));
+    pub fn add_chain(&mut self, size: (usize, usize)) -> Rc<DefaultChain> {
+        let chain = Rc::new(DefaultChain::new(&self.graphics_context, size));
         self.chains.push(chain.clone());
         chain
+    }
+}
+
+impl BlankTextureProvider for DefaultContext<'_> {
+    fn blank_texture(&self) -> Rc<Texture> {
+        self.blank_texture.clone()
     }
 }
