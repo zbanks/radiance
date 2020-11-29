@@ -3,22 +3,30 @@ use crate::chain::DefaultChain;
 use wgpu;
 use std::rc::Rc;
 
-pub struct DefaultContext<'a> {
+pub struct DefaultContext {
     chains: Vec<Rc<DefaultChain>>,
-    graphics_context: GraphicsContext<'a>,
+    graphics: Rc<GraphicsContext>,
     blank_texture: Rc<Texture>,
 }
 
-impl<'a> DefaultContext<'a> {
-    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue) -> DefaultContext<'a> {
+impl DefaultContext {
+    pub fn new(graphics: Rc<GraphicsContext>) -> DefaultContext {
+        let tex = DefaultContext::create_blank_texture(&graphics);
+        DefaultContext {
+            chains: Vec::new(),
+            graphics: graphics,
+            blank_texture: tex,
+        }
+    }
 
+    fn create_blank_texture(graphics: &GraphicsContext) -> Rc<Texture> {
         // Create blank texture
         let texture_size = wgpu::Extent3d {
             width: 1,
             height: 1,
             depth: 1,
         };
-        let texture = device.create_texture(
+        let texture = graphics.device.create_texture(
             &wgpu::TextureDescriptor {
                 size: texture_size,
                 mip_level_count: 1,
@@ -30,7 +38,7 @@ impl<'a> DefaultContext<'a> {
             }
         );
 
-        queue.write_texture(
+        graphics.queue.write_texture(
             wgpu::TextureCopyView {
                 texture: &texture,
                 mip_level: 0,
@@ -46,7 +54,7 @@ impl<'a> DefaultContext<'a> {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = device.create_sampler(
+        let sampler = graphics.device.create_sampler(
             &wgpu::SamplerDescriptor {
                 address_mode_u: wgpu::AddressMode::ClampToEdge,
                 address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -58,28 +66,21 @@ impl<'a> DefaultContext<'a> {
             }
         );
 
-        DefaultContext {
-            chains: Vec::new(),
-            graphics_context: GraphicsContext {
-                device: device,
-                queue: queue,
-            },
-            blank_texture: Rc::new(Texture {
-                texture: texture,
-                view: view,
-                sampler: sampler,
-            }),
-        }
+        Rc::new(Texture {
+            texture: texture,
+            view: view,
+            sampler: sampler,
+        })
     }
 
-    pub fn add_chain(&mut self, size: (usize, usize)) -> Rc<DefaultChain> {
-        let chain = Rc::new(DefaultChain::new(&self.graphics_context, size));
+    pub fn add_chain(&mut self, size: (u32, u32)) -> Rc<DefaultChain> {
+        let chain = Rc::new(DefaultChain::new(&self.graphics, size));
         self.chains.push(chain.clone());
         chain
     }
 }
 
-impl BlankTextureProvider for DefaultContext<'_> {
+impl BlankTextureProvider for DefaultContext {
     fn blank_texture(&self) -> Rc<Texture> {
         self.blank_texture.clone()
     }

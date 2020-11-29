@@ -8,9 +8,9 @@ pub struct Texture {
 }
 
 /// Convenient packaging for a device and queue
-pub struct GraphicsContext<'a> {
-    pub device: &'a wgpu::Device,
-    pub queue: &'a wgpu::Queue,
+pub struct GraphicsContext {
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
 }
 
 /// For the graph
