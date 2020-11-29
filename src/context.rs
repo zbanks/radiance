@@ -1,5 +1,6 @@
 use crate::chain::Chain;
 use wgpu;
+use std::rc::Rc;
 
 pub struct Texture {
     pub texture: wgpu::Texture,
@@ -13,7 +14,7 @@ pub struct GraphicsContext<'a> {
 }
 
 pub struct Context<'a> {
-    chains: Vec<Chain>,
+    chains: Vec<Rc<Chain>>,
     graphics_context: GraphicsContext<'a>,
     blank_texture: Texture,
 }
@@ -79,5 +80,11 @@ impl<'a> Context<'a> {
                 sampler: sampler,
             }
         }
+    }
+
+    pub fn add_chain(&mut self, size: (usize, usize)) -> Rc<Chain> {
+        let chain = Rc::new(Chain::new(&self.graphics_context, size));
+        self.chains.push(chain.clone());
+        chain
     }
 }

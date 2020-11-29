@@ -4,7 +4,7 @@ use rand;
 
 pub struct Chain {
     size: (usize, usize),
-    noise_texture: Texture,
+    pub noise_texture: Texture, // XXX shouldn't be pub
 }
 
 impl Chain {
@@ -22,8 +22,8 @@ impl Chain {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST,
-                label: Some("blank_texture"),
+                usage: wgpu::TextureUsage::SAMPLED | wgpu::TextureUsage::COPY_DST | wgpu::TextureUsage::COPY_SRC, // XXX remove COPY_SRC
+                label: Some("noise texture"),
             }
         );
 
