@@ -1,21 +1,29 @@
-use crate::types::{BlankTextureProvider, GraphicsContext, Texture};
+use crate::types::{BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider};
 use crate::chain::DefaultChain;
 use wgpu;
 use std::rc::Rc;
+use futures::executor::ThreadPool;
+use futures::task::SpawnExt;
+use futures::future::RemoteHandle;
+use futures::Future;
 
 pub struct DefaultContext {
     chains: Vec<Rc<DefaultChain>>,
     graphics: Rc<GraphicsContext>,
     blank_texture: Rc<Texture>,
+    worker_pool: ThreadPool,
 }
 
 impl DefaultContext {
     pub fn new(graphics: Rc<GraphicsContext>) -> DefaultContext {
         let tex = DefaultContext::create_blank_texture(&graphics);
+        let pool = DefaultContext::create_worker_pool();
+
         DefaultContext {
             chains: Vec::new(),
             graphics: graphics,
             blank_texture: tex,
+            worker_pool: pool,
         }
     }
 
@@ -73,6 +81,10 @@ impl DefaultContext {
         })
     }
 
+    pub fn create_worker_pool() -> ThreadPool {
+        ThreadPool::new().expect("Unable to create threadpool")
+    }
+
     pub fn add_chain(&mut self, size: (u32, u32)) -> Rc<DefaultChain> {
         let chain = Rc::new(DefaultChain::new(&self.graphics, size));
         self.chains.push(chain.clone());
@@ -83,5 +95,11 @@ impl DefaultContext {
 impl BlankTextureProvider for DefaultContext {
     fn blank_texture(&self) -> Rc<Texture> {
         self.blank_texture.clone()
+    }
+}
+
+impl<T: Send + 'static> WorkerPoolProvider<T, RemoteHandle<T>> for DefaultContext {
+    fn spawn(&self, f: fn () -> T) -> RemoteHandle<T> {
+        self.worker_pool.spawn_with_handle(async move {f()}).expect("Could not spawn task")
     }
 }

@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use futures::Future;
 
 /// Convenient packaging for a texture, view, and sampler
 pub struct Texture {
@@ -31,4 +32,9 @@ pub trait BlankTextureProvider {
 /// This context / chain provides a noise (random) texture
 pub trait NoiseTextureProvider {
     fn noise_texture(&self) -> Rc<Texture>;
+}
+
+/// This context / chain provides a worker pool for running blocking tasks asynchronously
+pub trait WorkerPoolProvider<T, F: Future<Output=T>> {
+    fn spawn(&self, f: fn () -> T) -> F;
 }
