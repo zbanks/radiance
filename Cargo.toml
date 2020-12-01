@@ -14,6 +14,9 @@ path = "src/lib.rs"
 name = "radiance"
 path = "src/main.rs"
 
+[unstable]
+generic-associated-types = "yes"
+
 [dependencies]
 futures = {version = "0.3.8", features = ["thread-pool"]}
 wgpu = "0.6.2"

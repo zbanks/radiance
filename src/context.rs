@@ -5,7 +5,6 @@ use std::rc::Rc;
 use futures::executor::ThreadPool;
 use futures::task::SpawnExt;
 use futures::future::RemoteHandle;
-use futures::Future;
 
 pub struct DefaultContext {
     chains: Vec<Rc<DefaultChain>>,
@@ -98,8 +97,16 @@ impl BlankTextureProvider for DefaultContext {
     }
 }
 
-impl<T: Send + 'static> WorkerPoolProvider<T, RemoteHandle<T>> for DefaultContext {
-    fn spawn(&self, f: fn () -> T) -> RemoteHandle<T> {
+//impl<T: Send + 'static> WorkerPoolProvider<T> for DefaultContext {
+//    type Fut = RemoteHandle<T>;
+//    fn spawn(&self, f: fn () -> T) -> RemoteHandle<T> {
+//        self.worker_pool.spawn_with_handle(async move {f()}).expect("Could not spawn task")
+//    }
+//}
+
+impl WorkerPoolProvider for DefaultContext {
+    type Fut<O: Send + 'static> = RemoteHandle<O>;
+    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> RemoteHandle<T> {
         self.worker_pool.spawn_with_handle(async move {f()}).expect("Could not spawn task")
     }
 }

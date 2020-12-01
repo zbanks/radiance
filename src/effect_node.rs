@@ -1,22 +1,44 @@
-use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider};
-use wgpu;
+use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider};
+//use wgpu;
 use std::rc::Rc;
+use futures::task::Poll;
 
-type EffectNodeContext = dyn BlankTextureProvider;
-type EffectNodeChain = dyn NoiseTextureProvider;
+//trait ShaderCompilationFuture: Future<Output=()> {}
+
+trait EffectNodeContext: NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider {}
 
 pub struct EffectNode {
-    context: Rc<EffectNodeContext>,
+//    shader_compilation_future: Option<SCF>,
 }
 
 impl EffectNode {
-    pub fn new(context: Rc<EffectNodeContext>) -> EffectNode {
+
+    pub fn new() -> EffectNode {
         EffectNode {
-            context: context,
+//            shader_compilation_future: None,
         }
     }
 
-    pub fn paint(&self, chain: Rc<EffectNodeChain>, input_textures: Vec<Rc<Texture>>) -> Rc<Texture> {
-        self.context.blank_texture()
+    pub fn paint<Context: EffectNodeContext>(&mut self, context: Rc<Context>, input_textures: Vec<Rc<Texture>>) -> Rc<Texture> {
+        // XXX temp behavior
+        match self.shader_compilation_future {
+            None => {
+                println!("Spawning");
+                self.shader_compilation_future = context.spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_millis(3000));
+                });
+            },
+            Some(f) => {
+                match f.poll() {
+                    Poll::Ready(t) => {
+                        println!("Finished");
+                    },
+                    Poll::Pending => {
+                        println!("Pending");
+                    }
+                }
+            }
+        }
+        context.blank_texture()
     }
 }

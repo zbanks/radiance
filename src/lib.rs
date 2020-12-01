@@ -1,3 +1,5 @@
+#![feature(generic_associated_types)]
+
 mod types;
 mod chain;
 mod node;
