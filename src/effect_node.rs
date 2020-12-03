@@ -1,40 +1,38 @@
-use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider};
-//use wgpu;
+use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider, WorkHandle, WorkResult};
 use std::rc::Rc;
-use futures::task::Poll;
-
-//trait ShaderCompilationFuture: Future<Output=()> {}
 
 trait EffectNodeContext: NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider {}
 
-pub struct EffectNode {
-//    shader_compilation_future: Option<SCF>,
+pub struct EffectNode<Context: EffectNodeContext> {
+    shader_compilation_work_handle: Option<<Context as WorkerPoolProvider>::Handle<()>>,
 }
 
-impl EffectNode {
-
-    pub fn new() -> EffectNode {
+impl<Context: EffectNodeContext> EffectNode<Context> {
+    pub fn new() -> EffectNode<Context> {
         EffectNode {
-//            shader_compilation_future: None,
+            shader_compilation_work_handle: None,
         }
     }
 
-    pub fn paint<Context: EffectNodeContext>(&mut self, context: Rc<Context>, input_textures: Vec<Rc<Texture>>) -> Rc<Texture> {
+    pub fn paint(&mut self, context: &Context, input_textures: Vec<Rc<Texture>>) -> Rc<Texture> {
         // XXX temp behavior
-        match self.shader_compilation_future {
+        match &self.shader_compilation_work_handle {
             None => {
                 println!("Spawning");
-                self.shader_compilation_future = context.spawn(|| {
+                self.shader_compilation_work_handle = Some(context.spawn(|| {
                     std::thread::sleep(std::time::Duration::from_millis(3000));
-                });
+                }));
             },
-            Some(f) => {
-                match f.poll() {
-                    Poll::Ready(t) => {
+            Some(h) => {
+                match h.poll() {
+                    WorkResult::Done(_) => {
                         println!("Finished");
                     },
-                    Poll::Pending => {
+                    WorkResult::Pending => {
                         println!("Pending");
+                    }
+                    WorkResult::Panic => {
+                        println!("Panicked!");
                     }
                 }
             }

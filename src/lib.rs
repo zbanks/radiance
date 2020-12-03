@@ -1,4 +1,5 @@
 #![feature(generic_associated_types)]
+#![allow(incomplete_features)]
 
 mod types;
 mod chain;

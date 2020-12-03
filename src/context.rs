@@ -1,28 +1,26 @@
-use crate::types::{BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider};
+use crate::types::{BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider, GraphicsProvider, WorkResult, WorkHandle};
 use crate::chain::DefaultChain;
 use wgpu;
 use std::rc::Rc;
-use futures::executor::ThreadPool;
-use futures::task::SpawnExt;
-use futures::future::RemoteHandle;
+use std::sync::{Arc, Weak};
+use std::sync::atomic::AtomicBool;
+use std::thread;
+use std::thread::JoinHandle;
 
-pub struct DefaultContext {
-    chains: Vec<Rc<DefaultChain>>,
+pub struct DefaultContext<'a> {
+    chains: Vec<DefaultChain<'a>>,
     graphics: Rc<GraphicsContext>,
     blank_texture: Rc<Texture>,
-    worker_pool: ThreadPool,
 }
 
-impl DefaultContext {
-    pub fn new(graphics: Rc<GraphicsContext>) -> DefaultContext {
+impl<'a> DefaultContext<'a> {
+    pub fn new(graphics: Rc<GraphicsContext>) -> DefaultContext<'a> {
         let tex = DefaultContext::create_blank_texture(&graphics);
-        let pool = DefaultContext::create_worker_pool();
 
         DefaultContext {
             chains: Vec::new(),
             graphics: graphics,
             blank_texture: tex,
-            worker_pool: pool,
         }
     }
 
@@ -80,33 +78,65 @@ impl DefaultContext {
         })
     }
 
-    pub fn create_worker_pool() -> ThreadPool {
-        ThreadPool::new().expect("Unable to create threadpool")
-    }
-
-    pub fn add_chain(&mut self, size: (u32, u32)) -> Rc<DefaultChain> {
-        let chain = Rc::new(DefaultChain::new(&self.graphics, size));
-        self.chains.push(chain.clone());
-        chain
+    pub fn add_chain(&'a mut self, size: (u32, u32)) -> () {
+        self.chains.push(DefaultChain::new(&self, size));
     }
 }
 
-impl BlankTextureProvider for DefaultContext {
+impl BlankTextureProvider for DefaultContext<'_> {
     fn blank_texture(&self) -> Rc<Texture> {
         self.blank_texture.clone()
     }
 }
 
-//impl<T: Send + 'static> WorkerPoolProvider<T> for DefaultContext {
-//    type Fut = RemoteHandle<T>;
-//    fn spawn(&self, f: fn () -> T) -> RemoteHandle<T> {
-//        self.worker_pool.spawn_with_handle(async move {f()}).expect("Could not spawn task")
-//    }
-//}
+struct ThreadWorkHandle<T> {
+    handle: JoinHandle<T>,
+    alive: Weak<AtomicBool>,
+}
 
-impl WorkerPoolProvider for DefaultContext {
-    type Fut<O: Send + 'static> = RemoteHandle<O>;
-    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> RemoteHandle<T> {
-        self.worker_pool.spawn_with_handle(async move {f()}).expect("Could not spawn task")
+impl<T: Send + 'static> ThreadWorkHandle<T> {
+    fn new(f: fn () -> T) -> Self {
+        let alive = Arc::new(AtomicBool::new(true));
+        let alive_weak = Arc::downgrade(&alive);
+
+        let handle = thread::spawn(move || {
+            alive; // Move
+            f()
+        });
+
+        ThreadWorkHandle {
+            alive: alive_weak,
+            handle: handle,
+        }
+    }
+}
+
+impl<T: Send + 'static> WorkHandle for ThreadWorkHandle<T> {
+    type Output = T;
+
+    fn poll(&self) -> WorkResult<T> {
+        match self.alive.upgrade() {
+            Some(_) => WorkResult::Pending,
+            None => {
+                match self.handle.join() {
+                    thread::Result::Ok(v) => WorkResult::Done(v),
+                    thread::Result::Err(_) => WorkResult::Panic,
+                }
+            }
+        }
+    }
+}
+
+impl WorkerPoolProvider for DefaultContext<'_> {
+    type Handle<T: Send + 'static> = ThreadWorkHandle<T>;
+
+    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> ThreadWorkHandle<T> {
+        ThreadWorkHandle::new(f)
+    }
+}
+
+impl GraphicsProvider for DefaultContext<'_> {
+    fn graphics(&self) -> Rc<GraphicsContext> {
+        self.graphics.clone()
     }
 }

@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use futures::Future;
 
 /// Convenient packaging for a texture, view, and sampler
 pub struct Texture {
@@ -23,6 +22,18 @@ pub enum NodeState {
     Broken,
 }
 
+pub enum WorkResult<T> {
+    Pending,
+    Panic,
+    Done(T),
+}
+
+pub trait WorkHandle {
+    type Output: Send + 'static;
+
+    fn poll(&self) -> WorkResult<Self::Output>;
+}
+
 // Context traits
 // We use finely devided traits to allow extensibility.
 // If someone wants to implement a new type of node that requires a new bit of global context,
@@ -40,6 +51,11 @@ pub trait NoiseTextureProvider {
 
 /// This context provides a worker pool for running blocking tasks asynchronously
 pub trait WorkerPoolProvider {
-    type Fut<O: Send + 'static>: Future<Output=O>;
-    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> Self::Fut<T>;
+    type Handle<T: Send + 'static>: WorkHandle<Output=T>;
+    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> Self::Handle<T>;
+}
+
+/// This context provides a graphical context via WGPU
+pub trait GraphicsProvider {
+    fn graphics(&self) -> Rc<GraphicsContext>;
 }
