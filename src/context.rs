@@ -79,7 +79,8 @@ impl<'a> DefaultContext<'a> {
     }
 
     pub fn add_chain(&'a mut self, size: (u32, u32)) -> () {
-        self.chains.push(DefaultChain::new(&self, size));
+        //let chain = DefaultChain::new(&self, size);
+        //self.chains.push(chain);
     }
 }
 
@@ -89,7 +90,7 @@ impl BlankTextureProvider for DefaultContext<'_> {
     }
 }
 
-struct ThreadWorkHandle<T> {
+pub struct ThreadWorkHandle<T> {
     handle: JoinHandle<T>,
     alive: Weak<AtomicBool>,
 }
@@ -100,8 +101,9 @@ impl<T: Send + 'static> ThreadWorkHandle<T> {
         let alive_weak = Arc::downgrade(&alive);
 
         let handle = thread::spawn(move || {
-            alive; // Move
-            f()
+            let r = f();
+            drop(alive); // Don't know if there's a better way to capture this value
+            r
         });
 
         ThreadWorkHandle {
@@ -114,15 +116,17 @@ impl<T: Send + 'static> ThreadWorkHandle<T> {
 impl<T: Send + 'static> WorkHandle for ThreadWorkHandle<T> {
     type Output = T;
 
-    fn poll(&self) -> WorkResult<T> {
+    fn alive(&self) -> bool {
         match self.alive.upgrade() {
-            Some(_) => WorkResult::Pending,
-            None => {
-                match self.handle.join() {
-                    thread::Result::Ok(v) => WorkResult::Done(v),
-                    thread::Result::Err(_) => WorkResult::Panic,
-                }
-            }
+            Some(_) => true,
+            None => false,
+        }
+    }
+
+    fn join(self) -> WorkResult<T> {
+        match self.handle.join() {
+            thread::Result::Ok(v) => WorkResult::Ok(v),
+            thread::Result::Err(_) => WorkResult::Err(()),
         }
     }
 }

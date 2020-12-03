@@ -22,16 +22,13 @@ pub enum NodeState {
     Broken,
 }
 
-pub enum WorkResult<T> {
-    Pending,
-    Panic,
-    Done(T),
-}
+pub type WorkResult<T> = Result<T, ()>;
 
 pub trait WorkHandle {
     type Output: Send + 'static;
 
-    fn poll(&self) -> WorkResult<Self::Output>;
+    fn alive(&self) -> bool;
+    fn join(self) -> WorkResult<Self::Output>;
 }
 
 // Context traits

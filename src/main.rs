@@ -1,4 +1,4 @@
-use libradiance::DefaultContext;
+use libradiance::{DefaultContext, DefaultChain};
 use libradiance::NoiseTextureProvider;
 use libradiance::GraphicsContext;
 use futures::executor::block_on;
@@ -19,7 +19,8 @@ fn main() {
     let mut ctx = DefaultContext::new(graphics.clone());
 
     let texture_size = 256;
-    let test_chain = ctx.add_chain((texture_size, texture_size));
+    //let test_chain = ctx.add_chain((texture_size, texture_size));
+    let test_chain = DefaultChain::new(&ctx, (texture_size, texture_size));
 
     // Read out the noise texture, as a test
     let mut encoder = graphics.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

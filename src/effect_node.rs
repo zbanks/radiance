@@ -1,7 +1,7 @@
 use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider, WorkHandle, WorkResult};
 use std::rc::Rc;
 
-trait EffectNodeContext: NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider {}
+pub trait EffectNodeContext: NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider {}
 
 pub struct EffectNode<Context: EffectNodeContext> {
     shader_compilation_work_handle: Option<<Context as WorkerPoolProvider>::Handle<()>>,
@@ -16,6 +16,7 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
 
     pub fn paint(&mut self, context: &Context, input_textures: Vec<Rc<Texture>>) -> Rc<Texture> {
         // XXX temp behavior
+
         match &self.shader_compilation_work_handle {
             None => {
                 println!("Spawning");
@@ -24,19 +25,24 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
                 }));
             },
             Some(h) => {
-                match h.poll() {
-                    WorkResult::Done(_) => {
-                        println!("Finished");
-                    },
-                    WorkResult::Pending => {
-                        println!("Pending");
-                    }
-                    WorkResult::Panic => {
-                        println!("Panicked!");
+                if !h.alive() {
+                    let h = std::mem::replace(&mut self.shader_compilation_work_handle, None);
+                    if let Some(h) = h {
+                        match h.join() {
+                            WorkResult::Ok(_) => {
+                                println!("Finished");
+                            },
+                            WorkResult::Err(_) => {
+                                println!("Panicked!");
+                            },
+                        }
+                    } else {
+                        panic!();
                     }
                 }
             }
         }
+
         context.blank_texture()
     }
 }
