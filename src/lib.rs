@@ -5,6 +5,7 @@ mod types;
 mod node;
 mod effect_node;
 mod context;
+mod threaded_worker;
 
 pub use crate::types::*;
 pub use crate::node::*;

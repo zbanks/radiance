@@ -1,19 +1,16 @@
-use crate::types::{NoiseTextureProvider, BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider, GraphicsProvider, WorkResult, WorkHandle};
+use crate::types::{NoiseTextureProvider, BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider, GraphicsProvider};
+use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
-use std::sync::{Arc, Weak};
-use std::sync::atomic::AtomicBool;
-use std::thread;
-use std::thread::JoinHandle;
 use rand;
 use std::collections::HashMap;
 
 
 pub struct DefaultContext {
     chains: HashMap<u32, DefaultChain>,
+    chain_id: u32,
     graphics: Rc<GraphicsContext>,
     blank_texture: Rc<Texture>,
-    chain_id: u32,
 }
 
 impl DefaultContext {
@@ -171,47 +168,6 @@ impl BlankTextureProvider for DefaultNodeContext<'_> {
 impl NoiseTextureProvider for DefaultNodeContext<'_> {
     fn noise_texture(&self) -> Rc<Texture> {
         self.chain.noise_texture.clone()
-    }
-}
-
-pub struct ThreadWorkHandle<T> {
-    handle: JoinHandle<T>,
-    alive: Weak<AtomicBool>,
-}
-
-impl<T: Send + 'static> ThreadWorkHandle<T> {
-    fn new(f: fn () -> T) -> Self {
-        let alive = Arc::new(AtomicBool::new(true));
-        let alive_weak = Arc::downgrade(&alive);
-
-        let handle = thread::spawn(move || {
-            let r = f();
-            drop(alive); // Don't know if there's a better way to capture this value
-            r
-        });
-
-        ThreadWorkHandle {
-            alive: alive_weak,
-            handle: handle,
-        }
-    }
-}
-
-impl<T: Send + 'static> WorkHandle for ThreadWorkHandle<T> {
-    type Output = T;
-
-    fn alive(&self) -> bool {
-        match self.alive.upgrade() {
-            Some(_) => true,
-            None => false,
-        }
-    }
-
-    fn join(self) -> WorkResult<T> {
-        match self.handle.join() {
-            thread::Result::Ok(v) => WorkResult::Ok(v),
-            thread::Result::Err(_) => WorkResult::Err(()),
-        }
     }
 }
 

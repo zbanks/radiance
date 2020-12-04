@@ -1,5 +1,4 @@
 use libradiance::{DefaultContext, DefaultChain};
-use libradiance::NoiseTextureProvider;
 use libradiance::GraphicsContext;
 use futures::executor::block_on;
 use std::rc::Rc;
