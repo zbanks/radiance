@@ -86,11 +86,20 @@ impl DefaultContext {
         self.chains.insert(id, chain);
         id
     }
+
+    pub fn node_context(&self, chain_id: u32) -> Option<DefaultNodeContext> {
+        let chain = self.chains.get(&chain_id)?;
+
+        Some(DefaultNodeContext {
+            context: &self,
+            chain: chain,
+        })
+    }
 }
 
 pub struct DefaultChain {
     size: (u32, u32),
-    pub noise_texture: Rc<Texture>, // XXX should not be pub
+    noise_texture: Rc<Texture>,
 }
 
 impl DefaultChain {

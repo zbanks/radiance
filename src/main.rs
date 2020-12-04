@@ -1,5 +1,4 @@
-use libradiance::{DefaultContext, DefaultChain};
-use libradiance::GraphicsContext;
+use libradiance::{DefaultContext, GraphicsContext, NoiseTextureProvider, EffectNode, EffectNodeContext};
 use futures::executor::block_on;
 use std::rc::Rc;
 
@@ -15,11 +14,21 @@ fn main() {
     let graphics = Rc::new(GraphicsContext {device: device, queue: queue});
 
     // Create a radiance Context
-    let ctx = DefaultContext::new(graphics.clone());
+    let mut ctx = DefaultContext::new(graphics.clone());
 
     let texture_size = 256;
-    //let test_chain = ctx.add_chain((texture_size, texture_size));
-    let test_chain = DefaultChain::new(&graphics, (texture_size, texture_size));
+    let test_chain_id = ctx.add_chain((texture_size, texture_size));
+    let mut effect_node = EffectNode::new();
+
+    // Fake paint loop
+    for i in 0..50 {
+        println!("paint...");
+        let node_ctx = ctx.node_context(test_chain_id).unwrap();
+        let result_texture = effect_node.paint(&node_ctx, vec![]);
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    let noise_texture = ctx.node_context(test_chain_id).unwrap().noise_texture();
 
     // Read out the noise texture, as a test
     let mut encoder = graphics.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -44,7 +53,7 @@ fn main() {
 
     encoder.copy_texture_to_buffer(
         wgpu::TextureCopyView {
-            texture: &test_chain.noise_texture.texture,
+            texture: &noise_texture.texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         }, 

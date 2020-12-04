@@ -1,4 +1,5 @@
 #![feature(generic_associated_types)]
+#![feature(trait_alias)]
 #![allow(incomplete_features)]
 
 mod types;

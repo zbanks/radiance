@@ -1,7 +1,7 @@
 use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider, WorkHandle, WorkResult};
 use std::rc::Rc;
 
-pub trait EffectNodeContext: NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider {}
+pub trait EffectNodeContext = NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider;
 
 pub struct EffectNode<Context: EffectNodeContext> {
     shader_compilation_work_handle: Option<<Context as WorkerPoolProvider>::Handle<()>>,
