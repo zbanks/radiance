@@ -16,11 +16,11 @@ fn main() {
     let graphics = Rc::new(GraphicsContext {device: device, queue: queue});
 
     // Create a radiance Context
-    let mut ctx = DefaultContext::new(graphics.clone());
+    let ctx = DefaultContext::new(graphics.clone());
 
     let texture_size = 256;
     //let test_chain = ctx.add_chain((texture_size, texture_size));
-    let test_chain = DefaultChain::new(&ctx, (texture_size, texture_size));
+    let test_chain = DefaultChain::new(&graphics, (texture_size, texture_size));
 
     // Read out the noise texture, as a test
     let mut encoder = graphics.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -45,7 +45,7 @@ fn main() {
 
     encoder.copy_texture_to_buffer(
         wgpu::TextureCopyView {
-            texture: &test_chain.noise_texture().texture,
+            texture: &test_chain.noise_texture.texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         }, 
