@@ -1,9 +1,10 @@
-use crate::types::{NoiseTextureProvider, BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider, GraphicsProvider};
+use crate::types::{NoiseTextureProvider, BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider, GraphicsProvider, FetchContent};
 use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
 use rand;
 use std::collections::HashMap;
+use std::fs::read_to_string;
 
 #[derive(Debug)]
 pub struct DefaultContext {
@@ -185,7 +186,7 @@ impl NoiseTextureProvider for DefaultNodeContext<'_> {
 impl WorkerPoolProvider for DefaultNodeContext<'_> {
     type Handle<T: Send + 'static> = ThreadWorkHandle<T>;
 
-    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> ThreadWorkHandle<T> {
+    fn spawn<T: Send + 'static, F: FnOnce () -> T + Send + 'static>(&self, f: F) -> ThreadWorkHandle<T> {
         ThreadWorkHandle::new(f)
     }
 }
@@ -193,5 +194,14 @@ impl WorkerPoolProvider for DefaultNodeContext<'_> {
 impl GraphicsProvider for DefaultNodeContext<'_> {
     fn graphics(&self) -> Rc<GraphicsContext> {
         self.context.graphics.clone()
+    }
+}
+
+impl FetchContent for DefaultNodeContext<'_> {
+    fn fetch_content_closure(&self, name: &str) -> Box<dyn FnOnce() -> std::io::Result<String> + Send + 'static> {
+        let cloned_name = name.to_string();
+        return Box::new(move || {
+            read_to_string(cloned_name)
+        })
     }
 }

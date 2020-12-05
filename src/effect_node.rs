@@ -1,21 +1,22 @@
-use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider, WorkHandle, WorkResult};
+use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider, WorkHandle, WorkResult, FetchContent};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
 
 // split into update context & paint context?
-pub trait EffectNodeContext = NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider;
+pub trait EffectNodeContext = NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider + FetchContent;
 
 #[derive(Debug)]
 pub struct EffectNode<Context: EffectNodeContext> {
-    state: EffectNodeState<Context>
+    state: EffectNodeState<Context>,
+    name: Option<String>,
 }
 
 enum EffectNodeState<Context: EffectNodeContext> {
     Uninitialized,
-    Compiling {shader_compilation_work_handle: Option<<Context as WorkerPoolProvider>::Handle<Result<Vec<u8>, shaderc::Error>>>},
+    Compiling {shader_compilation_work_handle: Option<<Context as WorkerPoolProvider>::Handle<Result<Vec<u8>, String>>>},
     Ready {compiled_shader: Vec<u8>},
-    Error {message: String},
+    Error(String),
 }
 
 impl<Context: EffectNodeContext> fmt::Debug for EffectNodeState<Context> {
@@ -24,7 +25,7 @@ impl<Context: EffectNodeContext> fmt::Debug for EffectNodeState<Context> {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
             EffectNodeState::Compiling {shader_compilation_work_handle: _} => write!(f, "Compiling"),
             EffectNodeState::Ready {compiled_shader: _} => write!(f, "Ready"),
-            EffectNodeState::Error {message} => write!(f, "Error({:?})", message),
+            EffectNodeState::Error(e) => write!(f, "Error({:?})", e),
         }
     }
 }
@@ -33,17 +34,21 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
     pub fn new() -> EffectNode<Context> {
         EffectNode {
             state: EffectNodeState::Uninitialized,
+            name: None,
         }
     }
 
     fn start_compiling_shader(&mut self, context: &Context) -> EffectNodeState<Context> {
-        let shader_compilation_work_handle = context.spawn(|| {
-            let frag_src = ""; // XXX
+
+        let shader_content_closure = context.fetch_content_closure(&self.name.as_ref().unwrap());
+
+        let shader_compilation_work_handle = context.spawn(move || {
+            let frag_src = shader_content_closure().map_err(|e| e.to_string())?;
             let mut compiler = shaderc::Compiler::new().unwrap();
-            let compilation_result = compiler.compile_into_spirv(frag_src, shaderc::ShaderKind::Fragment, "filename.glsl", "main", None);
+            let compilation_result = compiler.compile_into_spirv(&frag_src, shaderc::ShaderKind::Fragment, "filename.glsl", "main", None);
             match compilation_result {
                 Ok(artifact) => Ok(artifact.as_binary_u8().to_vec()),
-                Err(e) => Err(e),
+                Err(e) => Err(e.to_string()),
             }
         });
         EffectNodeState::Compiling {shader_compilation_work_handle: Some(shader_compilation_work_handle)}
@@ -54,7 +59,10 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
 
         match &mut self.state {
             EffectNodeState::Uninitialized => {
-                self.state = self.start_compiling_shader(context);
+                match self.name {
+                    Some(_) => {self.state = self.start_compiling_shader(context);}
+                    None => {},
+                };
             },
             EffectNodeState::Compiling {shader_compilation_work_handle: handle_opt} => {
                 let handle_ref = handle_opt.as_ref().unwrap();
@@ -64,11 +72,11 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
                         WorkResult::Ok(result) => {
                             match result {
                                 Ok(binary) => EffectNodeState::Ready {compiled_shader: binary},
-                                Err(msg) => EffectNodeState::Error {message: msg.to_string()},
+                                Err(msg) => EffectNodeState::Error(msg.to_string()),
                             }
                         },
                         WorkResult::Err(_) => {
-                            EffectNodeState::Error {message: "Panicked".to_string()}
+                            EffectNodeState::Error("Panicked".to_string())
                         },
                     };
                 }
@@ -81,5 +89,9 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
             EffectNodeState::Ready {compiled_shader: _} => context.blank_texture(), // XXX
             _ => context.blank_texture(),
         }
+    }
+
+    pub fn set_name(&mut self, name: &str) {
+        self.name = Some(name.to_string());
     }
 }

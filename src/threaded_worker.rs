@@ -11,7 +11,7 @@ pub struct ThreadWorkHandle<T> {
 }
 
 impl<T: Send + 'static> ThreadWorkHandle<T> {
-    pub fn new(f: fn () -> T) -> Self {
+    pub fn new<F: FnOnce () -> T + Send + 'static>(f: F) -> Self {
         let alive = Arc::new(AtomicBool::new(true));
         let alive_weak = Arc::downgrade(&alive);
 

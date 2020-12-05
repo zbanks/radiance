@@ -51,10 +51,15 @@ pub trait NoiseTextureProvider {
 /// This context provides a worker pool for running blocking tasks asynchronously
 pub trait WorkerPoolProvider {
     type Handle<T: Send + 'static>: WorkHandle<Output=T>;
-    fn spawn<T: Send + 'static>(&self, f: fn () -> T) -> Self::Handle<T>;
+    fn spawn<T: Send + 'static, F: FnOnce () -> T + Send + 'static>(&self, f: F) -> Self::Handle<T>;
 }
 
 /// This context provides a graphical context via WGPU
 pub trait GraphicsProvider {
     fn graphics(&self) -> Rc<GraphicsContext>;
+}
+
+/// This context provides a way to fetch a library item's content from its name
+pub trait FetchContent {
+    fn fetch_content_closure(&self, name: &str) -> Box<dyn FnOnce () -> std::io::Result<String> + Send + 'static>;
 }

@@ -19,14 +19,15 @@ fn main() {
     let texture_size = 256;
     let test_chain_id = ctx.add_chain((texture_size, texture_size));
     let mut effect_node = EffectNode::new();
+    effect_node.set_name("purple.glsl");
 
     // Fake paint loop
-    for i in 0..50 {
+    for i in 0..10 {
         println!("paint...");
         let node_ctx = ctx.node_context(test_chain_id).unwrap();
         let result_texture = effect_node.paint(&node_ctx, vec![]);
         println!("{:?}", effect_node);
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(10));
     }
 
     let noise_texture = ctx.node_context(test_chain_id).unwrap().noise_texture();
