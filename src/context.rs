@@ -5,7 +5,7 @@ use std::rc::Rc;
 use rand;
 use std::collections::HashMap;
 
-
+#[derive(Debug)]
 pub struct DefaultContext {
     chains: HashMap<u32, DefaultChain>,
     chain_id: u32,
@@ -97,6 +97,7 @@ impl DefaultContext {
     }
 }
 
+#[derive(Debug)]
 pub struct DefaultChain {
     size: (u32, u32),
     noise_texture: Rc<Texture>,
@@ -163,6 +164,7 @@ impl DefaultChain {
     }
 }
 
+#[derive(Debug)]
 pub struct DefaultNodeContext<'a> {
     context: &'a DefaultContext,
     chain: &'a DefaultChain,

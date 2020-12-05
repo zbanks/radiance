@@ -19,3 +19,4 @@ futures = {version = "0.3.8", features = ["thread-pool"]}
 wgpu = "0.6.2"
 rand = "0.7.3"
 image = "0.23.12"
+shaderc = "0.7.0"

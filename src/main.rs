@@ -25,6 +25,7 @@ fn main() {
         println!("paint...");
         let node_ctx = ctx.node_context(test_chain_id).unwrap();
         let result_texture = effect_node.paint(&node_ctx, vec![]);
+        println!("{:?}", effect_node);
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 

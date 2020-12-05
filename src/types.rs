@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 /// Convenient packaging for a texture, view, and sampler
+#[derive(Debug)]
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -8,6 +9,7 @@ pub struct Texture {
 }
 
 /// Convenient packaging for a device and queue
+#[derive(Debug)]
 pub struct GraphicsContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,

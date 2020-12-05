@@ -4,6 +4,7 @@ use std::thread::JoinHandle;
 use std::sync::{Arc, Weak};
 use std::sync::atomic::AtomicBool;
 
+#[derive(Debug)]
 pub struct ThreadWorkHandle<T> {
     handle: JoinHandle<T>,
     alive: Weak<AtomicBool>,
