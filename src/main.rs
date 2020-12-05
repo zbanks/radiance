@@ -1,4 +1,4 @@
-use libradiance::{DefaultContext, GraphicsContext, NoiseTexture, EffectNode};
+use libradiance::{DefaultContext, GraphicsContext, NoiseTexture, EffectNode, EffectNodeArguments};
 use futures::executor::block_on;
 use std::rc::Rc;
 
@@ -24,10 +24,14 @@ fn main() {
     let chain = ctx.chain(test_chain_id).unwrap();
     let mut paint_state = effect_node.new_paint_state(chain);
 
+    let args = EffectNodeArguments {
+        name: Some("purple.glsl"),
+    };
+
     // Fake paint loop
     for i in 0..10 {
         println!("update...");
-        effect_node.update(&ctx);
+        effect_node.update(&ctx, &args);
         println!("{:?}", effect_node);
         println!("paint...");
         effect_node.paint(chain, &mut paint_state);

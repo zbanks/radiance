@@ -38,6 +38,11 @@ impl<UpdateContext: WorkerPool + FetchContent> fmt::Debug for EffectNodeState<Up
     }
 }
 
+#[derive(Debug)]
+pub struct EffectNodeArguments<'a> {
+    pub name: Option<&'a str>,
+}
+
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
 impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
@@ -66,33 +71,56 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
         EffectNodeState::Compiling {shader_compilation_work_handle: Some(shader_compilation_work_handle)}
     }
 
-    pub fn update(&mut self, context: &UpdateContext) {
-        match &mut self.state {
-            EffectNodeState::Uninitialized => {
-                match self.name {
-                    Some(_) => {self.state = self.start_compiling_shader(context);}
-                    None => {},
-                };
-            },
-            EffectNodeState::Compiling {shader_compilation_work_handle: handle_opt} => {
-                let handle_ref = handle_opt.as_ref().unwrap();
-                if !handle_ref.alive() {
-                    let handle = handle_opt.take().unwrap();
-                    self.state = match handle.join() {
-                        WorkResult::Ok(result) => {
-                            match result {
-                                Ok(binary) => EffectNodeState::Ready {compiled_shader: binary},
-                                Err(msg) => EffectNodeState::Error(msg.to_string()),
-                            }
-                        },
-                        WorkResult::Err(_) => {
-                            EffectNodeState::Error("Panicked".to_owned())
-                        },
-                    };
+    pub fn update(&mut self, context: &UpdateContext, args: &EffectNodeArguments) {
+        // Update internal state based on args
+        let name_changed = match &mut self.name {
+            Some(cur_name) => match args.name {
+                Some(new_name) => { // Some, Some
+                    if cur_name != new_name {
+                        self.name = Some(new_name.to_owned());
+                        true
+                    } else {
+                        false
+                    }
+                },
+                None => { // Some, None
+                    self.name = None;
+                    true
                 }
-            },
-            _ => {},
+            }
+            None => match args.name {
+                Some(new_name) => {
+                    self.name = Some(new_name.to_owned());
+                    true
+                },
+                None => false, // None, None
+            }
         };
+
+        if name_changed {
+            // Always recompile if name changed
+            match self.name {
+                Some(_) => {self.state = self.start_compiling_shader(context);}
+                None => {self.state = EffectNodeState::Uninitialized;},
+            };
+        } else if let EffectNodeState::Compiling {shader_compilation_work_handle: handle_opt} = &mut self.state {
+            // See if compilation is finished
+            let handle_ref = handle_opt.as_ref().unwrap();
+            if !handle_ref.alive() {
+                let handle = handle_opt.take().unwrap();
+                self.state = match handle.join() {
+                    WorkResult::Ok(result) => {
+                        match result {
+                            Ok(binary) => EffectNodeState::Ready {compiled_shader: binary},
+                            Err(msg) => EffectNodeState::Error(msg.to_string()),
+                        }
+                    },
+                    WorkResult::Err(_) => {
+                        EffectNodeState::Error("Panicked".to_owned())
+                    },
+                };
+            }
+        }
     }
 
     /// Call this when a new chain is added to get a PaintState
