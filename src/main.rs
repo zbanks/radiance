@@ -1,4 +1,4 @@
-use libradiance::{DefaultContext, GraphicsContext, NoiseTextureProvider, EffectNode, EffectNodeContext};
+use libradiance::{DefaultContext, GraphicsContext, NoiseTexture, EffectNode};
 use futures::executor::block_on;
 use std::rc::Rc;
 
@@ -19,18 +19,22 @@ fn main() {
     let texture_size = 256;
     let test_chain_id = ctx.add_chain((texture_size, texture_size));
     let mut effect_node = EffectNode::new();
-    effect_node.set_name("purple.glsl");
+    //effect_node.set_name("purple.glsl");
+
+    let chain = ctx.chain(test_chain_id).unwrap();
+    let mut paint_state = effect_node.new_paint_state(chain);
 
     // Fake paint loop
     for i in 0..10 {
-        println!("paint...");
-        let node_ctx = ctx.node_context(test_chain_id).unwrap();
-        let result_texture = effect_node.paint(&node_ctx, vec![]);
+        println!("update...");
+        effect_node.update(&ctx);
         println!("{:?}", effect_node);
+        println!("paint...");
+        effect_node.paint(chain, &mut paint_state);
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
-    let noise_texture = ctx.node_context(test_chain_id).unwrap().noise_texture();
+    let noise_texture = chain.noise_texture();
 
     // Read out the noise texture, as a test
     let mut encoder = graphics.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

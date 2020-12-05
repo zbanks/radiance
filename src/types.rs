@@ -39,23 +39,23 @@ pub trait WorkHandle {
 // they can re-implement "DefaultChain / DefaultContext."
 
 /// This context provides a blank texture
-pub trait BlankTextureProvider {
+pub trait BlankTexture {
     fn blank_texture(&self) -> Rc<Texture>;
 }
 
 /// This context provides a noise (random) texture
-pub trait NoiseTextureProvider {
+pub trait NoiseTexture {
     fn noise_texture(&self) -> Rc<Texture>;
 }
 
 /// This context provides a worker pool for running blocking tasks asynchronously
-pub trait WorkerPoolProvider {
+pub trait WorkerPool {
     type Handle<T: Send + 'static>: WorkHandle<Output=T>;
     fn spawn<T: Send + 'static, F: FnOnce () -> T + Send + 'static>(&self, f: F) -> Self::Handle<T>;
 }
 
 /// This context provides a graphical context via WGPU
-pub trait GraphicsProvider {
+pub trait Graphics {
     fn graphics(&self) -> Rc<GraphicsContext>;
 }
 

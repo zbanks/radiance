@@ -1,4 +1,4 @@
-use crate::types::{NoiseTextureProvider, BlankTextureProvider, GraphicsContext, Texture, WorkerPoolProvider, GraphicsProvider, FetchContent};
+use crate::types::{NoiseTexture, BlankTexture, GraphicsContext, Texture, WorkerPool, Graphics, FetchContent};
 use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
@@ -81,32 +81,28 @@ impl DefaultContext {
     }
 
     pub fn add_chain(&mut self, size: (u32, u32)) -> u32 {
-        let chain = DefaultChain::new(self.graphics.as_ref(), size);
+        let chain = DefaultChain::new(self.graphics.as_ref(), size, self.blank_texture.clone());
         let id = self.chain_id;
         self.chain_id += 1;
         self.chains.insert(id, chain);
         id
     }
 
-    pub fn node_context(&self, chain_id: u32) -> Option<DefaultNodeContext> {
-        let chain = self.chains.get(&chain_id)?;
-
-        Some(DefaultNodeContext {
-            context: &self,
-            chain: chain,
-        })
+    pub fn chain(&self, id: u32) -> Option<&DefaultChain> {
+        self.chains.get(&id)
     }
 }
 
 #[derive(Debug)]
 pub struct DefaultChain {
     size: (u32, u32),
+    blank_texture: Rc<Texture>,
     noise_texture: Rc<Texture>,
 }
 
 impl DefaultChain {
     /// Construct a new chain for a given texture size
-    pub fn new(graphics: &GraphicsContext, size: (u32, u32)) -> DefaultChain {
+    pub fn new(graphics: &GraphicsContext, size: (u32, u32), blank_texture: Rc<Texture>) -> DefaultChain {
         let texture_size = wgpu::Extent3d {
             width: size.0,
             height: size.1,
@@ -161,29 +157,24 @@ impl DefaultChain {
                 view: view,
                 sampler: sampler,
             }),
+            blank_texture: blank_texture,
         }
     }
 }
 
-#[derive(Debug)]
-pub struct DefaultNodeContext<'a> {
-    context: &'a DefaultContext,
-    chain: &'a DefaultChain,
-}
-
-impl BlankTextureProvider for DefaultNodeContext<'_> {
+impl BlankTexture for DefaultChain {
     fn blank_texture(&self) -> Rc<Texture> {
-        self.context.blank_texture.clone()
+        self.blank_texture.clone()
     }
 }
 
-impl NoiseTextureProvider for DefaultNodeContext<'_> {
+impl NoiseTexture for DefaultChain {
     fn noise_texture(&self) -> Rc<Texture> {
-        self.chain.noise_texture.clone()
+        self.noise_texture.clone()
     }
 }
 
-impl WorkerPoolProvider for DefaultNodeContext<'_> {
+impl WorkerPool for DefaultContext {
     type Handle<T: Send + 'static> = ThreadWorkHandle<T>;
 
     fn spawn<T: Send + 'static, F: FnOnce () -> T + Send + 'static>(&self, f: F) -> ThreadWorkHandle<T> {
@@ -191,13 +182,13 @@ impl WorkerPoolProvider for DefaultNodeContext<'_> {
     }
 }
 
-impl GraphicsProvider for DefaultNodeContext<'_> {
+impl Graphics for DefaultContext {
     fn graphics(&self) -> Rc<GraphicsContext> {
-        self.context.graphics.clone()
+        self.graphics.clone()
     }
 }
 
-impl FetchContent for DefaultNodeContext<'_> {
+impl FetchContent for DefaultContext {
     fn fetch_content_closure(&self, name: &str) -> Box<dyn FnOnce() -> std::io::Result<String> + Send + 'static> {
         let cloned_name = name.to_string();
         return Box::new(move || {

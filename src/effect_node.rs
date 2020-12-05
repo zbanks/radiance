@@ -1,25 +1,33 @@
-use crate::types::{Texture, BlankTextureProvider, NoiseTextureProvider, WorkerPoolProvider, WorkHandle, WorkResult, FetchContent};
+use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
 
-// split into update context & paint context?
-pub trait EffectNodeContext = NoiseTextureProvider + BlankTextureProvider + WorkerPoolProvider + FetchContent;
-
+/// The EffectNodePaintState contains chain-specific data.
+/// It is constructed by calling new_paint_state() and mutated by paint().
+/// The application should construct and hold on to one paint state per render chain.
 #[derive(Debug)]
-pub struct EffectNode<Context: EffectNodeContext> {
-    state: EffectNodeState<Context>,
+pub struct EffectNodePaintState {
+    input_textures: Vec<Rc<Texture>>,
+    output_texture: Rc<Texture>,
+}
+
+/// The EffectNode contains context-specific, chain-agnostic data.
+/// It is constructed by calling new()
+#[derive(Debug)]
+pub struct EffectNode<UpdateContext: WorkerPool + FetchContent> {
+    state: EffectNodeState<UpdateContext>,
     name: Option<String>,
 }
 
-enum EffectNodeState<Context: EffectNodeContext> {
+enum EffectNodeState<UpdateContext: WorkerPool + FetchContent> {
     Uninitialized,
-    Compiling {shader_compilation_work_handle: Option<<Context as WorkerPoolProvider>::Handle<Result<Vec<u8>, String>>>},
+    Compiling {shader_compilation_work_handle: Option<<UpdateContext as WorkerPool>::Handle<Result<Vec<u8>, String>>>},
     Ready {compiled_shader: Vec<u8>},
     Error(String),
 }
 
-impl<Context: EffectNodeContext> fmt::Debug for EffectNodeState<Context> {
+impl<UpdateContext: WorkerPool + FetchContent> fmt::Debug for EffectNodeState<UpdateContext> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
@@ -32,15 +40,15 @@ impl<Context: EffectNodeContext> fmt::Debug for EffectNodeState<Context> {
 
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
-impl<Context: EffectNodeContext> EffectNode<Context> {
-    pub fn new() -> EffectNode<Context> {
+impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
+    pub fn new() -> EffectNode<UpdateContext> {
         EffectNode {
             state: EffectNodeState::Uninitialized,
             name: None,
         }
     }
 
-    fn start_compiling_shader(&mut self, context: &Context) -> EffectNodeState<Context> {
+    fn start_compiling_shader(&mut self, context: &UpdateContext) -> EffectNodeState<UpdateContext> {
 
         let shader_content_closure = context.fetch_content_closure(&self.name.as_ref().unwrap());
         let shader_name = self.name.as_ref().unwrap().to_owned();
@@ -58,9 +66,7 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
         EffectNodeState::Compiling {shader_compilation_work_handle: Some(shader_compilation_work_handle)}
     }
 
-    pub fn paint(&mut self, context: &Context, input_textures: Vec<Rc<Texture>>) -> Rc<Texture> {
-        // Update state machine
-
+    pub fn update(&mut self, context: &UpdateContext) {
         match &mut self.state {
             EffectNodeState::Uninitialized => {
                 match self.name {
@@ -87,15 +93,23 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
             },
             _ => {},
         };
+    }
 
-        // Paint
-        match self.state {
-            EffectNodeState::Ready {compiled_shader: _} => context.blank_texture(), // XXX
-            _ => context.blank_texture(),
+    /// Call this when a new chain is added to get a PaintState
+    /// suitable for use with paint().
+    pub fn new_paint_state<PaintContext: BlankTexture + NoiseTexture>(&self, context: &PaintContext) -> EffectNodePaintState {
+        EffectNodePaintState {
+            input_textures: Vec::new(),
+            output_texture: context.blank_texture(),
         }
     }
 
-    pub fn set_name(&mut self, name: &str) {
-        self.name = Some(name.to_owned());
+    /// Updates the given PaintState.
+    /// Paint should be lightweight and not kick off any work (update should do that.)
+    pub fn paint<PaintContext: BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) {
+        paint_state.output_texture = match self.state {
+            EffectNodeState::Ready {compiled_shader: _} => context.blank_texture(), // XXX
+            _ => context.blank_texture(),
+        };
     }
 }
