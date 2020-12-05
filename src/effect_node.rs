@@ -25,10 +25,12 @@ impl<Context: EffectNodeContext> fmt::Debug for EffectNodeState<Context> {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
             EffectNodeState::Compiling {shader_compilation_work_handle: _} => write!(f, "Compiling"),
             EffectNodeState::Ready {compiled_shader: _} => write!(f, "Ready"),
-            EffectNodeState::Error(e) => write!(f, "Error({:?})", e),
+            EffectNodeState::Error(e) => write!(f, "Error({})", e),
         }
     }
 }
+
+const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
 impl<Context: EffectNodeContext> EffectNode<Context> {
     pub fn new() -> EffectNode<Context> {
@@ -41,11 +43,13 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
     fn start_compiling_shader(&mut self, context: &Context) -> EffectNodeState<Context> {
 
         let shader_content_closure = context.fetch_content_closure(&self.name.as_ref().unwrap());
+        let shader_name = self.name.as_ref().unwrap().to_owned();
 
         let shader_compilation_work_handle = context.spawn(move || {
-            let frag_src = shader_content_closure().map_err(|e| e.to_string())?;
+            let effect_src = shader_content_closure().map_err(|e| e.to_string())?;
+            let frag_src = format!("{}{}\n", EFFECT_HEADER, effect_src);
             let mut compiler = shaderc::Compiler::new().unwrap();
-            let compilation_result = compiler.compile_into_spirv(&frag_src, shaderc::ShaderKind::Fragment, "filename.glsl", "main", None);
+            let compilation_result = compiler.compile_into_spirv(&frag_src, shaderc::ShaderKind::Fragment, &shader_name, "main", None);
             match compilation_result {
                 Ok(artifact) => Ok(artifact.as_binary_u8().to_vec()),
                 Err(e) => Err(e.to_string()),
@@ -76,7 +80,7 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
                             }
                         },
                         WorkResult::Err(_) => {
-                            EffectNodeState::Error("Panicked".to_string())
+                            EffectNodeState::Error("Panicked".to_owned())
                         },
                     };
                 }
@@ -92,6 +96,6 @@ impl<Context: EffectNodeContext> EffectNode<Context> {
     }
 
     pub fn set_name(&mut self, name: &str) {
-        self.name = Some(name.to_string());
+        self.name = Some(name.to_owned());
     }
 }
