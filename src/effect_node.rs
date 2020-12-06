@@ -1,4 +1,4 @@
-use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Graphics};
+use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Graphics, Resolution};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
@@ -85,9 +85,9 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
 
     // Called when the shader compilation is finished. Sets up the render pipeline that will be used in paint calls, and sets the state to Ready.
     fn setup_render_pipeline(&mut self, context: &UpdateContext, frag_binary: &[u8]) {
-        let device = &context.graphics().device;
+        let device = &context.graphics_device();
 
-        let vs_module = device.create_shader_module(wgpu::include_spirv!("effect_vertex.spv"));
+        let vs_module = device.create_shader_module(wgpu::include_spirv!(concat!(env!("OUT_DIR"), "/effect_vertex.spv")));
         let fs_module = device.create_shader_module(wgpu::util::make_spirv(frag_binary));
 
         let render_pipeline_layout =
@@ -199,19 +199,89 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
 
     /// Call this when a new chain is added to get a PaintState
     /// suitable for use with paint().
-    pub fn new_paint_state<PaintContext: BlankTexture + NoiseTexture>(&self, context: &PaintContext) -> EffectNodePaintState {
-        EffectNodePaintState {
+    pub fn new_paint_state<PaintContext: Graphics + BlankTexture + NoiseTexture + Resolution>(&self, context: &PaintContext) -> EffectNodePaintState {
+        let device = &context.graphics_device();
+
+        let (width, height) = context.resolution();
+
+        let texture_desc = wgpu::TextureDescriptor {
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth: 1,
+            },
+            //array_layer_count: 1,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsage::COPY_SRC
+                | wgpu::TextureUsage::OUTPUT_ATTACHMENT
+                ,
+            label: None,
+        };
+
+        let texture = device.create_texture(&texture_desc);
+        let view = texture.create_view(&Default::default());
+        let sampler = device.create_sampler(
+            &wgpu::SamplerDescriptor {
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Nearest,
+                min_filter: wgpu::FilterMode::Nearest,
+                mipmap_filter: wgpu::FilterMode::Nearest,
+                ..Default::default()
+            }
+        );
+
+        EffectNodePaintState{
             input_textures: Vec::new(),
-            output_texture: context.blank_texture(),
+            output_texture: Rc::new(Texture {
+                texture,
+                view,
+                sampler,
+            }),
         }
     }
 
     /// Updates the given PaintState.
-    /// Paint should be lightweight and not kick off any work (update should do that.)
-    pub fn paint<PaintContext: BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) {
-        paint_state.output_texture = match self.state {
-            EffectNodeState::Ready {render_pipeline: _} => context.blank_texture(), // XXX
+    /// Paint should be lightweight and not kick off any CPU work (update should do that.)
+    pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> Rc<Texture> {
+        match &self.state {
+            EffectNodeState::Ready {render_pipeline} => {
+
+            let mut encoder = context.graphics_device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[
+                        wgpu::RenderPassColorAttachmentDescriptor {
+                            attachment: &paint_state.output_texture.view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(
+                                    wgpu::Color {
+                                        r: 0.1,
+                                        g: 0.2,
+                                        b: 0.3,
+                                        a: 1.0,
+                                    }
+                                ),
+                                store: true,
+                            }
+                        }
+                    ],
+                    depth_stencil_attachment: None,
+                });
+
+                render_pass.set_pipeline(&render_pipeline);
+                render_pass.draw(0..3, 0..1);
+
+                paint_state.output_texture.clone()
+            },
             _ => context.blank_texture(),
-        };
+        }
     }
 }

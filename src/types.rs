@@ -8,13 +8,6 @@ pub struct Texture {
     pub sampler: wgpu::Sampler,
 }
 
-/// Convenient packaging for a device and queue
-#[derive(Debug)]
-pub struct GraphicsContext {
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
-}
-
 /// For the graph
 pub type UID = u32;
 
@@ -56,10 +49,16 @@ pub trait WorkerPool {
 
 /// This context provides a graphical context via WGPU
 pub trait Graphics {
-    fn graphics(&self) -> Rc<GraphicsContext>;
+    fn graphics_device(&self) -> &wgpu::Device;
+    fn graphics_queue(&self) -> &wgpu::Queue;
 }
 
 /// This context provides a way to fetch a library item's content from its name
 pub trait FetchContent {
     fn fetch_content_closure(&self, name: &str) -> Box<dyn FnOnce () -> std::io::Result<String> + Send + 'static>;
+}
+
+/// This context provides a way to fetch the current resolution (render size)
+pub trait Resolution {
+    fn resolution(&self) -> (u32, u32);
 }

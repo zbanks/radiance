@@ -1,6 +1,5 @@
-use libradiance::{DefaultContext, GraphicsContext, NoiseTexture, EffectNode, EffectNodeArguments};
+use libradiance::{DefaultContext, NoiseTexture, EffectNode, EffectNodeArguments};
 use futures::executor::block_on;
-use std::rc::Rc;
 
 fn main() {
     // Set up WGPU
@@ -11,10 +10,9 @@ fn main() {
         }
     )).unwrap();
     let (device, queue) = block_on(adapter.request_device(&Default::default(), None)).unwrap();
-    let graphics = Rc::new(GraphicsContext {device: device, queue: queue});
 
     // Create a radiance Context
-    let mut ctx = DefaultContext::new(graphics.clone());
+    let mut ctx = DefaultContext::new(&device, &queue);
 
     let texture_size = 256;
     let test_chain_id = ctx.add_chain((texture_size, texture_size));
@@ -41,7 +39,7 @@ fn main() {
     let noise_texture = chain.noise_texture();
 
     // Read out the noise texture, as a test
-    let mut encoder = graphics.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: None,
     });
 
@@ -53,7 +51,7 @@ fn main() {
         label: None,
         mapped_at_creation: false,
     };
-    let output_buffer = graphics.device.create_buffer(&output_buffer_desc);
+    let output_buffer = device.create_buffer(&output_buffer_desc);
 
     let texture_extent = wgpu::Extent3d {
         width: texture_size as u32,
@@ -78,13 +76,13 @@ fn main() {
         texture_extent,
     );
 
-    graphics.queue.submit(Some(encoder.finish()));
+    queue.submit(Some(encoder.finish()));
 
     // NOTE: We have to create the mapping THEN device.poll(). If we don't
     // the application will freeze.
     let buffer_slice = output_buffer.slice(..);
     let mapping = buffer_slice.map_async(wgpu::MapMode::Read);
-    graphics.device.poll(wgpu::Maintain::Wait);
+    device.poll(wgpu::Maintain::Wait);
 
     block_on(mapping).unwrap();
     let data = buffer_slice.get_mapped_range();
