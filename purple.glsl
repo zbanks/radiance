@@ -2,6 +2,11 @@
 //#property frequency 1
 
 void main(void) {
+    vec2 aspectCorrection = vec2(1.);
+    float iTime = 0.5;
+    float iFrequency = 1.;
+    float iIntensity = 1.;
+
     vec2 normCoord = (uv - 0.5) * aspectCorrection;
     //mat2 rot = mat2(cos(iTime), -sin(iTime), sin(iTime), cos(iTime));
     vec4 c;
@@ -18,5 +23,6 @@ void main(void) {
     c.a = 1.;
     c *= iIntensity;
 
-    fragColor = composite(texture(iInput, uv), c);
+    //fragColor = composite(texture(iInput, uv), c);
+    fragColor = c;
 }

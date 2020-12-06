@@ -1,9 +1,10 @@
 #version 450
 
 in vec4 gl_FragCoord;
+layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
-layout(location = 1) out vec4 fragColor;
 
+/*
 // Outputs of previous patterns
 layout(set = 0, binding = 0) uniform sampler2D iInputs[];
 
@@ -34,6 +35,7 @@ layout(set = 0, binding = 3) uniform Uniforms {
     // (Ideal) output rate in frames per second
     uniform float iFPS;
 };
+*/
 
 // Output of the previous pattern.  Alias to iInputs[0]
 #define iInput iInputs[0]
@@ -47,12 +49,15 @@ layout(set = 0, binding = 3) uniform Uniforms {
 
 #define M_PI 3.1415926535897932384626433832795
 
+/*
 float lin_step(float v) {
     return v * iStep * iFPS;
 }
 float exp_step(float v) {
     return pow(v, iStep * iFPS);
 }
+*/
+
 // Utilities to convert from an RGB vec3 to an HSV vec3
 // 0 <= H, S, V <= 1
 vec3 rgb2hsv(vec3 c) {
@@ -256,6 +261,7 @@ float modf(float x, out float integralPart) {
 #endif
 
 // FIXME
+/*
 #ifdef GL_ES
 #define onePixel (1.0 / min(iResolution.x, iResolution.y))
 #define aspectCorrection (iResolution / min(iResolution.x, iResolution.y))
@@ -265,5 +271,5 @@ float onePixel = 1. / min(iResolution.x, iResolution.y);
 #endif
 
 float defaultPulse = sawtooth(iTime * iFrequency, 0.1);
-
+*/
 #line 1

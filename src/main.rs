@@ -18,7 +18,6 @@ fn main() {
     let texture_size = 256;
     let test_chain_id = ctx.add_chain((texture_size, texture_size));
     let mut effect_node = EffectNode::new();
-    //effect_node.set_name("purple.glsl");
 
     let chain = ctx.chain(test_chain_id).unwrap();
     let mut paint_state = effect_node.new_paint_state(chain);
