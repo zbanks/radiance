@@ -1,7 +1,8 @@
-use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent};
+use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Graphics};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
+use wgpu;
 
 /// The EffectNodePaintState contains chain-specific data.
 /// It is constructed by calling new_paint_state() and mutated by paint().
@@ -15,37 +16,48 @@ pub struct EffectNodePaintState {
 /// The EffectNode contains context-specific, chain-agnostic data.
 /// It is constructed by calling new()
 #[derive(Debug)]
-pub struct EffectNode<UpdateContext: WorkerPool + FetchContent> {
+pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Graphics> {
     state: EffectNodeState<UpdateContext>,
     name: Option<String>,
 }
 
-enum EffectNodeState<UpdateContext: WorkerPool + FetchContent> {
+enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Graphics> {
     Uninitialized,
+    // Note: The work handle below is really not optional.
+    // The Option<> is only there to allow "taking" it as soon as compilation is done.
     Compiling {shader_compilation_work_handle: Option<<UpdateContext as WorkerPool>::Handle<Result<Vec<u8>, String>>>},
-    Ready {compiled_shader: Vec<u8>},
+    Ready {render_pipeline: wgpu::RenderPipeline},
     Error(String),
 }
 
-impl<UpdateContext: WorkerPool + FetchContent> fmt::Debug for EffectNodeState<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent + Graphics> fmt::Debug for EffectNodeState<UpdateContext> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
             EffectNodeState::Compiling {shader_compilation_work_handle: _} => write!(f, "Compiling"),
-            EffectNodeState::Ready {compiled_shader: _} => write!(f, "Ready"),
+            EffectNodeState::Ready {render_pipeline: _} => write!(f, "Ready"),
             EffectNodeState::Error(e) => write!(f, "Error({})", e),
         }
     }
 }
 
+/// Holds arguments to pass to EffectNode's update() method.
+/// This is how you tell the node what it should be doing.
 #[derive(Debug)]
 pub struct EffectNodeArguments<'a> {
     pub name: Option<&'a str>,
 }
 
+/// Return value for EffectNode's update() method.
+/// This is how the node tells you about itself.
+#[derive(Debug)]
+pub struct EffectNodeReturn<'a> {
+    pub name: Option<&'a str>,
+}
+
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
-impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateContext> {
     pub fn new() -> EffectNode<UpdateContext> {
         EffectNode {
             state: EffectNodeState::Uninitialized,
@@ -53,8 +65,8 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
         }
     }
 
-    fn start_compiling_shader(&mut self, context: &UpdateContext) -> EffectNodeState<UpdateContext> {
-
+    // Called when the name changes. Sets the state to Compiling and kicks off shaderc in a worker.
+    fn start_compiling_shader(&mut self, context: &UpdateContext) {
         let shader_content_closure = context.fetch_content_closure(&self.name.as_ref().unwrap());
         let shader_name = self.name.as_ref().unwrap().to_owned();
 
@@ -68,11 +80,71 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
                 Err(e) => Err(e.to_string()),
             }
         });
-        EffectNodeState::Compiling {shader_compilation_work_handle: Some(shader_compilation_work_handle)}
+        self.state = EffectNodeState::Compiling {shader_compilation_work_handle: Some(shader_compilation_work_handle)};
+    }
+
+    // Called when the shader compilation is finished. Sets up the render pipeline that will be used in paint calls, and sets the state to Ready.
+    fn setup_render_pipeline(&mut self, context: &UpdateContext, frag_binary: &[u8]) {
+        let device = &context.graphics().device;
+
+        let vs_module = device.create_shader_module(wgpu::include_spirv!("effect_vertex.spv"));
+        let fs_module = device.create_shader_module(wgpu::util::make_spirv(frag_binary));
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex_stage: wgpu::ProgrammableStageDescriptor {
+                module: &vs_module,
+                entry_point: "main",
+            },
+            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+                module: &fs_module,
+                entry_point: "main",
+            }),
+            rasterization_state: Some(
+                wgpu::RasterizationStateDescriptor {
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: wgpu::CullMode::Back,
+                    depth_bias: 0,
+                    depth_bias_slope_scale: 0.0,
+                    depth_bias_clamp: 0.0,
+                    clamp_depth: false,
+                }
+            ), 
+            color_states: &[
+                wgpu::ColorStateDescriptor {
+                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                    color_blend: wgpu::BlendDescriptor::REPLACE,
+                    alpha_blend: wgpu::BlendDescriptor::REPLACE,
+                    write_mask: wgpu::ColorWrite::ALL,
+                },
+            ],
+            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
+            depth_stencil_state: None,
+            vertex_state: wgpu::VertexStateDescriptor {
+                index_format: wgpu::IndexFormat::Uint16,
+                vertex_buffers: &[],
+            },
+            sample_count: 1,
+            sample_mask: !0,
+            alpha_to_coverage_enabled: false,
+        });
+
+        self.state = EffectNodeState::Ready {
+            render_pipeline,
+        };
     }
 
     pub fn update(&mut self, context: &UpdateContext, args: &EffectNodeArguments) {
         // Update internal state based on args
+        // This tree seems pretty big and convoluted just to compare Option<String> with Option<&str>
         let name_changed = match &mut self.name {
             Some(cur_name) => match args.name {
                 Some(new_name) => { // Some, Some
@@ -100,7 +172,7 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
         if name_changed {
             // Always recompile if name changed
             match self.name {
-                Some(_) => {self.state = self.start_compiling_shader(context);}
+                Some(_) => {self.start_compiling_shader(context);}
                 None => {self.state = EffectNodeState::Uninitialized;},
             };
         } else if let EffectNodeState::Compiling {shader_compilation_work_handle: handle_opt} = &mut self.state {
@@ -108,17 +180,19 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
             let handle_ref = handle_opt.as_ref().unwrap();
             if !handle_ref.alive() {
                 let handle = handle_opt.take().unwrap();
-                self.state = match handle.join() {
+                match handle.join() {
                     WorkResult::Ok(result) => {
                         match result {
-                            Ok(binary) => EffectNodeState::Ready {compiled_shader: binary},
-                            Err(msg) => EffectNodeState::Error(msg.to_string()),
+                            Ok(binary) => {
+                                self.setup_render_pipeline(context, &binary);
+                            },
+                            Err(msg) => {self.state = EffectNodeState::Error(msg.to_string())},
                         }
                     },
                     WorkResult::Err(_) => {
-                        EffectNodeState::Error("Panicked".to_owned())
+                        self.state = EffectNodeState::Error("Panicked".to_owned());
                     },
-                };
+                }
             }
         }
     }
@@ -136,7 +210,7 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
     /// Paint should be lightweight and not kick off any work (update should do that.)
     pub fn paint<PaintContext: BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) {
         paint_state.output_texture = match self.state {
-            EffectNodeState::Ready {compiled_shader: _} => context.blank_texture(), // XXX
+            EffectNodeState::Ready {render_pipeline: _} => context.blank_texture(), // XXX
             _ => context.blank_texture(),
         };
     }
