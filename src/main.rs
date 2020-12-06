@@ -1,4 +1,5 @@
-use libradiance::{DefaultContext, NoiseTexture, EffectNode, EffectNodeArguments};
+use libradiance::{DefaultContext, BlankTexture, EffectNode, EffectNodeArguments};
+
 use futures::executor::block_on;
 
 fn main() {
@@ -26,17 +27,19 @@ fn main() {
         name: Some("purple.glsl"),
     };
 
+    let mut texture = chain.blank_texture().clone();
+
     // Fake paint loop
     for i in 0..10 {
         println!("update...");
         effect_node.update(&ctx, &args);
         println!("{:?}", effect_node);
         println!("paint...");
-        effect_node.paint(chain, &mut paint_state);
+        let (cmds, tex) = effect_node.paint(chain, &mut paint_state);
+        queue.submit(cmds);
         std::thread::sleep(std::time::Duration::from_millis(100));
-    }
-
-    let noise_texture = chain.noise_texture();
+        texture = tex;
+    };
 
     // Read out the noise texture, as a test
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -61,7 +64,7 @@ fn main() {
 
     encoder.copy_texture_to_buffer(
         wgpu::TextureCopyView {
-            texture: &noise_texture.texture,
+            texture: &texture.texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         }, 

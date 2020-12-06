@@ -190,7 +190,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                         }
                     },
                     WorkResult::Err(_) => {
-                        self.state = EffectNodeState::Error("Panicked".to_owned());
+                        self.state = EffectNodeState::Error("Shader compilation panicked".to_owned());
                     },
                 }
             }
@@ -247,7 +247,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
 
     /// Updates the given PaintState.
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
-    pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> Rc<Texture> {
+    pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
         match &self.state {
             EffectNodeState::Ready {render_pipeline} => {
 
@@ -255,33 +255,35 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                 label: Some("Render Encoder"),
             });
 
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[
-                        wgpu::RenderPassColorAttachmentDescriptor {
-                            attachment: &paint_state.output_texture.view,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(
-                                    wgpu::Color {
-                                        r: 0.1,
-                                        g: 0.2,
-                                        b: 0.3,
-                                        a: 1.0,
-                                    }
-                                ),
-                                store: true,
+            {
+                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[
+                            wgpu::RenderPassColorAttachmentDescriptor {
+                                attachment: &paint_state.output_texture.view,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(
+                                        wgpu::Color {
+                                            r: 0.1,
+                                            g: 0.2,
+                                            b: 0.3,
+                                            a: 1.0,
+                                        }
+                                    ),
+                                    store: true,
+                                }
                             }
-                        }
-                    ],
-                    depth_stencil_attachment: None,
-                });
+                        ],
+                        depth_stencil_attachment: None,
+                    });
 
-                render_pass.set_pipeline(&render_pipeline);
-                render_pass.draw(0..3, 0..1);
+                    render_pass.set_pipeline(&render_pipeline);
+                    render_pass.draw(0..3, 0..1);
+                }
 
-                paint_state.output_texture.clone()
+                (vec![encoder.finish()], paint_state.output_texture.clone())
             },
-            _ => context.blank_texture(),
+            _ => (vec![], context.blank_texture()),
         }
     }
 }
