@@ -3,6 +3,8 @@ use std::rc::Rc;
 use shaderc;
 use std::fmt;
 use wgpu;
+use std::num::NonZeroU32;
+use bytemuck;
 
 /// The EffectNodePaintState contains chain-specific data.
 /// It is constructed by calling new_paint_state() and mutated by paint().
@@ -26,7 +28,7 @@ enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Graphics> {
     // Note: The work handle below is really not optional.
     // The Option<> is only there to allow "taking" it as soon as compilation is done.
     Compiling {shader_compilation_work_handle: Option<<UpdateContext as WorkerPool>::Handle<Result<Vec<u8>, String>>>},
-    Ready {render_pipeline: wgpu::RenderPipeline},
+    Ready {render_pipeline: wgpu::RenderPipeline, update_bind_group: wgpu::BindGroup, uniform_buffer: wgpu::Buffer},
     Error(String),
 }
 
@@ -35,7 +37,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> fmt::Debug for EffectN
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
             EffectNodeState::Compiling {shader_compilation_work_handle: _} => write!(f, "Compiling"),
-            EffectNodeState::Ready {render_pipeline: _} => write!(f, "Ready"),
+            EffectNodeState::Ready {render_pipeline: _, update_bind_group: _, uniform_buffer: _} => write!(f, "Ready"),
             EffectNodeState::Error(e) => write!(f, "Error({})", e),
         }
     }
@@ -53,6 +55,21 @@ pub struct EffectNodeArguments<'a> {
 #[derive(Debug)]
 pub struct EffectNodeReturn<'a> {
     pub name: Option<&'a str>,
+}
+
+/// The uniform buffer associated with the shader
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[allow(non_snake_case)]
+struct Uniforms {
+    iAudio: [f32; 4],
+    iResolution:[f32; 2],
+    iStep: f32,
+    iTime: f32,
+    iFrequency: f32,
+    iIntensity: f32,
+    iIntensityIntegral: f32,
+    iFPS: f32,
 }
 
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
@@ -86,17 +103,92 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     // Called when the shader compilation is finished. Sets up the render pipeline that will be used in paint calls, and sets the state to Ready.
     fn setup_render_pipeline(&mut self, context: &UpdateContext, frag_binary: &[u8]) {
         let device = &context.graphics_device();
+        let queue = &context.graphics_queue();
 
         let vs_module = device.create_shader_module(wgpu::include_spirv!(concat!(env!("OUT_DIR"), "/effect_vertex.spv")));
         let fs_module = device.create_shader_module(wgpu::util::make_spirv(frag_binary));
 
+        let n_inputs = 1_u32; // XXX read from file
+
+        // The effect will have two bind groups, one which will be bound in update() (uniforms & samplers)
+        // and one which will be bound in paint() (textures)
+
+        // The "update" bind group:
+        // 0: Uniforms
+        // 1: iSampler
+
+        // The "paint" bind group:
+        // 0: iInputsTex[]
+        // 1: iNoiseTex
+        // 2: iChannelTex[]
+
+        let update_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer {
+                        dynamic: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1, // iSampler
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler {
+                        comparison: false,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("update bind group layout"),
+        });
+
+        let paint_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0, // iInputsTex
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::SampledTexture {
+                        multisampled: false,
+                        dimension: wgpu::TextureViewDimension::D2,
+                        component_type: wgpu::TextureComponentType::Uint,
+                    },
+                    count: NonZeroU32::new(n_inputs),
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1, // iNoiseTex
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::SampledTexture {
+                        multisampled: false,
+                        dimension: wgpu::TextureViewDimension::D2,
+                        component_type: wgpu::TextureComponentType::Uint,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2, // iChannelTex
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::SampledTexture {
+                        multisampled: false,
+                        dimension: wgpu::TextureViewDimension::D2,
+                        component_type: wgpu::TextureComponentType::Uint,
+                    },
+                    count: NonZeroU32::new(n_inputs),
+                },
+            ],
+            label: Some("paint bind group layout"),
+        });
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&update_bind_group_layout], // , &paint_bind_group_layout], // XXX
                 push_constant_ranges: &[],
             });
 
+        // Create a render pipeline, we will eventually want multiple of these for a multi-pass effect
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
@@ -137,8 +229,62 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
             alpha_to_coverage_enabled: false,
         });
 
+        // The uniform buffer for this effect
+        let uniform_buffer = device.create_buffer(
+            &wgpu::BufferDescriptor {
+                label: Some("uniform buffer"),
+                size: std::mem::size_of::<Uniforms>() as u64,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+                mapped_at_creation: false,
+            }
+        );
+
+        // XXX temporary static uniform values
+        let uniforms = Uniforms {
+            iStep: 0.,
+            iTime: 0.,
+            iFrequency: 1.,
+            iAudio: [0., 0., 0., 0.],
+            iResolution: [256., 256.],
+            iIntensity: 1.,
+            iIntensityIntegral: 0.,
+            iFPS: 60.,
+        };
+        queue.write_buffer(&uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
+        // The sampler that will be used for texture access within the shaders
+        let sampler = device.create_sampler(
+            &wgpu::SamplerDescriptor {
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                mipmap_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            }
+        );
+
+        // The update bind group is actually static, since we will just issue updates the uniform buffer
+        let update_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &update_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(uniform_buffer.slice(..))
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+            label: Some("update bind group"),
+        });
+
         self.state = EffectNodeState::Ready {
             render_pipeline,
+            update_bind_group,
+            uniform_buffer,
         };
     }
 
@@ -228,9 +374,9 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                 address_mode_u: wgpu::AddressMode::ClampToEdge,
                 address_mode_v: wgpu::AddressMode::ClampToEdge,
                 address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mag_filter: wgpu::FilterMode::Nearest,
-                min_filter: wgpu::FilterMode::Nearest,
-                mipmap_filter: wgpu::FilterMode::Nearest,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                mipmap_filter: wgpu::FilterMode::Linear,
                 ..Default::default()
             }
         );
@@ -249,15 +395,14 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
     pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
         match &self.state {
-            EffectNodeState::Ready {render_pipeline} => {
+            EffectNodeState::Ready {render_pipeline, update_bind_group, uniform_buffer: _} => {
+                let mut encoder = context.graphics_device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Render Encoder"),
+                });
 
-            let mut encoder = context.graphics_device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
-
-            {
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    color_attachments: &[
+                {
+                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        color_attachments: &[
                             wgpu::RenderPassColorAttachmentDescriptor {
                                 attachment: &paint_state.output_texture.view,
                                 resolve_target: None,
@@ -278,6 +423,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                     });
 
                     render_pass.set_pipeline(&render_pipeline);
+                    render_pass.set_bind_group(0, &update_bind_group, &[]); 
                     render_pass.draw(0..4, 0..1);
                 }
 

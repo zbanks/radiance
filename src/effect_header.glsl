@@ -4,41 +4,50 @@ in vec4 gl_FragCoord;
 layout(location = 0) out vec4 fragColor;
 layout(location = 0) in vec2 uv;
 
-/*
-// Outputs of previous patterns
-layout(set = 0, binding = 0) uniform sampler2D iInputs[];
-
-// Full frame RGBA noise
-layout(set = 0, binding = 1) uniform sampler2D iNoise;
-
-// Previous outputs of the other channels (e.g. foo.1.glsl)
-layout(set = 0, binding = 2) uniform sampler2D iChannel[];
-
-// Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
-layout(set = 0, binding = 3) uniform Uniforms {
-    uniform float iStep;
-    uniform float iTime;
-    uniform float iFrequency;
-
+layout(set = 0, binding = 0) uniform Uniforms {
     // Audio levels, high/mid/low/level, [0.0, 1.0]
-    uniform vec4  iAudio;
+    vec4 iAudio;
 
     // Resolution of the output pattern
-    uniform vec2 iResolution;
+    vec2 iResolution;
+
+    float iStep;
+
+    // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
+    float iTime;
+
+    float iFrequency;
 
     // Intensity slider, [0.0, 1.0]
-    uniform float iIntensity;
+    float iIntensity;
 
     // Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
-    uniform float iIntensityIntegral;
+    float iIntensityIntegral;
 
     // (Ideal) output rate in frames per second
-    uniform float iFPS;
+    float iFPS;
 };
+
+layout(set = 0, binding = 1) uniform sampler iSampler;
+
+/*
+// Outputs of previous patterns
+layout(set = 1, binding = 0) uniform texture2D iInputsTex[];
+
+// Full frame RGBA noise
+layout(set = 1, binding = 1) uniform texture2D iNoiseTex;
+
+// Previous outputs of the other channels (e.g. foo.1.glsl)
+layout(set = 1, binding = 2) uniform texture2D iChannelTex[];
 */
 
-// Output of the previous pattern.  Alias to iInputs[0]
-#define iInput iInputs[0]
+// Macros to approximate the OpenGL syntax
+#define iInputs(X) (sampler2D(iInputsTex[(X)], iSampler))
+#define iNoise (sampler2D(iNoiseTex, iSampler))
+#define iChannel(X) (sampler2D(iChannelTex[(X)], iSampler))
+
+// Output of the previous pattern.  Alias to iInputs(0)
+#define iInput iInput(0)
 
 // Aliases to audio levels
 #define iAudioLow   iAudio.x
@@ -49,14 +58,12 @@ layout(set = 0, binding = 3) uniform Uniforms {
 
 #define M_PI 3.1415926535897932384626433832795
 
-/*
 float lin_step(float v) {
     return v * iStep * iFPS;
 }
 float exp_step(float v) {
     return pow(v, iStep * iFPS);
 }
-*/
 
 // Utilities to convert from an RGB vec3 to an HSV vec3
 // 0 <= H, S, V <= 1
@@ -239,37 +246,9 @@ float hmax(vec4 v) {
     return hmax(max(v.rg,v.ba));
 }
 
-#ifdef GL_ES
-// Shim functions for ES
-float round(float x) {
-    return floor(x + 0.5);
-}
-vec2 round(vec2 x) {
-    return floor(x + 0.5);
-}
-vec3 round(vec3 x) {
-    return floor(x + 0.5);
-}
-vec4 round(vec4 x) {
-    return floor(x + 0.5);
-}
-float modf(float x, out float integralPart) {
-    integralPart = floor(x);
-    return x - integralPart;
-}
-// TODO: Provide a shim for `mat2 inverse(mat2 x)`
-#endif
-
-// FIXME
-/*
-#ifdef GL_ES
-#define onePixel (1.0 / min(iResolution.x, iResolution.y))
-#define aspectCorrection (iResolution / min(iResolution.x, iResolution.y))
-#else
 vec2 aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
 float onePixel = 1. / min(iResolution.x, iResolution.y);
-#endif
 
 float defaultPulse = sawtooth(iTime * iFrequency, 0.1);
-*/
+
 #line 1

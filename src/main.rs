@@ -1,4 +1,4 @@
-use libradiance::{DefaultContext, BlankTexture, EffectNode, EffectNodeArguments};
+use radiance::{DefaultContext, BlankTexture, EffectNode, EffectNodeArguments};
 
 use futures::executor::block_on;
 
@@ -10,7 +10,11 @@ fn main() {
             compatible_surface: None,
         }
     )).unwrap();
-    let (device, queue) = block_on(adapter.request_device(&Default::default(), None)).unwrap();
+    let (device, queue) = block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        features: wgpu::Features::SAMPLED_TEXTURE_BINDING_ARRAY, // Need to remove for web port
+        limits: Default::default(),
+        shader_validation: true,
+    }, None)).unwrap();
 
     // Create a radiance Context
     let mut ctx = DefaultContext::new(&device, &queue);
@@ -46,14 +50,13 @@ fn main() {
     });
 
     let output_buffer_size = (4 * texture_size * texture_size) as wgpu::BufferAddress;
-    let output_buffer_desc = wgpu::BufferDescriptor {
+    let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         size: output_buffer_size,
         usage: wgpu::BufferUsage::COPY_DST
             | wgpu::BufferUsage::MAP_READ,
         label: None,
         mapped_at_creation: false,
-    };
-    let output_buffer = device.create_buffer(&output_buffer_desc);
+    });
 
     let texture_extent = wgpu::Extent3d {
         width: texture_size as u32,
