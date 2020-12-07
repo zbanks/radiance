@@ -8,9 +8,6 @@ layout(set = 0, binding = 0) uniform Uniforms {
     // Audio levels, high/mid/low/level, [0.0, 1.0]
     vec4 iAudio;
 
-    // Resolution of the output pattern
-    vec2 iResolution;
-
     float iStep;
 
     // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
@@ -23,22 +20,30 @@ layout(set = 0, binding = 0) uniform Uniforms {
 
     // Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
     float iIntensityIntegral;
+};
+
+layout(set = 0, binding = 1) uniform sampler iSampler;
+
+const vec2 iResolution = vec2(256, 256); // XXX
+const float iFPS = 60; // XXX
+
+/*
+layout(set = 1, binding = 0) uniform PaintUnifroms {
+    // Resolution of the output pattern
+    vec2 iResolution;
 
     // (Ideal) output rate in frames per second
     float iFPS;
 };
 
-layout(set = 0, binding = 1) uniform sampler iSampler;
-
-/*
 // Outputs of previous patterns
-layout(set = 1, binding = 0) uniform texture2D iInputsTex[];
+layout(set = 1, binding = 1) uniform texture2D iInputsTex[];
 
 // Full frame RGBA noise
-layout(set = 1, binding = 1) uniform texture2D iNoiseTex;
+layout(set = 1, binding = 2) uniform texture2D iNoiseTex;
 
 // Previous outputs of the other channels (e.g. foo.1.glsl)
-layout(set = 1, binding = 2) uniform texture2D iChannelTex[];
+layout(set = 1, binding = 3) uniform texture2D iChannelTex[];
 */
 
 // Macros to approximate the OpenGL syntax

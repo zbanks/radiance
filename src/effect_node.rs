@@ -15,7 +15,7 @@ pub struct EffectNodePaintState {
     output_texture: Rc<Texture>,
 }
 
-/// The EffectNode contains context-specific, chain-agnostic data.
+/// The EffectNode struct contains context-specific, chain-agnostic data.
 /// It is constructed by calling new()
 #[derive(Debug)]
 pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Graphics> {
@@ -28,7 +28,7 @@ enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Graphics> {
     // Note: The work handle below is really not optional.
     // The Option<> is only there to allow "taking" it as soon as compilation is done.
     Compiling {shader_compilation_work_handle: Option<<UpdateContext as WorkerPool>::Handle<Result<Vec<u8>, String>>>},
-    Ready {render_pipeline: wgpu::RenderPipeline, update_bind_group: wgpu::BindGroup, uniform_buffer: wgpu::Buffer},
+    Ready {render_pipeline: wgpu::RenderPipeline, update_bind_group: wgpu::BindGroup, update_uniform_buffer: wgpu::Buffer, paint_uniform_buffer: wgpu::Buffer},
     Error(String),
 }
 
@@ -37,7 +37,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> fmt::Debug for EffectN
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
             EffectNodeState::Compiling {shader_compilation_work_handle: _} => write!(f, "Compiling"),
-            EffectNodeState::Ready {render_pipeline: _, update_bind_group: _, uniform_buffer: _} => write!(f, "Ready"),
+            EffectNodeState::Ready {render_pipeline: _, update_bind_group: _, update_uniform_buffer: _,  paint_uniform_buffer: _} => write!(f, "Ready"),
             EffectNodeState::Error(e) => write!(f, "Error({})", e),
         }
     }
@@ -57,18 +57,25 @@ pub struct EffectNodeReturn<'a> {
     pub name: Option<&'a str>,
 }
 
-/// The uniform buffer associated with the shader
+/// The uniform buffer associated with the effect (chain-agnostic)
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[allow(non_snake_case)]
-struct Uniforms {
+struct UpdateUniforms {
     iAudio: [f32; 4],
-    iResolution:[f32; 2],
     iStep: f32,
     iTime: f32,
     iFrequency: f32,
     iIntensity: f32,
     iIntensityIntegral: f32,
+}
+
+/// The uniform buffer associated with the effect (chain-specific)
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[allow(non_snake_case)]
+struct PaintUniforms {
+    iResolution:[f32; 2],
     iFPS: f32,
 }
 
@@ -103,29 +110,29 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     // Called when the shader compilation is finished. Sets up the render pipeline that will be used in paint calls, and sets the state to Ready.
     fn setup_render_pipeline(&mut self, context: &UpdateContext, frag_binary: &[u8]) {
         let device = &context.graphics_device();
-        let queue = &context.graphics_queue();
 
         let vs_module = device.create_shader_module(wgpu::include_spirv!(concat!(env!("OUT_DIR"), "/effect_vertex.spv")));
         let fs_module = device.create_shader_module(wgpu::util::make_spirv(frag_binary));
 
         let n_inputs = 1_u32; // XXX read from file
 
-        // The effect will have two bind groups, one which will be bound in update() (uniforms & samplers)
-        // and one which will be bound in paint() (textures)
+        // The effect will have two bind groups, one which will be bound in update() (most uniforms & sampler)
+        // and one which will be bound in paint() (a few uniforms & textures)
 
         // The "update" bind group:
-        // 0: Uniforms
+        // 0: UpdateUniforms
         // 1: iSampler
 
         // The "paint" bind group:
-        // 0: iInputsTex[]
-        // 1: iNoiseTex
-        // 2: iChannelTex[]
+        // 0: PaintUniforms
+        // 1: iInputsTex[]
+        // 2: iNoiseTex
+        // 3: iChannelTex[]
 
         let update_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
-                    binding: 0,
+                    binding: 0, // UpdateUniforms
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: wgpu::BindingType::UniformBuffer {
                         dynamic: false,
@@ -148,7 +155,16 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
         let paint_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
-                    binding: 0, // iInputsTex
+                    binding: 0, // PaintUniforms
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::UniformBuffer {
+                        dynamic: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1, // iInputsTex
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: wgpu::BindingType::SampledTexture {
                         multisampled: false,
@@ -158,7 +174,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                     count: NonZeroU32::new(n_inputs),
                 },
                 wgpu::BindGroupLayoutEntry {
-                    binding: 1, // iNoiseTex
+                    binding: 2, // iNoiseTex
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: wgpu::BindingType::SampledTexture {
                         multisampled: false,
@@ -168,7 +184,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
-                    binding: 2, // iChannelTex
+                    binding: 3, // iChannelTex
                     visibility: wgpu::ShaderStage::FRAGMENT,
                     ty: wgpu::BindingType::SampledTexture {
                         multisampled: false,
@@ -229,28 +245,25 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
             alpha_to_coverage_enabled: false,
         });
 
-        // The uniform buffer for this effect
-        let uniform_buffer = device.create_buffer(
+        // The update uniform buffer for this effect
+        let update_uniform_buffer = device.create_buffer(
             &wgpu::BufferDescriptor {
-                label: Some("uniform buffer"),
-                size: std::mem::size_of::<Uniforms>() as u64,
+                label: Some("update uniform buffer"),
+                size: std::mem::size_of::<UpdateUniforms>() as u64,
                 usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
                 mapped_at_creation: false,
             }
         );
 
-        // XXX temporary static uniform values
-        let uniforms = Uniforms {
-            iStep: 0.,
-            iTime: 0.,
-            iFrequency: 1.,
-            iAudio: [0., 0., 0., 0.],
-            iResolution: [256., 256.],
-            iIntensity: 1.,
-            iIntensityIntegral: 0.,
-            iFPS: 60.,
-        };
-        queue.write_buffer(&uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        // The paint uniform buffer for this effect
+        let paint_uniform_buffer = device.create_buffer(
+            &wgpu::BufferDescriptor {
+                label: Some("paint uniform buffer"),
+                size: std::mem::size_of::<UpdateUniforms>() as u64,
+                usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+                mapped_at_creation: false,
+            }
+        );
 
         // The sampler that will be used for texture access within the shaders
         let sampler = device.create_sampler(
@@ -271,7 +284,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Buffer(uniform_buffer.slice(..))
+                    resource: wgpu::BindingResource::Buffer(update_uniform_buffer.slice(..))
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -284,10 +297,24 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
         self.state = EffectNodeState::Ready {
             render_pipeline,
             update_bind_group,
-            uniform_buffer,
+            update_uniform_buffer,
+            paint_uniform_buffer,
         };
     }
 
+    /// Updates the given EffectNode.
+    /// This function should be called to advance the pattern held by this EffectNode.
+    /// Here are some of the things this function is responsible for:
+    ///  * Apply the parameters from the given EffectNodeArguments struct
+    ///  * Poll completion of asynchronous work
+    ///  * Get and save any new "globals" from the context (such as iTime and iAudio)
+    ///  * Return information about the node's state in an EffectNodeReturn struct
+    /// The basic render loop pattern looks like this:
+    ///  1. Construct a new EffectNode
+    ///  2. Construct EffectNodePaintStates for each render chain
+    ///  3. Call update once
+    ///  4. Call paint once for each chain
+    ///  5. Goto 3
     pub fn update(&mut self, context: &UpdateContext, args: &EffectNodeArguments) {
         // Update internal state based on args
         // This tree seems pretty big and convoluted just to compare Option<String> with Option<&str>
@@ -340,6 +367,20 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                     },
                 }
             }
+        }
+
+        if let EffectNodeState::Ready {render_pipeline: _, update_bind_group: _, update_uniform_buffer, paint_uniform_buffer: _} = &mut self.state {
+            // Node is ready; we should set the uniforms
+            // TODO set these dynamically, from context()
+            let uniforms = UpdateUniforms {
+                iAudio: [0., 0., 0., 0.],
+                iStep: 0., // What's this?
+                iTime: 0.,
+                iFrequency: 1.,
+                iIntensity: 1.,
+                iIntensityIntegral: 0.,
+            };
+            context.graphics_queue().write_buffer(&update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
         }
     }
 
@@ -395,7 +436,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
     pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
         match &self.state {
-            EffectNodeState::Ready {render_pipeline, update_bind_group, uniform_buffer: _} => {
+            EffectNodeState::Ready {render_pipeline, update_bind_group, update_uniform_buffer: _, paint_uniform_buffer: _} => {
                 let mut encoder = context.graphics_device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Render Encoder"),
                 });
