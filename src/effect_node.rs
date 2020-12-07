@@ -28,8 +28,16 @@ enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Graphics> {
     // Note: The work handle below is really not optional.
     // The Option<> is only there to allow "taking" it as soon as compilation is done.
     Compiling {shader_compilation_work_handle: Option<<UpdateContext as WorkerPool>::Handle<Result<Vec<u8>, String>>>},
-    Ready {render_pipeline: wgpu::RenderPipeline, update_bind_group: wgpu::BindGroup, update_uniform_buffer: wgpu::Buffer, paint_uniform_buffer: wgpu::Buffer},
+    Ready(ReadyState),
     Error(String),
+}
+
+// Extra state associated with an EffectNode when it is Ready
+struct ReadyState {
+    render_pipeline: wgpu::RenderPipeline,
+    update_bind_group: wgpu::BindGroup,
+    update_uniform_buffer: wgpu::Buffer,
+    paint_uniform_buffer: wgpu::Buffer,
 }
 
 impl<UpdateContext: WorkerPool + FetchContent + Graphics> fmt::Debug for EffectNodeState<UpdateContext> {
@@ -37,7 +45,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> fmt::Debug for EffectN
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
             EffectNodeState::Compiling {shader_compilation_work_handle: _} => write!(f, "Compiling"),
-            EffectNodeState::Ready {render_pipeline: _, update_bind_group: _, update_uniform_buffer: _,  paint_uniform_buffer: _} => write!(f, "Ready"),
+            EffectNodeState::Ready(_) => write!(f, "Ready"),
             EffectNodeState::Error(e) => write!(f, "Error({})", e),
         }
     }
@@ -294,12 +302,12 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
             label: Some("update bind group"),
         });
 
-        self.state = EffectNodeState::Ready {
+        self.state = EffectNodeState::Ready(ReadyState {
             render_pipeline,
             update_bind_group,
             update_uniform_buffer,
             paint_uniform_buffer,
-        };
+        });
     }
 
     /// Updates the given EffectNode.
@@ -369,7 +377,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
             }
         }
 
-        if let EffectNodeState::Ready {render_pipeline: _, update_bind_group: _, update_uniform_buffer, paint_uniform_buffer: _} = &mut self.state {
+        if let EffectNodeState::Ready(ready_state) = &mut self.state {
             // Node is ready; we should set the uniforms
             // TODO set these dynamically, from context()
             let uniforms = UpdateUniforms {
@@ -380,7 +388,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                 iIntensity: 1.,
                 iIntensityIntegral: 0.,
             };
-            context.graphics_queue().write_buffer(&update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+            context.graphics_queue().write_buffer(&ready_state.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
         }
     }
 
@@ -436,7 +444,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
     pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
         match &self.state {
-            EffectNodeState::Ready {render_pipeline, update_bind_group, update_uniform_buffer: _, paint_uniform_buffer: _} => {
+            EffectNodeState::Ready(ready_state) => {
                 let mut encoder = context.graphics_device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Render Encoder"),
                 });
@@ -463,8 +471,8 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                         depth_stencil_attachment: None,
                     });
 
-                    render_pass.set_pipeline(&render_pipeline);
-                    render_pass.set_bind_group(0, &update_bind_group, &[]); 
+                    render_pass.set_pipeline(&ready_state.render_pipeline);
+                    render_pass.set_bind_group(0, &ready_state.update_bind_group, &[]); 
                     render_pass.draw(0..4, 0..1);
                 }
 
