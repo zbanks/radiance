@@ -1,4 +1,4 @@
-use crate::types::{NoiseTexture, BlankTexture, Graphics, Texture, WorkerPool, FetchContent, Resolution};
+use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution};
 use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
@@ -7,22 +7,18 @@ use std::collections::HashMap;
 use std::fs::read_to_string;
 
 #[derive(Debug)]
-pub struct DefaultContext<'a> {
-    chains: HashMap<u32, DefaultChain<'a>>,
+pub struct DefaultContext {
+    chains: HashMap<u32, DefaultChain>,
     chain_id: u32,
-    device: &'a wgpu::Device,
-    queue: &'a wgpu::Queue,
     blank_texture: Rc<Texture>,
 }
 
-impl<'a> DefaultContext<'a> {
-    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue) -> DefaultContext<'a> {
+impl DefaultContext {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> DefaultContext {
         let tex = DefaultContext::create_blank_texture(device, queue);
 
         DefaultContext {
             chains: HashMap::new(),
-            device,
-            queue,
             blank_texture: tex,
             chain_id: 0,
         }
@@ -82,8 +78,8 @@ impl<'a> DefaultContext<'a> {
         })
     }
 
-    pub fn add_chain(&mut self, resolution: (u32, u32)) -> u32 {
-        let chain = DefaultChain::new(self.device, self.queue, resolution, self.blank_texture.clone());
+    pub fn add_chain(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, resolution: (u32, u32)) -> u32 {
+        let chain = DefaultChain::new(device, queue, resolution, self.blank_texture.clone());
         let id = self.chain_id;
         self.chain_id += 1;
         self.chains.insert(id, chain);
@@ -96,17 +92,15 @@ impl<'a> DefaultContext<'a> {
 }
 
 #[derive(Debug)]
-pub struct DefaultChain<'a> {
+pub struct DefaultChain {
     resolution: (u32, u32),
-    device: &'a wgpu::Device,
-    queue: &'a wgpu::Queue,
     blank_texture: Rc<Texture>,
     noise_texture: Rc<Texture>,
 }
 
-impl<'a> DefaultChain<'a> {
+impl DefaultChain {
     /// Construct a new chain for a given texture resolution
-    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue, resolution: (u32, u32), blank_texture: Rc<Texture>) -> DefaultChain<'a> {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, resolution: (u32, u32), blank_texture: Rc<Texture>) -> DefaultChain {
         let texture_size = wgpu::Extent3d {
             width: resolution.0,
             height: resolution.1,
@@ -156,8 +150,6 @@ impl<'a> DefaultChain<'a> {
 
         DefaultChain {
             resolution,
-            device,
-            queue,
             noise_texture: Rc::new(Texture {
                 texture: texture,
                 view: view,
@@ -168,34 +160,25 @@ impl<'a> DefaultChain<'a> {
     }
 }
 
-impl BlankTexture for DefaultChain<'_> {
+impl BlankTexture for DefaultChain {
     fn blank_texture(&self) -> Rc<Texture> {
         self.blank_texture.clone()
     }
 }
 
-impl NoiseTexture for DefaultChain<'_> {
+impl NoiseTexture for DefaultChain {
     fn noise_texture(&self) -> Rc<Texture> {
         self.noise_texture.clone()
     }
 }
 
-impl Resolution for DefaultChain<'_> {
+impl Resolution for DefaultChain {
     fn resolution(&self) -> (u32, u32) {
         self.resolution
     }
 }
 
-impl Graphics for DefaultChain<'_> {
-    fn graphics_device(&self) -> &wgpu::Device {
-        self.device
-    }
-    fn graphics_queue(&self) -> &wgpu::Queue {
-        self.queue
-    }
-}
-
-impl WorkerPool for DefaultContext<'_> {
+impl WorkerPool for DefaultContext {
     type Handle<T: Send + 'static> = ThreadWorkHandle<T>;
 
     fn spawn<T: Send + 'static, F: FnOnce () -> T + Send + 'static>(&self, f: F) -> ThreadWorkHandle<T> {
@@ -203,16 +186,7 @@ impl WorkerPool for DefaultContext<'_> {
     }
 }
 
-impl Graphics for DefaultContext<'_> {
-    fn graphics_device(&self) -> &wgpu::Device {
-        self.device
-    }
-    fn graphics_queue(&self) -> &wgpu::Queue {
-        self.queue
-    }
-}
-
-impl FetchContent for DefaultContext<'_> {
+impl FetchContent for DefaultContext {
     fn fetch_content_closure(&self, name: &str) -> Box<dyn FnOnce() -> std::io::Result<String> + Send + 'static> {
         let cloned_name = name.to_string();
         return Box::new(move || {

@@ -101,7 +101,6 @@ impl<'a> Default for TextureConfig<'a> {
 pub struct Texture {
     texture: Rc<types::Texture>,
     bind_group: BindGroup,
-    size: Extent3d,
 }
 
 impl Texture {
@@ -159,7 +158,6 @@ impl Texture {
                 sampler: sampler,
             }),
             bind_group,
-            size: config.size, // XXX
         }
     }
 
@@ -184,11 +182,6 @@ impl Texture {
         Self {
             texture: texture,
             bind_group,
-            size: Extent3d {
-                width: 0, // XXX
-                height: 0, // XXX
-                depth: 1,
-            },
         }
     }
 
@@ -220,26 +213,6 @@ impl Texture {
                 depth: 1,
             },
         );
-    }
-
-    /// The width of the texture in pixels.
-    pub fn width(&self) -> u32 {
-        self.size.width
-    }
-
-    /// The height of the texture in pixels.
-    pub fn height(&self) -> u32 {
-        self.size.height
-    }
-
-    /// The depth of the texture.
-    pub fn depth(&self) -> u32 {
-        self.size.depth
-    }
-
-    /// The size of the texture in pixels.
-    pub fn size(&self) -> Extent3d {
-        self.size
     }
 
     /// The underlying `wgpu::Texture`.

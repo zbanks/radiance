@@ -1,4 +1,4 @@
-use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Graphics, Resolution};
+use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Resolution};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
@@ -18,12 +18,12 @@ pub struct EffectNodePaintState {
 /// The EffectNode struct contains context-specific, chain-agnostic data.
 /// It is constructed by calling new()
 #[derive(Debug)]
-pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Graphics> {
+pub struct EffectNode<UpdateContext: WorkerPool + FetchContent> {
     state: EffectNodeState<UpdateContext>,
     name: Option<String>,
 }
 
-enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Graphics> {
+enum EffectNodeState<UpdateContext: WorkerPool + FetchContent> {
     Uninitialized,
     // Note: The work handle below is really not optional.
     // The Option<> is only there to allow "taking" it as soon as compilation is done.
@@ -40,7 +40,7 @@ struct ReadyState {
     paint_uniform_buffer: wgpu::Buffer,
 }
 
-impl<UpdateContext: WorkerPool + FetchContent + Graphics> fmt::Debug for EffectNodeState<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent> fmt::Debug for EffectNodeState<UpdateContext> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
@@ -89,7 +89,7 @@ struct PaintUniforms {
 
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
-impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
     pub fn new() -> EffectNode<UpdateContext> {
         EffectNode {
             state: EffectNodeState::Uninitialized,
@@ -116,9 +116,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     }
 
     // Called when the shader compilation is finished. Sets up the render pipeline that will be used in paint calls, and sets the state to Ready.
-    fn setup_render_pipeline(&mut self, context: &UpdateContext, frag_binary: &[u8]) {
-        let device = &context.graphics_device();
-
+    fn setup_render_pipeline(&mut self, device: &wgpu::Device, frag_binary: &[u8]) {
         let vs_module = device.create_shader_module(wgpu::include_spirv!(concat!(env!("OUT_DIR"), "/effect_vertex.spv")));
         let fs_module = device.create_shader_module(wgpu::util::make_spirv(frag_binary));
 
@@ -323,7 +321,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
     ///  3. Call update once
     ///  4. Call paint once for each chain
     ///  5. Goto 3
-    pub fn update(&mut self, context: &UpdateContext, args: &EffectNodeArguments) {
+    pub fn update(&mut self, context: &UpdateContext, device: &wgpu::Device, queue: &wgpu::Queue, args: &EffectNodeArguments) {
         // Update internal state based on args
         // This tree seems pretty big and convoluted just to compare Option<String> with Option<&str>
         let name_changed = match &mut self.name {
@@ -365,7 +363,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                     WorkResult::Ok(result) => {
                         match result {
                             Ok(binary) => {
-                                self.setup_render_pipeline(context, &binary);
+                                self.setup_render_pipeline(device, &binary);
                             },
                             Err(msg) => {self.state = EffectNodeState::Error(msg.to_string())},
                         }
@@ -388,15 +386,13 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
                 iIntensity: 1.,
                 iIntensityIntegral: 0.,
             };
-            context.graphics_queue().write_buffer(&ready_state.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+            queue.write_buffer(&ready_state.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
         }
     }
 
     /// Call this when a new chain is added to get a PaintState
     /// suitable for use with paint().
-    pub fn new_paint_state<PaintContext: Graphics + BlankTexture + NoiseTexture + Resolution>(&self, context: &PaintContext) -> EffectNodePaintState {
-        let device = &context.graphics_device();
-
+    pub fn new_paint_state<PaintContext: BlankTexture + NoiseTexture + Resolution>(&self, context: &PaintContext, device: &wgpu::Device) -> EffectNodePaintState {
         let (width, height) = context.resolution();
 
         let texture_desc = wgpu::TextureDescriptor {
@@ -443,10 +439,10 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
 
     /// Updates the given PaintState.
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
-    pub fn paint<PaintContext: Graphics + BlankTexture + NoiseTexture>(&self, context: &PaintContext, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
+    pub fn paint<PaintContext: BlankTexture + NoiseTexture>(&self, context: &PaintContext, device: &wgpu::Device, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
         match &self.state {
             EffectNodeState::Ready(ready_state) => {
-                let mut encoder = context.graphics_device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Render Encoder"),
                 });
 

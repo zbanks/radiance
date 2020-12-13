@@ -47,12 +47,6 @@ pub trait WorkerPool {
     fn spawn<T: Send + 'static, F: FnOnce () -> T + Send + 'static>(&self, f: F) -> Self::Handle<T>;
 }
 
-/// This context provides a graphical context via WGPU
-pub trait Graphics {
-    fn graphics_device(&self) -> &wgpu::Device;
-    fn graphics_queue(&self) -> &wgpu::Queue;
-}
-
 /// This context provides a way to fetch a library item's content from its name
 pub trait FetchContent {
     fn fetch_content_closure(&self, name: &str) -> Box<dyn FnOnce () -> std::io::Result<String> + Send + 'static>;
