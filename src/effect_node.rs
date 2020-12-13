@@ -412,6 +412,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Graphics> EffectNode<UpdateConte
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             usage: wgpu::TextureUsage::COPY_SRC
                 | wgpu::TextureUsage::OUTPUT_ATTACHMENT
+                | wgpu::TextureUsage::SAMPLED
                 ,
             label: None,
         };

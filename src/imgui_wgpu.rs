@@ -16,8 +16,10 @@ use smallvec::SmallVec;
 use std::error::Error;
 use std::fmt;
 use std::mem::size_of;
+use std::rc::Rc;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
+use crate::types;
 
 pub type RendererResult<T> = Result<T, RendererError>;
 
@@ -97,28 +99,12 @@ impl<'a> Default for TextureConfig<'a> {
 
 /// A container for a bindable texture.
 pub struct Texture {
-    texture: wgpu::Texture,
-    view: wgpu::TextureView,
+    texture: Rc<types::Texture>,
     bind_group: BindGroup,
     size: Extent3d,
 }
 
 impl Texture {
-    /// Create a `Texture` from its raw parts.
-    pub fn from_raw_parts(
-        texture: wgpu::Texture,
-        view: wgpu::TextureView,
-        bind_group: BindGroup,
-        size: Extent3d,
-    ) -> Self {
-        Self {
-            texture,
-            view,
-            bind_group,
-            size,
-        }
-    }
-
     /// Create a new GPU texture width the specified `config`.
     pub fn new(device: &Device, renderer: &Renderer, config: TextureConfig) -> Self {
         // Create the wgpu texture.
@@ -167,10 +153,42 @@ impl Texture {
         });
 
         Self {
-            texture,
-            view,
+            texture: Rc::new(types::Texture {
+                texture: texture,
+                view: view,
+                sampler: sampler,
+            }),
             bind_group,
-            size: config.size,
+            size: config.size, // XXX
+        }
+    }
+
+    pub fn from_radiance(texture: Rc<types::Texture>, device: &Device, renderer: &Renderer) -> Self {
+        // Create the texture bind group from the layout.
+
+        let bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("radiance texture bind group"),
+            layout: &renderer.texture_layout,
+            entries: &[
+                BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(&texture.view),
+                },
+                BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::Sampler(&texture.sampler),
+                },
+            ],
+        });
+
+        Self {
+            texture: texture,
+            bind_group,
+            size: Extent3d {
+                width: 0, // XXX
+                height: 0, // XXX
+                depth: 1,
+            },
         }
     }
 
@@ -183,7 +201,7 @@ impl Texture {
         queue.write_texture(
             // destination (sub)texture
             TextureCopyView {
-                texture: &self.texture,
+                texture: &self.texture.texture,
                 mip_level: 0,
                 origin: Origin3d { x: 0, y: 0, z: 0 },
             },
@@ -226,12 +244,12 @@ impl Texture {
 
     /// The underlying `wgpu::Texture`.
     pub fn texture(&self) -> &wgpu::Texture {
-        &self.texture
+        &self.texture.texture
     }
 
     /// The `wgpu::TextureView` of the underlying texture.
     pub fn view(&self) -> &wgpu::TextureView {
-        &self.view
+        &self.texture.view
     }
 }
 

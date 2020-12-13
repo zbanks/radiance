@@ -6,7 +6,7 @@ use winit::{
 };
 use futures::executor::block_on;
 use imgui::*;
-use radiance::imgui_wgpu::{Renderer, RendererConfig};
+use radiance::imgui_wgpu;
 use std::time::Duration;
 
 struct State {
@@ -73,7 +73,7 @@ impl State {
     }
 }
 
-fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Context, platform: &mut imgui_winit_support::WinitPlatform, renderer: &mut Renderer) {
+fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Context, platform: &mut imgui_winit_support::WinitPlatform, renderer: &mut imgui_wgpu::Renderer, purple_tex_id: TextureId) {
     // Update the UI
     platform
         .prepare_frame(imgui.io_mut(), winit_window)
@@ -84,7 +84,7 @@ fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Con
     {
         let window = imgui::Window::new(im_str!("Hello Imgui from WGPU!"));
         window
-            .size([300.0, 100.0], Condition::FirstUseEver)
+            .size([300.0, 200.0], Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text(im_str!("Hello world!"));
                 ui.text(im_str!("This is a demo of imgui-rs using imgui-wgpu!"));
@@ -96,7 +96,7 @@ fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Con
                     mouse_pos[1],
                 ));
                 ui.separator();
-                //imgui::Image::new(texture_id, [100.0, 100.0]).build(&ui);
+                imgui::Image::new(purple_tex_id, [100.0, 100.0]).build(&ui);
             });
     }
 
@@ -111,10 +111,6 @@ fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Con
     }
     .output;
 
-    // Render the UI
-    //if self.last_cursor != ui.mouse_cursor() {
-    //    self.last_cursor = ui.mouse_cursor();
-    //}
     platform.prepare_render(&ui, winit_window);
 
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -173,11 +169,11 @@ fn main() {
         }),
     }]);
 
-    let renderer_config = RendererConfig {
+    let renderer_config = imgui_wgpu::RendererConfig {
         texture_format: state.sc_desc.format,
         ..Default::default()
     };
-    let mut renderer = Renderer::new(&mut imgui, &state.device, &state.queue, renderer_config);
+    let mut renderer = imgui_wgpu::Renderer::new(&mut imgui, &state.device, &state.queue, renderer_config);
 
     // Create a radiance Context
     let mut ctx = DefaultContext::new(&state.device, &state.queue);
@@ -193,7 +189,22 @@ fn main() {
         name: Some("purple.glsl"),
     };
 
-    let mut texture = chain.blank_texture().clone();
+    let mut purple_tex = None;
+
+    for i in 0..10 {
+        // Update and render effect node
+        println!("update...");
+        effect_node.update(&ctx, &args);
+        println!("{:?}", effect_node);
+        println!("paint...");
+        let (cmds, tex) = effect_node.paint(chain, &mut paint_state);
+        state.queue.submit(cmds);
+
+        std::thread::sleep(Duration::from_millis(10));
+        purple_tex = Some(tex);
+    }
+
+    let purple_tex_id = renderer.textures.insert(imgui_wgpu::Texture::from_radiance(purple_tex.unwrap().clone(), &state.device, &renderer));
 
     event_loop.run(move |event, _, control_flow| {
         platform.handle_event(imgui.io_mut(), &window, &event);
@@ -225,7 +236,7 @@ fn main() {
                 //}
             }
             Event::RedrawRequested(_) => {
-                render_imgui(&window, &mut state, &mut imgui, &mut platform, &mut renderer);
+                render_imgui(&window, &mut state, &mut imgui, &mut platform, &mut renderer, purple_tex_id);
                 //state.update();
                 //match state.render() {
                 //    Ok(_) => {}
@@ -246,14 +257,6 @@ fn main() {
         }
     });
 
-
-    // Update and render effect node
-    println!("update...");
-    effect_node.update(&ctx, &args);
-    println!("{:?}", effect_node);
-    println!("paint...");
-    let (cmds, tex) = effect_node.paint(chain, &mut paint_state);
-    state.queue.submit(cmds);
 
 
     // Fake paint loop
