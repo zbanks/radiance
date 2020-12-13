@@ -1,16 +1,19 @@
-use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution};
+use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution, Timebase};
 use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
 use rand;
 use std::collections::HashMap;
 use std::fs::read_to_string;
+use std::time::{Instant, Duration};
 
 #[derive(Debug)]
 pub struct DefaultContext {
     chains: HashMap<u32, DefaultChain>,
     chain_id: u32,
     blank_texture: Rc<Texture>,
+    start_time: Option<Instant>,
+    cur_time: Duration,
 }
 
 impl DefaultContext {
@@ -21,6 +24,8 @@ impl DefaultContext {
             chains: HashMap::new(),
             blank_texture: tex,
             chain_id: 0,
+            start_time: None,
+            cur_time: Duration::new(0, 0),
         }
     }
 
@@ -88,6 +93,18 @@ impl DefaultContext {
 
     pub fn chain(&self, id: u32) -> Option<&DefaultChain> {
         self.chains.get(&id)
+    }
+
+    pub fn update(&mut self) {
+        match self.start_time {
+            None => {
+                self.start_time = Some(Instant::now());
+                self.cur_time = Duration::new(0, 0);
+            },
+            Some(st) => {
+                self.cur_time = Instant::now().duration_since(st);
+            },
+        }
     }
 }
 
@@ -192,5 +209,11 @@ impl FetchContent for DefaultContext {
         return Box::new(move || {
             read_to_string(cloned_name)
         })
+    }
+}
+
+impl Timebase for DefaultContext {
+    fn time(&self) -> f32 {
+        (2. * self.cur_time.as_secs_f64() % 16.) as f32
     }
 }

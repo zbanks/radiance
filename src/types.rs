@@ -56,3 +56,8 @@ pub trait FetchContent {
 pub trait Resolution {
     fn resolution(&self) -> (u32, u32);
 }
+
+/// This context provides the current time in beats
+pub trait Timebase {
+    fn time(&self) -> f32;
+}

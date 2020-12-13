@@ -1,4 +1,4 @@
-use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Resolution};
+use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Resolution, Timebase};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
@@ -18,12 +18,12 @@ pub struct EffectNodePaintState {
 /// The EffectNode struct contains context-specific, chain-agnostic data.
 /// It is constructed by calling new()
 #[derive(Debug)]
-pub struct EffectNode<UpdateContext: WorkerPool + FetchContent> {
+pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Timebase> {
     state: EffectNodeState<UpdateContext>,
     name: Option<String>,
 }
 
-enum EffectNodeState<UpdateContext: WorkerPool + FetchContent> {
+enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Timebase> {
     Uninitialized,
     // Note: The work handle below is really not optional.
     // The Option<> is only there to allow "taking" it as soon as compilation is done.
@@ -40,7 +40,7 @@ struct ReadyState {
     paint_uniform_buffer: wgpu::Buffer,
 }
 
-impl<UpdateContext: WorkerPool + FetchContent> fmt::Debug for EffectNodeState<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent + Timebase> fmt::Debug for EffectNodeState<UpdateContext> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EffectNodeState::Uninitialized => write!(f, "Uninitialized"),
@@ -89,7 +89,7 @@ struct PaintUniforms {
 
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
-impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateContext> {
     pub fn new() -> EffectNode<UpdateContext> {
         EffectNode {
             state: EffectNodeState::Uninitialized,
@@ -381,7 +381,7 @@ impl<UpdateContext: WorkerPool + FetchContent> EffectNode<UpdateContext> {
             let uniforms = UpdateUniforms {
                 iAudio: [0., 0., 0., 0.],
                 iStep: 0., // What's this?
-                iTime: 0.,
+                iTime: context.time(),
                 iFrequency: 1.,
                 iIntensity: 1.,
                 iIntensityIntegral: 0.,

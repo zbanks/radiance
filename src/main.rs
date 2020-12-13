@@ -216,6 +216,7 @@ fn main() {
                 //}
             }
             Event::RedrawRequested(_) => {
+                ctx.update();
                 let chain = ctx.chain(test_chain_id).unwrap();
                 //let mut paint_state = effect_node.new_paint_state(chain, &state.device);
 
@@ -224,10 +225,7 @@ fn main() {
                 };
 
                 // Update and render effect node
-                println!("update...");
                 effect_node.update(&ctx, &state.device, &state.queue, &args);
-                println!("{:?}", effect_node);
-                println!("paint...");
                 let (cmds, tex) = effect_node.paint(chain, &state.device, &mut paint_state);
                 state.queue.submit(cmds);
 
