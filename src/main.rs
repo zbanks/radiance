@@ -7,6 +7,7 @@ use winit::{
 use futures::executor::block_on;
 use imgui::*;
 use radiance::imgui_wgpu;
+use std::rc::Rc;
 
 struct State {
     pub surface: wgpu::Surface,
@@ -72,7 +73,7 @@ impl State {
     }
 }
 
-fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Context, platform: &mut imgui_winit_support::WinitPlatform, renderer: &mut imgui_wgpu::Renderer) {
+fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Context, platform: &mut imgui_winit_support::WinitPlatform, renderer: &mut imgui_wgpu::Renderer, purple_tex_id: TextureId) {
     // Update the UI
     platform
         .prepare_frame(imgui.io_mut(), winit_window)
@@ -95,7 +96,7 @@ fn render_imgui(winit_window: &Window, state: &mut State, imgui: &mut imgui::Con
                     mouse_pos[1],
                 ));
                 ui.separator();
-                //imgui::Image::new(purple_tex_id, [400.0, 400.0]).build(&ui);
+                imgui::Image::new(purple_tex_id, [100.0, 100.0]).build(&ui);
             });
     }
 
@@ -180,8 +181,10 @@ fn main() {
     let texture_size = 256;
     let test_chain_id = ctx.add_chain(&state.device, &state.queue, (texture_size, texture_size));
     let mut effect_node = EffectNode::new();
+    let chain = ctx.chain(test_chain_id).unwrap();
+    let mut paint_state = effect_node.new_paint_state(chain, &state.device);
 
-    //let purple_tex_id = renderer.textures.insert(imgui_wgpu::Texture::from_radiance(purple_tex.unwrap().clone(), &state.device, &renderer));
+    let mut purple_tex_id = None;
 
     event_loop.run(move |event, _, control_flow| {
         platform.handle_event(imgui.io_mut(), &window, &event);
@@ -214,7 +217,7 @@ fn main() {
             }
             Event::RedrawRequested(_) => {
                 let chain = ctx.chain(test_chain_id).unwrap();
-                let mut paint_state = effect_node.new_paint_state(chain, &state.device);
+                //let mut paint_state = effect_node.new_paint_state(chain, &state.device);
 
                 let args = EffectNodeArguments {
                     name: Some("purple.glsl"),
@@ -228,7 +231,16 @@ fn main() {
                 let (cmds, tex) = effect_node.paint(chain, &state.device, &mut paint_state);
                 state.queue.submit(cmds);
 
-                render_imgui(&window, &mut state, &mut imgui, &mut platform, &mut renderer);
+                if let Some(id) = purple_tex_id {
+                    let existing_texture = &renderer.textures.get(id).unwrap().texture;
+                    if !Rc::ptr_eq(&tex, existing_texture) {
+                        renderer.textures.replace(id, imgui_wgpu::Texture::from_radiance(tex.clone(), &state.device, &renderer));
+                    }
+                } else {
+                    purple_tex_id = Some(renderer.textures.insert(imgui_wgpu::Texture::from_radiance(tex.clone(), &state.device, &renderer)));
+                }
+
+                render_imgui(&window, &mut state, &mut imgui, &mut platform, &mut renderer, purple_tex_id.unwrap());
             }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually

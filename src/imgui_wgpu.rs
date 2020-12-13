@@ -99,7 +99,7 @@ impl<'a> Default for TextureConfig<'a> {
 
 /// A container for a bindable texture.
 pub struct Texture {
-    texture: Rc<types::Texture>,
+    pub texture: Rc<types::Texture>,
     bind_group: BindGroup,
 }
 
