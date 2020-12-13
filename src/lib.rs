@@ -7,6 +7,7 @@ mod node;
 mod effect_node;
 mod context;
 mod threaded_worker;
+pub mod imgui_wgpu;
 
 pub use crate::types::*;
 pub use crate::node::*;

@@ -21,6 +21,10 @@ rand = "0.7.3"
 image = "0.23.12"
 shaderc = "0.7.0"
 bytemuck = {version = "1.4.1", features = ["derive"]}
+winit = "0.23.0"
+imgui = "0.6.0"
+imgui-winit-support = "0.6.0"
+smallvec = "1.5.1"
 
 [build-dependencies]
 anyhow = "1.0"
