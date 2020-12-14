@@ -20,45 +20,6 @@ pub struct DefaultUI {
     pub renderer: imgui_wgpu::Renderer,
 }
 
-/*
-        // Create a radiance Context
-        let mut ctx = DefaultContext::new(&state.device, &state.queue);
-
-        let texture_size = 256;
-        let test_chain_id = ctx.add_chain(&state.device, &state.queue, (texture_size, texture_size));
-        let mut effect_node = EffectNode::new();
-        let chain = ctx.chain(test_chain_id).unwrap();
-        let mut paint_state = effect_node.new_paint_state(chain, &state.device);
-
-        let mut purple_tex_id = None;
-*/
-
-/*
-                ctx.update();
-                let chain = ctx.chain(test_chain_id).unwrap();
-                //let mut paint_state = effect_node.new_paint_state(chain, &state.device);
-
-                let args = EffectNodeArguments {
-                    name: Some("purple.glsl"),
-                };
-
-                // Update and render effect node
-                effect_node.update(&ctx, &state.device, &state.queue, &args);
-                let (cmds, tex) = effect_node.paint(chain, &state.device, &mut paint_state);
-                state.queue.submit(cmds);
-
-                if let Some(id) = purple_tex_id {
-                    let existing_texture = &renderer.textures.get(id).unwrap().texture;
-                    if !Rc::ptr_eq(&tex, existing_texture) {
-                        renderer.textures.replace(id, imgui_wgpu::Texture::from_radiance(tex.clone(), &state.device, &renderer));
-                    }
-                } else {
-                    purple_tex_id = Some(renderer.textures.insert(imgui_wgpu::Texture::from_radiance(tex.clone(), &state.device, &renderer)));
-                }
-
-                render_imgui(&window, &mut state, &mut imgui, &mut platform, &mut renderer, purple_tex_id.unwrap());
-*/
-
 impl DefaultUI {
     pub fn setup() -> (Self, winit::event_loop::EventLoop<()>) {
         // Set up winit
@@ -149,7 +110,7 @@ impl DefaultUI {
         }, event_loop)
     }
 
-    pub fn run_event_loop<F: for<'a> FnMut(&'a wgpu::Device, &'a wgpu::Queue, &'a mut imgui::Context) -> imgui::Ui<'a> + 'static>(mut self, event_loop: winit::event_loop::EventLoop<()>, mut render_function: F) {
+    pub fn run_event_loop<F: for<'a> FnMut(&wgpu::Device, &wgpu::Queue, &'a mut imgui::Context, &mut imgui_wgpu::Renderer) -> imgui::Ui<'a> + 'static>(mut self, event_loop: winit::event_loop::EventLoop<()>, mut render_function: F) {
         event_loop.run(move |event, _, control_flow| {
             self.platform.handle_event(self.imgui.io_mut(), &self.window, &event);
             match event {
@@ -184,7 +145,7 @@ impl DefaultUI {
                         .expect("Failed to prepare frame!");
 
                     // Call user provided render function to build the UI
-                    let ui = render_function(&self.device, &self.queue, &mut self.imgui);
+                    let ui = render_function(&self.device, &self.queue, &mut self.imgui, &mut self.renderer);
 
                     // Prepare to render
                     let mut encoder = self.device.create_command_encoder(&Default::default());
@@ -196,9 +157,6 @@ impl DefaultUI {
                         }
                     }
                     .output;
-
-                    self.platform.prepare_render(&ui, &self.window);
-
                     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                             attachment: &output.view,
@@ -215,6 +173,9 @@ impl DefaultUI {
                         }],
                         depth_stencil_attachment: None,
                     });
+
+                    self.platform.prepare_render(&ui, &self.window);
+
                     self.renderer
                         .render(ui.render(), &self.queue, &self.device, &mut pass)
                         .expect("Failed to render UI!");
