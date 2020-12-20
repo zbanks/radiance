@@ -56,6 +56,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> fmt::Debug for EffectN
 #[derive(Debug)]
 pub struct EffectNodeArguments<'a> {
     pub name: Option<&'a str>,
+    pub intensity: f32,
 }
 
 /// Return value for EffectNode's update() method.
@@ -383,7 +384,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                 iStep: 0., // What's this?
                 iTime: context.time(),
                 iFrequency: 1.,
-                iIntensity: 1.,
+                iIntensity: args.intensity,
                 iIntensityIntegral: 0.,
             };
             queue.write_buffer(&ready_state.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));

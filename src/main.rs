@@ -17,14 +17,15 @@ fn main() {
 
     let mut purple_tex_id = None;
 
+    let mut args = radiance::EffectNodeArguments {
+        name: Some("purple.glsl"),
+        intensity: 1.,
+    };
+
     ui.run_event_loop(event_loop, move |device, queue, imgui, renderer| {
         // Update context
         ctx.update();
         let chain = ctx.chain(test_chain_id).unwrap();
-
-        let args = radiance::EffectNodeArguments {
-            name: Some("purple.glsl"),
-        };
 
         // Update and render effect node
         effect_node.update(&ctx, device, queue, &args);
@@ -44,19 +45,28 @@ fn main() {
         let ui = imgui.frame();
         let window = imgui::Window::new(im_str!("Hello Imgui from WGPU!"));
         window
-            .size([300.0, 200.0], Condition::FirstUseEver)
+            .size([600.0, 800.0], Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text(im_str!("Hello world!"));
-                ui.text(im_str!("This is a demo of imgui-rs using imgui-wgpu!"));
-                ui.separator();
-                let mouse_pos = ui.io().mouse_pos;
-                ui.text(im_str!(
-                    "Mouse Position: ({:.1}, {:.1})",
-                    mouse_pos[0],
-                    mouse_pos[1],
-                ));
-                ui.separator();
-                imgui::Image::new(purple_tex_id.unwrap(), [100.0, 100.0]).build(&ui);
+                const GRAY_BG: [f32; 4] = [0.1, 0.1, 0.1, 1.0];
+                let color = ui.push_style_color(StyleColor::ChildBg, GRAY_BG);
+                imgui::ChildWindow::new(im_str!("##test_tile"))
+                    .size([130., 200.])
+                    .border(true)
+                    .build(&ui, || {
+                        let text_width = ui.calc_text_size(im_str!("Purple"), false, 150.)[0];
+                        ui.set_cursor_pos([0.5 * (ui.window_size()[0] - text_width), ui.cursor_pos()[1]]);
+                        ui.text(im_str!("Purple"));
+                        ui.separator();
+                        ui.set_cursor_pos([0.5 * (ui.window_size()[0] - 100.0), ui.cursor_pos()[1]]);
+                        imgui::Image::new(purple_tex_id.unwrap(), [100.0, 100.0]).build(&ui);
+                        ui.set_next_item_width(ui.content_region_avail()[0]);
+                        imgui::Slider::new(im_str!("##test_slider"))
+                            .range(0. ..= 1.)
+                            .display_format(im_str!("%0.2f"))
+                            .build(&ui, &mut args.intensity);
+                    });
+                color.pop(&ui);
             });
         ui
     });
