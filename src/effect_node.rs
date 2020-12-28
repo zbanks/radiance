@@ -39,6 +39,7 @@ struct ReadyState {
     paint_bind_group_layout: wgpu::BindGroupLayout,
     update_uniform_buffer: wgpu::Buffer,
     paint_uniform_buffer: wgpu::Buffer,
+    n_inputs: u32,
 }
 
 impl<UpdateContext: WorkerPool + FetchContent + Timebase> fmt::Debug for EffectNodeState<UpdateContext> {
@@ -171,16 +172,16 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                     },
                     count: None,
                 },
-                //wgpu::BindGroupLayoutEntry {
-                //    binding: 1, // iInputsTex
-                //    visibility: wgpu::ShaderStage::FRAGMENT,
-                //    ty: wgpu::BindingType::SampledTexture {
-                //        multisampled: false,
-                //        dimension: wgpu::TextureViewDimension::D2,
-                //        component_type: wgpu::TextureComponentType::Uint,
-                //    },
-                //    count: NonZeroU32::new(n_inputs),
-                //},
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1, // iInputsTex
+                    visibility: wgpu::ShaderStage::FRAGMENT,
+                    ty: wgpu::BindingType::SampledTexture {
+                        multisampled: false,
+                        dimension: wgpu::TextureViewDimension::D2,
+                        component_type: wgpu::TextureComponentType::Uint,
+                    },
+                    count: NonZeroU32::new(n_inputs),
+                },
                 wgpu::BindGroupLayoutEntry {
                     binding: 2, // iNoiseTex
                     visibility: wgpu::ShaderStage::FRAGMENT,
@@ -308,6 +309,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
             paint_bind_group_layout,
             update_uniform_buffer,
             paint_uniform_buffer,
+            n_inputs,
         });
     }
 
@@ -368,7 +370,10 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                             Ok(binary) => {
                                 self.setup_render_pipeline(device, &binary);
                             },
-                            Err(msg) => {self.state = EffectNodeState::Error(msg.to_string())},
+                            Err(msg) => {
+                                self.state = EffectNodeState::Error(msg.to_string());
+                                println!("Shader compilation error: {}", msg.to_string());
+                            },
                         }
                     },
                     WorkResult::Err(_) => {
@@ -442,7 +447,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
 
     /// Updates the given PaintState.
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
-    pub fn paint<PaintContext: BlankTexture + NoiseTexture + Resolution>(&self, context: &PaintContext, device: &wgpu::Device, queue: &wgpu::Queue, paint_state: &mut EffectNodePaintState) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
+    pub fn paint<PaintContext: BlankTexture + NoiseTexture + Resolution>(&self, context: &PaintContext, device: &wgpu::Device, queue: &wgpu::Queue, paint_state: &mut EffectNodePaintState, inputs: &[Option<Rc<Texture>>]) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
         match &self.state {
             EffectNodeState::Ready(ready_state) => {
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -460,6 +465,20 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                 }
 
                 // Populate the paint bind group
+
+                // Make an array of input textures
+                // TODO repeatedly creating all these views seems bad,
+                // but TextureViewArray takes in &[TextureView], not &[&TextureView] so it's hard.
+                let input_binding: Vec<wgpu::TextureView> = (0..ready_state.n_inputs).map(|i| {
+                    match inputs.get(i as usize) {
+                        Some(opt_tex) => match opt_tex {
+                            Some(tex) => tex.texture.create_view(&Default::default()),
+                            None => context.blank_texture().texture.create_view(&Default::default()),
+                        },
+                        None => context.blank_texture().texture.create_view(&Default::default()),
+                    }
+                }).collect();
+
                 let paint_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                     layout: &ready_state.paint_bind_group_layout,
                     entries: &[
@@ -467,10 +486,10 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                             binding: 0, // PaintUniforms
                             resource: wgpu::BindingResource::Buffer(ready_state.paint_uniform_buffer.slice(..))
                         },
-                        //wgpu::BindGroupEntry {
-                        //    binding: 1, // iInputsTex
-                        //    resource: wgpu::BindingResource::Buffer()
-                        //},
+                        wgpu::BindGroupEntry {
+                            binding: 1, // iInputsTex
+                            resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
+                        },
                         wgpu::BindGroupEntry {
                             binding: 2, // iNoiseTex
                             resource: wgpu::BindingResource::TextureView(&context.noise_texture().view)
@@ -479,14 +498,6 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                         //    binding: 3, // iChannelTex
                         //    resource: wgpu::BindingResource::Buffer()
                         //},
-                        ////wgpu::BindGroupEntry {
-                        ////    binding: 0,
-                        ////    resource: wgpu::BindingResource::Buffer(update_uniform_buffer.slice(..))
-                        ////},
-                        ////wgpu::BindGroupEntry {
-                        ////    binding: 1,
-                        ////    resource: wgpu::BindingResource::Sampler(&sampler),
-                        ////},
                     ],
                     label: Some("update bind group"),
                 });

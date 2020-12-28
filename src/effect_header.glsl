@@ -33,7 +33,7 @@ layout(set = 1, binding = 0) uniform PaintUniforms {
 };
 
 // Outputs of previous patterns
-//layout(set = 1, binding = 1) uniform texture2D iInputsTexXXX[]; // XXX
+layout(set = 1, binding = 1) uniform texture2D iInputsTex[];
 
 // Full frame RGBA noise
 layout(set = 1, binding = 2) uniform texture2D iNoiseTex;
@@ -47,7 +47,7 @@ layout(set = 1, binding = 2) uniform texture2D iNoiseTex;
 #define iChannel(X) (sampler2D(iChannelTex[(X)], iSampler))
 
 // Output of the previous pattern.  Alias to iInputs(0)
-#define iInput iInput(0)
+#define iInput iInputs(0)
 
 // Aliases to audio levels
 #define iAudioLow   iAudio.x
