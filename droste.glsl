@@ -67,5 +67,5 @@ void main(void) {
     vec2 newUV = droste(normCoord);
     newUV = newUV / aspectCorrection + 0.5;
 
-    fragColor = texture(iInput, mix(uv, newUV, iIntensity));
+    fragColor = texture(iNoise, mix(uv, newUV, iIntensity)); // XXX iInput
 }

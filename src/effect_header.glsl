@@ -24,11 +24,7 @@ layout(set = 0, binding = 0) uniform Uniforms {
 
 layout(set = 0, binding = 1) uniform sampler iSampler;
 
-const vec2 iResolution = vec2(256, 256); // XXX
-const float iFPS = 60; // XXX
-
-/*
-layout(set = 1, binding = 0) uniform PaintUnifroms {
+layout(set = 1, binding = 0) uniform PaintUniforms {
     // Resolution of the output pattern
     vec2 iResolution;
 
@@ -37,14 +33,13 @@ layout(set = 1, binding = 0) uniform PaintUnifroms {
 };
 
 // Outputs of previous patterns
-layout(set = 1, binding = 1) uniform texture2D iInputsTex[];
+//layout(set = 1, binding = 1) uniform texture2D iInputsTexXXX[]; // XXX
 
 // Full frame RGBA noise
 layout(set = 1, binding = 2) uniform texture2D iNoiseTex;
 
 // Previous outputs of the other channels (e.g. foo.1.glsl)
-layout(set = 1, binding = 3) uniform texture2D iChannelTex[];
-*/
+//layout(set = 1, binding = 3) uniform texture2D iChannelTexXXX[];
 
 // Macros to approximate the OpenGL syntax
 #define iInputs(X) (sampler2D(iInputsTex[(X)], iSampler))

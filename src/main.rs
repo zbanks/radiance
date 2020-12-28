@@ -60,8 +60,8 @@ fn main() {
         // Update and render effect node
         effect_node_purple.update(&ctx, device, queue, &purple_args);
         effect_node_droste.update(&ctx, device, queue, &droste_args);
-        let (cmds_purple, tex_purple) = effect_node_purple.paint(chain, device, &mut paint_state_purple);
-        let (cmds_droste, tex_droste) = effect_node_droste.paint(chain, device, &mut paint_state_droste);
+        let (cmds_purple, tex_purple) = effect_node_purple.paint(chain, device, queue, &mut paint_state_purple);
+        let (cmds_droste, tex_droste) = effect_node_droste.paint(chain, device, queue, &mut paint_state_droste);
         queue.submit(cmds_purple.into_iter().chain(cmds_droste.into_iter()));
 
         if let Some(id) = purple_tex_id {
