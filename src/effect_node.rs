@@ -19,8 +19,10 @@ pub struct EffectNodePaintState {
 /// It is constructed by calling new()
 #[derive(Debug)]
 pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Timebase> {
+    pending: EffectNodePendingChanges,
     state: EffectNodeState<UpdateContext>,
     name: Option<String>,
+    intensity: f32,
 }
 
 enum EffectNodeState<UpdateContext: WorkerPool + FetchContent + Timebase> {
@@ -53,19 +55,12 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> fmt::Debug for EffectN
     }
 }
 
-/// Holds arguments to pass to EffectNode's update() method.
+/// Holds the "pending" copy of this EffectNode's state.
 /// This is how you tell the node what it should be doing.
 #[derive(Debug)]
-pub struct EffectNodeArguments<'a> {
-    pub name: Option<&'a str>,
+pub struct EffectNodePendingChanges {
+    pub name: Option<String>,
     pub intensity: f32,
-}
-
-/// Return value for EffectNode's update() method.
-/// This is how the node tells you about itself.
-#[derive(Debug)]
-pub struct EffectNodeReturn<'a> {
-    pub name: Option<&'a str>,
 }
 
 /// The uniform buffer associated with the effect (chain-agnostic)
@@ -94,9 +89,16 @@ const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
 impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateContext> {
     pub fn new() -> EffectNode<UpdateContext> {
+        let pending = EffectNodePendingChanges {
+            name: None,
+            intensity: 0.,
+        };
+
         EffectNode {
             state: EffectNodeState::Uninitialized,
-            name: None,
+            name: pending.name.clone(),
+            intensity: pending.intensity,
+            pending,
         }
     }
 
@@ -316,44 +318,20 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
     /// Updates the given EffectNode.
     /// This function should be called to advance the pattern held by this EffectNode.
     /// Here are some of the things this function is responsible for:
-    ///  * Apply the parameters from the given EffectNodeArguments struct
+    ///  * Apply all changes from the EffectNodePendingChanges struct
     ///  * Poll completion of asynchronous work
     ///  * Get and save any new "globals" from the context (such as iTime and iAudio)
-    ///  * Return information about the node's state in an EffectNodeReturn struct
     /// The basic render loop pattern looks like this:
     ///  1. Construct a new EffectNode
     ///  2. Construct EffectNodePaintStates for each render chain
     ///  3. Call update once
     ///  4. Call paint once for each chain
     ///  5. Goto 3
-    pub fn update(&mut self, context: &UpdateContext, device: &wgpu::Device, queue: &wgpu::Queue, args: &EffectNodeArguments) {
-        // Update internal state based on args
-        // This tree seems pretty big and convoluted just to compare Option<String> with Option<&str>
-        let name_changed = match &mut self.name {
-            Some(cur_name) => match args.name {
-                Some(new_name) => { // Some, Some
-                    if cur_name != new_name {
-                        self.name = Some(new_name.to_owned());
-                        true
-                    } else {
-                        false
-                    }
-                },
-                None => { // Some, None
-                    self.name = None;
-                    true
-                }
-            }
-            None => match args.name {
-                Some(new_name) => {
-                    self.name = Some(new_name.to_owned());
-                    true
-                },
-                None => false, // None, None
-            }
-        };
-
+    pub fn update(&mut self, context: &UpdateContext, device: &wgpu::Device, queue: &wgpu::Queue) {
+        // Update internal state based on self.pending
+        let name_changed = self.name != self.pending.name;
         if name_changed {
+            self.name = self.pending.name.clone();
             // Always recompile if name changed
             match self.name {
                 Some(_) => {self.start_compiling_shader(context);}
@@ -383,6 +361,8 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
             }
         }
 
+        self.intensity = self.pending.intensity;
+
         if let EffectNodeState::Ready(ready_state) = &mut self.state {
             // Node is ready; we should set the uniforms
             // TODO set these dynamically, from context()
@@ -391,7 +371,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                 iStep: 0., // What's this?
                 iTime: context.time(),
                 iFrequency: 1.,
-                iIntensity: args.intensity,
+                iIntensity: self.intensity,
                 iIntensityIntegral: 0.,
             };
             queue.write_buffer(&ready_state.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
@@ -496,7 +476,7 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
                         },
                         //wgpu::BindGroupEntry {
                         //    binding: 3, // iChannelTex
-                        //    resource: wgpu::BindingResource::Buffer()
+                        //    resource: wgpu::BindingResource::TextureViewArray()
                         //},
                     ],
                     label: Some("update bind group"),
@@ -534,5 +514,28 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
             },
             _ => (vec![], context.blank_texture()),
         }
+    }
+
+    // Getters and setters
+    pub fn name(&self) -> Option<&str> {
+        match &self.name {
+            None => None,
+            Some(n) => Some(&n),
+        }
+    }
+
+    pub fn set_name(&mut self, name: Option<&str>) {
+        self.pending.name = match name {
+            None => None,
+            Some(s) => Some(s.to_owned()),
+        };
+    }
+
+    pub fn intensity(&self) -> f32 {
+        self.intensity
+    }
+
+    pub fn set_intensity(&mut self, intensity: f32) {
+        self.pending.intensity = intensity;
     }
 }
