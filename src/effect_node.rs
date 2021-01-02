@@ -1,4 +1,4 @@
-use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Resolution, Timebase, UniqueId};
+use crate::types::{Texture, BlankTexture, NoiseTexture, WorkerPool, WorkHandle, WorkResult, FetchContent, Resolution, Timebase};
 use std::rc::Rc;
 use shaderc;
 use std::fmt;
@@ -6,6 +6,7 @@ use wgpu;
 use std::num::NonZeroU32;
 use bytemuck;
 use std::collections::HashMap;
+ use hashable_rc::HashableWeak;
 
 /// The EffectNodePaintState contains chain-specific data.
 /// It is constructed by calling new_paint_state() and mutated by paint().
@@ -19,10 +20,10 @@ pub struct EffectNodePaintState {
 /// The EffectNode struct contains context-specific, chain-agnostic data.
 /// It is constructed by calling new()
 #[derive(Debug)]
-pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Timebase> {
+pub struct EffectNode<UpdateContext: WorkerPool + FetchContent + Timebase, PaintContext: BlankTexture + NoiseTexture + Resolution> {
     pending: EffectNodePendingChanges,
     state: EffectNodeState<UpdateContext>,
-    paint_states: HashMap<u32, EffectNodePaintState>,
+    paint_states: HashMap<HashableWeak<PaintContext>, EffectNodePaintState>,
     name: Option<String>,
     intensity: f32,
 }
@@ -89,8 +90,8 @@ struct PaintUniforms {
 
 const EFFECT_HEADER: &str = include_str!("effect_header.glsl");
 
-impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateContext> {
-    pub fn new() -> EffectNode<UpdateContext> {
+impl<UpdateContext: WorkerPool + FetchContent + Timebase, PaintContext: BlankTexture + NoiseTexture + Resolution> EffectNode<UpdateContext, PaintContext> {
+    pub fn new() -> EffectNode<UpdateContext, PaintContext> {
         let pending = EffectNodePendingChanges {
             name: None,
             intensity: 0.,
@@ -384,17 +385,19 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
     /// Call this when a new chain is added (or just every frame.)
     /// It adds any PaintStates that this node is missing,
     /// and removes any that are extra.
-    pub fn set_paint_contexts<'a, PaintContext: 'a + BlankTexture + NoiseTexture + Resolution + UniqueId>(&mut self, contexts: &[&PaintContext], device: &wgpu::Device) {
+    pub fn set_paint_contexts(&mut self, contexts: &[Rc<PaintContext>], device: &wgpu::Device) {
         // Rebuild the paint_states map based on the given iterator.
         // Use existing values if they exist.
-        self.paint_states = contexts.iter().map(|&ctx| {
-            (ctx.id(), self.paint_states.remove(&ctx.id()).unwrap_or(self.new_paint_state(ctx, device)))
+        self.paint_states = contexts.iter().map(|ctx| {
+            let ctx_key1 = HashableWeak::new(Rc::downgrade(ctx));
+            let ctx_key2 = HashableWeak::new(Rc::downgrade(ctx));
+            (ctx_key1, self.paint_states.remove(&ctx_key2).unwrap_or(self.new_paint_state(ctx.clone(), device)))
         }).collect();
     }
 
     /// Call this when a new chain is added to get a PaintState
     /// suitable for use with paint().
-    fn new_paint_state<PaintContext: BlankTexture + NoiseTexture + Resolution>(&self, context: &PaintContext, device: &wgpu::Device) -> EffectNodePaintState {
+    fn new_paint_state(&self, context: Rc<PaintContext>, device: &wgpu::Device) -> EffectNodePaintState {
         let (width, height) = context.resolution();
 
         let texture_desc = wgpu::TextureDescriptor {
@@ -441,8 +444,8 @@ impl<UpdateContext: WorkerPool + FetchContent + Timebase> EffectNode<UpdateConte
 
     /// Updates the given PaintState.
     /// Paint should be lightweight and not kick off any CPU work (update should do that.)
-    pub fn paint<PaintContext: BlankTexture + NoiseTexture + Resolution + UniqueId>(&mut self, context: &PaintContext, device: &wgpu::Device, queue: &wgpu::Queue, inputs: &[Option<Rc<Texture>>]) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
-        let paint_state = self.paint_states.get_mut(&context.id()).expect("Call to paint() with an unexpected paint context (must use set_paint_contexts() first)");
+    pub fn paint(&mut self, context: Rc<PaintContext>, device: &wgpu::Device, queue: &wgpu::Queue, inputs: &[Option<Rc<Texture>>]) -> (Vec<wgpu::CommandBuffer>, Rc<Texture>) {
+        let paint_state = self.paint_states.get_mut(&HashableWeak::new(Rc::downgrade(&context))).expect("Call to paint() with an unexpected paint context (must use set_paint_contexts() first)");
 
         match &self.state {
             EffectNodeState::Ready(ready_state) => {

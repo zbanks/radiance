@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 enum Node {
-    EffectNode(radiance::EffectNode<radiance::DefaultContext>),
+    EffectNode(radiance::EffectNode<radiance::DefaultContext, radiance::DefaultChain>),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -16,7 +16,7 @@ struct Edge {
     input: u32,
 }
 
-fn tile<T: radiance::WorkerPool + radiance::FetchContent + radiance::Timebase>(ui: &imgui::Ui, id_str: &ImStr, effect_node: &mut radiance::EffectNode<T>, tex_id: imgui::TextureId) {
+fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance::Timebase, PaintContext: radiance::BlankTexture + radiance::NoiseTexture + radiance::Resolution>(ui: &imgui::Ui, id_str: &ImStr, effect_node: &mut radiance::EffectNode<UpdateContext, PaintContext>, tex_id: imgui::TextureId) {
     const GRAY_BG: [f32; 4] = [0.1, 0.1, 0.1, 1.0];
     let color = ui.push_style_color(StyleColor::ChildBg, GRAY_BG);
     let mut intensity: f32 = effect_node.intensity();
@@ -49,7 +49,7 @@ fn main() {
 
     // Create the preview chain
     let texture_size = 256;
-    let preview_chain = ctx.new_chain(&ui.device, &ui.queue, (texture_size, texture_size));
+    let preview_chain = Rc::new(ctx.new_chain(&ui.device, &ui.queue, (texture_size, texture_size)));
 
     // Create the map of nodes
     let mut nodes = HashMap::<u32, Node>::new();
@@ -70,7 +70,7 @@ fn main() {
         input: 0,
     });
 
-    let paint_contexts = vec![&preview_chain];
+    let paint_contexts = vec![preview_chain.clone()];
     for node in nodes.values_mut() {
         match node {
             Node::EffectNode(n) => n.set_paint_contexts(&paint_contexts, &ui.device),
@@ -120,13 +120,14 @@ fn main() {
             }).collect::<Vec<Option<Rc<radiance::Texture>>>>();
             match node {
                 Node::EffectNode(n) => {
-                    let (node_cmds, output_tex) = n.paint(&preview_chain, device, queue, input_textures.as_slice());
+                    let (node_cmds, output_tex) = n.paint(preview_chain.clone(), device, queue, input_textures.as_slice());
                     outputs.insert(node_id, output_tex);
                     node_cmds.into_iter()
                 }
             }
         }).flatten().collect::<Vec<wgpu::CommandBuffer>>();
-        // Not sure if this last collect() is strictly necessary...
+        // Not sure if this last collect() is strictly necessary,
+        // but I want to avoid any potential for lazy evaluation.
 
         queue.submit(cmds);
 

@@ -1,4 +1,4 @@
-use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution, Timebase, UniqueId};
+use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution, Timebase};
 use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
@@ -185,12 +185,6 @@ impl NoiseTexture for DefaultChain {
 impl Resolution for DefaultChain {
     fn resolution(&self) -> (u32, u32) {
         self.resolution
-    }
-}
-
-impl UniqueId for DefaultChain {
-    fn id(&self) -> u32 {
-        self.id
     }
 }
 
