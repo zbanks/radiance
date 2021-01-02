@@ -61,3 +61,8 @@ pub trait Resolution {
 pub trait Timebase {
     fn time(&self) -> f32;
 }
+
+/// This context can be uniquely identified by a u32
+pub trait UniqueId {
+    fn id(&self) -> u32;
+}

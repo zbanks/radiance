@@ -1,19 +1,17 @@
-use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution, Timebase};
+use crate::types::{NoiseTexture, BlankTexture, Texture, WorkerPool, FetchContent, Resolution, Timebase, UniqueId};
 use crate::threaded_worker::ThreadWorkHandle;
 use wgpu;
 use std::rc::Rc;
 use rand;
-use std::collections::HashMap;
 use std::fs::read_to_string;
 use std::time::{Instant, Duration};
 
 #[derive(Debug)]
 pub struct DefaultContext {
-    chains: HashMap<u32, DefaultChain>,
-    chain_id: u32,
     blank_texture: Rc<Texture>,
     start_time: Option<Instant>,
     cur_time: Duration,
+    next_chain_id: u32,
 }
 
 impl DefaultContext {
@@ -21,11 +19,10 @@ impl DefaultContext {
         let tex = DefaultContext::create_blank_texture(device, queue);
 
         DefaultContext {
-            chains: HashMap::new(),
             blank_texture: tex,
-            chain_id: 0,
             start_time: None,
             cur_time: Duration::new(0, 0),
+            next_chain_id: 0,
         }
     }
 
@@ -83,18 +80,6 @@ impl DefaultContext {
         })
     }
 
-    pub fn add_chain(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, resolution: (u32, u32)) -> u32 {
-        let chain = DefaultChain::new(device, queue, resolution, self.blank_texture.clone());
-        let id = self.chain_id;
-        self.chain_id += 1;
-        self.chains.insert(id, chain);
-        id
-    }
-
-    pub fn chain(&self, id: u32) -> Option<&DefaultChain> {
-        self.chains.get(&id)
-    }
-
     pub fn update(&mut self) {
         match self.start_time {
             None => {
@@ -106,6 +91,12 @@ impl DefaultContext {
             },
         }
     }
+
+    pub fn new_chain(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, resolution: (u32, u32)) -> DefaultChain {
+        let id = self.next_chain_id;
+        self.next_chain_id += 1;
+        DefaultChain::new(device, queue, resolution, self.blank_texture.clone(), id)
+    }
 }
 
 #[derive(Debug)]
@@ -113,11 +104,12 @@ pub struct DefaultChain {
     resolution: (u32, u32),
     blank_texture: Rc<Texture>,
     noise_texture: Rc<Texture>,
+    id: u32,
 }
 
 impl DefaultChain {
     /// Construct a new chain for a given texture resolution
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, resolution: (u32, u32), blank_texture: Rc<Texture>) -> DefaultChain {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, resolution: (u32, u32), blank_texture: Rc<Texture>, id: u32) -> DefaultChain {
         let texture_size = wgpu::Extent3d {
             width: resolution.0,
             height: resolution.1,
@@ -173,6 +165,7 @@ impl DefaultChain {
                 sampler: sampler,
             }),
             blank_texture,
+            id,
         }
     }
 }
@@ -192,6 +185,12 @@ impl NoiseTexture for DefaultChain {
 impl Resolution for DefaultChain {
     fn resolution(&self) -> (u32, u32) {
         self.resolution
+    }
+}
+
+impl UniqueId for DefaultChain {
+    fn id(&self) -> u32 {
+        self.id
     }
 }
 
