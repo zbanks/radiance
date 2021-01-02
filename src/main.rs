@@ -64,9 +64,19 @@ fn main() {
     effect_node_droste.set_name(Some("droste.glsl"));
     nodes.insert(1, Node::EffectNode(effect_node_droste));
 
+    let mut effect_node_droste = radiance::EffectNode::new();
+    effect_node_droste.set_name(Some("droste.glsl"));
+    nodes.insert(2, Node::EffectNode(effect_node_droste));
+
     edges.insert(Edge {
         from: 0,
         to: 1,
+        input: 0,
+    });
+
+    edges.insert(Edge {
+        from: 1,
+        to: 2,
         input: 0,
     });
 
@@ -90,7 +100,7 @@ fn main() {
         }
 
         // TODO topo-sort
-        let topo_order = [0, 1];
+        let topo_order = [0, 1, 2];
 
         fn node_inputs(edges: &HashSet<Edge>) -> HashMap<u32, Vec<Option<u32>>> {
             let mut inputs = HashMap::new();
@@ -128,9 +138,6 @@ fn main() {
 
         queue.submit(cmds);
 
-        let tex_purple = outputs.get(&0).unwrap().clone();
-        let tex_droste = outputs.get(&1).unwrap().clone();
-
         // Build the UI
 
         // Purge user textures so we don't leak them
@@ -142,18 +149,13 @@ fn main() {
             .size([600.0, 800.0], Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text(im_str!("Hello world!"));
-                {
-                    let effect_node_purple = match nodes.get_mut(&0).unwrap() {
-                        Node::EffectNode(n) => n
+                for node_id in &topo_order {
+                    match nodes.get_mut(&node_id).unwrap() {
+                        Node::EffectNode(effect_node) => {
+                            tile(&ui, &mut renderer, &device, &im_str!("##tile{}", node_id), effect_node, outputs.get(&node_id).unwrap().clone());
+                        }
                     };
-                    tile(&ui, &mut renderer, &device, im_str!("##tile1"), effect_node_purple, tex_purple);
-                }
-                ui.same_line(0.);
-                {
-                    let effect_node_droste = match nodes.get_mut(&1).unwrap() {
-                        Node::EffectNode(n) => n
-                    };
-                    tile(&ui, &mut renderer, &device, im_str!("##tile2"), effect_node_droste, tex_droste);
+                    ui.same_line(0.);
                 }
             });
         ui
