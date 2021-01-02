@@ -16,7 +16,7 @@ struct Edge {
     input: u32,
 }
 
-fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance::Timebase, PaintContext: radiance::BlankTexture + radiance::NoiseTexture + radiance::Resolution>(ui: &imgui::Ui, id_str: &ImStr, effect_node: &mut radiance::EffectNode<UpdateContext, PaintContext>, tex_id: imgui::TextureId) {
+fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance::Timebase, PaintContext: radiance::BlankTexture + radiance::NoiseTexture + radiance::Resolution>(ui: &imgui::Ui, renderer: &mut imgui_wgpu::Renderer, device: &wgpu::Device, id_str: &ImStr, effect_node: &mut radiance::EffectNode<UpdateContext, PaintContext>, tex: Rc<radiance::Texture>) {
     const GRAY_BG: [f32; 4] = [0.1, 0.1, 0.1, 1.0];
     let color = ui.push_style_color(StyleColor::ChildBg, GRAY_BG);
     let mut intensity: f32 = effect_node.intensity();
@@ -30,7 +30,7 @@ fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance:
             ui.text(im_name_str);
             ui.separator();
             ui.set_cursor_pos([0.5 * (ui.window_size()[0] - 100.0), ui.cursor_pos()[1]]);
-            imgui::Image::new(tex_id, [100.0, 100.0]).build(&ui);
+            imgui::Image::new(renderer.texture_id(device, tex), [100.0, 100.0]).build(&ui);
             ui.set_next_item_width(ui.content_region_avail()[0]);
             imgui::Slider::new(im_str!("##slider"))
                 .range(0. ..= 1.)
@@ -77,10 +77,7 @@ fn main() {
         }
     }
 
-    let mut purple_tex_id = None;
-    let mut droste_tex_id = None;
-
-    ui.run_event_loop(event_loop, move |device, queue, imgui, renderer| {
+    ui.run_event_loop(event_loop, move |device, queue, imgui, mut renderer| {
 
         // Update context
         ctx.update();
@@ -131,27 +128,14 @@ fn main() {
 
         queue.submit(cmds);
 
-        let tex_purple = outputs.get(&0).unwrap();
-        let tex_droste = outputs.get(&1).unwrap();
-
-        if let Some(id) = purple_tex_id {
-            let existing_texture = &renderer.textures.get(id).unwrap().texture;
-            if !Rc::ptr_eq(&tex_purple, existing_texture) {
-                renderer.textures.replace(id, imgui_wgpu::Texture::from_radiance(tex_purple.clone(), device, renderer));
-            }
-        } else {
-            purple_tex_id = Some(renderer.textures.insert(imgui_wgpu::Texture::from_radiance(tex_purple.clone(), device, renderer)));
-        }
-        if let Some(id) = droste_tex_id {
-            let existing_texture = &renderer.textures.get(id).unwrap().texture;
-            if !Rc::ptr_eq(&tex_droste, existing_texture) {
-                renderer.textures.replace(id, imgui_wgpu::Texture::from_radiance(tex_droste.clone(), device, renderer));
-            }
-        } else {
-            droste_tex_id = Some(renderer.textures.insert(imgui_wgpu::Texture::from_radiance(tex_droste.clone(), device, renderer)));
-        }
+        let tex_purple = outputs.get(&0).unwrap().clone();
+        let tex_droste = outputs.get(&1).unwrap().clone();
 
         // Build the UI
+
+        // Purge user textures so we don't leak them
+        renderer.purge_user_textures();
+
         let ui = imgui.frame();
         let window = imgui::Window::new(im_str!("Hello Imgui from WGPU!"));
         window
@@ -162,14 +146,14 @@ fn main() {
                     let effect_node_purple = match nodes.get_mut(&0).unwrap() {
                         Node::EffectNode(n) => n
                     };
-                    tile(&ui, im_str!("##tile1"), effect_node_purple, purple_tex_id.unwrap());
+                    tile(&ui, &mut renderer, &device, im_str!("##tile1"), effect_node_purple, tex_purple);
                 }
                 ui.same_line(0.);
                 {
                     let effect_node_droste = match nodes.get_mut(&1).unwrap() {
                         Node::EffectNode(n) => n
                     };
-                    tile(&ui, im_str!("##tile2"), effect_node_droste, droste_tex_id.unwrap());
+                    tile(&ui, &mut renderer, &device, im_str!("##tile2"), effect_node_droste, tex_droste);
                 }
             });
         ui

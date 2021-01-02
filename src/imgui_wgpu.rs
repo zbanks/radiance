@@ -20,6 +20,8 @@ use std::rc::Rc;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 use wgpu::*;
 use crate::types;
+use hashable_rc::HashableWeak;
+use std::collections::HashMap;
 
 pub type RendererResult<T> = Result<T, RendererError>;
 
@@ -292,6 +294,7 @@ pub struct Renderer {
     index_buffers: SmallVec<[Buffer; 4]>,
     vertex_buffers: SmallVec<[Buffer; 4]>,
     config: RendererConfig<'static, 'static>,
+    user_textures: HashMap<HashableWeak<types::Texture>, TextureId>,
 }
 
 impl Renderer {
@@ -446,6 +449,7 @@ impl Renderer {
                 vertex_shader: None,
                 fragment_shader: None,
             },
+            user_textures: HashMap::new(),
         };
 
         // Immediately load the font texture to the GPU.
@@ -629,5 +633,30 @@ impl Renderer {
         fonts.tex_id = self.textures.insert(font_texture);
         // Clear imgui texture data to save memory.
         fonts.clear_tex_data();
+    }
+
+    /// Gets a texture ID from a given texture.
+    /// Adds it to the texture list if it is not there,
+    /// or returns the existing texture ID.
+    pub fn texture_id(&mut self, device: &wgpu::Device, texture: Rc<types::Texture>) -> TextureId {
+        // Note: the behavior of this function combined with purge_user_textures
+        // is fairly wasteful, and creates new texture bind groups every frame.
+        let tex_key = HashableWeak::new(Rc::downgrade(&texture));
+        match self.user_textures.get(&tex_key) {
+            Some(&tex_id) => tex_id,
+            None => {
+                let tex_id = self.textures.insert(Texture::from_radiance(texture, device, self));
+                self.user_textures.insert(tex_key, tex_id);
+                tex_id
+            },
+        }
+    }
+
+    /// Call this every frame to clear out unused textures
+    pub fn purge_user_textures(&mut self) {
+        for &tex_id in self.user_textures.values() {
+            self.textures.remove(tex_id);
+        }
+        self.user_textures = HashMap::new();
     }
 }
