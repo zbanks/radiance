@@ -2,18 +2,14 @@ use radiance;
 use imgui::*;
 use std::rc::Rc;
 use radiance::imgui_wgpu;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 enum Node {
     EffectNode(radiance::EffectNode<radiance::DefaultContext, radiance::DefaultChain>),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-struct Edge {
-    from: u32,
-    to: u32,
-    input: u32,
+impl radiance::Node for Node {
 }
 
 fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance::Timebase, PaintContext: radiance::BlankTexture + radiance::NoiseTexture + radiance::Resolution>(ui: &imgui::Ui, renderer: &mut imgui_wgpu::Renderer, device: &wgpu::Device, id_str: &ImStr, effect_node: &mut radiance::EffectNode<UpdateContext, PaintContext>, tex: Rc<radiance::Texture>) {
@@ -41,6 +37,51 @@ fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance:
     effect_node.set_intensity(intensity);
 }
 
+fn update_nodes(dag: &mut radiance::DAG<Node>, update_context: &radiance::DefaultContext, paint_contexts: &[Rc<radiance::DefaultChain>], device: &wgpu::Device, queue: &wgpu::Queue) {
+    // Run update first, as this may generate new paint contexts in the future (e.g. on output nodes)
+    for node in dag.nodes.values_mut() {
+        match node {
+            Node::EffectNode(n) => n.update(update_context, device, queue),
+        }
+    }
+
+    // Set paint contexts
+    for node in dag.nodes.values_mut() {
+        match node {
+            Node::EffectNode(n) => n.set_paint_contexts(paint_contexts, device),
+        }
+    }
+}
+
+fn paint_nodes(dag: &mut radiance::DAG<Node>, paint_context: &Rc<radiance::DefaultChain>, device: &wgpu::Device, queue: &wgpu::Queue) -> HashMap<u32, Rc<radiance::Texture>> {
+    let topo_order = dag.topo_order();
+
+    let inputs = dag.node_inputs();
+
+    let mut outputs = HashMap::new();
+    let cmds = topo_order.iter().map(|&node_id| {
+        let node = dag.nodes.get_mut(&node_id).unwrap();
+        let input_textures = inputs.get(&node_id).unwrap_or(&vec![]).into_iter().map(|input_node_id| {
+            input_node_id
+                .and_then(|input_node_id| outputs.get(&input_node_id)
+                .and_then(|input_node_ref: &Rc<radiance::Texture>| Some(input_node_ref.clone())))
+        }).collect::<Vec<Option<Rc<radiance::Texture>>>>();
+        match node {
+            Node::EffectNode(n) => {
+                let (node_cmds, output_tex) = n.paint(paint_context.clone(), device, queue, input_textures.as_slice());
+                outputs.insert(node_id, output_tex);
+                node_cmds.into_iter()
+            }
+        }
+    }).flatten().collect::<Vec<wgpu::CommandBuffer>>();
+    // Not sure if this last collect() is strictly necessary,
+    // but I want to avoid any potential for lazy evaluation.
+
+    queue.submit(cmds);
+
+    outputs
+}
+
 fn main() {
     let (ui, event_loop) = radiance::ui::DefaultUI::setup();
 
@@ -51,41 +92,35 @@ fn main() {
     let texture_size = 256;
     let preview_chain = Rc::new(ctx.new_chain(&ui.device, &ui.queue, (texture_size, texture_size)));
 
-    // Create the map of nodes
-    let mut nodes = HashMap::<u32, Node>::new();
-    let mut edges = HashSet::<Edge>::new();
+    // Create the DAG
+    let mut dag = radiance::DAG::new();
 
     let mut effect_node_purple = radiance::EffectNode::new();
     effect_node_purple.set_name(Some("purple.glsl"));
     effect_node_purple.set_intensity(1.);
-    nodes.insert(0, Node::EffectNode(effect_node_purple));
+    dag.nodes.insert(0, Node::EffectNode(effect_node_purple));
 
     let mut effect_node_droste = radiance::EffectNode::new();
     effect_node_droste.set_name(Some("droste.glsl"));
-    nodes.insert(1, Node::EffectNode(effect_node_droste));
+    dag.nodes.insert(1, Node::EffectNode(effect_node_droste));
 
     let mut effect_node_droste = radiance::EffectNode::new();
     effect_node_droste.set_name(Some("droste.glsl"));
-    nodes.insert(2, Node::EffectNode(effect_node_droste));
+    dag.nodes.insert(2, Node::EffectNode(effect_node_droste));
 
-    edges.insert(Edge {
+    dag.edges.insert(radiance::Edge {
         from: 0,
         to: 1,
         input: 0,
     });
 
-    edges.insert(Edge {
+    dag.edges.insert(radiance::Edge {
         from: 1,
         to: 2,
         input: 0,
     });
 
     let paint_contexts = vec![preview_chain.clone()];
-    for node in nodes.values_mut() {
-        match node {
-            Node::EffectNode(n) => n.set_paint_contexts(&paint_contexts, &ui.device),
-        }
-    }
 
     ui.run_event_loop(event_loop, move |device, queue, imgui, mut renderer| {
 
@@ -93,50 +128,10 @@ fn main() {
         ctx.update();
 
         // Update nodes
-        for node in nodes.values_mut() {
-            match node {
-                Node::EffectNode(n) => n.update(&ctx, device, queue),
-            }
-        }
+        update_nodes(&mut dag, &ctx, &paint_contexts, device, queue);
 
-        // TODO topo-sort
-        let topo_order = [0, 1, 2];
-
-        fn node_inputs(edges: &HashSet<Edge>) -> HashMap<u32, Vec<Option<u32>>> {
-            let mut inputs = HashMap::new();
-            for edge in edges {
-                let input_vec = inputs.entry(edge.to).or_insert(Vec::new());
-                // Grow the vector if necessary
-                for _ in input_vec.len()..=(edge.input as usize) {
-                    input_vec.push(None);
-                }
-                input_vec[edge.input as usize] = Some(edge.from);
-            }
-            inputs
-        }
-
-        let inputs = node_inputs(&edges);
-
-        let mut outputs = HashMap::new();
-        let cmds = topo_order.iter().map(|&node_id| {
-            let node = nodes.get_mut(&node_id).unwrap();
-            let input_textures = inputs.get(&node_id).unwrap_or(&vec![]).into_iter().map(|input_node_id| {
-                input_node_id
-                    .and_then(|input_node_id| outputs.get(&input_node_id)
-                    .and_then(|input_node_ref: &Rc<radiance::Texture>| Some(input_node_ref.clone())))
-            }).collect::<Vec<Option<Rc<radiance::Texture>>>>();
-            match node {
-                Node::EffectNode(n) => {
-                    let (node_cmds, output_tex) = n.paint(preview_chain.clone(), device, queue, input_textures.as_slice());
-                    outputs.insert(node_id, output_tex);
-                    node_cmds.into_iter()
-                }
-            }
-        }).flatten().collect::<Vec<wgpu::CommandBuffer>>();
-        // Not sure if this last collect() is strictly necessary,
-        // but I want to avoid any potential for lazy evaluation.
-
-        queue.submit(cmds);
+        // Paint node previews
+        let previews = paint_nodes(&mut dag, &preview_chain, device, queue);
 
         // Build the UI
 
@@ -149,10 +144,12 @@ fn main() {
             .size([600.0, 800.0], Condition::FirstUseEver)
             .build(&ui, || {
                 ui.text(im_str!("Hello world!"));
+                // Temporary: just draw every node as a tile in topo-order
+                let topo_order = dag.topo_order();
                 for node_id in &topo_order {
-                    match nodes.get_mut(&node_id).unwrap() {
+                    match dag.nodes.get_mut(&node_id).unwrap() {
                         Node::EffectNode(effect_node) => {
-                            tile(&ui, &mut renderer, &device, &im_str!("##tile{}", node_id), effect_node, outputs.get(&node_id).unwrap().clone());
+                            tile(&ui, &mut renderer, &device, &im_str!("##tile{}", node_id), effect_node, previews.get(&node_id).unwrap().clone());
                         }
                     };
                     ui.same_line(0.);
