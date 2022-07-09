@@ -2,32 +2,17 @@
 name = "radiance"
 version = "0.1.0"
 authors = ["Zach Banks <zjbanks@gmail.com>", "Eric Van Albert <eric@van.al>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-name = "radiance"
-path = "src/lib.rs"
 
 [[bin]]
 name = "radiance"
 path = "src/main.rs"
 
 [dependencies]
-futures = "0.3.8"
-wgpu = "0.6.2"
-rand = "0.7.3"
-image = "0.23.12"
-shaderc = "0.7.0"
-bytemuck = {version = "1.4.1", features = ["derive"]}
-winit = "0.23.0"
-imgui = "0.6.0"
-imgui-winit-support = "0.6.0"
-smallvec = "1.5.1"
-hashable_rc = "0.2.1"
-
-[build-dependencies]
-anyhow = "1.0"
-fs_extra = "1.1"
-shaderc = "0.7.0"
+winit = "0.26"
+env_logger = "0.9"
+log = "0.4"
+wgpu = "0.13"
+pollster = "0.2"

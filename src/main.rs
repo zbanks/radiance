@@ -1,160 +1,325 @@
-use radiance;
-use imgui::*;
-use std::rc::Rc;
-use radiance::imgui_wgpu;
-use std::collections::HashMap;
+use winit::{
+    event::*,
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
 
-#[derive(Debug)]
-enum Node {
-    EffectNode(radiance::EffectNode<radiance::DefaultContext, radiance::DefaultChain>),
+// lib.rs
+use winit::window::Window;
+
+use std::{thread, time};
+use std::sync::Arc;
+
+pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface) {
+    if new_size.width > 0 && new_size.height > 0 {
+        config.width = new_size.width;
+        config.height = new_size.height;
+        surface.configure(device, config);
+    }
 }
 
-impl radiance::Node for Node {
-}
+fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue) -> Result<(), wgpu::SurfaceError> {
+    let output = surface.get_current_texture()?;
+    let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-fn tile<UpdateContext: radiance::WorkerPool + radiance::FetchContent + radiance::Timebase, PaintContext: radiance::BlankTexture + radiance::NoiseTexture + radiance::Resolution>(ui: &imgui::Ui, renderer: &mut imgui_wgpu::Renderer, device: &wgpu::Device, id_str: &ImStr, effect_node: &mut radiance::EffectNode<UpdateContext, PaintContext>, tex: Rc<radiance::Texture>) {
-    const GRAY_BG: [f32; 4] = [0.1, 0.1, 0.1, 1.0];
-    let color = ui.push_style_color(StyleColor::ChildBg, GRAY_BG);
-    let mut intensity: f32 = effect_node.intensity();
-    imgui::ChildWindow::new(id_str)
-        .size([130., 200.])
-        .border(true)
-        .build(&ui, || {
-            let im_name_str = im_str!("{}", effect_node.name().unwrap_or("(none)"));
-            let text_width = ui.calc_text_size(&im_name_str, false, 150.)[0];
-            ui.set_cursor_pos([0.5 * (ui.window_size()[0] - text_width), ui.cursor_pos()[1]]);
-            ui.text(im_name_str);
-            ui.separator();
-            ui.set_cursor_pos([0.5 * (ui.window_size()[0] - 100.0), ui.cursor_pos()[1]]);
-            imgui::Image::new(renderer.texture_id(device, tex), [100.0, 100.0]).build(&ui);
-            ui.set_next_item_width(ui.content_region_avail()[0]);
-            imgui::Slider::new(im_str!("##slider"))
-                .range(0. ..= 1.)
-                .display_format(im_str!("%0.2f"))
-                .build(ui, &mut intensity);
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Render Encoder"),
+    });
+
+    {
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[
+                // This is what @location(0) in the fragment shader targets
+                Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(
+                            wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }
+                        ),
+                        store: true,
+                    }
+                })
+            ],
+            depth_stencil_attachment: None,
         });
-    color.pop(&ui);
-    effect_node.set_intensity(intensity);
-}
 
-fn update_nodes(dag: &mut radiance::DAG<Node>, update_context: &radiance::DefaultContext, paint_contexts: &[Rc<radiance::DefaultChain>], device: &wgpu::Device, queue: &wgpu::Queue) {
-    // Run update first, as this may generate new paint contexts in the future (e.g. on output nodes)
-    for node in dag.nodes.values_mut() {
-        match node {
-            Node::EffectNode(n) => n.update(update_context, device, queue),
-        }
+        // NEW!
+        render_pass.set_pipeline(screen_render_pipeline); // 2.
+        render_pass.draw(0..3, 0..1); // 3.
     }
-
-    // Set paint contexts
-    for node in dag.nodes.values_mut() {
-        match node {
-            Node::EffectNode(n) => n.set_paint_contexts(paint_contexts, device),
-        }
-    }
+    queue.submit(std::iter::once(encoder.finish()));
+    output.present();
+    Ok(())
 }
 
-fn paint_nodes(dag: &mut radiance::DAG<Node>, paint_context: &Rc<radiance::DefaultChain>, device: &wgpu::Device, queue: &wgpu::Queue) -> HashMap<u32, Rc<radiance::Texture>> {
-    let topo_order = dag.topo_order();
 
-    let inputs = dag.node_inputs();
-
-    let mut outputs = HashMap::new();
-    let cmds = topo_order.iter().map(|&node_id| {
-        let node = dag.nodes.get_mut(&node_id).unwrap();
-        let input_textures = inputs.get(&node_id).unwrap_or(&vec![]).into_iter().map(|input_node_id| {
-            input_node_id
-                .and_then(|input_node_id| outputs.get(&input_node_id)
-                .and_then(|input_node_ref: &Rc<radiance::Texture>| Some(input_node_ref.clone())))
-        }).collect::<Vec<Option<Rc<radiance::Texture>>>>();
-        match node {
-            Node::EffectNode(n) => {
-                let (node_cmds, output_tex) = n.paint(paint_context.clone(), device, queue, input_textures.as_slice());
-                outputs.insert(node_id, output_tex);
-                node_cmds.into_iter()
-            }
-        }
-    }).flatten().collect::<Vec<wgpu::CommandBuffer>>();
-    // Not sure if this last collect() is strictly necessary,
-    // but I want to avoid any potential for lazy evaluation.
-
-    queue.submit(cmds);
-
-    outputs
-}
-
-fn main() {
-    let (ui, event_loop) = radiance::ui::DefaultUI::setup();
-
-    // Create a radiance Context
-    let mut ctx = radiance::DefaultContext::new(&ui.device, &ui.queue);
-
-    // Create the preview chain
-    let texture_size = 256;
-    let preview_chain = Rc::new(ctx.new_chain(&ui.device, &ui.queue, (texture_size, texture_size)));
-
-    // Create the DAG
-    let mut dag = radiance::DAG::new();
-
-    let mut effect_node_purple = radiance::EffectNode::new();
-    effect_node_purple.set_name(Some("purple.glsl"));
-    effect_node_purple.set_intensity(1.);
-    dag.nodes.insert(0, Node::EffectNode(effect_node_purple));
-
-    let mut effect_node_droste = radiance::EffectNode::new();
-    effect_node_droste.set_name(Some("droste.glsl"));
-    dag.nodes.insert(1, Node::EffectNode(effect_node_droste));
-
-    let mut effect_node_droste = radiance::EffectNode::new();
-    effect_node_droste.set_name(Some("droste.glsl"));
-    dag.nodes.insert(2, Node::EffectNode(effect_node_droste));
-
-    dag.edges.insert(radiance::Edge {
-        from: 0,
-        to: 1,
-        input: 0,
+fn render_texture(device: &wgpu::Device, texture_render_pipeline: &wgpu::RenderPipeline, view: &wgpu::TextureView, queue: &wgpu::Queue) {
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Render Encoder"),
     });
 
-    dag.edges.insert(radiance::Edge {
-        from: 1,
-        to: 2,
-        input: 0,
+    {
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[
+                // This is what @location(0) in the fragment shader targets
+                Some(wgpu::RenderPassColorAttachment {
+                    view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(
+                            wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }
+                        ),
+                        store: true,
+                    }
+                })
+            ],
+            depth_stencil_attachment: None,
+        });
+
+        // NEW!
+        render_pass.set_pipeline(texture_render_pipeline); // 2.
+        render_pass.draw(0..3, 0..1); // 3.
+    }
+    queue.submit(std::iter::once(encoder.finish()));
+}
+
+
+pub async fn run() {
+    env_logger::init();
+    let event_loop = EventLoop::new();
+    let window = WindowBuilder::new().build(&event_loop).unwrap();
+
+    let mut size = window.inner_size();
+
+    // The instance is a handle to our GPU
+    // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
+    let mut surface = unsafe { instance.create_surface(&window) };
+    let adapter = instance.request_adapter(
+        &wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::default(),
+            compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
+        },
+    ).await.unwrap();
+
+    let (device, queue) = adapter.request_device(
+        &wgpu::DeviceDescriptor {
+            features: wgpu::Features::empty(),
+            // WebGL doesn't support all of wgpu's features, so if
+            // we're building for the web we'll have to disable some.
+            limits: if cfg!(target_arch = "wasm32") {
+                wgpu::Limits::downlevel_webgl2_defaults()
+            } else {
+                wgpu::Limits::default()
+            },
+            label: None,
+        },
+        None, // Trace path
+    ).await.unwrap();
+
+    let device = Arc::new(device);
+    let queue = Arc::new(queue);
+
+    let mut config = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        format: surface.get_supported_formats(&adapter)[0],
+        width: size.width,
+        height: size.height,
+        present_mode: wgpu::PresentMode::Fifo,
+    };
+    surface.configure(&device, &config);
+
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Shader"),
+        source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
     });
 
-    let paint_contexts = vec![preview_chain.clone()];
+    let texture_render_pipeline_layout =
+        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Texture Render Pipeline Layout"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
 
-    ui.run_event_loop(event_loop, move |device, queue, imgui, mut renderer| {
+    let texture_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Texture Render Pipeline"),
+        layout: Some(&texture_render_pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &shader,
+            entry_point: "vs_main", // 1.
+            buffers: &[], // 2.
+        },
+        fragment: Some(wgpu::FragmentState { // 3.
+            module: &shader,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState { // 4.
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                blend: Some(wgpu::BlendState::REPLACE),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList, // 1.
+            strip_index_format: None,
+            front_face: wgpu::FrontFace::Ccw, // 2.
+            cull_mode: Some(wgpu::Face::Back),
+            // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+            polygon_mode: wgpu::PolygonMode::Fill,
+            // Requires Features::DEPTH_CLIP_CONTROL
+            unclipped_depth: false,
+            // Requires Features::CONSERVATIVE_RASTERIZATION
+            conservative: false,
+        },
+        depth_stencil: None, // 1.
+        multisample: wgpu::MultisampleState {
+            count: 1, // 2.
+            mask: !0, // 3.
+            alpha_to_coverage_enabled: false, // 4.
+        },
+        multiview: None, // 5.
+    });
 
-        // Update context
-        ctx.update();
+    let screen_render_pipeline_layout =
+        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Screen Render Pipeline Layout"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
 
-        // Update nodes
-        update_nodes(&mut dag, &ctx, &paint_contexts, device, queue);
+    let screen_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Screen Render Pipeline"),
+        layout: Some(&screen_render_pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &shader,
+            entry_point: "vs_main", // 1.
+            buffers: &[], // 2.
+        },
+        fragment: Some(wgpu::FragmentState { // 3.
+            module: &shader,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState { // 4.
+                format: config.format,
+                blend: Some(wgpu::BlendState::REPLACE),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList, // 1.
+            strip_index_format: None,
+            front_face: wgpu::FrontFace::Ccw, // 2.
+            cull_mode: Some(wgpu::Face::Back),
+            // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
+            polygon_mode: wgpu::PolygonMode::Fill,
+            // Requires Features::DEPTH_CLIP_CONTROL
+            unclipped_depth: false,
+            // Requires Features::CONSERVATIVE_RASTERIZATION
+            conservative: false,
+        },
+        depth_stencil: None, // 1.
+        multisample: wgpu::MultisampleState {
+            count: 1, // 2.
+            mask: !0, // 3.
+            alpha_to_coverage_enabled: false, // 4.
+        },
+        multiview: None, // 5.
+    });
 
-        // Paint node previews
-        let previews = paint_nodes(&mut dag, &preview_chain, device, queue);
+    let texture1_size = 256u32;
 
-        // Build the UI
+    let texture1_desc = wgpu::TextureDescriptor {
+        size: wgpu::Extent3d {
+            width: texture1_size,
+            height: texture1_size,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::RENDER_ATTACHMENT
+            ,
+        label: None,
+    };
+    let texture1 = device.create_texture(&texture1_desc);
+    let texture1_view = texture1.create_view(&Default::default());
 
-        // Purge user textures so we don't leak them
-        renderer.purge_user_textures();
+    let device_thread1 = device.clone();
+    let queue_thread1 = queue.clone();
 
-        let ui = imgui.frame();
-        let window = imgui::Window::new(im_str!("Hello Imgui from WGPU!"));
-        window
-            .size([600.0, 800.0], Condition::FirstUseEver)
-            .build(&ui, || {
-                ui.text(im_str!("Hello world!"));
-                // Temporary: just draw every node as a tile in topo-order
-                let topo_order = dag.topo_order();
-                for node_id in &topo_order {
-                    match dag.nodes.get_mut(&node_id).unwrap() {
-                        Node::EffectNode(effect_node) => {
-                            tile(&ui, &mut renderer, &device, &im_str!("##tile{}", node_id), effect_node, previews.get(&node_id).unwrap().clone());
-                        }
-                    };
-                    ui.same_line(0.);
+    let texture1_render_thread = thread::spawn(move || {
+        loop {
+            render_texture(&device_thread1, &texture_render_pipeline, &texture1_view, &queue_thread1);
+            println!("render 1");
+            thread::sleep(time::Duration::from_millis(100));
+        }
+    });
+
+    event_loop.run(move |event, _, control_flow| {
+        match event {
+            Event::RedrawRequested(window_id) if window_id == window.id() => {
+                match render_screen(&device, &screen_render_pipeline, &surface, &queue) {
+                    Ok(_) => {}
+                    // Reconfigure the surface if lost
+                    Err(wgpu::SurfaceError::Lost) => {
+                        resize(size, &mut config, &device, &mut surface);
+                    },
+                    // The system is out of memory, we should probably quit
+                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                    // All other errors (Outdated, Timeout) should be resolved by the next frame
+                    Err(e) => eprintln!("{:?}", e),
                 }
-            });
-        ui
+            }
+            Event::MainEventsCleared => {
+                // RedrawRequested will only trigger once, unless we manually
+                // request it.
+                window.request_redraw();
+            }
+            Event::WindowEvent {
+                ref event,
+                window_id,
+            } if window_id == window.id() => if !false { // XXX
+                match event {
+                    WindowEvent::CloseRequested
+                    | WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    } => *control_flow = ControlFlow::Exit,
+                    WindowEvent::Resized(physical_size) => {
+                        size = *physical_size;
+                        resize(size, &mut config, &device, &mut surface);
+                    }
+                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                        size = **new_inner_size;
+                        resize(size, &mut config, &device, &mut surface);
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
     });
+}
+
+pub fn main() {
+    pollster::block_on(run());
 }
