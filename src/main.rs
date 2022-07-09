@@ -3,12 +3,10 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-
-// lib.rs
 use winit::window::Window;
-
-use std::{thread, time};
 use std::sync::Arc;
+
+use radiance::{Context, Chain, Chains, ChainId, Graph, NodeId, NodeProps, EffectNodeProps};
 
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface) {
     if new_size.width > 0 && new_size.height > 0 {
@@ -17,7 +15,6 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-
 fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -59,6 +56,7 @@ fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPip
     Ok(())
 }
 
+/*
 
 fn render_texture(device: &wgpu::Device, texture_render_pipeline: &wgpu::RenderPipeline, view: &wgpu::TextureView, queue: &wgpu::Queue) {
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -95,7 +93,7 @@ fn render_texture(device: &wgpu::Device, texture_render_pipeline: &wgpu::RenderP
     }
     queue.submit(std::iter::once(encoder.finish()));
 }
-
+*/
 
 pub async fn run() {
     env_logger::init();
@@ -147,7 +145,7 @@ pub async fn run() {
         label: Some("Shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
     });
-
+/*
     let texture_render_pipeline_layout =
         device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Texture Render Pipeline Layout"),
@@ -192,7 +190,7 @@ pub async fn run() {
         },
         multiview: None, // 5.
     });
-
+*/
     let screen_render_pipeline_layout =
         device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Screen Render Pipeline Layout"),
@@ -237,7 +235,7 @@ pub async fn run() {
         },
         multiview: None, // 5.
     });
-
+/*
     let texture1_size = 256u32;
 
     let texture1_desc = wgpu::TextureDescriptor {
@@ -260,14 +258,33 @@ pub async fn run() {
 
     let device_thread1 = device.clone();
     let queue_thread1 = queue.clone();
+*/
 
-    let texture1_render_thread = thread::spawn(move || {
-        loop {
-            render_texture(&device_thread1, &texture_render_pipeline, &texture1_view, &queue_thread1);
-            println!("render 1");
-            thread::sleep(time::Duration::from_millis(100));
-        }
-    });
+    // RADIANCE, WOO
+
+    // Make context
+    let mut ctx = Context::new(device.clone(), queue.clone());
+
+    // Make a node
+    let node1_id = NodeId::gen();
+    let node1_props = NodeProps::EffectNode(EffectNodeProps {name: "purple".to_string(), intensity: 0.9});
+
+    // Make a graph
+    let mut graph = Graph::new();
+    graph.insert_node(node1_id, node1_props);
+
+    // Make a chain
+    let preview_chain_id = ChainId::gen();
+    let preview_chain = Chain::new(256, 256);
+
+    // Make a chains container
+    let mut chains = Chains::new();
+    chains.insert_chain(preview_chain_id, preview_chain);
+
+    // Paint
+    ctx.paint(&graph, &chains, preview_chain_id, 0.);
+
+    // END
 
     event_loop.run(move |event, _, control_flow| {
         match event {
