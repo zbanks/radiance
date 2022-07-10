@@ -4,17 +4,34 @@ use crate::graph::{NodeId, Graph, NodeProps};
 use crate::chain::{ChainId, Chain, Chains};
 use crate::effect_node::{EffectNodeState};
 
+#[derive(Clone)]
+pub struct ArcTextureViewSampler {
+    pub texture: Arc<wgpu::Texture>,
+    pub view: Arc<wgpu::TextureView>,
+    pub sampler: Arc<wgpu::Sampler>,
+}
+
+impl ArcTextureViewSampler {
+    pub fn new(texture: wgpu::Texture, view: wgpu::TextureView, sampler: wgpu::Sampler) -> Self {
+        Self {
+            texture: Arc::new(texture),
+            view: Arc::new(view),
+            sampler: Arc::new(sampler),
+        }
+    }
+}
+
 pub struct Context {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    blank_texture: Arc<wgpu::Texture>,
+    blank_texture: ArcTextureViewSampler,
 
     chain_states: HashMap<ChainId, ChainState>,
     node_states: HashMap<NodeId, NodeState>,
 }
 
 pub struct ChainState {
-    noise_texture: Arc<wgpu::Texture>,
+    noise_texture: ArcTextureViewSampler,
 }
 
 pub enum NodeState {
@@ -22,7 +39,7 @@ pub enum NodeState {
 }
 
 impl Context {
-    fn create_blank_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> wgpu::Texture {
+    fn create_blank_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> ArcTextureViewSampler {
         let texture_size = wgpu::Extent3d {
             width: 1,
             height: 1,
@@ -36,7 +53,7 @@ impl Context {
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba8UnormSrgb,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                label: Some("blank_texture"),
+                label: Some("blank texture"),
             }
         );
 
@@ -69,11 +86,10 @@ impl Context {
             }
         );
 
-        // XXX return view and sampler
-        texture
+        ArcTextureViewSampler::new(texture, view, sampler)
     }
 
-    fn create_noise_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> wgpu::Texture {
+    fn create_noise_texture(device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32) -> ArcTextureViewSampler {
         // XXX this creates a blank texture!
 
         let texture_size = wgpu::Extent3d {
@@ -89,9 +105,11 @@ impl Context {
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba8UnormSrgb,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                label: Some("blank_texture"),
+                label: Some("noise texture"),
             }
         );
+
+        let random_bytes: Vec<u8> = (0 .. width * height * 4).map(|_| { rand::random::<u8>() }).collect();
 
         queue.write_texture(
             wgpu::ImageCopyTexture {
@@ -100,11 +118,11 @@ impl Context {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &[0, 0, 0, 0],
+            &random_bytes,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4),
-                rows_per_image: std::num::NonZeroU32::new(1),
+                bytes_per_row: std::num::NonZeroU32::new(4 * width),
+                rows_per_image: std::num::NonZeroU32::new(height),
             },
             texture_size,
         );
@@ -122,12 +140,11 @@ impl Context {
             }
         );
 
-        // XXX return view and sampler
-        texture
+        ArcTextureViewSampler::new(texture, view, sampler)
     }
 
     pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
-        let blank_texture = Arc::new(Self::create_blank_texture(&device, &queue));
+        let blank_texture = Self::create_blank_texture(&device, &queue);
         Self {
             device,
             queue,
@@ -139,7 +156,7 @@ impl Context {
 
     fn new_chain_state(self: &Self, chain: &Chain) -> ChainState {
         ChainState {
-            noise_texture: Arc::new(Self::create_noise_texture(&self.device, &self.queue)),
+            noise_texture: Self::create_noise_texture(&self.device, &self.queue, chain.width(), chain.height()),
         }
     }
 
@@ -149,7 +166,7 @@ impl Context {
         }
     }
 
-    fn paint_node(self: &mut Self, node_id: NodeId, chain_id: ChainId, node_props: &NodeProps, time: f32) -> Arc<wgpu::Texture> {
+    fn paint_node(self: &mut Self, node_id: NodeId, chain_id: ChainId, node_props: &NodeProps, time: f32) -> ArcTextureViewSampler {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
             NodeState::EffectNode(ref mut state) => {
@@ -163,7 +180,7 @@ impl Context {
         result
     }
 
-    pub fn paint(&mut self, graph: &Graph, chains: &Chains, chain_id: ChainId, time: f32) -> HashMap<NodeId, Arc<wgpu::Texture>> {
+    pub fn paint(&mut self, graph: &Graph, chains: &Chains, chain_id: ChainId, time: f32) -> HashMap<NodeId, ArcTextureViewSampler> {
         // 1. Prune chain_states and node_states of any nodes or chains that are no longer present in the given graph/chains
         // 2. Construct any missing chain_states or node_states (this may kick of background processing)
         // 3. Topo-sort graph.
@@ -204,7 +221,7 @@ impl Context {
         result
     }
 
-    pub fn blank_texture(&self) -> &Arc<wgpu::Texture> {
+    pub fn blank_texture(&self) -> &ArcTextureViewSampler {
         &self.blank_texture
     }
 
@@ -214,7 +231,7 @@ impl Context {
 }
 
 impl ChainState {
-    pub fn noise_texture(&self) -> &Arc<wgpu::Texture> {
+    pub fn noise_texture(&self) -> &ArcTextureViewSampler {
         &self.noise_texture
     }
 }

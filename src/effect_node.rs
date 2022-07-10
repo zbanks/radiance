@@ -1,7 +1,6 @@
 use std::string::String;
-use crate::context::Context;
+use crate::context::{Context, ArcTextureViewSampler};
 use crate::chain::ChainId;
-use std::sync::Arc;
 
 pub struct EffectNodeProps {
     pub name: String,
@@ -22,7 +21,7 @@ impl EffectNodeState {
         Self {}
     }
 
-    pub fn paint(&mut self, ctx: &Context, chain_id: ChainId, props: &EffectNodeProps, time: f32) -> Arc<wgpu::Texture> {
+    pub fn paint(&mut self, ctx: &Context, chain_id: ChainId, props: &EffectNodeProps, time: f32) -> ArcTextureViewSampler {
         return ctx.blank_texture().clone(); // XXX actually paint something
     }
 }
