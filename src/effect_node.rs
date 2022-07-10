@@ -1,5 +1,4 @@
 use std::string::String;
-use std::num::NonZeroU32;
 use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use std::collections::HashMap;
@@ -14,11 +13,11 @@ pub enum EffectNodeStatus {
 
 pub enum EffectNodeState {
     Uninitialized,
-    Ready(ReadyState),
+    Ready(EffectNodeStateReady),
     Error(String),
 }
 
-pub struct ReadyState {
+pub struct EffectNodeStateReady {
     render_pipeline: wgpu::RenderPipeline,
     update_bind_group: wgpu::BindGroup,
     paint_bind_group_layout: wgpu::BindGroupLayout,
@@ -32,11 +31,13 @@ const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
 const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 
 struct EffectNodePaintState {
+    input_textures: Vec<ArcTextureViewSampler>,
+    output_texture: ArcTextureViewSampler,
 }
 
 // The uniform buffer associated with the effect (agnostic to render target)
 #[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[allow(non_snake_case)]
 struct UpdateUniforms {
     iAudio: [f32; 4],
@@ -45,19 +46,21 @@ struct UpdateUniforms {
     iFrequency: f32,
     iIntensity: f32,
     iIntensityIntegral: f32,
+    _padding: [u8; 12],
 }
 
 // The uniform buffer associated with the effect (specific to render target)
 #[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[allow(non_snake_case)]
 struct PaintUniforms {
     iResolution: [f32; 2],
     iFPS: f32,
+    _padding: [u8; 4],
 }
 
 impl EffectNodeState {
-    fn setup_render_pipeline(ctx: &Context, name: &str) -> Self {
+    fn setup_render_pipeline(ctx: &Context, name: &str) -> EffectNodeStateReady {
         // Shader
         let effect_source = ctx.fetch_content(name).expect("Failed to read effect shader file");
         let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source, EFFECT_FOOTER);
@@ -115,26 +118,26 @@ impl EffectNodeState {
                     },
                     count: None,
                 },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1, // iInputsTex
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Uint,
-                    },
-                    count: NonZeroU32::new(n_inputs),
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2, // iNoiseTex
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Uint,
-                    },
-                    count: None,
-                },
+                //wgpu::BindGroupLayoutEntry {
+                //    binding: 1, // iInputsTex
+                //    visibility: wgpu::ShaderStages::FRAGMENT,
+                //    ty: wgpu::BindingType::Texture {
+                //        multisampled: false,
+                //        view_dimension: wgpu::TextureViewDimension::D2,
+                //        sample_type: wgpu::TextureSampleType::Uint,
+                //    },
+                //    count: NonZeroU32::new(n_inputs),
+                //},
+                //wgpu::BindGroupLayoutEntry {
+                //    binding: 2, // iNoiseTex
+                //    visibility: wgpu::ShaderStages::FRAGMENT,
+                //    ty: wgpu::BindingType::Texture {
+                //        multisampled: false,
+                //        view_dimension: wgpu::TextureViewDimension::D2,
+                //        sample_type: wgpu::TextureSampleType::Uint,
+                //    },
+                //    count: None,
+                //},
                 //wgpu::BindGroupLayoutEntry {
                 //    binding: 3, // iChannelTex
                 //    visibility: wgpu::ShaderStages::FRAGMENT,
@@ -169,7 +172,7 @@ impl EffectNodeState {
                 module: &shader_module,
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: wgpu::TextureFormat::Rgba32Float,
+                    format: wgpu::TextureFormat::Rgba8Unorm,
                     blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -241,7 +244,7 @@ impl EffectNodeState {
             label: Some(&format!("EffectNode {} update bind group", name)),
         });
 
-        Self::Ready(ReadyState {
+        EffectNodeStateReady {
             render_pipeline,
             update_bind_group,
             paint_bind_group_layout,
@@ -249,42 +252,183 @@ impl EffectNodeState {
             paint_uniform_buffer,
             n_inputs,
             paint_states: HashMap::new(),
-        })
+        }
     }
 
-    fn update_paint_states(&mut self, ctx: &Context) {
-        match self {
-            Self::Ready(ready_state) => {
-                // See if we need to add or remove any paint states
-                // (based on the context's render targets)
-
-                // TODO add code to remove paint states, currently this only adds them
-
-                for (check_render_target_id, render_target_state) in ctx.render_target_states().iter() {
-                    if !ready_state.paint_states.contains_key(check_render_target_id) {
-                        ready_state.paint_states.insert(*check_render_target_id, EffectNodePaintState {
-                            // TODO add swap textures and stuff
-                        });
-                    }
-                }
+    fn new_paint_state(self_ready: &EffectNodeStateReady, ctx: &Context, render_target_state: &RenderTargetState) -> EffectNodePaintState {
+        let texture_desc = wgpu::TextureDescriptor {
+            size: wgpu::Extent3d {
+                width: render_target_state.width(),
+                height: render_target_state.height(),
+                depth_or_array_layers: 1,
             },
-            _ => {}, // Can't update paint states if not ready
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                ,
+            label: None,
+        };
+
+        let texture = ctx.device().create_texture(&texture_desc);
+        let view = texture.create_view(&Default::default());
+        let sampler = ctx.device().create_sampler(
+            &wgpu::SamplerDescriptor {
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                mipmap_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            }
+        );
+
+        EffectNodePaintState{
+            input_textures: Vec::new(),
+            output_texture: ArcTextureViewSampler::new(texture, view, sampler),
+        }
+    }
+
+    fn update_paint_states(self_ready: &mut EffectNodeStateReady, ctx: &Context) {
+        // See if we need to add or remove any paint states
+        // (based on the context's render targets)
+
+        // TODO add code to remove paint states, currently this only adds them
+
+        for (check_render_target_id, render_target_state) in ctx.render_target_states().iter() {
+            if !self_ready.paint_states.contains_key(check_render_target_id) {
+                self_ready.paint_states.insert(*check_render_target_id, Self::new_paint_state(self_ready, ctx, render_target_state));
+            }
         }
     }
 
     pub fn new(ctx: &Context, props: &EffectNodeProps) -> Self {
         // TODO kick of shader compilation in the background instead of blocking
-        let mut new_obj = Self::setup_render_pipeline(ctx, &props.name);
-        new_obj.update_paint_states(ctx);
-        new_obj
+        let mut new_obj_ready = Self::setup_render_pipeline(ctx, &props.name);
+        Self::update_paint_states(&mut new_obj_ready, ctx);
+        Self::Ready(new_obj_ready)
     }
 
     pub fn update(&mut self, ctx: &Context, props: &EffectNodeProps, time: f32) {
-        self.update_paint_states(ctx);
+        match self {
+            EffectNodeState::Ready(self_ready) => {
+                Self::update_paint_states(self_ready, ctx);
+                let uniforms = UpdateUniforms {
+                    iAudio: [0., 0., 0., 0.],
+                    iStep: 0., // What's this?
+                    iTime: time,
+                    iFrequency: 1.,
+                    iIntensity: 1., // XXX read from props
+                    iIntensityIntegral: 0., // XXX accumulate
+                    ..Default::default()
+                };
+                ctx.queue().write_buffer(&self_ready.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+            },
+            _ => {}
+        }
     }
 
-    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId) -> ArcTextureViewSampler {
-        return ctx.render_target_state(render_target_id).unwrap().noise_texture().clone(); // XXX actually paint something
+    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
+
+        match self {
+            EffectNodeState::Ready(self_ready) => {
+                let render_target_state = ctx.render_target_state(render_target_id).expect("Call to paint() with a render target ID unknown to the context");
+                let paint_state = self_ready.paint_states.get(&render_target_id).expect("Call to paint() with a render target ID unknown to the node (did you call update() first?)");
+
+                // Populate the paint uniforms
+                {
+                    let width = render_target_state.width();
+                    let height = render_target_state.height();
+                    let uniforms = PaintUniforms {
+                        iResolution: [width as f32, height as f32],
+                        iFPS: 60., // TODO set dynamically
+                        ..Default::default()
+                    };
+                    ctx.queue().write_buffer(&self_ready.paint_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+                }
+
+                // Populate the paint bind group
+
+/* XXX allow inputs
+                // Make an array of input textures
+                // TODO repeatedly creating all these views seems bad,
+                // but TextureViewArray takes in &[TextureView], not &[&TextureView] so it's hard.
+                let input_binding: Vec<wgpu::TextureView> = (0..ready_state.n_inputs).map(|i| {
+                    match inputs.get(i as usize) {
+                        Some(opt_tex) => match opt_tex {
+                            Some(tex) => tex.texture.create_view(&Default::default()),
+                            None => context.blank_texture().texture.create_view(&Default::default()),
+                        },
+                        None => context.blank_texture().texture.create_view(&Default::default()),
+                    }
+                }).collect();
+*/
+
+                let paint_bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
+                    layout: &self_ready.paint_bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0, // PaintUniforms
+                            resource: self_ready.paint_uniform_buffer.as_entire_binding(),
+                        },
+                        //wgpu::BindGroupEntry {
+                        //    binding: 1, // iInputsTex
+                        //    resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
+                        //},
+                        //wgpu::BindGroupEntry {
+                        //    binding: 2, // iNoiseTex
+                        //    resource: wgpu::BindingResource::TextureView(&context.noise_texture().view)
+                        //},
+                        //wgpu::BindGroupEntry {
+                        //    binding: 3, // iChannelTex
+                        //    resource: wgpu::BindingResource::TextureViewArray()
+                        //},
+                    ],
+                    label: Some("EffectNode paint bind group"),
+                });
+
+                let mut encoder = ctx.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("EffectNode encoder"),
+                });
+
+                {
+                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("EffectNode render pass"),
+                        color_attachments: &[
+                            Some(wgpu::RenderPassColorAttachment {
+                                view: &paint_state.output_texture.view,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(
+                                        wgpu::Color {
+                                            r: 0.9,
+                                            g: 0.2,
+                                            b: 0.3,
+                                            a: 1.0,
+                                        }
+                                    ),
+                                    store: true,
+                                }
+                            }),
+                        ],
+                        depth_stencil_attachment: None,
+                    });
+
+                    render_pass.set_pipeline(&self_ready.render_pipeline);
+                    render_pass.set_bind_group(0, &self_ready.update_bind_group, &[]); 
+                    render_pass.set_bind_group(1, &paint_bind_group, &[]); 
+                    render_pass.draw(0..4, 0..1);
+                }
+
+                (vec![encoder.finish()], paint_state.output_texture.clone())
+            },
+            _ => (vec![], ctx.blank_texture().clone()),
+        }
+        //return ctx.render_target_state(render_target_id).unwrap().noise_texture().clone(); // XXX actually paint something
     }
 }
 

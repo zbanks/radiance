@@ -209,7 +209,7 @@ impl Context {
         self.node_states.insert(node_id, node_state);
     }
 
-    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId) -> ArcTextureViewSampler {
+    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
             NodeState::EffectNode(ref mut state) => state.paint(self, render_target_id),
@@ -274,7 +274,9 @@ impl Context {
 
         let node_ids: Vec<NodeId> = self.node_states.keys().cloned().collect();
         for paint_node_id in node_ids {
-            let output_texture = self.paint_node(paint_node_id, render_target_id);
+            let (command_buffer, output_texture) = self.paint_node(paint_node_id, render_target_id);
+
+            self.queue.submit(command_buffer); // XXX concatenate them together instead
             result.insert(paint_node_id, output_texture);
         }
 
@@ -313,6 +315,16 @@ impl Context {
 }
 
 impl RenderTargetState {
+    /// Return the width of this render target
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    /// Return the height of this render target
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
     /// Get a texture whose resolution matches the render target resolution
     /// and whose pixel data is white noise (in all four channels)
     pub fn noise_texture(&self) -> &ArcTextureViewSampler {

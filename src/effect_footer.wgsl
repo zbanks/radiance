@@ -7,8 +7,8 @@ struct VertexOutput {
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     var varray = array<vec2<f32>, 4>(
         vec2<f32>(1., 1.),
-        vec2<f32>(1., -1.),
         vec2<f32>(-1., 1.),
+        vec2<f32>(1., -1.),
         vec2<f32>(-1., -1.),
     );
 
