@@ -4,6 +4,8 @@ use crate::graph::{NodeId, Graph, NodeProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;
+use std::fs;
+use std::io;
 
 /// A bundle of a texture, a texture view, and a sampler.
 /// Each is stored within an `Arc` for sharing between threads
@@ -275,6 +277,16 @@ impl Context {
         result
     }
 
+    /// Get the WGPU device associated with this context
+    pub fn device(&self) -> &Arc<wgpu::Device> {
+        &self.device
+    }
+
+    /// Get the WGPU queue associated with this context
+    pub fn queue(&self) -> &Arc<wgpu::Queue> {
+        &self.queue
+    }
+
     /// Get a blank (transparent) texture
     pub fn blank_texture(&self) -> &ArcTextureViewSampler {
         &self.blank_texture
@@ -283,6 +295,11 @@ impl Context {
     /// Get the specific state associated with a render target
     pub fn render_target_state(&self, id: RenderTargetId) -> Option<&RenderTargetState> {
         self.render_target_states.get(&id)
+    }
+
+    /// Load content from disk or the library or something
+    pub fn fetch_content(&self, filename: &str) -> io::Result<String> {
+        fs::read_to_string(filename)
     }
 }
 
