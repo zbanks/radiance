@@ -55,6 +55,8 @@ pub struct Context {
 /// Internal state and resources that is associated with a specific RenderTarget,
 /// but not with any specific node.
 pub struct RenderTargetState {
+    width: u32,
+    height: u32,
     noise_texture: ArcTextureViewSampler,
 }
 
@@ -182,6 +184,8 @@ impl Context {
 
     fn new_render_target_state(self: &Self, render_target: &RenderTarget) -> RenderTargetState {
         RenderTargetState {
+            width: render_target.width(),
+            height: render_target.height(),
             noise_texture: Self::create_noise_texture(&self.device, &self.queue, render_target.width(), render_target.height()),
         }
     }
@@ -292,7 +296,12 @@ impl Context {
         &self.blank_texture
     }
 
-    /// Get the specific state associated with a render target
+    /// Retrieve the current render targets as HashMap of id -> `RenderTargetState`
+    pub fn render_target_states(&self) -> &HashMap<RenderTargetId, RenderTargetState> {
+        &self.render_target_states
+    }
+
+    /// Get the state associated with a given render target
     pub fn render_target_state(&self, id: RenderTargetId) -> Option<&RenderTargetState> {
         self.render_target_states.get(&id)
     }

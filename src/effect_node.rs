@@ -1,7 +1,8 @@
 use std::string::String;
 use std::num::NonZeroU32;
-use crate::context::{Context, ArcTextureViewSampler};
+use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
+use std::collections::HashMap;
 
 pub struct EffectNodeProps {
     pub name: String,
@@ -24,15 +25,13 @@ pub struct ReadyState {
     update_uniform_buffer: wgpu::Buffer,
     paint_uniform_buffer: wgpu::Buffer,
     n_inputs: u32,
+    paint_states: HashMap<RenderTargetId, EffectNodePaintState>
 }
 
 const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
 const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 
 struct EffectNodePaintState {
-//    width: u32,
-//    height: u32,
-//    texture: Arc<wgpu::Texture>,
 }
 
 // The uniform buffer associated with the effect (agnostic to render target)
@@ -242,22 +241,46 @@ impl EffectNodeState {
             label: Some(&format!("EffectNode {} update bind group", name)),
         });
 
-        EffectNodeState::Ready(ReadyState {
+        Self::Ready(ReadyState {
             render_pipeline,
             update_bind_group,
             paint_bind_group_layout,
             update_uniform_buffer,
             paint_uniform_buffer,
             n_inputs,
+            paint_states: HashMap::new(),
         })
+    }
+
+    fn update_paint_states(&mut self, ctx: &Context) {
+        match self {
+            Self::Ready(ready_state) => {
+                // See if we need to add or remove any paint states
+                // (based on the context's render targets)
+
+                // TODO add code to remove paint states, currently this only adds them
+
+                for (check_render_target_id, render_target_state) in ctx.render_target_states().iter() {
+                    if !ready_state.paint_states.contains_key(check_render_target_id) {
+                        ready_state.paint_states.insert(*check_render_target_id, EffectNodePaintState {
+                            // TODO add swap textures and stuff
+                        });
+                    }
+                }
+            },
+            _ => {}, // Can't update paint states if not ready
+        }
     }
 
     pub fn new(ctx: &Context, props: &EffectNodeProps) -> Self {
         // TODO kick of shader compilation in the background instead of blocking
-        Self::setup_render_pipeline(ctx, &props.name)
+        let mut new_obj = Self::setup_render_pipeline(ctx, &props.name);
+        new_obj.update_paint_states(ctx);
+        new_obj
     }
 
     pub fn update(&mut self, ctx: &Context, props: &EffectNodeProps, time: f32) {
+        self.update_paint_states(ctx);
     }
 
     pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId) -> ArcTextureViewSampler {
