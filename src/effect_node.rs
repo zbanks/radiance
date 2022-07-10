@@ -3,12 +3,14 @@ use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use std::collections::HashMap;
 
+const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
+const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
+const INTENSITY_INTEGRAL_PERIOD: f32 = 1024.;
+
 pub struct EffectNodeProps {
     pub name: String,
     pub intensity: f32,
-}
-
-pub enum EffectNodeStatus {
+    pub frequency: f32,
 }
 
 pub enum EffectNodeState {
@@ -24,11 +26,9 @@ pub struct EffectNodeStateReady {
     update_uniform_buffer: wgpu::Buffer,
     paint_uniform_buffer: wgpu::Buffer,
     n_inputs: u32,
-    paint_states: HashMap<RenderTargetId, EffectNodePaintState>
+    paint_states: HashMap<RenderTargetId, EffectNodePaintState>,
+    intensity_integral: f32,
 }
-
-const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
-const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 
 struct EffectNodePaintState {
     input_textures: Vec<ArcTextureViewSampler>,
@@ -40,13 +40,12 @@ struct EffectNodePaintState {
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[allow(non_snake_case)]
 struct UpdateUniforms {
-    iAudio: [f32; 4],
-    iStep: f32,
-    iTime: f32,
-    iFrequency: f32,
-    iIntensity: f32,
-    iIntensityIntegral: f32,
-    _padding: [u8; 12],
+    audio: [f32; 4],
+    time: f32,
+    frequency: f32,
+    intensity: f32,
+    intensity_integral: f32,
+    _padding: [u8; 0],
 }
 
 // The uniform buffer associated with the effect (specific to render target)
@@ -54,8 +53,8 @@ struct UpdateUniforms {
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[allow(non_snake_case)]
 struct PaintUniforms {
-    iResolution: [f32; 2],
-    iFPS: f32,
+    resolution: [f32; 2],
+    dt: f32,
     _padding: [u8; 4],
 }
 
@@ -252,6 +251,7 @@ impl EffectNodeState {
             paint_uniform_buffer,
             n_inputs,
             paint_states: HashMap::new(),
+            intensity_integral: 0.,
         }
     }
 
@@ -313,17 +313,18 @@ impl EffectNodeState {
         Self::Ready(new_obj_ready)
     }
 
-    pub fn update(&mut self, ctx: &Context, props: &EffectNodeProps, time: f32) {
+    pub fn update(&mut self, ctx: &Context, props: &EffectNodeProps) {
         match self {
             EffectNodeState::Ready(self_ready) => {
                 Self::update_paint_states(self_ready, ctx);
+                self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.dt()) % INTENSITY_INTEGRAL_PERIOD;
+
                 let uniforms = UpdateUniforms {
-                    iAudio: [0., 0., 0., 0.],
-                    iStep: 0., // What's this?
-                    iTime: time,
-                    iFrequency: 1.,
-                    iIntensity: 1., // XXX read from props
-                    iIntensityIntegral: 0., // XXX accumulate
+                    audio: [0., 0., 0., 0.],
+                    time: ctx.time(),
+                    frequency: props.frequency,
+                    intensity: props.intensity,
+                    intensity_integral: self_ready.intensity_integral,
                     ..Default::default()
                 };
                 ctx.queue().write_buffer(&self_ready.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
@@ -344,8 +345,8 @@ impl EffectNodeState {
                     let width = render_target_state.width();
                     let height = render_target_state.height();
                     let uniforms = PaintUniforms {
-                        iResolution: [width as f32, height as f32],
-                        iFPS: 60., // TODO set dynamically
+                        resolution: [width as f32, height as f32],
+                        dt: render_target_state.dt(),
                         ..Default::default()
                     };
                     ctx.queue().write_buffer(&self_ready.paint_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));

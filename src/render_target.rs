@@ -28,20 +28,21 @@ impl RenderTargetId {
 /// RenderTargets are immutable once created; you can't change the size.
 /// 
 /// RenderTargets are lightweight objects and don't have associated state.
-/// They are really just two numbers, representing width and height.
 /// All per-target state is stored in other parts of the system,
 /// typically indexed by RenderTargetId.
 pub struct RenderTarget {
     width: u32,
     height: u32,
+    dt: f32,
 }
 
 impl RenderTarget {
     /// Create a new `RenderTarget` with the given dimensions, in pixels.
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: u32, height: u32, dt: f32) -> Self {
         Self {
             width,
             height,
+            dt,
         }
     }
 
@@ -53,6 +54,11 @@ impl RenderTarget {
     /// Get the height of the render target, in pixels
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    /// Get the timestep of the render target, in seconds
+    pub fn dt(&self) -> f32 {
+        self.dt
     }
 }
 

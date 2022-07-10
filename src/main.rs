@@ -365,11 +365,11 @@ pub async fn run() {
     // RADIANCE, WOO
 
     // Make context
-    let mut ctx = Context::new(device.clone(), queue.clone());
+    let mut ctx = Context::new(device.clone(), queue.clone(), 1. / 60.);
 
     // Make a node
     let node1_id = NodeId::gen();
-    let node1_props = NodeProps::EffectNode(EffectNodeProps {name: "purple.wgsl".to_string(), intensity: 0.9});
+    let node1_props = NodeProps::EffectNode(EffectNodeProps {name: "purple.wgsl".to_string(), intensity: 0.9, frequency: 1.});
 
     // Make a graph
     let mut graph = Graph::new();
@@ -377,17 +377,19 @@ pub async fn run() {
 
     // Make a render target
     let preview_render_target_id = RenderTargetId::gen();
-    let preview_render_target = RenderTarget::new(256, 256);
+    let preview_render_target = RenderTarget::new(256, 256, 1. / 60.);
 
     // Make a render target list
     let mut render_target_list = RenderTargetList::new();
     render_target_list.insert(preview_render_target_id, preview_render_target);
 
+    let mut t = 0.;
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
-                let results = ctx.update(&graph, &render_target_list, 0.);
+                let results = ctx.update(&graph, &render_target_list, t);
 
                 // Paint
                 let results = ctx.paint(preview_render_target_id);
@@ -406,6 +408,8 @@ pub async fn run() {
                     // All other errors (Outdated, Timeout) should be resolved by the next frame
                     Err(e) => eprintln!("{:?}", e),
                 }
+
+                t += 0.03;
             }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually

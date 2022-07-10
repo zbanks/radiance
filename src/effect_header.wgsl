@@ -1,27 +1,25 @@
 struct UpdateUniforms {
     // Audio levels, high/mid/low/level, [0.0, 1.0]
-    iAudio: vec4<f32>,
-
-    iStep: f32,
+    audio: vec4<f32>,
 
     // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
-    iTime: f32,
+    time: f32,
 
-    iFrequency: f32,
+    frequency: f32,
 
     // Intensity slider, [0.0, 1.0]
-    iIntensity: f32,
+    intensity: f32,
 
     // Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
-    iIntensityIntegral: f32,
+    intensity_integral: f32,
 }
 
 struct PaintUniforms {
     // Resolution of the output pattern
-    iResolution: vec2<f32>,
+    resolution: vec2<f32>,
 
     // (Ideal) output rate in frames per second
-    iFPS: f32,
+    dt: f32,
 }
 
 @group(0) @binding(0)
@@ -34,19 +32,19 @@ var iSampler: sampler;
 var<uniform> paint_uniforms: PaintUniforms;
 
 fn iTime() -> f32 {
-    return update_uniforms.iTime;
+    return update_uniforms.time;
 }
 
 fn iFrequency() -> f32 {
-    return update_uniforms.iFrequency;
+    return update_uniforms.frequency;
 }
 
 fn iIntensity() -> f32 {
-    return update_uniforms.iIntensity;
+    return update_uniforms.intensity;
 }
 
 fn iResolution() -> vec2<f32> {
-    return paint_uniforms.iResolution;
+    return paint_uniforms.resolution;
 }
 
 /*

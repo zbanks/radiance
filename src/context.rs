@@ -44,10 +44,16 @@ impl ArcTextureViewSampler {
 /// in a subsequent `paint` call,
 /// the `Context` will drop their state.
 pub struct Context {
+    // Graphics resources
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
     blank_texture: ArcTextureViewSampler,
 
+    // Cached values from the last update()
+    time: f32,
+    dt: f32,
+
+    // State of individual render targets and nodes
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
     node_states: HashMap<NodeId, NodeState>,
 }
@@ -57,6 +63,7 @@ pub struct Context {
 pub struct RenderTargetState {
     width: u32,
     height: u32,
+    dt: f32,
     noise_texture: ArcTextureViewSampler,
 }
 
@@ -170,13 +177,18 @@ impl Context {
         ArcTextureViewSampler::new(texture, view, sampler)
     }
 
-    /// Create a new context with the given graphics resources
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
+    /// Create a new context with the given graphics resources.
+    /// dt is the expected period (in seconds) with which update() will be called.
+    /// This is distinct from the period at which paint() may be called,
+    /// and the period for that is set in the render target.
+    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, dt: f32) -> Self {
         let blank_texture = Self::create_blank_texture(&device, &queue);
         Self {
             device,
             queue,
             blank_texture,
+            time: 0.,
+            dt,
             render_target_states: HashMap::new(),
             node_states: HashMap::new(),
         }
@@ -186,6 +198,7 @@ impl Context {
         RenderTargetState {
             width: render_target.width(),
             height: render_target.height(),
+            dt: render_target.dt(),
             noise_texture: Self::create_noise_texture(&self.device, &self.queue, render_target.width(), render_target.height()),
         }
     }
@@ -196,12 +209,12 @@ impl Context {
         }
     }
 
-    fn update_node(self: &mut Self, node_id: NodeId, node_props: &NodeProps, time: f32) {
+    fn update_node(self: &mut Self, node_id: NodeId, node_props: &NodeProps) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         match node_state {
             NodeState::EffectNode(ref mut state) => {
                 match node_props {
-                    NodeProps::EffectNode(props) => state.update(self, props, time),
+                    NodeProps::EffectNode(props) => state.update(self, props),
                     _ => panic!("Type mismatch between props and state"),
                 }
             },
@@ -227,15 +240,19 @@ impl Context {
     /// happens synchronously, so the `update` call may take a long time
     /// and rendering may stutter.
     pub fn update(&mut self, graph: &Graph, render_targets: &RenderTargetList, time: f32) {
-        // 1. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
-        // 2. Construct any missing render_target_states or node_states (this may kick of background processing)
-        // 3. Topo-sort graph.
+        // 1. Cache global properties like `time`
+        // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
+        // 3. Construct any missing render_target_states or node_states (this may kick of background processing)
+        // 4. Topo-sort graph.
+    
+        // 1. Cache global properties like `time`
+        self.time = time;
 
-        // 1. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
+        // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
         // TODO
 
-        // 2. Construct any missing render_target_states or node_states (this may kick of background processing)
+        // 3. Construct any missing render_target_states or node_states (this may kick of background processing)
 
         for (check_render_target_id, render_target) in render_targets.render_targets().iter() {
             if !self.render_target_states.contains_key(check_render_target_id) {
@@ -250,13 +267,13 @@ impl Context {
         }
         // TODO
 
-        // 3. Update state on every node
+        // 4. Update state on every node
 
         for (update_node_id, node_props) in graph.nodes().iter() {
-            self.update_node(*update_node_id, node_props, time);
+            self.update_node(*update_node_id, node_props);
         }
 
-        // 4. Topo-sort graph.
+        // 5. Topo-sort graph.
 
         // TODO
     }
@@ -298,6 +315,16 @@ impl Context {
         &self.blank_texture
     }
 
+    /// Get the cached time, based on the last call to update
+    pub fn time(&self) -> f32 {
+        self.time
+    }
+
+    /// Get the timestep between updates (based on the last call to update)
+    pub fn dt(&self) -> f32 {
+        self.dt
+    }
+
     /// Retrieve the current render targets as HashMap of id -> `RenderTargetState`
     pub fn render_target_states(&self) -> &HashMap<RenderTargetId, RenderTargetState> {
         &self.render_target_states
@@ -323,6 +350,11 @@ impl RenderTargetState {
     /// Return the height of this render target
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    /// Return the timestep of this render target
+    pub fn dt(&self) -> f32 {
+        self.dt
     }
 
     /// Get a texture whose resolution matches the render target resolution
