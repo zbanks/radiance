@@ -1,6 +1,6 @@
 use std::string::String;
 use crate::context::{Context, ArcTextureViewSampler};
-use crate::chain::ChainId;
+use crate::render_target::RenderTargetId;
 
 pub struct EffectNodeProps {
     pub name: String,
@@ -21,7 +21,7 @@ impl EffectNodeState {
         Self {}
     }
 
-    pub fn paint(&mut self, ctx: &Context, chain_id: ChainId, props: &EffectNodeProps, time: f32) -> ArcTextureViewSampler {
+    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId, props: &EffectNodeProps, time: f32) -> ArcTextureViewSampler {
         return ctx.blank_texture().clone(); // XXX actually paint something
     }
 }

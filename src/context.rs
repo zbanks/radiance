@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::graph::{NodeId, Graph, NodeProps};
-use crate::chain::{ChainId, Chain, Chains};
+use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 
+/// A bundle of a texture, a texture view, and a sampler.
+/// Each is stored within an `Arc` for sharing between threads
+/// if necessary.
 #[derive(Clone)]
 pub struct ArcTextureViewSampler {
     pub texture: Arc<wgpu::Texture>,
@@ -12,6 +15,7 @@ pub struct ArcTextureViewSampler {
 }
 
 impl ArcTextureViewSampler {
+    /// Bundle together a texture, a texture view, and a sampler
     pub fn new(texture: wgpu::Texture, view: wgpu::TextureView, sampler: wgpu::Sampler) -> Self {
         Self {
             texture: Arc::new(texture),
@@ -21,19 +25,37 @@ impl ArcTextureViewSampler {
     }
 }
 
+/// A `Context` bundles all of the state and graphics resources
+/// necessary to support iterated rendering of a `Graph`.
+/// 
+/// `Graph` and `RenderTargetList` are intentionally kept stateless
+/// and untangled from system resources.
+/// We push that complexity into this object.
+/// The `Context` caches objects for reuse and preserves state
+/// from frame to frame based on render target / node ID.
+///
+/// If given render targets or nodes that were not previously `paint`ed,
+/// the `Context` will carve out new state for them
+/// and remember it for next time.
+/// If previously rendered targets or nodes are omitted
+/// in a subsequent `paint` call,
+/// the `Context` will drop their state.
 pub struct Context {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
     blank_texture: ArcTextureViewSampler,
 
-    chain_states: HashMap<ChainId, ChainState>,
+    render_target_states: HashMap<RenderTargetId, RenderTargetState>,
     node_states: HashMap<NodeId, NodeState>,
 }
 
-pub struct ChainState {
+/// Internal state and resources that is associated with a specific RenderTarget,
+/// but not with any specific node.
+pub struct RenderTargetState {
     noise_texture: ArcTextureViewSampler,
 }
 
+/// Internal state and resources that is associated with a specific Node
 pub enum NodeState {
     EffectNode(EffectNodeState),
 }
@@ -143,20 +165,21 @@ impl Context {
         ArcTextureViewSampler::new(texture, view, sampler)
     }
 
+    /// Create a new context with the given graphics resources
     pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
         let blank_texture = Self::create_blank_texture(&device, &queue);
         Self {
             device,
             queue,
             blank_texture,
-            chain_states: HashMap::new(),
+            render_target_states: HashMap::new(),
             node_states: HashMap::new(),
         }
     }
 
-    fn new_chain_state(self: &Self, chain: &Chain) -> ChainState {
-        ChainState {
-            noise_texture: Self::create_noise_texture(&self.device, &self.queue, chain.width(), chain.height()),
+    fn new_render_target_state(self: &Self, render_target: &RenderTarget) -> RenderTargetState {
+        RenderTargetState {
+            noise_texture: Self::create_noise_texture(&self.device, &self.queue, render_target.width(), render_target.height()),
         }
     }
 
@@ -166,12 +189,12 @@ impl Context {
         }
     }
 
-    fn paint_node(self: &mut Self, node_id: NodeId, chain_id: ChainId, node_props: &NodeProps, time: f32) -> ArcTextureViewSampler {
+    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId, node_props: &NodeProps, time: f32) -> ArcTextureViewSampler {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
             NodeState::EffectNode(ref mut state) => {
                 match node_props {
-                    NodeProps::EffectNode(props) => state.paint(self, chain_id, props, time),
+                    NodeProps::EffectNode(props) => state.paint(self, render_target_id, props, time),
                     _ => panic!("Type mismatch between props and state"),
                 }
             },
@@ -180,21 +203,34 @@ impl Context {
         result
     }
 
-    pub fn paint(&mut self, graph: &Graph, chains: &Chains, chain_id: ChainId, time: f32) -> HashMap<NodeId, ArcTextureViewSampler> {
-        // 1. Prune chain_states and node_states of any nodes or chains that are no longer present in the given graph/chains
-        // 2. Construct any missing chain_states or node_states (this may kick of background processing)
+    /// Paint the given graph in the context of the given render target.
+    /// Every node will be painted and the resulting textures will be returned, indexed by NodeId.
+    /// Typically, but not always, the resulting texture will have a resolution matching the render target resolution.
+    /// (the render target resolution is just a hint, and nodes may return what they please.)
+    ///
+    /// `paint` tries to spend most of its time painting.
+    /// If a newly added node needs time to load resources and initializing,
+    /// it will likely do this asynchronously.
+    /// In the meantime, it will probably pass through its input unchanged or return a blank texture.
+    /// The exception to this rule is when render targets are added;
+    /// node-independent render target initialization (such as generating the noise texture)
+    /// happens synchronously, so the paint call may take a long time
+    /// and rendering may stutter.
+    pub fn paint(&mut self, graph: &Graph, render_targets: &RenderTargetList, render_target_id: RenderTargetId, time: f32) -> HashMap<NodeId, ArcTextureViewSampler> {
+        // 1. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
+        // 2. Construct any missing render_target_states or node_states (this may kick of background processing)
         // 3. Topo-sort graph.
         // 4. Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
 
-        // 1. Prune chain_states and node_states of any nodes or chains that are no longer present in the given graph/chains
+        // 1. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
         // TODO
 
-        // 2. Construct any missing chain_states or node_states (this may kick of background processing)
+        // 2. Construct any missing render_target_states or node_states (this may kick of background processing)
 
-        for (check_chain_id, chain) in chains.chains().iter() {
-            if !self.chain_states.contains_key(check_chain_id) {
-                self.chain_states.insert(*check_chain_id, self.new_chain_state(chain));
+        for (check_render_target_id, render_target) in render_targets.render_targets().iter() {
+            if !self.render_target_states.contains_key(check_render_target_id) {
+                self.render_target_states.insert(*check_render_target_id, self.new_render_target_state(render_target));
             }
         }
 
@@ -214,23 +250,27 @@ impl Context {
         let mut result = HashMap::new();
 
         for (paint_node_id, node_props) in graph.nodes().iter() {
-            let output_texture = self.paint_node(*paint_node_id, chain_id, node_props, time);
+            let output_texture = self.paint_node(*paint_node_id, render_target_id, node_props, time);
             result.insert(*paint_node_id, output_texture);
         }
 
         result
     }
 
+    /// Get a blank (transparent) texture
     pub fn blank_texture(&self) -> &ArcTextureViewSampler {
         &self.blank_texture
     }
 
-    pub fn chain_state(&self, id: ChainId) -> Option<&ChainState> {
-        self.chain_states.get(&id)
+    /// Get the specific state associated with a render target
+    pub fn render_target_state(&self, id: RenderTargetId) -> Option<&RenderTargetState> {
+        self.render_target_states.get(&id)
     }
 }
 
-impl ChainState {
+impl RenderTargetState {
+    /// Get a texture whose resolution matches the render target resolution
+    /// and whose pixel data is white noise (in all four channels)
     pub fn noise_texture(&self) -> &ArcTextureViewSampler {
         &self.noise_texture
     }

@@ -6,7 +6,7 @@ use winit::{
 use winit::window::Window;
 use std::sync::Arc;
 
-use radiance::{Context, Chain, Chains, ChainId, Graph, NodeId, NodeProps, EffectNodeProps};
+use radiance::{Context, RenderTarget, RenderTargetList, RenderTargetId, Graph, NodeId, NodeProps, EffectNodeProps};
 
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface) {
     if new_size.width > 0 && new_size.height > 0 {
@@ -273,16 +273,16 @@ pub async fn run() {
     let mut graph = Graph::new();
     graph.insert_node(node1_id, node1_props);
 
-    // Make a chain
-    let preview_chain_id = ChainId::gen();
-    let preview_chain = Chain::new(256, 256);
+    // Make a render target
+    let preview_render_target_id = RenderTargetId::gen();
+    let preview_render_target = RenderTarget::new(256, 256);
 
-    // Make a chains container
-    let mut chains = Chains::new();
-    chains.insert_chain(preview_chain_id, preview_chain);
+    // Make a render target list
+    let mut render_target_list = RenderTargetList::new();
+    render_target_list.insert(preview_render_target_id, preview_render_target);
 
     // Paint
-    ctx.paint(&graph, &chains, preview_chain_id, 0.);
+    ctx.paint(&graph, &render_target_list, preview_render_target_id, 0.);
 
     // END
 
