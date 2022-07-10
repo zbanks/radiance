@@ -27,6 +27,7 @@ pub struct ReadyState {
 }
 
 const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
+const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 
 struct EffectNodePaintState {
 //    width: u32,
@@ -60,7 +61,7 @@ impl EffectNodeState {
     fn setup_render_pipeline(ctx: &Context, name: &str) -> Self {
         // Shader
         let effect_source = ctx.fetch_content(name).expect("Failed to read effect shader file");
-        let shader_source = &format!("{}{}\n", EFFECT_HEADER, effect_source);
+        let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source, EFFECT_FOOTER);
         let shader_module = ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(&format!("EffectNode {} shader", name)),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
@@ -167,10 +168,10 @@ impl EffectNodeState {
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
-                entry_point: "main",
+                entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
                     format: wgpu::TextureFormat::Rgba32Float,
-                    blend: Some(wgpu::BlendState::REPLACE),
+                    blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
             }),

@@ -167,7 +167,7 @@ pub async fn run() {
 
     let (device, queue) = adapter.request_device(
         &wgpu::DeviceDescriptor {
-            features: wgpu::Features::empty(),
+            features: wgpu::Features::TEXTURE_BINDING_ARRAY,
             // WebGL doesn't support all of wgpu's features, so if
             // we're building for the web we'll have to disable some.
             limits: if cfg!(target_arch = "wasm32") {
@@ -369,7 +369,7 @@ pub async fn run() {
 
     // Make a node
     let node1_id = NodeId::gen();
-    let node1_props = NodeProps::EffectNode(EffectNodeProps {name: "purple".to_string(), intensity: 0.9});
+    let node1_props = NodeProps::EffectNode(EffectNodeProps {name: "purple.wgsl".to_string(), intensity: 0.9});
 
     // Make a graph
     let mut graph = Graph::new();
