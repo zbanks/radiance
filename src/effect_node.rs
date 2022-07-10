@@ -7,7 +7,22 @@ pub struct EffectNodeProps {
     pub intensity: f32,
 }
 
-pub struct EffectNodeState {
+pub enum EffectNodeStatus {
+}
+
+pub enum EffectNodeState {
+    Uninitialized,
+    Ready(ReadyState),
+    Error(String),
+}
+
+pub struct ReadyState {
+    render_pipeline: wgpu::RenderPipeline,
+    update_bind_group: wgpu::BindGroup,
+    paint_bind_group_layout: wgpu::BindGroupLayout,
+    update_uniform_buffer: wgpu::Buffer,
+    paint_uniform_buffer: wgpu::Buffer,
+    n_inputs: u32,
 }
 
 struct EffectNodePaintState {
@@ -18,10 +33,13 @@ struct EffectNodePaintState {
 
 impl EffectNodeState {
     pub fn new(ctx: &Context, props: &EffectNodeProps) -> Self {
-        Self {}
+        Self::Uninitialized
     }
 
-    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId, props: &EffectNodeProps, time: f32) -> ArcTextureViewSampler {
+    pub fn update(&mut self, ctx: &Context, props: &EffectNodeProps, time: f32) {
+    }
+
+    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId) -> ArcTextureViewSampler {
         return ctx.render_target_state(render_target_id).unwrap().noise_texture().clone(); // XXX actually paint something
     }
 }

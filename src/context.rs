@@ -190,38 +190,40 @@ impl Context {
         }
     }
 
-    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId, node_props: &NodeProps, time: f32) -> ArcTextureViewSampler {
+    fn update_node(self: &mut Self, node_id: NodeId, node_props: &NodeProps, time: f32) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
-        let result = match node_state {
+        match node_state {
             NodeState::EffectNode(ref mut state) => {
                 match node_props {
-                    NodeProps::EffectNode(props) => state.paint(self, render_target_id, props, time),
+                    NodeProps::EffectNode(props) => state.update(self, props, time),
                     _ => panic!("Type mismatch between props and state"),
                 }
             },
         };
         self.node_states.insert(node_id, node_state);
-        result
     }
 
-    /// Paint the given graph in the context of the given render target.
-    /// Every node will be painted and the resulting textures will be returned, indexed by NodeId.
-    /// Typically, but not always, the resulting texture will have a resolution matching the render target resolution.
-    /// (the render target resolution is just a hint, and nodes may return what they please.)
-    ///
-    /// `paint` tries to spend most of its time painting.
+    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId) -> ArcTextureViewSampler {
+        let mut node_state = self.node_states.remove(&node_id).unwrap();
+        let result = match node_state {
+            NodeState::EffectNode(ref mut state) => state.paint(self, render_target_id),
+        };
+        self.node_states.insert(node_id, node_state);
+        result
+    }
+    /// Update the internal state of `Context` to match the given graph.
+    /// `update` tries to run quickly.
     /// If a newly added node needs time to load resources and initializing,
-    /// it will likely do this asynchronously.
+    /// the node will likely do this asynchronously.
     /// In the meantime, it will probably pass through its input unchanged or return a blank texture.
     /// The exception to this rule is when render targets are added;
     /// node-independent render target initialization (such as generating the noise texture)
-    /// happens synchronously, so the paint call may take a long time
+    /// happens synchronously, so the `update` call may take a long time
     /// and rendering may stutter.
-    pub fn paint(&mut self, graph: &Graph, render_targets: &RenderTargetList, render_target_id: RenderTargetId, time: f32) -> HashMap<NodeId, ArcTextureViewSampler> {
+    pub fn update(&mut self, graph: &Graph, render_targets: &RenderTargetList, time: f32) {
         // 1. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
         // 2. Construct any missing render_target_states or node_states (this may kick of background processing)
         // 3. Topo-sort graph.
-        // 4. Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
 
         // 1. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
@@ -242,17 +244,32 @@ impl Context {
         }
         // TODO
 
-        // 3. Topo-sort graph.
+        // 3. Update state on every node
+
+        for (update_node_id, node_props) in graph.nodes().iter() {
+            self.update_node(*update_node_id, node_props, time);
+        }
+
+        // 4. Topo-sort graph.
 
         // TODO
+    }
 
-        // 4. Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
-
+    /// Paint the given render target.
+    /// The most recent call to `update` will dictate
+    /// what graph nodes and render targets are available.
+    /// Every node from the last update will be painted,
+    ///  and the resulting textures will be returned, indexed by NodeId.
+    /// Typically, but not always, the resulting texture will have a resolution matching the render target resolution.
+    /// (the render target resolution is just a hint, and nodes may return what they please.)
+    pub fn paint(&mut self, render_target_id: RenderTargetId) -> HashMap<NodeId, ArcTextureViewSampler> {
+        // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
         let mut result = HashMap::new();
 
-        for (paint_node_id, node_props) in graph.nodes().iter() {
-            let output_texture = self.paint_node(*paint_node_id, render_target_id, node_props, time);
-            result.insert(*paint_node_id, output_texture);
+        let node_ids: Vec<NodeId> = self.node_states.keys().cloned().collect();
+        for paint_node_id in node_ids {
+            let output_texture = self.paint_node(paint_node_id, render_target_id);
+            result.insert(paint_node_id, output_texture);
         }
 
         result

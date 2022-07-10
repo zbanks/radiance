@@ -386,8 +386,11 @@ pub async fn run() {
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
+                // Update
+                let results = ctx.update(&graph, &render_target_list, 0.);
+
                 // Paint
-                let results = ctx.paint(&graph, &render_target_list, preview_render_target_id, 0.);
+                let results = ctx.paint(preview_render_target_id);
 
                 // Get node
                 let preview_texture = results.get(&node1_id).unwrap();
