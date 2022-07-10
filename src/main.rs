@@ -8,6 +8,38 @@ use std::sync::Arc;
 
 use radiance::{Context, RenderTarget, RenderTargetList, RenderTargetId, Graph, NodeId, NodeProps, EffectNodeProps};
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct BlitInstanceRaw {
+    pos_min: [f32; 2],
+    pos_max: [f32; 2],
+}
+
+impl BlitInstanceRaw {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<BlitInstanceRaw>() as wgpu::BufferAddress,
+            // We need to switch from using a step mode of Vertex to Instance
+            // This means that our shaders will only change to use the next
+            // instance when the shader starts processing a new instance
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+            ],
+        }
+    }
+}
+
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface) {
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
@@ -15,7 +47,7 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue, preview_instance_buffer: &wgpu::Buffer) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -48,8 +80,9 @@ fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPip
         });
 
         // NEW!
-        render_pass.set_pipeline(screen_render_pipeline); // 2.
-        render_pass.draw(0..3, 0..1); // 3.
+        render_pass.set_pipeline(screen_render_pipeline);
+        render_pass.set_vertex_buffer(0, preview_instance_buffer.slice(..));
+        render_pass.draw(0..4, 0..1);
     }
     queue.submit(std::iter::once(encoder.finish()));
     output.present();
@@ -145,6 +178,31 @@ pub async fn run() {
         label: Some("Shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
     });
+
+    // Blits
+
+    const MAX_BLITS: usize = 5;
+
+    let preview_instance_buffer = device.create_buffer(
+        &wgpu::BufferDescriptor {
+            label: Some("preview instance buffer"),
+            size: std::mem::size_of::<[BlitInstanceRaw; MAX_BLITS]>() as _,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false, // is this right?
+        }
+    );
+
+    let preview_instances = [
+        BlitInstanceRaw {
+            pos_min: [0., 0.],
+            pos_max: [0.5, 0.5],
+        }
+    ].to_vec();
+
+    assert!(preview_instances.len() <= MAX_BLITS);
+
+    queue.write_buffer(&preview_instance_buffer, 0, bytemuck::cast_slice(&preview_instances));
+
 /*
     let texture_render_pipeline_layout =
         device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -204,7 +262,9 @@ pub async fn run() {
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main", // 1.
-            buffers: &[], // 2.
+            buffers: &[
+                BlitInstanceRaw::desc(),
+            ],
         },
         fragment: Some(wgpu::FragmentState { // 3.
             module: &shader,
@@ -216,7 +276,7 @@ pub async fn run() {
             })],
         }),
         primitive: wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleList, // 1.
+            topology: wgpu::PrimitiveTopology::TriangleStrip, // 1.
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw, // 2.
             cull_mode: Some(wgpu::Face::Back),
@@ -289,7 +349,7 @@ pub async fn run() {
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                match render_screen(&device, &screen_render_pipeline, &surface, &queue) {
+                match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {

@@ -21,3 +21,4 @@ log = "0.4"
 wgpu = "0.13"
 pollster = "0.2"
 rand = "0.8"
+bytemuck = { version = "1.10", features = [ "derive" ] }
