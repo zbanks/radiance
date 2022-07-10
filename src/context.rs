@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::graph::{NodeId, Graph, NodeProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
+use rand::Rng;
 
 /// A bundle of a texture, a texture view, and a sampler.
 /// Each is stored within an `Arc` for sharing between threads
@@ -115,8 +116,8 @@ impl Context {
         // XXX this creates a blank texture!
 
         let texture_size = wgpu::Extent3d {
-            width: 1,
-            height: 1,
+            width,
+            height,
             depth_or_array_layers: 1,
         };
         let texture = device.create_texture(
@@ -131,7 +132,7 @@ impl Context {
             }
         );
 
-        let random_bytes: Vec<u8> = (0 .. width * height * 4).map(|_| { rand::random::<u8>() }).collect();
+        let random_bytes: Vec<u8> = (0 .. width * height * 4).map(|_| { rand::thread_rng().gen::<u8>() }).collect();
 
         queue.write_texture(
             wgpu::ImageCopyTexture {

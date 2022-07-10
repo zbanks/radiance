@@ -6,7 +6,7 @@ use winit::{
 use winit::window::Window;
 use std::sync::Arc;
 
-use radiance::{Context, RenderTarget, RenderTargetList, RenderTargetId, Graph, NodeId, NodeProps, EffectNodeProps};
+use radiance::{Context, RenderTarget, RenderTargetList, RenderTargetId, Graph, NodeId, NodeProps, EffectNodeProps, ArcTextureViewSampler};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -47,9 +47,26 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue, preview_instance_buffer: &wgpu::Buffer) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue, preview_instance_buffer: &wgpu::Buffer, screen_bind_group_layout: &wgpu::BindGroupLayout, preview_texture: &ArcTextureViewSampler) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let preview_bind_group = device.create_bind_group(
+        &wgpu::BindGroupDescriptor {
+            layout: &screen_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&preview_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&preview_texture.sampler),
+                },
+            ],
+            label: Some("preview bind group"),
+        }
+    );
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Render Encoder"),
@@ -81,6 +98,7 @@ fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPip
 
         // NEW!
         render_pass.set_pipeline(screen_render_pipeline);
+        render_pass.set_bind_group(0, &preview_bind_group, &[]);
         render_pass.set_vertex_buffer(0, preview_instance_buffer.slice(..));
         render_pass.draw(0..4, 0..1);
     }
@@ -249,10 +267,34 @@ pub async fn run() {
         multiview: None, // 5.
     });
 */
+    let screen_bind_group_layout = device.create_bind_group_layout(
+        &wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("screen bind group layout"),
+        }
+    );
+
     let screen_render_pipeline_layout =
         device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Screen Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&screen_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -341,15 +383,16 @@ pub async fn run() {
     let mut render_target_list = RenderTargetList::new();
     render_target_list.insert(preview_render_target_id, preview_render_target);
 
-    // Paint
-    ctx.paint(&graph, &render_target_list, preview_render_target_id, 0.);
-
-    // END
-
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer) {
+                // Paint
+                let results = ctx.paint(&graph, &render_target_list, preview_render_target_id, 0.);
+
+                // Get node
+                let preview_texture = results.get(&node1_id).unwrap();
+
+                match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer, &screen_bind_group_layout, preview_texture) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {

@@ -22,7 +22,7 @@ impl EffectNodeState {
     }
 
     pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId, props: &EffectNodeProps, time: f32) -> ArcTextureViewSampler {
-        return ctx.blank_texture().clone(); // XXX actually paint something
+        return ctx.render_target_state(render_target_id).unwrap().noise_texture().clone(); // XXX actually paint something
     }
 }
 
