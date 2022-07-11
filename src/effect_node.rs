@@ -21,14 +21,20 @@ pub enum EffectNodeState {
 }
 
 pub struct EffectNodeStateReady {
+    // Info
+    name: String,
+    n_inputs: u32,
+    intensity_integral: f32,
+
+    // GPU resources
     render_pipeline: wgpu::RenderPipeline,
     update_bind_group: wgpu::BindGroup,
     paint_bind_group_layout: wgpu::BindGroupLayout,
     update_uniform_buffer: wgpu::Buffer,
     paint_uniform_buffer: wgpu::Buffer,
-    n_inputs: u32,
+
+    // Paint states
     paint_states: HashMap<RenderTargetId, EffectNodePaintState>,
-    intensity_integral: f32,
 }
 
 struct EffectNodePaintState {
@@ -245,14 +251,15 @@ impl EffectNodeState {
         });
 
         EffectNodeStateReady {
+            name: name.to_string(),
+            n_inputs,
+            intensity_integral: 0.,
             render_pipeline,
             update_bind_group,
             paint_bind_group_layout,
             update_uniform_buffer,
             paint_uniform_buffer,
-            n_inputs,
             paint_states: HashMap::new(),
-            intensity_integral: 0.,
         }
     }
 
@@ -317,6 +324,11 @@ impl EffectNodeState {
     pub fn update(&mut self, ctx: &Context, props: &mut EffectNodeProps) {
         match self {
             EffectNodeState::Ready(self_ready) => {
+                if props.name != self_ready.name {
+                    *self = EffectNodeState::Error("EffectNode name changed after construction".to_string());
+                    return;
+                }
+
                 Self::update_paint_states(self_ready, ctx);
                 self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.dt()) % INTENSITY_INTEGRAL_PERIOD;
 
