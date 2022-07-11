@@ -1,6 +1,6 @@
 use crate::effect_node::EffectNodeProps;
 use rand::Rng;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map};
 
 /// A unique identifier that can be used to look up a `Node` in a `Graph`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
@@ -28,6 +28,7 @@ impl NodeId {
 /// NodeProps enumerates all possible node types,
 /// and delegates to their specific props struct,
 /// e.g. `EffectNodeProps`.
+#[derive(Debug, Clone)]
 pub enum NodeProps {
     EffectNode(EffectNodeProps),
 }
@@ -48,6 +49,7 @@ pub enum NodeProps {
 /// One use case of a Graph is passing it to `Context.paint` for rendering.
 /// Another is serializing it out to disk,
 /// or deserializing it from a server.
+#[derive(Debug, Clone)]
 pub struct Graph {
     nodes: HashMap<NodeId, NodeProps>,
     edges: HashSet<(NodeId, NodeId)>,
@@ -73,8 +75,13 @@ impl Graph {
         self.nodes.insert(id, props);
     }
 
-    /// Retrieve the nodes in the graph as a HashMap of id -> `NodeProps`
-    pub fn nodes(&self) -> &HashMap<NodeId, NodeProps> {
-        &self.nodes
+    /// Iterate over the graph nodes
+    pub fn iter_nodes(&self) -> hash_map::Iter<NodeId, NodeProps> {
+        self.nodes.iter()
+    }
+
+    /// Iterate over the graph nodes allowing mutation of the nodes
+    pub fn iter_nodes_mut(&mut self) -> hash_map::IterMut<NodeId, NodeProps> {
+        self.nodes.iter_mut()
     }
 }

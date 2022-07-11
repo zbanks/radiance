@@ -209,12 +209,12 @@ impl Context {
         }
     }
 
-    fn update_node(self: &mut Self, node_id: NodeId, node_props: &NodeProps) {
+    fn update_node(self: &mut Self, node_id: NodeId, node_props: &mut NodeProps) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         match node_state {
             NodeState::EffectNode(ref mut state) => {
                 match node_props {
-                    NodeProps::EffectNode(props) => state.update(self, props),
+                    NodeProps::EffectNode(ref mut props) => state.update(self, props),
                     _ => panic!("Type mismatch between props and state"),
                 }
             },
@@ -239,7 +239,11 @@ impl Context {
     /// node-independent render target initialization (such as generating the noise texture)
     /// happens synchronously, so the `update` call may take a long time
     /// and rendering may stutter.
-    pub fn update(&mut self, graph: &Graph, render_targets: &RenderTargetList, time: f32) {
+    ///
+    /// The passed in Graph will be mutated to advance its contents by one timestep.
+    /// It can then be further mutated before calling update() again
+    /// (or replaced entirely.)
+    pub fn update(&mut self, graph: &mut Graph, render_targets: &RenderTargetList, time: f32) {
         // 1. Cache global properties like `time`
         // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
         // 3. Construct any missing render_target_states or node_states (this may kick of background processing)
@@ -260,7 +264,7 @@ impl Context {
             }
         }
 
-        for (check_node_id, node_props) in graph.nodes().iter() {
+        for (check_node_id, node_props) in graph.iter_nodes() {
             if !self.node_states.contains_key(check_node_id) {
                 self.node_states.insert(*check_node_id, self.new_node_state(node_props));
             }
@@ -269,7 +273,7 @@ impl Context {
 
         // 4. Update state on every node
 
-        for (update_node_id, node_props) in graph.nodes().iter() {
+        for (update_node_id, node_props) in graph.iter_nodes_mut() {
             self.update_node(*update_node_id, node_props);
         }
 

@@ -389,7 +389,7 @@ pub async fn run() {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
-                let results = ctx.update(&graph, &render_target_list, t);
+                let results = ctx.update(&mut graph, &render_target_list, t);
 
                 // Paint
                 let results = ctx.paint(preview_render_target_id);

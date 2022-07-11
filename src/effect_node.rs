@@ -7,6 +7,7 @@ const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
 const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 const INTENSITY_INTEGRAL_PERIOD: f32 = 1024.;
 
+#[derive(Debug, Clone)]
 pub struct EffectNodeProps {
     pub name: String,
     pub intensity: f32,
@@ -313,7 +314,7 @@ impl EffectNodeState {
         Self::Ready(new_obj_ready)
     }
 
-    pub fn update(&mut self, ctx: &Context, props: &EffectNodeProps) {
+    pub fn update(&mut self, ctx: &Context, props: &mut EffectNodeProps) {
         match self {
             EffectNodeState::Ready(self_ready) => {
                 Self::update_paint_states(self_ready, ctx);
