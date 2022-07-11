@@ -1,6 +1,9 @@
 use crate::effect_node::EffectNodeProps;
 use rand::Rng;
 use std::collections::{HashMap, HashSet, hash_map};
+use serde::{Serialize, Deserialize};
+use serde::de::Error;
+use std::fmt;
 
 /// A unique identifier that can be used to look up a `Node` in a `Graph`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
@@ -12,6 +15,36 @@ impl NodeId {
     /// Generate a new random NodeId
     pub fn gen() -> NodeId {
         NodeId(rand::thread_rng().gen())
+    }
+}
+
+impl fmt::Display for NodeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "node_{}", &base64::encode(self.0.to_be_bytes())[0..22])
+    }
+}
+
+impl Serialize for NodeId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for NodeId {
+    fn deserialize<D>(deserializer: D) -> Result<NodeId, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        if s.starts_with("node_") {
+            let decoded_bytes: Vec<u8> = base64::decode(&s[5..]).map_err(D::Error::custom)?;
+            let decoded_value = <u128>::from_be_bytes(decoded_bytes.try_into().map_err(|_| D::Error::custom("node id is wrong length"))?);
+            Ok(NodeId(decoded_value))
+        } else {
+            Err(D::Error::custom("not a valid node id (must start with node_)"))
+        }
     }
 }
 
@@ -28,7 +61,8 @@ impl NodeId {
 /// NodeProps enumerates all possible node types,
 /// and delegates to their specific props struct,
 /// e.g. `EffectNodeProps`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum NodeProps {
     EffectNode(EffectNodeProps),
 }
@@ -49,7 +83,7 @@ pub enum NodeProps {
 /// One use case of a Graph is passing it to `Context.paint` for rendering.
 /// Another is serializing it out to disk,
 /// or deserializing it from a server.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
     nodes: HashMap<NodeId, NodeProps>,
     edges: HashSet<(NodeId, NodeId)>,

@@ -5,6 +5,7 @@ use winit::{
 };
 use winit::window::Window;
 use std::sync::Arc;
+use serde_json::json;
 
 use radiance::{Context, RenderTarget, RenderTargetList, RenderTargetId, Graph, NodeId, NodeProps, EffectNodeProps, ArcTextureViewSampler};
 
@@ -367,21 +368,33 @@ pub async fn run() {
     // Make context
     let mut ctx = Context::new(device.clone(), queue.clone(), 1. / 60.);
 
-    // Make a node
-    let node1_id = NodeId::gen();
-    let node1_props = NodeProps::EffectNode(EffectNodeProps {name: "purple.wgsl".to_string(), intensity: 0.9, frequency: 1.});
-
     // Make a graph
-    let mut graph = Graph::new();
-    graph.insert_node(node1_id, node1_props);
+    let preview_node_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
+    let mut graph: Graph = serde_json::from_value(json!({
+        "nodes": {
+            preview_node_id.to_string(): {
+                "type": "EffectNode",
+                "name": "purple.wgsl",
+                "intensity": 0.9,
+                "frequency": 1.0
+            }
+        },
+        "edges": []
+    })).unwrap();
+
+    println!("Graph: {}", serde_json::to_string(&graph).unwrap());
 
     // Make a render target
-    let preview_render_target_id = RenderTargetId::gen();
-    let preview_render_target = RenderTarget::new(256, 256, 1. / 60.);
+    let preview_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_LVrjzxhXrGU7SqFo+85zkw")).unwrap();
+    let render_target_list: RenderTargetList = serde_json::from_value(json!({
+        preview_render_target_id.to_string(): {
+            "width": 256,
+            "height": 256,
+            "dt": 1. / 60.
+        }
+    })).unwrap();
 
-    // Make a render target list
-    let mut render_target_list = RenderTargetList::new();
-    render_target_list.insert(preview_render_target_id, preview_render_target);
+    println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
     let mut t = 0.;
 
@@ -395,7 +408,7 @@ pub async fn run() {
                 let results = ctx.paint(preview_render_target_id);
 
                 // Get node
-                let preview_texture = results.get(&node1_id).unwrap();
+                let preview_texture = results.get(&preview_node_id).unwrap();
 
                 match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer, &screen_bind_group_layout, preview_texture) {
                     Ok(_) => {}

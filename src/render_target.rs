@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 use rand::Rng;
+use serde::{Serialize, Deserialize};
+use serde::de::Error;
+use std::fmt;
 
 /// A unique identifier that can be used to look up a `RenderTarget` in a `RenderTargetList`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
@@ -11,6 +14,36 @@ impl RenderTargetId {
     /// Generate a new random RenderTargetId
     pub fn gen() -> RenderTargetId {
         RenderTargetId(rand::thread_rng().gen())
+    }
+}
+
+impl fmt::Display for RenderTargetId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "rt_{}", &base64::encode(self.0.to_be_bytes())[0..22])
+    }
+}
+
+impl Serialize for RenderTargetId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for RenderTargetId {
+    fn deserialize<D>(deserializer: D) -> Result<RenderTargetId, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        if s.starts_with("rt_") {
+            let decoded_bytes: Vec<u8> = base64::decode(&s[3..]).map_err(D::Error::custom)?;
+            let decoded_value = <u128>::from_be_bytes(decoded_bytes.try_into().map_err(|_| D::Error::custom("render target id is wrong length"))?);
+            Ok(RenderTargetId(decoded_value))
+        } else {
+            Err(D::Error::custom("not a valid render target id (must start with rt_)"))
+        }
     }
 }
 
@@ -30,6 +63,7 @@ impl RenderTargetId {
 /// RenderTargets are lightweight objects and don't have associated state.
 /// All per-target state is stored in other parts of the system,
 /// typically indexed by RenderTargetId.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderTarget {
     width: u32,
     height: u32,
@@ -66,7 +100,9 @@ impl RenderTarget {
 /// This `RenderTargetList` object is only a description:
 /// It does not contain any render state or graphics resources.
 /// One use case of a RenderTargetList is passing it to `Context.paint` during rendering.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RenderTargetList {
+    #[serde(flatten)]
     render_targets: HashMap<RenderTargetId, RenderTarget>,
 }
 

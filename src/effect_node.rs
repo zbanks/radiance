@@ -2,12 +2,13 @@ use std::string::String;
 use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 
 const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
 const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 const INTENSITY_INTEGRAL_PERIOD: f32 = 1024.;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EffectNodeProps {
     pub name: String,
     pub intensity: f32,
