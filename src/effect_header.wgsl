@@ -1,57 +1,48 @@
-struct UpdateUniforms {
+struct Uniforms {
     // Audio levels, high/mid/low/level, [0.0, 1.0]
-    audio: vec4<f32>,
+    iAudio: vec4<f32>,
 
     // Time, measured in beats. Wraps around to 0 every 16 beats, [0.0, 16.0)
-    time: f32,
+    iTime: f32,
 
-    frequency: f32,
+    iFrequency: f32,
 
     // Intensity slider, [0.0, 1.0]
-    intensity: f32,
+    iIntensity: f32,
 
     // Intensity slider integrated with respect to wall time mod 1024, [0.0, 1024.0)
-    intensity_integral: f32,
-}
+    iIntensityIntegral: f32,
 
-struct PaintUniforms {
     // Resolution of the output pattern
-    resolution: vec2<f32>,
+    iResolution: vec2<f32>,
 
     // (Ideal) output rate in frames per second
-    dt: f32,
+    iStep: f32,
 }
 
 @group(0) @binding(0)
-var<uniform> update_uniforms: UpdateUniforms;
+var<uniform> global: Uniforms;
 
 @group(0) @binding(1)
 var iSampler: sampler;
 
-@group(1) @binding(0)
-var<uniform> paint_uniforms: PaintUniforms;
-
-@group(1) @binding(1)
+@group(0) @binding(2)
 var iInputsTex: binding_array<texture_2d<f32>>;
 
-@group(1) @binding(2)
+@group(0) @binding(3)
 var iNoiseTex: texture_2d<f32>;
 
-fn iTime() -> f32 {
-    return update_uniforms.time;
-}
+var<private> iAudio: vec4<f32>;
+var<private> iTime: f32;
+var<private> iFrequency: f32;
+var<private> iIntensity: f32;
+var<private> iIntensityIntegral: f32;
+var<private> iResolution: vec2<f32>;
+var<private> iStep: f32;
 
-fn iFrequency() -> f32 {
-    return update_uniforms.frequency;
-}
+var<private> aspectCorrection: vec2<f32>;
 
-fn iIntensity() -> f32 {
-    return update_uniforms.intensity;
-}
-
-fn iResolution() -> vec2<f32> {
-    return paint_uniforms.resolution;
-}
+// TODO iChannels in binding(4)
 
 //// Outputs of previous patterns
 //layout(set = 1, binding = 1) uniform texture2D iInputsTex[];
@@ -267,15 +258,8 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 //    return hmax(max(v.rg,v.ba));
 //}
 
-fn aspectCorrection() -> vec2<f32> {
-    return iResolution() / min(iResolution().x, iResolution().y);
-}
-
-/*
-
-float onePixel = 1. / min(iResolution.x, iResolution.y);
-
-float defaultPulse = sawtooth(iTime * iFrequency, 0.1);
-
-#line 1
-*/
+//float onePixel = 1. / min(iResolution.x, iResolution.y);
+//
+//float defaultPulse = sawtooth(iTime * iFrequency, 0.1);
+//
+//#line 1

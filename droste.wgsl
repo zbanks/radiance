@@ -39,7 +39,7 @@ fn droste(z: vec2<f32>) -> vec2<f32> {
     let angle = atan(scale/(2.0*pi));
     var z = cdiv(z, cexp(vec2(0.0,angle))*cos(angle)); 
     // 2. Tile the strips
-    z.x -= iTime() * iFrequency();
+    z.x -= iTime * iFrequency;
     z.x = z.x % scale;
     // 1. Take the annulus to a strip
     let z = cexp(z)*r1;
@@ -61,9 +61,9 @@ fn f(x: f32, n: f32) -> f32{
 //}
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
-    let normCoord = 2. * (uv - 0.5) * aspectCorrection();
+    let normCoord = 2. * (uv - 0.5) * aspectCorrection;
     let newUV = droste(normCoord);
-    let newUV = newUV / aspectCorrection() + 0.5;
+    let newUV = newUV / aspectCorrection + 0.5;
 
-    return textureSample(iInputsTex[0], iSampler, mix(uv, newUV, iIntensity()));
+    return textureSample(iInputsTex[0], iSampler, mix(uv, newUV, iIntensity));
 }

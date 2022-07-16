@@ -26,14 +26,16 @@ pub struct EffectNodeStateReady {
     // Info
     name: String,
     n_inputs: u32,
+    time: f32,
+    intensity: f32,
+    frequency: f32,
     intensity_integral: f32,
 
     // GPU resources
+    bind_group_layout: wgpu::BindGroupLayout,
+    uniform_buffer: wgpu::Buffer,
+    sampler: wgpu::Sampler,
     render_pipeline: wgpu::RenderPipeline,
-    update_bind_group: wgpu::BindGroup,
-    paint_bind_group_layout: wgpu::BindGroupLayout,
-    update_uniform_buffer: wgpu::Buffer,
-    paint_uniform_buffer: wgpu::Buffer,
 
     // Paint states
     paint_states: HashMap<RenderTargetId, EffectNodePaintState>,
@@ -48,20 +50,12 @@ struct EffectNodePaintState {
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 #[allow(non_snake_case)]
-struct UpdateUniforms {
+struct Uniforms {
     audio: [f32; 4],
     time: f32,
     frequency: f32,
     intensity: f32,
     intensity_integral: f32,
-    _padding: [u8; 0],
-}
-
-// The uniform buffer associated with the effect (specific to render target)
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-#[allow(non_snake_case)]
-struct PaintUniforms {
     resolution: [f32; 2],
     dt: f32,
     _padding: [u8; 4],
@@ -79,20 +73,14 @@ impl EffectNodeState {
 
         let n_inputs = 1_u32; // XXX read from file
 
-        // The effect will have two bind groups, one which will be bound in update() (most uniforms & sampler)
-        // and one which will be bound in paint() (a few uniforms & textures)
-
-        // The "update" bind group:
-        // 0: UpdateUniforms
+        // The uniforms bind group:
+        // 0: Uniforms
         // 1: iSampler
+        // 2: iInputsTex[]
+        // 3: iNoiseTex
+        // 4: iChannelTex[]
 
-        // The "paint" bind group:
-        // 0: PaintUniforms
-        // 1: iInputsTex[]
-        // 2: iNoiseTex
-        // 3: iChannelTex[]
-
-        let update_bind_group_layout = ctx.device().create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = ctx.device().create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0, // UpdateUniforms
@@ -110,24 +98,8 @@ impl EffectNodeState {
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                 },
-            ],
-            label: Some(&format!("EffectNode {} update bind group layout", name)),
-        });
-
-        let paint_bind_group_layout = ctx.device().create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
                 wgpu::BindGroupLayoutEntry {
-                    binding: 0, // PaintUniforms
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1, // iInputsTex
+                    binding: 2, // iInputsTex
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
                         multisampled: false,
@@ -137,7 +109,7 @@ impl EffectNodeState {
                     count: NonZeroU32::new(n_inputs),
                 },
                 wgpu::BindGroupLayoutEntry {
-                    binding: 2, // iNoiseTex
+                    binding: 3, // iNoiseTex
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
                         multisampled: false,
@@ -147,7 +119,7 @@ impl EffectNodeState {
                     count: None,
                 },
                 //wgpu::BindGroupLayoutEntry {
-                //    binding: 3, // iChannelTex
+                //    binding: 4, // iChannelTex
                 //    visibility: wgpu::ShaderStages::FRAGMENT,
                 //    ty: wgpu::BindingType::Texture {
                 //        multisampled: false,
@@ -157,13 +129,13 @@ impl EffectNodeState {
                 //    count: NonZeroU32::new(n_inputs),
                 //},
             ],
-            label: Some(&format!("EffectNode {} paint bind group layout", name)),
+            label: Some(&format!("EffectNode {} bind group layout", name)),
         });
 
         let render_pipeline_layout =
             ctx.device().create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&update_bind_group_layout, &paint_bind_group_layout],
+                bind_group_layouts: &[&bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -204,20 +176,10 @@ impl EffectNodeState {
         });
 
         // The update uniform buffer for this effect
-        let update_uniform_buffer = ctx.device().create_buffer(
+        let uniform_buffer = ctx.device().create_buffer(
             &wgpu::BufferDescriptor {
-                label: Some(&format!("EffectNode {} update uniform buffer", name)),
-                size: std::mem::size_of::<UpdateUniforms>() as u64,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }
-        );
-
-        // The paint uniform buffer for this effect
-        let paint_uniform_buffer = ctx.device().create_buffer(
-            &wgpu::BufferDescriptor {
-                label: Some(&format!("EffectNode {} paint uniform buffer", name)),
-                size: std::mem::size_of::<PaintUniforms>() as u64,
+                label: Some(&format!("EffectNode {} uniform buffer", name)),
+                size: std::mem::size_of::<Uniforms>() as u64,
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }
@@ -236,31 +198,17 @@ impl EffectNodeState {
             }
         );
 
-        // The update bind group is actually static, since we will just issue updates the uniform buffer
-        let update_bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &update_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: update_uniform_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-            ],
-            label: Some(&format!("EffectNode {} update bind group", name)),
-        });
-
         EffectNodeStateReady {
             name: name.to_string(),
             n_inputs,
+            time: 0.,
+            intensity: 0.,
+            frequency: 0.,
             intensity_integral: 0.,
+            bind_group_layout,
+            uniform_buffer,
+            sampler,
             render_pipeline,
-            update_bind_group,
-            paint_bind_group_layout,
-            update_uniform_buffer,
-            paint_uniform_buffer,
             paint_states: HashMap::new(),
         }
     }
@@ -332,17 +280,15 @@ impl EffectNodeState {
                 }
 
                 Self::update_paint_states(self_ready, ctx);
-                self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.dt()) % INTENSITY_INTEGRAL_PERIOD;
 
-                let uniforms = UpdateUniforms {
-                    audio: [0., 0., 0., 0.],
-                    time: ctx.time(),
-                    frequency: props.frequency,
-                    intensity: props.intensity,
-                    intensity_integral: self_ready.intensity_integral,
-                    ..Default::default()
-                };
-                ctx.queue().write_buffer(&self_ready.update_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+                // Sample-and-hold these values
+                // for when paint() is called
+                self_ready.time = ctx.time();
+                self_ready.frequency = props.frequency;
+                self_ready.intensity = props.intensity;
+
+                // Accumulate intensity_integral
+                self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.dt()) % INTENSITY_INTEGRAL_PERIOD;
             },
             _ => {}
         }
@@ -355,54 +301,56 @@ impl EffectNodeState {
                 let render_target_state = ctx.render_target_state(render_target_id).expect("Call to paint() with a render target ID unknown to the context");
                 let paint_state = self_ready.paint_states.get(&render_target_id).expect("Call to paint() with a render target ID unknown to the node (did you call update() first?)");
 
-                // Populate the paint uniforms
+                // Populate the uniforms
                 {
                     let width = render_target_state.width();
                     let height = render_target_state.height();
-                    let uniforms = PaintUniforms {
+                    let uniforms = Uniforms {
+                        audio: [0., 0., 0., 0.],
+                        time: self_ready.time,
+                        frequency: self_ready.frequency,
+                        intensity: self_ready.intensity,
+                        intensity_integral: self_ready.intensity_integral,
                         resolution: [width as f32, height as f32],
                         dt: render_target_state.dt(),
                         ..Default::default()
                     };
-                    ctx.queue().write_buffer(&self_ready.paint_uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+                    ctx.queue().write_buffer(&self_ready.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
                 }
 
-                // Populate the paint bind group
-
                 // Make an array of input textures
-                // TODO repeatedly creating all these views seems bad,
-                // but TextureViewArray takes in &[TextureView], not &[&TextureView] so it's hard.
                 let input_binding: Vec<&wgpu::TextureView> = (0..self_ready.n_inputs).map(|i| {
                     match inputs.get(i as usize) {
-                        Some(opt_tex) => match opt_tex {
-                            Some(tex) => tex.view.as_ref(),
-                            None => ctx.blank_texture().view.as_ref(),
-                        },
-                        None => ctx.blank_texture().view.as_ref(),
+                        Some(Some(tex)) => tex.view.as_ref(),
+                        _ => ctx.blank_texture().view.as_ref(),
                     }
                 }).collect();
 
-                let paint_bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
-                    layout: &self_ready.paint_bind_group_layout,
+                let bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
+                    layout: &self_ready.bind_group_layout,
                     entries: &[
                         wgpu::BindGroupEntry {
-                            binding: 0, // PaintUniforms
-                            resource: self_ready.paint_uniform_buffer.as_entire_binding(),
+                            binding: 0,
+                            resource: self_ready.uniform_buffer.as_entire_binding(),
                         },
                         wgpu::BindGroupEntry {
-                            binding: 1, // iInputsTex
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&self_ready.sampler),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2, // iInputsTex
                             resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
                         },
                         wgpu::BindGroupEntry {
-                            binding: 2, // iNoiseTex
+                            binding: 3, // iNoiseTex
                             resource: wgpu::BindingResource::TextureView(&render_target_state.noise_texture().view)
                         },
                         //wgpu::BindGroupEntry {
-                        //    binding: 3, // iChannelTex
+                        //    binding: 4, // iChannelTex
                         //    resource: wgpu::BindingResource::TextureViewArray()
                         //},
                     ],
-                    label: Some("EffectNode paint bind group"),
+                    label: Some("EffectNode bind group"),
                 });
 
                 let mut encoder = ctx.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -433,8 +381,7 @@ impl EffectNodeState {
                     });
 
                     render_pass.set_pipeline(&self_ready.render_pipeline);
-                    render_pass.set_bind_group(0, &self_ready.update_bind_group, &[]); 
-                    render_pass.set_bind_group(1, &paint_bind_group, &[]); 
+                    render_pass.set_bind_group(0, &bind_group, &[]); 
                     render_pass.draw(0..4, 0..1);
                 }
 

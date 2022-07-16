@@ -23,5 +23,15 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
 
 @fragment
 fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
+    iAudio = global.iAudio;
+    iTime = global.iTime;
+    iFrequency = global.iFrequency;
+    iIntensity = global.iIntensity;
+    iIntensityIntegral = global.iIntensityIntegral;
+    iResolution = global.iResolution;
+    iStep = global.iStep;
+
+    aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
+
     return main(vertex.uv);
 }

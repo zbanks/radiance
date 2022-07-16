@@ -374,7 +374,7 @@ pub async fn run() {
         "nodes": {
             preview_node_id.to_string(): {
                 "type": "EffectNode",
-                "name": "droste.wgsl",
+                "name": "purple.wgsl",
                 "intensity": 1.0,
                 "frequency": 1.0
             }
