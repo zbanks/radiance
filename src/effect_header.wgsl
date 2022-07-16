@@ -76,9 +76,9 @@ fn iResolution() -> vec2<f32> {
 //#define iAudioHi    iAudio.z
 //#define iAudioLevel iAudio.w
 //
-//
-//#define M_PI 3.1415926535897932384626433832795
-//
+
+let pi: f32 = 3.1415926535897932384626433832795;
+
 //float lin_step(float v) {
 //    return v * iStep * iFPS;
 //}
