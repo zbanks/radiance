@@ -135,16 +135,16 @@ impl EffectNodeState {
                 //    },
                 //    count: NonZeroU32::new(n_inputs),
                 //},
-                //wgpu::BindGroupLayoutEntry {
-                //    binding: 2, // iNoiseTex
-                //    visibility: wgpu::ShaderStages::FRAGMENT,
-                //    ty: wgpu::BindingType::Texture {
-                //        multisampled: false,
-                //        view_dimension: wgpu::TextureViewDimension::D2,
-                //        sample_type: wgpu::TextureSampleType::Uint,
-                //    },
-                //    count: None,
-                //},
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2, // iNoiseTex
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
                 //wgpu::BindGroupLayoutEntry {
                 //    binding: 3, // iChannelTex
                 //    visibility: wgpu::ShaderStages::FRAGMENT,
@@ -394,10 +394,10 @@ impl EffectNodeState {
                         //    binding: 1, // iInputsTex
                         //    resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
                         //},
-                        //wgpu::BindGroupEntry {
-                        //    binding: 2, // iNoiseTex
-                        //    resource: wgpu::BindingResource::TextureView(&context.noise_texture().view)
-                        //},
+                        wgpu::BindGroupEntry {
+                            binding: 2, // iNoiseTex
+                            resource: wgpu::BindingResource::TextureView(&render_target_state.noise_texture().view)
+                        },
                         //wgpu::BindGroupEntry {
                         //    binding: 3, // iChannelTex
                         //    resource: wgpu::BindingResource::TextureViewArray()

@@ -31,6 +31,11 @@ var iSampler: sampler;
 @group(1) @binding(0)
 var<uniform> paint_uniforms: PaintUniforms;
 
+// TODO iInputs here
+
+@group(1) @binding(2)
+var iNoiseTex: texture_2d<f32>;
+
 fn iTime() -> f32 {
     return update_uniforms.time;
 }
