@@ -372,7 +372,18 @@ pub async fn run() {
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
     let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
     let mut graph: Graph = serde_json::from_value(json!({
-        "nodes": {
+        "nodes": [
+            node1_id,
+            node2_id,
+        ],
+        "edges": [
+            {
+                "from": node1_id,
+                "to": node1_id,
+                "input": 0,
+            }
+        ],
+        "node_props": {
             node1_id.to_string(): {
                 "type": "EffectNode",
                 "name": "purple.wgsl",
@@ -386,13 +397,6 @@ pub async fn run() {
                 "frequency": 1.0
             }
         },
-        "edges": [
-            {
-                "from": node1_id,
-                "to": node1_id,
-                "input": 0,
-            }
-        ],
     })).unwrap();
 
     println!("Graph: {}", serde_json::to_string(&graph).unwrap());

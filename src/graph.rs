@@ -1,6 +1,6 @@
 use crate::effect_node::EffectNodeProps;
 use rand::Rng;
-use std::collections::{HashMap, HashSet, hash_map};
+use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use serde::de::Error;
 use std::fmt;
@@ -80,7 +80,11 @@ pub struct Edge {
 /// and edges (which nodes feed into which other nodes)
 /// that describe an overall visual composition.
 /// 
-/// Each node is identified by a `NodeId` and contains a `NodeProps`
+/// Each node is identified by a `NodeId` and is stored in a sorted list.
+/// The ordering of the list does not affect updating and painting,
+/// but may be used for when visualizing the graph in the UI
+///
+/// Each node also has properties, accessed via `node_props()`,
 /// describing that node's behavior.
 /// 
 /// The graph topology must be acyclic.
@@ -92,9 +96,14 @@ pub struct Edge {
 /// or deserializing it from a server.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
-    nodes: HashMap<NodeId, NodeProps>,
-    edges: HashSet<Edge>,
+    nodes: Vec<NodeId>,
+    edges: Vec<Edge>,
+    node_props: HashMap<NodeId, NodeProps>,
 }
+
+// (TODO) after deserialization, the graph should be validated
+// to ensure that every ID in `nodes` has a corresponding entry in `node_props`
+// and that the graph topology is acyclic.
 
 // (TODO) we should have a GraphOperation datum for easy implementation of undo / redo
 // and sending changesets to a server.
@@ -104,25 +113,24 @@ impl Graph {
     /// Create an empty Graph
     pub fn new() -> Self {
         Self {
-            nodes: HashMap::new(),
-            edges: HashSet::new(),
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            node_props: HashMap::new(),
         }
     }
 
-    /// Add a node to the graph, with no edges.
-    /// The given ID must be unique within the graph.
-    pub fn insert_node(&mut self, id: NodeId, props: NodeProps) {
-        assert!(!self.nodes.contains_key(&id), "Given node ID already exists in graph");
-        self.nodes.insert(id, props);
-    }
-
-    /// Iterate over the graph nodes
-    pub fn iter_nodes(&self) -> hash_map::Iter<NodeId, NodeProps> {
+    /// Iterate over the graph nodes, returning a reference to each NodeId
+    pub fn iter_nodes(&self) -> impl Iterator<Item=&NodeId> {
         self.nodes.iter()
     }
 
-    /// Iterate over the graph nodes allowing mutation of the nodes
-    pub fn iter_nodes_mut(&mut self) -> hash_map::IterMut<NodeId, NodeProps> {
-        self.nodes.iter_mut()
+    /// Get an individual node's properties
+    pub fn node_props(&self, id: &NodeId) -> Option<&NodeProps> {
+        self.node_props.get(id)
+    }
+
+    /// Get an individual node's properties for mutation
+    pub fn node_props_mut(&mut self, id: &NodeId) -> Option<&mut NodeProps> {
+        self.node_props.get_mut(id)
     }
 }

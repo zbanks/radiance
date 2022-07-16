@@ -264,16 +264,21 @@ impl Context {
             }
         }
 
-        for (check_node_id, node_props) in graph.iter_nodes() {
+        for check_node_id in graph.iter_nodes() {
             if !self.node_states.contains_key(check_node_id) {
-                self.node_states.insert(*check_node_id, self.new_node_state(node_props));
+                self.node_states.insert(
+                    *check_node_id,
+                    self.new_node_state(graph.node_props(check_node_id).unwrap())
+                );
             }
         }
         // TODO
 
         // 4. Update state on every node
 
-        for (update_node_id, node_props) in graph.iter_nodes_mut() {
+        let nodes: Vec<NodeId> = graph.iter_nodes().cloned().collect();
+        for update_node_id in nodes.iter() {
+            let node_props = graph.node_props_mut(update_node_id).unwrap();
             self.update_node(*update_node_id, node_props);
         }
 
