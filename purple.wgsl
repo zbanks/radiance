@@ -16,7 +16,6 @@ fn main(uv: vec2<f32>) -> vec4<f32> {
     c.a = 1.;
     c *= iIntensity();
 
-    //fragColor = composite(texture(iInput, uv), c);
-    c = textureSample(iNoiseTex, iSampler, uv);
+    c = composite(textureSample(iInputsTex[0], iSampler, uv), c);
     return c;
 }

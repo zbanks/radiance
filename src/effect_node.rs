@@ -3,6 +3,7 @@ use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
+use std::num::NonZeroU32;
 
 const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
 const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
@@ -125,16 +126,16 @@ impl EffectNodeState {
                     },
                     count: None,
                 },
-                //wgpu::BindGroupLayoutEntry {
-                //    binding: 1, // iInputsTex
-                //    visibility: wgpu::ShaderStages::FRAGMENT,
-                //    ty: wgpu::BindingType::Texture {
-                //        multisampled: false,
-                //        view_dimension: wgpu::TextureViewDimension::D2,
-                //        sample_type: wgpu::TextureSampleType::Uint,
-                //    },
-                //    count: NonZeroU32::new(n_inputs),
-                //},
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1, // iInputsTex
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: NonZeroU32::new(n_inputs),
+                },
                 wgpu::BindGroupLayoutEntry {
                     binding: 2, // iNoiseTex
                     visibility: wgpu::ShaderStages::FRAGMENT,
@@ -347,7 +348,7 @@ impl EffectNodeState {
         }
     }
 
-    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
+    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId, inputs: &[Option<ArcTextureViewSampler>]) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
 
         match self {
             EffectNodeState::Ready(self_ready) => {
@@ -368,20 +369,18 @@ impl EffectNodeState {
 
                 // Populate the paint bind group
 
-/* XXX allow inputs
                 // Make an array of input textures
                 // TODO repeatedly creating all these views seems bad,
                 // but TextureViewArray takes in &[TextureView], not &[&TextureView] so it's hard.
-                let input_binding: Vec<wgpu::TextureView> = (0..ready_state.n_inputs).map(|i| {
+                let input_binding: Vec<&wgpu::TextureView> = (0..self_ready.n_inputs).map(|i| {
                     match inputs.get(i as usize) {
                         Some(opt_tex) => match opt_tex {
-                            Some(tex) => tex.texture.create_view(&Default::default()),
-                            None => context.blank_texture().texture.create_view(&Default::default()),
+                            Some(tex) => tex.view.as_ref(),
+                            None => ctx.blank_texture().view.as_ref(),
                         },
-                        None => context.blank_texture().texture.create_view(&Default::default()),
+                        None => ctx.blank_texture().view.as_ref(),
                     }
                 }).collect();
-*/
 
                 let paint_bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
                     layout: &self_ready.paint_bind_group_layout,
@@ -390,10 +389,10 @@ impl EffectNodeState {
                             binding: 0, // PaintUniforms
                             resource: self_ready.paint_uniform_buffer.as_entire_binding(),
                         },
-                        //wgpu::BindGroupEntry {
-                        //    binding: 1, // iInputsTex
-                        //    resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
-                        //},
+                        wgpu::BindGroupEntry {
+                            binding: 1, // iInputsTex
+                            resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
+                        },
                         wgpu::BindGroupEntry {
                             binding: 2, // iNoiseTex
                             resource: wgpu::BindingResource::TextureView(&render_target_state.noise_texture().view)

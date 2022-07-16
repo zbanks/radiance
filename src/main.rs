@@ -314,7 +314,7 @@ pub async fn run() {
             entry_point: "fs_main",
             targets: &[Some(wgpu::ColorTargetState { // 4.
                 format: config.format,
-                blend: Some(wgpu::BlendState::REPLACE),
+                blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
                 write_mask: wgpu::ColorWrites::ALL,
             })],
         }),
@@ -375,7 +375,7 @@ pub async fn run() {
             preview_node_id.to_string(): {
                 "type": "EffectNode",
                 "name": "purple.wgsl",
-                "intensity": 0.9,
+                "intensity": 0.4,
                 "frequency": 1.0
             }
         },

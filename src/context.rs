@@ -225,7 +225,7 @@ impl Context {
     fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
-            NodeState::EffectNode(ref mut state) => state.paint(self, render_target_id),
+            NodeState::EffectNode(ref mut state) => state.paint(self, render_target_id, &[]),
         };
         self.node_states.insert(node_id, node_state);
         result
