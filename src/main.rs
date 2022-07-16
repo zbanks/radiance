@@ -369,17 +369,30 @@ pub async fn run() {
     let mut ctx = Context::new(device.clone(), queue.clone(), 1. / 60.);
 
     // Make a graph
-    let preview_node_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
+    let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
+    let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
     let mut graph: Graph = serde_json::from_value(json!({
         "nodes": {
-            preview_node_id.to_string(): {
+            node1_id.to_string(): {
                 "type": "EffectNode",
                 "name": "purple.wgsl",
                 "intensity": 1.0,
                 "frequency": 1.0
+            },
+            node2_id.to_string(): {
+                "type": "EffectNode",
+                "name": "droste.wgsl",
+                "intensity": 1.0,
+                "frequency": 1.0
             }
         },
-        "edges": []
+        "edges": [
+            {
+                "from": node1_id,
+                "to": node1_id,
+                "input": 0,
+            }
+        ],
     })).unwrap();
 
     println!("Graph: {}", serde_json::to_string(&graph).unwrap());
@@ -408,7 +421,7 @@ pub async fn run() {
                 let results = ctx.paint(preview_render_target_id);
 
                 // Get node
-                let preview_texture = results.get(&preview_node_id).unwrap();
+                let preview_texture = results.get(&node2_id).unwrap();
 
                 match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer, &screen_bind_group_layout, preview_texture) {
                     Ok(_) => {}

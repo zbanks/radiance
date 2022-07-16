@@ -67,14 +67,21 @@ pub enum NodeProps {
     EffectNode(EffectNodeProps),
 }
 
+/// An edge in the graph is identified by a source `NodeId` ("from"),
+/// a sink `NodeId` ("to"), and which input of the sink node to use ("input").
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Hash, PartialEq)]
+pub struct Edge {
+    from: NodeId,
+    to: NodeId,
+    input: u32,
+}
+
 /// A `Graph` contains a list of nodes (such as effects, movies, and images)
 /// and edges (which nodes feed into which other nodes)
 /// that describe an overall visual composition.
 /// 
 /// Each node is identified by a `NodeId` and contains a `NodeProps`
 /// describing that node's behavior.
-/// 
-/// Each edge is identified by a source `NodeId` and a sink `NodeId` (TODO)
 /// 
 /// The graph topology must be acyclic.
 /// 
@@ -86,7 +93,7 @@ pub enum NodeProps {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
     nodes: HashMap<NodeId, NodeProps>,
-    edges: HashSet<(NodeId, NodeId)>,
+    edges: HashSet<Edge>,
 }
 
 // (TODO) we should have a GraphOperation datum for easy implementation of undo / redo
