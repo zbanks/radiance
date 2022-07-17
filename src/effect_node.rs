@@ -24,10 +24,8 @@ pub enum EffectNodeState {
 
 pub struct EffectNodeStateReady {
     // Info
-    name: String,
+    props: EffectNodeProps,
     n_inputs: u32,
-    intensity: f32,
-    frequency: f32,
     intensity_integral: f32,
 
     // GPU resources
@@ -61,12 +59,12 @@ struct Uniforms {
 }
 
 impl EffectNodeState {
-    fn setup_render_pipeline(ctx: &Context, name: &str) -> EffectNodeStateReady {
+    fn setup_render_pipeline(ctx: &Context, props: &EffectNodeProps) -> EffectNodeStateReady {
         // Shader
-        let effect_source = ctx.fetch_content(name).expect("Failed to read effect shader file");
+        let effect_source = ctx.fetch_content(&props.name).expect("Failed to read effect shader file");
         let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source, EFFECT_FOOTER);
         let shader_module = ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(&format!("EffectNode {} shader", name)),
+            label: Some(&format!("EffectNode {} shader", props.name)),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
@@ -128,7 +126,7 @@ impl EffectNodeState {
                 //    count: NonZeroU32::new(n_inputs),
                 //},
             ],
-            label: Some(&format!("EffectNode {} bind group layout", name)),
+            label: Some(&format!("EffectNode {} bind group layout", props.name)),
         });
 
         let render_pipeline_layout =
@@ -140,7 +138,7 @@ impl EffectNodeState {
 
         // Create a render pipeline, we will eventually want multiple of these for a multi-pass effect
         let render_pipeline = ctx.device().create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some(&format!("EffectNode {} render pipeline", name)),
+            label: Some(&format!("EffectNode {} render pipeline", props.name)),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader_module,
@@ -177,7 +175,7 @@ impl EffectNodeState {
         // The update uniform buffer for this effect
         let uniform_buffer = ctx.device().create_buffer(
             &wgpu::BufferDescriptor {
-                label: Some(&format!("EffectNode {} uniform buffer", name)),
+                label: Some(&format!("EffectNode {} uniform buffer", props.name)),
                 size: std::mem::size_of::<Uniforms>() as u64,
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
@@ -198,10 +196,8 @@ impl EffectNodeState {
         );
 
         EffectNodeStateReady {
-            name: name.to_string(),
+            props: props.clone(),
             n_inputs,
-            intensity: 0.,
-            frequency: 0.,
             intensity_integral: 0.,
             bind_group_layout,
             uniform_buffer,
@@ -264,7 +260,7 @@ impl EffectNodeState {
 
     pub fn new(ctx: &Context, props: &EffectNodeProps) -> Self {
         // TODO kick of shader compilation in the background instead of blocking
-        let mut new_obj_ready = Self::setup_render_pipeline(ctx, &props.name);
+        let mut new_obj_ready = Self::setup_render_pipeline(ctx, props);
         Self::update_paint_states(&mut new_obj_ready, ctx);
         Self::Ready(new_obj_ready)
     }
@@ -272,7 +268,7 @@ impl EffectNodeState {
     pub fn update(&mut self, ctx: &Context, props: &mut EffectNodeProps) {
         match self {
             EffectNodeState::Ready(self_ready) => {
-                if props.name != self_ready.name {
+                if props.name != self_ready.props.name {
                     *self = EffectNodeState::Error("EffectNode name changed after construction".to_string());
                     return;
                 }
@@ -281,8 +277,7 @@ impl EffectNodeState {
 
                 // Sample-and-hold props
                 // for when paint() is called
-                self_ready.frequency = props.frequency;
-                self_ready.intensity = props.intensity;
+                self_ready.props = props.clone();
 
                 // Accumulate intensity_integral
                 self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.global_props().dt) % INTENSITY_INTEGRAL_PERIOD;
@@ -305,8 +300,8 @@ impl EffectNodeState {
                     let uniforms = Uniforms {
                         audio: [0., 0., 0., 0.],
                         time: ctx.global_props().time,
-                        frequency: self_ready.frequency,
-                        intensity: self_ready.intensity,
+                        frequency: self_ready.props.frequency,
+                        intensity: self_ready.props.intensity,
                         intensity_integral: self_ready.intensity_integral,
                         resolution: [width as f32, height as f32],
                         dt: render_target_state.dt(),

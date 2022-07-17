@@ -366,7 +366,7 @@ pub async fn run() {
     // RADIANCE, WOO
 
     // Make context
-    let mut ctx = Context::new(device.clone(), queue.clone(), 1. / 60.);
+    let mut ctx = Context::new(device.clone(), queue.clone());
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();

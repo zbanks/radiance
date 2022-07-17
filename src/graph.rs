@@ -84,7 +84,7 @@ pub struct GlobalProps {
     /// Time, in beats. Wraps around at 64 beats.
     pub time: f32,
 
-    /// Time between successive calls to `update()`, in seconds
+    /// Time between successive calls to `update()`, in beats
     pub dt: f32,
 }
 

@@ -12,7 +12,7 @@ const MAX_TIME: f32 = 64.;
 /// A bundle of a texture, a texture view, and a sampler.
 /// Each is stored within an `Arc` for sharing between threads
 /// if necessary.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ArcTextureViewSampler {
     pub texture: Arc<wgpu::Texture>,
     pub view: Arc<wgpu::TextureView>,
@@ -59,6 +59,10 @@ pub struct Context {
     // State of individual render targets and nodes
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
     node_states: HashMap<NodeId, NodeState>,
+
+    // Helpful state related to graph rendering
+    node_topo_order: Vec<NodeId>,
+    node_inputs: HashMap<NodeId, Vec<Option<NodeId>>>,
 }
 
 /// Internal state and resources that is associated with a specific RenderTarget,
@@ -184,7 +188,7 @@ impl Context {
     /// dt is the expected period (in seconds) with which update() will be called.
     /// This is distinct from the period at which paint() may be called,
     /// and the period for that is set in the render target.
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, dt: f32) -> Self {
+    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
         let blank_texture = Self::create_blank_texture(&device, &queue);
         Self {
             device,
@@ -193,6 +197,8 @@ impl Context {
             global_props: Default::default(),
             render_target_states: Default::default(),
             node_states: Default::default(),
+            node_topo_order: Default::default(),
+            node_inputs: Default::default(),
         }
     }
 
@@ -224,10 +230,10 @@ impl Context {
         self.node_states.insert(node_id, node_state);
     }
 
-    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
+    fn paint_node(self: &mut Self, node_id: NodeId, render_target_id: RenderTargetId, input_textures: &[Option<ArcTextureViewSampler>]) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
-            NodeState::EffectNode(ref mut state) => state.paint(self, render_target_id, &[]),
+            NodeState::EffectNode(ref mut state) => state.paint(self, render_target_id, input_textures),
         };
         self.node_states.insert(node_id, node_state);
         result
@@ -284,6 +290,12 @@ impl Context {
         }
 
         // 5. Topo-sort graph.
+        // XXX hardcoded values
+        self.node_topo_order = vec![nodes[0], nodes[1]];
+
+        self.node_inputs = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
+        self.node_inputs.insert(nodes[0], vec![]);
+        self.node_inputs.insert(nodes[1], vec![Some(nodes[0])]);
 
         // TODO
     }
@@ -297,14 +309,23 @@ impl Context {
     /// (the render target resolution is just a hint, and nodes may return what they please.)
     pub fn paint(&mut self, render_target_id: RenderTargetId) -> HashMap<NodeId, ArcTextureViewSampler> {
         // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
-        let mut result = HashMap::new();
+        let mut result: HashMap<NodeId, ArcTextureViewSampler> = HashMap::new();
 
-        let node_ids: Vec<NodeId> = self.node_states.keys().cloned().collect();
-        for paint_node_id in node_ids {
-            let (command_buffer, output_texture) = self.paint_node(paint_node_id, render_target_id);
+        let node_ids: Vec<NodeId> = self.node_topo_order.clone();
+        for paint_node_id in &node_ids {
+
+            let input_nodes = self.node_inputs.get(paint_node_id).unwrap();
+            let input_textures: Vec<Option<ArcTextureViewSampler>> = input_nodes.iter().map(
+                |maybe_id| match maybe_id {
+                    Some(id) => Some(result.get(id).unwrap().clone()),
+                   None => None,
+                }
+            ).collect();
+
+            let (command_buffer, output_texture) = self.paint_node(*paint_node_id, render_target_id, &input_textures);
 
             self.queue.submit(command_buffer); // XXX concatenate them together instead
-            result.insert(paint_node_id, output_texture);
+            result.insert(*paint_node_id, output_texture);
         }
 
         result
