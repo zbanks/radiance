@@ -7,7 +7,7 @@ use std::fmt;
 /// A unique identifier that can be used to look up a `RenderTarget` in a `RenderTargetList`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
 /// they will be unique and never collide, even across different application instances. 
-#[derive(Eq, Hash, PartialEq, Debug, Clone, Copy)]
+#[derive(Eq, Hash, PartialEq, Clone, Copy)]
 pub struct RenderTargetId(u128);
 
 impl RenderTargetId {
@@ -20,6 +20,12 @@ impl RenderTargetId {
 impl fmt::Display for RenderTargetId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "rt_{}", &base64::encode(self.0.to_be_bytes())[0..22])
+    }
+}
+
+impl fmt::Debug for RenderTargetId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 

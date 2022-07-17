@@ -379,7 +379,7 @@ pub async fn run() {
         "edges": [
             {
                 "from": node1_id,
-                "to": node1_id,
+                "to": node2_id,
                 "input": 0,
             }
         ],

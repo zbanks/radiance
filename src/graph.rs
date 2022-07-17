@@ -8,7 +8,7 @@ use std::fmt;
 /// A unique identifier that can be used to look up a `Node` in a `Graph`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
 /// they will be unique and never collide, even across different application instances. 
-#[derive(Eq, Hash, PartialEq, Debug, Clone, Copy)]
+#[derive(Eq, Hash, PartialEq, Clone, Copy)]
 pub struct NodeId(u128);
 
 impl NodeId {
@@ -21,6 +21,12 @@ impl NodeId {
 impl fmt::Display for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "node_{}", &base64::encode(self.0.to_be_bytes())[0..22])
+    }
+}
+
+impl fmt::Debug for NodeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
     }
 }
 
@@ -112,6 +118,125 @@ pub struct Graph {
     edges: Vec<Edge>,
     node_props: HashMap<NodeId, NodeProps>,
     global_props: GlobalProps,
+
+    // Internal stuff
+    #[serde(skip_serializing)]
+    input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
+    #[serde(skip_serializing)]
+    topo_order: Vec<NodeId>,
+}
+
+/// Given a list of NodeIds and Edges, return a mapping from a node to its inputs (dependencies)
+/// The indices in the returned Vec will correspond to the numbered inputs of the node
+/// and can be used for rendering.
+fn input_mapping(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<NodeId>>> {
+    let mut result = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
+
+    // Add every node to the map
+    for node in nodes {
+        result.insert(*node, Default::default());
+    }
+
+    // Add every edge to the map
+    for edge in edges {
+        let input_vec = result.get_mut(&edge.to).unwrap();
+
+        // Ensure vec has enough space to add our entry
+        if input_vec.len() <= edge.input as usize {
+            for _ in 0..=edge.input as usize - input_vec.len() {
+                input_vec.push(None);
+            }
+        }
+
+        // Add to vec
+        input_vec[edge.input as usize] = Some(edge.from);
+    }
+
+    result
+}
+
+/// Given a graph (encoded as a HashMap from each node to its inputs (dependencies)
+/// return the nodes in topological order.
+/// A vec of NodeId is also included for sort stability.
+fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Result<Vec<NodeId>, &'static str> {
+
+    // Later parts of this function don't work properly
+    // if the graph is totally empty.
+    // Return successfully in this case.
+    if graph.len() == 0 {
+        return Ok(Default::default());
+    }
+
+    // Find the "start" nodes: the nodes with no outputs
+    let mut start_nodes: HashSet<NodeId> = graph.keys().cloned().collect();
+    for input_vec in graph.values() {
+        for maybe_input in input_vec {
+            match maybe_input {
+                Some(input) => {
+                    start_nodes.remove(input);
+                },
+                None => {},
+            }
+        }
+    }
+    if start_nodes.len() == 0 {
+        return Err("Graph is cyclic")
+    }
+
+    // Topo-sort using DFS
+    // Use a "white-grey-black" node coloring approach
+    // to detect cycles
+    // https://stackoverflow.com/a/62971341
+
+    enum Color {
+        White, // Node is not visited
+        Grey, // Node is on the path that is being explored
+        Black, // Node is visited
+    }
+
+    // Push "start" nodes onto the stack for DFS
+    let mut stack: Vec<NodeId> = nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
+    let mut color = HashMap::<NodeId, Color>::from_iter(graph.keys().map(|x| (*x, Color::White)));
+    let mut result = Vec::<NodeId>::new();
+
+    while let Some(&n) = stack.last() {
+        let cn = color.get(&n).unwrap();
+        match cn {
+            Color::White => {
+                color.insert(n, Color::Grey);
+                for m in graph.get(&n).unwrap().iter().flatten() {
+                    let cm = color.get(m).unwrap();
+                    match cm {
+                        Color::White => {
+                            stack.push(*m);
+                        },
+                        Color::Grey => {
+                            return Err("Graph is cyclic");
+                        },
+                        Color::Black => {
+                            // Already visited; no action necessary
+                        },
+                    }
+                }
+            },
+            Color::Grey => {
+                color.insert(n, Color::Black);
+                stack.pop();
+                result.push(n);
+            },
+            Color::Black => {
+                panic!("DFS error; visited node on the stack");
+            },
+        }
+    }
+
+    if !color.values().all(|c| match c {Color::Black => true, _ => false}) {
+        // Isolated nodes connected to themself will not appear in start_nodes
+        // and will not be visited
+        return Err("Graph is cyclic");
+    }
+
+    Ok(result)
 }
 
 impl<'de> Deserialize<'de> for Graph {
@@ -144,11 +269,19 @@ impl<'de> Deserialize<'de> for Graph {
                     return Err("Node ID list does not match node_props mapping")
                 }
 
+                // Compute mapping from nodes to their inputs
+                let input_mapping = input_mapping(&x.nodes, &x.edges);
+
+                // Compute topo order (and detect cycles in the process)
+                let topo_order = topo_order(&x.nodes, &input_mapping)?;
+
                 Ok(Graph {
                     nodes: x.nodes,
                     edges: x.edges,
                     node_props: x.node_props,
                     global_props: x.global_props,
+                    input_mapping,
+                    topo_order,
                 })
             }
         }
