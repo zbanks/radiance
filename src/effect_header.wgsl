@@ -262,4 +262,9 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 //
 //float defaultPulse = sawtooth(iTime * iFrequency, 0.1);
 //
+
+fn modulo(x: f32, y: f32) -> f32 {
+    return x - y * floor(x / y);
+}
+
 //#line 1
