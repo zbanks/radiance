@@ -26,7 +26,6 @@ pub struct EffectNodeStateReady {
     // Info
     name: String,
     n_inputs: u32,
-    time: f32,
     intensity: f32,
     frequency: f32,
     intensity_integral: f32,
@@ -201,7 +200,6 @@ impl EffectNodeState {
         EffectNodeStateReady {
             name: name.to_string(),
             n_inputs,
-            time: 0.,
             intensity: 0.,
             frequency: 0.,
             intensity_integral: 0.,
@@ -281,14 +279,13 @@ impl EffectNodeState {
 
                 Self::update_paint_states(self_ready, ctx);
 
-                // Sample-and-hold these values
+                // Sample-and-hold props
                 // for when paint() is called
-                self_ready.time = ctx.time();
                 self_ready.frequency = props.frequency;
                 self_ready.intensity = props.intensity;
 
                 // Accumulate intensity_integral
-                self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.dt()) % INTENSITY_INTEGRAL_PERIOD;
+                self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.global_props().dt) % INTENSITY_INTEGRAL_PERIOD;
             },
             _ => {}
         }
@@ -307,7 +304,7 @@ impl EffectNodeState {
                     let height = render_target_state.height();
                     let uniforms = Uniforms {
                         audio: [0., 0., 0., 0.],
-                        time: self_ready.time,
+                        time: ctx.global_props().time,
                         frequency: self_ready.frequency,
                         intensity: self_ready.intensity,
                         intensity_integral: self_ready.intensity_integral,

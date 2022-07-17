@@ -397,6 +397,10 @@ pub async fn run() {
                 "frequency": 1.0
             }
         },
+        "global_props": {
+            "time": 0.,
+            "dt": 0.03,
+        }
     })).unwrap();
 
     println!("Graph: {}", serde_json::to_string(&graph).unwrap());
@@ -413,13 +417,11 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
-    let mut t = 0.;
-
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
-                let results = ctx.update(&mut graph, &render_target_list, t);
+                let results = ctx.update(&mut graph, &render_target_list);
 
                 // Paint
                 let results = ctx.paint(preview_render_target_id);
@@ -438,8 +440,6 @@ pub async fn run() {
                     // All other errors (Outdated, Timeout) should be resolved by the next frame
                     Err(e) => eprintln!("{:?}", e),
                 }
-
-                t += 0.03;
             }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually

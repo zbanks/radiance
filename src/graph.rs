@@ -76,6 +76,18 @@ pub struct Edge {
     input: u32,
 }
 
+/// `GlobalProps` govern the overall behavior of the `Graph`.
+/// For example, an `GlobalProps` has a properties of `time`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(tag = "type")]
+pub struct GlobalProps {
+    /// Time, in beats. Wraps around at 64 beats.
+    pub time: f32,
+
+    /// Time between successive calls to `update()`, in seconds
+    pub dt: f32,
+}
+
 /// A `Graph` contains a list of nodes (such as effects, movies, and images)
 /// and edges (which nodes feed into which other nodes)
 /// that describe an overall visual composition.
@@ -94,11 +106,12 @@ pub struct Edge {
 /// One use case of a Graph is passing it to `Context.paint` for rendering.
 /// Another is serializing it out to disk,
 /// or deserializing it from a server.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Graph {
     nodes: Vec<NodeId>,
     edges: Vec<Edge>,
     node_props: HashMap<NodeId, NodeProps>,
+    global_props: GlobalProps,
 }
 
 impl<'de> Deserialize<'de> for Graph {
@@ -111,6 +124,7 @@ impl<'de> Deserialize<'de> for Graph {
             nodes: Vec<NodeId>,
             edges: Vec<Edge>,
             node_props: HashMap<NodeId, NodeProps>,
+            global_props: GlobalProps,
         }
 
         impl TryFrom<UncheckedGraph> for Graph {
@@ -134,6 +148,7 @@ impl<'de> Deserialize<'de> for Graph {
                     nodes: x.nodes,
                     edges: x.edges,
                     node_props: x.node_props,
+                    global_props: x.global_props,
                 })
             }
         }
@@ -151,15 +166,6 @@ impl<'de> Deserialize<'de> for Graph {
 // The server can then respond with the complete updated Graph
 
 impl Graph {
-    /// Create an empty Graph
-    pub fn new() -> Self {
-        Self {
-            nodes: Vec::new(),
-            edges: Vec::new(),
-            node_props: HashMap::new(),
-        }
-    }
-
     /// Iterate over the graph nodes, returning a reference to each NodeId
     pub fn iter_nodes(&self) -> impl Iterator<Item=&NodeId> {
         self.nodes.iter()
@@ -173,5 +179,15 @@ impl Graph {
     /// Get an individual node's properties for mutation
     pub fn node_props_mut(&mut self, id: &NodeId) -> Option<&mut NodeProps> {
         self.node_props.get_mut(id)
+    }
+
+    /// Get the global props for this graph
+    pub fn global_props(&self) -> &GlobalProps {
+        &self.global_props
+    }
+
+    /// Get the global props for this graph
+    pub fn global_props_mut(&mut self) -> &mut GlobalProps {
+        &mut self.global_props
     }
 }

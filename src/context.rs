@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::graph::{NodeId, Graph, NodeProps};
+use crate::graph::{NodeId, Graph, NodeProps, GlobalProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;
 use std::fs;
 use std::io;
+
+const MAX_TIME: f32 = 64.;
 
 /// A bundle of a texture, a texture view, and a sampler.
 /// Each is stored within an `Arc` for sharing between threads
@@ -16,6 +18,8 @@ pub struct ArcTextureViewSampler {
     pub view: Arc<wgpu::TextureView>,
     pub sampler: Arc<wgpu::Sampler>,
 }
+
+// TODO are all three of these really necessary? I think most are unused.
 
 impl ArcTextureViewSampler {
     /// Bundle together a texture, a texture view, and a sampler
@@ -49,9 +53,8 @@ pub struct Context {
     queue: Arc<wgpu::Queue>,
     blank_texture: ArcTextureViewSampler,
 
-    // Cached values from the last update()
-    time: f32,
-    dt: f32,
+    // Cached props from the last update()
+    global_props: GlobalProps,
 
     // State of individual render targets and nodes
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
@@ -187,10 +190,9 @@ impl Context {
             device,
             queue,
             blank_texture,
-            time: 0.,
-            dt,
-            render_target_states: HashMap::new(),
-            node_states: HashMap::new(),
+            global_props: Default::default(),
+            render_target_states: Default::default(),
+            node_states: Default::default(),
         }
     }
 
@@ -243,14 +245,13 @@ impl Context {
     /// The passed in Graph will be mutated to advance its contents by one timestep.
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
-    pub fn update(&mut self, graph: &mut Graph, render_targets: &RenderTargetList, time: f32) {
-        // 1. Cache global properties like `time`
-        // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
-        // 3. Construct any missing render_target_states or node_states (this may kick of background processing)
-        // 4. Topo-sort graph.
-    
-        // 1. Cache global properties like `time`
-        self.time = time;
+    pub fn update(&mut self, graph: &mut Graph, render_targets: &RenderTargetList) {
+        // 1. Sample-and-hold global props like `time` and `dt`, then update them
+        {
+            self.global_props = graph.global_props().clone();
+            let props = graph.global_props_mut();
+            props.time = (props.time + props.dt) % MAX_TIME;
+        }
 
         // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
@@ -324,14 +325,9 @@ impl Context {
         &self.blank_texture
     }
 
-    /// Get the cached time, based on the last call to update
-    pub fn time(&self) -> f32 {
-        self.time
-    }
-
-    /// Get the timestep between updates (based on the last call to update)
-    pub fn dt(&self) -> f32 {
-        self.dt
+    /// Get the cached global props, based on the last call to update
+    pub fn global_props(&self) -> &GlobalProps {
+        &self.global_props
     }
 
     /// Retrieve the current render targets as HashMap of id -> `RenderTargetState`
