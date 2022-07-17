@@ -1,6 +1,6 @@
 use crate::effect_node::EffectNodeProps;
 use rand::Rng;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 use serde::de::Error;
 use std::fmt;
@@ -94,11 +94,52 @@ pub struct Edge {
 /// One use case of a Graph is passing it to `Context.paint` for rendering.
 /// Another is serializing it out to disk,
 /// or deserializing it from a server.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Graph {
     nodes: Vec<NodeId>,
     edges: Vec<Edge>,
     node_props: HashMap<NodeId, NodeProps>,
+}
+
+impl<'de> Deserialize<'de> for Graph {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct UncheckedGraph {
+            nodes: Vec<NodeId>,
+            edges: Vec<Edge>,
+            node_props: HashMap<NodeId, NodeProps>,
+        }
+
+        impl TryFrom<UncheckedGraph> for Graph {
+            type Error = &'static str;
+
+            fn try_from(x: UncheckedGraph) -> Result<Self, Self::Error> {
+                let set1: HashSet<NodeId> = x.nodes.iter().cloned().collect();
+                let set2: HashSet<NodeId> = x.node_props.keys().cloned().collect();
+
+                // Ensure there are no duplicates in the list of NodeIds
+                if x.nodes.len() > set1.len() {
+                    return Err("Node ID list has duplicates")
+                }
+
+                // Ensure the list of NodeIds matches the mapping of NodeIds to props
+                if set1.symmetric_difference(&set2).next().is_some() {
+                    return Err("Node ID list does not match node_props mapping")
+                }
+
+                Ok(Graph {
+                    nodes: x.nodes,
+                    edges: x.edges,
+                    node_props: x.node_props,
+                })
+            }
+        }
+
+        UncheckedGraph::deserialize(deserializer)?.try_into().map_err(D::Error::custom)
+    }
 }
 
 // (TODO) after deserialization, the graph should be validated
