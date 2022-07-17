@@ -289,13 +289,9 @@ impl Context {
             self.update_node(*update_node_id, node_props);
         }
 
-        // 5. Topo-sort graph.
-        // XXX hardcoded values
-        self.node_topo_order = vec![nodes[0], nodes[1]];
-
-        self.node_inputs = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
-        self.node_inputs.insert(nodes[0], vec![]);
-        self.node_inputs.insert(nodes[1], vec![Some(nodes[0])]);
+        // 5. Store topo order & input mapping for rendering
+        self.node_inputs = graph.input_mapping().clone();
+        self.node_topo_order = graph.topo_order().cloned().collect();
 
         // TODO
     }

@@ -5,19 +5,22 @@ struct VertexOutput {
 
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
-    var varray = array<vec2<f32>, 4>(
+    var pos_array = array<vec2<f32>, 4>(
         vec2<f32>(1., 1.),
         vec2<f32>(-1., 1.),
         vec2<f32>(1., -1.),
         vec2<f32>(-1., -1.),
     );
+    var uv_array = array<vec2<f32>, 4>(
+        vec2<f32>(1., 0.),
+        vec2<f32>(0., 0.),
+        vec2<f32>(1., 1.),
+        vec2<f32>(0., 1.),
+    );
 
-    let vertex = varray[vertex_index];
-    let gl_Position = vec4<f32>(vertex, 0., 1.);
-    let uv = 0.5 * (vertex + 1.);
     return VertexOutput(
-        gl_Position,
-        uv,
+        vec4<f32>(pos_array[vertex_index], 0., 1.),
+        uv_array[vertex_index],
     );
 }
 

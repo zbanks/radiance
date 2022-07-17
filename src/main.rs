@@ -371,15 +371,22 @@ pub async fn run() {
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
     let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
+    let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
     let mut graph: Graph = serde_json::from_value(json!({
         "nodes": [
             node1_id,
             node2_id,
+            node3_id,
         ],
         "edges": [
             {
                 "from": node1_id,
                 "to": node2_id,
+                "input": 0,
+            },
+            {
+                "from": node2_id,
+                "to": node3_id,
                 "input": 0,
             }
         ],
@@ -394,6 +401,12 @@ pub async fn run() {
                 "type": "EffectNode",
                 "name": "droste.wgsl",
                 "intensity": 1.0,
+                "frequency": 1.0
+            },
+            node3_id.to_string(): {
+                "type": "EffectNode",
+                "name": "droste.wgsl",
+                "intensity": 0.0,
                 "frequency": 1.0
             }
         },
@@ -427,7 +440,7 @@ pub async fn run() {
                 let results = ctx.paint(preview_render_target_id);
 
                 // Get node
-                let preview_texture = results.get(&node2_id).unwrap();
+                let preview_texture = results.get(&node3_id).unwrap();
 
                 match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer, &screen_bind_group_layout, preview_texture) {
                     Ok(_) => {}

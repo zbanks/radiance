@@ -323,4 +323,14 @@ impl Graph {
     pub fn global_props_mut(&mut self) -> &mut GlobalProps {
         &mut self.global_props
     }
+
+    /// Iterate over the graph's nodes in topological order
+    pub fn topo_order(&self) -> impl Iterator<Item=&NodeId> {
+        self.topo_order.iter()
+    }
+
+    /// Get a mapping from nodes to their inputs
+    pub fn input_mapping(&self) -> &HashMap<NodeId, Vec<Option<NodeId>>> {
+        &self.input_mapping
+    }
 }
