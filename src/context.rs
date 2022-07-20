@@ -261,7 +261,8 @@ impl Context {
 
         // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
-        // TODO
+        self.render_target_states.retain(|id, _| render_targets.render_targets().contains_key(id));
+        self.node_states.retain(|id, _| graph.contains_node(id));
 
         // 3. Construct any missing render_target_states or node_states (this may kick of background processing)
 
@@ -279,10 +280,8 @@ impl Context {
                 );
             }
         }
-        // TODO
 
         // 4. Update state on every node
-
         let nodes: Vec<NodeId> = graph.iter_nodes().cloned().collect();
         for update_node_id in nodes.iter() {
             let node_props = graph.node_props_mut(update_node_id).unwrap();
@@ -292,8 +291,6 @@ impl Context {
         // 5. Store topo order & input mapping for rendering
         self.node_inputs = graph.input_mapping().clone();
         self.node_topo_order = graph.topo_order().cloned().collect();
-
-        // TODO
     }
 
     /// Paint the given render target.

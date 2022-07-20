@@ -304,6 +304,11 @@ impl Graph {
         self.nodes.iter()
     }
 
+    /// Returns True if the graph contains a given node
+    pub fn contains_node(&self, id: &NodeId) -> bool {
+        self.node_props.contains_key(id)
+    }
+
     /// Get an individual node's properties
     pub fn node_props(&self, id: &NodeId) -> Option<&NodeProps> {
         self.node_props.get(id)
