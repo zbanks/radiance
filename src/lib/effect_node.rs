@@ -247,7 +247,7 @@ impl EffectNodeState {
         // See if we need to add or remove any paint states
         // (based on the context's render targets)
 
-        // TODO add code to remove paint states, currently this only adds them
+        self_ready.paint_states.retain(|id, _| ctx.render_target_states().contains_key(id));
 
         for (check_render_target_id, render_target_state) in ctx.render_target_states().iter() {
             if !self_ready.paint_states.contains_key(check_render_target_id) {
@@ -284,7 +284,7 @@ impl EffectNodeState {
         }
     }
 
-    pub fn paint(&mut self, ctx: &Context, render_target_id: RenderTargetId, inputs: &[Option<ArcTextureViewSampler>]) -> (Vec<wgpu::CommandBuffer>, ArcTextureViewSampler) {
+    pub fn paint(&mut self, ctx: &Context, command_buffers: &mut Vec<wgpu::CommandBuffer>, render_target_id: RenderTargetId, inputs: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
 
         match self {
             EffectNodeState::Ready(self_ready) => {
@@ -375,11 +375,11 @@ impl EffectNodeState {
                     render_pass.draw(0..4, 0..1);
                 }
 
-                (vec![encoder.finish()], paint_state.output_texture.clone())
+                command_buffers.push(encoder.finish());
+                paint_state.output_texture.clone()
             },
-            _ => (vec![], ctx.blank_texture().clone()),
+            _ => ctx.blank_texture().clone(),
         }
-        //return ctx.render_target_state(render_target_id).unwrap().noise_texture().clone(); // XXX actually paint something
     }
 }
 

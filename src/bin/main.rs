@@ -47,7 +47,7 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue, preview_instance_buffer: &wgpu::Buffer, screen_bind_group_layout: &wgpu::BindGroupLayout, preview_texture: &ArcTextureViewSampler) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue, mut command_buffers: Vec<wgpu::CommandBuffer>, preview_instance_buffer: &wgpu::Buffer, screen_bind_group_layout: &wgpu::BindGroupLayout, preview_texture: &ArcTextureViewSampler) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -102,7 +102,8 @@ fn render_screen(device: &wgpu::Device, screen_render_pipeline: &wgpu::RenderPip
         render_pass.set_vertex_buffer(0, preview_instance_buffer.slice(..));
         render_pass.draw(0..4, 0..1);
     }
-    queue.submit(std::iter::once(encoder.finish()));
+    command_buffers.push(encoder.finish());
+    queue.submit(command_buffers);
     output.present();
     Ok(())
 }
@@ -436,12 +437,14 @@ pub async fn run() {
                 ctx.update(&mut graph, &render_target_list);
 
                 // Paint
-                let results = ctx.paint(preview_render_target_id);
+
+                let mut command_buffers = Vec::<wgpu::CommandBuffer>::new();
+                let results = ctx.paint(&mut command_buffers, preview_render_target_id);
 
                 // Get node
                 let preview_texture = results.get(&node3_id).unwrap();
 
-                match render_screen(&device, &screen_render_pipeline, &surface, &queue, &preview_instance_buffer, &screen_bind_group_layout, preview_texture) {
+                match render_screen(&device, &screen_render_pipeline, &surface, &queue, command_buffers, &preview_instance_buffer, &screen_bind_group_layout, preview_texture) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {
