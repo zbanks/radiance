@@ -223,7 +223,7 @@ impl Context {
             NodeState::EffectNode(ref mut state) => {
                 match node_props {
                     NodeProps::EffectNode(ref mut props) => state.update(self, props),
-                    _ => panic!("Type mismatch between props and state"),
+                    //_ => panic!("Type mismatch between props and state"),
                 }
             },
         };

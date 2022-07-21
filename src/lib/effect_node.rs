@@ -39,7 +39,6 @@ pub struct EffectNodeStateReady {
 }
 
 struct EffectNodePaintState {
-    input_textures: Vec<ArcTextureViewSampler>,
     output_texture: ArcTextureViewSampler,
 }
 
@@ -207,7 +206,7 @@ impl EffectNodeState {
         }
     }
 
-    fn new_paint_state(self_ready: &EffectNodeStateReady, ctx: &Context, render_target_state: &RenderTargetState) -> EffectNodePaintState {
+    fn new_paint_state(_self_ready: &EffectNodeStateReady, ctx: &Context, render_target_state: &RenderTargetState) -> EffectNodePaintState {
         let texture_desc = wgpu::TextureDescriptor {
             size: wgpu::Extent3d {
                 width: render_target_state.width(),
@@ -240,7 +239,6 @@ impl EffectNodeState {
         );
 
         EffectNodePaintState{
-            input_textures: Vec::new(),
             output_texture: ArcTextureViewSampler::new(texture, view, sampler),
         }
     }

@@ -8,11 +8,11 @@ edition = "2021"
 
 [lib]
 name = "radiance"
-path = "src/lib.rs"
+path = "src/lib/mod.rs"
 
 [[bin]]
 name = "radiance"
-path = "src/main.rs"
+path = "src/bin/main.rs"
 
 [dependencies]
 winit = "0.26"

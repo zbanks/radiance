@@ -3,11 +3,10 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-use winit::window::Window;
 use std::sync::Arc;
 use serde_json::json;
 
-use radiance::{Context, RenderTarget, RenderTargetList, RenderTargetId, Graph, NodeId, NodeProps, EffectNodeProps, ArcTextureViewSampler};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, ArcTextureViewSampler};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -434,7 +433,7 @@ pub async fn run() {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
-                let results = ctx.update(&mut graph, &render_target_list);
+                ctx.update(&mut graph, &render_target_list);
 
                 // Paint
                 let results = ctx.paint(preview_render_target_id);
