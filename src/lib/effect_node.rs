@@ -45,7 +45,6 @@ struct EffectNodePaintState {
 // The uniform buffer associated with the effect (agnostic to render target)
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-#[allow(non_snake_case)]
 struct Uniforms {
     audio: [f32; 4],
     time: f32,
@@ -284,7 +283,7 @@ impl EffectNodeState {
         }
     }
 
-    pub fn paint(&mut self, ctx: &Context, command_buffers: &mut Vec<wgpu::CommandBuffer>, render_target_id: RenderTargetId, inputs: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
+    pub fn paint(&mut self, ctx: &Context, encoder: &mut wgpu::CommandEncoder, render_target_id: RenderTargetId, inputs: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
 
         match self {
             EffectNodeState::Ready(self_ready) => {
@@ -343,10 +342,6 @@ impl EffectNodeState {
                     label: Some("EffectNode bind group"),
                 });
 
-                let mut encoder = ctx.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("EffectNode encoder"),
-                });
-
                 {
                     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some("EffectNode render pass"),
@@ -375,7 +370,6 @@ impl EffectNodeState {
                     render_pass.draw(0..4, 0..1);
                 }
 
-                command_buffers.push(encoder.finish());
                 paint_state.output_texture.clone()
             },
             _ => ctx.blank_texture().clone(),

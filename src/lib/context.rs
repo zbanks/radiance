@@ -230,10 +230,10 @@ impl Context {
         self.node_states.insert(node_id, node_state);
     }
 
-    fn paint_node(self: &mut Self, command_buffers: &mut Vec<wgpu::CommandBuffer>, node_id: NodeId, render_target_id: RenderTargetId, input_textures: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
+    fn paint_node(self: &mut Self, encoder: &mut wgpu::CommandEncoder, node_id: NodeId, render_target_id: RenderTargetId, input_textures: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
-            NodeState::EffectNode(ref mut state) => state.paint(self, command_buffers, render_target_id, input_textures),
+            NodeState::EffectNode(ref mut state) => state.paint(self, encoder, render_target_id, input_textures),
         };
         self.node_states.insert(node_id, node_state);
         result
@@ -300,7 +300,7 @@ impl Context {
     ///  and the resulting textures will be returned, indexed by NodeId.
     /// Typically, but not always, the resulting texture will have a resolution matching the render target resolution.
     /// (the render target resolution is just a hint, and nodes may return what they please.)
-    pub fn paint(&mut self, command_buffers: &mut Vec<wgpu::CommandBuffer>, render_target_id: RenderTargetId) -> HashMap<NodeId, ArcTextureViewSampler> {
+    pub fn paint(&mut self, encoder: &mut wgpu::CommandEncoder, render_target_id: RenderTargetId) -> HashMap<NodeId, ArcTextureViewSampler> {
         // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
         let mut result: HashMap<NodeId, ArcTextureViewSampler> = HashMap::new();
 
@@ -315,7 +315,7 @@ impl Context {
                 }
             ).collect();
 
-            let output_texture = self.paint_node(command_buffers, *paint_node_id, render_target_id, &input_textures);
+            let output_texture = self.paint_node(encoder, *paint_node_id, render_target_id, &input_textures);
 
             result.insert(*paint_node_id, output_texture);
         }
