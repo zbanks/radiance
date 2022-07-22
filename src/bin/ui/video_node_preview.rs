@@ -6,6 +6,19 @@ use std::sync::Arc;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
+// The uniform buffer associated with the node preview
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct Uniforms {
+    view: [f32; 16],
+    pos_min: [f32; 2],
+    pos_max: [f32; 2],
+    _padding: [u8; 0],
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug, Clone)]
 struct InstanceDescriptor {
     texture: ArcTextureViewSampler,
     pos_min: Vector2<f32>,
@@ -13,11 +26,15 @@ struct InstanceDescriptor {
 }
 
 struct InstanceResources {
+    uniform_buffer: wgpu::Buffer,
 }
 
 pub struct VideoNodePreviewRenderer<ID: Clone + Eq + Hash> {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
+    pipeline: wgpu::RenderPipeline,
+    bind_group_layout: wgpu::BindGroupLayout,
+
     view: Matrix4<f32>,
     instance_list: Vec<(ID, InstanceDescriptor)>,
     instance_cache: HashMap<ID, InstanceResources>,
@@ -25,12 +42,112 @@ pub struct VideoNodePreviewRenderer<ID: Clone + Eq + Hash> {
 
 impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
     pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("video_node_preview.wgsl").into()),
+        });
+
+        let bind_group_layout = device.create_bind_group_layout(
+            &wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("screen bind group layout"),
+            }
+        );
+
+        let pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Screen Render Pipeline Layout"),
+                bind_group_layouts: &[&bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Screen Render Pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Rgba8Unorm,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleStrip,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        });
+
         Self {
             device,
             queue,
+            pipeline,
+            bind_group_layout,
+
             view: Matrix4::identity(),
             instance_cache: Default::default(),
             instance_list: Default::default(),
+        }
+    }
+
+    fn new_instance(&mut self) -> InstanceResources {
+        // The uniform buffer for the video node preview
+        let uniform_buffer = self.device.create_buffer(
+            &wgpu::BufferDescriptor {
+                label: Some("video node preview uniform buffer"),
+                size: std::mem::size_of::<Uniforms>() as u64,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }
+        );
+
+        InstanceResources {
+            uniform_buffer,
         }
     }
 
@@ -49,13 +166,21 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
         ));
     }
 
-    pub fn paint(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub fn paint(&mut self, render_pass: &mut wgpu::RenderPass) {
         // Paint all of the pushed instances
         let mut visited = HashSet::<ID>::new();
-        for (id, instance) in self.instance_list.iter() {
+        for (id, descriptor) in self.instance_list.clone().iter() {
+            // Get cached resources or create new ones
+            if !self.instance_cache.contains_key(id) {
+                let new = self.new_instance();
+                self.instance_cache.insert(id.clone(), new);
+            }
+
+            // Paint
+            self.paint_instance(render_pass, id, descriptor);
+
+            // Mark this instance as visited so we don't purge it from the cache
             visited.insert(id.clone());
-            // TODO create cache entries if necessary
-            // TODO paint
         }
 
         // Delete any cache entries that are not present in the instance list
@@ -63,5 +188,42 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
 
         // Clear the list
         self.instance_list.clear();
+    }
+
+    fn paint_instance(&mut self, render_pass: &mut wgpu::RenderPass, id: &ID, descriptor: &InstanceDescriptor) {
+        let resources = self.instance_cache.get_mut(id).unwrap();
+
+        let uniforms = Uniforms {
+            view: [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.],
+            pos_min: [0., 0.],
+            pos_max: [0.5, 0.5],
+            ..Default::default()
+        };
+        self.queue.write_buffer(&resources.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
+        let bind_group = self.device.create_bind_group(
+            &wgpu::BindGroupDescriptor {
+                layout: &self.bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: resources.uniform_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(&descriptor.texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::Sampler(&descriptor.texture.sampler),
+                    },
+                ],
+                label: Some("video node preview bind group"),
+            }
+        );
+
+        render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_bind_group(0, &bind_group, &[]);
+        render_pass.draw(0..4, 0..1);
     }
 }

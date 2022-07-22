@@ -41,16 +41,6 @@ mod ui;
 //    }
 //}
 
-// The uniform buffer associated with the node preview
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct VideoNodePreviewUniforms {
-    view: [f32; 16],
-    pos_min: [f32; 2],
-    pos_max: [f32; 2],
-    _padding: [u8; 0],
-}
-
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface) {
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
@@ -58,30 +48,9 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-fn render_screen(device: &wgpu::Device, video_node_preview_pipeline: &wgpu::RenderPipeline, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_bind_group_layout: &wgpu::BindGroupLayout, preview_texture: &ArcTextureViewSampler, video_node_preview_uniform_buffer: &wgpu::Buffer) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, _preview_texture: &ArcTextureViewSampler) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-    let video_node_preview_bind_group = device.create_bind_group(
-        &wgpu::BindGroupDescriptor {
-            layout: &video_node_preview_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: video_node_preview_uniform_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(&preview_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&preview_texture.sampler),
-                },
-            ],
-            label: Some("preview bind group"),
-        }
-    );
 
     {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -106,12 +75,10 @@ fn render_screen(device: &wgpu::Device, video_node_preview_pipeline: &wgpu::Rend
             ],
             depth_stencil_attachment: None,
         });
-
-        // NEW!
-        render_pass.set_pipeline(video_node_preview_pipeline);
-        render_pass.set_bind_group(0, &video_node_preview_bind_group, &[]);
-        render_pass.draw(0..4, 0..1);
     }
+
+    // TODO render the UI here!
+
     queue.submit(std::iter::once(encoder.finish()));
     output.present();
     Ok(())
@@ -201,105 +168,6 @@ pub async fn run() {
         present_mode: wgpu::PresentMode::Fifo,
     };
     surface.configure(&device, &config);
-
-    let video_node_preview_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("ui/video_node_preview.wgsl").into()),
-    });
-
-    let video_node_preview_bind_group_layout = device.create_bind_group_layout(
-        &wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("screen bind group layout"),
-        }
-    );
-
-    let video_node_preview_pipeline_layout =
-        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Screen Render Pipeline Layout"),
-            bind_group_layouts: &[&video_node_preview_bind_group_layout],
-            push_constant_ranges: &[],
-        });
-
-    let video_node_preview_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("Screen Render Pipeline"),
-        layout: Some(&video_node_preview_pipeline_layout),
-        vertex: wgpu::VertexState {
-            module: &video_node_preview_shader,
-            entry_point: "vs_main",
-            buffers: &[],
-        },
-        fragment: Some(wgpu::FragmentState {
-            module: &video_node_preview_shader,
-            entry_point: "fs_main",
-            targets: &[Some(wgpu::ColorTargetState {
-                format: config.format,
-                blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
-                write_mask: wgpu::ColorWrites::ALL,
-            })],
-        }),
-        primitive: wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleStrip,
-            strip_index_format: None,
-            front_face: wgpu::FrontFace::Ccw,
-            cull_mode: Some(wgpu::Face::Back),
-            polygon_mode: wgpu::PolygonMode::Fill,
-            unclipped_depth: false,
-            conservative: false,
-        },
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState {
-            count: 1,
-            mask: !0,
-            alpha_to_coverage_enabled: false,
-        },
-        multiview: None,
-    });
-
-    // The uniform buffer for the video node preview
-    let video_node_preview_uniform_buffer = device.create_buffer(
-        &wgpu::BufferDescriptor {
-            label: Some("video node preview uniform buffer"),
-            size: std::mem::size_of::<VideoNodePreviewUniforms>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        }
-    );
-
-    let video_node_preview_uniforms = VideoNodePreviewUniforms {
-        view: [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.],
-        pos_min: [0., 0.],
-        pos_max: [0.5, 0.5],
-        ..Default::default()
-    };
-    queue.write_buffer(&video_node_preview_uniform_buffer, 0, bytemuck::cast_slice(&[video_node_preview_uniforms]));
 
 /*
     let texture1_size = 256u32;
@@ -410,7 +278,7 @@ pub async fn run() {
                 // Get node
                 let preview_texture = results.get(&node3_id).unwrap();
 
-                match render_screen(&device, &video_node_preview_pipeline, &surface, &queue, encoder, &video_node_preview_bind_group_layout, preview_texture, &video_node_preview_uniform_buffer) {
+                match render_screen(&device, &surface, &queue, encoder, preview_texture) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {
