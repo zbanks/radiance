@@ -8,6 +8,8 @@ use serde_json::json;
 
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, ArcTextureViewSampler};
 
+mod ui;
+
 ///// A vertex passed to the video_node_decoration.wgsl vertex shader
 //#[repr(C)]
 //#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -202,7 +204,7 @@ pub async fn run() {
 
     let video_node_preview_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("video_node_preview.wgsl").into()),
+        source: wgpu::ShaderSource::Wgsl(include_str!("ui/video_node_preview.wgsl").into()),
     });
 
     let video_node_preview_bind_group_layout = device.create_bind_group_layout(
