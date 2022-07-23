@@ -29,6 +29,10 @@ struct InstanceResources {
     uniform_buffer: wgpu::Buffer,
 }
 
+pub struct RenderPassResources {
+    bind_groups: Vec<wgpu::BindGroup>,
+}
+
 pub struct VideoNodePreviewRenderer<ID: Clone + Eq + Hash> {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -100,7 +104,7 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
                 module: &shader,
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: wgpu::TextureFormat::Rgba8Unorm,
+                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -166,9 +170,12 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
         ));
     }
 
-    pub fn paint(&mut self, render_pass: &mut wgpu::RenderPass) {
+    // Modeled off of https://github.com/gfx-rs/wgpu-rs/wiki/Encapsulating-Graphics-Work
+
+    pub fn prepare(&mut self) -> RenderPassResources {
         // Paint all of the pushed instances
         let mut visited = HashSet::<ID>::new();
+        let mut bind_groups = Vec::<wgpu::BindGroup>::new();
         for (id, descriptor) in self.instance_list.clone().iter() {
             // Get cached resources or create new ones
             if !self.instance_cache.contains_key(id) {
@@ -177,7 +184,37 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
             }
 
             // Paint
-            self.paint_instance(render_pass, id, descriptor);
+            let resources = self.instance_cache.get_mut(id).unwrap();
+
+            let uniforms = Uniforms {
+                view: [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.],
+                pos_min: [0., 0.],
+                pos_max: [0.5, 0.5],
+                ..Default::default()
+            };
+            self.queue.write_buffer(&resources.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
+            let bind_group = self.device.create_bind_group(
+                &wgpu::BindGroupDescriptor {
+                    layout: &self.bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: resources.uniform_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::TextureView(&descriptor.texture.view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Sampler(&descriptor.texture.sampler),
+                        },
+                    ],
+                    label: Some("video node preview bind group"),
+                }
+            );
+            bind_groups.push(bind_group);
 
             // Mark this instance as visited so we don't purge it from the cache
             visited.insert(id.clone());
@@ -188,42 +225,16 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
 
         // Clear the list
         self.instance_list.clear();
+        RenderPassResources {
+            bind_groups
+        }
     }
 
-    fn paint_instance(&mut self, render_pass: &mut wgpu::RenderPass, id: &ID, descriptor: &InstanceDescriptor) {
-        let resources = self.instance_cache.get_mut(id).unwrap();
-
-        let uniforms = Uniforms {
-            view: [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.],
-            pos_min: [0., 0.],
-            pos_max: [0.5, 0.5],
-            ..Default::default()
-        };
-        self.queue.write_buffer(&resources.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
-
-        let bind_group = self.device.create_bind_group(
-            &wgpu::BindGroupDescriptor {
-                layout: &self.bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: resources.uniform_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::TextureView(&descriptor.texture.view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: wgpu::BindingResource::Sampler(&descriptor.texture.sampler),
-                    },
-                ],
-                label: Some("video node preview bind group"),
-            }
-        );
-
-        render_pass.set_pipeline(&self.pipeline);
-        render_pass.set_bind_group(0, &bind_group, &[]);
-        render_pass.draw(0..4, 0..1);
+    pub fn paint<'rpass>(&'rpass self, render_pass: &mut wgpu::RenderPass<'rpass>, render_pass_resources: &'rpass RenderPassResources) {
+        for bind_group in render_pass_resources.bind_groups.iter() {
+            render_pass.set_pipeline(&self.pipeline);
+            render_pass.set_bind_group(0, bind_group, &[]);
+            render_pass.draw(0..4, 0..1);
+        }
     }
 }

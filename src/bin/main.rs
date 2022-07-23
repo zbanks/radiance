@@ -1,3 +1,5 @@
+extern crate nalgebra as na;
+
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -5,6 +7,7 @@ use winit::{
 };
 use std::sync::Arc;
 use serde_json::json;
+use na::Vector2;
 
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, ArcTextureViewSampler};
 
@@ -48,9 +51,11 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, _preview_texture: &ArcTextureViewSampler) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer<u128>) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let video_node_preview_resources = video_node_preview_renderer.prepare();
 
     {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -75,9 +80,9 @@ fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Q
             ],
             depth_stencil_attachment: None,
         });
-    }
 
-    // TODO render the UI here!
+        video_node_preview_renderer.paint(&mut render_pass, &video_node_preview_resources);
+    }
 
     queue.submit(std::iter::once(encoder.finish()));
     output.present();
@@ -194,6 +199,8 @@ pub async fn run() {
     let queue_thread1 = queue.clone();
 */
 
+    let mut video_node_preview_renderer = ui::VideoNodePreviewRenderer::<u128>::new(device.clone(), queue.clone());
+
     // RADIANCE, WOO
 
     // Make context
@@ -278,7 +285,10 @@ pub async fn run() {
                 // Get node
                 let preview_texture = results.get(&node3_id).unwrap();
 
-                match render_screen(&device, &surface, &queue, encoder, preview_texture) {
+                // Draw preview
+                video_node_preview_renderer.push_instance(&1, preview_texture, &Vector2::<f32>::new(0., 0.), &Vector2::<f32>::new(0.5, 0.5));
+
+                match render_screen(&device, &surface, &queue, encoder, &mut video_node_preview_renderer) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {
