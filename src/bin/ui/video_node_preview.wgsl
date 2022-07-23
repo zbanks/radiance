@@ -31,13 +31,6 @@ fn vs_main(
     // This shader generates its own vertex coordinates.
     // Just draw 4 vertices in a triangle strip.
 
-    var vertex_positions = array<vec2<f32>, 4>(
-      vec2<f32>(0., 0.),
-      vec2<f32>(1., 0.),
-      vec2<f32>(0., 1.),
-      vec2<f32>(1., 1.)
-    );
-
     var vertex_uvs = array<vec2<f32>, 4>(
       vec2<f32>(0., 1.),
       vec2<f32>(1., 1.),
@@ -45,11 +38,9 @@ fn vs_main(
       vec2<f32>(1., 0.)
     );
 
-    let position = vertex_positions[vertex_index];
-    let uv = vertex_uvs[vertex_index];
-    let position = uniforms.pos_min + position * (uniforms.pos_max - uniforms.pos_min);
+    out.uv = vertex_uvs[vertex_index];
+    let position = uniforms.pos_min + out.uv * (uniforms.pos_max - uniforms.pos_min);
     out.position = uniforms.view * vec4<f32>(position.x, position.y, 0., 1.);
-    out.uv = uv;
     return out;
 }
 

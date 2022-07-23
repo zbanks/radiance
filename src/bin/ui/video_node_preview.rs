@@ -8,7 +8,7 @@ use std::sync::Arc;
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniforms {
-    view: [f32; 16],
+    view: [[f32; 4]; 4],
     pos_min: [f32; 2],
     pos_max: [f32; 2],
     _padding: [u8; 0],
@@ -192,9 +192,9 @@ impl VideoNodePreviewRenderer {
             let resources = &mut self.instance_cache[i];
 
             let uniforms = Uniforms {
-                view: [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.],
-                pos_min: [0., 0.],
-                pos_max: [0.5, 0.5],
+                view: self.view.into(),
+                pos_min: descriptor.pos_min.into(),
+                pos_max: descriptor.pos_max.into(),
                 ..Default::default()
             };
             self.queue.write_buffer(&resources.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
