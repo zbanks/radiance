@@ -3,8 +3,6 @@ extern crate nalgebra as na;
 use na::{Vector2, Matrix4};
 use radiance::ArcTextureViewSampler;
 use std::sync::Arc;
-use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
 
 // The uniform buffer associated with the node preview
 #[repr(C)]
@@ -33,18 +31,18 @@ pub struct RenderPassResources {
     bind_groups: Vec<wgpu::BindGroup>,
 }
 
-pub struct VideoNodePreviewRenderer<ID: Clone + Eq + Hash> {
+pub struct VideoNodePreviewRenderer {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
 
     view: Matrix4<f32>,
-    instance_list: Vec<(ID, InstanceDescriptor)>,
-    instance_cache: HashMap<ID, InstanceResources>,
+    instance_list: Vec<InstanceDescriptor>,
+    instance_cache: Vec<InstanceResources>,
 }
 
-impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
+impl VideoNodePreviewRenderer {
     pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -159,32 +157,39 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
         self.view = *view;
     }
 
-    pub fn push_instance(&mut self, id: &ID, texture: &ArcTextureViewSampler, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>) {
-        self.instance_list.push((
-            id.clone(),
+    pub fn push_instance(&mut self, texture: &ArcTextureViewSampler, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>) {
+        self.instance_list.push(
             InstanceDescriptor {
                 texture: texture.clone(),
                 pos_min: pos_min.clone(),
                 pos_max: pos_max.clone(),
             },
-        ));
+        );
     }
 
     // Modeled off of https://github.com/gfx-rs/wgpu-rs/wiki/Encapsulating-Graphics-Work
 
     pub fn prepare(&mut self) -> RenderPassResources {
-        // Paint all of the pushed instances
-        let mut visited = HashSet::<ID>::new();
-        let mut bind_groups = Vec::<wgpu::BindGroup>::new();
-        for (id, descriptor) in self.instance_list.clone().iter() {
-            // Get cached resources or create new ones
-            if !self.instance_cache.contains_key(id) {
-                let new = self.new_instance();
-                self.instance_cache.insert(id.clone(), new);
-            }
 
+        if self.instance_list.len() > self.instance_cache.len() {
+            // If we don't have enough cache entries, add them
+            for _ in 0..self.instance_list.len() - self.instance_cache.len() {
+                let new = self.new_instance();
+                self.instance_cache.push(new);
+            }
+        } else if self.instance_cache.len() > self.instance_list.len() {
+            // If we have too many cache entries, remove them
+            for _ in 0..self.instance_cache.len() - self.instance_list.len() {
+                self.instance_cache.pop();
+            }
+        }
+
+        let mut bind_groups = Vec::<wgpu::BindGroup>::new();
+
+        for i in 0..self.instance_list.len() {
             // Paint
-            let resources = self.instance_cache.get_mut(id).unwrap();
+            let descriptor = &mut self.instance_list[i];
+            let resources = &mut self.instance_cache[i];
 
             let uniforms = Uniforms {
                 view: [1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.],
@@ -215,13 +220,7 @@ impl<ID: Clone + Eq + Hash> VideoNodePreviewRenderer<ID> {
                 }
             );
             bind_groups.push(bind_group);
-
-            // Mark this instance as visited so we don't purge it from the cache
-            visited.insert(id.clone());
         }
-
-        // Delete any cache entries that are not present in the instance list
-        self.instance_cache.retain(|id, _| visited.contains(id));
 
         // Clear the list
         self.instance_list.clear();

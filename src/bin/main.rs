@@ -51,7 +51,7 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         surface.configure(device, config);
     }
 }
-fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer<u128>) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -199,7 +199,7 @@ pub async fn run() {
     let queue_thread1 = queue.clone();
 */
 
-    let mut video_node_preview_renderer = ui::VideoNodePreviewRenderer::<u128>::new(device.clone(), queue.clone());
+    let mut video_node_preview_renderer = ui::VideoNodePreviewRenderer::new(device.clone(), queue.clone());
 
     // RADIANCE, WOO
 
@@ -286,7 +286,7 @@ pub async fn run() {
                 let preview_texture = results.get(&node3_id).unwrap();
 
                 // Draw preview
-                video_node_preview_renderer.push_instance(&1, preview_texture, &Vector2::<f32>::new(0., 0.), &Vector2::<f32>::new(0.5, 0.5));
+                video_node_preview_renderer.push_instance(preview_texture, &Vector2::<f32>::new(0., 0.), &Vector2::<f32>::new(0.5, 0.5));
 
                 match render_screen(&device, &surface, &queue, encoder, &mut video_node_preview_renderer) {
                     Ok(_) => {}
