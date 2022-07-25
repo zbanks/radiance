@@ -63,19 +63,21 @@ fn view_matrix(width: u32, height: u32) -> Matrix4<f32> {
     m
 }
 
-pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer) {
+pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer, video_node_tile_renderer: &mut ui::VideoNodeTileRenderer) {
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
         config.height = new_size.height;
         surface.configure(device, config);
         video_node_preview_renderer.set_view(&view_matrix(new_size.width, new_size.height));
+        video_node_tile_renderer.set_view(&view_matrix(new_size.width, new_size.height));
     }
 }
-fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer) -> Result<(), wgpu::SurfaceError> {
+fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer, video_node_tile_renderer: &mut ui::VideoNodeTileRenderer) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
     let video_node_preview_resources = video_node_preview_renderer.prepare();
+    let video_node_tile_resources = video_node_tile_renderer.prepare();
 
     {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -101,6 +103,7 @@ fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Q
         });
 
         video_node_preview_renderer.paint(&mut render_pass, &video_node_preview_resources);
+        video_node_tile_renderer.paint(&mut render_pass, &video_node_tile_resources);
     }
 
     queue.submit(std::iter::once(encoder.finish()));
@@ -219,7 +222,9 @@ pub async fn run() {
 */
 
     let mut video_node_preview_renderer = ui::VideoNodePreviewRenderer::new(device.clone(), queue.clone());
+    let mut video_node_tile_renderer = ui::VideoNodeTileRenderer::new(device.clone(), queue.clone());
     video_node_preview_renderer.set_view(&view_matrix(size.width, size.height));
+    video_node_tile_renderer.set_view(&view_matrix(size.width, size.height));
 
     // RADIANCE, WOO
 
@@ -288,6 +293,8 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
+    let mut a = -10.;
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -308,11 +315,16 @@ pub async fn run() {
                 // Draw preview
                 video_node_preview_renderer.push_instance(preview_texture, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(200., 200.));
 
-                match render_screen(&device, &surface, &queue, encoder, &mut video_node_preview_renderer) {
+                // Draw random thing
+                video_node_tile_renderer.push_instance(&Vector2::<f32>::new(300., 300.), &Vector2::<f32>::new(500., 500.), &[100.], &[]);
+                video_node_tile_renderer.push_instance(&Vector2::<f32>::new(600., 300.), &Vector2::<f32>::new(700., 500.), &[a, 120.], &[100.]);
+                a += 0.1;
+
+                match render_screen(&device, &surface, &queue, encoder, &mut video_node_preview_renderer, &mut video_node_tile_renderer) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {
-                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
                     },
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
@@ -342,11 +354,11 @@ pub async fn run() {
                     } => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(physical_size) => {
                         size = *physical_size;
-                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         size = **new_inner_size;
-                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
                     }
                     _ => {}
                 }
