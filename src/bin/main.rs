@@ -9,7 +9,7 @@ use std::sync::Arc;
 use serde_json::json;
 use na::Vector2;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState};
 
 mod ui;
 
@@ -152,15 +152,20 @@ pub async fn run() {
 
                 let results = ctx.paint(&mut encoder, preview_render_target_id);
 
-                // Get node
+                // Get node states
+                let node_state_1 = if let NodeState::EffectNode(s) = ctx.node_state(node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                let node_state_2 = if let NodeState::EffectNode(s) = ctx.node_state(node2_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                let node_state_3 = if let NodeState::EffectNode(s) = ctx.node_state(node3_id).unwrap() {s} else {panic!("Not EffectNode!")};
+
+                // Get node outputs
                 let preview_texture_1 = results.get(&node1_id).unwrap();
                 let preview_texture_2 = results.get(&node2_id).unwrap();
                 let preview_texture_3 = results.get(&node3_id).unwrap();
 
                 // Draw preview
-                ui_renderer.effect_node(preview_texture_1, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(230., 300.));
-                ui_renderer.effect_node(preview_texture_2, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.));
-                ui_renderer.effect_node(preview_texture_3, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 300.));
+                ui_renderer.effect_node(node_state_1, preview_texture_1, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(230., 300.));
+                ui_renderer.effect_node(node_state_2, preview_texture_2, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.));
+                ui_renderer.effect_node(node_state_3, preview_texture_3, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 300.));
 
                 match ui_renderer.render(&surface, encoder) {
                     Ok(_) => {}

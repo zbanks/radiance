@@ -357,6 +357,11 @@ impl Context {
     pub fn fetch_content(&self, filename: &str) -> io::Result<String> {
         fs::read_to_string(filename)
     }
+
+    /// Get the state associated with a given node
+    pub fn node_state(&self, id: NodeId) -> Option<&NodeState> {
+        self.node_states.get(&id)
+    }
 }
 
 impl RenderTargetState {
