@@ -14,6 +14,7 @@ fn cross(a: &Vector2<f32>, b: &Vector2<f32>) -> f32 {
 
 const BG_COLOR: [f32; 4] = [0., 0., 0., 1.];
 const BORDER_COLOR: [f32; 4] = [0.3, 0.3, 0.3, 1.];
+const BORDER_THICKNESS: f32 = 2.;
 const CHEVRON_SIZE: f32 = 15.;
 
 const EPSILON: f32 = 0.0001;
@@ -264,21 +265,6 @@ impl VideoNodeTileRenderer {
 
         vertices.dedup_by(|a, b| (a.x - b.x).abs() < EPSILON && (a.y - b.y).abs() < EPSILON);
 
-        //let vertices = [
-        //    Vector2::<f32>::new(pos_min.x, pos_min.y),
-        //    Vector2::<f32>::new(pos_min.x, half_y - delta),
-        //    Vector2::<f32>::new(pos_min.x + delta, half_y),
-        //    Vector2::<f32>::new(pos_min.x, half_y + delta),
-        //    Vector2::<f32>::new(pos_min.x, pos_max.y),
-        //    Vector2::<f32>::new(pos_max.x, pos_max.y),
-        //    Vector2::<f32>::new(pos_max.x, half_y + delta),
-        //    Vector2::<f32>::new(pos_max.x + delta, half_y),
-        //    Vector2::<f32>::new(pos_max.x, half_y - delta),
-        //    Vector2::<f32>::new(pos_max.x, pos_min.y),
-        //];
-
-        // TODO remove duplicates
-
         // Push vertices of polygon
         let offset = self.vertices.len();
         for pos in vertices.iter() {
@@ -321,6 +307,48 @@ impl VideoNodeTileRenderer {
                 break;
             }
             assert!(found_interior || !found_exterior, "Triangulation failed (malformed polygon?)");
+        }
+
+        // Now work on the border
+        let offset = self.vertices.len();
+
+        for i in 0..vertices.len() {
+            let prev = vertices[(i + vertices.len() - 1) % vertices.len()];
+            let cur = vertices[i];
+            let next = vertices[(i + 1) % vertices.len()];
+
+            // Polygon offset algorithm from https://stackoverflow.com/a/54042831
+            let a = cur - prev;
+            let b = next - cur;
+            let na = Vector2::new(-a.y, a.x).normalize();
+            let nb = Vector2::new(-b.y, b.x).normalize();
+            let bis = (na + nb).normalize();
+            // I think the SO length math was wrong
+            let length = 0.5 * BORDER_THICKNESS / bis.dot(&na);
+            let inset_vertex = cur - bis * length;
+            let outset_vertex = cur + bis * length;
+
+            // Push vertices
+            self.vertices.push(Vertex {
+                pos: [inset_vertex.x, inset_vertex.y],
+                color: BORDER_COLOR,
+            });
+            self.vertices.push(Vertex {
+                pos: [outset_vertex.x, outset_vertex.y],
+                color: BORDER_COLOR,
+            });
+
+            // Push indices to draw a quad
+            let cur_inset = (offset + i * 2) as u32;
+            let cur_outset = cur_inset + 1;
+            let next_inset = (offset + ((i + 1) % vertices.len()) * 2) as u32;
+            let next_outset = next_inset + 1;
+            self.indices.push(cur_inset);
+            self.indices.push(cur_outset);
+            self.indices.push(next_inset);
+            self.indices.push(cur_outset);
+            self.indices.push(next_outset);
+            self.indices.push(next_inset);
         }
     }
 
