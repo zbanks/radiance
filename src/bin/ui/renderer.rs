@@ -53,8 +53,8 @@ impl Renderer {
         let output = surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let video_node_preview_resources = self.video_node_preview_renderer.prepare();
         let video_node_tile_resources = self.video_node_tile_renderer.prepare();
+        let video_node_preview_resources = self.video_node_preview_renderer.prepare();
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -79,8 +79,8 @@ impl Renderer {
                 depth_stencil_attachment: None,
             });
 
-            self.video_node_preview_renderer.paint(&mut render_pass, &video_node_preview_resources);
             self.video_node_tile_renderer.paint(&mut render_pass, &video_node_tile_resources);
+            self.video_node_preview_renderer.paint(&mut render_pass, &video_node_preview_resources);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -88,11 +88,15 @@ impl Renderer {
         Ok(())
     }
 
-    pub fn video_node_preview(&mut self, texture: &ArcTextureViewSampler, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>) {
-        self.video_node_preview_renderer.push_instance(texture, pos_min, pos_max)
-    }
+    // TODO: add state: &radiance::EffectNodeState, 
+    pub fn effect_node(&mut self, texture: &ArcTextureViewSampler, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>) {
+        let width = pos_max.x - pos_min.x;
+        let height = pos_max.y - pos_min.y;
+        self.video_node_tile_renderer.push_instance(pos_min, pos_max, &[0.5 * height], &[0.5 * height]);
 
-    pub fn video_node_tile(&mut self, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>, inputs: &[f32], outputs: &[f32]) {
-        self.video_node_tile_renderer.push_instance(pos_min, pos_max, inputs, outputs)
+        let preview_center = 0.5 * (pos_min + pos_max);
+        let preview_size = (0.5 * width - 20.).min(0.5 * height - 30.);
+        let preview_size = Vector2::<f32>::new(preview_size, preview_size);
+        self.video_node_preview_renderer.push_instance(texture, &(preview_center - preview_size), &(preview_center + preview_size));
     }
 }
