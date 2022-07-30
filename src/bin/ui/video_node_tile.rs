@@ -1,7 +1,6 @@
 extern crate nalgebra as na;
 
 use na::{Vector2, Matrix4};
-use radiance::ArcTextureViewSampler;
 use std::sync::Arc;
 
 const MAX_N_INDICES: usize = 1024;
@@ -61,10 +60,9 @@ pub struct RenderPassResources {
 }
 
 pub struct VideoNodeTileRenderer {
-    device: Arc<wgpu::Device>,
+    _device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
     pipeline: wgpu::RenderPipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
     bind_group: wgpu::BindGroup,
     uniform_buffer: wgpu::Buffer,
     vertex_buffer: wgpu::Buffer,
@@ -183,10 +181,9 @@ impl VideoNodeTileRenderer {
         );
 
         let mut result = Self {
-            device,
+            _device: device,
             queue,
             pipeline,
-            bind_group_layout,
             uniform_buffer,
             bind_group,
             vertex_buffer,

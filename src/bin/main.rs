@@ -7,78 +7,19 @@ use winit::{
 };
 use std::sync::Arc;
 use serde_json::json;
-use na::{Vector2, Matrix4};
+use na::Vector2;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, ArcTextureViewSampler};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId};
 
 mod ui;
 
-const PIXEL_SCALING: f32 = 2.;
-
-fn view_matrix(width: u32, height: u32) -> Matrix4<f32> {
-    let m = Matrix4::<f32>::new(
-        2.0 / width as f32, 0., 0., -1.,
-        0., -2.0 / height as f32, 0., 1.,
-        0., 0., 1., 0.,
-        0., 0., 0., 1.
-    );
-
-    let m = m * Matrix4::<f32>::new(
-        PIXEL_SCALING, 0., 0., 0.,
-        0., PIXEL_SCALING, 0., 0.,
-        0., 0., 1., 0.,
-        0., 0., 0., 1.
-    );
-    m
-}
-
-pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer, video_node_tile_renderer: &mut ui::VideoNodeTileRenderer) {
+pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, ui_renderer: &mut ui::Renderer) {
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
         config.height = new_size.height;
         surface.configure(device, config);
-        video_node_preview_renderer.set_view(&view_matrix(new_size.width, new_size.height));
-        video_node_tile_renderer.set_view(&view_matrix(new_size.width, new_size.height));
+        ui_renderer.resize(new_size.width, new_size.height);
     }
-}
-
-fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer, video_node_tile_renderer: &mut ui::VideoNodeTileRenderer) -> Result<(), wgpu::SurfaceError> {
-    let output = surface.get_current_texture()?;
-    let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-    let video_node_preview_resources = video_node_preview_renderer.prepare();
-    let video_node_tile_resources = video_node_tile_renderer.prepare();
-
-    {
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Render Pass"),
-            color_attachments: &[
-                Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(
-                            wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }
-                        ),
-                        store: true,
-                    }
-                })
-            ],
-            depth_stencil_attachment: None,
-        });
-
-        video_node_preview_renderer.paint(&mut render_pass, &video_node_preview_resources);
-        video_node_tile_renderer.paint(&mut render_pass, &video_node_tile_resources);
-    }
-
-    queue.submit(std::iter::once(encoder.finish()));
-    output.present();
-    Ok(())
 }
 
 pub async fn run() {
@@ -127,11 +68,8 @@ pub async fn run() {
     };
 
     // Surface configuration handled by resize()
-
-    let mut video_node_preview_renderer = ui::VideoNodePreviewRenderer::new(device.clone(), queue.clone());
-    let mut video_node_tile_renderer = ui::VideoNodeTileRenderer::new(device.clone(), queue.clone());
-
-    resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
+    let mut ui_renderer = ui::Renderer::new(device.clone(), queue.clone());
+    resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
 
     // RADIANCE, WOO
 
@@ -220,18 +158,18 @@ pub async fn run() {
                 let preview_texture = results.get(&node3_id).unwrap();
 
                 // Draw preview
-                video_node_preview_renderer.push_instance(preview_texture, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(200., 200.));
+                ui_renderer.video_node_preview(preview_texture, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(200., 200.));
 
                 // Draw random thing
-                video_node_tile_renderer.push_instance(&Vector2::<f32>::new(300., 300.), &Vector2::<f32>::new(500., 500.), &[100.], &[]);
-                video_node_tile_renderer.push_instance(&Vector2::<f32>::new(600., 300.), &Vector2::<f32>::new(700., 500.), &[a, 120.], &[100.]);
+                ui_renderer.video_node_tile(&Vector2::<f32>::new(300., 300.), &Vector2::<f32>::new(500., 500.), &[100.], &[]);
+                ui_renderer.video_node_tile(&Vector2::<f32>::new(600., 300.), &Vector2::<f32>::new(700., 500.), &[a, 120.], &[100.]);
                 a += 0.1;
 
-                match render_screen(&device, &surface, &queue, encoder, &mut video_node_preview_renderer, &mut video_node_tile_renderer) {
+                match ui_renderer.render(&surface, encoder) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => {
-                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
                     },
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
@@ -261,11 +199,11 @@ pub async fn run() {
                     } => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(physical_size) => {
                         size = *physical_size;
-                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         size = **new_inner_size;
-                        resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
                     }
                     _ => {}
                 }
