@@ -15,37 +15,6 @@ mod ui;
 
 const PIXEL_SCALING: f32 = 2.;
 
-///// A vertex passed to the video_node_decoration.wgsl vertex shader
-//#[repr(C)]
-//#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-//struct VideoNodeDecorationVertex {
-//    pos: [f32; 2],
-//    color: [f32; 4],
-//    _padding: [u8; 2],
-//}
-//
-//impl VideoNodeDecorationVertex {
-//    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-//        use std::mem;
-//        wgpu::VertexBufferLayout {
-//            array_stride: mem::size_of::<Vertex>() as wgpu::BufferAddress,
-//            step_mode: wgpu::VertexStepMode::Vertex,
-//            attributes: &[
-//                wgpu::VertexAttribute {
-//                    offset: 0,
-//                    shader_location: 0,
-//                    format: wgpu::VertexFormat::Float32x2,
-//                },
-//                wgpu::VertexAttribute {
-//                    offset: mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-//                    shader_location: 1,
-//                    format: wgpu::VertexFormat::Float32x4,
-//                },
-//            ],
-//        }
-//    }
-//}
-
 fn view_matrix(width: u32, height: u32) -> Matrix4<f32> {
     let m = Matrix4::<f32>::new(
         2.0 / width as f32, 0., 0., -1.,
@@ -72,6 +41,7 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
         video_node_tile_renderer.set_view(&view_matrix(new_size.width, new_size.height));
     }
 }
+
 fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, mut encoder: wgpu::CommandEncoder, video_node_preview_renderer: &mut ui::VideoNodePreviewRenderer, video_node_tile_renderer: &mut ui::VideoNodeTileRenderer) -> Result<(), wgpu::SurfaceError> {
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -110,45 +80,6 @@ fn render_screen(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Q
     output.present();
     Ok(())
 }
-
-/*
-
-fn render_texture(device: &wgpu::Device, texture_render_pipeline: &wgpu::RenderPipeline, view: &wgpu::TextureView, queue: &wgpu::Queue) {
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Render Encoder"),
-    });
-
-    {
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Render Pass"),
-            color_attachments: &[
-                // This is what @location(0) in the fragment shader targets
-                Some(wgpu::RenderPassColorAttachment {
-                    view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(
-                            wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }
-                        ),
-                        store: true,
-                    }
-                })
-            ],
-            depth_stencil_attachment: None,
-        });
-
-        // NEW!
-        render_pass.set_pipeline(texture_render_pipeline); // 2.
-        render_pass.draw(0..3, 0..1); // 3.
-    }
-    queue.submit(std::iter::once(encoder.finish()));
-}
-*/
 
 pub async fn run() {
     env_logger::init();
@@ -194,37 +125,13 @@ pub async fn run() {
         height: size.height,
         present_mode: wgpu::PresentMode::Fifo,
     };
-    surface.configure(&device, &config);
 
-/*
-    let texture1_size = 256u32;
-
-    let texture1_desc = wgpu::TextureDescriptor {
-        size: wgpu::Extent3d {
-            width: texture1_size,
-            height: texture1_size,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Rgba8UnormSrgb,
-        usage: wgpu::TextureUsages::COPY_SRC
-            | wgpu::TextureUsages::RENDER_ATTACHMENT
-            ,
-        label: None,
-    };
-    let texture1 = device.create_texture(&texture1_desc);
-    let texture1_view = texture1.create_view(&Default::default());
-
-    let device_thread1 = device.clone();
-    let queue_thread1 = queue.clone();
-*/
+    // Surface configuration handled by resize()
 
     let mut video_node_preview_renderer = ui::VideoNodePreviewRenderer::new(device.clone(), queue.clone());
     let mut video_node_tile_renderer = ui::VideoNodeTileRenderer::new(device.clone(), queue.clone());
-    video_node_preview_renderer.set_view(&view_matrix(size.width, size.height));
-    video_node_tile_renderer.set_view(&view_matrix(size.width, size.height));
+
+    resize(size, &mut config, &device, &mut surface, &mut video_node_preview_renderer, &mut video_node_tile_renderer);
 
     // RADIANCE, WOO
 
