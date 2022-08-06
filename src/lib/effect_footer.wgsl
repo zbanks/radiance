@@ -35,6 +35,7 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     iStep = global.iStep;
 
     aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
+    defaultPulse = sawtooth(iTime * iFrequency, 0.1);
 
     return main(vertex.uv);
 }

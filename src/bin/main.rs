@@ -80,11 +80,13 @@ pub async fn run() {
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
     let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
     let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
+    let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
     let mut graph: Graph = serde_json::from_value(json!({
         "nodes": [
             node1_id,
             node2_id,
             node3_id,
+            node4_id,
         ],
         "edges": [
             {
@@ -94,7 +96,12 @@ pub async fn run() {
             },
             {
                 "from": node2_id,
-                "to": node3_id,
+                "to": node4_id,
+                "input": 1,
+            },
+            {
+                "from": node3_id,
+                "to": node4_id,
                 "input": 0,
             }
         ],
@@ -113,9 +120,15 @@ pub async fn run() {
             },
             node3_id.to_string(): {
                 "type": "EffectNode",
-                "name": "droste.wgsl",
-                "intensity": 0.0,
+                "name": "wwave.wgsl",
+                "intensity": 0.8,
                 "frequency": 1.0
+            },
+            node4_id.to_string(): {
+                "type": "EffectNode",
+                "name": "uvmap.wgsl",
+                "intensity": 0.6,
+                "frequency": 0.0
             }
         },
         "global_props": {
@@ -156,16 +169,19 @@ pub async fn run() {
                 let node_state_1 = if let NodeState::EffectNode(s) = ctx.node_state(node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
                 let node_state_2 = if let NodeState::EffectNode(s) = ctx.node_state(node2_id).unwrap() {s} else {panic!("Not EffectNode!")};
                 let node_state_3 = if let NodeState::EffectNode(s) = ctx.node_state(node3_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                let node_state_4 = if let NodeState::EffectNode(s) = ctx.node_state(node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
 
                 // Get node outputs
                 let preview_texture_1 = results.get(&node1_id).unwrap();
                 let preview_texture_2 = results.get(&node2_id).unwrap();
                 let preview_texture_3 = results.get(&node3_id).unwrap();
+                let preview_texture_4 = results.get(&node4_id).unwrap();
 
                 // Draw preview
-                ui_renderer.effect_node(node_state_1, preview_texture_1, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(230., 300.));
-                ui_renderer.effect_node(node_state_2, preview_texture_2, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.));
-                ui_renderer.effect_node(node_state_3, preview_texture_3, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 300.));
+                ui_renderer.effect_node(node_state_1, preview_texture_1, &Vector2::<f32>::new(100., 320.), &Vector2::<f32>::new(230., 520.), &[100.], &[100.]);
+                ui_renderer.effect_node(node_state_2, preview_texture_2, &Vector2::<f32>::new(230., 320.), &Vector2::<f32>::new(360., 520.), &[100.], &[100.]);
+                ui_renderer.effect_node(node_state_3, preview_texture_3, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.), &[100.], &[100.]);
+                ui_renderer.effect_node(node_state_4, preview_texture_4, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 520.), &[100., 320.], &[210.]);
 
                 match ui_renderer.render(&surface, encoder) {
                     Ok(_) => {}

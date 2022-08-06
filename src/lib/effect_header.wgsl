@@ -42,6 +42,8 @@ var<private> iStep: f32;
 
 var<private> aspectCorrection: vec2<f32>;
 
+var<private> defaultPulse: f32;
+
 // TODO iChannels in binding(4)
 
 //// Outputs of previous patterns
@@ -69,6 +71,10 @@ var<private> aspectCorrection: vec2<f32>;
 //
 
 let pi: f32 = 3.1415926535897932384626433832795;
+
+fn modulo(x: f32, y: f32) -> f32 {
+    return x - y * floor(x / y);
+}
 
 //float lin_step(float v) {
 //    return v * iStep * iFPS;
@@ -118,11 +124,12 @@ let pi: f32 = 3.1415926535897932384626433832795;
 //    return clamp(rgb, 0.0, 1.0);
 //}
 //
-//// Turn non-premultipled alpha RGBA into premultipled alpha RGBA
-//vec4 premultiply(vec4 c) {
-//    return vec4(c.rgb * c.a, c.a);
-//}
-//
+
+// Turn non-premultipled alpha RGBA into premultipled alpha RGBA
+fn premultiply(c: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(c.rgb * c.a, c.a);
+}
+
 //// Turn premultipled alpha RGBA into non-premultipled alpha RGBA
 //vec4 demultiply(vec4 c) {
 //    return clamp(vec4(c.rgb / c.a, c.a), vec4(0.), vec4(1.));
@@ -134,13 +141,13 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
     return clamp(vec4<f32>((over.rgb + under.rgb * (1. - over.a)), a_out), vec4<f32>(0.), vec4<f32>(1.));
 }
 
-//// Sawtooth wave
-//float sawtooth(float x, float t_up) {
-//    x = mod(x + t_up, 1.);
-//    return x / t_up * step(x, t_up) +
-//           (1. - x) / (1. - t_up) * (1. - step(x, t_up));
-//}
-//
+// Sawtooth wave
+fn sawtooth(x: f32, t_up: f32) -> f32 {
+    let x = modulo(x + t_up, 1.);
+    return x / t_up * step(x, t_up) +
+           (1. - x) / (1. - t_up) * (1. - step(x, t_up));
+}
+
 //// Box from [0, 0] to (1, 1)
 //float box(vec2 p) {
 //    vec2 b = step(0., p) - step(1., p);
@@ -260,11 +267,5 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 
 //float onePixel = 1. / min(iResolution.x, iResolution.y);
 //
-//float defaultPulse = sawtooth(iTime * iFrequency, 0.1);
-//
-
-fn modulo(x: f32, y: f32) -> f32 {
-    return x - y * floor(x / y);
-}
 
 //#line 1

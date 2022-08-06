@@ -88,10 +88,10 @@ impl Renderer {
         Ok(())
     }
 
-    pub fn effect_node(&mut self, _state: &radiance::EffectNodeState, texture: &ArcTextureViewSampler, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>) {
+    pub fn effect_node(&mut self, _state: &radiance::EffectNodeState, texture: &ArcTextureViewSampler, pos_min: &Vector2<f32>, pos_max: &Vector2<f32>, inputs: &[f32], outputs: &[f32]) {
         let width = pos_max.x - pos_min.x;
         let height = pos_max.y - pos_min.y;
-        self.video_node_tile_renderer.push_instance(pos_min, pos_max, &[0.5 * height], &[0.5 * height]);
+        self.video_node_tile_renderer.push_instance(pos_min, pos_max, inputs, outputs);
 
         let preview_center = 0.5 * (pos_min + pos_max);
         let preview_size = (0.5 * width - 20.).min(0.5 * height - 30.);
