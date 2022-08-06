@@ -56,17 +56,47 @@ struct Uniforms {
     _padding: [u8; 4],
 }
 
+fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
+    let mut processed_source = String::new();
+    let mut n_inputs = 1;
+
+    for l in effect_source.lines() {
+        let line_parts: Vec<&str> = l.split_whitespace().collect();
+        if line_parts.len() >= 1 && line_parts[0] == "#property" {
+            if line_parts.len() >= 2 {
+                if line_parts[1] == "inputCount" {
+                    if line_parts.len() >= 3 {
+                        n_inputs = line_parts[2].parse::<u32>().map_err(|e| e.to_string())?;
+                    } else {
+                        return Err(String::from("inputCount missing argument"));
+                    }
+                } else {
+                    return Err(format!("Unrecognized property: {}", line_parts[1]));
+                }
+            } else {
+                return Err(String::from("Missing property name"));
+            }
+        } else {
+            processed_source.push_str(l);
+            processed_source.push('\n');
+        }
+    }
+
+    Ok((processed_source, n_inputs))
+}
+
 impl EffectNodeState {
-    fn setup_render_pipeline(ctx: &Context, props: &EffectNodeProps) -> EffectNodeStateReady {
+    fn setup_render_pipeline(ctx: &Context, props: &EffectNodeProps) -> Result<EffectNodeStateReady, String> {
         // Shader
         let effect_source = ctx.fetch_content(&props.name).expect("Failed to read effect shader file");
-        let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source, EFFECT_FOOTER);
+
+        let (effect_source_processed, n_inputs) = preprocess_shader(&effect_source)?;
+
+        let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source_processed, EFFECT_FOOTER);
         let shader_module = ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(&format!("EffectNode {} shader", props.name)),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
-
-        let n_inputs = 1_u32; // XXX read from file
 
         // The uniforms bind group:
         // 0: Uniforms
@@ -193,7 +223,7 @@ impl EffectNodeState {
             }
         );
 
-        EffectNodeStateReady {
+        Ok(EffectNodeStateReady {
             props: props.clone(),
             n_inputs,
             intensity_integral: 0.,
@@ -202,7 +232,7 @@ impl EffectNodeState {
             sampler,
             render_pipeline,
             paint_states: HashMap::new(),
-        }
+        })
     }
 
     fn new_paint_state(_self_ready: &EffectNodeStateReady, ctx: &Context, render_target_state: &RenderTargetState) -> EffectNodePaintState {
@@ -257,9 +287,15 @@ impl EffectNodeState {
 
     pub fn new(ctx: &Context, props: &EffectNodeProps) -> Self {
         // TODO kick of shader compilation in the background instead of blocking
-        let mut new_obj_ready = Self::setup_render_pipeline(ctx, props);
-        Self::update_paint_states(&mut new_obj_ready, ctx);
-        Self::Ready(new_obj_ready)
+        match Self::setup_render_pipeline(ctx, props) {
+            Ok(mut new_obj_ready) => {
+                Self::update_paint_states(&mut new_obj_ready, ctx);
+                Self::Ready(new_obj_ready)
+            },
+            Err(msg) => {
+                Self::Error(msg)
+            }
+        }
     }
 
     pub fn update(&mut self, ctx: &Context, props: &mut EffectNodeProps) {
