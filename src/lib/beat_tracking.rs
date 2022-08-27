@@ -1,9 +1,10 @@
 use std::sync::Arc;
-use rustfft::{FftPlanner, num_complex::Complex, Fft};
-use nalgebra::SVector;
+use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
+use nalgebra::{SVector, SMatrix};
 
 const HOP_SIZE: usize = 441;
 const FRAME_SIZE: usize = 2048;
+const N_FILTERS: usize = 81;
 
 struct FramedSignalProcessor {
     buffer: [i16; FRAME_SIZE * 2], // Circular buffer using double-write strategy to ensure contiguous readout
@@ -70,15 +71,40 @@ impl ShortTimeFourierTransformProcessor {
         }
     }
 
-    pub fn process(&mut self, frame: &SVector<i16, FRAME_SIZE>) -> SVector<Complex<f32>, {FRAME_SIZE / 2}> {
+    pub fn process(&mut self, frame: &SVector<i16, FRAME_SIZE>) -> SVector<f32, {FRAME_SIZE / 2}> {
         let mut buffer = [Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE];
         for i in 0..FRAME_SIZE {
             buffer[i].re = (frame[i] as f32) * self.window[i];
         }
         self.fft.process(&mut buffer);
-        let mut result = [Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE / 2];
-        result.copy_from_slice(&buffer[0..FRAME_SIZE / 2]);
+
+        // Convert FFT to spectrogram by taking magnitude of each element
+        let mut result = [0_f32; FRAME_SIZE / 2];
+        for i in 0..FRAME_SIZE / 2 {
+            result[i] = buffer[i].abs();
+        }
         SVector::from(result)
+    }
+}
+
+struct FilteredSpectrogramProcessor {
+    filterbank: SMatrix<f32, N_FILTERS, {FRAME_SIZE / 2}>
+}
+
+impl FilteredSpectrogramProcessor {
+    pub fn new() -> Self {
+        // TODO: Generate a set of triangle filters
+
+        let filterbank = [[0_f32; N_FILTERS]; FRAME_SIZE / 2];
+        let filterbank = SMatrix::from(filterbank);
+
+        Self {
+            filterbank,
+        }
+    }
+
+    pub fn process(&mut self, spectrogram: &SVector<f32, {FRAME_SIZE / 2}>) -> SVector<f32, N_FILTERS> {
+        self.filterbank * spectrogram
     }
 }
 
@@ -124,9 +150,9 @@ mod tests {
         let mut stft_processor = ShortTimeFourierTransformProcessor::new();
         let result = stft_processor.process(&audio_frame);
 
-        assert_eq!(result[0], Complex { re: 31.96973, im: 0.0 });
-        assert_eq!(result[1], Complex { re: -16.008266, im: 7.608182 });
-        assert_eq!(result[2], Complex { re: 0.01043538, im: -1.7020998 });
-        assert_eq!(result[1023], Complex { re: 0., im: 0. });
+        assert_eq!(result[0], 31.96973);
+        assert_eq!(result[1], 17.724249);
+        assert_eq!(result[2], 1.7021317);
+        assert_eq!(result[1023], 0.);
     }
 }
