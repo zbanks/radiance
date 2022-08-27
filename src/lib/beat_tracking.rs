@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::Complex, Fft};
+use nalgebra::SVector;
 
 const HOP_SIZE: usize = 441;
 const FRAME_SIZE: usize = 2048;
@@ -19,8 +20,8 @@ impl FramedSignalProcessor {
         }
     }
 
-    pub fn process(&mut self, samples: &[i16]) -> Vec<[i16; FRAME_SIZE]> {
-        let mut result = Vec::<[i16; FRAME_SIZE]>::new();
+    pub fn process(&mut self, samples: &[i16]) -> Vec<SVector<i16, FRAME_SIZE>> {
+        let mut result = Vec::<SVector<i16, FRAME_SIZE>>::new();
         for sample in samples {
             self.buffer[self.write_pointer] = *sample;
             self.buffer[self.write_pointer + FRAME_SIZE] = *sample;
@@ -35,7 +36,7 @@ impl FramedSignalProcessor {
                 self.hop_counter = 0;
                 let mut chunk = [0_i16; FRAME_SIZE];
                 chunk.copy_from_slice(&self.buffer[self.write_pointer..self.write_pointer + FRAME_SIZE]);
-                result.push(chunk);
+                result.push(SVector::from(chunk));
             }
         }
         result
@@ -43,7 +44,7 @@ impl FramedSignalProcessor {
 }
 
 struct ShortTimeFourierTransformProcessor {
-    window: [f32; FRAME_SIZE],
+    window: SVector<f32, FRAME_SIZE>,
     fft: Arc<dyn Fft<f32>>,
 }
 
@@ -54,7 +55,7 @@ fn hann(n: usize, m: usize) -> f32 {
 impl ShortTimeFourierTransformProcessor {
     pub fn new() -> Self {
         // Generate a hann window that also normalizes i16 audio data to the range -1 to 1
-        let mut window = [0_f32; FRAME_SIZE];
+        let mut window = SVector::from([0_f32; FRAME_SIZE]);
         for i in 0..FRAME_SIZE {
             window[i] = hann(i, FRAME_SIZE) * (1_f32 / (i16::MAX as f32));
         }
@@ -69,13 +70,15 @@ impl ShortTimeFourierTransformProcessor {
         }
     }
 
-    pub fn process(&mut self, frame: &[i16; FRAME_SIZE]) -> [Complex<f32>; FRAME_SIZE] {
+    pub fn process(&mut self, frame: &SVector<i16, FRAME_SIZE>) -> SVector<Complex<f32>, {FRAME_SIZE / 2}> {
         let mut buffer = [Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE];
         for i in 0..FRAME_SIZE {
             buffer[i].re = (frame[i] as f32) * self.window[i];
         }
         self.fft.process(&mut buffer);
-        buffer
+        let mut result = [Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE / 2];
+        result.copy_from_slice(&buffer[0..FRAME_SIZE / 2]);
+        SVector::from(result)
     }
 }
 
@@ -117,6 +120,7 @@ mod tests {
     fn test_stft_processor() {
         let mut audio_frame = [0_i16; 2048];
         audio_frame.copy_from_slice(&(0_i16..2048).collect::<Vec<_>>()[..]);
+        let audio_frame = SVector::from(audio_frame);
         let mut stft_processor = ShortTimeFourierTransformProcessor::new();
         let result = stft_processor.process(&audio_frame);
 
