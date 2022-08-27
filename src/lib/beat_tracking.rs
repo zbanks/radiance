@@ -1,9 +1,57 @@
+// Code in this file is based on and ported from the madmom project:
+// @inproceedings{madmom,
+//    Title = {{madmom: a new Python Audio and Music Signal Processing Library}},
+//    Author = {B{\"o}ck, Sebastian and Korzeniowski, Filip and Schl{\"u}ter, Jan and Krebs, Florian and Widmer, Gerhard},
+//    Booktitle = {Proceedings of the 24th ACM International Conference on
+//    Multimedia},
+//    Month = {10},
+//    Year = {2016},
+//    Pages = {1174--1178},
+//    Address = {Amsterdam, The Netherlands},
+//    Doi = {10.1145/2964284.2973795}
+// }
+//
+// Copyright (c) 2022 Eric Van Albert
+// Copyright (c) 2012-2014 Department of Computational Perception,
+// Johannes Kepler University, Linz, Austria and Austrian Research Institute for
+// Artificial Intelligence (OFAI), Vienna, Austria.
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
 use nalgebra::{SVector, SMatrix};
 
+const SAMPLE_RATE: usize = 44100;
+// Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
 const HOP_SIZE: usize = 441;
 const FRAME_SIZE: usize = 2048;
+const SPECTROGRAM_SIZE: usize = FRAME_SIZE / 2;
+
+// MIDI notes corresponding to the low and high filters
+// Span a range from 30 Hz to 17000 Hz
+const FILTER_MIN_NOTE: i32 = 23; // 30.87 Hz
+const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
+// Filtering parameters:
 const N_FILTERS: usize = 81;
 
 struct FramedSignalProcessor {
@@ -71,7 +119,7 @@ impl ShortTimeFourierTransformProcessor {
         }
     }
 
-    pub fn process(&mut self, frame: &SVector<i16, FRAME_SIZE>) -> SVector<f32, {FRAME_SIZE / 2}> {
+    pub fn process(&mut self, frame: &SVector<i16, FRAME_SIZE>) -> SVector<f32, SPECTROGRAM_SIZE> {
         let mut buffer = [Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE];
         for i in 0..FRAME_SIZE {
             buffer[i].re = (frame[i] as f32) * self.window[i];
@@ -79,8 +127,8 @@ impl ShortTimeFourierTransformProcessor {
         self.fft.process(&mut buffer);
 
         // Convert FFT to spectrogram by taking magnitude of each element
-        let mut result = [0_f32; FRAME_SIZE / 2];
-        for i in 0..FRAME_SIZE / 2 {
+        let mut result = [0_f32; SPECTROGRAM_SIZE];
+        for i in 0..SPECTROGRAM_SIZE {
             result[i] = buffer[i].abs();
         }
         SVector::from(result)
@@ -88,14 +136,63 @@ impl ShortTimeFourierTransformProcessor {
 }
 
 struct FilteredSpectrogramProcessor {
-    filterbank: SMatrix<f32, N_FILTERS, {FRAME_SIZE / 2}>
+    filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>
+}
+
+fn triangle_filter(start: usize, center: usize, stop: usize) -> SVector<f32, SPECTROGRAM_SIZE> {
+    assert!(start < center);
+    assert!(center < stop);
+    assert!(stop <= SPECTROGRAM_SIZE);
+
+    let mut result = [0_f32; SPECTROGRAM_SIZE];
+    let mut sum = 0_f32;
+    for i in start + 1..=center {
+        let x = (i as f32 - start as f32) / (center as f32 - start as f32);
+        result[i] = x;
+        sum += x;
+    }
+    for i in center + 1..stop {
+        let x = (i as f32 - stop as f32) / (center as f32 - stop as f32);
+        result[i] = x;
+        sum += x;
+    }
+
+    // Normalize
+    for i in start + 1..stop {
+        result[i] /= sum;
+    }
+
+    SVector::from(result)
+}
+
+// MIDI note to frequency in Hz
+fn note2freq(note: i32) -> f32 {
+    2_f32.powf((note as f32 - 69.) / 12.) * 440.
+}
+
+// Returns the frequency corresponding to each entry in the spectrogram
+fn spectrogram_frequencies() -> SVector<f32, SPECTROGRAM_SIZE> {
+    let mut result = [0_f32; SPECTROGRAM_SIZE];
+    for i in 0..SPECTROGRAM_SIZE {
+        result[i] = i as f32 * SAMPLE_RATE as f32 / (SPECTROGRAM_SIZE * 2) as f32
+    }
+    SVector::from(result)
+}
+
+// Returns the index of the closest entry in the spectrogram to the given frequency in Hz
+fn freq2bin(spectrogram_frequencies: SVector<f32, SPECTROGRAM_SIZE>, freq: f32) -> usize {
+    for i in 1..SPECTROGRAM_SIZE {
+        if freq > spectrogram_frequencies[i] {
+            
+        }
+    }
 }
 
 impl FilteredSpectrogramProcessor {
     pub fn new() -> Self {
         // TODO: Generate a set of triangle filters
 
-        let filterbank = [[0_f32; N_FILTERS]; FRAME_SIZE / 2];
+        let filterbank = [[0_f32; N_FILTERS]; SPECTROGRAM_SIZE];
         let filterbank = SMatrix::from(filterbank);
 
         Self {
@@ -103,7 +200,7 @@ impl FilteredSpectrogramProcessor {
         }
     }
 
-    pub fn process(&mut self, spectrogram: &SVector<f32, {FRAME_SIZE / 2}>) -> SVector<f32, N_FILTERS> {
+    pub fn process(&mut self, spectrogram: &SVector<f32, SPECTROGRAM_SIZE>) -> SVector<f32, N_FILTERS> {
         self.filterbank * spectrogram
     }
 }
@@ -154,5 +251,37 @@ mod tests {
         assert_eq!(result[1], 17.724249);
         assert_eq!(result[2], 1.7021317);
         assert_eq!(result[1023], 0.);
+    }
+
+    #[test]
+    fn test_triangle_filter() {
+        let filt = triangle_filter(5, 7, 15);
+        assert_eq!(filt[5], 0.);
+        assert_eq!(filt[6], 0.1);
+        assert_eq!(filt[7], 0.2);
+        assert_eq!(filt[8], 0.175);
+        assert_eq!(filt[9], 0.15);
+        assert_eq!(filt[10], 0.125);
+        assert_eq!(filt[11], 0.1);
+        assert_eq!(filt[12], 0.075);
+        assert_eq!(filt[13], 0.05);
+        assert_eq!(filt[14], 0.025);
+        assert_eq!(filt[15], 0.);
+    }
+
+    #[test]
+    fn test_note2freq() {
+        assert_eq!(note2freq(69), 440.);
+        assert_eq!(note2freq(57), 220.);
+        assert_eq!(note2freq(60), 261.62555);
+    }
+
+    #[test]
+    fn test_spectrogram_frequencies() {
+        let freqs = spectrogram_frequencies();
+        assert_eq!(freqs[0], 0.);
+        assert_eq!(freqs[1], 21.533203);
+        assert_eq!(freqs[1022], 22006.934);
+        assert_eq!(freqs[1023], 22028.467);
     }
 }
