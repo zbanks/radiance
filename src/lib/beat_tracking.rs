@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{SVector, SMatrix, Vector};
+use nalgebra::{SVector, SMatrix};
 
 const SAMPLE_RATE: usize = 44100;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
@@ -53,6 +53,8 @@ const FILTER_MIN_NOTE: i32 = 23; // 30.87 Hz
 const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
 // Filtering parameters:
 const N_FILTERS: usize = 81;
+
+const LOG_OFFSET: f32 = 1.;
 
 struct FramedSignalProcessor {
     buffer: [i16; FRAME_SIZE * 2], // Circular buffer using double-write strategy to ensure contiguous readout
@@ -125,6 +127,9 @@ impl ShortTimeFourierTransformProcessor {
             buffer[i].re = (frame[i] as f32) * self.window[i];
         }
         self.fft.process(&mut buffer);
+
+        // Slight deviation from madmom: the ShortTimeFourierTransformProcessor
+        // returns complex values in madmom. Here, it returns a spectrogram (FFT magnitude)
 
         // Convert FFT to spectrogram by taking magnitude of each element
         let mut result = [0_f32; SPECTROGRAM_SIZE];
@@ -246,7 +251,14 @@ impl FilteredSpectrogramProcessor {
     }
 
     pub fn process(&mut self, spectrogram: &SVector<f32, SPECTROGRAM_SIZE>) -> SVector<f32, N_FILTERS> {
-        self.filterbank * spectrogram
+        let filter_output = self.filterbank * spectrogram;
+
+        // Slight deviation from madmom: the output of the FilteredSpectrogramProcessor
+        // is sent into a LogarithmicSpectrogramProcessor.
+        // Instead, we just take the log here and skip defining a LogarithmicSpectrogramProcessor.
+        // (It is strange they call it a *spectrogram* processor,
+        // as the output of this step is not really a spectrogram)
+        filter_output.map(|x| (x + LOG_OFFSET).log10())
     }
 }
 
