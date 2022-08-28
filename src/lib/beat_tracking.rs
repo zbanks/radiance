@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{SVector, SMatrix};
+use nalgebra::{SVector, SMatrix, Vector};
 
 const SAMPLE_RATE: usize = 44100;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
@@ -135,31 +135,33 @@ impl ShortTimeFourierTransformProcessor {
     }
 }
 
-struct FilteredSpectrogramProcessor {
-    filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>
-}
-
-fn triangle_filter(start: usize, center: usize, stop: usize) -> SVector<f32, SPECTROGRAM_SIZE> {
+fn triangle_filter(start: i32, center: i32, stop: i32) -> SVector<f32, SPECTROGRAM_SIZE> {
     assert!(start < center);
     assert!(center < stop);
-    assert!(stop <= SPECTROGRAM_SIZE);
+    assert!(stop <= SPECTROGRAM_SIZE as i32);
 
     let mut result = [0_f32; SPECTROGRAM_SIZE];
     let mut sum = 0_f32;
     for i in start + 1..=center {
         let x = (i as f32 - start as f32) / (center as f32 - start as f32);
-        result[i] = x;
+        if i >= 0 && i < SPECTROGRAM_SIZE as i32 {
+            result[i as usize] = x;
+        }
         sum += x;
     }
     for i in center + 1..stop {
         let x = (i as f32 - stop as f32) / (center as f32 - stop as f32);
-        result[i] = x;
+        if i >= 0 && i < SPECTROGRAM_SIZE as i32 {
+            result[i as usize] = x;
+        }
         sum += x;
     }
 
     // Normalize
     for i in start + 1..stop {
-        result[i] /= sum;
+        if i >= 0 && i < SPECTROGRAM_SIZE as i32 {
+            result[i as usize] /= sum;
+        }
     }
 
     SVector::from(result)
@@ -181,22 +183,65 @@ fn spectrogram_frequencies() -> SVector<f32, SPECTROGRAM_SIZE> {
 
 // Returns the index of the closest entry in the spectrogram to the given frequency in Hz
 fn freq2bin(spectrogram_frequencies: SVector<f32, SPECTROGRAM_SIZE>, freq: f32) -> usize {
+    let mut index = SPECTROGRAM_SIZE - 1;
     for i in 1..SPECTROGRAM_SIZE {
-        if freq > spectrogram_frequencies[i] {
-            
+        if freq < spectrogram_frequencies[i] {
+            let left = spectrogram_frequencies[i - 1];
+            let right = spectrogram_frequencies[i];
+            index = if (freq - left).abs() < (freq - right).abs() {
+                i - 1
+            } else {
+                i
+            };
+            break;
         }
     }
+    index
+}
+
+// Returns a filter bank according to the given constants
+pub fn gen_filterbank() -> SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE> {
+    let freqs = spectrogram_frequencies();
+
+    let filterbank = [[0_f32; N_FILTERS]; SPECTROGRAM_SIZE];
+    let mut filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE> = SMatrix::from(filterbank);
+
+    // Generate a set of triangle filters
+    let mut filter_index = 0_usize;
+    let mut previous_center = -1_i32;
+    for note in (FILTER_MIN_NOTE + 1)..=(FILTER_MAX_NOTE - 1) {
+        let center = freq2bin(freqs, note2freq(note)) as i32;
+        // Skip duplicate filters
+        if center == previous_center {
+            continue;
+        }
+        // Expand filter to include at least one spectrogram entry
+        let mut start = freq2bin(freqs, note2freq(note - 1)) as i32;
+        let mut stop = freq2bin(freqs, note2freq(note + 1)) as i32;
+        if stop - start < 2 {
+            start = center - 1;
+            stop = center + 1;
+        }
+        filterbank.set_row(filter_index, &triangle_filter(start, center, stop).transpose());
+        filter_index += 1;
+        previous_center = center;
+    }
+
+    // Check that N_FILTERS constant was set appropriately
+    assert_eq!(filter_index, N_FILTERS);
+
+    filterbank
+}
+
+
+struct FilteredSpectrogramProcessor {
+    filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>
 }
 
 impl FilteredSpectrogramProcessor {
     pub fn new() -> Self {
-        // TODO: Generate a set of triangle filters
-
-        let filterbank = [[0_f32; N_FILTERS]; SPECTROGRAM_SIZE];
-        let filterbank = SMatrix::from(filterbank);
-
         Self {
-            filterbank,
+            filterbank: gen_filterbank(),
         }
     }
 
@@ -283,5 +328,26 @@ mod tests {
         assert_eq!(freqs[1], 21.533203);
         assert_eq!(freqs[1022], 22006.934);
         assert_eq!(freqs[1023], 22028.467);
+    }
+
+    #[test]
+    fn test_freq2bin() {
+        let freqs = spectrogram_frequencies();
+        assert_eq!(freq2bin(freqs, 0.), 0);
+        assert_eq!(freq2bin(freqs, 24000.), 1023);
+        assert_eq!(freq2bin(freqs, 440.), 20);
+    }
+
+    #[test]
+    fn test_gen_filterbank() {
+        let filterbank = gen_filterbank();
+
+        // Check triangle filter peaks
+        assert_eq!(filterbank[(0,2)], 1.);
+        assert_eq!(filterbank[(1,3)], 1.);
+        assert_eq!(filterbank[(2,4)], 1.);
+        assert_eq!(filterbank[(78,654)], 0.02631579);
+        assert_eq!(filterbank[(79,693)], 0.025);
+        assert_eq!(filterbank[(80,734)], 0.023529412);
     }
 }
