@@ -240,7 +240,7 @@ pub fn gen_filterbank() -> SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE> {
 
 
 struct FilteredSpectrogramProcessor {
-    filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>
+    filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>,
 }
 
 impl FilteredSpectrogramProcessor {
@@ -259,6 +259,38 @@ impl FilteredSpectrogramProcessor {
         // (It is strange they call it a *spectrogram* processor,
         // as the output of this step is not really a spectrogram)
         filter_output.map(|x| (x + LOG_OFFSET).log10())
+    }
+}
+
+struct SpectrogramDifferenceProcessor {
+    prev: Option<SVector<f32, N_FILTERS>>,
+}
+
+impl SpectrogramDifferenceProcessor {
+    pub fn new() -> Self {
+        Self {
+            prev: None,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.prev = None;
+    }
+
+    pub fn process(&mut self, filtered_data: &SVector<f32, N_FILTERS>) -> SVector<f32, {N_FILTERS * 2}> {
+        let prev = match &self.prev {
+            None => filtered_data,
+            Some(prev) => prev,
+        };
+
+        let diff = (filtered_data - prev).map(|x| 0_f32.max(x));
+
+        self.prev = Some(filtered_data.clone());
+
+        let mut result = [0_f32; N_FILTERS * 2];
+        result[0..N_FILTERS].copy_from_slice(filtered_data.as_slice());
+        result[N_FILTERS..N_FILTERS * 2].copy_from_slice(diff.as_slice());
+        SVector::from(result)
     }
 }
 
@@ -361,5 +393,28 @@ mod tests {
         assert_eq!(filterbank[(78,654)], 0.02631579);
         assert_eq!(filterbank[(79,693)], 0.025);
         assert_eq!(filterbank[(80,734)], 0.023529412);
+    }
+
+    #[test]
+    fn test_spectrogram_difference_processor() {
+        let mut data = SVector::from([0_f32; N_FILTERS]);
+        let mut proc = SpectrogramDifferenceProcessor::new();
+
+        data[0] = 1.;
+        let r1 = proc.process(&data);
+        data[0] = 2.;
+        let r2 = proc.process(&data);
+        data[0] = 1.;
+        let r3 = proc.process(&data);
+
+        // First half matches input
+        assert_eq!(r1[0], 1.);
+        assert_eq!(r2[0], 2.);
+        assert_eq!(r3[0], 1.);
+
+        // Second half is clamped differences
+        assert_eq!(r1[N_FILTERS], 0.);
+        assert_eq!(r2[N_FILTERS], 1.);
+        assert_eq!(r3[N_FILTERS], 0.);
     }
 }
