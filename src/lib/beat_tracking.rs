@@ -67,7 +67,7 @@ impl FramedSignalProcessor {
         Self {
             buffer: [0_i16; FRAME_SIZE * 2],
             write_pointer: 0,
-            hop_counter: (HOP_SIZE as i32) - (FRAME_SIZE as i32),
+            hop_counter: (HOP_SIZE as i32) - ((FRAME_SIZE / 2) as i32),
         }
     }
 
@@ -300,21 +300,25 @@ mod tests {
 
     #[test]
     fn test_framed_signal_processor() {
-        let audio_signal: Vec<i16> = (0_i16..3072).collect();
+        let audio_signal: Vec<i16> = (0_i16..2048).collect();
         let mut framed_signal_processor = FramedSignalProcessor::new();
-        let frames = framed_signal_processor.process(&audio_signal[0..1024]);
+        let frames = framed_signal_processor.process(&audio_signal[0..512]);
         assert_eq!(frames.len(), 0); // No frames should be returned yet
-        let frames = framed_signal_processor.process(&audio_signal[1024..2048]);
+        let frames = framed_signal_processor.process(&audio_signal[512..1024]);
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0][0], 0);
-        assert_eq!(frames[0][1], 1);
-        assert_eq!(frames[0][2047], 2047);
-        let frames = framed_signal_processor.process(&audio_signal[2048..3072]);
+        assert_eq!(frames[0][1023], 0);
+        assert_eq!(frames[0][1024], 0);
+        assert_eq!(frames[0][1025], 1);
+        assert_eq!(frames[0][2047], 1023);
+        let frames = framed_signal_processor.process(&audio_signal[1024..2048]);
         assert_eq!(frames.len(), 2);
-        assert_eq!(frames[0][0], 441);
-        assert_eq!(frames[0][2047], 2488);
-        assert_eq!(frames[1][0], 882);
-        assert_eq!(frames[1][2047], 2929);
+        assert_eq!(frames[0][584], 1);
+        assert_eq!(frames[0][1024], 441);
+        assert_eq!(frames[0][2047], 1464);
+        assert_eq!(frames[1][143], 1);
+        assert_eq!(frames[1][1024], 882);
+        assert_eq!(frames[1][2047], 1905);
     }
 
     #[test]
