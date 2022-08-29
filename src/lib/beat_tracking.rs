@@ -205,11 +205,11 @@ fn freq2bin(spectrogram_frequencies: SVector<f32, SPECTROGRAM_SIZE>, freq: f32) 
 }
 
 // Returns a filter bank according to the given constants
-pub fn gen_filterbank() -> SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE> {
+pub fn gen_filterbank() -> Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>> {
     let freqs = spectrogram_frequencies();
 
     let filterbank = [[0_f32; N_FILTERS]; SPECTROGRAM_SIZE];
-    let mut filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE> = SMatrix::from(filterbank);
+    let mut filterbank: Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>> = Box::new(SMatrix::from(filterbank));
 
     // Generate a set of triangle filters
     let mut filter_index = 0_usize;
@@ -240,7 +240,7 @@ pub fn gen_filterbank() -> SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE> {
 
 
 struct FilteredSpectrogramProcessor {
-    filterbank: SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>,
+    filterbank: Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>>,
 }
 
 impl FilteredSpectrogramProcessor {
@@ -251,7 +251,7 @@ impl FilteredSpectrogramProcessor {
     }
 
     pub fn process(&mut self, spectrogram: &SVector<f32, SPECTROGRAM_SIZE>) -> SVector<f32, N_FILTERS> {
-        let filter_output = self.filterbank * spectrogram;
+        let filter_output = *self.filterbank * spectrogram;
 
         // Slight deviation from madmom: the output of the FilteredSpectrogramProcessor
         // is sent into a LogarithmicSpectrogramProcessor.
@@ -291,6 +291,38 @@ impl SpectrogramDifferenceProcessor {
         result[0..N_FILTERS].copy_from_slice(filtered_data.as_slice());
         result[N_FILTERS..N_FILTERS * 2].copy_from_slice(diff.as_slice());
         SVector::from(result)
+    }
+}
+
+// Put everything together
+struct BeatTracker {
+    framed_processor: FramedSignalProcessor,
+    stft_processor: ShortTimeFourierTransformProcessor,
+    filter_processor: FilteredSpectrogramProcessor,
+    difference_processor: SpectrogramDifferenceProcessor,
+}
+
+impl BeatTracker {
+    pub fn new() -> Self {
+        Self {
+            framed_processor: FramedSignalProcessor::new(),
+            stft_processor: ShortTimeFourierTransformProcessor::new(),
+            filter_processor: FilteredSpectrogramProcessor::new(),
+            difference_processor: SpectrogramDifferenceProcessor::new(),
+        }
+    }
+
+    pub fn process(&mut self, samples: &[i16]) -> Vec<SVector<f32, {N_FILTERS * 2}>> {
+        println!("Processing {:?} samples", samples.len());
+        let frames = self.framed_processor.process(samples);
+        println!("Yielded {:?} frames", frames.len());
+        frames.iter().map(|frame| {
+            let spectrogram = self.stft_processor.process(frame);
+            let filtered = self.filter_processor.process(&spectrogram);
+            let diff = self.difference_processor.process(&filtered);
+            // TODO: NN
+            diff
+        }).collect()
     }
 }
 
@@ -420,5 +452,28 @@ mod tests {
         assert_eq!(r1[N_FILTERS], 0.);
         assert_eq!(r2[N_FILTERS], 1.);
         assert_eq!(r3[N_FILTERS], 0.);
+    }
+
+    #[test]
+    fn test_music() {
+        use std::fs::File;
+        use std::path::Path;
+
+        // Read music from audio file
+        let mut inp_file = File::open(Path::new("src/lib/test/frontier.wav")).unwrap();
+        let (header, data) = wav::read(&mut inp_file).unwrap();
+        assert_eq!(header.audio_format, wav::WAV_FORMAT_PCM);
+        assert_eq!(header.channel_count, 1);
+        assert_eq!(header.sampling_rate, 44100);
+        assert_eq!(header.bits_per_sample, 16);
+        let data = data.try_into_sixteen().unwrap();
+
+        println!("WAV file has {:?} samples", data.len());
+
+        // Instantiate a BeatTracker
+        let mut bt = BeatTracker::new();
+        let result = bt.process(&data);
+        println!("{:?}", result[128]);
+        panic!();
     }
 }
