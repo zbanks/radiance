@@ -298,6 +298,10 @@ fn sigmoid(x: f32) -> f32 {
     0.5_f32 * (1_f32 + (0.5_f32 * x).tanh())
 }
 
+fn tanh(x: f32) -> f32 {
+    x.tanh()
+}
+
 struct FeedForwardLayer<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
     weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
     bias: Box<SVector<f32, OUTPUT_SIZE>>,
@@ -311,17 +315,133 @@ impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> FeedForwardLayer<OUTPUT_
         }
     }
 
-    pub fn process(&self, data: SVector<f32, INPUT_SIZE>) -> SVector<f32, OUTPUT_SIZE> {
+    pub fn process(&self, data: &SVector<f32, INPUT_SIZE>) -> SVector<f32, OUTPUT_SIZE> {
         (*self.weights * data + *self.bias).map(sigmoid)
     }
 }
 
-struct LSTMLayer {
+struct Gate<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
+    weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
+    bias: Box<SVector<f32, OUTPUT_SIZE>>,
+    recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
+    peephole_weights: Box<SVector<f32, OUTPUT_SIZE>>,
 }
 
-impl LSTMLayer {
-    pub fn new() -> Self {
-        Self {}
+impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> Gate<OUTPUT_SIZE, INPUT_SIZE> {
+    pub fn new(
+        weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
+        bias: Box<SVector<f32, OUTPUT_SIZE>>,
+        recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
+        peephole_weights: Box<SVector<f32, OUTPUT_SIZE>>,
+    ) -> Self {
+        Self {
+            weights,
+            bias,
+            recurrent_weights,
+            peephole_weights,
+        }
+    }
+
+    pub fn process(
+        &self,
+        data: &SVector<f32, INPUT_SIZE>,
+        prev: &SVector<f32, OUTPUT_SIZE>,
+        state: &SVector<f32, OUTPUT_SIZE>,
+    ) -> SVector<f32, OUTPUT_SIZE> {
+        (
+            *self.weights * data
+            + state.component_mul(&self.peephole_weights)
+            + *self.recurrent_weights * prev
+            + *self.bias
+        ).map(sigmoid)
+    }
+}
+
+struct Cell<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
+    weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
+    bias: Box<SVector<f32, OUTPUT_SIZE>>,
+    recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
+}
+
+impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> Cell<OUTPUT_SIZE, INPUT_SIZE> {
+    pub fn new(
+        weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
+        bias: Box<SVector<f32, OUTPUT_SIZE>>,
+        recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
+    ) -> Self {
+        Self {
+            weights,
+            bias,
+            recurrent_weights,
+        }
+    }
+
+    pub fn process(
+        &self,
+        data: &SVector<f32, INPUT_SIZE>,
+        prev: &SVector<f32, OUTPUT_SIZE>,
+    ) -> SVector<f32, OUTPUT_SIZE> {
+        (
+            *self.weights * data
+            + *self.recurrent_weights * prev
+            + *self.bias
+        ).map(tanh)
+    }
+}
+
+struct LSTMLayer<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
+    // Note: for an LSTM layer, OUTPUT_SIZE == HIDDEN_SIZE == CELL_STATE_SIZE
+
+    // prev stores the hidden state output of the LSTMLayer from t = n - 1
+    prev: Box<SVector<f32, OUTPUT_SIZE>>,
+    // state stores the cell state of the LSTMLayer from t = n - 1
+    state: Box<SVector<f32, OUTPUT_SIZE>>,
+
+    // LSTM machinery
+    input_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+    forget_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+    cell: Cell<OUTPUT_SIZE, INPUT_SIZE>,
+    output_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+}
+
+impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> LSTMLayer<OUTPUT_SIZE, INPUT_SIZE> {
+    pub fn new(
+        input_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+        forget_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+        cell: Cell<OUTPUT_SIZE, INPUT_SIZE>,
+        output_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+    ) -> Self {
+        Self {
+            prev: Box::new(SVector::from([0_f32; OUTPUT_SIZE])),
+            state: Box::new(SVector::from([0_f32; OUTPUT_SIZE])),
+            input_gate,
+            forget_gate,
+            cell,
+            output_gate,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.prev.fill(0.);
+        self.state.fill(0.);
+    }
+
+    pub fn process(&mut self, data: &SVector<f32, INPUT_SIZE>) -> SVector<f32, OUTPUT_SIZE> {
+        // Input gate: operate on current data, previous output, and state
+        let ig = self.input_gate.process(data, &self.prev, &self.state);
+        // Forget gate: operate on current data, previous output and state
+        let fg = self.forget_gate.process(data, &self.prev, &self.state);
+        // Cell: operate on current data and previous output
+        let cell = self.cell.process(data, &self.prev);
+        // Internal state: weight the cell with the input gate
+        // and add the previous state weighted by the forget gate
+        *self.state = cell.component_mul(&ig) + self.state.component_mul(&fg);
+        // Output gate: operate on current data, previous output and current state
+        let og = self.output_gate.process(data, &self.prev, &self.state);
+        // Output: apply activation function to state and weight by output gate
+        let out = self.state.map(tanh).component_mul(&og);
+        *self.prev = out;
+        out
     }
 }
 
@@ -506,7 +626,7 @@ mod tests {
         let weights = Box::new(SMatrix::from([[1_f32, 0.], [1., 1.], [1., 0.]]));
         let bias = Box::new(SVector::from([0_f32, 5.]));
         let layer = FeedForwardLayer::new(weights, bias);
-        let out = layer.process(SVector::from([0.5_f32, 0.6, 0.7]));
+        let out = layer.process(&SVector::from([0.5_f32, 0.6, 0.7]));
 
         assert_eq!(out[0], sigmoid(1.8));
         assert_eq!(out[1], sigmoid(5.6));
