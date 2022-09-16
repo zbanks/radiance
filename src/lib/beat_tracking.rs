@@ -98,7 +98,7 @@ impl FramedSignalProcessor {
 }
 
 struct ShortTimeFourierTransformProcessor {
-    window: SVector<f32, FRAME_SIZE>,
+    window: DVector<f32>, // size = FRAME_SIZE
     fft: Arc<dyn Fft<f32>>,
 }
 
@@ -109,10 +109,8 @@ fn hann(n: usize, m: usize) -> f32 {
 impl ShortTimeFourierTransformProcessor {
     pub fn new() -> Self {
         // Generate a hann window that also normalizes i16 audio data to the range -1 to 1
-        let mut window = SVector::from([0_f32; FRAME_SIZE]);
-        for i in 0..FRAME_SIZE {
-            window[i] = hann(i, FRAME_SIZE) * (1_f32 / (i16::MAX as f32));
-        }
+
+        let window = DVector::from_fn(FRAME_SIZE, |i, _| hann(i, FRAME_SIZE) * (1_f32 / (i16::MAX as f32)));
 
         // Plan the FFT
         let mut planner = FftPlanner::<f32>::new();
@@ -124,8 +122,11 @@ impl ShortTimeFourierTransformProcessor {
         }
     }
 
-    pub fn process(&mut self, frame: &SVector<i16, FRAME_SIZE>) -> SVector<f32, SPECTROGRAM_SIZE> {
-        let mut buffer = [Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE];
+    pub fn process(
+        &mut self,
+        frame: &DVector<i16> // size = FRAME_SIZE
+    ) -> DVector<f32> { // size = SPECTROGRAM_SIZE
+        let mut buffer = vec![Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE];
         for i in 0..FRAME_SIZE {
             buffer[i].re = (frame[i] as f32) * self.window[i];
         }
@@ -135,11 +136,7 @@ impl ShortTimeFourierTransformProcessor {
         // returns complex values in madmom. Here, it returns a spectrogram (FFT magnitude)
 
         // Convert FFT to spectrogram by taking magnitude of each element
-        let mut result = [0_f32; SPECTROGRAM_SIZE];
-        for i in 0..SPECTROGRAM_SIZE {
-            result[i] = buffer[i].abs();
-        }
-        SVector::from(result)
+        DVector::from_fn(SPECTROGRAM_SIZE, |i, _| buffer[i].abs())
     }
 }
 
@@ -535,9 +532,7 @@ mod tests {
 
     #[test]
     fn test_stft_processor() {
-        let mut audio_frame = [0_i16; 2048];
-        audio_frame.copy_from_slice(&(0_i16..2048).collect::<Vec<_>>()[..]);
-        let audio_frame = SVector::from(audio_frame);
+        let audio_frame = DVector::from_fn(2048, |i, _| i as i16);
         let mut stft_processor = ShortTimeFourierTransformProcessor::new();
         let result = stft_processor.process(&audio_frame);
 
