@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{SVector, SMatrix};
+use nalgebra::{SVector, SMatrix, DVector, DMatrix, dvector, dmatrix};
 
 const SAMPLE_RATE: usize = 44100;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
@@ -302,21 +302,21 @@ fn tanh(x: f32) -> f32 {
     x.tanh()
 }
 
-struct FeedForwardLayer<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
-    weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
-    bias: Box<SVector<f32, OUTPUT_SIZE>>,
+struct FeedForwardLayer {
+    weights: DMatrix<f32>,
+    bias: DVector<f32>,
 }
 
-impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> FeedForwardLayer<OUTPUT_SIZE, INPUT_SIZE> {
-    pub fn new(weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>, bias: Box<SVector<f32, OUTPUT_SIZE>>) -> Self {
+impl FeedForwardLayer {
+    pub fn new(weights: DMatrix<f32>, bias: DVector<f32>) -> Self {
         Self {
             weights,
             bias,
         }
     }
 
-    pub fn process(&self, data: &SVector<f32, INPUT_SIZE>) -> SVector<f32, OUTPUT_SIZE> {
-        (*self.weights * data + *self.bias).map(sigmoid)
+    pub fn process(&self, data: &DVector<f32>) -> DVector<f32> {
+        (&self.weights * data + &self.bias).map(sigmoid)
     }
 }
 
@@ -623,13 +623,12 @@ mod tests {
 
     #[test]
     fn test_feed_forward_layer() {
-        let weights = Box::new(SMatrix::from([[1_f32, 0.], [1., 1.], [1., 0.]]));
-        let bias = Box::new(SVector::from([0_f32, 5.]));
+        let weights = dmatrix!(1_f32, 1., 1.; 0., 1., 0.);
+        let bias = dvector!(0_f32, 5.);
         let layer = FeedForwardLayer::new(weights, bias);
-        let out = layer.process(&SVector::from([0.5_f32, 0.6, 0.7]));
+        let out = layer.process(&dvector!(0.5_f32, 0.6, 0.7));
 
-        assert_eq!(out[0], sigmoid(1.8));
-        assert_eq!(out[1], sigmoid(5.6));
+        assert_eq!(out, dvector!(sigmoid(1.8), sigmoid(5.6)));
     }
 
     #[test]
