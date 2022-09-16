@@ -54,6 +54,7 @@ const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
 // Filtering parameters:
 const N_FILTERS: usize = 81;
 
+
 const LOG_OFFSET: f32 = 1.;
 
 struct FramedSignalProcessor {
@@ -458,11 +459,45 @@ impl LSTMLayer {
 }
 
 struct NeuralNetwork {
+    layer1: LSTMLayer, // INPUT_SIZE = N_FILTERS * 2
+    layer2: LSTMLayer,
+    layer3: LSTMLayer,
+    layer4: FeedForwardLayer, // OUTPUT_SIZE = 1
 }
 
 impl NeuralNetwork {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(
+        layer1: LSTMLayer,
+        layer2: LSTMLayer,
+        layer3: LSTMLayer,
+        layer4: FeedForwardLayer,
+    ) -> Self {
+        Self {
+            layer1,
+            layer2,
+            layer3,
+            layer4,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.layer1.reset();
+        self.layer2.reset();
+        self.layer3.reset();
+        // layer4 is a FeedForwardLayer
+        // and therefore doesn't have any state to reset()
+    }
+
+    pub fn process(
+        &mut self,
+        data: &DVector<f32> // size N_FILTERS * 2
+    ) -> f32 {
+        let layer1_result = self.layer1.process(data);
+        let layer2_result = self.layer2.process(&layer1_result);
+        let layer3_result = self.layer3.process(&layer2_result);
+        let layer4_result = self.layer4.process(&layer3_result);
+        assert_eq!(layer4_result.len(), 1); // NN should produce a scalar output
+        layer4_result[0]
     }
 }
 
@@ -472,6 +507,7 @@ struct BeatTracker {
     stft_processor: ShortTimeFourierTransformProcessor,
     filter_processor: FilteredSpectrogramProcessor,
     difference_processor: SpectrogramDifferenceProcessor,
+    neural_network: NeuralNetwork,
 }
 
 impl BeatTracker {
@@ -481,13 +517,14 @@ impl BeatTracker {
             stft_processor: ShortTimeFourierTransformProcessor::new(),
             filter_processor: FilteredSpectrogramProcessor::new(),
             difference_processor: SpectrogramDifferenceProcessor::new(),
+            neural_network: NeuralNetwork::new(),
         }
     }
 
     pub fn process(
         &mut self,
         samples: &[i16]
-    ) -> Vec<DVector<f32>> { // each DVector size = N_FILTERS * 2
+    ) -> Vec<f32> {
         println!("Processing {:?} samples", samples.len());
         let frames = self.framed_processor.process(samples);
         println!("Yielded {:?} frames", frames.len());
@@ -495,8 +532,8 @@ impl BeatTracker {
             let spectrogram = self.stft_processor.process(frame);
             let filtered = self.filter_processor.process(&spectrogram);
             let diff = self.difference_processor.process(&filtered);
-            // TODO: NN
-            diff
+            let nn = self.neural_network.process(&diff);
+            nn
         }).collect()
     }
 }
