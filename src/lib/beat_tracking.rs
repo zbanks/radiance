@@ -57,7 +57,9 @@ const N_FILTERS: usize = 81;
 const LOG_OFFSET: f32 = 1.;
 
 struct FramedSignalProcessor {
-    buffer: [i16; FRAME_SIZE * 2], // Circular buffer using double-write strategy to ensure contiguous readout
+    // Circular buffer using double-write strategy to ensure contiguous readout
+    // (size = FRAME_SIZE * 2)
+    buffer: Vec<i16>,
     write_pointer: usize,
     hop_counter: i32,
 }
@@ -65,14 +67,17 @@ struct FramedSignalProcessor {
 impl FramedSignalProcessor {
     pub fn new() -> Self {
         Self {
-            buffer: [0_i16; FRAME_SIZE * 2],
+            buffer: vec![0_i16; FRAME_SIZE * 2],
             write_pointer: 0,
             hop_counter: (HOP_SIZE as i32) - ((FRAME_SIZE / 2) as i32),
         }
     }
 
-    pub fn process(&mut self, samples: &[i16]) -> Vec<SVector<i16, FRAME_SIZE>> {
-        let mut result = Vec::<SVector<i16, FRAME_SIZE>>::new();
+    pub fn process(
+        &mut self,
+        samples: &[i16] // this can be any length
+    ) -> Vec<DVector<i16>> { // each DVector has size FRAME_SIZE
+        let mut result = Vec::<DVector<i16>>::new();
         for sample in samples {
             self.buffer[self.write_pointer] = *sample;
             self.buffer[self.write_pointer + FRAME_SIZE] = *sample;
@@ -85,9 +90,7 @@ impl FramedSignalProcessor {
             assert!(self.hop_counter <= HOP_SIZE as i32);
             if self.hop_counter == HOP_SIZE as i32 {
                 self.hop_counter = 0;
-                let mut chunk = [0_i16; FRAME_SIZE];
-                chunk.copy_from_slice(&self.buffer[self.write_pointer..self.write_pointer + FRAME_SIZE]);
-                result.push(SVector::from(chunk));
+                result.push(DVector::from_column_slice(&self.buffer[self.write_pointer..self.write_pointer + FRAME_SIZE]));
             }
         }
         result
