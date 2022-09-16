@@ -303,8 +303,8 @@ fn tanh(x: f32) -> f32 {
 }
 
 struct FeedForwardLayer {
-    weights: DMatrix<f32>,
-    bias: DVector<f32>,
+    weights: DMatrix<f32>, // OUTPUT_SIZE rows x INPUT_SIZE cols
+    bias: DVector<f32>, // OUTPUT_SIZE
 }
 
 impl FeedForwardLayer {
@@ -315,24 +315,27 @@ impl FeedForwardLayer {
         }
     }
 
-    pub fn process(&self, data: &DVector<f32>) -> DVector<f32> {
+    pub fn process(
+        &self,
+        data: &DVector<f32> // size INPUT_SIZE
+    ) -> DVector<f32> { // size OUTPUT_SIZE
         (&self.weights * data + &self.bias).map(sigmoid)
     }
 }
 
-struct Gate<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
-    weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
-    bias: Box<SVector<f32, OUTPUT_SIZE>>,
-    recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
-    peephole_weights: Box<SVector<f32, OUTPUT_SIZE>>,
+struct Gate {
+    weights: DMatrix<f32>, // OUTPUT_SIZE rows x INPUT_SIZE cols
+    bias: DVector<f32>, // OUTPUT_SIZE
+    recurrent_weights: DMatrix<f32>, // OUTPUT_SIZE rows x OUTPUT_SIZE cols
+    peephole_weights: DVector<f32>, // OUTPUT_SIZE
 }
 
-impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> Gate<OUTPUT_SIZE, INPUT_SIZE> {
+impl Gate {
     pub fn new(
-        weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
-        bias: Box<SVector<f32, OUTPUT_SIZE>>,
-        recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
-        peephole_weights: Box<SVector<f32, OUTPUT_SIZE>>,
+        weights: DMatrix<f32>,
+        bias: DVector<f32>,
+        recurrent_weights: DMatrix<f32>,
+        peephole_weights: DVector<f32>,
     ) -> Self {
         Self {
             weights,
@@ -344,30 +347,30 @@ impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> Gate<OUTPUT_SIZE, INPUT_
 
     pub fn process(
         &self,
-        data: &SVector<f32, INPUT_SIZE>,
-        prev: &SVector<f32, OUTPUT_SIZE>,
-        state: &SVector<f32, OUTPUT_SIZE>,
-    ) -> SVector<f32, OUTPUT_SIZE> {
+        data: &DVector<f32>, // size INPUT_SIZE
+        prev: &DVector<f32>, // size OUTPUT_SIZE
+        state: &DVector<f32>, // size OUTPUT_SIZE
+    ) -> DVector<f32> { // size OUTPUT_SIZE
         (
-            *self.weights * data
+            &self.weights * data
             + state.component_mul(&self.peephole_weights)
-            + *self.recurrent_weights * prev
-            + *self.bias
+            + &self.recurrent_weights * prev
+            + &self.bias
         ).map(sigmoid)
     }
 }
 
-struct Cell<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
-    weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
-    bias: Box<SVector<f32, OUTPUT_SIZE>>,
-    recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
+struct Cell {
+    weights: DMatrix<f32>, // OUTPUT_SIZE rows x INPUT_SIZE cols
+    bias: DVector<f32>, // OUTPUT_SIZE
+    recurrent_weights: DMatrix<f32>, // OUTPUT_SIZE rows x OUTPUT_SIZE cols
 }
 
-impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> Cell<OUTPUT_SIZE, INPUT_SIZE> {
+impl Cell {
     pub fn new(
-        weights: Box<SMatrix<f32, OUTPUT_SIZE, INPUT_SIZE>>,
-        bias: Box<SVector<f32, OUTPUT_SIZE>>,
-        recurrent_weights: Box<SMatrix<f32, OUTPUT_SIZE, OUTPUT_SIZE>>,
+        weights: DMatrix<f32>,
+        bias: DVector<f32>,
+        recurrent_weights: DMatrix<f32>,
     ) -> Self {
         Self {
             weights,
@@ -375,45 +378,45 @@ impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> Cell<OUTPUT_SIZE, INPUT_
             recurrent_weights,
         }
     }
-
     pub fn process(
         &self,
-        data: &SVector<f32, INPUT_SIZE>,
-        prev: &SVector<f32, OUTPUT_SIZE>,
-    ) -> SVector<f32, OUTPUT_SIZE> {
+        data: &DVector<f32>, // size INPUT_SIZE
+        prev: &DVector<f32>, // size OUTPUT_SIZE
+    ) -> DVector<f32> { // size OUTPUT_SIZE
         (
-            *self.weights * data
-            + *self.recurrent_weights * prev
-            + *self.bias
+            &self.weights * data
+            + &self.recurrent_weights * prev
+            + &self.bias
         ).map(tanh)
     }
 }
 
-struct LSTMLayer<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> {
+struct LSTMLayer {
     // Note: for an LSTM layer, OUTPUT_SIZE == HIDDEN_SIZE == CELL_STATE_SIZE
 
     // prev stores the hidden state output of the LSTMLayer from t = n - 1
-    prev: Box<SVector<f32, OUTPUT_SIZE>>,
+    prev: DVector<f32>, // OUTPUT_SIZE
     // state stores the cell state of the LSTMLayer from t = n - 1
-    state: Box<SVector<f32, OUTPUT_SIZE>>,
+    state: DVector<f32>, // OUTPUT_SIZE
 
     // LSTM machinery
-    input_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
-    forget_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
-    cell: Cell<OUTPUT_SIZE, INPUT_SIZE>,
-    output_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+    input_gate: Gate,
+    forget_gate: Gate,
+    cell: Cell,
+    output_gate: Gate,
 }
 
-impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> LSTMLayer<OUTPUT_SIZE, INPUT_SIZE> {
+impl LSTMLayer {
     pub fn new(
-        input_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
-        forget_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
-        cell: Cell<OUTPUT_SIZE, INPUT_SIZE>,
-        output_gate: Gate<OUTPUT_SIZE, INPUT_SIZE>,
+        input_gate: Gate,
+        forget_gate: Gate,
+        cell: Cell,
+        output_gate: Gate,
     ) -> Self {
+        let output_size = input_gate.weights.nrows();
         Self {
-            prev: Box::new(SVector::from([0_f32; OUTPUT_SIZE])),
-            state: Box::new(SVector::from([0_f32; OUTPUT_SIZE])),
+            prev: DVector::zeros(output_size),
+            state: DVector::zeros(output_size),
             input_gate,
             forget_gate,
             cell,
@@ -426,7 +429,10 @@ impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> LSTMLayer<OUTPUT_SIZE, I
         self.state.fill(0.);
     }
 
-    pub fn process(&mut self, data: &SVector<f32, INPUT_SIZE>) -> SVector<f32, OUTPUT_SIZE> {
+    pub fn process(
+        &mut self,
+        data: &DVector<f32> // size INPUT_SIZE
+    ) -> DVector<f32> { // size OUTPUT_SIZE
         // Input gate: operate on current data, previous output, and state
         let ig = self.input_gate.process(data, &self.prev, &self.state);
         // Forget gate: operate on current data, previous output and state
@@ -435,12 +441,12 @@ impl<const OUTPUT_SIZE: usize, const INPUT_SIZE: usize> LSTMLayer<OUTPUT_SIZE, I
         let cell = self.cell.process(data, &self.prev);
         // Internal state: weight the cell with the input gate
         // and add the previous state weighted by the forget gate
-        *self.state = cell.component_mul(&ig) + self.state.component_mul(&fg);
+        self.state.copy_from(&(cell.component_mul(&ig) + self.state.component_mul(&fg)));
         // Output gate: operate on current data, previous output and current state
         let og = self.output_gate.process(data, &self.prev, &self.state);
         // Output: apply activation function to state and weight by output gate
         let out = self.state.map(tanh).component_mul(&og);
-        *self.prev = out;
+        self.prev.copy_from(&out);
         out
     }
 }
@@ -634,46 +640,46 @@ mod tests {
     #[test]
     fn test_lstm_layer() {
         // Input gate
-        let weights = Box::new(SMatrix::from([[2_f32, 0.], [3., 2.], [-1., 0.]]));
-        let bias = Box::new(SMatrix::from([1_f32, 3.]));
-        let recurrent_weights = Box::new(SMatrix::from([[0_f32, 1.], [-1., 0.]]));
-        let peephole_weights = Box::new(SMatrix::from([2_f32, 3.]));
+        let weights = dmatrix!(2_f32, 3., -1.; 0., 2., 0.);
+        let bias = dvector!(1_f32, 3.);
+        let recurrent_weights = dmatrix!(0_f32, -1.; 1., 0.);
+        let peephole_weights = dvector!(2_f32, 3.);
         let ig = Gate::new(weights, bias, recurrent_weights, peephole_weights);
 
         // Forget gate;
-        let weights = Box::new(SMatrix::from([[-1_f32, -1.], [1., 0.], [0., 2.]]));
-        let bias = Box::new(SMatrix::from([-2_f32, -1.]));
-        let recurrent_weights = Box::new(SMatrix::from([[2_f32, 0.], [0., 2.]]));
-        let peephole_weights = Box::new(SMatrix::from([3_f32, -1.]));
+        let weights = dmatrix!(-1_f32, 1., 0.; -1., 0., 2.);
+        let bias = dvector!(-2_f32, -1.);
+        let recurrent_weights = dmatrix!(2_f32, 0.; 0., 2.);
+        let peephole_weights = dvector!(3_f32, -1.);
         let fg = Gate::new(weights, bias, recurrent_weights, peephole_weights);
 
         // Cell;
-        let weights = Box::new(SMatrix::from([[1_f32, 2.], [-1., -3.], [3., -2.]]));
-        let bias = Box::new(SMatrix::from([1_f32, 2.]));
-        let recurrent_weights = Box::new(SMatrix::from([[2_f32, 0.], [0., 2.]]));
+        let weights = dmatrix!(1_f32, -1., 3.; 2., -3., -2.);
+        let bias = dvector!(1_f32, 2.);
+        let recurrent_weights = dmatrix!(2_f32, 0.; 0., 2.);
         let c = Cell::new(weights, bias, recurrent_weights);
 
         // Output gate;
-        let weights = Box::new(SMatrix::from([[1_f32, 1.], [-1., -3.], [2., 4.]]));
-        let bias = Box::new(SMatrix::from([1_f32, -2.]));
-        let recurrent_weights = Box::new(SMatrix::from([[2_f32, 3.], [-2., -1.]]));
-        let peephole_weights = Box::new(SMatrix::from([1_f32, 3.]));
+        let weights = dmatrix!(1_f32, -1., 2.; 1., -3., 4.);
+        let bias = dvector!(1_f32, -2.);
+        let recurrent_weights = dmatrix!(2_f32, -2.; 3., -1.);
+        let peephole_weights = dvector!(1_f32, 3.);
         let og = Gate::new(weights, bias, recurrent_weights, peephole_weights);
 
         // LSTMLayer
         let mut l = LSTMLayer::new(ig, fg, c, og);
 
-        let input1 = Box::new(SVector::from([2_f32, 3., 4.]));
-        let input2 = Box::new(SVector::from([6_f32, 7., 6.]));
-        let input3 = Box::new(SVector::from([4_f32, 3., 2.]));
+        let input1 = dvector!(2_f32, 3., 4.);
+        let input2 = dvector!(6_f32, 7., 6.);
+        let input3 = dvector!(4_f32, 3., 2.);
 
         let output1 = l.process(&input1);
         let output2 = l.process(&input2);
         let output3 = l.process(&input3);
 
-        assert_eq!(output1, SVector::from([0.7614811, -0.74785006]));
-        assert_eq!(output2, SVector::from([0.9619418 , -0.94699216]));
-        assert_eq!(output3, SVector::from([0.99459594, -0.4957872]));
+        assert_eq!(output1, dvector!(0.7614811, -0.74785006));
+        assert_eq!(output2, dvector!(0.9619418 , -0.94699216));
+        assert_eq!(output3, dvector!(0.99459594, -0.4957872));
     }
 
     #[ignore]
