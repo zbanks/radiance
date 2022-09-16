@@ -632,6 +632,51 @@ mod tests {
         assert_eq!(out[1], sigmoid(5.6));
     }
 
+    #[test]
+    fn test_lstm_layer() {
+        // Input gate
+        let weights = Box::new(SMatrix::from([[2_f32, 0.], [3., 2.], [-1., 0.]]));
+        let bias = Box::new(SMatrix::from([1_f32, 3.]));
+        let recurrent_weights = Box::new(SMatrix::from([[0_f32, 1.], [-1., 0.]]));
+        let peephole_weights = Box::new(SMatrix::from([2_f32, 3.]));
+        let ig = Gate::new(weights, bias, recurrent_weights, peephole_weights);
+
+        // Forget gate;
+        let weights = Box::new(SMatrix::from([[-1_f32, -1.], [1., 0.], [0., 2.]]));
+        let bias = Box::new(SMatrix::from([-2_f32, -1.]));
+        let recurrent_weights = Box::new(SMatrix::from([[2_f32, 0.], [0., 2.]]));
+        let peephole_weights = Box::new(SMatrix::from([3_f32, -1.]));
+        let fg = Gate::new(weights, bias, recurrent_weights, peephole_weights);
+
+        // Cell;
+        let weights = Box::new(SMatrix::from([[1_f32, 2.], [-1., -3.], [3., -2.]]));
+        let bias = Box::new(SMatrix::from([1_f32, 2.]));
+        let recurrent_weights = Box::new(SMatrix::from([[2_f32, 0.], [0., 2.]]));
+        let c = Cell::new(weights, bias, recurrent_weights);
+
+        // Output gate;
+        let weights = Box::new(SMatrix::from([[1_f32, 1.], [-1., -3.], [2., 4.]]));
+        let bias = Box::new(SMatrix::from([1_f32, -2.]));
+        let recurrent_weights = Box::new(SMatrix::from([[2_f32, 3.], [-2., -1.]]));
+        let peephole_weights = Box::new(SMatrix::from([1_f32, 3.]));
+        let og = Gate::new(weights, bias, recurrent_weights, peephole_weights);
+
+        // LSTMLayer
+        let mut l = LSTMLayer::new(ig, fg, c, og);
+
+        let input1 = Box::new(SVector::from([2_f32, 3., 4.]));
+        let input2 = Box::new(SVector::from([6_f32, 7., 6.]));
+        let input3 = Box::new(SVector::from([4_f32, 3., 2.]));
+
+        let output1 = l.process(&input1);
+        let output2 = l.process(&input2);
+        let output3 = l.process(&input3);
+
+        assert_eq!(output1, SVector::from([0.7614811, -0.74785006]));
+        assert_eq!(output2, SVector::from([0.9619418 , -0.94699216]));
+        assert_eq!(output3, SVector::from([0.99459594, -0.4957872]));
+    }
+
     #[ignore]
     #[test]
     fn test_music() {
