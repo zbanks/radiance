@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{SVector, SMatrix, DVector, DMatrix, dvector, dmatrix};
+use nalgebra::{DVector, DMatrix};
 
 const SAMPLE_RATE: usize = 44100;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
@@ -140,12 +140,14 @@ impl ShortTimeFourierTransformProcessor {
     }
 }
 
-fn triangle_filter(start: i32, center: i32, stop: i32) -> SVector<f32, SPECTROGRAM_SIZE> {
+fn triangle_filter(
+    start: i32, center: i32, stop: i32
+) -> DVector<f32> { // size = SPECTROGRAM_SIZE
     assert!(start < center);
     assert!(center < stop);
     assert!(stop <= SPECTROGRAM_SIZE as i32);
 
-    let mut result = [0_f32; SPECTROGRAM_SIZE];
+    let mut result = DVector::<f32>::zeros(SPECTROGRAM_SIZE);
     let mut sum = 0_f32;
     for i in start + 1..=center {
         let x = (i as f32 - start as f32) / (center as f32 - start as f32);
@@ -169,7 +171,7 @@ fn triangle_filter(start: i32, center: i32, stop: i32) -> SVector<f32, SPECTROGR
         }
     }
 
-    SVector::from(result)
+    result
 }
 
 // MIDI note to frequency in Hz
@@ -178,16 +180,15 @@ fn note2freq(note: i32) -> f32 {
 }
 
 // Returns the frequency corresponding to each entry in the spectrogram
-fn spectrogram_frequencies() -> SVector<f32, SPECTROGRAM_SIZE> {
-    let mut result = [0_f32; SPECTROGRAM_SIZE];
-    for i in 0..SPECTROGRAM_SIZE {
-        result[i] = i as f32 * SAMPLE_RATE as f32 / (SPECTROGRAM_SIZE * 2) as f32
-    }
-    SVector::from(result)
+fn spectrogram_frequencies() -> DVector<f32> { // size = SPECTROGRAM_SIZE
+    DVector::from_fn(SPECTROGRAM_SIZE, |i, _| i as f32 * SAMPLE_RATE as f32 / (SPECTROGRAM_SIZE * 2) as f32)
 }
 
 // Returns the index of the closest entry in the spectrogram to the given frequency in Hz
-fn freq2bin(spectrogram_frequencies: SVector<f32, SPECTROGRAM_SIZE>, freq: f32) -> usize {
+fn freq2bin(
+    spectrogram_frequencies: &DVector<f32>, // size = SPECTROGRAM_SIZE
+    freq: f32
+) -> usize {
     let mut index = SPECTROGRAM_SIZE - 1;
     for i in 1..SPECTROGRAM_SIZE {
         if freq < spectrogram_frequencies[i] {
@@ -205,24 +206,23 @@ fn freq2bin(spectrogram_frequencies: SVector<f32, SPECTROGRAM_SIZE>, freq: f32) 
 }
 
 // Returns a filter bank according to the given constants
-pub fn gen_filterbank() -> Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>> {
+pub fn gen_filterbank() -> DMatrix<f32> { // rows = N_FILTERS, cols = SPECTROGRAM_SIZE
     let freqs = spectrogram_frequencies();
 
-    let filterbank = [[0_f32; N_FILTERS]; SPECTROGRAM_SIZE];
-    let mut filterbank: Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>> = Box::new(SMatrix::from(filterbank));
+    let mut filterbank = DMatrix::<f32>::zeros(N_FILTERS, SPECTROGRAM_SIZE);
 
     // Generate a set of triangle filters
     let mut filter_index = 0_usize;
     let mut previous_center = -1_i32;
     for note in (FILTER_MIN_NOTE + 1)..=(FILTER_MAX_NOTE - 1) {
-        let center = freq2bin(freqs, note2freq(note)) as i32;
+        let center = freq2bin(&freqs, note2freq(note)) as i32;
         // Skip duplicate filters
         if center == previous_center {
             continue;
         }
         // Expand filter to include at least one spectrogram entry
-        let mut start = freq2bin(freqs, note2freq(note - 1)) as i32;
-        let mut stop = freq2bin(freqs, note2freq(note + 1)) as i32;
+        let mut start = freq2bin(&freqs, note2freq(note - 1)) as i32;
+        let mut stop = freq2bin(&freqs, note2freq(note + 1)) as i32;
         if stop - start < 2 {
             start = center - 1;
             stop = center + 1;
@@ -240,7 +240,7 @@ pub fn gen_filterbank() -> Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>> {
 
 
 struct FilteredSpectrogramProcessor {
-    filterbank: Box<SMatrix<f32, N_FILTERS, SPECTROGRAM_SIZE>>,
+    filterbank: DMatrix<f32> // rows = N_FILTERS, cols = SPECTROGRAM_SIZE
 }
 
 impl FilteredSpectrogramProcessor {
@@ -250,8 +250,11 @@ impl FilteredSpectrogramProcessor {
         }
     }
 
-    pub fn process(&mut self, spectrogram: &SVector<f32, SPECTROGRAM_SIZE>) -> SVector<f32, N_FILTERS> {
-        let filter_output = *self.filterbank * spectrogram;
+    pub fn process(
+        &mut self,
+        spectrogram: &DVector<f32>, // size = SPECTROGRAM_SIZE
+    ) -> DVector<f32> { // size = N_FILTERS
+        let filter_output = &self.filterbank * spectrogram;
 
         // Slight deviation from madmom: the output of the FilteredSpectrogramProcessor
         // is sent into a LogarithmicSpectrogramProcessor.
@@ -263,7 +266,7 @@ impl FilteredSpectrogramProcessor {
 }
 
 struct SpectrogramDifferenceProcessor {
-    prev: Option<SVector<f32, N_FILTERS>>,
+    prev: Option<DVector<f32>>, // size = N_FILTERS
 }
 
 impl SpectrogramDifferenceProcessor {
@@ -277,7 +280,10 @@ impl SpectrogramDifferenceProcessor {
         self.prev = None;
     }
 
-    pub fn process(&mut self, filtered_data: &SVector<f32, N_FILTERS>) -> SVector<f32, {N_FILTERS * 2}> {
+    pub fn process(
+        &mut self,
+        filtered_data: &DVector<f32> // size = N_FILTERS
+    ) -> DVector<f32> { // size = N_FILTERS * 2
         let prev = match &self.prev {
             None => filtered_data,
             Some(prev) => prev,
@@ -287,10 +293,10 @@ impl SpectrogramDifferenceProcessor {
 
         self.prev = Some(filtered_data.clone());
 
-        let mut result = [0_f32; N_FILTERS * 2];
-        result[0..N_FILTERS].copy_from_slice(filtered_data.as_slice());
-        result[N_FILTERS..N_FILTERS * 2].copy_from_slice(diff.as_slice());
-        SVector::from(result)
+        let mut result = DVector::<f32>::zeros(N_FILTERS * 2);
+        result.rows_range_mut(0..N_FILTERS).copy_from_slice(filtered_data.as_slice());
+        result.rows_range_mut(N_FILTERS..N_FILTERS * 2).copy_from_slice(diff.as_slice());
+        result
     }
 }
 
@@ -478,7 +484,10 @@ impl BeatTracker {
         }
     }
 
-    pub fn process(&mut self, samples: &[i16]) -> Vec<SVector<f32, {N_FILTERS * 2}>> {
+    pub fn process(
+        &mut self,
+        samples: &[i16]
+    ) -> Vec<DVector<f32>> { // each DVector size = N_FILTERS * 2
         println!("Processing {:?} samples", samples.len());
         let frames = self.framed_processor.process(samples);
         println!("Yielded {:?} frames", frames.len());
@@ -495,6 +504,7 @@ impl BeatTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nalgebra::{dvector, dmatrix};
 
     #[test]
     fn test_framed_signal_processor() {
@@ -577,9 +587,9 @@ mod tests {
     #[test]
     fn test_freq2bin() {
         let freqs = spectrogram_frequencies();
-        assert_eq!(freq2bin(freqs, 0.), 0);
-        assert_eq!(freq2bin(freqs, 24000.), 1023);
-        assert_eq!(freq2bin(freqs, 440.), 20);
+        assert_eq!(freq2bin(&freqs, 0.), 0);
+        assert_eq!(freq2bin(&freqs, 24000.), 1023);
+        assert_eq!(freq2bin(&freqs, 440.), 20);
     }
 
     #[test]
@@ -597,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_spectrogram_difference_processor() {
-        let mut data = SVector::from([0_f32; N_FILTERS]);
+        let mut data = DVector::<f32>::zeros(N_FILTERS);
         let mut proc = SpectrogramDifferenceProcessor::new();
 
         data[0] = 1.;
