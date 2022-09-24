@@ -309,7 +309,7 @@ struct BeatTracker {
     stft_processor: ShortTimeFourierTransformProcessor,
     filter_processor: FilteredSpectrogramProcessor,
     difference_processor: SpectrogramDifferenceProcessor,
-    neural_network: NeuralNetwork,
+    neural_networks: Vec<NeuralNetwork>,
 }
 
 impl BeatTracker {
@@ -319,7 +319,7 @@ impl BeatTracker {
             stft_processor: ShortTimeFourierTransformProcessor::new(),
             filter_processor: FilteredSpectrogramProcessor::new(),
             difference_processor: SpectrogramDifferenceProcessor::new(),
-            neural_network: NeuralNetwork::new(),
+            neural_networks: models(),
         }
     }
 
@@ -334,8 +334,9 @@ impl BeatTracker {
             let spectrogram = self.stft_processor.process(frame);
             let filtered = self.filter_processor.process(&spectrogram);
             let diff = self.difference_processor.process(&filtered);
-            let nn = self.neural_network.process(&diff);
-            nn
+            let ensemble_results = self.neural_networks.iter_mut().map(|nn| nn.process(&diff));
+            let result = ensemble_results.sum::<f32>() / self.neural_networks.len() as f32;
+            result
         }).collect()
     }
 }
@@ -715,7 +716,7 @@ mod tests {
         // Instantiate a BeatTracker
         let mut bt = BeatTracker::new();
         let result = bt.process(&data);
-        println!("{:?}", result[128]);
+        println!("{:?}", &result);
         panic!();
     }
 }
