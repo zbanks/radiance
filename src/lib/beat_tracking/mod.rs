@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{DVector, DMatrix};
+use nalgebra::{DVector, DMatrix, SVector};
 
 const SAMPLE_RATE: usize = 44100;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
@@ -55,6 +55,10 @@ const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
 const N_FILTERS: usize = 81;
 
 const LOG_OFFSET: f32 = 1.;
+
+// HMM parameters:
+const N_STATES: usize = 1; // XXX TODO figure this out
+const OBSERVATION_LAMBDA: f32 = 16.;
 
 mod ml_models;
 use ml_models::*;
@@ -300,6 +304,160 @@ impl SpectrogramDifferenceProcessor {
         result.rows_range_mut(0..N_FILTERS).copy_from_slice(filtered_data.as_slice());
         result.rows_range_mut(N_FILTERS..N_FILTERS * 2).copy_from_slice(diff.as_slice());
         result
+    }
+}
+
+fn ss_state_positions() -> DVector<usize> { // size = N_STATES
+    panic!("SS state positions not implemented");
+}
+
+/// Compute transition model in Compressed Sparse Row (CSR) format
+fn transition_model() -> (
+    Vec<usize>, // pointers (indptr)
+    Vec<usize>, // states (indices)
+    Vec<f32>, // probabilities (data)
+) {
+    let entries: Vec<(usize, usize, f32)> = Vec::new();
+    // TODO implement TM
+
+    // Convert the list of (row, col, value) to CSR format
+    {
+        let mut rows: Vec<Vec<(usize, f32)>> = (0..N_STATES).map(|_| Vec::new()).collect();
+
+        // Unpack entries into rows
+        for (row, col, value) in entries.into_iter() {
+            rows[row].push((col, value));
+        }
+
+        // Sort each row
+        rows.iter_mut().for_each(|row| row.sort_by_key(|&(col, _)| col));
+
+        // Write out resulting CSR representation
+        let mut indptr = Vec::<usize>::new();
+        let mut indices = Vec::<usize>::new();
+        let mut data = Vec::<f32>::new();
+        let mut i: usize = 0;
+
+        for row in rows {
+            indptr.push(i);
+            for (col, value) in row.into_iter() {
+                indices.push(col);
+                data.push(value);
+                i += 1;
+            }
+        }
+        indptr.push(i);
+
+        (indptr, indices, data)
+    }
+}
+
+/// Compute observation model
+/// Returns observation model pointers (see HMMBeatTrackingProcessor)
+fn observation_model() -> DVector<usize> {
+    let state_positions = ss_state_positions();
+
+    // always point to the non-beat densities
+    // unless they are in the beat range of the state space
+    let border = 1. / OBSERVATION_LAMBDA;
+    DVector::from_fn(N_STATES, |i, _| if (state_positions[i] as f32) < border {1} else {0})
+}
+
+/// Compute the probability densities of the observations.
+/// observation: (e.g. beat activation of the RNN).
+/// returns: 2-element vector containing probability densities of the observations
+/// the two entries represent the observation probability densities for no-beats and beats.
+fn om_densities(observation: f32) -> SVector<f32, 2> {
+    let p_no_beat = (1. - observation) / (OBSERVATION_LAMBDA - 1.);
+    let p_beat = observation;
+    SVector::<f32, 2>::from([p_no_beat, p_beat])
+}
+
+fn hmm_initial_distribution() -> DVector<f32> { // size = N_STATES
+    // TODO
+    DVector::zeros(N_STATES)
+}
+
+struct HMMBeatTrackingProcessor {
+    // Acronyms:
+    // HMM = hidden markov model
+    // SS = state space
+    // OM = observation model
+    // TM = transition model
+
+    // The transition model is defined similar to a scipy compressed sparse row
+    // matrix and holds all transition probabilities from one state to an other.
+    // This allows an efficient Viterbi decoding of the HMM.
+    tm_pointers: Vec<usize>, // Pointers into tm_states and tm_probabilities. size = N_STATES + 1 (one extra so that tm_pointers[s+1] can always be valid)
+    tm_states: Vec<usize>, // All states transitioning to state s are stored in tm_states[tm_pointers[s]..tm_pointers[s+1]]
+    tm_probabilities: Vec<f32>, // The corresponding transition probabilities are stored in tm_probabilities[tm_pointers[s]..tm_pointers[s+1]]
+
+    // The observation model is defined as a plain vector `om_pointers` and
+    // the function `om_densities()` which returns the probability densities of the observation.
+    om_pointers: DVector<usize>, // size = N_STATES
+
+    // The state of the HMM
+    hmm_fwd_prev: DVector<f32>, // size = N_STATES
+}
+
+impl HMMBeatTrackingProcessor {
+    pub fn new() -> Self {
+        let (tm_pointers, tm_states, tm_probabilities) = transition_model();
+        let om_pointers = observation_model();
+        Self {
+            tm_pointers,
+            tm_states,
+            tm_probabilities,
+            om_pointers,
+            hmm_fwd_prev: hmm_initial_distribution(),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.hmm_fwd_prev = hmm_initial_distribution();
+    }
+
+    /// Take in a an observation
+    /// Returns the forward variables for this timestep
+    fn hmm_forward(
+        &mut self,
+        observation: f32
+    ) -> DVector<f32> { // size = N_STATES
+
+        // calculate OM densities
+        let densities = om_densities(observation);
+
+        let mut fwd = DVector::<f32>::zeros(N_STATES);
+
+        // keep track of the normalisation sum
+        let mut prob_sum: f32 = 0.;
+        // iterate over all states
+        for state in 0..N_STATES {
+            // sum over all possible predecessors
+            let mut fwd_state: f32 = 0.;
+            for prev_pointer in self.tm_pointers[state]..self.tm_pointers[state + 1] {
+                fwd_state += self.hmm_fwd_prev[self.tm_states[prev_pointer]] * self.tm_probabilities[prev_pointer];
+            }
+            // multiply with the observation probability
+            fwd_state *= densities[self.om_pointers[state]];
+            fwd[state] = fwd_state;
+            prob_sum += fwd_state;
+        }
+        // normalize
+        fwd *= 1. / prob_sum;
+        self.hmm_fwd_prev.copy_from(&fwd);
+        fwd
+    }
+
+    /// Takes in a sample from the beat activation function
+    /// Returns true if a beat is detected
+    pub fn process(
+        &mut self,
+        activation: f32,
+    ) -> bool {
+        // Run 
+
+        false
     }
 }
 
