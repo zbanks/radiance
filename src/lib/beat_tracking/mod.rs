@@ -40,6 +40,7 @@
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
 use nalgebra::{DVector, DMatrix, SVector};
+use itertools::iproduct;
 
 const SAMPLE_RATE: usize = 44100;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
@@ -59,6 +60,8 @@ const LOG_OFFSET: f32 = 1.;
 // HMM parameters:
 const N_STATES: usize = 1; // XXX TODO figure this out
 const OBSERVATION_LAMBDA: f32 = 16.;
+const TRANSITION_LAMBDA: f32 = 100.;
+const PROBABILITY_EPSILON: f32 = f32::EPSILON;
 
 mod ml_models;
 use ml_models::*;
@@ -307,18 +310,65 @@ impl SpectrogramDifferenceProcessor {
     }
 }
 
-fn ss_state_positions() -> DVector<usize> { // size = N_STATES
-    panic!("SS state positions not implemented");
+struct BeatStateSpace {
+    state_positions: Vec<f32>,
+    state_intervals: Vec<usize>,
+    first_states: Vec<usize>,
+    last_states: Vec<usize>,
+}
+
+impl BeatStateSpace {
+    fn new() -> Self {
+        panic!("not implemented");
+        //Self {
+        //}
+    }
 }
 
 /// Compute transition model in Compressed Sparse Row (CSR) format
-fn transition_model() -> (
+fn transition_model(ss: &BeatStateSpace) -> (
     Vec<usize>, // pointers (indptr)
     Vec<usize>, // states (indices)
     Vec<f32>, // probabilities (data)
 ) {
-    let entries: Vec<(usize, usize, f32)> = Vec::new();
-    // TODO implement TM
+    // same tempo transitions probabilities within the state space is 1
+    // Note: use all states, but remove all first states because there are
+    //       no same tempo transitions into them
+    let same_tempo_states = (0..N_STATES).filter(|s| !ss.first_states.contains(s));
+    let same_tempo_entries = same_tempo_states.map(|s| (s - 1, s, 1.));
+
+    // tempo transitions occur at the boundary between beats
+    // Note: connect the beat state space with itself, the transitions from
+    //       the last states to the first states follow an exponential tempo
+    //       transition (with the tempi given as intervals)
+    let to_states = &ss.first_states;
+    let from_states = &ss.last_states;
+    let from_intervals: Vec<usize> = from_states.iter().map(|&s| ss.state_intervals[s]).collect();
+    let to_intervals: Vec<usize> = to_states.iter().map(|&s| ss.state_intervals[s]).collect();
+
+    // exponential tempo transition
+    let transition_tempo_entries: Vec<(usize, usize, f32)> = iproduct!(from_intervals, to_intervals).map(|(from, to)| {(
+        from,
+        to,
+        (-TRANSITION_LAMBDA * ((to as f32) / (from as f32) - 1.).abs()).exp(),
+    )}).filter(|&(_, _, val)| val > PROBABILITY_EPSILON).collect();
+
+    // Normalize each row
+    let mut row_factor = vec![0_f32; N_STATES];
+    for &(from, _, prob) in transition_tempo_entries.iter() {
+        row_factor[from] += prob;
+    }
+    row_factor.iter_mut().for_each(|x| *x = 1. / *x);
+    //let row_factor: Vec<f32> = row_sum.into_iter().map(|x| 1. / x).collect();
+    let transition_tempo_entries = transition_tempo_entries.iter().map(|&(from, to, prob)| {
+        let prob = prob * row_factor[from];
+        // Make sure we did everything right
+        // (including avoiding NaNs in the above division)
+        assert!(prob >= 0. && prob <= 1.);
+        (from, to, prob)
+    });
+
+    let entries = same_tempo_entries.chain(transition_tempo_entries);
 
     // Convert the list of (row, col, value) to CSR format
     {
@@ -354,13 +404,11 @@ fn transition_model() -> (
 
 /// Compute observation model
 /// Returns observation model pointers (see HMMBeatTrackingProcessor)
-fn observation_model() -> DVector<usize> {
-    let state_positions = ss_state_positions();
-
+fn observation_model(ss: &BeatStateSpace) -> DVector<usize> {
     // always point to the non-beat densities
     // unless they are in the beat range of the state space
     let border = 1. / OBSERVATION_LAMBDA;
-    DVector::from_fn(N_STATES, |i, _| if (state_positions[i] as f32) < border {1} else {0})
+    DVector::from_fn(N_STATES, |i, _| if (ss.state_positions[i] as f32) < border {1} else {0})
 }
 
 /// Compute the probability densities of the observations.
@@ -374,8 +422,9 @@ fn om_densities(observation: f32) -> SVector<f32, 2> {
 }
 
 fn hmm_initial_distribution() -> DVector<f32> { // size = N_STATES
-    // TODO
-    DVector::zeros(N_STATES)
+    // Return a uniform distribution
+    let fill_value = 1. / N_STATES as f32;
+    DVector::from_element(N_STATES, fill_value)
 }
 
 struct HMMBeatTrackingProcessor {
@@ -384,6 +433,8 @@ struct HMMBeatTrackingProcessor {
     // SS = state space
     // OM = observation model
     // TM = transition model
+
+    ss: BeatStateSpace,
 
     // The transition model is defined similar to a scipy compressed sparse row
     // matrix and holds all transition probabilities from one state to an other.
@@ -402,9 +453,11 @@ struct HMMBeatTrackingProcessor {
 
 impl HMMBeatTrackingProcessor {
     pub fn new() -> Self {
-        let (tm_pointers, tm_states, tm_probabilities) = transition_model();
-        let om_pointers = observation_model();
+        let ss = BeatStateSpace::new();
+        let (tm_pointers, tm_states, tm_probabilities) = transition_model(&ss);
+        let om_pointers = observation_model(&ss);
         Self {
+            ss,
             tm_pointers,
             tm_states,
             tm_probabilities,
@@ -455,8 +508,7 @@ impl HMMBeatTrackingProcessor {
         &mut self,
         activation: f32,
     ) -> bool {
-        // Run 
-
+        // TODO
         false
     }
 }
