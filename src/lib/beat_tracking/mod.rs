@@ -404,7 +404,6 @@ fn transition_model(ss: &BeatStateSpace) -> (
         row_factor[from] += prob;
     }
     row_factor.iter_mut().for_each(|x| *x = 1. / *x);
-    //let row_factor: Vec<f32> = row_sum.into_iter().map(|x| 1. / x).collect();
     let transition_tempo_entries = transition_tempo_entries.iter().map(|&(from, to, prob)| {
         let prob = prob * row_factor[from];
         // Make sure we did everything right
@@ -553,8 +552,12 @@ impl HMMBeatTrackingProcessor {
         &mut self,
         activation: f32,
     ) -> bool {
-        // TODO
-        false
+        let state_probabilities = self.hmm_forward(activation);
+        let most_probable_state = state_probabilities.iter().enumerate().max_by(
+            |(_, v1), (_, v2)| v1.partial_cmp(v2).unwrap()
+        ).unwrap().0;
+        let beat = self.om_pointers[most_probable_state] == 1;
+        beat
     }
 }
 
