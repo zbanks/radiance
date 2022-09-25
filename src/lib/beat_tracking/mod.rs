@@ -478,7 +478,7 @@ struct HMMBeatTrackingProcessor {
     // OM = observation model
     // TM = transition model
 
-    ss: BeatStateSpace,
+    _ss: BeatStateSpace,
 
     // The transition model is defined similar to a scipy compressed sparse row
     // matrix and holds all transition probabilities from one state to an other.
@@ -501,7 +501,7 @@ impl HMMBeatTrackingProcessor {
         let (tm_pointers, tm_states, tm_probabilities) = transition_model(&ss);
         let om_pointers = observation_model(&ss);
         Self {
-            ss,
+            _ss: ss,
             tm_pointers,
             tm_states,
             tm_probabilities,
@@ -953,6 +953,64 @@ mod tests {
         assert_eq!(r1[N_FILTERS], 0.);
         assert_eq!(r2[N_FILTERS], 1.);
         assert_eq!(r3[N_FILTERS], 0.);
+    }
+
+    #[test]
+    fn test_beat_state_space() {
+        let ss = BeatStateSpace::new();
+
+        // Check a few entries in each array
+        // (these values were popuated from inspecting the Python object)
+        assert_eq!(ss.first_states[0], 0);
+        assert_eq!(ss.first_states[10], 325);
+        assert_eq!(ss.first_states[81], 5508);
+
+        assert_eq!(ss.last_states[0], 27);
+        assert_eq!(ss.last_states[10], 362);
+        assert_eq!(ss.last_states[81], 5616);
+
+        assert_eq!(ss.state_positions[0], 0.);
+        assert_eq!(ss.state_positions[2000], 0.46376812);
+        assert_eq!(ss.state_positions[5616], 0.99082565);
+
+        assert_eq!(ss.state_intervals[0], 28);
+        assert_eq!(ss.state_intervals[2000], 69);
+        assert_eq!(ss.state_intervals[5616], 109);
+    }
+
+    #[test]
+    fn test_transition_model() {
+        let ss = BeatStateSpace::new();
+        let (pointers, states, probabilities) = transition_model(&ss);
+
+        // Check how many entries are in the sparse representation
+        // (these values were popuated from inspecting the Python object)
+        assert_eq!(pointers.len(), 5618);
+        assert_eq!(states.len(), 8934);
+        assert_eq!(probabilities.len(), 8934);
+
+        // Check a few entries in each array
+        // (these values were popuated from inspecting the Python object)
+        assert_eq!(pointers[0], 0);
+        assert_eq!(pointers[2000], 3609);
+        assert_eq!(pointers[5617], 8934);
+
+        assert_eq!(states[0], 0);
+        assert_eq!(states[1000], 702);
+        assert_eq!(states[8933], 5615);
+
+        assert_eq!(probabilities[0], 0.971884);
+        assert_eq!(probabilities[1000], 0.010293);
+        assert_eq!(probabilities[8933], 1.0);
+    }
+
+    #[test]
+    fn test_observation_model() {
+        //let om = transition_model(&ss);
+    }
+
+    #[test]
+    fn test_om_density() {
     }
 
     #[ignore]
