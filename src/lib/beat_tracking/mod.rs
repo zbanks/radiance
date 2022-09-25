@@ -69,7 +69,7 @@ const MAX_INTERVAL: usize = 109;
 const N_STATES: usize = ((MAX_INTERVAL + 1) * MAX_INTERVAL - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2;
 const OBSERVATION_LAMBDA: f32 = 16.;
 const TRANSITION_LAMBDA: f32 = 100.;
-const PROBABILITY_EPSILON: f32 = f32::EPSILON;
+const PROBABILITY_EPSILON: f32 = f64::EPSILON as f32;
 
 mod ml_models;
 use ml_models::*;
@@ -388,14 +388,14 @@ fn transition_model(ss: &BeatStateSpace) -> (
     //       transition (with the tempi given as intervals)
     let to_states = &ss.first_states;
     let from_states = &ss.last_states;
-    let from_intervals: Vec<usize> = from_states.iter().map(|&s| ss.state_intervals[s]).collect();
-    let to_intervals: Vec<usize> = to_states.iter().map(|&s| ss.state_intervals[s]).collect();
+    let from_intervals: Vec<(usize, usize)> = from_states.iter().map(|&s| (s, ss.state_intervals[s])).collect();
+    let to_intervals: Vec<(usize, usize)> = to_states.iter().map(|&s| (s, ss.state_intervals[s])).collect();
 
     // exponential tempo transition
-    let transition_tempo_entries: Vec<(usize, usize, f32)> = iproduct!(from_intervals, to_intervals).map(|(from, to)| {(
-        from,
-        to,
-        (-TRANSITION_LAMBDA * ((to as f32) / (from as f32) - 1.).abs()).exp(),
+    let transition_tempo_entries: Vec<(usize, usize, f32)> = iproduct!(from_intervals, to_intervals).map(|((from_state, from_interval), (to_state, to_interval))| {(
+        from_state,
+        to_state,
+        (-TRANSITION_LAMBDA * ((to_interval as f32) / (from_interval as f32) - 1.).abs()).exp(),
     )}).filter(|&(_, _, val)| val > PROBABILITY_EPSILON).collect();
 
     // Normalize each row
@@ -419,7 +419,7 @@ fn transition_model(ss: &BeatStateSpace) -> (
         let mut rows: Vec<Vec<(usize, f32)>> = (0..N_STATES).map(|_| Vec::new()).collect();
 
         // Unpack entries into rows
-        for (row, col, value) in entries.into_iter() {
+        for (col, row, value) in entries.into_iter() {
             rows[row].push((col, value));
         }
 
@@ -493,6 +493,8 @@ struct HMMBeatTrackingProcessor {
 
     // The state of the HMM
     hmm_fwd_prev: DVector<f32>, // size = N_STATES
+
+    debounce_counter: usize,
 }
 
 impl HMMBeatTrackingProcessor {
@@ -507,11 +509,13 @@ impl HMMBeatTrackingProcessor {
             tm_probabilities,
             om_pointers,
             hmm_fwd_prev: hmm_initial_distribution(),
+            debounce_counter: MIN_INTERVAL,
         }
     }
 
     pub fn reset(&mut self) {
         self.hmm_fwd_prev = hmm_initial_distribution();
+        self.debounce_counter = MIN_INTERVAL;
     }
 
     /// Take in a an observation
@@ -557,7 +561,21 @@ impl HMMBeatTrackingProcessor {
             |(_, v1), (_, v2)| v1.partial_cmp(v2).unwrap()
         ).unwrap().0;
         let beat = self.om_pointers[most_probable_state] == 1;
-        beat
+
+        // forward path often reports multiple beats close together, thus report
+        // only beats more than the minimum interval apart
+        let filt_beat = beat && {
+            if self.debounce_counter == 0 {
+                self.debounce_counter = MIN_INTERVAL;
+                true // beat after sufficient spacing
+            } else {
+                false // beat in too quick succession
+            }
+        };
+        if self.debounce_counter > 0 {
+            self.debounce_counter -= 1;
+        }
+        filt_beat
     }
 }
 
@@ -985,6 +1003,7 @@ mod tests {
 
         // Check how many entries are in the sparse representation
         // (these values were popuated from inspecting the Python object)
+
         assert_eq!(pointers.len(), 5618);
         assert_eq!(states.len(), 8934);
         assert_eq!(probabilities.len(), 8934);
@@ -995,12 +1014,12 @@ mod tests {
         assert_eq!(pointers[2000], 3609);
         assert_eq!(pointers[5617], 8934);
 
-        assert_eq!(states[0], 0);
+        assert_eq!(states[0], 27);
         assert_eq!(states[1000], 702);
         assert_eq!(states[8933], 5615);
 
-        assert_eq!(probabilities[0], 0.971884);
-        assert_eq!(probabilities[1000], 0.010293);
+        assert_eq!(probabilities[0], 0.97188437);
+        assert_eq!(probabilities[1000], 0.010293146);
         assert_eq!(probabilities[8933], 1.0);
     }
 
@@ -1011,6 +1030,18 @@ mod tests {
 
     #[test]
     fn test_om_density() {
+    }
+
+    #[test]
+    fn test_hmm_initial_distribution() {
+    }
+
+    #[test]
+    fn test_hmm_forward() {
+    }
+
+    #[test]
+    fn test_hmm_beat_tracking_processor() {
     }
 
     #[ignore]
