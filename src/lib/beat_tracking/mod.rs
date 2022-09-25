@@ -42,7 +42,8 @@ use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
 use nalgebra::{DVector, DMatrix, SVector};
 use itertools::iproduct;
 
-const SAMPLE_RATE: usize = 44100;
+const SAMPLE_RATE: f32 = 44100.;
+const FPS: f32 = 100.;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
 const HOP_SIZE: usize = 441;
 const FRAME_SIZE: usize = 2048;
@@ -58,7 +59,14 @@ const N_FILTERS: usize = 81;
 const LOG_OFFSET: f32 = 1.;
 
 // HMM parameters:
-const N_STATES: usize = 1; // XXX TODO figure this out
+const MIN_BPM: f32 = 55.;
+const MAX_BPM: f32 = 215.;
+// MIN_ and MAX_INTERVAL must be set according to MAX_ and MIN_BPM
+// (see assertions in BeatStateSpace)
+const MIN_INTERVAL: usize = 28;
+const MAX_INTERVAL: usize = 109;
+// N_STATES = (MIN_INTERVAL..=MAX_INTERVAL).sum()
+const N_STATES: usize = ((MAX_INTERVAL + 1) * MAX_INTERVAL - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2;
 const OBSERVATION_LAMBDA: f32 = 16.;
 const TRANSITION_LAMBDA: f32 = 100.;
 const PROBABILITY_EPSILON: f32 = f32::EPSILON;
@@ -76,6 +84,7 @@ struct FramedSignalProcessor {
 
 impl FramedSignalProcessor {
     pub fn new() -> Self {
+        assert_eq!(HOP_SIZE, (SAMPLE_RATE / FPS).round() as usize, "Incorrect HOP_SIZE setting");
         Self {
             buffer: vec![0_i16; FRAME_SIZE * 2],
             write_pointer: 0,
@@ -191,7 +200,7 @@ fn note2freq(note: i32) -> f32 {
 
 // Returns the frequency corresponding to each entry in the spectrogram
 fn spectrogram_frequencies() -> DVector<f32> { // size = SPECTROGRAM_SIZE
-    DVector::from_fn(SPECTROGRAM_SIZE, |i, _| i as f32 * SAMPLE_RATE as f32 / (SPECTROGRAM_SIZE * 2) as f32)
+    DVector::from_fn(SPECTROGRAM_SIZE, |i, _| i as f32 * SAMPLE_RATE / (SPECTROGRAM_SIZE * 2) as f32)
 }
 
 // Returns the index of the closest entry in the spectrogram to the given frequency in Hz
@@ -243,7 +252,7 @@ pub fn gen_filterbank() -> DMatrix<f32> { // rows = N_FILTERS, cols = SPECTROGRA
     }
 
     // Check that N_FILTERS constant was set appropriately
-    assert_eq!(filter_index, N_FILTERS);
+    assert_eq!(filter_index, N_FILTERS, "N_FILTERS set incorrectly");
 
     filterbank
 }
@@ -311,17 +320,53 @@ impl SpectrogramDifferenceProcessor {
 }
 
 struct BeatStateSpace {
-    state_positions: Vec<f32>,
-    state_intervals: Vec<usize>,
+    state_positions: DVector<f32>, // size = N_STATES
+    state_intervals: DVector<usize>, // size = N_STATES
     first_states: Vec<usize>,
     last_states: Vec<usize>,
 }
 
 impl BeatStateSpace {
     fn new() -> Self {
-        panic!("not implemented");
-        //Self {
-        //}
+        // Check compile-time constants
+        assert_eq!(MIN_INTERVAL, (60. * FPS / MAX_BPM).round() as usize, "MIN_INTERVAL set incorrectly");
+        assert_eq!(MAX_INTERVAL, (60. * FPS / MIN_BPM).round() as usize, "MAX_INTERVAL set incorrectly");
+
+        // intervals = [MIN_INTERVAL, MIN_INTERVAL + 1, ..., MAX_INTERVAL - 1, MAX_INTERVAL]
+        let intervals: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL).collect();
+
+        // first_states = [0, intervals[0], intervals[1], ..., intervals[intervals.len() - 2]].cumsum()
+        let first_states: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL).map(|i|
+            ((i - 1) * i - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2
+        ).collect();
+
+        // last_states = intervals.cumsum() - 1
+        let last_states: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL).map(|i|
+            ((i + 1) * i - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2 - 1
+        ).collect();
+
+        let mut state_positions = DVector::<f32>::zeros(N_STATES);
+        let mut state_intervals = DVector::<usize>::zeros(N_STATES);
+
+        // each set of states from first..=last
+        // gets filled with a linear sweep of 0.0 to 1.0
+        // where state[first] corresponds to 0.0
+        // and state[last + 1] would correspond to 1.0
+        // (we stop slightly short of 1.0)
+        for (&interval, (&first, &last)) in intervals.iter().zip(first_states.iter().zip(last_states.iter())) {
+            let inverse_size = 1. / (last + 1 - first) as f32;
+            for i in first..=last {
+                state_positions[i] = (i - first) as f32 * inverse_size;
+                state_intervals[i] = interval;
+            }
+        }
+
+        Self {
+            state_positions,
+            state_intervals,
+            first_states,
+            last_states,
+        }
     }
 }
 
@@ -520,6 +565,7 @@ struct BeatTracker {
     filter_processor: FilteredSpectrogramProcessor,
     difference_processor: SpectrogramDifferenceProcessor,
     neural_networks: Vec<NeuralNetwork>,
+    hmm: HMMBeatTrackingProcessor,
 }
 
 impl BeatTracker {
@@ -530,23 +576,23 @@ impl BeatTracker {
             filter_processor: FilteredSpectrogramProcessor::new(),
             difference_processor: SpectrogramDifferenceProcessor::new(),
             neural_networks: models(),
+            hmm: HMMBeatTrackingProcessor::new(),
         }
     }
 
     pub fn process(
         &mut self,
         samples: &[i16]
-    ) -> Vec<f32> {
-        println!("Processing {:?} samples", samples.len());
+    ) -> Vec<bool> {
         let frames = self.framed_processor.process(samples);
-        println!("Yielded {:?} frames", frames.len());
         frames.iter().map(|frame| {
             let spectrogram = self.stft_processor.process(frame);
             let filtered = self.filter_processor.process(&spectrogram);
             let diff = self.difference_processor.process(&filtered);
-            let ensemble_results = self.neural_networks.iter_mut().map(|nn| nn.process(&diff));
-            let result = ensemble_results.sum::<f32>() / self.neural_networks.len() as f32;
-            result
+            let ensemble_activations = self.neural_networks.iter_mut().map(|nn| nn.process(&diff));
+            let activation = ensemble_activations.sum::<f32>() / self.neural_networks.len() as f32;
+            let beat = self.hmm.process(activation);
+            beat
         }).collect()
     }
 }
