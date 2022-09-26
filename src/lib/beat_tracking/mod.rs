@@ -1059,12 +1059,20 @@ mod tests {
         assert_eq!(header.bits_per_sample, 16);
         let data = data.try_into_sixteen().unwrap();
 
-        println!("WAV file has {:?} samples", data.len());
-
         // Instantiate a BeatTracker
         let mut bt = BeatTracker::new();
-        let result = bt.process(&data);
-        println!("{:?}", &result);
-        panic!();
+        let beats = bt.process(&data);
+
+        // These values were popuated from the Python library output
+        let expected_beat_indices = vec![
+            51,  147,  221,  293,  366,  439,  488,  535,  583,  631,  679,
+            727,  777,  825,  873,  921,  970, 1020, 1067, 1115, 1163, 1211,
+            1259, 1307, 1357, 1410, 1458, 1508, 1551, 1599, 1647, 1695, 1744,
+            1794, 1843, 1892, 1938, 1985, 2035, 2084, 2132, 2180
+        ];
+
+        for (i, &beat) in beats.iter().enumerate() {
+            assert_eq!(beat, expected_beat_indices.contains(&i));
+        }
     }
 }
