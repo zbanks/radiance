@@ -518,7 +518,7 @@ impl HMMBeatTrackingProcessor {
         self.debounce_counter = MIN_INTERVAL;
     }
 
-    /// Take in a an observation
+    /// Take in an observation
     /// Returns the forward variables for this timestep
     fn hmm_forward(
         &mut self,
@@ -1030,18 +1030,40 @@ mod tests {
 
     #[test]
     fn test_om_density() {
+        assert_eq!(om_densities(0.), SVector::<f32, 2>::from([0.06666667, 0.]));
+        assert_eq!(om_densities(0.5), SVector::<f32, 2>::from([0.033333335, 0.5]));
+        assert_eq!(om_densities(1.), SVector::<f32, 2>::from([0., 1.]));
     }
 
     #[test]
     fn test_hmm_initial_distribution() {
-    }
+        let dist = hmm_initial_distribution();
 
-    #[test]
-    fn test_hmm_forward() {
+        assert_eq!(dist[0], 0.00017803098);
+        assert_eq!(dist[2000], 0.00017803098);
+        assert_eq!(dist[5616], 0.00017803098);
     }
 
     #[test]
     fn test_hmm_beat_tracking_processor() {
+        let mut hmm = HMMBeatTrackingProcessor::new();
+
+        // Give the HMM some artificial activations
+        hmm.process(0.1);
+        hmm.process(0.2);
+        hmm.process(0.9);
+        hmm.process(0.7);
+        hmm.process(0.3);
+        let probs = &hmm.hmm_fwd_prev;
+
+        // Check the resulting probabilities
+        // (these values were popuated from giving the same input to Python)
+        assert_eq!(probs[0], 2.3026321e-7);
+        assert_eq!(probs[5404], 0.0068785422);
+        assert_eq!(probs[5191], 0.0068932814);
+        assert_eq!(probs[5297], 0.0069466503); // max
+        assert_eq!(probs[5616], 3.571157e-8);
+        assert_eq!(hmm.debounce_counter, MIN_INTERVAL - 5);
     }
 
     #[ignore]
