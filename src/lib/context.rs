@@ -256,7 +256,7 @@ impl Context {
         {
             self.global_props = graph.global_props().clone();
             let props = graph.global_props_mut();
-            props.time = (props.time + props.dt) % MAX_TIME;
+            props.time = (props.time + props.dt).rem_euclid(MAX_TIME);
         }
 
         // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets

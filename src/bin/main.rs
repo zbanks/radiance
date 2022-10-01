@@ -74,7 +74,7 @@ pub async fn run() {
     // RADIANCE, WOO
 
     // Make a Mir
-    let mut mir = Some(Mir::new());
+    let mut mir = Mir::new();
 
     // Make context
     let mut ctx = Context::new(device.clone(), queue.clone());
@@ -158,6 +158,8 @@ pub async fn run() {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
+                let music_info = mir.poll();
+                println!("music_info: {:?}", music_info);
                 ctx.update(&mut graph, &render_target_list);
 
                 // Paint
@@ -218,7 +220,6 @@ pub async fn run() {
                             },
                         ..
                     } => {
-                        mir.take().unwrap().stop();
                         *control_flow = ControlFlow::Exit
                     },
                     WindowEvent::Resized(physical_size) => {

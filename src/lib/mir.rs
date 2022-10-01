@@ -1,29 +1,70 @@
 use crate::beat_tracking::{BeatTracker, SAMPLE_RATE};
-use std::thread;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 use cpal;
 use cpal::traits::DeviceTrait;
+use std::sync::mpsc;
+use std::time;
+
+const MAX_TIME: f32 = 64.;
 
 /// A Mir (Music information retrieval) object
-/// handles listening to the music
+/// handles listening to the music via the system audio
 /// and generates a global timebase from the beats,
 /// along with other relevant real-time inputs based on the music
-/// such as the highs, mids, lows, and overall audio level.
+/// such as the low, mid, high, and overall audio level.
+/// It can be polled from the main thread at every frame,
+/// at which point it will compute and return the current time in beats,
+/// and the four audio levels.
+/// It has a buffer of about a second or so,
+/// but should be polled frequently to avoid dropped updates.
 pub struct Mir {
-    thread: thread::JoinHandle<()>,
-    shared: Arc<MirShared>,
+    stream: cpal::Stream,
+    receiver: mpsc::Receiver<Update>,
+    last_update: Update,
 }
 
-struct MirShared {
-    should_stop: AtomicBool,
+/// Updates sent over a queue
+/// from the audio thread to the main thread
+/// containing new data from which to produce MusicInfos
+/// when polled
+#[derive(Clone, Debug)]
+struct Update {
+    // For computing t in beats
+    // We will do a linear calculation
+    // of the form t = tempo * (x - wall_ref) + t_ref
+    // x (the wallclock time measured at the time of poll(); an Instant)
+    // and wall_ref (a reference Instant in wallclock time)
+    // yield (x - wall_ref) (a duration in seconds.)
+    // m is a tempo in beats per second.
+    wall_ref: time::Instant, // reference wall clock time
+    t_ref: f32, // reference t measured in beats
+    tempo: f32, // beats per second
+
+    // For computing the audio levels
+    low: f32,
+    mid: f32,
+    high: f32,
+    level: f32,
+}
+
+/// The structure returned from the Mir object when it is polled,
+/// containing real-time information about the audio.
+#[derive(Clone, Debug)]
+pub struct MusicInfo {
+    pub t: f32,
+    pub low: f32,
+    pub mid: f32,
+    pub high: f32,
+    pub level: f32,
 }
 
 impl Mir {
-    fn run(s: Arc<MirShared>) {
+    pub fn new() -> Self {
         // Make a new beat tracker
         let mut bt = BeatTracker::new();
+
+        // Make a communication channel to communicate with the audio thread
+        const MESSAGE_BUFFER_SIZE: usize = 16;
+        let (sender, receiver) = mpsc::sync_channel(MESSAGE_BUFFER_SIZE); 
 
         // Set up system audio
         use cpal::traits::HostTrait;
@@ -52,27 +93,65 @@ impl Mir {
             .expect("no supported config")
             .with_sample_rate(SAMPLE_RATE_CPAL);
 
-        println!("found supported config {:?}", config_range);
+        println!("MIR: Found supported audio config: {:?}", config_range);
         let mut config = config_range.config();
 
         if let cpal::SupportedBufferSize::Range {min, ..} = *config_range.buffer_size() {
             config.buffer_size = cpal::BufferSize::Fixed(MIN_USEFUL_BUFFER_SIZE.max(min));
         }
 
-        println!("choosing audio config {:?}", config);
+        println!("MIR: Choosing audio config: {:?}", config);
+
+        // This tempo will be quickly overridden as the audio thread
+        // starts tapping out the real beat
+        const DEFAULT_BPM: f32 = 120.;
+        let mut update = Update {
+            wall_ref: time::Instant::now(),
+            t_ref: 0.,
+            tempo: DEFAULT_BPM / 60.,
+            low: 0.,
+            mid: 0.,
+            high: 0.,
+            level: 0.,
+        };
 
         let mut process_audio_i16_mono = move |data: &[i16]| {
-            let (spectrogram, activation, beat) = match bt.process(data).pop() {
+            // Reduce all of the returned results into just the most recent
+            // Typically; only 0 or 1 results are returned per audio frame,
+            // but we do this reduction just to be safe,
+            // in case the audio frames returned are really large
+            let recent_result = bt.process(data).into_iter().reduce(|(_, _, beat_acc), (spectrogram, activation, beat)| (spectrogram, activation, beat_acc && beat));
+            let (spectrogram, activation, beat) = match recent_result {
                 Some(result) => result,
                 None => {return;},
             };
+
+            // Compute the update
+            // For now, simply set lows, mids, and highs to random spectrogram buckets
+            update.low = spectrogram[2];
+            update.mid = spectrogram[100];
+            update.high = spectrogram[800];
+            update.level = update.mid;
+
+            // Send an update back to the main thread
+            if let Err(err) = sender.try_send(update.clone()) {
+                match err {
+                    mpsc::TrySendError::Full(_) => {
+                        println!("MIR: buffer full; dropping update (polling too slow?)");
+                    },
+                    mpsc::TrySendError::Disconnected(_) => {
+                        println!("MIR: main thread disconnected; dropping update");
+                    },
+                }
+            };
+            // TODO: remove debug beat printing
             if beat {
                 println!("Beat");
             }
         };
 
         let process_error = move |err| {
-            println!("Audio error, {:?}", err)
+            println!("MIR: audio stream error: {:?}", err)
         };
 
         let stream = match (config_range.sample_format(), config.channels) {
@@ -110,29 +189,46 @@ impl Mir {
                 _ => panic!("unexpected sample format or channel count")
         }.expect("failed to open input stream");
 
-        while !s.should_stop.load(Ordering::Relaxed) {
-            //println!("Thread tick");
-            thread::sleep(Duration::from_millis(100));
+        Self {
+            stream,
+            receiver,
+            last_update: Update {
+                wall_ref: time::Instant::now(),
+                t_ref: 0.,
+                tempo: 0., // This will hold t at 0 until the audio thread starts up
+                low: 0.,
+                mid: 0.,
+                high: 0.,
+                level: 0.,
+            },
         }
-        println!("MIR thread exiting")
     }
 
-    pub fn stop(self) {
-        self.shared.should_stop.store(true, Ordering::Relaxed);
-        self.thread.join().expect("Mir thread panicked");
-    }
+    pub fn poll(&mut self) -> MusicInfo {
+        // Drain the receiver,
+        // applying updates from the audio thread
+        match self.receiver.try_iter().last() {
+            Some(update) => {self.last_update = update;},
+            None => {},
+        }
 
-    pub fn new() -> Self {
-        let shared = Arc::new(MirShared {
-            should_stop: AtomicBool::new(false),
-        });
-        let shared_clone = shared.clone();
-        let thread = thread::spawn(move || {
-            Self::run(shared_clone);
-        });
-        Mir {
-            thread,
-            shared,
+        // Compute t
+        let elapsed = self.last_update.wall_ref.elapsed().as_secs_f32();
+        let t = self.last_update.tempo * elapsed + self.last_update.t_ref;
+        let t = t.rem_euclid(MAX_TIME);
+
+        // Simply take the most recent values for the audio levels
+        let low = self.last_update.low;
+        let mid = self.last_update.mid;
+        let high = self.last_update.high;
+        let level = self.last_update.level;
+
+        MusicInfo {
+            t,
+            low,
+            mid,
+            high,
+            level,
         }
     }
 }
