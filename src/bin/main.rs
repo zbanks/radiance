@@ -9,7 +9,7 @@ use std::sync::Arc;
 use serde_json::json;
 use na::Vector2;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir};
 
 mod ui;
 
@@ -72,6 +72,9 @@ pub async fn run() {
     resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
 
     // RADIANCE, WOO
+
+    // Make a Mir
+    let mut mir = Some(Mir::new());
 
     // Make context
     let mut ctx = Context::new(device.clone(), queue.clone());
@@ -214,7 +217,10 @@ pub async fn run() {
                                 ..
                             },
                         ..
-                    } => *control_flow = ControlFlow::Exit,
+                    } => {
+                        mir.take().unwrap().stop();
+                        *control_flow = ControlFlow::Exit
+                    },
                     WindowEvent::Resized(physical_size) => {
                         size = *physical_size;
                         resize(size, &mut config, &device, &mut surface, &mut ui_renderer);

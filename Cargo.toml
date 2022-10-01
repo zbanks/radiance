@@ -28,6 +28,7 @@ base64 = "0.13"
 nalgebra = "0.31.0"
 rustfft = "6.0"
 itertools = "0.10"
+cpal = "0.14"
 
 [dev-dependencies]
 wav = "1.0"

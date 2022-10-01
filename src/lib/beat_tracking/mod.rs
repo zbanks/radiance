@@ -42,7 +42,7 @@ use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
 use nalgebra::{DVector, DMatrix, SVector};
 use itertools::iproduct;
 
-const SAMPLE_RATE: f32 = 44100.;
+pub const SAMPLE_RATE: f32 = 44100.;
 const FPS: f32 = 100.;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
 const HOP_SIZE: usize = 441;
@@ -83,13 +83,20 @@ struct FramedSignalProcessor {
 }
 
 impl FramedSignalProcessor {
+    const INITIAL_HOP_COUNTER: i32 = (HOP_SIZE as i32) - ((FRAME_SIZE / 2) as i32);
+
     pub fn new() -> Self {
         assert_eq!(HOP_SIZE, (SAMPLE_RATE / FPS).round() as usize, "Incorrect HOP_SIZE setting");
         Self {
             buffer: vec![0_i16; FRAME_SIZE * 2],
             write_pointer: 0,
-            hop_counter: (HOP_SIZE as i32) - ((FRAME_SIZE / 2) as i32),
+            hop_counter: Self::INITIAL_HOP_COUNTER,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.write_pointer = 0;
+        self.hop_counter = Self::INITIAL_HOP_COUNTER;
     }
 
     pub fn process(
@@ -580,7 +587,7 @@ impl HMMBeatTrackingProcessor {
 }
 
 // Put everything together
-struct BeatTracker {
+pub struct BeatTracker {
     framed_processor: FramedSignalProcessor,
     stft_processor: ShortTimeFourierTransformProcessor,
     filter_processor: FilteredSpectrogramProcessor,
@@ -601,10 +608,23 @@ impl BeatTracker {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.framed_processor.reset();
+        self.difference_processor.reset();
+        for nn in &mut self.neural_networks {
+            nn.reset();
+        }
+        self.hmm.reset();
+    }
+
     pub fn process(
         &mut self,
         samples: &[i16]
-    ) -> Vec<bool> {
+    ) -> Vec<(
+        DVector<f32>, // Spectrogram: size = SPECTROGRAM_SIZE
+        f32,          // Activation
+        bool,         // Beat
+    )> {
         let frames = self.framed_processor.process(samples);
         frames.iter().map(|frame| {
             let spectrogram = self.stft_processor.process(frame);
@@ -613,7 +633,7 @@ impl BeatTracker {
             let ensemble_activations = self.neural_networks.iter_mut().map(|nn| nn.process(&diff));
             let activation = ensemble_activations.sum::<f32>() / self.neural_networks.len() as f32;
             let beat = self.hmm.process(activation);
-            beat
+            (spectrogram, activation, beat)
         }).collect()
     }
 }
@@ -1093,7 +1113,7 @@ mod tests {
             1794, 1843, 1892, 1938, 1985, 2035, 2084, 2132, 2180
         ];
 
-        for (i, &beat) in beats.iter().enumerate() {
+        for (i, &(_, _, beat)) in beats.iter().enumerate() {
             assert_eq!(beat, expected_beat_indices.contains(&i));
         }
     }
