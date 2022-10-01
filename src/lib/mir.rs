@@ -5,6 +5,8 @@ use std::sync::mpsc;
 use std::time;
 
 const MAX_TIME: f32 = 64.;
+// Anticipate beats by this many seconds
+const LATENCY_COMPENSATION: f32 = 0.07;
 
 /// A Mir (Music information retrieval) object
 /// handles listening to the music via the system audio
@@ -17,7 +19,7 @@ const MAX_TIME: f32 = 64.;
 /// It has a buffer of about a second or so,
 /// but should be polled frequently to avoid dropped updates.
 pub struct Mir {
-    stream: cpal::Stream,
+    _stream: cpal::Stream,
     receiver: mpsc::Receiver<Update>,
     last_update: Update,
 }
@@ -46,6 +48,14 @@ struct Update {
     level: f32,
 }
 
+impl Update {
+    fn t(&self, wall: time::Instant) -> f32 {
+        let elapsed = (wall - self.wall_ref).as_secs_f32();
+        let t = self.tempo * elapsed + self.t_ref;
+        t.rem_euclid(MAX_TIME)
+    }
+}
+
 /// The structure returned from the Mir object when it is polled,
 /// containing real-time information about the audio.
 #[derive(Clone, Debug)]
@@ -55,6 +65,7 @@ pub struct MusicInfo {
     pub mid: f32,
     pub high: f32,
     pub level: f32,
+    // TODO: send full spectrogram
 }
 
 impl Mir {
@@ -121,12 +132,41 @@ impl Mir {
             // but we do this reduction just to be safe,
             // in case the audio frames returned are really large
             let recent_result = bt.process(data).into_iter().reduce(|(_, _, beat_acc), (spectrogram, activation, beat)| (spectrogram, activation, beat_acc && beat));
-            let (spectrogram, activation, beat) = match recent_result {
+            let (spectrogram, _activation, beat) = match recent_result {
                 Some(result) => result,
                 None => {return;},
             };
 
             // Compute the update
+            // If we detected a beat, recompute the linear parameters for t
+            if beat {
+                // In computing the new line, we want to preserve continuity;
+                // i.e. we want to pivot our line about the current point (wall clock time, current t in beats)
+                // So, we set wall_ref to right now, and t_ref to t(wall_ref)
+                let wall_ref = time::Instant::now();
+                let t_ref = update.t(wall_ref);
+
+                // Now we just have one remaining parameter to set: the slope (aka tempo)
+                // We set the slope of the line so that it intersects the point
+                // (expected wall clock time of next beat, current integer beat + 1)
+
+                // Inter-arrival time of the last two beats, in seconds
+                let last_beat_wall_period = (wall_ref - update.wall_ref).as_secs_f32();
+                // Next beat
+                let next_beat = t_ref.round() + 1.0;
+                // Amount of ground we need to cover, in number of beats
+                let beats_to_cover = next_beat - t_ref;
+                // Typically, beats_to_cover should be close to 1.0 if we're doing a good job.
+
+                let tempo = beats_to_cover / last_beat_wall_period;
+                // The beat tracker is good about not tapping beats too fast,
+                // so the denominator should never produce tempos that are too high.
+
+                update.wall_ref = wall_ref;
+                update.t_ref = t_ref;
+                update.tempo = tempo;
+            }
+
             // For now, simply set lows, mids, and highs to random spectrogram buckets
             update.low = spectrogram[2];
             update.mid = spectrogram[100];
@@ -144,10 +184,6 @@ impl Mir {
                     },
                 }
             };
-            // TODO: remove debug beat printing
-            if beat {
-                println!("Beat");
-            }
         };
 
         let process_error = move |err| {
@@ -190,7 +226,7 @@ impl Mir {
         }.expect("failed to open input stream");
 
         Self {
-            stream,
+            _stream: stream,
             receiver,
             last_update: Update {
                 wall_ref: time::Instant::now(),
@@ -206,16 +242,14 @@ impl Mir {
 
     pub fn poll(&mut self) -> MusicInfo {
         // Drain the receiver,
-        // applying updates from the audio thread
+        // applying the most recent update from the audio thread
         match self.receiver.try_iter().last() {
             Some(update) => {self.last_update = update;},
             None => {},
         }
 
         // Compute t
-        let elapsed = self.last_update.wall_ref.elapsed().as_secs_f32();
-        let t = self.last_update.tempo * elapsed + self.last_update.t_ref;
-        let t = t.rem_euclid(MAX_TIME);
+        let t = self.last_update.t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION));
 
         // Simply take the most recent values for the audio levels
         let low = self.last_update.low;
