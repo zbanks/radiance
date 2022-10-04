@@ -60,7 +60,8 @@ impl Update {
 /// containing real-time information about the audio.
 #[derive(Clone, Debug)]
 pub struct MusicInfo {
-    pub t: f32,
+    pub time: f32, // time in beats
+    pub tempo: f32, // beats per second
     pub low: f32,
     pub mid: f32,
     pub high: f32,
@@ -251,18 +252,13 @@ impl Mir {
         // Compute t
         let t = self.last_update.t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION));
 
-        // Simply take the most recent values for the audio levels
-        let low = self.last_update.low;
-        let mid = self.last_update.mid;
-        let high = self.last_update.high;
-        let level = self.last_update.level;
-
         MusicInfo {
-            t,
-            low,
-            mid,
-            high,
-            level,
+            time: t,
+            tempo: self.last_update.tempo,
+            low: self.last_update.low,
+            mid: self.last_update.mid,
+            high: self.last_update.high,
+            level: self.last_update.level,
         }
     }
 }
