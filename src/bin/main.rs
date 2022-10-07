@@ -1,13 +1,20 @@
 extern crate nalgebra as na;
 
-use winit::{
+use egui_winit::winit;
+
+use egui_winit::winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 use std::sync::Arc;
+use std::iter;
+use std::time::Instant;
 use serde_json::json;
 use na::Vector2;
+use ::egui::FontDefinitions;
+use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
+use egui_winit::{State};
 
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir};
 
@@ -70,6 +77,22 @@ pub async fn run() {
     // Surface configuration handled by resize()
     let mut ui_renderer = ui::Renderer::new(device.clone(), queue.clone());
     resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
+
+    // EGUI
+    // Make a egui context:
+    let mut egui_ctx = egui::Context::default();
+
+    // We use the egui_winit_platform crate as the platform.
+    let mut platform = egui_winit::State::new(&event_loop);
+
+    // We use the egui_wgpu_backend crate as the render backend.
+    let mut egui_rpass = RenderPass::new(&device, config.format, 1);
+
+    // Display the demo application that ships with egui.
+    let mut demo_app = egui_demo_lib::DemoWindows::default();
+
+    // For egui animations
+    let start_time = Instant::now();
 
     // RADIANCE, WOO
 
@@ -176,13 +199,23 @@ pub async fn run() {
                 graph.global_props_mut().dt = music_info.tempo * (1. / 60.);
                 ctx.update(&mut graph, &render_target_list);
 
+                // EGUI update
+
+                let raw_input = platform.take_egui_input(&window);
+                let full_output = egui_ctx.run(raw_input, |egui_ctx| {
+                    demo_app.ui(&egui_ctx);
+                });
+
+                platform.handle_platform_output(&window, &egui_ctx, full_output.platform_output);
+                let clipped_primitives = egui_ctx.tessellate(full_output.shapes); // create triangles to paint
+
                 // Paint
 
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Encoder"),
                 });
 
-                let results = ctx.paint(&mut encoder, preview_render_target_id);
+                //let results = ctx.paint(&mut encoder, preview_render_target_id);
 
                 // Get node states
                 let node_state_1 = if let NodeState::EffectNode(s) = ctx.node_state(node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
@@ -192,30 +225,66 @@ pub async fn run() {
                 let node_state_5 = if let NodeState::EffectNode(s) = ctx.node_state(node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
 
                 // Get node outputs
-                let preview_texture_1 = results.get(&node1_id).unwrap();
-                let preview_texture_2 = results.get(&node2_id).unwrap();
-                let preview_texture_3 = results.get(&node3_id).unwrap();
-                let preview_texture_4 = results.get(&node4_id).unwrap();
-                let preview_texture_5 = results.get(&node5_id).unwrap();
+                //let preview_texture_1 = results.get(&node1_id).unwrap();
+                //let preview_texture_2 = results.get(&node2_id).unwrap();
+                //let preview_texture_3 = results.get(&node3_id).unwrap();
+                //let preview_texture_4 = results.get(&node4_id).unwrap();
+                //let preview_texture_5 = results.get(&node5_id).unwrap();
+
+                // EGUI paint
+
+                let output = surface.get_current_texture().unwrap();
+                let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+                // Upload all resources for the GPU.
+                let screen_descriptor = ScreenDescriptor {
+                    size_in_pixels: [config.width, config.height],
+                    //pixels_per_point: window.scale_factor() as f32,
+                    pixels_per_point: 1.,
+                };
+                let tdelta: egui::TexturesDelta = full_output.textures_delta;
+                for (texture_id, image_delta) in tdelta.set.iter() {
+                    egui_rpass.update_texture(&device, &queue, *texture_id, image_delta);
+                }
+                egui_rpass.update_buffers(&device, &queue, &clipped_primitives, &screen_descriptor);
+
+                // Record all render passes.
+                egui_rpass
+                    .execute(
+                        &mut encoder,
+                        &view,
+                        &clipped_primitives,
+                        &screen_descriptor,
+                        Some(wgpu::Color::BLACK),
+                    );
+                // Submit the commands.
+                queue.submit(iter::once(encoder.finish()));
+
+                // Redraw egui
+                output.present();
+
+                for texture_id in tdelta.free.iter() {
+                    egui_rpass.free_texture(texture_id);
+                }
 
                 // Draw preview
-                ui_renderer.effect_node(node_state_1, preview_texture_1, &Vector2::<f32>::new(100., 320.), &Vector2::<f32>::new(230., 520.), &[100.], &[100.]);
-                ui_renderer.effect_node(node_state_2, preview_texture_2, &Vector2::<f32>::new(230., 320.), &Vector2::<f32>::new(360., 520.), &[100.], &[100.]);
-                ui_renderer.effect_node(node_state_3, preview_texture_3, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(230., 300.), &[100.], &[100.]);
-                ui_renderer.effect_node(node_state_4, preview_texture_4, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.), &[100.], &[100.]);
-                ui_renderer.effect_node(node_state_5, preview_texture_5, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 520.), &[100., 320.], &[210.]);
+                //ui_renderer.effect_node(node_state_1, preview_texture_1, &Vector2::<f32>::new(100., 320.), &Vector2::<f32>::new(230., 520.), &[100.], &[100.]);
+                //ui_renderer.effect_node(node_state_2, preview_texture_2, &Vector2::<f32>::new(230., 320.), &Vector2::<f32>::new(360., 520.), &[100.], &[100.]);
+                //ui_renderer.effect_node(node_state_3, preview_texture_3, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(230., 300.), &[100.], &[100.]);
+                //ui_renderer.effect_node(node_state_4, preview_texture_4, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.), &[100.], &[100.]);
+                //ui_renderer.effect_node(node_state_5, preview_texture_5, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 520.), &[100., 320.], &[210.]);
 
-                match ui_renderer.render(&surface, encoder) {
-                    Ok(_) => {}
-                    // Reconfigure the surface if lost
-                    Err(wgpu::SurfaceError::Lost) => {
-                        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
-                    },
-                    // The system is out of memory, we should probably quit
-                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                    // All other errors (Outdated, Timeout) should be resolved by the next frame
-                    Err(e) => eprintln!("{:?}", e),
-                }
+                //match ui_renderer.render(&surface, encoder) {
+                //    Ok(_) => {}
+                //    // Reconfigure the surface if lost
+                //    Err(wgpu::SurfaceError::Lost) => {
+                //        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
+                //    },
+                //    // The system is out of memory, we should probably quit
+                //    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                //    // All other errors (Outdated, Timeout) should be resolved by the next frame
+                //    Err(e) => eprintln!("{:?}", e),
+                //}
             }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually
@@ -226,6 +295,10 @@ pub async fn run() {
                 ref event,
                 window_id,
             } if window_id == window.id() => if !false { // XXX
+                // Pass the winit events to the EGUI platform integration.
+                if platform.on_event(&egui_ctx, &event) {
+                    return; // EGUI wants exclusive use of this event
+                }
                 match event {
                     WindowEvent::CloseRequested
                     | WindowEvent::KeyboardInput {

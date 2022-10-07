@@ -29,6 +29,10 @@ nalgebra = "0.31.0"
 rustfft = "6.0"
 itertools = "0.10"
 cpal = "0.14"
+egui = "0.19"
+egui-wgpu = "0.19"
+egui-winit = "0.19"
+egui_demo_lib = "0.19" # removeme
 
 [dev-dependencies]
 wav = "1.0"
