@@ -1,7 +1,6 @@
 extern crate nalgebra as na;
 
 use egui_winit::winit;
-
 use egui_winit::winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -9,23 +8,20 @@ use egui_winit::winit::{
 };
 use std::sync::Arc;
 use std::iter;
-use std::time::Instant;
 use serde_json::json;
-use na::Vector2;
-use ::egui::FontDefinitions;
 use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
-use egui_winit::{State};
 
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir};
 
 mod ui;
+use ui::VideoNodeTile;
 
-pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, ui_renderer: &mut ui::Renderer) {
+pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, screen_descriptor: &mut ScreenDescriptor) {
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
         config.height = new_size.height;
         surface.configure(device, config);
-        ui_renderer.resize(new_size.width, new_size.height);
+        screen_descriptor.size_in_pixels = [config.width, config.height]
     }
 }
 
@@ -74,25 +70,25 @@ pub async fn run() {
         present_mode: wgpu::PresentMode::Fifo,
     };
 
-    // Surface configuration handled by resize()
-    let mut ui_renderer = ui::Renderer::new(device.clone(), queue.clone());
-    resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
-
     // EGUI
+    let pixels_per_point = window.scale_factor() as f32;
+
+    let mut screen_descriptor = ScreenDescriptor {
+        size_in_pixels: [0, 0],
+        pixels_per_point: window.scale_factor() as f32,
+    };
+
+    resize(size, &mut config, &device, &mut surface, &mut screen_descriptor);
+
     // Make a egui context:
-    let mut egui_ctx = egui::Context::default();
+    let egui_ctx = egui::Context::default();
 
     // We use the egui_winit_platform crate as the platform.
     let mut platform = egui_winit::State::new(&event_loop);
+    platform.set_pixels_per_point(pixels_per_point);
 
     // We use the egui_wgpu_backend crate as the render backend.
     let mut egui_rpass = RenderPass::new(&device, config.format, 1);
-
-    // Display the demo application that ships with egui.
-    let mut demo_app = egui_demo_lib::DemoWindows::default();
-
-    // For egui animations
-    let start_time = Instant::now();
 
     // RADIANCE, WOO
 
@@ -101,6 +97,8 @@ pub async fn run() {
 
     // Make context
     let mut ctx = Context::new(device.clone(), queue.clone());
+
+    let mut my_value: f32 = 0.;
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
@@ -199,23 +197,12 @@ pub async fn run() {
                 graph.global_props_mut().dt = music_info.tempo * (1. / 60.);
                 ctx.update(&mut graph, &render_target_list);
 
-                // EGUI update
-
-                let raw_input = platform.take_egui_input(&window);
-                let full_output = egui_ctx.run(raw_input, |egui_ctx| {
-                    demo_app.ui(&egui_ctx);
-                });
-
-                platform.handle_platform_output(&window, &egui_ctx, full_output.platform_output);
-                let clipped_primitives = egui_ctx.tessellate(full_output.shapes); // create triangles to paint
-
                 // Paint
-
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Encoder"),
                 });
 
-                //let results = ctx.paint(&mut encoder, preview_render_target_id);
+                let results = ctx.paint(&mut encoder, preview_render_target_id);
 
                 // Get node states
                 let node_state_1 = if let NodeState::EffectNode(s) = ctx.node_state(node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
@@ -225,23 +212,42 @@ pub async fn run() {
                 let node_state_5 = if let NodeState::EffectNode(s) = ctx.node_state(node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
 
                 // Get node outputs
-                //let preview_texture_1 = results.get(&node1_id).unwrap();
-                //let preview_texture_2 = results.get(&node2_id).unwrap();
-                //let preview_texture_3 = results.get(&node3_id).unwrap();
-                //let preview_texture_4 = results.get(&node4_id).unwrap();
-                //let preview_texture_5 = results.get(&node5_id).unwrap();
+                let preview_texture_1 = results.get(&node1_id).unwrap();
+                let preview_texture_2 = results.get(&node2_id).unwrap();
+                let preview_texture_3 = results.get(&node3_id).unwrap();
+                let preview_texture_4 = results.get(&node4_id).unwrap();
+                let preview_texture_5 = results.get(&node5_id).unwrap();
+
+                let egui_preview_5_id = egui_rpass.register_native_texture(&device, &preview_texture_5.view, wgpu::FilterMode::Linear);
+
+                // EGUI update
+                let raw_input = platform.take_egui_input(&window);
+                let full_output = egui_ctx.run(raw_input, |egui_ctx| {
+                    egui::CentralPanel::default().show(&egui_ctx, |ui| {
+                        let resp = VideoNodeTile::new(&node1_id, egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)), &[100.], &[100.]).show(ui, |ui| {
+                            ui.heading("Hello...");
+                            // Preserve aspect ratio
+                            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center).with_cross_justify(true), |ui| {
+                                ui.add(egui::Slider::new(&mut my_value, 0.0..=1.0).show_value(false)); // TODO why does this slider not fill the horizontal space?
+                                ui.centered_and_justified(|ui| {
+                                    let image_size = ui.available_size();
+                                    let aspect = 1.;
+                                    let image_size = (image_size * egui::vec2(1., 1. / aspect)).min_elem() * egui::vec2(1., aspect);
+                                    ui.image(egui_preview_5_id, image_size);
+                                });
+                            });
+                        });
+                    });
+                });
+
+                platform.handle_platform_output(&window, &egui_ctx, full_output.platform_output);
+                let clipped_primitives = egui_ctx.tessellate(full_output.shapes); // create triangles to paint
 
                 // EGUI paint
-
                 let output = surface.get_current_texture().unwrap();
                 let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
                 // Upload all resources for the GPU.
-                let screen_descriptor = ScreenDescriptor {
-                    size_in_pixels: [config.width, config.height],
-                    //pixels_per_point: window.scale_factor() as f32,
-                    pixels_per_point: 1.,
-                };
                 let tdelta: egui::TexturesDelta = full_output.textures_delta;
                 for (texture_id, image_delta) in tdelta.set.iter() {
                     egui_rpass.update_texture(&device, &queue, *texture_id, image_delta);
@@ -255,12 +261,12 @@ pub async fn run() {
                         &view,
                         &clipped_primitives,
                         &screen_descriptor,
-                        Some(wgpu::Color::BLACK),
+                        Some(wgpu::Color {r: 0.1, g: 0.1, b: 0.1, a: 1.0}),
                     );
                 // Submit the commands.
                 queue.submit(iter::once(encoder.finish()));
 
-                // Redraw egui
+                // Draw
                 output.present();
 
                 for texture_id in tdelta.free.iter() {
@@ -314,11 +320,11 @@ pub async fn run() {
                     },
                     WindowEvent::Resized(physical_size) => {
                         size = *physical_size;
-                        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut screen_descriptor);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         size = **new_inner_size;
-                        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
+                        resize(size, &mut config, &device, &mut surface, &mut screen_descriptor);
                     }
                     _ => {}
                 }

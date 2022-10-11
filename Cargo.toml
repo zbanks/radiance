@@ -15,7 +15,6 @@ name = "radiance"
 path = "src/bin/main.rs"
 
 [dependencies]
-winit = "0.26"
 env_logger = "0.9"
 log = "0.4"
 wgpu = "0.13"
@@ -32,7 +31,6 @@ cpal = "0.14"
 egui = "0.19"
 egui-wgpu = "0.19"
 egui-winit = "0.19"
-egui_demo_lib = "0.19" # removeme
 
 [dev-dependencies]
 wav = "1.0"
