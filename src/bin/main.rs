@@ -11,7 +11,7 @@ use std::iter;
 use serde_json::json;
 use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir, NodeProps};
 
 mod ui;
 use ui::{Tile, EffectNodeTile};
@@ -105,7 +105,7 @@ pub async fn run() {
     let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
     let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
     let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
-    let node5_id: NodeId = NodeId::gen();
+    let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
     let mut graph: Graph = serde_json::from_value(json!({
         "nodes": [
             node1_id,
@@ -188,8 +188,6 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
-    let mut preview_5_intensity: f32 = 1.;
-
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -214,28 +212,85 @@ pub async fn run() {
                 let node_state_5 = if let NodeState::EffectNode(s) = ctx.node_state(node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
 
                 // Get node outputs
-                let preview_texture_1 = results.get(&node1_id).unwrap();
-                let preview_texture_2 = results.get(&node2_id).unwrap();
-                let preview_texture_3 = results.get(&node3_id).unwrap();
-                let preview_texture_4 = results.get(&node4_id).unwrap();
-                let preview_texture_5 = results.get(&node5_id).unwrap();
+                let mut preview = |node_id| {
+                    egui_rpass.register_native_texture(&device, &results.get(node_id).unwrap().view, wgpu::FilterMode::Linear)
+                };
 
-                let egui_preview_5_id = egui_rpass.register_native_texture(&device, &preview_texture_5.view, wgpu::FilterMode::Linear);
+                let preview_texture_1 = preview(&node1_id);
+                let preview_texture_2 = preview(&node2_id);
+                let preview_texture_3 = preview(&node3_id);
+                let preview_texture_4 = preview(&node4_id);
+                let preview_texture_5 = preview(&node5_id);
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        let resp = ui.add(EffectNodeTile::new(
-                            Tile::new(
-                                egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)),
-                                &[100.],
-                                &[100.]
-                            ),
-                            "Hello...",
-                            egui_preview_5_id,
-                            &mut preview_5_intensity,
-                        ));
+                        {
+                            let node_props_1 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            ui.add(EffectNodeTile::new(
+                                Tile::new(
+                                    egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)),
+                                    &[100.],
+                                    &[100.]
+                                ),
+                                &node_props_1.name,
+                                preview_texture_1,
+                                &mut node_props_1.intensity,
+                            ));
+                        }
+                        {
+                            let node_props_2 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node2_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            ui.add(EffectNodeTile::new(
+                                Tile::new(
+                                    egui::Rect::from_min_size(egui::pos2(230., 320.), egui::vec2(130., 200.)),
+                                    &[100.],
+                                    &[100.]
+                                ),
+                                &node_props_2.name,
+                                preview_texture_2,
+                                &mut node_props_2.intensity,
+                            ));
+                        }
+                        {
+                            let node_props_3 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node3_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            ui.add(EffectNodeTile::new(
+                                Tile::new(
+                                    egui::Rect::from_min_size(egui::pos2(100., 100.), egui::vec2(130., 200.)),
+                                    &[100.],
+                                    &[100.]
+                                ),
+                                &node_props_3.name,
+                                preview_texture_3,
+                                &mut node_props_3.intensity,
+                            ));
+                        }
+                        {
+                            let node_props_4 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            ui.add(EffectNodeTile::new(
+                                Tile::new(
+                                    egui::Rect::from_min_size(egui::pos2(230., 100.), egui::vec2(130., 200.)),
+                                    &[100.],
+                                    &[100.]
+                                ),
+                                &node_props_4.name,
+                                preview_texture_4,
+                                &mut node_props_4.intensity,
+                            ));
+                        }
+                        {
+                            let node_props_5 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node5_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            ui.add(EffectNodeTile::new(
+                                Tile::new(
+                                    egui::Rect::from_min_size(egui::pos2(360., 100.), egui::vec2(130., 420.)),
+                                    &[100., 320.],
+                                    &[210.]
+                                ),
+                                &node_props_5.name,
+                                preview_texture_5,
+                                &mut node_props_5.intensity,
+                            ));
+                        }
                     });
                 });
 
@@ -276,13 +331,6 @@ pub async fn run() {
                 for texture_id in tdelta.free.iter() {
                     egui_rpass.free_texture(texture_id);
                 }
-
-                // Draw preview
-                //ui_renderer.effect_node(node_state_1, preview_texture_1, &Vector2::<f32>::new(100., 320.), &Vector2::<f32>::new(230., 520.), &[100.], &[100.]);
-                //ui_renderer.effect_node(node_state_2, preview_texture_2, &Vector2::<f32>::new(230., 320.), &Vector2::<f32>::new(360., 520.), &[100.], &[100.]);
-                //ui_renderer.effect_node(node_state_3, preview_texture_3, &Vector2::<f32>::new(100., 100.), &Vector2::<f32>::new(230., 300.), &[100.], &[100.]);
-                //ui_renderer.effect_node(node_state_4, preview_texture_4, &Vector2::<f32>::new(230., 100.), &Vector2::<f32>::new(360., 300.), &[100.], &[100.]);
-                //ui_renderer.effect_node(node_state_5, preview_texture_5, &Vector2::<f32>::new(360., 100.), &Vector2::<f32>::new(490., 520.), &[100., 320.], &[210.]);
 
                 //match ui_renderer.render(&surface, encoder) {
                 //    Ok(_) => {}

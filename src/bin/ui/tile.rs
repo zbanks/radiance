@@ -57,7 +57,7 @@ impl<'a> Tile<'a> {
             response.request_focus();
         }
         self.paint(&ui, &response);
-        let mut content_ui = ui.child_ui(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down_justified(Align::Center));
+        let mut content_ui = ui.child_ui(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down(Align::Center));
         let inner = add_contents(&mut content_ui);
         InnerResponse::new(inner, response)
     }
