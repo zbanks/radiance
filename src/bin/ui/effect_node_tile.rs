@@ -1,17 +1,17 @@
 use egui::{Ui, RichText, TextureId, Response, vec2, Layout, Align, Slider, Widget, InnerResponse};
-use crate::ui::video_node_tile::VideoNodeTile;
+use crate::ui::tile::Tile;
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 
 pub struct EffectNodeTile<'a> {
-    tile: VideoNodeTile<'a>,
+    tile: Tile<'a>,
     title: RichText,
     preview_image: TextureId,
     intensity: &'a mut f32,
 }
 
 impl<'a> EffectNodeTile<'a> {
-    pub fn new(tile: VideoNodeTile<'a>, title: impl Into<RichText>, preview_image: TextureId, intensity: &'a mut f32) -> Self {
+    pub fn new(tile: Tile<'a>, title: impl Into<RichText>, preview_image: TextureId, intensity: &'a mut f32) -> Self {
         EffectNodeTile {
             tile,
             title: title.into(),
@@ -28,7 +28,8 @@ impl<'a> Widget for EffectNodeTile<'a> {
             ui.heading(title);
             // Preserve aspect ratio
             ui.with_layout(Layout::bottom_up(Align::Center).with_cross_justify(true), |ui| {
-                //ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)); // TODO why does this slider not fill the horizontal space?
+                ui.spacing_mut().slider_width = ui.available_width();
+                ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false));
                 ui.centered_and_justified(|ui| {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem() * vec2(1., PREVIEW_ASPECT_RATIO);

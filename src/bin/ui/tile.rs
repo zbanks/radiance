@@ -1,8 +1,7 @@
 use egui::{Id, Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2};
 use std::hash::Hash;
 
-pub struct VideoNodeTile<'a> {
-    id: Id,
+pub struct Tile<'a> {
     rect: Rect,
     selected: bool,
     inputs: &'a [f32],
@@ -13,16 +12,25 @@ fn cross(a: Vec2, b: Vec2) -> f32 {
     a.x * b.y - a.y * b.x
 }
 
+const FILL_DESELECTED: Color32 = Color32::BLACK;
+const FILL_SELECTED: Color32 = Color32::from_rgb(34, 0, 57);
+const STROKE_FOCUSED: Stroke = Stroke {
+    width: 2.,
+    color: Color32::LIGHT_GRAY,
+};
+const STROKE_BLURRED: Stroke = Stroke {
+    width: 1.,
+    color: Color32::GRAY,
+};
+
 const MARGIN_HORIZONTAL: f32 = 20.;
 const MARGIN_VERTICAL: f32 = 10.;
-const BORDER_THICKNESS: f32 = 2.;
 const CHEVRON_SIZE: f32 = 15.;
 const EPSILON: f32 = 0.0001;
 
-impl<'a> VideoNodeTile<'a> {
-   pub fn new(id_source: impl Hash, rect: Rect, inputs: &'a [f32], outputs: &'a [f32]) -> Self {
+impl<'a> Tile<'a> {
+   pub fn new(rect: Rect, inputs: &'a [f32], outputs: &'a [f32]) -> Self {
         Self {
-            id: Id::new(id_source),
             rect,
             selected: false,
             inputs,
@@ -49,16 +57,16 @@ impl<'a> VideoNodeTile<'a> {
             response.request_focus();
         }
         self.paint(&ui, &response);
-        //if ui.is_rect_visible(self.rect) {
-            //let visuals = ui.style().interact_selectable(&response, self.selected);
-           //ui.painter().rect(self.rect, 0., Color32::BLACK, Stroke::new(2., if response.has_focus() {Color32::LIGHT_GRAY} else {Color32::GRAY}));
-        //}
-        let mut content_ui = ui.child_ui_with_id_source(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down_justified(Align::Center), self.id);
+        let mut content_ui = ui.child_ui(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down_justified(Align::Center));
         let inner = add_contents(&mut content_ui);
         InnerResponse::new(inner, response)
     }
 
     fn paint(&self, ui: &Ui, response: &Response) {
+        if !ui.is_rect_visible(self.rect.expand(CHEVRON_SIZE)) {
+            return;
+        }
+
         // Figure out how big each chevron can be without interfering with the
         // rectangle boundaries or other chevrons
         let calc_chevron_sizes = |locations: &[f32]| {
@@ -112,9 +120,10 @@ impl<'a> VideoNodeTile<'a> {
         vertices.dedup_by(|a, b| (a.x - b.x).abs() < EPSILON && (a.y - b.y).abs() < EPSILON);
 
         // Push vertices of polygon
+        let fill = if self.selected { FILL_SELECTED } else { FILL_DESELECTED };
         let mut mesh = Mesh::with_texture(TextureId::default());
         for &pos in vertices.iter() {
-            mesh.colored_vertex(pos, Color32::BLACK);
+            mesh.colored_vertex(pos, fill);
         }
 
         // Triangulate with ear clipping
@@ -150,11 +159,12 @@ impl<'a> VideoNodeTile<'a> {
             }
             assert!(found_interior || !found_exterior, "Triangulation failed (malformed polygon?)");
         }
+
         // Paint fill
         ui.painter().add(mesh);
 
         // Paint stroke
-        let stroke = Stroke::new(BORDER_THICKNESS, if response.has_focus() {Color32::LIGHT_GRAY} else {Color32::GRAY});
+        let stroke = if response.has_focus() { STROKE_FOCUSED } else { STROKE_BLURRED };
         ui.painter().add(Shape::closed_line(vertices, stroke));
     }
 }

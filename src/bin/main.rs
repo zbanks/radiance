@@ -14,7 +14,9 @@ use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir};
 
 mod ui;
-use ui::{VideoNodeTile, EffectNodeTile};
+use ui::{Tile, EffectNodeTile};
+
+const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, screen_descriptor: &mut ScreenDescriptor) {
     if new_size.width > 0 && new_size.height > 0 {
@@ -225,8 +227,7 @@ pub async fn run() {
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
                         let resp = ui.add(EffectNodeTile::new(
-                            VideoNodeTile::new(
-                                &node1_id,
+                            Tile::new(
                                 egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)),
                                 &[100.],
                                 &[100.]
@@ -235,19 +236,6 @@ pub async fn run() {
                             egui_preview_5_id,
                             &mut preview_5_intensity,
                         ));
-                        //let resp = VideoNodeTile::new(&node1_id, egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)), &[100.], &[100.]).show(ui, |ui| {
-                        //    ui.heading("Hello...");
-                        //    // Preserve aspect ratio
-                        //    ui.with_layout(egui::Layout::bottom_up(egui::Align::Center).with_cross_justify(true), |ui| {
-                        //        ui.add(egui::Slider::new(&mut my_value, 0.0..=1.0).show_value(false)); // TODO why does this slider not fill the horizontal space?
-                        //        ui.centered_and_justified(|ui| {
-                        //            let image_size = ui.available_size();
-                        //            let aspect = 1.;
-                        //            let image_size = (image_size * egui::vec2(1., 1. / aspect)).min_elem() * egui::vec2(1., aspect);
-                        //            ui.image(egui_preview_5_id, image_size);
-                        //        });
-                        //    });
-                        //});
                     });
                 });
 
@@ -272,7 +260,12 @@ pub async fn run() {
                         &view,
                         &clipped_primitives,
                         &screen_descriptor,
-                        Some(wgpu::Color {r: 0.1, g: 0.1, b: 0.1, a: 1.0}),
+                        Some(wgpu::Color {
+                            r: BACKGROUND_COLOR.r() as f64 / 255.,
+                            g: BACKGROUND_COLOR.g() as f64 / 255.,
+                            b: BACKGROUND_COLOR.b() as f64 / 255.,
+                            a: BACKGROUND_COLOR.a() as f64 / 255.,
+                        }),
                     );
                 // Submit the commands.
                 queue.submit(iter::once(encoder.finish()));
