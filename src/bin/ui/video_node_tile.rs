@@ -1,4 +1,4 @@
-use egui::{Id, Vec2, Ui, vec2, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, pos2, TextureId, Mesh, Pos2, Shape};
+use egui::{Id, Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2};
 use std::hash::Hash;
 
 pub struct VideoNodeTile<'a> {
@@ -13,7 +13,8 @@ fn cross(a: Vec2, b: Vec2) -> f32 {
     a.x * b.y - a.y * b.x
 }
 
-const MARGIN: f32 = 10.;
+const MARGIN_HORIZONTAL: f32 = 20.;
+const MARGIN_VERTICAL: f32 = 10.;
 const BORDER_THICKNESS: f32 = 2.;
 const CHEVRON_SIZE: f32 = 15.;
 const EPSILON: f32 = 0.0001;
@@ -52,7 +53,7 @@ impl<'a> VideoNodeTile<'a> {
             //let visuals = ui.style().interact_selectable(&response, self.selected);
            //ui.painter().rect(self.rect, 0., Color32::BLACK, Stroke::new(2., if response.has_focus() {Color32::LIGHT_GRAY} else {Color32::GRAY}));
         //}
-        let mut content_ui = ui.child_ui_with_id_source(self.rect.shrink(MARGIN), Layout::top_down_justified(Align::Center), self.id);
+        let mut content_ui = ui.child_ui_with_id_source(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down_justified(Align::Center), self.id);
         let inner = add_contents(&mut content_ui);
         InnerResponse::new(inner, response)
     }

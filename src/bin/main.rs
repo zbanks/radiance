@@ -14,7 +14,7 @@ use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir};
 
 mod ui;
-use ui::VideoNodeTile;
+use ui::{VideoNodeTile, EffectNodeTile};
 
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, screen_descriptor: &mut ScreenDescriptor) {
     if new_size.width > 0 && new_size.height > 0 {
@@ -97,8 +97,6 @@ pub async fn run() {
 
     // Make context
     let mut ctx = Context::new(device.clone(), queue.clone());
-
-    let mut my_value: f32 = 0.;
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
@@ -188,6 +186,8 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
+    let mut preview_5_intensity: f32 = 1.;
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -224,19 +224,30 @@ pub async fn run() {
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        let resp = VideoNodeTile::new(&node1_id, egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)), &[100.], &[100.]).show(ui, |ui| {
-                            ui.heading("Hello...");
-                            // Preserve aspect ratio
-                            ui.with_layout(egui::Layout::bottom_up(egui::Align::Center).with_cross_justify(true), |ui| {
-                                ui.add(egui::Slider::new(&mut my_value, 0.0..=1.0).show_value(false)); // TODO why does this slider not fill the horizontal space?
-                                ui.centered_and_justified(|ui| {
-                                    let image_size = ui.available_size();
-                                    let aspect = 1.;
-                                    let image_size = (image_size * egui::vec2(1., 1. / aspect)).min_elem() * egui::vec2(1., aspect);
-                                    ui.image(egui_preview_5_id, image_size);
-                                });
-                            });
-                        });
+                        let resp = ui.add(EffectNodeTile::new(
+                            VideoNodeTile::new(
+                                &node1_id,
+                                egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)),
+                                &[100.],
+                                &[100.]
+                            ),
+                            "Hello...",
+                            egui_preview_5_id,
+                            &mut preview_5_intensity,
+                        ));
+                        //let resp = VideoNodeTile::new(&node1_id, egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)), &[100.], &[100.]).show(ui, |ui| {
+                        //    ui.heading("Hello...");
+                        //    // Preserve aspect ratio
+                        //    ui.with_layout(egui::Layout::bottom_up(egui::Align::Center).with_cross_justify(true), |ui| {
+                        //        ui.add(egui::Slider::new(&mut my_value, 0.0..=1.0).show_value(false)); // TODO why does this slider not fill the horizontal space?
+                        //        ui.centered_and_justified(|ui| {
+                        //            let image_size = ui.available_size();
+                        //            let aspect = 1.;
+                        //            let image_size = (image_size * egui::vec2(1., 1. / aspect)).min_elem() * egui::vec2(1., aspect);
+                        //            ui.image(egui_preview_5_id, image_size);
+                        //        });
+                        //    });
+                        //});
                     });
                 });
 
