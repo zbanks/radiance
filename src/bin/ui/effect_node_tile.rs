@@ -1,5 +1,6 @@
 use egui::{Ui, RichText, TextureId, Response, vec2, Layout, Align, Slider, Widget, InnerResponse};
 use crate::ui::tile::Tile;
+use radiance::{EffectNodeProps, EffectNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 
@@ -11,12 +12,12 @@ pub struct EffectNodeTile<'a> {
 }
 
 impl<'a> EffectNodeTile<'a> {
-    pub fn new(tile: Tile<'a>, title: impl Into<RichText>, preview_image: TextureId, intensity: &'a mut f32) -> Self {
+    pub fn new(tile: Tile<'a>, props: &'a mut EffectNodeProps, _state: &'a EffectNodeState, preview_image: TextureId) -> Self {
         EffectNodeTile {
             tile,
-            title: title.into(),
+            title: (&props.name).into(),
             preview_image,
-            intensity,
+            intensity: &mut props.intensity,
         }
     }
 }

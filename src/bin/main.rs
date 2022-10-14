@@ -205,11 +205,11 @@ pub async fn run() {
                 let results = ctx.paint(&mut encoder, preview_render_target_id);
 
                 // Get node states
-                let _node_state_1: &EffectNodeState = ctx.node_state(node1_id).unwrap().try_into().unwrap();
-                let _node_state_2: &EffectNodeState = ctx.node_state(node2_id).unwrap().try_into().unwrap();
-                let _node_state_3: &EffectNodeState = ctx.node_state(node3_id).unwrap().try_into().unwrap();
-                let _node_state_4: &EffectNodeState = ctx.node_state(node4_id).unwrap().try_into().unwrap();
-                let _node_state_5: &EffectNodeState = ctx.node_state(node5_id).unwrap().try_into().unwrap();
+                let node_state_1: &EffectNodeState = ctx.node_state(node1_id).unwrap().try_into().unwrap();
+                let node_state_2: &EffectNodeState = ctx.node_state(node2_id).unwrap().try_into().unwrap();
+                let node_state_3: &EffectNodeState = ctx.node_state(node3_id).unwrap().try_into().unwrap();
+                let node_state_4: &EffectNodeState = ctx.node_state(node4_id).unwrap().try_into().unwrap();
+                let node_state_5: &EffectNodeState = ctx.node_state(node5_id).unwrap().try_into().unwrap();
 
                 // Get node outputs
                 let mut preview = |node_id| {
@@ -234,9 +234,9 @@ pub async fn run() {
                                     &[100.],
                                     &[100.]
                                 ),
-                                &node_props_1.name,
+                                node_props_1,
+                                node_state_1,
                                 preview_texture_1,
-                                &mut node_props_1.intensity,
                             ));
                         }
                         {
@@ -247,9 +247,9 @@ pub async fn run() {
                                     &[100.],
                                     &[100.]
                                 ),
-                                &node_props_2.name,
+                                node_props_2,
+                                node_state_2,
                                 preview_texture_2,
-                                &mut node_props_2.intensity,
                             ));
                         }
                         {
@@ -260,9 +260,9 @@ pub async fn run() {
                                     &[100.],
                                     &[100.]
                                 ),
-                                &node_props_3.name,
+                                node_props_3,
+                                node_state_3,
                                 preview_texture_3,
-                                &mut node_props_3.intensity,
                             ));
                         }
                         {
@@ -273,9 +273,9 @@ pub async fn run() {
                                     &[100.],
                                     &[100.]
                                 ),
-                                &node_props_4.name,
+                                node_props_4,
+                                node_state_4,
                                 preview_texture_4,
-                                &mut node_props_4.intensity,
                             ));
                         }
                         {
@@ -286,9 +286,9 @@ pub async fn run() {
                                     &[100., 320.],
                                     &[210.]
                                 ),
-                                &node_props_5.name,
+                                node_props_5,
+                                node_state_5,
                                 preview_texture_5,
-                                &mut node_props_5.intensity,
                             ));
                         }
                     });
