@@ -74,6 +74,19 @@ pub enum NodeProps {
     EffectNode(EffectNodeProps),
 }
 
+/// This is a struct of props that are common to every node.
+pub struct CommonNodeProps {
+    pub input_count: u32,
+}
+
+impl From<&NodeProps> for CommonNodeProps {
+    fn from(props: &NodeProps) -> Self {
+        match props {
+            NodeProps::EffectNode(p) => p.into(),
+        }
+    }
+}
+
 /// An edge in the graph is identified by a source `NodeId` ("from"),
 /// a sink `NodeId` ("to"), and which input of the sink node to use ("input").
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, Hash, PartialEq)]

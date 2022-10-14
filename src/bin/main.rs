@@ -140,30 +140,35 @@ pub async fn run() {
             node1_id.to_string(): {
                 "type": "EffectNode",
                 "name": "purple.wgsl",
+                "input_count": 1,
                 "intensity": 1.0,
                 "frequency": 1.0
             },
             node2_id.to_string(): {
                 "type": "EffectNode",
                 "name": "droste.wgsl",
+                "input_count": 1,
                 "intensity": 1.0,
                 "frequency": 1.0
             },
             node3_id.to_string(): {
                 "type": "EffectNode",
                 "name": "wwave.wgsl",
+                "input_count": 1,
                 "intensity": 0.6,
                 "frequency": 0.25,
             },
             node4_id.to_string(): {
                 "type": "EffectNode",
                 "name": "zoomin.wgsl",
+                "input_count": 1,
                 "intensity": 0.3,
                 "frequency": 1.0
             },
             node5_id.to_string(): {
                 "type": "EffectNode",
                 "name": "uvmap.wgsl",
+                "input_count": 2,
                 "intensity": 0.2,
                 "frequency": 1.0
             }

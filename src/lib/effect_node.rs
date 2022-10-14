@@ -1,6 +1,7 @@
 use std::string::String;
 use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
+use crate::graph::CommonNodeProps;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use std::num::NonZeroU32;
@@ -14,6 +15,15 @@ pub struct EffectNodeProps {
     pub name: String,
     pub intensity: f32,
     pub frequency: f32,
+    pub input_count: u32,
+}
+
+impl From<&EffectNodeProps> for CommonNodeProps {
+    fn from(props: &EffectNodeProps) -> Self {
+        CommonNodeProps {
+            input_count: props.input_count,
+        }
+    }
 }
 
 pub enum EffectNodeState {
@@ -23,9 +33,10 @@ pub enum EffectNodeState {
 }
 
 pub struct EffectNodeStateReady {
-    // Info
+    // Cached props
     props: EffectNodeProps,
-    n_inputs: u32,
+
+    // Computed Info
     intensity_integral: f32,
 
     // GPU resources
@@ -58,7 +69,7 @@ struct Uniforms {
 
 fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
     let mut processed_source = String::new();
-    let mut n_inputs = 1;
+    let mut input_count = 1;
 
     for l in effect_source.lines() {
         let line_parts: Vec<&str> = l.split_whitespace().collect();
@@ -66,7 +77,7 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
             if line_parts.len() >= 2 {
                 if line_parts[1] == "inputCount" {
                     if line_parts.len() >= 3 {
-                        n_inputs = line_parts[2].parse::<u32>().map_err(|e| e.to_string())?;
+                        input_count = line_parts[2].parse::<u32>().map_err(|e| e.to_string())?;
                     } else {
                         return Err(String::from("inputCount missing argument"));
                     }
@@ -82,7 +93,7 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
         }
     }
 
-    Ok((processed_source, n_inputs))
+    Ok((processed_source, input_count))
 }
 
 impl EffectNodeState {
@@ -90,7 +101,11 @@ impl EffectNodeState {
         // Shader
         let effect_source = ctx.fetch_content(&props.name).expect("Failed to read effect shader file");
 
-        let (effect_source_processed, n_inputs) = preprocess_shader(&effect_source)?;
+        let (effect_source_processed, shader_input_count) = preprocess_shader(&effect_source)?;
+
+        if shader_input_count != props.input_count {
+            return Err("Shader input count does not match input count declared in graph".to_string());
+        }
 
         let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source_processed, EFFECT_FOOTER);
         let shader_module = ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -131,7 +146,7 @@ impl EffectNodeState {
                         view_dimension: wgpu::TextureViewDimension::D2,
                         sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     },
-                    count: NonZeroU32::new(n_inputs),
+                    count: NonZeroU32::new(props.input_count),
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 3, // iNoiseTex
@@ -151,7 +166,7 @@ impl EffectNodeState {
                 //        view_dimension: wgpu::TextureViewDimension::D2,
                 //        sample_type: wgpu::TextureSampleType::Uint,
                 //    },
-                //    count: NonZeroU32::new(n_inputs),
+                //    count: NonZeroU32::new(props.input_count),
                 //},
             ],
             label: Some(&format!("EffectNode {} bind group layout", props.name)),
@@ -225,7 +240,6 @@ impl EffectNodeState {
 
         Ok(EffectNodeStateReady {
             props: props.clone(),
-            n_inputs,
             intensity_integral: 0.,
             bind_group_layout,
             uniform_buffer,
@@ -305,6 +319,10 @@ impl EffectNodeState {
                     *self = EffectNodeState::Error_("EffectNode name changed after construction".to_string());
                     return;
                 }
+                if props.input_count != self_ready.props.input_count {
+                    *self = EffectNodeState::Error_("EffectNode input_count changed after construction".to_string());
+                    return;
+                }
 
                 Self::update_paint_states(self_ready, ctx);
 
@@ -344,7 +362,7 @@ impl EffectNodeState {
                 }
 
                 // Make an array of input textures
-                let input_binding: Vec<&wgpu::TextureView> = (0..self_ready.n_inputs).map(|i| {
+                let input_binding: Vec<&wgpu::TextureView> = (0..self_ready.props.input_count).map(|i| {
                     match inputs.get(i as usize) {
                         Some(Some(tex)) => tex.view.as_ref(),
                         _ => ctx.blank_texture().view.as_ref(),
