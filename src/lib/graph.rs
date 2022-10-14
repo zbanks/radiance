@@ -137,6 +137,8 @@ pub struct Graph {
     #[serde(skip_serializing)]
     input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
     #[serde(skip_serializing)]
+    start_nodes: Vec<NodeId>,
+    #[serde(skip_serializing)]
     topo_order: Vec<NodeId>,
 }
 
@@ -170,15 +172,15 @@ fn input_mapping(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option
 }
 
 /// Given a graph (encoded as a HashMap from each node to its inputs (dependencies)
-/// return the nodes in topological order.
-/// A vec of NodeId is also included for sort stability.
-fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Result<Vec<NodeId>, &'static str> {
+/// return the start nodes and return the nodes in topological order.
+/// An ordered array of NodeId is also passed in so that the sort can be stable.
+fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Result<(Vec<NodeId>, Vec<NodeId>), &'static str> {
 
     // Later parts of this function don't work properly
     // if the graph is totally empty.
     // Return successfully in this case.
     if graph.len() == 0 {
-        return Ok(Default::default());
+        return Ok((Vec::<NodeId>::new(), Vec::<NodeId>::new()));
     }
 
     // Find the "start" nodes: the nodes with no outputs
@@ -196,6 +198,9 @@ fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) ->
     if start_nodes.len() == 0 {
         return Err("Graph is cyclic")
     }
+    // Convert start_nodes to vec in a stable fashion
+    // (returned start_nodes will appear in same order as the parameter 'nodes')
+    let start_nodes: Vec<NodeId> = nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
 
     // Topo-sort using DFS
     // Use a "white-grey-black" node coloring approach
@@ -209,9 +214,9 @@ fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) ->
     }
 
     // Push "start" nodes onto the stack for DFS
-    let mut stack: Vec<NodeId> = nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
+    let mut stack: Vec<NodeId> = start_nodes.clone();
     let mut color = HashMap::<NodeId, Color>::from_iter(graph.keys().map(|x| (*x, Color::White)));
-    let mut result = Vec::<NodeId>::new();
+    let mut topo_ordered = Vec::<NodeId>::new();
 
     while let Some(&n) = stack.last() {
         let cn = color.get(&n).unwrap();
@@ -236,7 +241,7 @@ fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) ->
             Color::Grey => {
                 color.insert(n, Color::Black);
                 stack.pop();
-                result.push(n);
+                topo_ordered.push(n);
             },
             Color::Black => {
                 panic!("DFS error; visited node on the stack");
@@ -250,7 +255,7 @@ fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) ->
         return Err("Graph is cyclic");
     }
 
-    Ok(result)
+    Ok((start_nodes, topo_ordered))
 }
 
 impl<'de> Deserialize<'de> for Graph {
@@ -287,7 +292,7 @@ impl<'de> Deserialize<'de> for Graph {
                 let input_mapping = input_mapping(&x.nodes, &x.edges);
 
                 // Compute topo order (and detect cycles in the process)
-                let topo_order = topo_order(&x.nodes, &input_mapping)?;
+                let (start_nodes, topo_order) = topo_order(&x.nodes, &input_mapping)?;
 
                 Ok(Graph {
                     nodes: x.nodes,
@@ -295,6 +300,7 @@ impl<'de> Deserialize<'de> for Graph {
                     node_props: x.node_props,
                     global_props: x.global_props,
                     input_mapping,
+                    start_nodes,
                     topo_order,
                 })
             }
@@ -341,6 +347,11 @@ impl Graph {
     /// Get the global props for this graph
     pub fn global_props_mut(&mut self) -> &mut GlobalProps {
         &mut self.global_props
+    }
+
+    /// Iterate over the graph's nodes in topological order
+    pub fn start_nodes(&self) -> impl Iterator<Item=&NodeId> {
+        self.start_nodes.iter()
     }
 
     /// Iterate over the graph's nodes in topological order

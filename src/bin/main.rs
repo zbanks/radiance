@@ -14,7 +14,7 @@ use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, EffectNodeProps, EffectNodeState};
 
 mod ui;
-use ui::{Tile, EffectNodeTile};
+use ui::{Tile, EffectNodeTile, layout};
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
@@ -180,6 +180,8 @@ pub async fn run() {
     })).unwrap();
 
     println!("Graph: {}", serde_json::to_string(&graph).unwrap());
+
+    layout(&graph);
 
     // Make a render target
     let preview_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_LVrjzxhXrGU7SqFo+85zkw")).unwrap();
