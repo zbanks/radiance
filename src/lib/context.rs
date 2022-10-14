@@ -75,6 +75,8 @@ pub struct RenderTargetState {
 }
 
 /// Internal state and resources that is associated with a specific Node
+#[derive(derive_more::TryInto)]
+#[try_into(owned, ref, ref_mut)]
 pub enum NodeState {
     EffectNode(EffectNodeState),
 }

@@ -1,5 +1,4 @@
-use egui::{Id, Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2};
-use std::hash::Hash;
+use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2};
 
 pub struct Tile<'a> {
     rect: Rect,

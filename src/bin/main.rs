@@ -11,7 +11,7 @@ use std::iter;
 use serde_json::json;
 use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, NodeState, Mir, NodeProps};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, EffectNodeProps, EffectNodeState};
 
 mod ui;
 use ui::{Tile, EffectNodeTile};
@@ -205,11 +205,11 @@ pub async fn run() {
                 let results = ctx.paint(&mut encoder, preview_render_target_id);
 
                 // Get node states
-                let node_state_1 = if let NodeState::EffectNode(s) = ctx.node_state(node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
-                let node_state_2 = if let NodeState::EffectNode(s) = ctx.node_state(node2_id).unwrap() {s} else {panic!("Not EffectNode!")};
-                let node_state_3 = if let NodeState::EffectNode(s) = ctx.node_state(node3_id).unwrap() {s} else {panic!("Not EffectNode!")};
-                let node_state_4 = if let NodeState::EffectNode(s) = ctx.node_state(node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
-                let node_state_5 = if let NodeState::EffectNode(s) = ctx.node_state(node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                let _node_state_1: &EffectNodeState = ctx.node_state(node1_id).unwrap().try_into().unwrap();
+                let _node_state_2: &EffectNodeState = ctx.node_state(node2_id).unwrap().try_into().unwrap();
+                let _node_state_3: &EffectNodeState = ctx.node_state(node3_id).unwrap().try_into().unwrap();
+                let _node_state_4: &EffectNodeState = ctx.node_state(node4_id).unwrap().try_into().unwrap();
+                let _node_state_5: &EffectNodeState = ctx.node_state(node5_id).unwrap().try_into().unwrap();
 
                 // Get node outputs
                 let mut preview = |node_id| {
@@ -227,7 +227,7 @@ pub async fn run() {
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
                         {
-                            let node_props_1 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node1_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            let node_props_1: &mut EffectNodeProps = graph.node_props_mut(&node1_id).unwrap().try_into().unwrap();
                             ui.add(EffectNodeTile::new(
                                 Tile::new(
                                     egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)),
@@ -240,7 +240,7 @@ pub async fn run() {
                             ));
                         }
                         {
-                            let node_props_2 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node2_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            let node_props_2: &mut EffectNodeProps = graph.node_props_mut(&node2_id).unwrap().try_into().unwrap();
                             ui.add(EffectNodeTile::new(
                                 Tile::new(
                                     egui::Rect::from_min_size(egui::pos2(230., 320.), egui::vec2(130., 200.)),
@@ -253,7 +253,7 @@ pub async fn run() {
                             ));
                         }
                         {
-                            let node_props_3 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node3_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            let node_props_3: &mut EffectNodeProps = graph.node_props_mut(&node3_id).unwrap().try_into().unwrap();
                             ui.add(EffectNodeTile::new(
                                 Tile::new(
                                     egui::Rect::from_min_size(egui::pos2(100., 100.), egui::vec2(130., 200.)),
@@ -266,7 +266,7 @@ pub async fn run() {
                             ));
                         }
                         {
-                            let node_props_4 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node4_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            let node_props_4: &mut EffectNodeProps = graph.node_props_mut(&node4_id).unwrap().try_into().unwrap();
                             ui.add(EffectNodeTile::new(
                                 Tile::new(
                                     egui::Rect::from_min_size(egui::pos2(230., 100.), egui::vec2(130., 200.)),
@@ -279,7 +279,7 @@ pub async fn run() {
                             ));
                         }
                         {
-                            let node_props_5 = if let NodeProps::EffectNode(s) = graph.node_props_mut(&node5_id).unwrap() {s} else {panic!("Not EffectNode!")};
+                            let node_props_5: &mut EffectNodeProps = graph.node_props_mut(&node5_id).unwrap().try_into().unwrap();
                             ui.add(EffectNodeTile::new(
                                 Tile::new(
                                     egui::Rect::from_min_size(egui::pos2(360., 100.), egui::vec2(130., 420.)),

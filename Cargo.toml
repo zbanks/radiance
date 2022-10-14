@@ -31,6 +31,7 @@ cpal = "0.14"
 egui = "0.19"
 egui-wgpu = "0.19"
 egui-winit = "0.19"
+derive_more = "0.99"
 
 [dev-dependencies]
 wav = "1.0"

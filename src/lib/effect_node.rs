@@ -19,7 +19,7 @@ pub struct EffectNodeProps {
 pub enum EffectNodeState {
     Uninitialized,
     Ready(EffectNodeStateReady),
-    Error(String),
+    Error_(String), // ambiguous_associated_items error triggered by derive_more::TryInto without the _
 }
 
 pub struct EffectNodeStateReady {
@@ -293,7 +293,7 @@ impl EffectNodeState {
                 Self::Ready(new_obj_ready)
             },
             Err(msg) => {
-                Self::Error(msg)
+                Self::Error_(msg)
             }
         }
     }
@@ -302,7 +302,7 @@ impl EffectNodeState {
         match self {
             EffectNodeState::Ready(self_ready) => {
                 if props.name != self_ready.props.name {
-                    *self = EffectNodeState::Error("EffectNode name changed after construction".to_string());
+                    *self = EffectNodeState::Error_("EffectNode name changed after construction".to_string());
                     return;
                 }
 

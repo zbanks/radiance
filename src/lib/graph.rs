@@ -67,8 +67,9 @@ impl<'de> Deserialize<'de> for NodeId {
 /// NodeProps enumerates all possible node types,
 /// and delegates to their specific props struct,
 /// e.g. `EffectNodeProps`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, derive_more::TryInto)]
 #[serde(tag = "type")]
+#[try_into(owned, ref, ref_mut)]
 pub enum NodeProps {
     EffectNode(EffectNodeProps),
 }
