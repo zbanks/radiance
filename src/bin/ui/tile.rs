@@ -1,5 +1,5 @@
 use radiance::NodeId;
-use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2};
+use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id};
 
 /// A unique identifier for a visual tile in the UI.
 /// There may be multiple tiles per node,
@@ -64,7 +64,7 @@ impl Tile {
         ui: &mut Ui,
         add_contents: Box<dyn FnOnce(&mut Ui) -> R + 'c>,
     ) -> InnerResponse<R> {
-        let response = ui.allocate_rect(self.rect, Sense::click());
+        let response = ui.interact(self.rect, Id::new(self.id), Sense::click());
         if response.clicked() {
             response.request_focus();
         }
