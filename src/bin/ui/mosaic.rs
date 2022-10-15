@@ -19,8 +19,11 @@ pub struct TileId {
 /// The "instance" field tracks this.
 #[derive(Debug, Clone)]
 pub struct TilePlacement {
-    pub id: TileId,     // The tile ID (includes node ID)
-    pub rect: Rect,     // The visual rectangle to draw the node in
+    pub id: TileId,        // The tile ID (includes node ID)
+    pub rect: Rect,        // The visual rectangle to draw the node in
+    pub inputs: Vec<f32>,  // Locations to add input chevrons
+    pub outputs: Vec<f32>, // Locations to add output chevrons
+    // TODO: should this just be a Tile ?
 }
 
 /// Visually lay out a graph
@@ -78,6 +81,8 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
     println!("start_tiles: {:?}", start_tiles);
     println!("tree: {:?}", tree);
 
+    // We will start with the vertical geometry (heights and Y positions.)
+
     // To begin, lets make a mapping of TileId to input height
     // and initialize them all to the min input heights.
     let mut input_heights: HashMap<TileId, Vec<f32>> = tree.keys().map(|&tile_id| {
@@ -91,23 +96,13 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
         (tile_id, heights)
     }).collect();
 
-    // Now lets do widths.
-    // We will initialize these to NAN to make sure we don't miss anything.
-    let mut widths: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
-        (tile_id, f32::NAN)
-    }).collect();
-
-    // Finally, lets make mappings for X and Y coordinates.
-    // We will initialize these to NAN to make sure we don't miss anything.
-    let mut xs: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
-        (tile_id, f32::NAN)
-    }).collect();
-
+    // Also, lets make a mappings Y coordinates.
+    // We will initialize them to NAN to make sure we don't miss anything.
     let mut ys: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
         (tile_id, f32::NAN)
     }).collect();
 
-    // Now traverse each tree, computing heights and Y positions
+    // Now traverse each tree, computing heights and Y positions in three passes
     let mut y = 0_f32;
     for &start_tile in start_tiles.iter() {
         set_input_height_fwd(&start_tile, &tree, &mut input_heights);
@@ -116,9 +111,43 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
     }
     let total_height = y;
 
+    // We are done with the vertical geometry! Now for the horizontal geometry.
+
+    // Tile widths are not flexible in the same way the heights are--
+    // each node sets its own width.
+    // However, it has the option to make its width dependent on its computed height
+    // (that is why we do heights first.)
+    let widths: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
+        let height: f32 = input_heights.get(&tile_id).unwrap().iter().sum();
+        let props = graph.node_props(&tile_id.node).unwrap();
+        let width = match props {
+            NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(p, height),
+        };
+        (tile_id, width)
+    }).collect();
+
+    // We will initialize these to NAN like the ys
+    let mut xs: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
+        (tile_id, f32::NAN)
+    }).collect();
+
+    // X is simpler than Y, we only need one pass
+    for &start_tile in start_tiles.iter() {
+        set_horizontal_stackup(&start_tile, &tree, &widths, &mut xs, 0.);
+    }
+
+    // Well, three, if you count finding the total width and flipping the coordinate system
+    let total_width = *xs.values().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(&0.);
+    for x in xs.values_mut() {
+        *x = total_width - *x;
+    }
+
     println!("input heights: {:?}", input_heights);
-    println!("input ys: {:?}", ys);
+    println!("ys: {:?}", ys);
     println!("total height: {:?}", total_height);
+    println!("widths: {:?}", widths);
+    println!("xs: {:?}", xs);
+    println!("total width: {:?}", total_width);
 
     Vec::new() // XXX
 }
@@ -180,5 +209,20 @@ fn set_vertical_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileId>
             set_vertical_stackup(&child_tile, tree, input_heights, ys, &mut sub_y);
         }
         *y += my_input_height;
+    }
+}
+
+/// Working from roots to leaves, set the X position of each tile
+/// Note that we work in a coordinate system where X increases from right to left
+/// and we will flip it afterwards (once we know the total width)
+fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileId>>>, widths: &HashMap<TileId, f32>, xs: &mut HashMap<TileId, f32>, x: f32) {
+    let child_tiles = tree.get(tile).unwrap();
+
+    // Place the current tile at the current X plus the tile width
+    let sub_x = x + widths.get(tile).unwrap();
+    *xs.get_mut(tile).unwrap() = sub_x;
+
+    for &child_tile in child_tiles.iter().flatten() {
+        set_horizontal_stackup(&child_tile, tree, widths, xs, sub_x);
     }
 }
