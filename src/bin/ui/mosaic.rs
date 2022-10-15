@@ -1,33 +1,26 @@
 use radiance::{Graph, NodeId, NodeProps, CommonNodeProps};
-use egui::Rect;
+use egui::{pos2, vec2, Rect};
 use std::collections::HashMap;
+use crate::ui::tile::{Tile, TileId};
 use crate::ui::effect_node_tile::EffectNodeTile;
 
-/// A unique identifier for a visual tile in the UI.
-/// There may be multiple tiles per node,
-/// since the graph may be a DAG but is visualized as a tree.
-/// The "instance" field increments for each additional tile for the same NodeId.
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
-pub struct TileId {
-    pub node: NodeId,
-    pub instance: u32,
-}
+///// A struct describing a visual node in the graph.
+///// There may be multiple visual nodes per graph node,
+///// since the graph may be a DAG but is visualized as a tree.
+///// The "instance" field tracks this.
+//#[derive(Debug, Clone)]
+//pub struct TilePlacement {
+//    pub id: TileId,        // The tile ID (includes node ID)
+//    pub rect: Rect,        // The visual rectangle to draw the node in
+//    pub inputs: Vec<f32>,  // Locations to add input chevrons
+//    pub outputs: Vec<f32>, // Locations to add output chevrons
+//    // TODO: should this just be a Tile ?
+//}
 
-/// A struct describing a visual node in the graph.
-/// There may be multiple visual nodes per graph node,
-/// since the graph may be a DAG but is visualized as a tree.
-/// The "instance" field tracks this.
-#[derive(Debug, Clone)]
-pub struct TilePlacement {
-    pub id: TileId,        // The tile ID (includes node ID)
-    pub rect: Rect,        // The visual rectangle to draw the node in
-    pub inputs: Vec<f32>,  // Locations to add input chevrons
-    pub outputs: Vec<f32>, // Locations to add output chevrons
-    // TODO: should this just be a Tile ?
-}
+const MARGIN: f32 = 20.;
 
 /// Visually lay out a graph
-pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
+pub fn layout(graph: &Graph) -> Vec<Tile> {
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
     // Some nodes will be repeated.
@@ -78,14 +71,10 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
     // and `tree` (lookup table from tile -> child tiles)
     // and are ready to begin computing geometry.
 
-    println!("start_tiles: {:?}", start_tiles);
-    println!("tree: {:?}", tree);
-
     // We will start with the vertical geometry (heights and Y positions.)
 
-    // To begin, lets make a mapping of TileId to input height
-    // and initialize them all to the min input heights.
-    let mut input_heights: HashMap<TileId, Vec<f32>> = tree.keys().map(|&tile_id| {
+    // To begin, lets make a mapping of TileId to its minimum input heights.
+    let min_input_heights: HashMap<TileId, Vec<f32>> = tree.keys().map(|&tile_id| {
         let props = graph.node_props(&tile_id.node).unwrap();
         let heights = match props {
             NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(p),
@@ -93,10 +82,19 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
         // The length of the returned heights array should match the input count,
         // or be 1 if the input count is zero
         assert_eq!(heights.len() as u32, 1.max(CommonNodeProps::from(props).input_count));
+
+        // TODO: add margins
         (tile_id, heights)
     }).collect();
 
-    // Also, lets make a mappings Y coordinates.
+    // The actual input heights may be larger than this.
+    // Initialize the actual input heights to the min heights plus some margin.
+    let mut input_heights: HashMap<TileId, Vec<f32>> = min_input_heights.iter().map(|(&tile_id, heights)| {
+        // Each input port will split its margin half above and half below.
+        (tile_id, heights.iter().map(|h| h + MARGIN).collect())
+    }).collect();
+
+    // Also, lets make a mapping of Y coordinates.
     // We will initialize them to NAN to make sure we don't miss anything.
     let mut ys: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
         (tile_id, f32::NAN)
@@ -110,6 +108,56 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
         set_vertical_stackup(&start_tile, &tree, &input_heights, &mut ys, &mut y);
     }
     let total_height = y;
+
+    // In a fourth pass, shrink nodes that are unnecessarily tall.
+    // Kust because a node is connected to a tall input
+    // and is allocated a large amount of vertical space
+    // doesn't mean it has to take it all.
+
+    // We shrink the top-most and bottom-most input.
+    // We can't mess with the inner inputs without messing up the layout.
+    // This operation also won't affect the total height,
+    // since that height was allocated for a reason.
+
+    let mut inputs = HashMap::<TileId, Vec<f32>>::new();
+    let mut outputs = HashMap::<TileId, f32>::new();
+    let mut heights = HashMap::<TileId, f32>::new();
+
+    for &tile_id in tree.keys() {
+        let my_input_heights = input_heights.get(&tile_id).unwrap();
+        let my_min_input_heights = min_input_heights.get(&tile_id).unwrap();
+
+        // See how much we can shrink the top input
+        let shrinkage_top = 0.5 * (my_input_heights.first().unwrap() - my_min_input_heights.first().unwrap());
+        assert!(shrinkage_top >= 0.);
+
+        // See how much we can shrink the bottom input
+        let shrinkage_bottom = 0.5 * (my_input_heights.last().unwrap() - my_min_input_heights.last().unwrap());
+        assert!(shrinkage_bottom >= 0.);
+
+        // Convert input heights to chevron locations (midpoint of each input port)
+        let mut last_input_bottom_y = 0.;
+        let my_inputs: Vec<f32> = my_input_heights.iter().map(|&input_height| {
+            let input = last_input_bottom_y + 0.5 * input_height - shrinkage_top;
+            last_input_bottom_y += input_height;
+            input
+        }).collect();
+        // Remember this tile's total allocated height
+        let allocated_height = last_input_bottom_y;
+
+        // Compute and write the input chevron locations
+        inputs.insert(tile_id, my_inputs);
+
+        // Compute and write the output chevron location
+        outputs.insert(tile_id, 0.5 * allocated_height - shrinkage_top);
+
+        // Compute and write the new Y coordinate
+        let y = ys.get_mut(&tile_id).unwrap();
+        *y = *y + shrinkage_top;
+
+        // Compute and insert new height
+        heights.insert(tile_id, allocated_height - shrinkage_top - shrinkage_bottom);
+    }
 
     // We are done with the vertical geometry! Now for the horizontal geometry.
 
@@ -136,20 +184,36 @@ pub fn layout(graph: &Graph) -> Vec<TilePlacement> {
         set_horizontal_stackup(&start_tile, &tree, &widths, &mut xs, 0.);
     }
 
-    // Well, three, if you count finding the total width and flipping the coordinate system
-    let total_width = *xs.values().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(&0.);
+    // Well, three, if you count finding the total width and flipping the coordinate system.
+    // Note that for the horizontal layout, we don't add any margin per-tile like we do for the vertical layout.
+    // We only add 0.5 * MARGIN on the left and right of the entire mosaic.
+    let total_width = *xs.values().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(&0.) + MARGIN;
     for x in xs.values_mut() {
-        *x = total_width - *x;
+        *x = total_width - *x - MARGIN * 0.5;
     }
 
-    println!("input heights: {:?}", input_heights);
-    println!("ys: {:?}", ys);
-    println!("total height: {:?}", total_height);
-    println!("widths: {:?}", widths);
-    println!("xs: {:?}", xs);
-    println!("total width: {:?}", total_width);
+    // Collect and return the result
+    // TODO: draw in render order
+    let tiles: Vec<Tile> = tree.keys().map(|&tile_id| {
+        let &x = xs.get(&tile_id).unwrap();
+        let &y = ys.get(&tile_id).unwrap();
+        let &width = widths.get(&tile_id).unwrap();
+        let &height = heights.get(&tile_id).unwrap();
+        let my_inputs = inputs.get(&tile_id).unwrap().clone(); // Note: can probably .take instead of .clone
+        let &my_output = outputs.get(&tile_id).unwrap();
 
-    Vec::new() // XXX
+        // TODO make outputs a f32 instead of Vec<f32> in Tile
+        let my_outputs: Vec<f32> = [my_output].into();
+
+        Tile::new(
+            tile_id,
+            Rect::from_min_size(pos2(x, y), vec2(width, height)),
+            my_inputs,
+            my_outputs,
+        )
+    }).collect();
+
+    tiles
 }
 
 /// Working from leaves to roots, set each input height to be large enough

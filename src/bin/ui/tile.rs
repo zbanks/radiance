@@ -1,10 +1,22 @@
+use radiance::NodeId;
 use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2};
 
-pub struct Tile<'a> {
+/// A unique identifier for a visual tile in the UI.
+/// There may be multiple tiles per node,
+/// since the graph may be a DAG but is visualized as a tree.
+/// The "instance" field increments for each additional tile for the same NodeId.
+#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
+pub struct TileId {
+    pub node: NodeId,
+    pub instance: u32,
+}
+
+pub struct Tile {
+    id: TileId,
     rect: Rect,
+    inputs: Vec<f32>,
+    outputs: Vec<f32>,
     selected: bool,
-    inputs: &'a [f32],
-    outputs: &'a [f32],
 }
 
 fn cross(a: Vec2, b: Vec2) -> f32 {
@@ -27,13 +39,14 @@ const MARGIN_VERTICAL: f32 = 10.;
 const CHEVRON_SIZE: f32 = 15.;
 const EPSILON: f32 = 0.0001;
 
-impl<'a> Tile<'a> {
-   pub fn new(rect: Rect, inputs: &'a [f32], outputs: &'a [f32]) -> Self {
+impl Tile {
+   pub fn new(id: TileId, rect: Rect, inputs: Vec<f32>, outputs: Vec<f32>) -> Self {
         Self {
+            id,
             rect,
-            selected: false,
             inputs,
             outputs,
+            selected: false,
         }
     }
 
@@ -86,8 +99,8 @@ impl<'a> Tile<'a> {
             }).collect::<Vec<f32>>()
         };
 
-        let input_sizes = calc_chevron_sizes(self.inputs);
-        let output_sizes = calc_chevron_sizes(self.outputs);
+        let input_sizes = calc_chevron_sizes(&self.inputs);
+        let output_sizes = calc_chevron_sizes(&self.outputs);
 
         // Construct the polygon in CCW order starting with the top left
         let mut vertices = Vec::<Pos2>::new();

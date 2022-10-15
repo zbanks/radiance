@@ -181,8 +181,6 @@ pub async fn run() {
 
     println!("Graph: {}", serde_json::to_string(&graph).unwrap());
 
-    layout(&graph);
-
     // Make a render target
     let preview_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_LVrjzxhXrGU7SqFo+85zkw")).unwrap();
     let render_target_list: RenderTargetList = serde_json::from_value(json!({
@@ -229,10 +227,18 @@ pub async fn run() {
                 let preview_texture_4 = preview(&node4_id);
                 let preview_texture_5 = preview(&node5_id);
 
+                // Layout graph
+                let tiles = layout(&graph);
+
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
+                        for tile in tiles.into_iter() {
+                            tile.show(ui, |_ui| {
+                            });
+                        }
+/*
                         {
                             let node_props_1: &mut EffectNodeProps = graph.node_props_mut(&node1_id).unwrap().try_into().unwrap();
                             ui.add(EffectNodeTile::new(
@@ -298,6 +304,7 @@ pub async fn run() {
                                 preview_texture_5,
                             ));
                         }
+*/
                     });
                 });
 

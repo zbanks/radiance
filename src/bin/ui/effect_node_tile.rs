@@ -7,7 +7,7 @@ const NORMAL_HEIGHT: f32 = 200.;
 const NORMAL_WIDTH: f32 = 120.;
 
 pub struct EffectNodeTile<'a> {
-    tile: Tile<'a>,
+    tile: Tile,
     title: RichText,
     preview_image: TextureId,
     intensity: &'a mut f32,
@@ -28,7 +28,7 @@ impl<'a> EffectNodeTile<'a> {
 
     /// Creates a new visual tile
     /// (builder pattern; this is not a stateful UI component)
-    pub fn new(tile: Tile<'a>, props: &'a mut EffectNodeProps, _state: &'a EffectNodeState, preview_image: TextureId) -> Self {
+    pub fn new(tile: Tile, props: &'a mut EffectNodeProps, _state: &'a EffectNodeState, preview_image: TextureId) -> Self {
         EffectNodeTile {
             tile,
             title: (&props.name).into(),
