@@ -8,7 +8,7 @@ use std::fmt;
 /// A unique identifier that can be used to look up a `Node` in a `Graph`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
 /// they will be unique and never collide, even across different application instances. 
-#[derive(Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Eq, Hash, Clone, Copy, PartialEq, PartialOrd, Ord)]
 pub struct NodeId(u128);
 
 impl NodeId {

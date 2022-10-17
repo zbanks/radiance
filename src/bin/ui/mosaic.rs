@@ -1,26 +1,13 @@
 use radiance::{Graph, NodeId, NodeProps, CommonNodeProps};
-use egui::{pos2, vec2, Rect};
+use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2};
 use std::collections::HashMap;
 use crate::ui::tile::{Tile, TileId};
 use crate::ui::effect_node_tile::EffectNodeTile;
 
-///// A struct describing a visual node in the graph.
-///// There may be multiple visual nodes per graph node,
-///// since the graph may be a DAG but is visualized as a tree.
-///// The "instance" field tracks this.
-//#[derive(Debug, Clone)]
-//pub struct TilePlacement {
-//    pub id: TileId,        // The tile ID (includes node ID)
-//    pub rect: Rect,        // The visual rectangle to draw the node in
-//    pub inputs: Vec<f32>,  // Locations to add input chevrons
-//    pub outputs: Vec<f32>, // Locations to add output chevrons
-//    // TODO: should this just be a Tile ?
-//}
-
 const MARGIN: f32 = 20.;
 
-/// Visually lay out a graph
-pub fn layout(graph: &Graph) -> Vec<Tile> {
+/// Visually lay out the mosaic (collection of tiles)
+fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
     // Some nodes will be repeated.
@@ -193,7 +180,6 @@ pub fn layout(graph: &Graph) -> Vec<Tile> {
     }
 
     // Collect and return the result
-    // TODO: draw in render order
     let tiles: Vec<Tile> = tree.keys().map(|&tile_id| {
         let &x = xs.get(&tile_id).unwrap();
         let &y = ys.get(&tile_id).unwrap();
@@ -213,7 +199,7 @@ pub fn layout(graph: &Graph) -> Vec<Tile> {
         )
     }).collect();
 
-    tiles
+    (vec2(total_width, total_height), tiles)
 }
 
 /// Working from leaves to roots, set each input height to be large enough
@@ -289,4 +275,52 @@ fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileI
     for &child_tile in child_tiles.iter().flatten() {
         set_horizontal_stackup(&child_tile, tree, widths, xs, sub_x);
     }
+}
+
+/// State associated with the mosaic UI, to be preserved between frames,
+/// like which tiles are selected.
+/// Does not include anything associated with the graph (like intensities)
+/// or anything already tracked separately by egui (like focus)
+/// TODO: store this in egui::Memory
+pub struct MosaicState {
+}
+
+impl MosaicState {
+    pub fn new() -> Self {
+        MosaicState {}
+    }
+}
+
+pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, state: &mut MosaicState) -> Response {
+    // Lay out the mosaic
+    let (layout_size, tiles) = layout(&graph);
+    // Note that the layout function returns tiles that all the way to (0, 0)
+    // and they must be further offset for the UI region we are allocated
+
+    let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense {click: false, drag: false, focusable: false});
+
+    // Apply focus and offset
+    let offset = mosaic_rect.min - Pos2::ZERO;
+    let mut tiles: Vec<Tile> = tiles.into_iter().map(|tile| {
+        let focused = ui.ctx().memory().has_focus(tile.ui_id());
+        tile.with_offset(offset).with_focus(focused)
+    }).collect();
+
+    // Sort
+    tiles.sort_by_key(|tile| tile.draw_order());
+
+    for tile in tiles.into_iter() {
+
+        let InnerResponse { inner, response } = tile.with_offset(mosaic_rect.min - Pos2::ZERO).show(ui, |_ui| {
+        });
+
+        if response.clicked() {
+            response.request_focus();
+        }
+    }
+    mosaic_response
+}
+
+pub fn mosaic<'a>(graph: &'a mut Graph, state: &'a mut MosaicState) -> impl Widget + 'a {
+    move |ui: &mut Ui| mosaic_ui(ui, graph, state)
 }

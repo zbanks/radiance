@@ -14,7 +14,7 @@ use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, EffectNodeProps, EffectNodeState};
 
 mod ui;
-use ui::{Tile, EffectNodeTile, layout};
+use ui::{Tile, EffectNodeTile, mosaic, MosaicState};
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
@@ -193,6 +193,8 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
+    let mut mosaic_state = MosaicState::new();
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -227,17 +229,11 @@ pub async fn run() {
                 let preview_texture_4 = preview(&node4_id);
                 let preview_texture_5 = preview(&node5_id);
 
-                // Layout graph
-                let tiles = layout(&graph);
-
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        for tile in tiles.into_iter() {
-                            tile.show(ui, |_ui| {
-                            });
-                        }
+                        ui.add(mosaic(&mut graph, &mut mosaic_state));
 /*
                         {
                             let node_props_1: &mut EffectNodeProps = graph.node_props_mut(&node1_id).unwrap().try_into().unwrap();

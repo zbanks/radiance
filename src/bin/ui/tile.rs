@@ -1,22 +1,38 @@
 use radiance::NodeId;
-use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, Response, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id};
+use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id};
 
 /// A unique identifier for a visual tile in the UI.
 /// There may be multiple tiles per node,
 /// since the graph may be a DAG but is visualized as a tree.
 /// The "instance" field increments for each additional tile for the same NodeId.
-#[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Clone, Copy)]
 pub struct TileId {
     pub node: NodeId,
     pub instance: u32,
 }
 
+/// A UI element representing an empty tile
+/// (not stateful; builder pattern)
 pub struct Tile {
     id: TileId,
+    ui_id: Id,
     rect: Rect,
     inputs: Vec<f32>,
     outputs: Vec<f32>,
+    focused: bool,
     selected: bool,
+}
+
+/// An enum that identifies appropriate draw order for tiles
+/// (to sort the result)
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+enum DrawOrder {
+    // Bottom
+    Normal,         // Normal tile in the mosaic
+    Focused,        // Normal tile in the mosaic with focus (needs to be drawn above surrounding normal tiles)
+    Lifted,         // Tile is being dragged & dropped (needs to be drawn on top of the mosaic)
+    LiftedFocused,  // Tile is being dragged & dropped and is focused (needs to be drawn on top of the surrounding lifted tiles)
+    // Top
 }
 
 fn cross(a: Vec2, b: Vec2) -> f32 {
@@ -43,16 +59,45 @@ impl Tile {
    pub fn new(id: TileId, rect: Rect, inputs: Vec<f32>, outputs: Vec<f32>) -> Self {
         Self {
             id,
+            ui_id: Id::new(id),
             rect,
             inputs,
             outputs,
+            focused: false,
             selected: false,
         }
     }
 
-    pub fn selected(mut self, selected: bool) -> Self {
+    pub fn with_focus(mut self, focused: bool) -> Self {
+        self.focused = focused;
+        self
+    }
+
+    pub fn with_selected(mut self, selected: bool) -> Self {
         self.selected = selected;
         self
+    }
+
+    pub fn with_offset(mut self, offset: Vec2) -> Self {
+        self.rect = self.rect.translate(offset);
+        self
+    }
+
+    pub fn id(&self) -> TileId {
+        self.id
+    }
+
+    pub fn draw_order(&self) -> impl Ord {
+        let draw_order = match self.focused {
+            false => DrawOrder::Normal,
+            true => DrawOrder::Focused,
+        };
+
+        (draw_order, self.id)
+    }
+
+    pub fn ui_id(&self) -> Id {
+        self.ui_id
     }
 
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
@@ -64,17 +109,14 @@ impl Tile {
         ui: &mut Ui,
         add_contents: Box<dyn FnOnce(&mut Ui) -> R + 'c>,
     ) -> InnerResponse<R> {
-        let response = ui.interact(self.rect, Id::new(self.id), Sense::click());
-        if response.clicked() {
-            response.request_focus();
-        }
-        self.paint(&ui, &response);
+        let response = ui.interact(self.rect, self.ui_id, Sense::click());
+        self.paint(&ui);
         let mut content_ui = ui.child_ui(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down(Align::Center));
         let inner = add_contents(&mut content_ui);
         InnerResponse::new(inner, response)
     }
 
-    fn paint(&self, ui: &Ui, response: &Response) {
+    fn paint(&self, ui: &Ui) {
         if !ui.is_rect_visible(self.rect.expand(CHEVRON_SIZE)) {
             return;
         }
@@ -176,7 +218,7 @@ impl Tile {
         ui.painter().add(mesh);
 
         // Paint stroke
-        let stroke = if response.has_focus() { STROKE_FOCUSED } else { STROKE_BLURRED };
+        let stroke = if self.focused { STROKE_FOCUSED } else { STROKE_BLURRED };
         ui.painter().add(Shape::closed_line(vertices, stroke));
     }
 }
