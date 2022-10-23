@@ -6,6 +6,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [lib]
 name = "radiance"
 path = "src/lib/mod.rs"
@@ -13,6 +14,10 @@ path = "src/lib/mod.rs"
 [[bin]]
 name = "radiance"
 path = "src/bin/main.rs"
+
+[[bin]]
+name = "beat_tracking_test"
+path = "src/bin/beat_tracking_test.rs"
 
 [dependencies]
 env_logger = "0.9"
@@ -32,6 +37,13 @@ egui = "0.19"
 egui-wgpu = "0.19"
 egui-winit = "0.19"
 derive_more = "0.99"
+# Only needed for beat_tracking_test
+wav = "1.0"
+
+# There was a breaking change to `alsa` introduced in v0.6.1,
+# temporarily pin it to v0.6.0 until this has been fixed, see:
+# https://github.com/diwic/alsa-rs/issues/90
+alsa = "=0.6.0"
 
 [dev-dependencies]
 wav = "1.0"

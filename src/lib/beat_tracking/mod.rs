@@ -43,7 +43,7 @@ use nalgebra::{DVector, DMatrix, SVector};
 use itertools::iproduct;
 
 pub const SAMPLE_RATE: f32 = 44100.;
-const FPS: f32 = 100.;
+pub const FPS: f32 = 100.;
 // Hop size of 441 with sample rate of 44100 Hz gives an output frame rate of 100 Hz
 const HOP_SIZE: usize = 441;
 const FRAME_SIZE: usize = 2048;
