@@ -1,5 +1,5 @@
-use radiance::{Graph, NodeId, NodeProps, CommonNodeProps};
-use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2};
+use radiance::{Graph, NodeId, NodeProps, CommonNodeProps, NodeState};
+use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId};
 use std::collections::HashMap;
 use crate::ui::tile::{Tile, TileId};
 use crate::ui::effect_node_tile::EffectNodeTile;
@@ -8,6 +8,9 @@ const MARGIN: f32 = 20.;
 
 /// Visually lay out the mosaic (collection of tiles)
 fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
+    // TODO: take, as input, a map NodeId to TileSizeDescriptors
+    // and use that instead of the `match` statement below
+
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
     // Some nodes will be repeated.
@@ -70,7 +73,6 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
         // or be 1 if the input count is zero
         assert_eq!(heights.len() as u32, 1.max(CommonNodeProps::from(props).input_count));
 
-        // TODO: add margins
         (tile_id, heights)
     }).collect();
 
@@ -291,7 +293,7 @@ impl MosaicState {
     }
 }
 
-pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, state: &mut MosaicState) -> Response {
+pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>, _ui_state: &mut MosaicState) -> Response {
     // Lay out the mosaic
     let (layout_size, tiles) = layout(&graph);
     // Note that the layout function returns tiles that all the way to (0, 0)
@@ -309,9 +311,17 @@ pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, state: &mut MosaicState) -> Res
     // Sort
     tiles.sort_by_key(|tile| tile.draw_order());
 
+    // Draw
     for tile in tiles.into_iter() {
+        let node_id = tile.id().node;
+        let node_state = node_states.get(&node_id).unwrap();
+        let &preview_image = preview_images.get(&node_id).unwrap();
+        let node_props = graph.node_props_mut(&node_id).unwrap();
 
-        let InnerResponse { inner, response } = tile.with_offset(mosaic_rect.min - Pos2::ZERO).show(ui, |_ui| {
+        let InnerResponse { inner, response } = tile.with_offset(mosaic_rect.min - Pos2::ZERO).show(ui, |ui| {
+            match node_props {
+                NodeProps::EffectNode(props) => EffectNodeTile::new(props, node_state.try_into().unwrap(), preview_image).add_contents(ui)
+            }
         });
 
         if response.clicked() {
@@ -321,6 +331,6 @@ pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, state: &mut MosaicState) -> Res
     mosaic_response
 }
 
-pub fn mosaic<'a>(graph: &'a mut Graph, state: &'a mut MosaicState) -> impl Widget + 'a {
-    move |ui: &mut Ui| mosaic_ui(ui, graph, state)
+pub fn mosaic<'a>(graph: &'a mut Graph, node_states: &'a HashMap<NodeId, NodeState>, preview_images: &'a HashMap<NodeId, TextureId>, ui_state: &'a mut MosaicState) -> impl Widget + 'a {
+    move |ui: &mut Ui| mosaic_ui(ui, graph, node_states, preview_images, ui_state)
 }

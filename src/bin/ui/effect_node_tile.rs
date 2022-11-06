@@ -7,7 +7,6 @@ const NORMAL_HEIGHT: f32 = 200.;
 const NORMAL_WIDTH: f32 = 120.;
 
 pub struct EffectNodeTile<'a> {
-    tile: Tile,
     title: RichText,
     preview_image: TextureId,
     intensity: &'a mut f32,
@@ -28,32 +27,27 @@ impl<'a> EffectNodeTile<'a> {
 
     /// Creates a new visual tile
     /// (builder pattern; this is not a stateful UI component)
-    pub fn new(tile: Tile, props: &'a mut EffectNodeProps, _state: &'a EffectNodeState, preview_image: TextureId) -> Self {
+    pub fn new(props: &'a mut EffectNodeProps, _state: &'a EffectNodeState, preview_image: TextureId) -> Self {
         EffectNodeTile {
-            tile,
             title: (&props.name).into(),
             preview_image,
             intensity: &mut props.intensity,
         }
     }
-}
 
-impl<'a> Widget for EffectNodeTile<'a> {
-    fn ui(self, ui: &mut Ui) -> Response {
-        let EffectNodeTile {tile, title, preview_image, intensity} = self;
-        let InnerResponse {inner: _, response} = tile.show(ui, |ui| {
-            ui.heading(title);
-            // Preserve aspect ratio
-            ui.with_layout(Layout::bottom_up(Align::Center).with_cross_justify(true), |ui| {
-                ui.spacing_mut().slider_width = ui.available_width();
-                ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false));
-                ui.centered_and_justified(|ui| {
-                    let image_size = ui.available_size();
-                    let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem() * vec2(1., PREVIEW_ASPECT_RATIO);
-                    ui.image(preview_image, image_size);
-                });
+    /// Render the contents of the EffectNodeTile (presumably into a Tile)
+    pub fn add_contents(self, ui: &mut Ui) {
+        let EffectNodeTile {title, preview_image, intensity} = self;
+        ui.heading(title);
+        // Preserve aspect ratio
+        ui.with_layout(Layout::bottom_up(Align::Center).with_cross_justify(true), |ui| {
+            ui.spacing_mut().slider_width = ui.available_width();
+            ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false));
+            ui.centered_and_justified(|ui| {
+                let image_size = ui.available_size();
+                let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem() * vec2(1., PREVIEW_ASPECT_RATIO);
+                ui.image(preview_image, image_size);
             });
         });
-        response
     }
 }

@@ -10,8 +10,9 @@ use std::sync::Arc;
 use std::iter;
 use serde_json::json;
 use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
+use std::collections::HashMap;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, EffectNodeProps, EffectNodeState};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, NodeState, NodeProps};
 
 mod ui;
 use ui::{Tile, EffectNodeTile, mosaic, MosaicState};
@@ -212,28 +213,32 @@ pub async fn run() {
                 let results = ctx.paint(&mut encoder, preview_render_target_id);
 
                 // Get node states
-                let node_state_1: &EffectNodeState = ctx.node_state(node1_id).unwrap().try_into().unwrap();
-                let node_state_2: &EffectNodeState = ctx.node_state(node2_id).unwrap().try_into().unwrap();
-                let node_state_3: &EffectNodeState = ctx.node_state(node3_id).unwrap().try_into().unwrap();
-                let node_state_4: &EffectNodeState = ctx.node_state(node4_id).unwrap().try_into().unwrap();
-                let node_state_5: &EffectNodeState = ctx.node_state(node5_id).unwrap().try_into().unwrap();
+                //let node_state_1: &EffectNodeState = ctx.node_state(node1_id).unwrap().try_into().unwrap();
+                //let node_state_2: &EffectNodeState = ctx.node_state(node2_id).unwrap().try_into().unwrap();
+                //let node_state_3: &EffectNodeState = ctx.node_state(node3_id).unwrap().try_into().unwrap();
+                //let node_state_4: &EffectNodeState = ctx.node_state(node4_id).unwrap().try_into().unwrap();
+                //let node_state_5: &EffectNodeState = ctx.node_state(node5_id).unwrap().try_into().unwrap();
 
-                // Get node outputs
-                let mut preview = |node_id| {
-                    egui_rpass.register_native_texture(&device, &results.get(node_id).unwrap().view, wgpu::FilterMode::Linear)
-                };
+                //let node_states: HashMap<NodeId, NodeState> = [node1_id, node2_id, node3_id, node4_id, node5_id].iter().map(|&node_id| {
+                //    (node_id, *ctx.node_state(node_id).unwrap())
+                //}).collect();
 
-                let preview_texture_1 = preview(&node1_id);
-                let preview_texture_2 = preview(&node2_id);
-                let preview_texture_3 = preview(&node3_id);
-                let preview_texture_4 = preview(&node4_id);
-                let preview_texture_5 = preview(&node5_id);
+                let preview_images: HashMap<NodeId, egui::TextureId> = [node1_id, node2_id, node3_id, node4_id, node5_id].iter().map(|&node_id| {
+                    let tex_id = egui_rpass.register_native_texture(&device, &results.get(&node_id).unwrap().view, wgpu::FilterMode::Linear);
+                    (node_id, tex_id)
+                }).collect();
+
+                //let preview_texture_1 = preview(&node1_id);
+                //let preview_texture_2 = preview(&node2_id);
+                //let preview_texture_3 = preview(&node3_id);
+                //let preview_texture_4 = preview(&node4_id);
+                //let preview_texture_5 = preview(&node5_id);
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        ui.add(mosaic(&mut graph, &mut mosaic_state));
+                        ui.add(mosaic(&mut graph, ctx.node_states(), &preview_images, &mut mosaic_state));
 /*
                         {
                             let node_props_1: &mut EffectNodeProps = graph.node_props_mut(&node1_id).unwrap().try_into().unwrap();

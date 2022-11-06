@@ -360,6 +360,11 @@ impl Context {
         fs::read_to_string(filename)
     }
 
+    /// Get all node states
+    pub fn node_states(&self) -> &HashMap<NodeId, NodeState> {
+        &self.node_states
+    }
+
     /// Get the state associated with a given node
     pub fn node_state(&self, id: NodeId) -> Option<&NodeState> {
         self.node_states.get(&id)
