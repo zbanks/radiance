@@ -320,7 +320,7 @@ pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, node_states: &HashMap<NodeId, N
 
         let InnerResponse { inner, response } = tile.with_offset(mosaic_rect.min - Pos2::ZERO).show(ui, |ui| {
             match node_props {
-                NodeProps::EffectNode(props) => EffectNodeTile::new(props, node_state.try_into().unwrap(), preview_image).add_contents(ui)
+                NodeProps::EffectNode(props) => EffectNodeTile::new(props, node_state.try_into().unwrap(), preview_image).add_contents(ui),
             }
         });
 

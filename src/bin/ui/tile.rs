@@ -109,9 +109,14 @@ impl Tile {
         ui: &mut Ui,
         add_contents: Box<dyn FnOnce(&mut Ui) -> R + 'c>,
     ) -> InnerResponse<R> {
-        let response = ui.interact(self.rect, self.ui_id, Sense::click());
+        let response = ui.interact(self.rect, self.ui_id(), Sense::click());
         self.paint(&ui);
-        let mut content_ui = ui.child_ui(self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)), Layout::top_down(Align::Center));
+
+        let mut content_ui = ui.child_ui_with_id_source(
+            self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)),
+            Layout::top_down(Align::Center),
+            self.ui_id(),
+        );
         let inner = add_contents(&mut content_ui);
         InnerResponse::new(inner, response)
     }

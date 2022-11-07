@@ -3,6 +3,7 @@ name = "radiance"
 version = "0.1.0"
 authors = ["Zach Banks <zjbanks@gmail.com>", "Eric Van Albert <eric@van.al>"]
 edition = "2021"
+default-run = "radiance"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -50,3 +51,6 @@ wav = "1.0"
 
 [profile.dev]
 opt-level = 1
+
+[patch.crates-io]
+egui = { git = "https://github.com/ervanalb/egui", rev = "16931c80" }
