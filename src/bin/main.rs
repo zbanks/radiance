@@ -9,7 +9,7 @@ use egui_winit::winit::{
 use std::sync::Arc;
 use std::iter;
 use serde_json::json;
-use egui_wgpu::renderer::{RenderPass, ScreenDescriptor};
+use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, NodeState, NodeProps};
@@ -71,6 +71,7 @@ pub async fn run() {
         width: size.width,
         height: size.height,
         present_mode: wgpu::PresentMode::Fifo,
+        alpha_mode: wgpu::CompositeAlphaMode::Auto,
     };
 
     // EGUI
@@ -91,7 +92,7 @@ pub async fn run() {
     platform.set_pixels_per_point(pixels_per_point);
 
     // We use the egui_wgpu_backend crate as the render backend.
-    let mut egui_rpass = RenderPass::new(&device, config.format, 1);
+    let mut egui_renderer = Renderer::new(&device, config.format, None, 1);
 
     // RADIANCE, WOO
 
@@ -224,7 +225,7 @@ pub async fn run() {
                 //}).collect();
 
                 let preview_images: HashMap<NodeId, egui::TextureId> = [node1_id, node2_id, node3_id, node4_id, node5_id].iter().map(|&node_id| {
-                    let tex_id = egui_rpass.register_native_texture(&device, &results.get(&node_id).unwrap().view, wgpu::FilterMode::Linear);
+                    let tex_id = egui_renderer.register_native_texture(&device, &results.get(&node_id).unwrap().view, wgpu::FilterMode::Linear);
                     (node_id, tex_id)
                 }).collect();
 
@@ -319,24 +320,38 @@ pub async fn run() {
                 // Upload all resources for the GPU.
                 let tdelta: egui::TexturesDelta = full_output.textures_delta;
                 for (texture_id, image_delta) in tdelta.set.iter() {
-                    egui_rpass.update_texture(&device, &queue, *texture_id, image_delta);
+                    egui_renderer.update_texture(&device, &queue, *texture_id, image_delta);
                 }
-                egui_rpass.update_buffers(&device, &queue, &clipped_primitives, &screen_descriptor);
+                egui_renderer.update_buffers(&device, &queue, &mut encoder, &clipped_primitives, &screen_descriptor);
 
-                // Record all render passes.
-                egui_rpass
-                    .execute(
-                        &mut encoder,
-                        &view,
-                        &clipped_primitives,
-                        &screen_descriptor,
-                        Some(wgpu::Color {
-                            r: BACKGROUND_COLOR.r() as f64 / 255.,
-                            g: BACKGROUND_COLOR.g() as f64 / 255.,
-                            b: BACKGROUND_COLOR.b() as f64 / 255.,
-                            a: BACKGROUND_COLOR.a() as f64 / 255.,
-                        }),
-                    );
+                // Record UI render pass.
+                {
+                    let mut egui_render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("EGUI Render Pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color {
+                                    r: BACKGROUND_COLOR.r() as f64 / 255.,
+                                    g: BACKGROUND_COLOR.g() as f64 / 255.,
+                                    b: BACKGROUND_COLOR.b() as f64 / 255.,
+                                    a: BACKGROUND_COLOR.a() as f64 / 255.,
+                                }),
+                                store: true,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                    });
+
+                    egui_renderer
+                        .render(
+                            &mut egui_render_pass,
+                            &clipped_primitives,
+                            &screen_descriptor,
+                        );
+                }
+
                 // Submit the commands.
                 queue.submit(iter::once(encoder.finish()));
 
@@ -344,7 +359,7 @@ pub async fn run() {
                 output.present();
 
                 for texture_id in tdelta.free.iter() {
-                    egui_rpass.free_texture(texture_id);
+                    egui_renderer.free_texture(texture_id);
                 }
 
                 //match ui_renderer.render(&surface, encoder) {
@@ -369,7 +384,7 @@ pub async fn run() {
                 window_id,
             } if window_id == window.id() => if !false { // XXX
                 // Pass the winit events to the EGUI platform integration.
-                if platform.on_event(&egui_ctx, &event) {
+                if platform.on_event(&egui_ctx, &event).consumed {
                     return; // EGUI wants exclusive use of this event
                 }
                 match event {

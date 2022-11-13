@@ -23,7 +23,7 @@ path = "src/bin/beat_tracking_test.rs"
 [dependencies]
 env_logger = "0.9"
 log = "0.4"
-wgpu = "0.13"
+wgpu = "0.14"
 pollster = "0.2"
 rand = "0.8"
 bytemuck = { version = "1.10", features = [ "derive" ] }
@@ -53,4 +53,6 @@ wav = "1.0"
 opt-level = 1
 
 [patch.crates-io]
-egui = { git = "https://github.com/ervanalb/egui", rev = "16931c80" }
+egui = { git = "https://github.com/emilk/egui", rev = "02e22dd" }
+egui-wgpu = { git = "https://github.com/emilk/egui", rev = "02e22dd" }
+egui-winit = { git = "https://github.com/emilk/egui", rev = "02e22dd" }
