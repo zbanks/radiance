@@ -53,6 +53,6 @@ wav = "1.0"
 opt-level = 1
 
 [patch.crates-io]
-egui = { git = "https://github.com/emilk/egui", rev = "02e22dd" }
-egui-wgpu = { git = "https://github.com/emilk/egui", rev = "02e22dd" }
-egui-winit = { git = "https://github.com/emilk/egui", rev = "02e22dd" }
+egui = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
+egui-wgpu = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
+egui-winit = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
