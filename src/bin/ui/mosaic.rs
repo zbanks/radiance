@@ -1,6 +1,8 @@
 use radiance::{Graph, NodeId, NodeProps, CommonNodeProps, NodeState};
-use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId};
-use std::collections::HashMap;
+use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId, Modifiers};
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
+use std::hash::Hash;
 use crate::ui::tile::{Tile, TileId};
 use crate::ui::effect_node_tile::EffectNodeTile;
 
@@ -283,17 +285,27 @@ fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileI
 /// like which tiles are selected.
 /// Does not include anything associated with the graph (like intensities)
 /// or anything already tracked separately by egui (like focus)
-/// TODO: store this in egui::Memory
-pub struct MosaicState {
+#[derive(Debug, Default)]
+struct MosaicMemory {
+    pub selected: HashSet<NodeId>,
 }
 
-impl MosaicState {
-    pub fn new() -> Self {
-        MosaicState {}
-    }
-}
+pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>) -> Response
+    where IdSource: Hash + std::fmt::Debug,
+{
+    // Generate an UI ID for the mosiac
+    let mosaic_id = ui.make_persistent_id(id_source);
 
-pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>, _ui_state: &mut MosaicState) -> Response {
+    // Load state from memory
+
+    let mosaic_memory = ui.ctx().memory().data.get_temp_mut_or_default::<Arc<Mutex<MosaicMemory>>>(mosaic_id).clone();
+
+    let mut mosaic_memory = mosaic_memory.lock().unwrap();
+
+    // Retain only selected nodes that still exist in the graph
+    let graph_nodes: HashSet<NodeId> = graph.iter_nodes().cloned().collect();
+    mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
+
     // Lay out the mosaic
     let (layout_size, tiles) = layout(&graph);
     // Note that the layout function returns tiles that all the way to (0, 0)
@@ -303,9 +315,12 @@ pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, node_states: &HashMap<NodeId, N
 
     // Apply focus and offset
     let offset = mosaic_rect.min - Pos2::ZERO;
+    let mut any_tile_focused = false;
     let mut tiles: Vec<Tile> = tiles.into_iter().map(|tile| {
         let focused = ui.ctx().memory().has_focus(tile.ui_id());
-        tile.with_offset(offset).with_focus(focused)
+        let selected = mosaic_memory.selected.contains(&tile.id().node);
+        any_tile_focused |= focused;
+        tile.with_offset(offset).with_focus(focused).with_selected(selected)
     }).collect();
 
     // Sort
@@ -325,12 +340,36 @@ pub fn mosaic_ui(ui: &mut Ui, graph: &mut Graph, node_states: &HashMap<NodeId, N
         });
 
         if response.clicked() {
+            // Focus the tile
             response.request_focus();
+
+            // Handle node selection
+            match ui.input().modifiers {
+                Modifiers { ctrl: true, .. } => {
+                    if mosaic_memory.selected.contains(&node_id) {
+                        mosaic_memory.selected.remove(&node_id);
+                    } else {
+                        mosaic_memory.selected.insert(node_id);
+                    }
+                },
+                _ => {
+                    mosaic_memory.selected.clear();
+                    mosaic_memory.selected.insert(node_id);
+                },
+            }
         }
     }
+
+    // Graph interactions
+    if any_tile_focused && ui.input().key_pressed(egui::Key::Delete) {
+        graph.delete_nodes(&mosaic_memory.selected);
+    }
+
     mosaic_response
 }
 
-pub fn mosaic<'a>(graph: &'a mut Graph, node_states: &'a HashMap<NodeId, NodeState>, preview_images: &'a HashMap<NodeId, TextureId>, ui_state: &'a mut MosaicState) -> impl Widget + 'a {
-    move |ui: &mut Ui| mosaic_ui(ui, graph, node_states, preview_images, ui_state)
+pub fn mosaic<'a, IdSource>(id_source: IdSource, graph: &'a mut Graph, node_states: &'a HashMap<NodeId, NodeState>, preview_images: &'a HashMap<NodeId, TextureId>) -> impl Widget + 'a
+    where IdSource: Hash + std::fmt::Debug + 'a,
+{
+    move |ui: &mut Ui| mosaic_ui(ui, id_source, graph, node_states, preview_images)
 }

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, NodeState, NodeProps};
 
 mod ui;
-use ui::{Tile, EffectNodeTile, mosaic, MosaicState};
+use ui::{Tile, EffectNodeTile, mosaic};
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
@@ -195,8 +195,6 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
-    let mut mosaic_state = MosaicState::new();
-
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -224,7 +222,7 @@ pub async fn run() {
                 //    (node_id, *ctx.node_state(node_id).unwrap())
                 //}).collect();
 
-                let preview_images: HashMap<NodeId, egui::TextureId> = [node1_id, node2_id, node3_id, node4_id, node5_id].iter().map(|&node_id| {
+                let preview_images: HashMap<NodeId, egui::TextureId> = graph.iter_nodes().map(|&node_id| {
                     let tex_id = egui_renderer.register_native_texture(&device, &results.get(&node_id).unwrap().view, wgpu::FilterMode::Linear);
                     (node_id, tex_id)
                 }).collect();
@@ -239,7 +237,7 @@ pub async fn run() {
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        ui.add(mosaic(&mut graph, ctx.node_states(), &preview_images, &mut mosaic_state));
+                        ui.add(mosaic("mosaic", &mut graph, ctx.node_states(), &preview_images));
 /*
                         {
                             let node_props_1: &mut EffectNodeProps = graph.node_props_mut(&node1_id).unwrap().try_into().unwrap();
