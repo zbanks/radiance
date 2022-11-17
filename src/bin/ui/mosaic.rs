@@ -320,7 +320,7 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
         let focused = ui.ctx().memory().has_focus(tile.ui_id());
         let selected = mosaic_memory.selected.contains(&tile.id().node);
         any_tile_focused |= focused;
-        tile.with_offset(offset).with_focus(focused).with_selected(selected)
+        tile.with_animation(ui.ctx()).with_offset(offset).with_focus(focused).with_selected(selected)
     }).collect();
 
     // Sort
