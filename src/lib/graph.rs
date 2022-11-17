@@ -4,7 +4,6 @@ use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 use serde::de::Error;
 use std::fmt;
-use std::mem::replace;
 
 /// A unique identifier that can be used to look up a `Node` in a `Graph`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
@@ -259,66 +258,72 @@ fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) ->
     Ok((start_nodes, topo_ordered))
 }
 
-#[derive(Deserialize)]
-struct UncheckedGraph {
-    nodes: Vec<NodeId>,
-    edges: Vec<Edge>,
-    node_props: HashMap<NodeId, NodeProps>,
-    global_props: GlobalProps,
-}
-
-impl TryFrom<UncheckedGraph> for Graph {
-    type Error = &'static str;
-
-    fn try_from(x: UncheckedGraph) -> Result<Self, Self::Error> {
-        let set1: HashSet<NodeId> = x.nodes.iter().cloned().collect();
-        let set2: HashSet<NodeId> = x.node_props.keys().cloned().collect();
-
-        // Ensure there are no duplicates in the list of NodeIds
-        if x.nodes.len() > set1.len() {
-            return Err("Node ID list has duplicates")
-        }
-
-        // Ensure the list of NodeIds matches the mapping of NodeIds to props
-        if set1.symmetric_difference(&set2).next().is_some() {
-            return Err("Node ID list does not match node_props mapping")
-        }
-
-        // Compute mapping from nodes to their inputs
-        let input_mapping = input_mapping(&x.nodes, &x.edges);
-
-        // Compute topo order (and detect cycles in the process)
-        let (start_nodes, topo_order) = topo_order(&x.nodes, &input_mapping)?;
-
-        Ok(Graph {
-            nodes: x.nodes,
-            edges: x.edges,
-            node_props: x.node_props,
-            global_props: x.global_props,
-            input_mapping,
-            start_nodes,
-            topo_order,
-        })
-    }
-}
-
 impl<'de> Deserialize<'de> for Graph {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
+        #[derive(Deserialize)]
+        struct UncheckedGraph {
+            nodes: Vec<NodeId>,
+            edges: Vec<Edge>,
+            node_props: HashMap<NodeId, NodeProps>,
+            global_props: GlobalProps,
+        }
+
+        impl TryFrom<UncheckedGraph> for Graph {
+            type Error = &'static str;
+
+            fn try_from(x: UncheckedGraph) -> Result<Self, Self::Error> {
+                let set1: HashSet<NodeId> = x.nodes.iter().cloned().collect();
+                let set2: HashSet<NodeId> = x.node_props.keys().cloned().collect();
+
+                // Ensure there are no duplicates in the list of NodeIds
+                if x.nodes.len() > set1.len() {
+                    return Err("Node ID list has duplicates")
+                }
+
+                // Ensure the list of NodeIds matches the mapping of NodeIds to props
+                if set1.symmetric_difference(&set2).next().is_some() {
+                    return Err("Node ID list does not match node_props mapping")
+                }
+
+                // Compute mapping from nodes to their inputs
+                let input_mapping = input_mapping(&x.nodes, &x.edges);
+
+                // Compute topo order (and detect cycles in the process)
+                let (start_nodes, topo_order) = topo_order(&x.nodes, &input_mapping)?;
+
+                Ok(Graph {
+                    nodes: x.nodes,
+                    edges: x.edges,
+                    node_props: x.node_props,
+                    global_props: x.global_props,
+                    input_mapping,
+                    start_nodes,
+                    topo_order,
+                })
+            }
+        }
+
         UncheckedGraph::deserialize(deserializer)?.try_into().map_err(D::Error::custom)
     }
 }
 
 impl Graph {
-    fn clone_unchecked(&self) -> UncheckedGraph {
-        UncheckedGraph {
-            nodes: self.nodes.clone(),
-            edges: self.edges.clone(),
-            node_props: self.node_props.clone(),
-            global_props: self.global_props.clone(),
-        }
+    /// Rebuilds the derived graph fields from the nodes and edges.
+    /// This is useful after directly editing the nodes and edges.
+    /// Panics if the graph is malformed (e.g. has cycles.)
+    fn rebuild(&mut self) {
+        // Compute mapping from nodes to their inputs
+        let input_mapping = input_mapping(&self.nodes, &self.edges);
+
+        // Compute topo order (and detect cycles in the process)
+        let (start_nodes, topo_order) = topo_order(&self.nodes, &input_mapping).unwrap();
+
+        self.input_mapping = input_mapping;
+        self.start_nodes = start_nodes;
+        self.topo_order = topo_order;
     }
 
     /// Iterate over the graph nodes, returning a reference to each NodeId
@@ -368,14 +373,9 @@ impl Graph {
 
     /// Delete nodes
     pub fn delete_nodes(&mut self, delete_ids: &HashSet<NodeId>) {
-        let mut graph: UncheckedGraph = self.clone_unchecked();
-
-        // TODO improve this function to do less unnecessary copying,
-        // and to add back in skip-edges so the graph doesn't totally break apart
-        graph.nodes.retain(|id| !delete_ids.contains(id));
-        graph.node_props.retain(|id, _| !delete_ids.contains(id));
-        graph.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
-
-        replace(self, graph.try_into().unwrap());
+        self.nodes.retain(|id| !delete_ids.contains(id));
+        self.node_props.retain(|id, _| !delete_ids.contains(id));
+        self.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
+        self.rebuild();
     }
 }
