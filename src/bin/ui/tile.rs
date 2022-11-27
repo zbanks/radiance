@@ -1,5 +1,5 @@
 use radiance::NodeId;
-use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id, Context};
+use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id};
 
 /// A unique identifier for a visual tile in the UI.
 /// There may be multiple tiles per node,
@@ -55,8 +55,6 @@ const MARGIN_VERTICAL: f32 = 10.;
 const CHEVRON_SIZE: f32 = 15.;
 const EPSILON: f32 = 0.0001;
 
-const ANIMATION_DURATION: f32 = 0.3;
-
 impl Tile {
    pub fn new(id: TileId, rect: Rect, inputs: Vec<f32>, outputs: Vec<f32>) -> Self {
         Self {
@@ -85,13 +83,8 @@ impl Tile {
         self
     }
 
-    pub fn with_animation(mut self, ctx: &Context) -> Self {
-        let Rect { min: Pos2 { x: mut min_x, y: mut min_y }, max: Pos2 { x: mut max_x, y: mut max_y } } = self.rect;
-        min_x = ctx.animate_value_with_time(self.ui_id.with("min_x"), min_x, ANIMATION_DURATION);
-        min_y = ctx.animate_value_with_time(self.ui_id.with("min_y"), min_y, ANIMATION_DURATION);
-        max_x = ctx.animate_value_with_time(self.ui_id.with("max_x"), max_x, ANIMATION_DURATION);
-        max_y = ctx.animate_value_with_time(self.ui_id.with("max_y"), max_y, ANIMATION_DURATION);
-        self.rect = Rect::from_min_max(pos2(min_x, min_y), pos2(max_x, max_y));
+    pub fn with_rect(mut self, rect: Rect) -> Self {
+        self.rect = rect;
         self
     }
 
@@ -110,6 +103,10 @@ impl Tile {
 
     pub fn ui_id(&self) -> Id {
         self.ui_id
+    }
+
+    pub fn rect(&self) -> Rect {
+        self.rect
     }
 
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {

@@ -1,5 +1,5 @@
 use radiance::{Graph, NodeId, NodeProps, CommonNodeProps, NodeState};
-use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId, Modifiers};
+use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId, Modifiers, IdMap, InputState};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::hash::Hash;
@@ -7,6 +7,7 @@ use crate::ui::tile::{Tile, TileId};
 use crate::ui::effect_node_tile::EffectNodeTile;
 
 const MARGIN: f32 = 20.;
+const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
 
 /// Visually lay out the mosaic (collection of tiles)
 fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
@@ -281,12 +282,85 @@ fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileI
     }
 }
 
+// We implement a custom AnimationManager to get easing functions
+#[derive(Debug, Default)]
+struct MosaicAnimationManager {
+    tiles: IdMap<TileAnimation>,
+}
+
+#[derive(Clone, Debug)]
+struct TileAnimation {
+    from_rect: Rect,
+    to_rect: Rect,
+    /// when did `value` last toggle?
+    toggle_time: f64,
+}
+
+fn ease(x: f32) -> f32 {
+    // Implement quadratic in-out easing
+
+    let x = x.min(1.).max(0.);
+    if x < 0.5 { 2. * x.powi(2) } else { 1. - 0.5 * (-2. * x + 2.).powi(2) }
+}
+
+fn rect_easing(time_since_toggle: f32, from_rect: Rect, to_rect: Rect) -> Rect {
+    let alpha = ease(time_since_toggle / MOSAIC_ANIMATION_DURATION);
+
+    let min = from_rect.min + (to_rect.min - from_rect.min) * alpha;
+    let max = from_rect.max + (to_rect.max - from_rect.max) * alpha;
+    Rect {
+        min,
+        max,
+    }
+}
+
+impl MosaicAnimationManager {
+    pub fn animate_tile(
+        &mut self,
+        input: &InputState,
+        tile: Tile,
+    ) -> Tile {
+        // TODO: This only adds to the map, never removes. Consider removing deleted tiles to avoid memory leak.
+        match self.tiles.get_mut(&tile.ui_id()) {
+            None => {
+                self.tiles.insert(
+                    tile.ui_id(),
+                    TileAnimation {
+                        from_rect: tile.rect(),
+                        to_rect: tile.rect(),
+                        toggle_time: -f64::INFINITY, // long time ago
+                    },
+                );
+                tile
+            }
+            Some(anim) => {
+                let time_since_toggle = (input.time - anim.toggle_time) as f32;
+                // On the frame we toggle we don't want to return the old value,
+                // so we extrapolate forwards:
+                let time_since_toggle = time_since_toggle + input.predicted_dt;
+                let current_rect = rect_easing(
+                    time_since_toggle,
+                    anim.from_rect,
+                    anim.to_rect,
+                );
+                if anim.to_rect != tile.rect() {
+                    anim.from_rect = current_rect; //start new animation from current position of playing animation
+                    anim.to_rect = tile.rect();
+                    anim.toggle_time = input.time;
+                }
+                tile.with_rect(current_rect)
+            }
+        }
+    }
+}
+
 /// State associated with the mosaic UI, to be preserved between frames,
 /// like which tiles are selected.
 /// Does not include anything associated with the graph (like intensities)
 /// or anything already tracked separately by egui (like focus)
 #[derive(Debug, Default)]
 struct MosaicMemory {
+    pub animation_manager: MosaicAnimationManager,
     pub selected: HashSet<NodeId>,
 }
 
@@ -320,7 +394,8 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
         let focused = ui.ctx().memory().has_focus(tile.ui_id());
         let selected = mosaic_memory.selected.contains(&tile.id().node);
         any_tile_focused |= focused;
-        tile.with_animation(ui.ctx()).with_offset(offset).with_focus(focused).with_selected(selected)
+        let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile);
+        tile.with_offset(offset).with_focus(focused).with_selected(selected)
     }).collect();
 
     // Sort
