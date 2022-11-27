@@ -211,100 +211,16 @@ pub async fn run() {
 
                 let results = ctx.paint(&mut encoder, preview_render_target_id);
 
-                // Get node states
-                //let node_state_1: &EffectNodeState = ctx.node_state(node1_id).unwrap().try_into().unwrap();
-                //let node_state_2: &EffectNodeState = ctx.node_state(node2_id).unwrap().try_into().unwrap();
-                //let node_state_3: &EffectNodeState = ctx.node_state(node3_id).unwrap().try_into().unwrap();
-                //let node_state_4: &EffectNodeState = ctx.node_state(node4_id).unwrap().try_into().unwrap();
-                //let node_state_5: &EffectNodeState = ctx.node_state(node5_id).unwrap().try_into().unwrap();
-
-                //let node_states: HashMap<NodeId, NodeState> = [node1_id, node2_id, node3_id, node4_id, node5_id].iter().map(|&node_id| {
-                //    (node_id, *ctx.node_state(node_id).unwrap())
-                //}).collect();
-
                 let preview_images: HashMap<NodeId, egui::TextureId> = graph.iter_nodes().map(|&node_id| {
                     let tex_id = egui_renderer.register_native_texture(&device, &results.get(&node_id).unwrap().view, wgpu::FilterMode::Linear);
                     (node_id, tex_id)
                 }).collect();
-
-                //let preview_texture_1 = preview(&node1_id);
-                //let preview_texture_2 = preview(&node2_id);
-                //let preview_texture_3 = preview(&node3_id);
-                //let preview_texture_4 = preview(&node4_id);
-                //let preview_texture_5 = preview(&node5_id);
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
                         ui.add(mosaic("mosaic", &mut graph, ctx.node_states(), &preview_images));
-/*
-                        {
-                            let node_props_1: &mut EffectNodeProps = graph.node_props_mut(&node1_id).unwrap().try_into().unwrap();
-                            ui.add(EffectNodeTile::new(
-                                Tile::new(
-                                    egui::Rect::from_min_size(egui::pos2(100., 320.), egui::vec2(130., 200.)),
-                                    &[100.],
-                                    &[100.]
-                                ),
-                                node_props_1,
-                                node_state_1,
-                                preview_texture_1,
-                            ));
-                        }
-                        {
-                            let node_props_2: &mut EffectNodeProps = graph.node_props_mut(&node2_id).unwrap().try_into().unwrap();
-                            ui.add(EffectNodeTile::new(
-                                Tile::new(
-                                    egui::Rect::from_min_size(egui::pos2(230., 320.), egui::vec2(130., 200.)),
-                                    &[100.],
-                                    &[100.]
-                                ),
-                                node_props_2,
-                                node_state_2,
-                                preview_texture_2,
-                            ));
-                        }
-                        {
-                            let node_props_3: &mut EffectNodeProps = graph.node_props_mut(&node3_id).unwrap().try_into().unwrap();
-                            ui.add(EffectNodeTile::new(
-                                Tile::new(
-                                    egui::Rect::from_min_size(egui::pos2(100., 100.), egui::vec2(130., 200.)),
-                                    &[100.],
-                                    &[100.]
-                                ),
-                                node_props_3,
-                                node_state_3,
-                                preview_texture_3,
-                            ));
-                        }
-                        {
-                            let node_props_4: &mut EffectNodeProps = graph.node_props_mut(&node4_id).unwrap().try_into().unwrap();
-                            ui.add(EffectNodeTile::new(
-                                Tile::new(
-                                    egui::Rect::from_min_size(egui::pos2(230., 100.), egui::vec2(130., 200.)),
-                                    &[100.],
-                                    &[100.]
-                                ),
-                                node_props_4,
-                                node_state_4,
-                                preview_texture_4,
-                            ));
-                        }
-                        {
-                            let node_props_5: &mut EffectNodeProps = graph.node_props_mut(&node5_id).unwrap().try_into().unwrap();
-                            ui.add(EffectNodeTile::new(
-                                Tile::new(
-                                    egui::Rect::from_min_size(egui::pos2(360., 100.), egui::vec2(130., 420.)),
-                                    &[100., 320.],
-                                    &[210.]
-                                ),
-                                node_props_5,
-                                node_state_5,
-                                preview_texture_5,
-                            ));
-                        }
-*/
                     });
                 });
 
@@ -359,18 +275,6 @@ pub async fn run() {
                 for texture_id in tdelta.free.iter() {
                     egui_renderer.free_texture(texture_id);
                 }
-
-                //match ui_renderer.render(&surface, encoder) {
-                //    Ok(_) => {}
-                //    // Reconfigure the surface if lost
-                //    Err(wgpu::SurfaceError::Lost) => {
-                //        resize(size, &mut config, &device, &mut surface, &mut ui_renderer);
-                //    },
-                //    // The system is out of memory, we should probably quit
-                //    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                //    // All other errors (Outdated, Timeout) should be resolved by the next frame
-                //    Err(e) => eprintln!("{:?}", e),
-                //}
             }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually
