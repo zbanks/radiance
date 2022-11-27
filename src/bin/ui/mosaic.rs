@@ -320,7 +320,6 @@ impl MosaicAnimationManager {
         input: &InputState,
         tile: Tile,
     ) -> Tile {
-        // TODO: This only adds to the map, never removes. Consider removing deleted tiles to avoid memory leak.
         match self.tiles.get_mut(&tile.ui_id()) {
             None => {
                 self.tiles.insert(
@@ -352,6 +351,10 @@ impl MosaicAnimationManager {
             }
         }
     }
+
+    pub fn retain_tiles(&mut self, tile_ids: &HashSet<egui::Id>) {
+        self.tiles.retain(|id, _| tile_ids.contains(id));
+    }
 }
 
 /// State associated with the mosaic UI, to be preserved between frames,
@@ -382,7 +385,7 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
 
     // Lay out the mosaic
     let (layout_size, tiles) = layout(&graph);
-    // Note that the layout function returns tiles that all the way to (0, 0)
+    // Note that the layout function returns tiles that go all the way to (0, 0)
     // and they must be further offset for the UI region we are allocated
 
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense {click: false, drag: false, focusable: false});
@@ -400,6 +403,10 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
 
     // Sort
     tiles.sort_by_key(|tile| tile.draw_order());
+
+    // Retain only animation states for tiles that exist
+    let tile_ids = tiles.iter().map(|tile| tile.ui_id()).collect();
+    mosaic_memory.animation_manager.retain_tiles(&tile_ids);
 
     // Draw
     for tile in tiles.into_iter() {
