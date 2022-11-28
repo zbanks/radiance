@@ -1,5 +1,5 @@
 //#property description Organic purple waves
-//#property frequency 1
+#property frequency 1
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
     let normCoord = (uv - 0.5) * aspectCorrection + 0.5;

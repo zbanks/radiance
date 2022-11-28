@@ -1,6 +1,6 @@
 //#property description Droste effect (spiral forever!)
 //#property author http://roy.red/droste-.html + zbanks
-//#property frequency 1
+#property frequency 1
 
 // Complex functions from http://glslsandbox.com/e#5664.1
 

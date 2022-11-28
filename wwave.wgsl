@@ -1,5 +1,5 @@
 //#property description White wave with hard edges
-//#property frequency 0.5
+#property frequency 0.5
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
     let normCoord = (uv - 0.5) * aspectCorrection;

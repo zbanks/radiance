@@ -144,14 +144,12 @@ pub async fn run() {
                 "name": "purple.wgsl",
                 "input_count": 1,
                 "intensity": 1.0,
-                "frequency": 1.0
             },
             node2_id.to_string(): {
                 "type": "EffectNode",
                 "name": "droste.wgsl",
                 "input_count": 1,
                 "intensity": 1.0,
-                "frequency": 1.0
             },
             node3_id.to_string(): {
                 "type": "EffectNode",
