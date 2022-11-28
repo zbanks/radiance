@@ -12,7 +12,7 @@ use serde_json::json;
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, NodeState, NodeProps};
+use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, NodeState, NodeProps, EffectNodeProps};
 
 mod ui;
 use ui::{Tile, EffectNodeTile, mosaic};
@@ -195,6 +195,11 @@ pub async fn run() {
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
+    // UI state
+    let mut node_add_textedit = String::new();
+    let mut left_panel_expanded = false;
+    let mut node_add_wants_focus = false;
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -219,8 +224,38 @@ pub async fn run() {
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
+
+                    let left_panel_response = egui::SidePanel::left("left").show_animated(&egui_ctx, left_panel_expanded, |ui| {
+                        ui.text_edit_singleline(&mut node_add_textedit)
+                    });
+
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
                         ui.add(mosaic("mosaic", &mut graph, ctx.node_states(), &preview_images));
+                        if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
+                            left_panel_expanded = true;
+                            node_add_wants_focus = true;
+                        }
+
+                        if let Some(egui::InnerResponse { inner: node_add_response, response: _}) = left_panel_response {
+                            // TODO all this side-panel handling is wonky. It is done, in part, to avoid mutating the graph before it's drawn.
+                            // This needs to be factored out into a real "library" component.
+                            if node_add_wants_focus {
+                                node_add_response.request_focus();
+                                node_add_wants_focus = false;
+                            }
+                            if node_add_response.lost_focus() {
+                                if egui_ctx.input().key_pressed(egui::Key::Enter) {
+                                    graph.add_node(NodeId::gen(), NodeProps::EffectNode(EffectNodeProps {
+                                        name: node_add_textedit.clone(),
+                                        intensity: 0.,
+                                        frequency: 0.,
+                                        input_count: 1,
+                                    }));
+                                }
+                                node_add_textedit.clear();
+                                left_panel_expanded = false;
+                            }
+                        }
                     });
                 });
 

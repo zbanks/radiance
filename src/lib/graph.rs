@@ -371,11 +371,25 @@ impl Graph {
         &self.input_mapping
     }
 
+    // TODO: This graph API is weird:
+    // * it's weird that the graphy graph bits come bundled with global_props
+    // * the "topo order" generation / caching is weird
+    // * it should be easier to do common operations
+    // * we need more concepts (like "connected component" and "open edge")
+    // Consider refactoring it.
+
     /// Delete nodes
     pub fn delete_nodes(&mut self, delete_ids: &HashSet<NodeId>) {
         self.nodes.retain(|id| !delete_ids.contains(id));
         self.node_props.retain(|id, _| !delete_ids.contains(id));
         self.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
+        self.rebuild();
+    }
+
+    /// Add a node
+    pub fn add_node(&mut self, id: NodeId, props: NodeProps) {
+        self.nodes.push(id);
+        self.node_props.insert(id, props);
         self.rebuild();
     }
 }
