@@ -247,9 +247,7 @@ pub async fn run() {
                                 if egui_ctx.input().key_pressed(egui::Key::Enter) {
                                     graph.add_node(NodeId::gen(), NodeProps::EffectNode(EffectNodeProps {
                                         name: node_add_textedit.clone(),
-                                        intensity: 0.,
-                                        frequency: 0.,
-                                        input_count: 1,
+                                        ..Default::default()
                                     }));
                                 }
                                 node_add_textedit.clear();

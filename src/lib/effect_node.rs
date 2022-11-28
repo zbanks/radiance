@@ -10,12 +10,14 @@ const EFFECT_HEADER: &str = include_str!("effect_header.wgsl");
 const EFFECT_FOOTER: &str = include_str!("effect_footer.wgsl");
 const INTENSITY_INTEGRAL_PERIOD: f32 = 1024.;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Properties of an EffectNode.
+/// Fields that are None are set to their default when the shader is loaded.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EffectNodeProps {
     pub name: String,
-    pub intensity: f32,
-    pub frequency: f32,
-    pub input_count: u32,
+    pub intensity: Option<f32>,
+    pub frequency: Option<f32>,
+    pub input_count: Option<u32>,
 }
 
 impl From<&EffectNodeProps> for CommonNodeProps {
@@ -34,6 +36,9 @@ pub enum EffectNodeState {
 
 pub struct EffectNodeStateReady {
     // Cached props
+    // TODO: consider flattening this or making it into a different type
+    // since the properties are not optional at this point
+    // (they are always accessed with .unwrap())
     props: EffectNodeProps,
 
     // Computed Info
@@ -67,9 +72,10 @@ struct Uniforms {
     _padding: [u8; 4],
 }
 
-fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
+fn preprocess_shader(effect_source: &str) -> Result<(String, u32, f32), String> {
     let mut processed_source = String::new();
     let mut input_count = 1;
+    let mut frequency = 0.;
 
     for l in effect_source.lines() {
         let line_parts: Vec<&str> = l.split_whitespace().collect();
@@ -80,6 +86,12 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
                         input_count = line_parts[2].parse::<u32>().map_err(|e| e.to_string())?;
                     } else {
                         return Err(String::from("inputCount missing argument"));
+                    }
+                } else if line_parts[1] == "frequency" {
+                    if line_parts.len() >= 3 {
+                        frequency = line_parts[2].parse::<f32>().map_err(|e| e.to_string())?;
+                    } else {
+                        return Err(String::from("frequency missing argument"));
                     }
                 } else {
                     return Err(format!("Unrecognized property: {}", line_parts[1]));
@@ -93,18 +105,42 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32), String> {
         }
     }
 
-    Ok((processed_source, input_count))
+    Ok((processed_source, input_count, frequency))
 }
 
 impl EffectNodeState {
     fn setup_render_pipeline(ctx: &Context, props: &EffectNodeProps) -> Result<EffectNodeStateReady, String> {
+        let mut props = props.clone();
+
         // Shader
         let effect_source = ctx.fetch_content(&props.name).expect("Failed to read effect shader file");
 
-        let (effect_source_processed, shader_input_count) = preprocess_shader(&effect_source)?;
+        let (effect_source_processed, shader_input_count, default_frequency) = preprocess_shader(&effect_source)?;
 
-        if shader_input_count != props.input_count {
-            return Err("Shader input count does not match input count declared in graph".to_string());
+        match props.input_count {
+            Some(input_count) => {
+                if shader_input_count != input_count {
+                    return Err("Shader input count does not match input count declared in graph".to_string());
+                }
+            },
+            None => {
+                props.input_count = Some(shader_input_count);
+            },
+        }
+
+        // TODO replace these one-arm matches with `unwrap_or_else`
+        match props.intensity {
+            None => {
+                props.intensity = Some(0.); // Default to 0 intensity if none given
+            },
+            _ => {},
+        }
+
+        match props.frequency {
+            None => {
+                props.frequency = Some(default_frequency);
+            },
+            _ => {},
         }
 
         let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source_processed, EFFECT_FOOTER);
@@ -146,7 +182,7 @@ impl EffectNodeState {
                         view_dimension: wgpu::TextureViewDimension::D2,
                         sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     },
-                    count: NonZeroU32::new(props.input_count),
+                    count: NonZeroU32::new(props.input_count.unwrap()),
                 },
                 wgpu::BindGroupLayoutEntry {
                     binding: 3, // iNoiseTex
@@ -166,7 +202,7 @@ impl EffectNodeState {
                 //        view_dimension: wgpu::TextureViewDimension::D2,
                 //        sample_type: wgpu::TextureSampleType::Uint,
                 //    },
-                //    count: NonZeroU32::new(props.input_count),
+                //    count: NonZeroU32::new(props.input_count.unwrap()),
                 //},
             ],
             label: Some(&format!("EffectNode {} bind group layout", props.name)),
@@ -239,7 +275,7 @@ impl EffectNodeState {
         );
 
         Ok(EffectNodeStateReady {
-            props: props.clone(),
+            props,
             intensity_integral: 0.,
             bind_group_layout,
             uniform_buffer,
@@ -319,19 +355,38 @@ impl EffectNodeState {
                     *self = EffectNodeState::Error_("EffectNode name changed after construction".to_string());
                     return;
                 }
-                if props.input_count != self_ready.props.input_count {
-                    *self = EffectNodeState::Error_("EffectNode input_count changed after construction".to_string());
-                    return;
+                match props.input_count {
+                    Some(input_count) => {
+                        // Caller passed in an input_count, we should validate it
+                        if input_count != self_ready.props.input_count.unwrap() {
+                            *self = EffectNodeState::Error_("EffectNode input_count changed after construction".to_string());
+                            return;
+                        }
+                    },
+                    _ => {},
                 }
+                match props.intensity {
+                    Some(intensity) => {
+                        // Cache the intensity for when paint() is called
+                        self_ready.props.intensity = Some(intensity);
+                    },
+                    _ => {},
+                }
+                match props.frequency {
+                    Some(frequency) => {
+                        // Cache the frequency for when paint() is called
+                        self_ready.props.frequency = Some(frequency);
+                    },
+                    _ => {},
+                }
+
+                // Report back to the caller what our props are
+                props.clone_from(&self_ready.props);
 
                 Self::update_paint_states(self_ready, ctx);
 
-                // Sample-and-hold props
-                // for when paint() is called
-                self_ready.props = props.clone();
-
                 // Accumulate intensity_integral
-                self_ready.intensity_integral = (self_ready.intensity_integral + props.intensity * ctx.global_props().dt) % INTENSITY_INTEGRAL_PERIOD;
+                self_ready.intensity_integral = (self_ready.intensity_integral + self_ready.props.intensity.unwrap() * ctx.global_props().dt) % INTENSITY_INTEGRAL_PERIOD;
             },
             _ => {}
         }
@@ -351,8 +406,8 @@ impl EffectNodeState {
                     let uniforms = Uniforms {
                         audio: [0., 0., 0., 0.],
                         time: ctx.global_props().time,
-                        frequency: self_ready.props.frequency,
-                        intensity: self_ready.props.intensity,
+                        frequency: self_ready.props.frequency.unwrap(),
+                        intensity: self_ready.props.intensity.unwrap(),
                         intensity_integral: self_ready.intensity_integral,
                         resolution: [width as f32, height as f32],
                         dt: render_target_state.dt(),
@@ -362,7 +417,7 @@ impl EffectNodeState {
                 }
 
                 // Make an array of input textures
-                let input_binding: Vec<&wgpu::TextureView> = (0..self_ready.props.input_count).map(|i| {
+                let input_binding: Vec<&wgpu::TextureView> = (0..self_ready.props.input_count.unwrap()).map(|i| {
                     match inputs.get(i as usize) {
                         Some(Some(tex)) => tex.view.as_ref(),
                         _ => ctx.blank_texture().view.as_ref(),

@@ -76,7 +76,7 @@ pub enum NodeProps {
 
 /// This is a struct of props that are common to every node.
 pub struct CommonNodeProps {
-    pub input_count: u32,
+    pub input_count: Option<u32>,
 }
 
 impl From<&NodeProps> for CommonNodeProps {

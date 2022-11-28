@@ -74,7 +74,7 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
         };
         // The length of the returned heights array should match the input count,
         // or be 1 if the input count is zero
-        assert_eq!(heights.len() as u32, 1.max(CommonNodeProps::from(props).input_count));
+        assert_eq!(heights.len() as u32, 1.max(CommonNodeProps::from(props).input_count.unwrap_or(1)));
 
         (tile_id, heights)
     }).collect();
