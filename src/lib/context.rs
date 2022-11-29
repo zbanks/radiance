@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::graph::{NodeId, Graph, NodeProps, GlobalProps};
+use crate::graph::{NodeId, Graph, GraphTopology, NodeProps, GlobalProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;
@@ -60,9 +60,9 @@ pub struct Context {
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
     node_states: HashMap<NodeId, NodeState>,
 
-    // Helpful state related to graph rendering
-    node_topo_order: Vec<NodeId>,
-    node_inputs: HashMap<NodeId, Vec<Option<NodeId>>>,
+    // Graph
+    graph: Graph,
+    graph_topology: GraphTopology,
 }
 
 /// Internal state and resources that is associated with a specific RenderTarget,
@@ -199,8 +199,8 @@ impl Context {
             global_props: Default::default(),
             render_target_states: Default::default(),
             node_states: Default::default(),
-            node_topo_order: Default::default(),
-            node_inputs: Default::default(),
+            graph: Default::default(),
+            graph_topology: Default::default(),
         }
     }
 
@@ -253,20 +253,25 @@ impl Context {
     /// The passed in Graph will be mutated to advance its contents by one timestep.
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
-    pub fn update(&mut self, graph: &mut Graph, render_targets: &RenderTargetList) {
-        // 1. Sample-and-hold global props like `time` and `dt`, then update them
+    pub fn update(&mut self, graph: &mut Graph, render_targets: &RenderTargetList) -> Result<(), &'static str> {
+        // 1. Store graph topology for rendering
+        // TODO check if the graph has changed by comparing it to self.graph
+        // before computing topology
+        self.graph_topology = graph.topology()?;
+
+        // 2. Sample-and-hold global props like `time` and `dt`, then update them
         {
             self.global_props = graph.global_props().clone();
             let props = graph.global_props_mut();
             props.time = (props.time + props.dt).rem_euclid(MAX_TIME);
         }
 
-        // 2. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
+        // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
         self.render_target_states.retain(|id, _| render_targets.render_targets().contains_key(id));
         self.node_states.retain(|id, _| graph.contains_node(id));
 
-        // 3. Construct any missing render_target_states or node_states (this may kick of background processing)
+        // 4. Construct any missing render_target_states or node_states (this may kick of background processing)
 
         for (check_render_target_id, render_target) in render_targets.render_targets().iter() {
             if !self.render_target_states.contains_key(check_render_target_id) {
@@ -283,16 +288,14 @@ impl Context {
             }
         }
 
-        // 4. Update state on every node
+        // 5. Update state on every node
         let nodes: Vec<NodeId> = graph.iter_nodes().cloned().collect();
         for update_node_id in nodes.iter() {
             let node_props = graph.node_props_mut(update_node_id).unwrap();
             self.update_node(*update_node_id, node_props);
         }
 
-        // 5. Store topo order & input mapping for rendering
-        self.node_inputs = graph.input_mapping().clone();
-        self.node_topo_order = graph.topo_order().cloned().collect();
+        Ok(())
     }
 
     /// Paint the given render target.
@@ -306,10 +309,10 @@ impl Context {
         // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
         let mut result: HashMap<NodeId, ArcTextureViewSampler> = HashMap::new();
 
-        let node_ids: Vec<NodeId> = self.node_topo_order.clone();
+        let node_ids: Vec<NodeId> = self.graph_topology.topo_order.clone();
         for paint_node_id in &node_ids {
 
-            let input_nodes = self.node_inputs.get(paint_node_id).unwrap();
+            let input_nodes = self.graph_topology.input_mapping.get(paint_node_id).unwrap();
             let input_textures: Vec<Option<ArcTextureViewSampler>> = input_nodes.iter().map(
                 |maybe_id| match maybe_id {
                     Some(id) => Some(result.get(id).unwrap().clone()),

@@ -126,204 +126,137 @@ pub struct GlobalProps {
 /// One use case of a Graph is passing it to `Context.paint` for rendering.
 /// Another is serializing it out to disk,
 /// or deserializing it from a server.
-#[derive(Debug, Clone, Serialize, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Graph {
     nodes: Vec<NodeId>,
     edges: Vec<Edge>,
     node_props: HashMap<NodeId, NodeProps>,
     global_props: GlobalProps,
-
-    // Internal stuff
-    #[serde(skip_serializing)]
-    input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
-    #[serde(skip_serializing)]
-    start_nodes: Vec<NodeId>,
-    #[serde(skip_serializing)]
-    topo_order: Vec<NodeId>,
 }
 
-/// Given a list of NodeIds and Edges, return a mapping from a node to its inputs (dependencies)
-/// The indices in the returned Vec will correspond to the numbered inputs of the node
-/// and can be used for rendering.
-fn input_mapping(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<NodeId>>> {
-    let mut result = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
-
-    // Add every node to the map
-    for node in nodes {
-        result.insert(*node, Default::default());
-    }
-
-    // Add every edge to the map
-    for edge in edges {
-        let input_vec = result.get_mut(&edge.to).unwrap();
-
-        // Ensure vec has enough space to add our entry
-        if input_vec.len() <= edge.input as usize {
-            for _ in 0..=edge.input as usize - input_vec.len() {
-                input_vec.push(None);
-            }
-        }
-
-        // Add to vec
-        input_vec[edge.input as usize] = Some(edge.from);
-    }
-
-    result
-}
-
-/// Given a graph (encoded as a HashMap from each node to its inputs (dependencies)
-/// return the start nodes and return the nodes in topological order.
-/// An ordered array of NodeId is also passed in so that the sort can be stable.
-fn topo_order(nodes: &[NodeId], graph: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Result<(Vec<NodeId>, Vec<NodeId>), &'static str> {
-
-    // Later parts of this function don't work properly
-    // if the graph is totally empty.
-    // Return successfully in this case.
-    if graph.len() == 0 {
-        return Ok((Vec::<NodeId>::new(), Vec::<NodeId>::new()));
-    }
-
-    // Find the "start" nodes: the nodes with no outputs
-    let mut start_nodes: HashSet<NodeId> = graph.keys().cloned().collect();
-    for input_vec in graph.values() {
-        for maybe_input in input_vec {
-            match maybe_input {
-                Some(input) => {
-                    start_nodes.remove(input);
-                },
-                None => {},
-            }
-        }
-    }
-    if start_nodes.len() == 0 {
-        return Err("Graph is cyclic")
-    }
-    // Convert start_nodes to vec in a stable fashion
-    // (returned start_nodes will appear in same order as the parameter 'nodes')
-    let start_nodes: Vec<NodeId> = nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
-
-    // Topo-sort using DFS
-    // Use a "white-grey-black" node coloring approach
-    // to detect cycles
-    // https://stackoverflow.com/a/62971341
-
-    enum Color {
-        White, // Node is not visited
-        Grey, // Node is on the path that is being explored
-        Black, // Node is visited
-    }
-
-    // Push "start" nodes onto the stack for DFS
-    let mut stack: Vec<NodeId> = start_nodes.clone();
-    let mut color = HashMap::<NodeId, Color>::from_iter(graph.keys().map(|x| (*x, Color::White)));
-    let mut topo_ordered = Vec::<NodeId>::new();
-
-    while let Some(&n) = stack.last() {
-        let cn = color.get(&n).unwrap();
-        match cn {
-            Color::White => {
-                color.insert(n, Color::Grey);
-                for m in graph.get(&n).unwrap().iter().flatten() {
-                    let cm = color.get(m).unwrap();
-                    match cm {
-                        Color::White => {
-                            stack.push(*m);
-                        },
-                        Color::Grey => {
-                            return Err("Graph is cyclic");
-                        },
-                        Color::Black => {
-                            // Already visited; no action necessary
-                        },
-                    }
-                }
-            },
-            Color::Grey => {
-                color.insert(n, Color::Black);
-                stack.pop();
-                topo_ordered.push(n);
-            },
-            Color::Black => {
-                panic!("DFS error; visited node on the stack");
-            },
-        }
-    }
-
-    if !color.values().all(|c| match c {Color::Black => true, _ => false}) {
-        // Isolated nodes connected to themself will not appear in start_nodes
-        // and will not be visited
-        return Err("Graph is cyclic");
-    }
-
-    Ok((start_nodes, topo_ordered))
-}
-
-impl<'de> Deserialize<'de> for Graph {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct UncheckedGraph {
-            nodes: Vec<NodeId>,
-            edges: Vec<Edge>,
-            node_props: HashMap<NodeId, NodeProps>,
-            global_props: GlobalProps,
-        }
-
-        impl TryFrom<UncheckedGraph> for Graph {
-            type Error = &'static str;
-
-            fn try_from(x: UncheckedGraph) -> Result<Self, Self::Error> {
-                let set1: HashSet<NodeId> = x.nodes.iter().cloned().collect();
-                let set2: HashSet<NodeId> = x.node_props.keys().cloned().collect();
-
-                // Ensure there are no duplicates in the list of NodeIds
-                if x.nodes.len() > set1.len() {
-                    return Err("Node ID list has duplicates")
-                }
-
-                // Ensure the list of NodeIds matches the mapping of NodeIds to props
-                if set1.symmetric_difference(&set2).next().is_some() {
-                    return Err("Node ID list does not match node_props mapping")
-                }
-
-                // Compute mapping from nodes to their inputs
-                let input_mapping = input_mapping(&x.nodes, &x.edges);
-
-                // Compute topo order (and detect cycles in the process)
-                let (start_nodes, topo_order) = topo_order(&x.nodes, &input_mapping)?;
-
-                Ok(Graph {
-                    nodes: x.nodes,
-                    edges: x.edges,
-                    node_props: x.node_props,
-                    global_props: x.global_props,
-                    input_mapping,
-                    start_nodes,
-                    topo_order,
-                })
-            }
-        }
-
-        UncheckedGraph::deserialize(deserializer)?.try_into().map_err(D::Error::custom)
-    }
+/// Useful topological properties computed from a Graph
+#[derive(Debug, Clone, Default)]
+pub struct GraphTopology {
+    /// A mapping from a node to its inputs (dependencies)
+    /// The indices in the returned Vec will correspond to the numbered inputs of the node
+    /// and can be used for rendering.
+    pub input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
+    pub start_nodes: Vec<NodeId>,
+    pub topo_order: Vec<NodeId>,
 }
 
 impl Graph {
-    /// Rebuilds the derived graph fields from the nodes and edges.
-    /// This is useful after directly editing the nodes and edges.
-    /// Panics if the graph is malformed (e.g. has cycles.)
-    fn rebuild(&mut self) {
-        // Compute mapping from nodes to their inputs
-        let input_mapping = input_mapping(&self.nodes, &self.edges);
+    pub fn topology(&self) -> Result<GraphTopology, &'static str> {
+        // 1. compute the input mapping
 
-        // Compute topo order (and detect cycles in the process)
-        let (start_nodes, topo_order) = topo_order(&self.nodes, &input_mapping).unwrap();
+        let mut input_mapping = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
 
-        self.input_mapping = input_mapping;
-        self.start_nodes = start_nodes;
-        self.topo_order = topo_order;
+        // Add every node to the map
+        for node in self.nodes.iter() {
+            input_mapping.insert(*node, Default::default());
+        }
+
+        // Add every edge to the map
+        for edge in self.edges.iter() {
+            let input_vec = input_mapping.get_mut(&edge.to).unwrap();
+
+            // Ensure vec has enough space to add our entry
+            if input_vec.len() <= edge.input as usize {
+                for _ in 0..=edge.input as usize - input_vec.len() {
+                    input_vec.push(None);
+                }
+            }
+
+            // Add to vec
+            input_vec[edge.input as usize] = Some(edge.from);
+        }
+
+        // Later parts of this function don't work properly
+        // if the graph is totally empty.
+        // Return successfully in this case.
+        if input_mapping.len() == 0 {
+            return Ok(Default::default());
+        }
+
+        // 2. compute the start nodes and topo order
+
+        // Find the "start" nodes: the nodes with no outputs
+        let mut start_nodes: HashSet<NodeId> = input_mapping.keys().cloned().collect();
+        for input_vec in input_mapping.values() {
+            for maybe_input in input_vec {
+                match maybe_input {
+                    Some(input) => {
+                        start_nodes.remove(input);
+                    },
+                    None => {},
+                }
+            }
+        }
+        if start_nodes.len() == 0 {
+            return Err("Graph is cyclic")
+        }
+        // Convert start_nodes to vec in a stable fashion
+        // (returned start_nodes will appear in same order as the parameter 'nodes')
+        let start_nodes: Vec<NodeId> = self.nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
+
+        // Topo-sort using DFS
+        // Use a "white-grey-black" node coloring approach
+        // to detect cycles
+        // https://stackoverflow.com/a/62971341
+
+        enum Color {
+            White, // Node is not visited
+            Grey, // Node is on the path that is being explored
+            Black, // Node is visited
+        }
+
+        // Push "start" nodes onto the stack for DFS
+        let mut stack: Vec<NodeId> = start_nodes.clone();
+        let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
+        let mut topo_order = Vec::<NodeId>::new();
+
+        while let Some(&n) = stack.last() {
+            let cn = color.get(&n).unwrap();
+            match cn {
+                Color::White => {
+                    color.insert(n, Color::Grey);
+                    for m in input_mapping.get(&n).unwrap().iter().flatten() {
+                        let cm = color.get(m).unwrap();
+                        match cm {
+                            Color::White => {
+                                stack.push(*m);
+                            },
+                            Color::Grey => {
+                                return Err("Graph is cyclic");
+                            },
+                            Color::Black => {
+                                // Already visited; no action necessary
+                            },
+                        }
+                    }
+                },
+                Color::Grey => {
+                    color.insert(n, Color::Black);
+                    stack.pop();
+                    topo_order.push(n);
+                },
+                Color::Black => {
+                    panic!("DFS error; visited node on the stack");
+                },
+            }
+        }
+
+        if !color.values().all(|c| match c {Color::Black => true, _ => false}) {
+            // Isolated nodes connected to themself will not appear in start_nodes
+            // and will not be visited
+            return Err("Graph is cyclic");
+        }
+
+        Ok(GraphTopology {
+            input_mapping,
+            start_nodes,
+            topo_order,
+        })
     }
 
     /// Iterate over the graph nodes, returning a reference to each NodeId
@@ -356,21 +289,6 @@ impl Graph {
         &mut self.global_props
     }
 
-    /// Iterate over the graph's nodes in topological order
-    pub fn start_nodes(&self) -> impl Iterator<Item=&NodeId> {
-        self.start_nodes.iter()
-    }
-
-    /// Iterate over the graph's nodes in topological order
-    pub fn topo_order(&self) -> impl Iterator<Item=&NodeId> {
-        self.topo_order.iter()
-    }
-
-    /// Get a mapping from nodes to their inputs
-    pub fn input_mapping(&self) -> &HashMap<NodeId, Vec<Option<NodeId>>> {
-        &self.input_mapping
-    }
-
     // TODO: This graph API is weird:
     // * it's weird that the graphy graph bits come bundled with global_props
     // * the "topo order" generation / caching is weird
@@ -383,13 +301,11 @@ impl Graph {
         self.nodes.retain(|id| !delete_ids.contains(id));
         self.node_props.retain(|id, _| !delete_ids.contains(id));
         self.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
-        self.rebuild();
     }
 
     /// Add a node
     pub fn add_node(&mut self, id: NodeId, props: NodeProps) {
         self.nodes.push(id);
         self.node_props.insert(id, props);
-        self.rebuild();
     }
 }

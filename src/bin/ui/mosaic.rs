@@ -14,6 +14,8 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
+    let topology = graph.topology().unwrap(); // XXX return result instead of unwrap
+
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
     // Some nodes will be repeated.
@@ -37,14 +39,14 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
 
     // Start by allocating tiles for the start nodes
     // (start nodes will necessarily have only one tile)
-    let start_tiles: Vec<TileId> = graph.start_nodes().map(&mut allocate_tile).collect();
+    let start_tiles: Vec<TileId> = topology.start_nodes.iter().map(&mut allocate_tile).collect();
 
     let mut stack = start_tiles.clone();
     let mut tree = HashMap::<TileId, Vec<Option<TileId>>>::new();
 
     while let Some(tile) = stack.pop() {
         // For each node in the stack, 1) allocate new tiles for its children
-        let child_tiles: Vec<Option<TileId>> = graph.input_mapping().get(&tile.node).unwrap()
+        let child_tiles: Vec<Option<TileId>> = topology.input_mapping.get(&tile.node).unwrap()
             .iter()
             .map(|maybe_child_node| maybe_child_node.as_ref().map(&mut allocate_tile))
             .collect();
@@ -357,6 +359,15 @@ impl MosaicAnimationManager {
     }
 }
 
+/// The last recorded graph, and the layout it produced
+/// (stored to avoid re-computing layout if graph hasn't changed)
+#[derive(Debug)]
+struct LayoutCache {
+    graph: Graph, // Stored to check equality against subsequent call
+    size: Vec2,
+    tiles: Vec<Tile>,
+}
+
 /// State associated with the mosaic UI, to be preserved between frames,
 /// like which tiles are selected.
 /// Does not include anything associated with the graph (like intensities)
@@ -365,6 +376,8 @@ impl MosaicAnimationManager {
 struct MosaicMemory {
     pub animation_manager: MosaicAnimationManager,
     pub selected: HashSet<NodeId>,
+
+    layout_cache: Option<LayoutCache>,
 }
 
 pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>) -> Response
@@ -384,12 +397,29 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
     mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
 
     // Lay out the mosaic
-    let (layout_size, tiles) = layout(&graph);
-    // Note that the layout function returns tiles that go all the way to (0, 0)
-    // and they must be further offset for the UI region we are allocated
+    let layout_cache_needs_refresh = match &mosaic_memory.layout_cache {
+        None => true,
+        Some(cache) => true, // XXX check cache.graph != graph,
+    };
+
+    if layout_cache_needs_refresh {
+        let (size, tiles) = layout(&graph);
+        mosaic_memory.layout_cache = Some(LayoutCache {
+            graph: graph.clone(),
+            size,
+            tiles,
+        });
+    }
+
+    // Get layout from cache (guaranteed to exist post-refresh)
+    let LayoutCache {graph: _, size: layout_size, tiles} = &mosaic_memory.layout_cache.as_ref().unwrap();
+    let layout_size = *layout_size;
+    let tiles = tiles.to_vec();
 
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense {click: false, drag: false, focusable: false});
 
+    // Note that the layout function returns tiles that go all the way to (0, 0)
+    // and they must be further offset for the UI region we are allocated
     // Apply focus and offset
     let offset = mosaic_rect.min - Pos2::ZERO;
     let mut any_tile_focused = false;

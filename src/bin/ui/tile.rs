@@ -13,6 +13,7 @@ pub struct TileId {
 
 /// A UI element representing an empty tile
 /// (not stateful; builder pattern)
+#[derive(Debug, Clone)]
 pub struct Tile {
     id: TileId,
     ui_id: Id,
