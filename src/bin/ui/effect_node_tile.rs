@@ -1,5 +1,4 @@
-use egui::{Ui, RichText, TextureId, Response, vec2, Layout, Align, Slider, Widget, InnerResponse};
-use crate::ui::tile::Tile;
+use egui::{Ui, RichText, TextureId, vec2, Layout, Align, Slider};
 use radiance::{EffectNodeProps, EffectNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;

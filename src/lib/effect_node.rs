@@ -1,7 +1,7 @@
 use std::string::String;
 use crate::context::{Context, ArcTextureViewSampler, RenderTargetState};
 use crate::render_target::RenderTargetId;
-use crate::graph::CommonNodeProps;
+use crate::CommonNodeProps;
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use std::num::NonZeroU32;

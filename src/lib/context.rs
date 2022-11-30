@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::graph::{NodeId, Props, Graph, GraphTopology, NodeProps, GlobalProps};
+use crate::{NodeId, Props, Graph, GraphTopology, NodeProps, GlobalProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;

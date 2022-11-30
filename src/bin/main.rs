@@ -12,10 +12,10 @@ use serde_json::json;
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, NodeState, NodeProps, EffectNodeProps};
+use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps};
 
 mod ui;
-use ui::{Tile, EffectNodeTile, mosaic};
+use ui::{mosaic};
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
