@@ -12,7 +12,7 @@ use serde_json::json;
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Graph, NodeId, Mir, NodeState, NodeProps, EffectNodeProps};
+use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, NodeState, NodeProps, EffectNodeProps};
 
 mod ui;
 use ui::{Tile, EffectNodeTile, mosaic};
@@ -108,36 +108,38 @@ pub async fn run() {
     let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
     let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
     let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
-    let mut graph: Graph = serde_json::from_value(json!({
-        "nodes": [
-            node1_id,
-            node2_id,
-            node3_id,
-            node4_id,
-            node5_id,
-        ],
-        "edges": [
-            {
-                "from": node1_id,
-                "to": node2_id,
-                "input": 0,
-            },
-            {
-                "from": node2_id,
-                "to": node5_id,
-                "input": 1,
-            },
-            {
-                "from": node3_id,
-                "to": node4_id,
-                "input": 0,
-            },
-            {
-                "from": node4_id,
-                "to": node5_id,
-                "input": 0,
-            }
-        ],
+    let mut props: Props = serde_json::from_value(json!({
+        "graph": {
+            "nodes": [
+                node1_id,
+                node2_id,
+                node3_id,
+                node4_id,
+                node5_id,
+            ],
+            "edges": [
+                {
+                    "from": node1_id,
+                    "to": node2_id,
+                    "input": 0,
+                },
+                {
+                    "from": node2_id,
+                    "to": node5_id,
+                    "input": 1,
+                },
+                {
+                    "from": node3_id,
+                    "to": node4_id,
+                    "input": 0,
+                },
+                {
+                    "from": node4_id,
+                    "to": node5_id,
+                    "input": 0,
+                }
+            ],
+        },
         "node_props": {
             node1_id.to_string(): {
                 "type": "EffectNode",
@@ -179,7 +181,7 @@ pub async fn run() {
         }
     })).unwrap();
 
-    println!("Graph: {}", serde_json::to_string(&graph).unwrap());
+    println!("Props: {}", serde_json::to_string(&props).unwrap());
 
     // Make a render target
     let preview_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_LVrjzxhXrGU7SqFo+85zkw")).unwrap();
@@ -203,9 +205,9 @@ pub async fn run() {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
                 let music_info = mir.poll();
-                graph.global_props_mut().time = music_info.time;
-                graph.global_props_mut().dt = music_info.tempo * (1. / 60.);
-                ctx.update(&mut graph, &render_target_list);
+                props.global_props.time = music_info.time;
+                props.global_props.dt = music_info.tempo * (1. / 60.);
+                ctx.update(&mut props, &render_target_list).unwrap(); // XXX handle bad graph instead of unwrap, or consider repairing graph
 
                 // Paint
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -214,7 +216,7 @@ pub async fn run() {
 
                 let results = ctx.paint(&mut encoder, preview_render_target_id);
 
-                let preview_images: HashMap<NodeId, egui::TextureId> = graph.iter_nodes().map(|&node_id| {
+                let preview_images: HashMap<NodeId, egui::TextureId> = props.graph.nodes.iter().map(|&node_id| {
                     let tex_id = egui_renderer.register_native_texture(&device, &results.get(&node_id).unwrap().view, wgpu::FilterMode::Linear);
                     (node_id, tex_id)
                 }).collect();
@@ -228,14 +230,14 @@ pub async fn run() {
                     });
 
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        ui.add(mosaic("mosaic", &mut graph, ctx.node_states(), &preview_images));
+                        ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images));
                         if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
                             left_panel_expanded = true;
                             node_add_wants_focus = true;
                         }
 
                         if let Some(egui::InnerResponse { inner: node_add_response, response: _}) = left_panel_response {
-                            // TODO all this side-panel handling is wonky. It is done, in part, to avoid mutating the graph before it's drawn.
+                            // TODO all this side-panel handling is wonky. It is done, in part, to avoid mutating the props before it's drawn.
                             // This needs to be factored out into a real "library" component.
                             if node_add_wants_focus {
                                 node_add_response.request_focus();
@@ -243,7 +245,7 @@ pub async fn run() {
                             }
                             if node_add_response.lost_focus() {
                                 if egui_ctx.input().key_pressed(egui::Key::Enter) {
-                                    graph.add_node(NodeId::gen(), NodeProps::EffectNode(EffectNodeProps {
+                                    props.add_node(NodeId::gen(), NodeProps::EffectNode(EffectNodeProps {
                                         name: node_add_textedit.clone(),
                                         ..Default::default()
                                     }));

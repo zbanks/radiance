@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::graph::{NodeId, Graph, GraphTopology, NodeProps, GlobalProps};
+use crate::graph::{NodeId, Props, Graph, GraphTopology, NodeProps, GlobalProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;
@@ -33,9 +33,9 @@ impl ArcTextureViewSampler {
 }
 
 /// A `Context` bundles all of the state and graphics resources
-/// necessary to support iterated rendering of a `Graph`.
+/// necessary to support iterated rendering of a `Props`.
 /// 
-/// `Graph` and `RenderTargetList` are intentionally kept stateless
+/// `Props` and `RenderTargetList` are intentionally kept stateless
 /// and untangled from system resources.
 /// We push that complexity into this object.
 /// The `Context` caches objects for reuse and preserves state
@@ -55,14 +55,12 @@ pub struct Context {
 
     // Cached props from the last update()
     global_props: GlobalProps,
+    graph: Graph,
+    graph_topology: GraphTopology,
 
     // State of individual render targets and nodes
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
     node_states: HashMap<NodeId, NodeState>,
-
-    // Graph
-    graph: Graph,
-    graph_topology: GraphTopology,
 }
 
 /// Internal state and resources that is associated with a specific RenderTarget,
@@ -197,10 +195,10 @@ impl Context {
             queue,
             blank_texture,
             global_props: Default::default(),
-            render_target_states: Default::default(),
-            node_states: Default::default(),
             graph: Default::default(),
             graph_topology: Default::default(),
+            render_target_states: Default::default(),
+            node_states: Default::default(),
         }
     }
 
@@ -240,7 +238,7 @@ impl Context {
         self.node_states.insert(node_id, node_state);
         result
     }
-    /// Update the internal state of `Context` to match the given graph.
+    /// Update the internal state of `Context` to match the given `Props`.
     /// `update` tries to run quickly.
     /// If a newly added node needs time to load resources and initializing,
     /// the node will likely do this asynchronously.
@@ -250,26 +248,25 @@ impl Context {
     /// happens synchronously, so the `update` call may take a long time
     /// and rendering may stutter.
     ///
-    /// The passed in Graph will be mutated to advance its contents by one timestep.
+    /// The passed in Props will be mutated to advance its contents by one timestep.
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
-    pub fn update(&mut self, graph: &mut Graph, render_targets: &RenderTargetList) -> Result<(), &'static str> {
+    pub fn update(&mut self, props: &mut Props, render_targets: &RenderTargetList) -> Result<(), &'static str> {
         // 1. Store graph topology for rendering
-        // TODO check if the graph has changed by comparing it to self.graph
-        // before computing topology
-        self.graph_topology = graph.topology()?;
+        if self.graph != props.graph {
+            // Only re-compute topology if the graph has changed
+            self.graph = props.graph.clone();
+            self.graph_topology = props.graph.topology()?;
+        }
 
         // 2. Sample-and-hold global props like `time` and `dt`, then update them
-        {
-            self.global_props = graph.global_props().clone();
-            let props = graph.global_props_mut();
-            props.time = (props.time + props.dt).rem_euclid(MAX_TIME);
-        }
+        self.global_props = props.global_props.clone();
+        props.global_props.time = (props.global_props.time + props.global_props.dt).rem_euclid(MAX_TIME);
 
         // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
         self.render_target_states.retain(|id, _| render_targets.render_targets().contains_key(id));
-        self.node_states.retain(|id, _| graph.contains_node(id));
+        self.node_states.retain(|id, _| self.graph_topology.input_mapping.contains_key(id));
 
         // 4. Construct any missing render_target_states or node_states (this may kick of background processing)
 
@@ -279,19 +276,19 @@ impl Context {
             }
         }
 
-        for check_node_id in graph.iter_nodes() {
+        for check_node_id in props.graph.nodes.iter() {
             if !self.node_states.contains_key(check_node_id) {
                 self.node_states.insert(
                     *check_node_id,
-                    self.new_node_state(graph.node_props(check_node_id).unwrap())
+                    self.new_node_state(props.node_props.get(check_node_id).unwrap())
                 );
             }
         }
 
         // 5. Update state on every node
-        let nodes: Vec<NodeId> = graph.iter_nodes().cloned().collect();
+        let nodes: Vec<NodeId> = props.graph.nodes.clone();
         for update_node_id in nodes.iter() {
-            let node_props = graph.node_props_mut(update_node_id).unwrap();
+            let node_props = props.node_props.get_mut(update_node_id).unwrap();
             self.update_node(*update_node_id, node_props);
         }
 

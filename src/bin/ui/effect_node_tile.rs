@@ -17,6 +17,7 @@ impl<'a> EffectNodeTile<'a> {
     /// corresponding to the minimum allowable height for that input port.
     /// If there are no input ports, this function should return a 1-element Vec.
     pub fn min_input_heights(props: &EffectNodeProps) -> Vec<f32> {
+        // TODO Simplify this to just be a single f32
         (0..1.max(props.input_count.unwrap_or(1))).map(|_| NORMAL_HEIGHT).collect()
     }
 

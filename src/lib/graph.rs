@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use serde::de::Error;
 use std::fmt;
 
-/// A unique identifier that can be used to look up a `Node` in a `Graph`.
+/// A unique identifier that can be used to look up a `Node`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
 /// they will be unique and never collide, even across different application instances. 
 #[derive(Eq, Hash, Clone, Copy, PartialEq, PartialOrd, Ord)]
@@ -54,15 +54,14 @@ impl<'de> Deserialize<'de> for NodeId {
     }
 }
 
-/// `NodeProps` govern the construction and behavior of a single node in a `Graph`.
+/// `NodeProps` govern the construction and behavior of a single node.
 /// For example, an `EffectNode` has properties of `name` and `intensity`.
 /// 
 /// Some, but not all fields in `NodeProps` can be edited live.
 /// For instance, editing an EffectNode's `intensity` every frame
 /// is supported, but editing its `name` between successive paint calls
 /// will likely cause the `EffectNode` to enter an error state.
-/// To change an EffectNode's name, it must be re-added to the `Graph`
-/// with a new ID.
+/// To change an EffectNode's name, it must be re-added with a new ID.
 ///
 /// NodeProps enumerates all possible node types,
 /// and delegates to their specific props struct,
@@ -96,8 +95,8 @@ pub struct Edge {
     input: u32,
 }
 
-/// `GlobalProps` govern the overall behavior of the `Graph`.
-/// For example, an `GlobalProps` has a properties of `time`.
+/// `GlobalProps` govern the overall behavior not specific to any one node.
+/// For example, `GlobalProps` has a `time` property representing the global timebase.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(tag = "type")]
 pub struct GlobalProps {
@@ -108,30 +107,35 @@ pub struct GlobalProps {
     pub dt: f32,
 }
 
-/// A `Graph` contains a list of nodes (such as effects, movies, and images)
-/// and edges (which nodes feed into which other nodes)
+/// `Props` contains nodes (such as effects, movies, and images)
+/// and connectivity information (which nodes feed into which other nodes)
 /// that describe an overall visual composition.
 /// 
-/// Each node is identified by a `NodeId` and is stored in a sorted list.
-/// The ordering of the list does not affect updating and painting,
-/// but may be used for when visualizing the graph in the UI
-///
-/// Each node also has properties, accessed via `node_props()`,
+/// Each node has properties, accessed via `node_props`,
 /// describing that node's behavior.
 /// 
-/// The graph topology must be acyclic.
-/// 
-/// This `Graph` object is only the graph description:
+/// This `Props` object is a descriptor:
 /// It does not contain any render state or graphics resources.
-/// One use case of a Graph is passing it to `Context.paint` for rendering.
+/// One use case of a Props is passing it to `Context.paint` for rendering.
 /// Another is serializing it out to disk,
 /// or deserializing it from a server.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Props {
+    pub graph: Graph,
+    pub node_props: HashMap<NodeId, NodeProps>,
+    pub global_props: GlobalProps,
+}
+
+/// A Graph stores node connectivity information.
+/// Each node is identified by a `NodeId` and is stored in a sorted list.
+/// The ordering of the list does not affect updating and painting,
+/// but may be used for when visualizing the graph in the UI.
+/// 
+/// The graph topology must be acyclic. Calling topology() will check this.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Graph {
-    nodes: Vec<NodeId>,
-    edges: Vec<Edge>,
-    node_props: HashMap<NodeId, NodeProps>,
-    global_props: GlobalProps,
+    pub nodes: Vec<NodeId>,
+    pub edges: Vec<Edge>,
 }
 
 /// Useful topological properties computed from a Graph
@@ -258,54 +262,19 @@ impl Graph {
             topo_order,
         })
     }
+}
 
-    /// Iterate over the graph nodes, returning a reference to each NodeId
-    pub fn iter_nodes(&self) -> impl Iterator<Item=&NodeId> {
-        self.nodes.iter()
-    }
-
-    /// Returns True if the graph contains a given node
-    pub fn contains_node(&self, id: &NodeId) -> bool {
-        self.node_props.contains_key(id)
-    }
-
-    /// Get an individual node's properties
-    pub fn node_props(&self, id: &NodeId) -> Option<&NodeProps> {
-        self.node_props.get(id)
-    }
-
-    /// Get an individual node's properties for mutation
-    pub fn node_props_mut(&mut self, id: &NodeId) -> Option<&mut NodeProps> {
-        self.node_props.get_mut(id)
-    }
-
-    /// Get the global props for this graph
-    pub fn global_props(&self) -> &GlobalProps {
-        &self.global_props
-    }
-
-    /// Get the global props for this graph
-    pub fn global_props_mut(&mut self) -> &mut GlobalProps {
-        &mut self.global_props
-    }
-
-    // TODO: This graph API is weird:
-    // * it's weird that the graphy graph bits come bundled with global_props
-    // * the "topo order" generation / caching is weird
-    // * it should be easier to do common operations
-    // * we need more concepts (like "connected component" and "open edge")
-    // Consider refactoring it.
-
+impl Props {
     /// Delete nodes
     pub fn delete_nodes(&mut self, delete_ids: &HashSet<NodeId>) {
-        self.nodes.retain(|id| !delete_ids.contains(id));
+        self.graph.nodes.retain(|id| !delete_ids.contains(id));
+        self.graph.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
         self.node_props.retain(|id, _| !delete_ids.contains(id));
-        self.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
     }
 
     /// Add a node
     pub fn add_node(&mut self, id: NodeId, props: NodeProps) {
-        self.nodes.push(id);
+        self.graph.nodes.push(id);
         self.node_props.insert(id, props);
     }
 }

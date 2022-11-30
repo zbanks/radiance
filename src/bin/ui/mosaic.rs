@@ -1,4 +1,4 @@
-use radiance::{Graph, NodeId, NodeProps, CommonNodeProps, NodeState};
+use radiance::{Props, Graph, NodeId, NodeProps, CommonNodeProps, NodeState};
 use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId, Modifiers, IdMap, InputState};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -10,11 +10,11 @@ const MARGIN: f32 = 20.;
 const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
 
 /// Visually lay out the mosaic (collection of tiles)
-fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
+fn layout(props: &Props) -> (Vec2, Vec<Tile>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
-    let topology = graph.topology().unwrap(); // XXX return result instead of unwrap
+    let topology = props.graph.topology().unwrap(); // XXX return result instead of unwrap
 
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
@@ -23,7 +23,7 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
     // Prepare to count repeated nodes
     // Initialize all node counts to zero
     let mut instance_count = HashMap::<NodeId, u32>::new();
-    for &node_id in graph.iter_nodes() {
+    for &node_id in props.graph.nodes.iter() {
         instance_count.insert(node_id, 0);
     }
 
@@ -70,9 +70,9 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
 
     // To begin, lets make a mapping of TileId to its minimum input heights.
     let min_input_heights: HashMap<TileId, Vec<f32>> = tree.keys().map(|&tile_id| {
-        let props = graph.node_props(&tile_id.node).unwrap();
+        let props = props.node_props.get(&tile_id.node).unwrap();
         let heights = match props {
-            NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(p),
+            NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(&p),
         };
         // The length of the returned heights array should match the input count,
         // or be 1 if the input count is zero
@@ -161,9 +161,9 @@ fn layout(graph: &Graph) -> (Vec2, Vec<Tile>) {
     // (that is why we do heights first.)
     let widths: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
         let height: f32 = input_heights.get(&tile_id).unwrap().iter().sum();
-        let props = graph.node_props(&tile_id.node).unwrap();
-        let width = match props {
-            NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(p, height),
+        let node_props = props.node_props.get(&tile_id.node).unwrap();
+        let width = match node_props {
+            NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(&p, height),
         };
         (tile_id, width)
     }).collect();
@@ -380,7 +380,7 @@ struct MosaicMemory {
     layout_cache: Option<LayoutCache>,
 }
 
-pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>) -> Response
+pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>) -> Response
     where IdSource: Hash + std::fmt::Debug,
 {
     // Generate an UI ID for the mosiac
@@ -393,19 +393,19 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
     let mut mosaic_memory = mosaic_memory.lock().unwrap();
 
     // Retain only selected nodes that still exist in the graph
-    let graph_nodes: HashSet<NodeId> = graph.iter_nodes().cloned().collect();
+    let graph_nodes: HashSet<NodeId> = props.graph.nodes.iter().cloned().collect();
     mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
 
     // Lay out the mosaic
     let layout_cache_needs_refresh = match &mosaic_memory.layout_cache {
         None => true,
-        Some(cache) => true, // XXX check cache.graph != graph,
+        Some(cache) => cache.graph != props.graph,
     };
 
     if layout_cache_needs_refresh {
-        let (size, tiles) = layout(&graph);
+        let (size, tiles) = layout(&props);
         mosaic_memory.layout_cache = Some(LayoutCache {
-            graph: graph.clone(),
+            graph: props.graph.clone(),
             size,
             tiles,
         });
@@ -443,11 +443,11 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
         let node_id = tile.id().node;
         let node_state = node_states.get(&node_id).unwrap();
         let &preview_image = preview_images.get(&node_id).unwrap();
-        let node_props = graph.node_props_mut(&node_id).unwrap();
+        let node_props = props.node_props.get_mut(&node_id).unwrap();
 
         let InnerResponse { inner, response } = tile.with_offset(mosaic_rect.min - Pos2::ZERO).show(ui, |ui| {
             match node_props {
-                NodeProps::EffectNode(props) => EffectNodeTile::new(props, node_state.try_into().unwrap(), preview_image).add_contents(ui),
+                NodeProps::EffectNode(p) => EffectNodeTile::new(p, node_state.try_into().unwrap(), preview_image).add_contents(ui),
             }
         });
 
@@ -474,14 +474,14 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, graph: &mut Graph, 
 
     // Graph interactions
     if any_tile_focused && ui.input().key_pressed(egui::Key::Delete) {
-        graph.delete_nodes(&mosaic_memory.selected);
+        props.delete_nodes(&mosaic_memory.selected);
     }
 
     mosaic_response
 }
 
-pub fn mosaic<'a, IdSource>(id_source: IdSource, graph: &'a mut Graph, node_states: &'a HashMap<NodeId, NodeState>, preview_images: &'a HashMap<NodeId, TextureId>) -> impl Widget + 'a
+pub fn mosaic<'a, IdSource>(id_source: IdSource, props: &'a mut Props, node_states: &'a HashMap<NodeId, NodeState>, preview_images: &'a HashMap<NodeId, TextureId>) -> impl Widget + 'a
     where IdSource: Hash + std::fmt::Debug + 'a,
 {
-    move |ui: &mut Ui| mosaic_ui(ui, id_source, graph, node_states, preview_images)
+    move |ui: &mut Ui| mosaic_ui(ui, id_source, props, node_states, preview_images)
 }
