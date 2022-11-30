@@ -252,6 +252,16 @@ impl Context {
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
     pub fn update(&mut self, props: &mut Props, render_targets: &RenderTargetList) -> Result<(), &'static str> {
+        // TODO consider first ensuring that props is well-formed, and if it isn't, make it. i.e.
+        // a) remove any nodes from the graph that aren't present in node_props
+        // b) remove any nodes from node_props that aren't present in nodes
+        // c) remove any edges that go to a node input greater than a node's inputCount (if inputCount is Some)
+        // d) remove any edges from the graph that create cycles
+        // This should allow this function to become infalliable.
+        // Consider writing two functions:
+        // pub fn fix(&mut self) // method on props, does a & b & c
+        // pub fn fix_topology(&mut self) -> GraphTopology // method on graph, does d
+
         // 1. Store graph topology for rendering
         if self.graph != props.graph {
             // Only re-compute topology if the graph has changed
