@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::{NodeId, Props, Graph, GraphTopology, NodeProps, GlobalProps};
+use crate::{NodeId, Props, Graph, GraphTopology, NodeProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;
@@ -54,7 +54,8 @@ pub struct Context {
     blank_texture: ArcTextureViewSampler,
 
     // Cached props from the last update()
-    global_props: GlobalProps,
+    pub time: f32,
+    pub dt: f32,
     graph: Graph,
     graph_topology: GraphTopology,
 
@@ -194,7 +195,8 @@ impl Context {
             device,
             queue,
             blank_texture,
-            global_props: Default::default(),
+            time: 0.,
+            dt: 0.,
             graph: Default::default(),
             graph_topology: Default::default(),
             render_target_states: Default::default(),
@@ -270,8 +272,9 @@ impl Context {
         }
 
         // 2. Sample-and-hold global props like `time` and `dt`, then update them
-        self.global_props = props.global_props.clone();
-        props.global_props.time = (props.global_props.time + props.global_props.dt).rem_euclid(MAX_TIME);
+        self.time = props.time;
+        self.dt = props.dt;
+        props.time = (props.time + props.dt).rem_euclid(MAX_TIME);
 
         // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
@@ -348,11 +351,6 @@ impl Context {
     /// Get a blank (transparent) texture
     pub fn blank_texture(&self) -> &ArcTextureViewSampler {
         &self.blank_texture
-    }
-
-    /// Get the cached global props, based on the last call to update
-    pub fn global_props(&self) -> &GlobalProps {
-        &self.global_props
     }
 
     /// Retrieve the current render targets as HashMap of id -> `RenderTargetState`

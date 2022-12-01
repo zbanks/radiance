@@ -35,19 +35,6 @@ impl From<&NodeProps> for CommonNodeProps {
     }
 }
 
-/// `GlobalProps` govern the overall behavior not specific to any one node.
-/// For example, `GlobalProps` has a `time` property representing the global timebase.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct GlobalProps {
-    // TODO merge these fields into Props
-
-    /// Time, in beats. Wraps around at 64 beats.
-    pub time: f32,
-
-    /// Time between successive calls to `update()`, in beats
-    pub dt: f32,
-}
-
 /// `Props` contains nodes (such as effects, movies, and images)
 /// and connectivity information (which nodes feed into which other nodes)
 /// that describe an overall visual composition.
@@ -62,9 +49,17 @@ pub struct GlobalProps {
 /// or deserializing it from a server.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Props {
+    /// The list of node IDs and how they connect
     pub graph: Graph,
+
+    /// Properties of each node, independent of connectivity
     pub node_props: HashMap<NodeId, NodeProps>,
-    pub global_props: GlobalProps,
+
+    /// Time, in beats. Wraps around at 64 beats.
+    pub time: f32,
+
+    /// Time between successive calls to `update()`, in beats
+    pub dt: f32,
 }
 
 impl Props {

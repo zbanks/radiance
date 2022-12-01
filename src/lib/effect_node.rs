@@ -386,7 +386,7 @@ impl EffectNodeState {
                 Self::update_paint_states(self_ready, ctx);
 
                 // Accumulate intensity_integral
-                self_ready.intensity_integral = (self_ready.intensity_integral + self_ready.props.intensity.unwrap() * ctx.global_props().dt) % INTENSITY_INTEGRAL_PERIOD;
+                self_ready.intensity_integral = (self_ready.intensity_integral + self_ready.props.intensity.unwrap() * ctx.dt) % INTENSITY_INTEGRAL_PERIOD;
             },
             _ => {}
         }
@@ -405,7 +405,7 @@ impl EffectNodeState {
                     let height = render_target_state.height();
                     let uniforms = Uniforms {
                         audio: [0., 0., 0., 0.],
-                        time: ctx.global_props().time,
+                        time: ctx.time,
                         frequency: self_ready.props.frequency.unwrap(),
                         intensity: self_ready.props.intensity.unwrap(),
                         intensity_integral: self_ready.intensity_integral,

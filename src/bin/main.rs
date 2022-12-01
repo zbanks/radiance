@@ -175,10 +175,8 @@ pub async fn run() {
                 "frequency": 1.0
             }
         },
-        "global_props": {
-            "time": 0.,
-            "dt": 0.03,
-        }
+        "time": 0.,
+        "dt": 0.03,
     })).unwrap();
 
     println!("Props: {}", serde_json::to_string(&props).unwrap());
@@ -205,8 +203,8 @@ pub async fn run() {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
                 let music_info = mir.poll();
-                props.global_props.time = music_info.time;
-                props.global_props.dt = music_info.tempo * (1. / 60.);
+                props.time = music_info.time;
+                props.dt = music_info.tempo * (1. / 60.);
                 ctx.update(&mut props, &render_target_list).unwrap(); // XXX handle bad graph instead of unwrap, or consider repairing graph
 
                 // Paint
