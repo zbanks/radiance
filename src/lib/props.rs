@@ -63,6 +63,29 @@ pub struct Props {
 }
 
 impl Props {
+    /// Ensure that props is well-formed, and if it isn't, make it.
+    /// Specifically, make sure that the list of nodes in node_props and graph match,
+    /// and that there are no edges to non-existent nodes.
+    /// This does not detect and remove cycles.
+    /// This should be fairly quick if no changes are necessary.
+    pub fn fix(&mut self) {
+        // a) remove any nodes from the graph that aren't present in node_props
+        // TODO do less naive graph deletion; try to preserve connectivity better
+        self.graph.nodes.retain(|id| self.node_props.contains_key(id));
+        // b) remove any nodes from node_props that aren't present in nodes
+        let save_nodes: HashSet<NodeId> = self.graph.nodes.iter().cloned().collect();
+        self.graph.nodes.retain(|id| save_nodes.contains(id));
+        // c) remove any edges to nodes that don't exist,
+        // or that go to a node input greater than a node's inputCount (if inputCount is Some)
+        self.graph.edges.retain(|edge| {
+            save_nodes.contains(&edge.from) &&
+            save_nodes.contains(&edge.to) &&
+            match CommonNodeProps::from(self.node_props.get(&edge.to).unwrap()).input_count {
+                None => true, // Retain all edges if inputCount not yet known
+                Some(count) => edge.input < count,
+            }
+        });
+    }
 
     // TODO delete a node by simply deleting it from the grpah.nodes
     // TODO add a node by pushing it onto graph.nodes (and node_props)

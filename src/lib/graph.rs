@@ -85,117 +85,218 @@ pub struct GraphTopology {
     pub topo_order: Vec<NodeId>,
 }
 
-impl Graph {
-    pub fn topology(&self) -> Result<GraphTopology, &'static str> {
-        // 1. compute the input mapping
+/// Convert from a list of nodes and edges
+/// into a mapping from node to ints input nodes
+fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<NodeId>>> {
+    let mut input_mapping = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
 
-        let mut input_mapping = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
+    // Add every node to the map
+    for node in nodes.iter() {
+        input_mapping.insert(*node, Default::default());
+    }
 
-        // Add every node to the map
-        for node in self.nodes.iter() {
-            input_mapping.insert(*node, Default::default());
-        }
+    // Add every edge to the map
+    for edge in edges.iter() {
+        let input_vec = input_mapping.get_mut(&edge.to).unwrap();
 
-        // Add every edge to the map
-        for edge in self.edges.iter() {
-            let input_vec = input_mapping.get_mut(&edge.to).unwrap();
-
-            // Ensure vec has enough space to add our entry
-            if input_vec.len() <= edge.input as usize {
-                for _ in 0..=edge.input as usize - input_vec.len() {
-                    input_vec.push(None);
-                }
-            }
-
-            // Add to vec
-            input_vec[edge.input as usize] = Some(edge.from);
-        }
-
-        // Later parts of this function don't work properly
-        // if the graph is totally empty.
-        // Return successfully in this case.
-        if input_mapping.len() == 0 {
-            return Ok(Default::default());
-        }
-
-        // 2. compute the start nodes and topo order
-
-        // Find the "start" nodes: the nodes with no outputs
-        let mut start_nodes: HashSet<NodeId> = input_mapping.keys().cloned().collect();
-        for input_vec in input_mapping.values() {
-            for maybe_input in input_vec {
-                match maybe_input {
-                    Some(input) => {
-                        start_nodes.remove(input);
-                    },
-                    None => {},
-                }
+        // Ensure vec has enough space to add our entry
+        if input_vec.len() <= edge.input as usize {
+            for _ in 0..=edge.input as usize - input_vec.len() {
+                input_vec.push(None);
             }
         }
-        if start_nodes.len() == 0 {
-            return Err("Graph is cyclic")
-        }
-        // Convert start_nodes to vec in a stable fashion
-        // (returned start_nodes will appear in same order as the parameter 'nodes')
-        let start_nodes: Vec<NodeId> = self.nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
 
-        // Topo-sort using DFS
-        // Use a "white-grey-black" node coloring approach
-        // to detect cycles
-        // https://stackoverflow.com/a/62971341
+        // Add to vec
+        input_vec[edge.input as usize] = Some(edge.from);
+    }
 
-        enum Color {
-            White, // Node is not visited
-            Grey, // Node is on the path that is being explored
-            Black, // Node is visited
-        }
+    input_mapping
+}
 
-        // Push "start" nodes onto the stack for DFS
-        let mut stack: Vec<NodeId> = start_nodes.clone();
-        let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
-        let mut topo_order = Vec::<NodeId>::new();
+/// Find cycles in the graph.
+/// Return which edges need to be removed from the graph in order to break all cycles.
+fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> HashSet<Edge> {
+    let mut cyclic_edges = HashSet::<Edge>::new();
 
-        while let Some(&n) = stack.last() {
-            let cn = color.get(&n).unwrap();
-            match cn {
-                Color::White => {
-                    color.insert(n, Color::Grey);
-                    for m in input_mapping.get(&n).unwrap().iter().flatten() {
-                        let cm = color.get(m).unwrap();
-                        match cm {
-                            Color::White => {
-                                stack.push(*m);
-                            },
-                            Color::Grey => {
-                                return Err("Graph is cyclic");
-                            },
-                            Color::Black => {
-                                // Already visited; no action necessary
-                            },
-                        }
+    // Identify cycles using DFS.
+    // Use a "white-grey-black" node coloring approach
+    // to detect cycles
+    // https://stackoverflow.com/a/62971341
+
+    enum Color {
+        White, // Node is not visited
+        Grey, // Node is on the path that is being explored
+        Black, // Node is visited
+    }
+
+    // Push all nodes onto the stack for DFS
+    let mut stack: Vec<NodeId> = nodes.to_vec();
+    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
+
+    while let Some(&n) = stack.last() {
+        let cn = color.get(&n).unwrap();
+        match cn {
+            Color::White => {
+                color.insert(n, Color::Grey);
+                for (i, opt_m) in input_mapping.get(&n).unwrap().iter().enumerate() {
+                    let m = match opt_m {
+                        Some(m) => m,
+                        None => continue,
+                    };
+
+                    let cm = color.get(m).unwrap();
+                    match cm {
+                        Color::White => {
+                            stack.push(*m);
+                        },
+                        Color::Grey => {
+                            // This edge creates a cycle! Add it to the list of edges to remove
+                            cyclic_edges.insert(Edge {
+                                from: *m,
+                                to: n,
+                                input: i as u32,
+                            });
+                        },
+                        Color::Black => {
+                            // Already visited; no action necessary
+                        },
                     }
+                }
+            },
+            Color::Grey => {
+                color.insert(n, Color::Black);
+                stack.pop();
+            },
+            Color::Black => {
+                // Some of the original nodes that were pushed will become colored black,
+                // we can ignore them as they have been explored already.
+                stack.pop();
+            },
+        }
+    }
+
+    cyclic_edges
+}
+
+/// Computes the set of "start nodes", nodes that have no ouputs.
+/// These nodes can be used as a starting point for a DFS,
+/// assuming the graph is acyclic.
+fn start_nodes(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
+    let mut start_nodes: HashSet<NodeId> = input_mapping.keys().cloned().collect();
+    for input_vec in input_mapping.values() {
+        for maybe_input in input_vec {
+            match maybe_input {
+                Some(input) => {
+                    start_nodes.remove(input);
                 },
-                Color::Grey => {
-                    color.insert(n, Color::Black);
-                    stack.pop();
-                    topo_order.push(n);
-                },
-                Color::Black => {
-                    panic!("DFS error; visited node on the stack");
-                },
+                None => {},
             }
         }
+    }
+    // Convert start_nodes to vec in a stable fashion
+    // (returned start_nodes will appear in same order as the parameter 'nodes')
+    let start_nodes: Vec<NodeId> = nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
 
-        if !color.values().all(|c| match c {Color::Black => true, _ => false}) {
-            // Isolated nodes connected to themself will not appear in start_nodes
-            // and will not be visited
+    start_nodes
+}
+
+/// Use DFS to compute a topological ordering of the nodes in a graph.
+/// The input graph must be acyclic or this function will panic.
+fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
+    // Topo-sort using DFS.
+    // Use a "white-grey-black" node coloring approach.
+    // https://stackoverflow.com/a/62971341
+
+    enum Color {
+        White, // Node is not visited
+        Grey, // Node is on the path that is being explored
+        Black, // Node is visited
+    }
+
+    // Push start nodes onto the stack for DFS
+    let mut stack: Vec<NodeId> = start_nodes.to_vec();
+    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
+    let mut topo_order = Vec::<NodeId>::new();
+
+    while let Some(&n) = stack.last() {
+        let cn = color.get(&n).unwrap();
+        match cn {
+            Color::White => {
+                color.insert(n, Color::Grey);
+                for m in input_mapping.get(&n).unwrap().iter().flatten() {
+                    let cm = color.get(m).unwrap();
+                    match cm {
+                        Color::White => {
+                            stack.push(*m);
+                        },
+                        Color::Grey => {
+                            // This edge creates a cycle! Panic!
+                            panic!("Cycle detected in graph");
+                        },
+                        Color::Black => {
+                            // Already visited; no action necessary
+                        },
+                    }
+                }
+            },
+            Color::Grey => {
+                color.insert(n, Color::Black);
+                stack.pop();
+                topo_order.push(n);
+            },
+            Color::Black => {
+                panic!("DFS integrity error"); // Black nodes should never be pushed to the stack
+            },
+        }
+    }
+
+    topo_order
+}
+
+impl Graph {
+    /// Compute the topology of this graph.
+    /// If the graph is acyclic, return a GraphTopology struct describing it.
+    /// If the graph is cyclic, return an error.
+    pub fn topology(&self) -> Result<GraphTopology, &'static str> {
+        let input_mapping = map_inputs(&self.nodes, &self.edges);
+        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
+        if !cyclic_edges.is_empty() {
             return Err("Graph is cyclic");
         }
+
+        // Now that we know the graph is acyclic, it is safe to do the following:
+        let start_nodes = start_nodes(&self.nodes, &input_mapping);
+        let topo_order = topo_sort(&start_nodes, &input_mapping);
 
         Ok(GraphTopology {
             input_mapping,
             start_nodes,
             topo_order,
         })
+    }
+
+    /// Compute the topology of this graph.
+    /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
+    /// Then, compute and return a GraphTopology struct descrbing the acylic graph.
+    pub fn repair_topology(&mut self) -> GraphTopology {
+        let mut input_mapping = map_inputs(&self.nodes, &self.edges);
+        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
+        if !cyclic_edges.is_empty() {
+            // Remove edges that cause cycles
+            self.edges.retain(|e| cyclic_edges.contains(e));
+
+            // Recompute input_mapping since we removed edges
+            input_mapping = map_inputs(&self.nodes, &self.edges);
+        }
+
+        // Now that we know the graph is acyclic, it is safe to do the following:
+        let start_nodes = start_nodes(&self.nodes, &input_mapping);
+        let topo_order = topo_sort(&start_nodes, &input_mapping);
+
+        GraphTopology {
+            input_mapping,
+            start_nodes,
+            topo_order,
+        }
     }
 }
