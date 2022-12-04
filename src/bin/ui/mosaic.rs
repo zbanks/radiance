@@ -405,11 +405,11 @@ struct LayoutCache {
 /// State associated with the mosaic UI, to be preserved between frames,
 /// like which tiles are selected.
 /// Does not include anything associated with the graph (like intensities)
-/// or anything already tracked separately by egui (like focus)
 #[derive(Debug, Default)]
 struct MosaicMemory {
     pub animation_manager: MosaicAnimationManager,
     pub selected: HashSet<NodeId>,
+    pub focused: Option<TileId>,
 
     layout_cache: Option<LayoutCache>,
 }
@@ -459,18 +459,21 @@ pub fn mosaic_ui<IdSource>(
     let layout_size = *layout_size;
     let tiles = tiles.to_vec();
 
-    let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense {click: false, drag: false, focusable: false});
+    let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
 
     // Note that the layout function returns tiles that go all the way to (0, 0)
     // and they must be further offset for the UI region we are allocated
     // Apply focus and offset,
     // and figure out where the focused insertion point is
     let offset = mosaic_rect.min - Pos2::ZERO;
-    let mut any_tile_focused = false;
+    insertion_point.clone_from(&Default::default());
     let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, output_insertion_point}| {
-        let focused = ui.ctx().memory().has_focus(tile.ui_id());
+        let focused = match mosaic_memory.focused {
+            Some(id) => id == tile.id(),
+            None => false,
+        };
+
         let selected = mosaic_memory.selected.contains(&tile.id().node);
-        any_tile_focused |= focused;
         if focused {
             // Use the focused tile's insertion point
             // as the overall graph's focused_insertion_point
@@ -494,7 +497,8 @@ pub fn mosaic_ui<IdSource>(
 
     // Draw
     for tile in tiles.into_iter() {
-        let node_id = tile.id().node;
+        let tile_id = tile.id();
+        let node_id = tile_id.node;
         let node_state = node_states.get(&node_id).unwrap();
         let &preview_image = preview_images.get(&node_id).unwrap();
         let node_props = props.node_props.get_mut(&node_id).unwrap();
@@ -506,8 +510,11 @@ pub fn mosaic_ui<IdSource>(
         });
 
         if response.clicked() {
+            // Focus the mosaic
+            mosaic_response.request_focus();
+
             // Focus the tile
-            response.request_focus();
+            mosaic_memory.focused = Some(tile_id);
 
             // Handle node selection
             match ui.input().modifiers {
@@ -526,8 +533,26 @@ pub fn mosaic_ui<IdSource>(
         }
     }
 
+    // Check if background was clicked, and if so, blur & deselect tiles
+    if mosaic_response.clicked() {
+        // Focus the mosaic
+        mosaic_response.request_focus();
+
+        // No tile is focused
+        mosaic_memory.focused = None;
+        match ui.input().modifiers {
+            Modifiers { ctrl: true, .. } => {
+                // Do nothing if Ctrl-click
+            },
+            _ => {
+                // Deselect all tiles for normal click
+                mosaic_memory.selected.clear();
+            },
+        }
+    }
+
     // Graph interactions
-    if any_tile_focused && ui.input().key_pressed(egui::Key::Delete) {
+    if mosaic_response.has_focus() && ui.input().key_pressed(egui::Key::Delete) {
         props.graph.delete_nodes(&mosaic_memory.selected);
     }
 

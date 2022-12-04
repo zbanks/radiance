@@ -229,7 +229,7 @@ pub async fn run() {
                     });
 
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images, &mut insertion_point));
+                        let mosaic_response = ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images, &mut insertion_point));
 
                         if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
                             left_panel_expanded = true;
@@ -252,9 +252,12 @@ pub async fn run() {
                                     });
                                     props.node_props.insert(new_node_id, new_node_props);
                                     props.graph.insert_node(new_node_id, &insertion_point);
+                                    // TODO: select and focus the new node
+                                    // (consider making selection & focus part of the explicit state of mosaic, not memory)
                                 }
                                 node_add_textedit.clear();
                                 left_panel_expanded = false;
+                                mosaic_response.request_focus();
                             }
                         }
                     });
