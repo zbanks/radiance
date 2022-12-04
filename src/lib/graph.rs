@@ -106,8 +106,6 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<N
         input_vec[edge.input as usize] = Some(edge.from);
     }
 
-    // TODO consider returning start nodes here too
-
     (input_mapping, invalid_edges)
 }
 
@@ -253,57 +251,4 @@ impl Graph {
             self.edges.retain(|e| !invalid_edges.contains(e));
         }
     }
-}
-
-/// Use DFS to compute a topological ordering of the nodes in a graph (represented as a mapping.)
-/// The input mapping must be acyclic or this function will panic.
-pub fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
-    // Topo-sort using DFS.
-    // Use a "white-grey-black" node coloring approach.
-    // https://stackoverflow.com/a/62971341
-
-    enum Color {
-        White, // Node is not visited
-        Grey, // Node is on the path that is being explored
-        Black, // Node is visited
-    }
-
-    // Push start nodes onto the stack for DFS
-    let mut stack: Vec<NodeId> = start_nodes.to_vec();
-    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
-    let mut topo_order = Vec::<NodeId>::new();
-
-    while let Some(&n) = stack.last() {
-        let cn = color.get(&n).unwrap();
-        match cn {
-            Color::White => {
-                color.insert(n, Color::Grey);
-                for m in input_mapping.get(&n).unwrap().iter().flatten() {
-                    let cm = color.get(m).unwrap();
-                    match cm {
-                        Color::White => {
-                            stack.push(*m);
-                        },
-                        Color::Grey => {
-                            // This edge creates a cycle! Panic!
-                            panic!("Cycle detected in graph");
-                        },
-                        Color::Black => {
-                            // Already visited; no action necessary
-                        },
-                    }
-                }
-            },
-            Color::Grey => {
-                color.insert(n, Color::Black);
-                stack.pop();
-                topo_order.push(n);
-            },
-            Color::Black => {
-                panic!("DFS integrity error"); // Black nodes should never be pushed to the stack
-            },
-        }
-    }
-
-    topo_order
 }
