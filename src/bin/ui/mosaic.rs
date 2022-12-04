@@ -1,4 +1,4 @@
-use radiance::{Props, Graph, NodeId, NodeProps, CommonNodeProps, NodeState};
+use radiance::{Props, Graph, NodeId, NodeProps, CommonNodeProps, NodeState, InsertionPoint};
 use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId, Modifiers, IdMap, InputState};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -9,8 +9,18 @@ use crate::ui::effect_node_tile::EffectNodeTile;
 const MARGIN: f32 = 20.;
 const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
 
+/// A struct to hold info about a single tile that has been laid out.
+#[derive(Clone, Debug)]
+struct TileInMosaic {
+    /// The visual tile
+    pub tile: Tile,
+
+    /// The insertion point that should be used if a tile is inserted "on top of" this file
+    pub insertion_point: InsertionPoint,
+}
+
 /// Visually lay out the mosaic (collection of tiles)
-fn layout(props: &mut Props) -> (Vec2, Vec<Tile>) {
+fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
@@ -187,7 +197,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<Tile>) {
     }
 
     // Collect and return the result
-    let tiles: Vec<Tile> = tree.keys().map(|&tile_id| {
+    let tiles: Vec<TileInMosaic> = tree.keys().map(|&tile_id| {
         let &x = xs.get(&tile_id).unwrap();
         let &y = ys.get(&tile_id).unwrap();
         let &width = widths.get(&tile_id).unwrap();
@@ -198,12 +208,16 @@ fn layout(props: &mut Props) -> (Vec2, Vec<Tile>) {
         // TODO make outputs a f32 instead of Vec<f32> in Tile
         let my_outputs: Vec<f32> = [my_output].into();
 
-        Tile::new(
-            tile_id,
-            Rect::from_min_size(pos2(x, y), vec2(width, height)),
-            my_inputs,
-            my_outputs,
-        )
+        TileInMosaic {
+            tile: Tile::new(
+                tile_id,
+                Rect::from_min_size(pos2(x, y), vec2(width, height)),
+                my_inputs,
+                my_outputs,
+            ),
+            // TODO insert node at a specific location in the graph
+            insertion_point: Default::default(),
+        }
     }).collect();
 
     (vec2(total_width, total_height), tiles)
@@ -365,7 +379,7 @@ impl MosaicAnimationManager {
 struct LayoutCache {
     graph: Graph, // Stored to check equality against subsequent call
     size: Vec2,
-    tiles: Vec<Tile>,
+    tiles: Vec<TileInMosaic>,
 }
 
 /// State associated with the mosaic UI, to be preserved between frames,
@@ -380,7 +394,14 @@ struct MosaicMemory {
     layout_cache: Option<LayoutCache>,
 }
 
-pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>) -> Response
+pub fn mosaic_ui<IdSource>(
+    ui: &mut Ui,
+    id_source: IdSource,
+    props: &mut Props,
+    node_states: &HashMap<NodeId, NodeState>,
+    preview_images: &HashMap<NodeId, TextureId>,
+    insertion_point: &mut Option<InsertionPoint>,
+) -> Response
     where IdSource: Hash + std::fmt::Debug,
 {
     props.fix();
@@ -422,16 +443,28 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, 
 
     // Note that the layout function returns tiles that go all the way to (0, 0)
     // and they must be further offset for the UI region we are allocated
-    // Apply focus and offset
+    // Apply focus and offset,
+    // and figure out where the focused insertion point is
     let offset = mosaic_rect.min - Pos2::ZERO;
     let mut any_tile_focused = false;
-    let mut tiles: Vec<Tile> = tiles.into_iter().map(|tile| {
+    let mut focused_insertion_point: InsertionPoint = Default::default();
+    let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, insertion_point}| {
         let focused = ui.ctx().memory().has_focus(tile.ui_id());
         let selected = mosaic_memory.selected.contains(&tile.id().node);
         any_tile_focused |= focused;
+        if focused {
+            // Use the focused tile's insertion point
+            // as the overall graph's focused_insertion_point
+            focused_insertion_point = insertion_point;
+        }
         let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile);
         tile.with_offset(offset).with_focus(focused).with_selected(selected)
     }).collect();
+
+    // Always write Some() back.
+    // TODO consider only updating this when the graph or the focus changes
+    // TODO this is weird, returning a result in the parameters feels very C-like.
+    std::mem::drop(std::mem::replace(insertion_point, Some(focused_insertion_point)));
 
     // Sort
     tiles.sort_by_key(|tile| tile.draw_order());
@@ -482,8 +515,21 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, 
     mosaic_response
 }
 
-pub fn mosaic<'a, IdSource>(id_source: IdSource, props: &'a mut Props, node_states: &'a HashMap<NodeId, NodeState>, preview_images: &'a HashMap<NodeId, TextureId>) -> impl Widget + 'a
+pub fn mosaic<'a, IdSource>(
+    id_source: IdSource,
+    props: &'a mut Props,
+    node_states: &'a HashMap<NodeId, NodeState>,
+    preview_images: &'a HashMap<NodeId, TextureId>,
+    insertion_point: &'a mut Option<InsertionPoint>,
+) -> impl Widget + 'a
     where IdSource: Hash + std::fmt::Debug + 'a,
 {
-    move |ui: &mut Ui| mosaic_ui(ui, id_source, props, node_states, preview_images)
+    move |ui: &mut Ui| mosaic_ui(
+        ui,
+        id_source,
+        props,
+        node_states,
+        preview_images,
+        insertion_point,
+    )
 }

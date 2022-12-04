@@ -12,7 +12,7 @@ use serde_json::json;
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps};
+use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps, InsertionPoint};
 
 mod ui;
 use ui::{mosaic};
@@ -228,7 +228,10 @@ pub async fn run() {
                     });
 
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images));
+                        let mut insertion_point: Option<InsertionPoint> = None;
+                        ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images, &mut insertion_point));
+                        let insertion_point = insertion_point.unwrap();
+
                         if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
                             left_panel_expanded = true;
                             node_add_wants_focus = true;
@@ -249,8 +252,7 @@ pub async fn run() {
                                         ..Default::default()
                                     });
                                     props.node_props.insert(new_node_id, new_node_props);
-                                    // TODO insert node at a specific location in the graph
-                                    props.graph.insert_node(new_node_id, Default::default());
+                                    props.graph.insert_node(new_node_id, insertion_point);
                                 }
                                 node_add_textedit.clear();
                                 left_panel_expanded = false;
