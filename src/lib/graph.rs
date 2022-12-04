@@ -298,7 +298,7 @@ impl Graph {
     /// Add a node to the graph
     /// and make appropriate connections
     /// so that it appears at the given insertion point.
-    pub fn insert_node(&mut self, node: NodeId, insertion_point: InsertionPoint) {
+    pub fn insert_node(&mut self, node: NodeId, insertion_point: &InsertionPoint) {
         self.nodes.push(node);
         if let Some(from_output) = insertion_point.from_output {
             // If we have both an output and inputs,
@@ -317,7 +317,7 @@ impl Graph {
         }
 
         // Wire up the outgoing edges
-        for (to, input) in insertion_point.to_inputs {
+        for &(to, input) in insertion_point.to_inputs.iter() {
             self.edges.push(Edge {
                 from: node,
                 to,

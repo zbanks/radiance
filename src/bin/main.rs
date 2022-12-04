@@ -197,6 +197,7 @@ pub async fn run() {
     let mut node_add_textedit = String::new();
     let mut left_panel_expanded = false;
     let mut node_add_wants_focus = false;
+    let mut insertion_point: InsertionPoint = Default::default();
 
     event_loop.run(move |event, _, control_flow| {
         match event {
@@ -228,9 +229,7 @@ pub async fn run() {
                     });
 
                     egui::CentralPanel::default().show(&egui_ctx, |ui| {
-                        let mut insertion_point: Option<InsertionPoint> = None;
                         ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images, &mut insertion_point));
-                        let insertion_point = insertion_point.unwrap();
 
                         if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
                             left_panel_expanded = true;
@@ -252,7 +251,7 @@ pub async fn run() {
                                         ..Default::default()
                                     });
                                     props.node_props.insert(new_node_id, new_node_props);
-                                    props.graph.insert_node(new_node_id, insertion_point);
+                                    props.graph.insert_node(new_node_id, &insertion_point);
                                 }
                                 node_add_textedit.clear();
                                 left_panel_expanded = false;

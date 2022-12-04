@@ -15,8 +15,8 @@ struct TileInMosaic {
     /// The visual tile
     pub tile: Tile,
 
-    /// The insertion point that should be used if a tile is inserted "on top of" this file
-    pub insertion_point: InsertionPoint,
+    /// The insertion point that should be used if a tile is inserted on the output of this tile
+    pub output_insertion_point: InsertionPoint,
 }
 
 /// Visually lay out the mosaic (collection of tiles)
@@ -47,9 +47,20 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
         }
     };
 
+    // Start an map from a TileId to its output's insertion point.
+    let mut output_insertion_points = HashMap::<TileId, InsertionPoint>::new();
+
     // Start by allocating tiles for the start nodes
     // (start nodes will necessarily have only one tile)
     let start_tiles: Vec<TileId> = start_nodes.iter().map(&mut allocate_tile).collect();
+
+    // Add a half-open output insertion point for each start tile
+    for &tile_id in start_tiles.iter() {
+        output_insertion_points.insert(tile_id, InsertionPoint {
+            from_output: Some(tile_id.node),
+            to_inputs: Default::default(),
+        });
+    }
 
     let mut stack = start_tiles.clone();
     let mut tree = HashMap::<TileId, Vec<Option<TileId>>>::new();
@@ -61,12 +72,22 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
             .map(|maybe_child_node| maybe_child_node.as_ref().map(&mut allocate_tile))
             .collect();
 
-        // 2) Push its newly created child tiles onto the stack
+        // 2) Create output insertion points for each child
+        for (input, &child_tile) in child_tiles.iter().enumerate() {
+            if let Some(child_tile) = child_tile {
+                output_insertion_points.insert(child_tile, InsertionPoint {
+                    from_output: Some(child_tile.node),
+                    to_inputs: vec![(tile.node, input as u32)],
+                });
+            }
+        }
+
+        // 3) Push its newly created child tiles onto the stack
         for &child_tile in child_tiles.iter().flatten() {
             stack.push(child_tile);
         }
 
-        // 3) Insert its child connections into the tree
+        // 4) Insert its child connections into the tree
         tree.insert(tile, child_tiles);
     }
 
@@ -215,8 +236,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
                 my_inputs,
                 my_outputs,
             ),
-            // TODO insert node at a specific location in the graph
-            insertion_point: Default::default(),
+            output_insertion_point: output_insertion_points.get(&tile_id).unwrap().clone(),
         }
     }).collect();
 
@@ -400,7 +420,7 @@ pub fn mosaic_ui<IdSource>(
     props: &mut Props,
     node_states: &HashMap<NodeId, NodeState>,
     preview_images: &HashMap<NodeId, TextureId>,
-    insertion_point: &mut Option<InsertionPoint>,
+    insertion_point: &mut InsertionPoint,
 ) -> Response
     where IdSource: Hash + std::fmt::Debug,
 {
@@ -447,24 +467,23 @@ pub fn mosaic_ui<IdSource>(
     // and figure out where the focused insertion point is
     let offset = mosaic_rect.min - Pos2::ZERO;
     let mut any_tile_focused = false;
-    let mut focused_insertion_point: InsertionPoint = Default::default();
-    let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, insertion_point}| {
+    let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, output_insertion_point}| {
         let focused = ui.ctx().memory().has_focus(tile.ui_id());
         let selected = mosaic_memory.selected.contains(&tile.id().node);
         any_tile_focused |= focused;
         if focused {
             // Use the focused tile's insertion point
             // as the overall graph's focused_insertion_point
-            focused_insertion_point = insertion_point;
+            // TODO consider only updating this when the graph or the focus changes
+            // TODO this is weird, returning a result in the parameters feels very C-like.
+            // TODO tile focus is weird and probably needs to be done in-house
+            // so it isn't cleared upon moving a slider or adding a node.
+            // Right now it's impossible to clear this insertion point.
+            insertion_point.clone_from(&output_insertion_point);
         }
         let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile);
         tile.with_offset(offset).with_focus(focused).with_selected(selected)
     }).collect();
-
-    // Always write Some() back.
-    // TODO consider only updating this when the graph or the focus changes
-    // TODO this is weird, returning a result in the parameters feels very C-like.
-    std::mem::drop(std::mem::replace(insertion_point, Some(focused_insertion_point)));
 
     // Sort
     tiles.sort_by_key(|tile| tile.draw_order());
@@ -520,7 +539,7 @@ pub fn mosaic<'a, IdSource>(
     props: &'a mut Props,
     node_states: &'a HashMap<NodeId, NodeState>,
     preview_images: &'a HashMap<NodeId, TextureId>,
-    insertion_point: &'a mut Option<InsertionPoint>,
+    insertion_point: &'a mut InsertionPoint,
 ) -> impl Widget + 'a
     where IdSource: Hash + std::fmt::Debug + 'a,
 {
