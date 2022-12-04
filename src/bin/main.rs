@@ -250,7 +250,7 @@ pub async fn run() {
                                     });
                                     props.node_props.insert(new_node_id, new_node_props);
                                     // TODO insert node at a specific location in the graph
-                                    props.graph.nodes.push(new_node_id);
+                                    props.graph.insert_node(new_node_id, Default::default());
                                 }
                                 node_add_textedit.clear();
                                 left_panel_expanded = false;

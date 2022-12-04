@@ -74,6 +74,40 @@ pub struct Graph {
     pub edges: Vec<Edge>,
 }
 
+/// A insertion point describes a place in a graph where a subgraph can be inserted.
+/// A insertion point may be:
+/// * Closed: A insertion point with both an input and an output.
+///   This happens when new nodes are being inserted between existing connected nodes.
+///   Inserting nodes here involves removing existing edges.
+///
+///   Note that when an output connects to multiple inputs,
+///   there are two options for constructing an insertion point:
+///                 --o--> Node B
+///                /
+///   Node A --o--+------> Node C
+///                \
+///                 -----> Node D
+///   Both 'o' marks are a valid insertion point between nodes A and B.
+///   One is on the output of A, and insertion will affect all downstream connections.
+///   This InsertionPoint will have three to_input entries.
+///   The other is on the input of B, and will only affect B's branch.
+///   This InsertionPoint will have one to_input entry.
+/// * Half-open on the output: An insertion point that has no output.
+///   This happens when nodes are inserted at output of an existing "start node"
+///   (all the way towards the root.)
+///   After insertion, one of the inserted nodes will be the new "start node".
+/// * Half-open on the input: An insertion point that has no inputs.
+///   This happens when nodes are inserted at the input of an existing leaf node.
+///   After insertion, the one of the inserted nodes will be the new leaf.
+/// * Open: An insertion point that has no input or output.
+///   This happens when nodes are inserted as a disconnected subgraph.
+///   No connections to the existing graph need to be made or broken.
+#[derive(Debug, Clone, Default)]
+pub struct InsertionPoint {
+    pub from_output: Option<NodeId>,
+    pub to_inputs: Vec<(NodeId, u32)>,
+}
+
 /// Convert from a list of nodes and edges
 /// into a mapping from node to ints input nodes.
 /// Return this mapping, along with a set of edges that were not valid.
@@ -258,6 +292,37 @@ impl Graph {
             // remove dangling edges
             let (_, invalid_edges) = map_inputs(&self.nodes, &self.edges);
             self.edges.retain(|e| !invalid_edges.contains(e));
+        }
+    }
+
+    /// Add a node to the graph
+    /// and make appropriate connections
+    /// so that it appears at the given insertion point.
+    pub fn insert_node(&mut self, node: NodeId, insertion_point: InsertionPoint) {
+        self.nodes.push(node);
+        if let Some(from_output) = insertion_point.from_output {
+            // If we have both an output and inputs,
+            // remove any existing edges in the graph
+            self.edges.retain(|e| 
+                e.from != from_output &&
+                !insertion_point.to_inputs.contains(&(e.to, e.input))
+            );
+
+            // Wire up the incoming edge
+            self.edges.push(Edge {
+                from: from_output,
+                to: node,
+                input: 0,
+            });
+        }
+
+        // Wire up the outgoing edges
+        for (to, input) in insertion_point.to_inputs {
+            self.edges.push(Edge {
+                from: node,
+                to,
+                input,
+            });
         }
     }
 }
