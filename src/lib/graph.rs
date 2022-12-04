@@ -88,12 +88,20 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<N
 
     // Add every edge to the map
     for edge in edges.iter() {
-        if !input_mapping.contains_key(&edge.to) || !input_mapping.contains_key(&edge.from) {
+        if !input_mapping.contains_key(&edge.to) ||
+           !input_mapping.contains_key(&edge.from)
+        {
             invalid_edges.insert(edge.clone());
             continue;
         }
 
         let input_vec = input_mapping.get_mut(&edge.to).unwrap();
+
+        // Ensure this input doesn't already have a connection
+        if input_vec.get(edge.input as usize).cloned().flatten().is_some() {
+            invalid_edges.insert(edge.clone());
+            continue;
+        }
 
         // Ensure vec has enough space to add our entry
         if input_vec.len() <= edge.input as usize {
@@ -214,6 +222,7 @@ impl Graph {
 
     /// Repair a graph if necessary.
     /// If the graph contains edges referencing nonexistant nodes, they will be removed.
+    /// If a node input has multiple incoming edges, all but one will be removed.
     /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
     /// Returns an input mapping (map from NodeIds to their inputs)
     pub fn repair(&mut self) -> HashMap<NodeId, Vec<Option<NodeId>>> {
