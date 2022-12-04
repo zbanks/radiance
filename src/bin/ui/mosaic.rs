@@ -8,6 +8,7 @@ use crate::ui::effect_node_tile::EffectNodeTile;
 
 const MARGIN: f32 = 20.;
 const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
+const INTENSITY_SCROLL_RATE: f32 = 0.001;
 
 /// A struct to hold info about a single tile that has been laid out.
 #[derive(Clone, Debug)]
@@ -552,8 +553,26 @@ pub fn mosaic_ui<IdSource>(
     }
 
     // Graph interactions
-    if mosaic_response.has_focus() && ui.input().key_pressed(egui::Key::Delete) {
-        props.graph.delete_nodes(&mosaic_memory.selected);
+    if mosaic_response.has_focus() {
+        // Handle scroll wheel
+        let intensity_delta = ui.input().scroll_delta.y * INTENSITY_SCROLL_RATE;
+        if intensity_delta != 0. {
+            for node in mosaic_memory.selected.iter() {
+                match props.node_props.get_mut(&node).unwrap() {
+                    NodeProps::EffectNode(node_props) => {
+                        if let Some(intensity) = node_props.intensity {
+                            node_props.intensity = Some((intensity + intensity_delta).clamp(0., 1.));
+                        }
+                    },
+                    _ => {},
+                }
+            }
+        }
+
+        // Handle delete key
+        if ui.input().key_pressed(egui::Key::Delete) {
+            props.graph.delete_nodes(&mosaic_memory.selected);
+        }
     }
 
     mosaic_response
