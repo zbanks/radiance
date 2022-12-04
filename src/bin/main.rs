@@ -205,7 +205,7 @@ pub async fn run() {
                 let music_info = mir.poll();
                 props.time = music_info.time;
                 props.dt = music_info.tempo * (1. / 60.);
-                ctx.update(&mut props, &render_target_list).unwrap(); // XXX handle bad graph instead of unwrap, or consider repairing graph
+                ctx.update(&mut props, &render_target_list);
 
                 // Paint
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -243,10 +243,14 @@ pub async fn run() {
                             }
                             if node_add_response.lost_focus() {
                                 if egui_ctx.input().key_pressed(egui::Key::Enter) {
-                                    props.add_node(NodeId::gen(), NodeProps::EffectNode(EffectNodeProps {
+                                    let new_node_id = NodeId::gen();
+                                    let new_node_props = NodeProps::EffectNode(EffectNodeProps {
                                         name: node_add_textedit.clone(),
                                         ..Default::default()
-                                    }));
+                                    });
+                                    props.node_props.insert(new_node_id, new_node_props);
+                                    // TODO insert node at a specific location in the graph
+                                    props.graph.nodes.push(new_node_id);
                                 }
                                 node_add_textedit.clear();
                                 left_panel_expanded = false;

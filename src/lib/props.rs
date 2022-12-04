@@ -66,17 +66,15 @@ impl Props {
     /// Ensure that props is well-formed, and if it isn't, make it.
     /// Specifically, make sure that the list of nodes in node_props and graph match,
     /// and that there are no edges to non-existent nodes.
-    /// This does not detect and remove cycles.
-    /// This should be fairly quick if no changes are necessary.
+    /// We also check for and remove cycles in the graph.
     pub fn fix(&mut self) {
         // a) remove any nodes from the graph that aren't present in node_props
-        // TODO do less naive graph deletion; try to preserve connectivity better
-        self.graph.nodes.retain(|id| self.node_props.contains_key(id));
+        let graph_nodes_to_remove: HashSet<NodeId> = self.graph.nodes.iter().filter(|n| !self.node_props.contains_key(n)).cloned().collect();
+        self.graph.delete_nodes(&graph_nodes_to_remove);
         // b) remove any nodes from node_props that aren't present in nodes
         let save_nodes: HashSet<NodeId> = self.graph.nodes.iter().cloned().collect();
         self.graph.nodes.retain(|id| save_nodes.contains(id));
-        // c) remove any edges to nodes that don't exist,
-        // or that go to a node input greater than a node's inputCount (if inputCount is Some)
+        // c) remove any edges that go to a node input greater than a node's inputCount (if inputCount is Some)
         self.graph.edges.retain(|edge| {
             save_nodes.contains(&edge.from) &&
             save_nodes.contains(&edge.to) &&
@@ -85,23 +83,7 @@ impl Props {
                 Some(count) => edge.input < count,
             }
         });
-    }
-
-    // TODO delete a node by simply deleting it from the grpah.nodes
-    // TODO add a node by pushing it onto graph.nodes (and node_props)
-    // Then these methods can be removed
-    // and less naive versions of them can be written into impl Graph
-
-    /// Delete nodes
-    pub fn delete_nodes(&mut self, delete_ids: &HashSet<NodeId>) {
-        self.graph.nodes.retain(|id| !delete_ids.contains(id));
-        self.graph.edges.retain(|edge| !delete_ids.contains(&edge.from) && !delete_ids.contains(&edge.to));
-        self.node_props.retain(|id, _| !delete_ids.contains(id));
-    }
-
-    /// Add a node
-    pub fn add_node(&mut self, id: NodeId, props: NodeProps) {
-        self.graph.nodes.push(id);
-        self.node_props.insert(id, props);
+        // d) repair the graph (remove cycles)
+        self.graph.repair(); // This won't remove any nodes, only edges.
     }
 }

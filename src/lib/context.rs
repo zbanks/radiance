@@ -253,22 +253,17 @@ impl Context {
     /// The passed in Props will be mutated to advance its contents by one timestep.
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
-    pub fn update(&mut self, props: &mut Props, render_targets: &RenderTargetList) -> Result<(), &'static str> {
-        // TODO consider first ensuring that props is well-formed, and if it isn't, make it. i.e.
-        // a) remove any nodes from the graph that aren't present in node_props
-        // b) remove any nodes from node_props that aren't present in nodes
-        // c) remove any edges that go to a node input greater than a node's inputCount (if inputCount is Some)
-        // d) remove any edges from the graph that create cycles
-        // This should allow this function to become infalliable.
-        // Consider writing two functions:
-        // pub fn fix(&mut self) // method on props, does a & b & c
-        // pub fn fix_topology(&mut self) -> GraphTopology // method on graph, does d
-
+    pub fn update(&mut self, props: &mut Props, render_targets: &RenderTargetList) {
         // 1. Store graph topology for rendering
+
+        // Make sure the props are well-formed
+        // (e.g. there is a .node_props entry for every node in the .graph)
+        props.fix();
+
+        // Re-compute the graph topology if the graph changed
         if self.graph != props.graph {
-            // Only re-compute topology if the graph has changed
+            self.graph_topology = props.graph.topology();
             self.graph = props.graph.clone();
-            self.graph_topology = props.graph.topology()?;
         }
 
         // 2. Sample-and-hold global props like `time` and `dt`, then update them
@@ -304,8 +299,6 @@ impl Context {
             let node_props = props.node_props.get_mut(update_node_id).unwrap();
             self.update_node(*update_node_id, node_props);
         }
-
-        Ok(())
     }
 
     /// Paint the given render target.

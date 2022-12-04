@@ -10,11 +10,11 @@ const MARGIN: f32 = 20.;
 const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
 
 /// Visually lay out the mosaic (collection of tiles)
-fn layout(props: &Props) -> (Vec2, Vec<Tile>) {
+fn layout(props: &mut Props) -> (Vec2, Vec<Tile>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
-    let topology = props.graph.topology().unwrap(); // XXX return result instead of unwrap
+    let topology = props.graph.topology();
 
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
@@ -383,6 +383,8 @@ struct MosaicMemory {
 pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, node_states: &HashMap<NodeId, NodeState>, preview_images: &HashMap<NodeId, TextureId>) -> Response
     where IdSource: Hash + std::fmt::Debug,
 {
+    props.fix();
+
     // Generate an UI ID for the mosiac
     let mosaic_id = ui.make_persistent_id(id_source);
 
@@ -403,7 +405,7 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, 
     };
 
     if layout_cache_needs_refresh {
-        let (size, tiles) = layout(&props);
+        let (size, tiles) = layout(props);
         mosaic_memory.layout_cache = Some(LayoutCache {
             graph: props.graph.clone(),
             size,
@@ -474,7 +476,7 @@ pub fn mosaic_ui<IdSource>(ui: &mut Ui, id_source: IdSource, props: &mut Props, 
 
     // Graph interactions
     if any_tile_focused && ui.input().key_pressed(egui::Key::Delete) {
-        props.delete_nodes(&mosaic_memory.selected);
+        props.graph.delete_nodes(&mosaic_memory.selected);
     }
 
     mosaic_response

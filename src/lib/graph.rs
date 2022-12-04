@@ -75,6 +75,8 @@ pub struct Graph {
 }
 
 /// Useful topological properties computed from a Graph
+// TODO: is this useful collected together?
+// Would it be better to have individual functions for each computed thing?
 #[derive(Debug, Clone, Default)]
 pub struct GraphTopology {
     /// A mapping from a node to its inputs (dependencies)
@@ -86,9 +88,11 @@ pub struct GraphTopology {
 }
 
 /// Convert from a list of nodes and edges
-/// into a mapping from node to ints input nodes
-fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<NodeId>>> {
+/// into a mapping from node to ints input nodes.
+/// Return this mapping, along with a set of edges that were not valid.
+fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<NodeId>>>, HashSet<Edge>) {
     let mut input_mapping = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
+    let mut invalid_edges = HashSet::<Edge>::new();
 
     // Add every node to the map
     for node in nodes.iter() {
@@ -97,6 +101,11 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<No
 
     // Add every edge to the map
     for edge in edges.iter() {
+        if !input_mapping.contains_key(&edge.to) || !input_mapping.contains_key(&edge.from) {
+            invalid_edges.insert(edge.clone());
+            continue;
+        }
+
         let input_vec = input_mapping.get_mut(&edge.to).unwrap();
 
         // Ensure vec has enough space to add our entry
@@ -110,7 +119,9 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<No
         input_vec[edge.input as usize] = Some(edge.from);
     }
 
-    input_mapping
+    // TODO consider returning start nodes here too
+
+    (input_mapping, invalid_edges)
 }
 
 /// Find cycles in the graph.
@@ -254,42 +265,15 @@ fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<
 }
 
 impl Graph {
-    /// Compute the topology of this graph.
-    /// If the graph is acyclic, return a GraphTopology struct describing it.
-    /// If the graph is cyclic, return an error.
-    pub fn topology(&self) -> Result<GraphTopology, &'static str> {
-        let input_mapping = map_inputs(&self.nodes, &self.edges);
-        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
-        if !cyclic_edges.is_empty() {
-            return Err("Graph is cyclic");
+    /// Compute the topology of a well-formed DAG.
+    /// This function may panic or return unexpected results
+    /// if the input is not a well-formed DAG.
+    pub fn topology(&self) -> GraphTopology {
+        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+        if !invalid_edges.is_empty() {
+            panic!("Graph contains edges that reference nonexistant nodes");
         }
 
-        // Now that we know the graph is acyclic, it is safe to do the following:
-        let start_nodes = start_nodes(&self.nodes, &input_mapping);
-        let topo_order = topo_sort(&start_nodes, &input_mapping);
-
-        Ok(GraphTopology {
-            input_mapping,
-            start_nodes,
-            topo_order,
-        })
-    }
-
-    /// Compute the topology of this graph.
-    /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
-    /// Then, compute and return a GraphTopology struct descrbing the acylic graph.
-    pub fn repair_topology(&mut self) -> GraphTopology {
-        let mut input_mapping = map_inputs(&self.nodes, &self.edges);
-        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
-        if !cyclic_edges.is_empty() {
-            // Remove edges that cause cycles
-            self.edges.retain(|e| cyclic_edges.contains(e));
-
-            // Recompute input_mapping since we removed edges
-            input_mapping = map_inputs(&self.nodes, &self.edges);
-        }
-
-        // Now that we know the graph is acyclic, it is safe to do the following:
         let start_nodes = start_nodes(&self.nodes, &input_mapping);
         let topo_order = topo_sort(&start_nodes, &input_mapping);
 
@@ -297,6 +281,46 @@ impl Graph {
             input_mapping,
             start_nodes,
             topo_order,
+        }
+    }
+
+    /// Repair a graph if necessary.
+    /// If the graph contains edges referencing nonexistant nodes, they will be removed.
+    /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
+    /// Returns an input mapping (map from NodeIds to their inputs)
+    pub fn repair(&mut self) -> HashMap<NodeId, Vec<Option<NodeId>>> {
+        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+
+        if !invalid_edges.is_empty() {
+            // Remove edges that reference nonexistant nodes
+            self.edges.retain(|e| !invalid_edges.contains(e));
+        }
+
+        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
+
+        if !cyclic_edges.is_empty() {
+            // Remove edges that cause cycles
+            self.edges.retain(|e| !cyclic_edges.contains(e));
+
+            // Recompute input_mapping since we removed edges
+            let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+            assert!(invalid_edges.is_empty(), "Invalid edges were not removed");
+            input_mapping
+        } else {
+            input_mapping
+        }
+    }
+
+    /// Delete a set of nodes from the graph.
+    /// TODO attempt to preserve connectivity.
+    pub fn delete_nodes(&mut self, nodes: &HashSet<NodeId>) {
+        let length = self.nodes.len();
+        self.nodes.retain(|n| !nodes.contains(n));
+        if self.nodes.len() != length {
+            // If we actually deleted any nodes,
+            // remove dangling edges
+            let (_, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+            self.edges.retain(|e| !invalid_edges.contains(e));
         }
     }
 }
