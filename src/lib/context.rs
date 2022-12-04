@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::{NodeId, Props, Graph, GraphTopology, NodeProps};
+use crate::{NodeId, Props, Graph, NodeProps, topo_sort};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
 use rand::Rng;
@@ -57,7 +57,8 @@ pub struct Context {
     pub time: f32,
     pub dt: f32,
     graph: Graph,
-    graph_topology: GraphTopology,
+    graph_input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
+    graph_topo_order: Vec<NodeId>,
 
     // State of individual render targets and nodes
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
@@ -198,7 +199,8 @@ impl Context {
             time: 0.,
             dt: 0.,
             graph: Default::default(),
-            graph_topology: Default::default(),
+            graph_input_mapping: Default::default(),
+            graph_topo_order: Default::default(),
             render_target_states: Default::default(),
             node_states: Default::default(),
         }
@@ -262,7 +264,10 @@ impl Context {
 
         // Re-compute the graph topology if the graph changed
         if self.graph != props.graph {
-            self.graph_topology = props.graph.topology();
+            let (start_nodes, input_mapping) = props.graph.mapping();
+            let topo_order = topo_sort(&start_nodes, &input_mapping);
+            self.graph_input_mapping = input_mapping;
+            self.graph_topo_order = topo_order;
             self.graph = props.graph.clone();
         }
 
@@ -274,7 +279,7 @@ impl Context {
         // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
         self.render_target_states.retain(|id, _| render_targets.render_targets().contains_key(id));
-        self.node_states.retain(|id, _| self.graph_topology.input_mapping.contains_key(id));
+        self.node_states.retain(|id, _| self.graph_input_mapping.contains_key(id));
 
         // 4. Construct any missing render_target_states or node_states (this may kick of background processing)
 
@@ -312,10 +317,10 @@ impl Context {
         // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
         let mut result: HashMap<NodeId, ArcTextureViewSampler> = HashMap::new();
 
-        let node_ids: Vec<NodeId> = self.graph_topology.topo_order.clone();
+        let node_ids: Vec<NodeId> = self.graph_topo_order.clone();
         for paint_node_id in &node_ids {
 
-            let input_nodes = self.graph_topology.input_mapping.get(paint_node_id).unwrap();
+            let input_nodes = self.graph_input_mapping.get(paint_node_id).unwrap();
             let input_textures: Vec<Option<ArcTextureViewSampler>> = input_nodes.iter().map(
                 |maybe_id| match maybe_id {
                     Some(id) => Some(result.get(id).unwrap().clone()),

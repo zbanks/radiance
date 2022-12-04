@@ -14,7 +14,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<Tile>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
-    let topology = props.graph.topology();
+    let (start_nodes, input_mapping) = props.graph.mapping();
 
     // We will perform a DFS from each start node
     // to convert the graph (a DAG) into a tree.
@@ -39,14 +39,14 @@ fn layout(props: &mut Props) -> (Vec2, Vec<Tile>) {
 
     // Start by allocating tiles for the start nodes
     // (start nodes will necessarily have only one tile)
-    let start_tiles: Vec<TileId> = topology.start_nodes.iter().map(&mut allocate_tile).collect();
+    let start_tiles: Vec<TileId> = start_nodes.iter().map(&mut allocate_tile).collect();
 
     let mut stack = start_tiles.clone();
     let mut tree = HashMap::<TileId, Vec<Option<TileId>>>::new();
 
     while let Some(tile) = stack.pop() {
         // For each node in the stack, 1) allocate new tiles for its children
-        let child_tiles: Vec<Option<TileId>> = topology.input_mapping.get(&tile.node).unwrap()
+        let child_tiles: Vec<Option<TileId>> = input_mapping.get(&tile.node).unwrap()
             .iter()
             .map(|maybe_child_node| maybe_child_node.as_ref().map(&mut allocate_tile))
             .collect();

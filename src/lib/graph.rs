@@ -74,19 +74,6 @@ pub struct Graph {
     pub edges: Vec<Edge>,
 }
 
-/// Useful topological properties computed from a Graph
-// TODO: is this useful collected together?
-// Would it be better to have individual functions for each computed thing?
-#[derive(Debug, Clone, Default)]
-pub struct GraphTopology {
-    /// A mapping from a node to its inputs (dependencies)
-    /// The indices in the returned Vec will correspond to the numbered inputs of the node
-    /// and can be used for rendering.
-    pub input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
-    pub start_nodes: Vec<NodeId>,
-    pub topo_order: Vec<NodeId>,
-}
-
 /// Convert from a list of nodes and edges
 /// into a mapping from node to ints input nodes.
 /// Return this mapping, along with a set of edges that were not valid.
@@ -211,9 +198,66 @@ fn start_nodes(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
     start_nodes
 }
 
-/// Use DFS to compute a topological ordering of the nodes in a graph.
-/// The input graph must be acyclic or this function will panic.
-fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
+impl Graph {
+    /// Compute the start nodes and input mapping of a well-formed DAG.
+    /// This function may panic or return unexpected results
+    /// if the input is not a well-formed DAG.
+    /// The response will be a pair: (start_nodes, input_mapping)
+    pub fn mapping(&self) -> (Vec<NodeId>, HashMap<NodeId, Vec<Option<NodeId>>>) {
+        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+        if !invalid_edges.is_empty() {
+            panic!("Graph contains edges that reference nonexistant nodes");
+        }
+
+        let start_nodes = start_nodes(&self.nodes, &input_mapping);
+
+        (start_nodes, input_mapping)
+    }
+
+    /// Repair a graph if necessary.
+    /// If the graph contains edges referencing nonexistant nodes, they will be removed.
+    /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
+    /// Returns an input mapping (map from NodeIds to their inputs)
+    pub fn repair(&mut self) -> HashMap<NodeId, Vec<Option<NodeId>>> {
+        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+
+        if !invalid_edges.is_empty() {
+            // Remove edges that reference nonexistant nodes
+            self.edges.retain(|e| !invalid_edges.contains(e));
+        }
+
+        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
+
+        if !cyclic_edges.is_empty() {
+            // Remove edges that cause cycles
+            self.edges.retain(|e| !cyclic_edges.contains(e));
+
+            // Recompute input_mapping since we removed edges
+            let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+            assert!(invalid_edges.is_empty(), "Invalid edges were not removed");
+            input_mapping
+        } else {
+            input_mapping
+        }
+    }
+
+    /// Delete a set of nodes from the graph.
+    /// TODO attempt to preserve connectivity.
+    pub fn delete_nodes(&mut self, nodes: &HashSet<NodeId>) {
+        let length = self.nodes.len();
+        self.nodes.retain(|n| !nodes.contains(n));
+        if self.nodes.len() != length {
+            // If we actually deleted any nodes,
+            // remove dangling edges
+            let (_, invalid_edges) = map_inputs(&self.nodes, &self.edges);
+            self.edges.retain(|e| !invalid_edges.contains(e));
+        }
+    }
+}
+
+/// Use DFS to compute a topological ordering of the nodes in a graph (represented as a mapping.)
+/// The input mapping must be acyclic or this function will panic.
+pub fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
     // Topo-sort using DFS.
     // Use a "white-grey-black" node coloring approach.
     // https://stackoverflow.com/a/62971341
@@ -262,65 +306,4 @@ fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<
     }
 
     topo_order
-}
-
-impl Graph {
-    /// Compute the topology of a well-formed DAG.
-    /// This function may panic or return unexpected results
-    /// if the input is not a well-formed DAG.
-    pub fn topology(&self) -> GraphTopology {
-        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-        if !invalid_edges.is_empty() {
-            panic!("Graph contains edges that reference nonexistant nodes");
-        }
-
-        let start_nodes = start_nodes(&self.nodes, &input_mapping);
-        let topo_order = topo_sort(&start_nodes, &input_mapping);
-
-        GraphTopology {
-            input_mapping,
-            start_nodes,
-            topo_order,
-        }
-    }
-
-    /// Repair a graph if necessary.
-    /// If the graph contains edges referencing nonexistant nodes, they will be removed.
-    /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
-    /// Returns an input mapping (map from NodeIds to their inputs)
-    pub fn repair(&mut self) -> HashMap<NodeId, Vec<Option<NodeId>>> {
-        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-
-        if !invalid_edges.is_empty() {
-            // Remove edges that reference nonexistant nodes
-            self.edges.retain(|e| !invalid_edges.contains(e));
-        }
-
-        let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
-
-        if !cyclic_edges.is_empty() {
-            // Remove edges that cause cycles
-            self.edges.retain(|e| !cyclic_edges.contains(e));
-
-            // Recompute input_mapping since we removed edges
-            let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-            assert!(invalid_edges.is_empty(), "Invalid edges were not removed");
-            input_mapping
-        } else {
-            input_mapping
-        }
-    }
-
-    /// Delete a set of nodes from the graph.
-    /// TODO attempt to preserve connectivity.
-    pub fn delete_nodes(&mut self, nodes: &HashSet<NodeId>) {
-        let length = self.nodes.len();
-        self.nodes.retain(|n| !nodes.contains(n));
-        if self.nodes.len() != length {
-            // If we actually deleted any nodes,
-            // remove dangling edges
-            let (_, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-            self.edges.retain(|e| !invalid_edges.contains(e));
-        }
-    }
 }
