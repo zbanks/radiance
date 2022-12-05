@@ -136,7 +136,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
     let total_height = y;
 
     // In a fourth pass, shrink nodes that are unnecessarily tall.
-    // Kust because a node is connected to a tall input
+    // Just because a node is connected to a tall input
     // and is allocated a large amount of vertical space
     // doesn't mean it has to take it all.
 
@@ -293,8 +293,8 @@ fn set_vertical_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileId>
     // Place the current tile at the current Y
     *ys.get_mut(tile).unwrap() = *y;
 
-    let mut sub_y = *y;
     for (i, &my_input_height) in input_heights.get(tile).unwrap().iter().enumerate() {
+        let mut sub_y = *y;
         if let Some(child_tile) = child_tiles.get(i).cloned().flatten() {
             // For each child tile, place it farther down
             // according to the current tile's input heights
