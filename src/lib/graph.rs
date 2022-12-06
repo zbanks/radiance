@@ -108,13 +108,28 @@ pub struct InsertionPoint {
     pub to_inputs: Vec<(NodeId, u32)>,
 }
 
+/// Given a list of nodes and edges,
+/// removes edges that reference nonexistant nodes
+/// and edges that connect to an input that already has an edge going to it.
+fn remove_invalid_edges(nodes: &[NodeId], edges: &mut Vec<Edge>) {
+    let mut inputs_seen = HashSet::<(NodeId, u32)>::new();
+    let nodes_set: HashSet<NodeId> = nodes.iter().cloned().collect();
+
+    edges.retain(|edge| {
+        let valid = nodes_set.contains(&edge.to) &&
+                    nodes_set.contains(&edge.from) &&
+                    !inputs_seen.contains(&(edge.to, edge.input));
+
+        inputs_seen.insert((edge.to, edge.input));
+        valid
+    });
+}
+
 /// Convert from a list of nodes and edges
 /// into a mapping from each node to its input nodes.
-/// Return this mapping, along with a set of edges that were not valid.
-// TODO split out the "invalid edges" functionality into a separate function, like start nodes
-fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<NodeId>>>, HashSet<Edge>) {
+/// Return this mapping.
+fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<NodeId>>> {
     let mut input_mapping = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
-    let mut invalid_edges = HashSet::<Edge>::new();
 
     // Add every node to the map
     for node in nodes.iter() {
@@ -126,7 +141,6 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<N
         if !input_mapping.contains_key(&edge.to) ||
            !input_mapping.contains_key(&edge.from)
         {
-            invalid_edges.insert(edge.clone());
             continue;
         }
 
@@ -134,7 +148,6 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<N
 
         // Ensure this input doesn't already have a connection
         if input_vec.get(edge.input as usize).cloned().flatten().is_some() {
-            invalid_edges.insert(edge.clone());
             continue;
         }
 
@@ -149,12 +162,12 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<N
         input_vec[edge.input as usize] = Some(edge.from);
     }
 
-    (input_mapping, invalid_edges)
+    input_mapping
 }
 
 /// Convert from a list of nodes and edges
 /// into a mapping from each node to its output nodes.
-/// Return this mapping, along with a set of edges that were not valid.
+/// Return this mapping.
 fn map_outputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, HashSet<(NodeId, u32)>> {
     let mut output_mapping = HashMap::<NodeId, HashSet<(NodeId, u32)>>::new();
 
@@ -280,32 +293,30 @@ fn first_input(input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>, start_node:
 
 impl Graph {
     /// Compute the start nodes and input mapping of a well-formed DAG.
-    /// This function may panic or return unexpected results
+    /// This function may return unexpected results
     /// if the input is not a well-formed DAG.
     /// The response will be a pair: (start_nodes, input_mapping)
     pub fn mapping(&self) -> (Vec<NodeId>, HashMap<NodeId, Vec<Option<NodeId>>>) {
-        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-        if !invalid_edges.is_empty() {
-            panic!("Graph contains edges that reference nonexistant nodes");
-        }
-
+        let input_mapping = map_inputs(&self.nodes, &self.edges);
         let start_nodes = start_nodes(&self.nodes, &input_mapping);
 
         (start_nodes, input_mapping)
     }
 
-    /// Repair a graph if necessary.
+    /// Repair the edges in a graph, if necessary.
     /// If the graph contains edges referencing nonexistant nodes, they will be removed.
     /// If a node input has multiple incoming edges, all but one will be removed.
     /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
     /// Returns an input mapping (map from NodeIds to their inputs)
-    pub fn repair(&mut self) -> HashMap<NodeId, Vec<Option<NodeId>>> {
-        let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-
-        if !invalid_edges.is_empty() {
-            // Remove edges that reference nonexistant nodes
-            self.edges.retain(|e| !invalid_edges.contains(e));
+    pub fn fix_edges(&mut self) {
+        let orig_n_edges = self.edges.len();
+        remove_invalid_edges(&self.nodes, &mut self.edges);
+        let edges_removed = self.edges.len() - orig_n_edges;
+        if edges_removed > 0 {
+            println!("Removed {} invalid edges", edges_removed);
         }
+
+        let input_mapping = map_inputs(&self.nodes, &self.edges);
 
         let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
 
@@ -313,22 +324,17 @@ impl Graph {
             // Remove edges that cause cycles
             self.edges.retain(|e| !cyclic_edges.contains(e));
 
-            // Recompute input_mapping since we removed edges
-            let (input_mapping, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-            assert!(invalid_edges.is_empty(), "Invalid edges were not removed");
-            input_mapping
-        } else {
-            input_mapping
+            println!("Removed {} edges to break cycles", cyclic_edges.len());
         }
     }
 
     /// Delete a set of nodes from the graph.
     pub fn delete_nodes(&mut self, nodes: &HashSet<NodeId>) {
-        let (input_mapping, _) = map_inputs(&self.nodes, &self.edges);
+        let input_mapping = map_inputs(&self.nodes, &self.edges);
         let output_mapping = map_outputs(&self.nodes, &self.edges);
 
         let subgraph_nodes: Vec<NodeId> = self.nodes.iter().filter(|n| nodes.contains(n)).cloned().collect();
-        let (subgraph_input_mapping, _) = map_inputs(&subgraph_nodes, &self.edges);
+        let subgraph_input_mapping = map_inputs(&subgraph_nodes, &self.edges);
         let start_nodes = start_nodes(&subgraph_nodes, &subgraph_input_mapping);
 
         for &start_node in start_nodes.iter() {

@@ -71,10 +71,22 @@ impl Props {
         // a) remove any nodes from the graph that aren't present in node_props
         let graph_nodes_to_remove: HashSet<NodeId> = self.graph.nodes.iter().filter(|n| !self.node_props.contains_key(n)).cloned().collect();
         self.graph.delete_nodes(&graph_nodes_to_remove);
+        let nodes_without_props = graph_nodes_to_remove.len();
+        if nodes_without_props > 0 {
+            println!("Removed {} nodes without props", nodes_without_props);
+        }
         // b) remove any nodes from node_props that aren't present in nodes
         let save_nodes: HashSet<NodeId> = self.graph.nodes.iter().cloned().collect();
+        let orig_nodes_len = self.graph.nodes.len();
         self.graph.nodes.retain(|id| save_nodes.contains(id));
-        // c) remove any edges that go to a node input greater than a node's inputCount (if inputCount is Some)
+        let props_not_in_graph = orig_nodes_len - self.graph.nodes.len();
+        if props_not_in_graph > 0 {
+            println!("Removed {} node props that weren't in the graph", props_not_in_graph);
+        }
+        // c) repair the graph (remove edges referencing nonexistant nodes, conflicting edges, and cycles)
+        self.graph.fix_edges();
+        // d) remove any edges that go to a node input beyond a node's inputCount (if inputCount is Some)
+        let orig_edges_len = self.graph.edges.len();
         self.graph.edges.retain(|edge| {
             save_nodes.contains(&edge.from) &&
             save_nodes.contains(&edge.to) &&
@@ -83,7 +95,9 @@ impl Props {
                 Some(count) => edge.input < count,
             }
         });
-        // d) repair the graph (remove cycles)
-        self.graph.repair(); // This won't remove any nodes, only edges.
+        let edges_to_nonexistant_inputs = orig_edges_len - self.graph.edges.len();
+        if edges_to_nonexistant_inputs > 0 {
+            println!("Removed {} edges to nonexistant inputs", edges_to_nonexistant_inputs);
+        }
     }
 }
