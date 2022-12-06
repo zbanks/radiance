@@ -109,8 +109,9 @@ pub struct InsertionPoint {
 }
 
 /// Convert from a list of nodes and edges
-/// into a mapping from node to ints input nodes.
+/// into a mapping from each node to its input nodes.
 /// Return this mapping, along with a set of edges that were not valid.
+// TODO split out the "invalid edges" functionality into a separate function, like start nodes
 fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<NodeId>>>, HashSet<Edge>) {
     let mut input_mapping = HashMap::<NodeId, Vec<Option<NodeId>>>::new();
     let mut invalid_edges = HashSet::<Edge>::new();
@@ -149,6 +150,32 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> (HashMap<NodeId, Vec<Option<N
     }
 
     (input_mapping, invalid_edges)
+}
+
+/// Convert from a list of nodes and edges
+/// into a mapping from each node to its output nodes.
+/// Return this mapping, along with a set of edges that were not valid.
+fn map_outputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, HashSet<(NodeId, u32)>> {
+    let mut output_mapping = HashMap::<NodeId, HashSet<(NodeId, u32)>>::new();
+
+    // Add every node to the map
+    for node in nodes.iter() {
+        output_mapping.insert(*node, Default::default());
+    }
+
+    // Add every edge to the map
+    for edge in edges.iter() {
+        if !output_mapping.contains_key(&edge.to) ||
+           !output_mapping.contains_key(&edge.from)
+        {
+            continue;
+        }
+
+        let output_set = output_mapping.get_mut(&edge.from).unwrap();
+        output_set.insert((edge.to, edge.input));
+    }
+
+    output_mapping
 }
 
 /// Find cycles in the graph.
@@ -238,6 +265,19 @@ fn start_nodes(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
     start_nodes
 }
 
+/// Walk the graph from a starting node until a disconnected input 0 is found.
+/// Return the node with disconnected input 0.
+fn first_input(input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>, start_node: NodeId) -> NodeId {
+    let mut node = start_node;
+    loop {
+        match input_mapping.get(&node).and_then(|input_vec| input_vec.get(0).cloned().flatten()) {
+            Some(n) => {node = n;}
+            None => {break;}
+        }
+    }
+    node
+}
+
 impl Graph {
     /// Compute the start nodes and input mapping of a well-formed DAG.
     /// This function may panic or return unexpected results
@@ -283,16 +323,35 @@ impl Graph {
     }
 
     /// Delete a set of nodes from the graph.
-    /// TODO attempt to preserve connectivity.
     pub fn delete_nodes(&mut self, nodes: &HashSet<NodeId>) {
-        let length = self.nodes.len();
-        self.nodes.retain(|n| !nodes.contains(n));
-        if self.nodes.len() != length {
-            // If we actually deleted any nodes,
-            // remove dangling edges
-            let (_, invalid_edges) = map_inputs(&self.nodes, &self.edges);
-            self.edges.retain(|e| !invalid_edges.contains(e));
+        let (input_mapping, _) = map_inputs(&self.nodes, &self.edges);
+        let output_mapping = map_outputs(&self.nodes, &self.edges);
+
+        let subgraph_nodes: Vec<NodeId> = self.nodes.iter().filter(|n| nodes.contains(n)).cloned().collect();
+        let (subgraph_input_mapping, _) = map_inputs(&subgraph_nodes, &self.edges);
+        let start_nodes = start_nodes(&subgraph_nodes, &subgraph_input_mapping);
+
+        for &start_node in start_nodes.iter() {
+            // If we walk the graph, starting from each start node,
+            // we find one connected component of the subgraph to delete
+            let end_node = first_input(&subgraph_input_mapping, start_node);
+            let outgoing_connections = output_mapping.get(&start_node).unwrap();
+            let incoming_connection = input_mapping.get(&end_node).unwrap().get(0).cloned().flatten();
+
+            if let Some(from) = incoming_connection {
+                for &(to, input) in outgoing_connections.iter() {
+                    // Push a "bypass" edge to hop over the nodes being deleted
+                    self.edges.push(Edge {
+                        from,
+                        to,
+                        input,
+                    });
+                }
+            }
         }
+
+        self.nodes.retain(|n| !nodes.contains(n));
+        self.edges.retain(|e| !nodes.contains(&e.from) && !nodes.contains(&e.to));
     }
 
     /// Add a node to the graph
