@@ -462,11 +462,7 @@ pub fn mosaic_ui<IdSource>(
 
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
 
-    // Note that the layout function returns tiles that go all the way to (0, 0)
-    // and they must be further offset for the UI region we are allocated
-    // Apply focus and offset,
-    // and figure out where the focused insertion point is
-    let offset = mosaic_rect.min - Pos2::ZERO;
+    // Apply focus
     insertion_point.clone_from(&Default::default());
     let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, output_insertion_point}| {
         let focused = match mosaic_memory.focused {
@@ -486,7 +482,7 @@ pub fn mosaic_ui<IdSource>(
             insertion_point.clone_from(&output_insertion_point);
         }
         let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile);
-        tile.with_offset(offset).with_focus(focused).with_selected(selected)
+        tile.with_focus(focused).with_selected(selected)
     }).collect();
 
     // Sort
