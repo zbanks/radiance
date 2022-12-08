@@ -58,7 +58,6 @@ pub struct Context {
     pub dt: f32,
     graph: Graph,
     graph_input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
-    graph_topo_order: Vec<NodeId>,
 
     // State of individual render targets and nodes
     render_target_states: HashMap<RenderTargetId, RenderTargetState>,
@@ -79,59 +78,6 @@ pub struct RenderTargetState {
 #[try_into(owned, ref, ref_mut)]
 pub enum NodeState {
     EffectNode(EffectNodeState),
-}
-
-/// Use DFS to compute a topological ordering of the nodes in a graph (represented as a mapping.)
-/// The input mapping must be acyclic or this function will panic.
-pub fn topo_sort(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
-    // Topo-sort using DFS.
-    // Use a "white-grey-black" node coloring approach.
-    // https://stackoverflow.com/a/62971341
-
-    enum Color {
-        White, // Node is not visited
-        Grey, // Node is on the path that is being explored
-        Black, // Node is visited
-    }
-
-    // Push start nodes onto the stack for DFS
-    let mut stack: Vec<NodeId> = start_nodes.to_vec();
-    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
-    let mut topo_order = Vec::<NodeId>::new();
-
-    while let Some(&n) = stack.last() {
-        let cn = color.get(&n).unwrap();
-        match cn {
-            Color::White => {
-                color.insert(n, Color::Grey);
-                for m in input_mapping.get(&n).unwrap().iter().flatten() {
-                    let cm = color.get(m).unwrap();
-                    match cm {
-                        Color::White => {
-                            stack.push(*m);
-                        },
-                        Color::Grey => {
-                            // This edge creates a cycle! Panic!
-                            panic!("Cycle detected in graph");
-                        },
-                        Color::Black => {
-                            // Already visited; no action necessary
-                        },
-                    }
-                }
-            },
-            Color::Grey => {
-                color.insert(n, Color::Black);
-                stack.pop();
-                topo_order.push(n);
-            },
-            Color::Black => {
-                panic!("DFS integrity error"); // Black nodes should never be pushed to the stack
-            },
-        }
-    }
-
-    topo_order
 }
 
 impl Context {
@@ -253,7 +199,6 @@ impl Context {
             dt: 0.,
             graph: Default::default(),
             graph_input_mapping: Default::default(),
-            graph_topo_order: Default::default(),
             render_target_states: Default::default(),
             node_states: Default::default(),
         }
@@ -313,14 +258,13 @@ impl Context {
 
         // Make sure the props are well-formed
         // (e.g. there is a .node_props entry for every node in the .graph)
+        // and re-compute the graph topology if the graph changed
         props.fix();
 
-        // Re-compute the graph topology if the graph changed
         if self.graph != props.graph {
-            let (start_nodes, input_mapping) = props.graph.mapping();
-            let topo_order = topo_sort(&start_nodes, &input_mapping);
+            props.graph.fix();
+            let (_, input_mapping) = props.graph.mapping();
             self.graph_input_mapping = input_mapping;
-            self.graph_topo_order = topo_order;
             self.graph = props.graph.clone();
         }
 
@@ -370,7 +314,7 @@ impl Context {
         // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
         let mut result: HashMap<NodeId, ArcTextureViewSampler> = HashMap::new();
 
-        let node_ids: Vec<NodeId> = self.graph_topo_order.clone();
+        let node_ids: Vec<NodeId> = self.graph.nodes.clone();
         for paint_node_id in &node_ids {
 
             let input_nodes = self.graph_input_mapping.get(paint_node_id).unwrap();

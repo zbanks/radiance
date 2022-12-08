@@ -63,7 +63,11 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
         });
     }
 
-    let mut stack = start_tiles.clone();
+    // Note that we frequently reverse the order things are pushed to the stack.
+    // This prioritizes exploring start nodes that appear earlier in the nodes list,
+    // as well as nodes connected to lower-numbered inputs,
+    // causing them to be laid out first / at the top, consistently.
+    let mut stack: Vec<TileId> = start_tiles.iter().rev().cloned().collect();
     let mut tree = HashMap::<TileId, Vec<Option<TileId>>>::new();
 
     while let Some(tile) = stack.pop() {
@@ -84,7 +88,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
         }
 
         // 3) Push its newly created child tiles onto the stack
-        for &child_tile in child_tiles.iter().flatten() {
+        for &child_tile in child_tiles.iter().rev().flatten() {
             stack.push(child_tile);
         }
 
@@ -425,8 +429,6 @@ pub fn mosaic_ui<IdSource>(
 ) -> Response
     where IdSource: Hash + std::fmt::Debug,
 {
-    props.fix();
-
     // Generate an UI ID for the mosiac
     let mosaic_id = ui.make_persistent_id(id_source);
 
@@ -436,9 +438,7 @@ pub fn mosaic_ui<IdSource>(
 
     let mut mosaic_memory = mosaic_memory.lock().unwrap();
 
-    // Retain only selected nodes that still exist in the graph
-    let graph_nodes: HashSet<NodeId> = props.graph.nodes.iter().cloned().collect();
-    mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
+    props.fix();
 
     // Lay out the mosaic
     let layout_cache_needs_refresh = match &mosaic_memory.layout_cache {
@@ -447,6 +447,7 @@ pub fn mosaic_ui<IdSource>(
     };
 
     if layout_cache_needs_refresh {
+        props.graph.fix();
         let (size, tiles) = layout(props);
         mosaic_memory.layout_cache = Some(LayoutCache {
             graph: props.graph.clone(),
@@ -459,6 +460,10 @@ pub fn mosaic_ui<IdSource>(
     let LayoutCache {graph: _, size: layout_size, tiles} = &mosaic_memory.layout_cache.as_ref().unwrap();
     let layout_size = *layout_size;
     let tiles = tiles.to_vec();
+
+    // Retain only selected nodes that still exist in the graph
+    let graph_nodes: HashSet<NodeId> = props.graph.nodes.iter().cloned().collect();
+    mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
 
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
 

@@ -66,7 +66,6 @@ impl Props {
     /// Ensure that props is well-formed, and if it isn't, make it.
     /// Specifically, make sure that the list of nodes in node_props and graph match,
     /// and that there are no edges to non-existent nodes.
-    /// We also check for and remove cycles in the graph.
     pub fn fix(&mut self) {
         // a) remove any nodes from the graph that aren't present in node_props
         let graph_nodes_to_remove: HashSet<NodeId> = self.graph.nodes.iter().filter(|n| !self.node_props.contains_key(n)).cloned().collect();
@@ -83,9 +82,7 @@ impl Props {
         if props_not_in_graph > 0 {
             println!("Removed {} node props that weren't in the graph", props_not_in_graph);
         }
-        // c) repair the graph (remove edges referencing nonexistant nodes, conflicting edges, and cycles)
-        self.graph.fix_edges();
-        // d) remove any edges that go to a node input beyond a node's inputCount (if inputCount is Some)
+        // c) remove any edges that go to a node input beyond a node's inputCount (if inputCount is Some)
         let orig_edges_len = self.graph.edges.len();
         self.graph.edges.retain(|edge| {
             save_nodes.contains(&edge.from) &&

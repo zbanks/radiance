@@ -67,7 +67,7 @@ pub struct Edge {
 /// The ordering of the list does not affect updating and painting,
 /// but may be used for when visualizing the graph in the UI.
 /// 
-/// The graph topology must be acyclic. Calling topology() will check this.
+/// The graph topology must be acyclic. Calling fix() will enforce this.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Graph {
     pub nodes: Vec<NodeId>,
@@ -208,7 +208,11 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
     }
 
     // Push all nodes onto the stack for DFS
-    let mut stack: Vec<NodeId> = nodes.to_vec();
+    // We frequently reverse the order things are pushed to the stack.
+    // This prioritizes cycle breaking towards retaining edges
+    // on start nodes that appear earlier in the nodes list,
+    // and on nodes connected to lower-numbered inputs.
+    let mut stack: Vec<NodeId> = nodes.iter().rev().cloned().collect();
     let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
 
     while let Some(&n) = stack.last() {
@@ -216,7 +220,7 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
         match cn {
             Color::White => {
                 color.insert(n, Color::Grey);
-                for (i, opt_m) in input_mapping.get(&n).unwrap().iter().enumerate() {
+                for (i, opt_m) in input_mapping.get(&n).unwrap().iter().rev().enumerate() {
                     let m = match opt_m {
                         Some(m) => m,
                         None => continue,
@@ -291,6 +295,61 @@ fn first_input(input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>, start_node:
     node
 }
 
+/// Use DFS to compute a topological ordering of the nodes in a graph (represented as a mapping.)
+/// The input mapping must be acyclic or this function will panic.
+/// This sort is stable (calling topo_sort_nodes a second time should be idempotent.)
+pub fn topo_sort_nodes(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
+    // Topo-sort using DFS.
+    // Use a "white-grey-black" node coloring approach.
+    // https://stackoverflow.com/a/62971341
+
+    enum Color {
+        White, // Node is not visited
+        Grey, // Node is on the path that is being explored
+        Black, // Node is visited
+    }
+
+    // Push start nodes onto the stack for DFS
+    // This prioritizes exploring start nodes that appear earlier in the nodes list,
+    // as well as nodes connected to lower-numbered inputs.
+    let mut stack: Vec<NodeId> = start_nodes.iter().rev().cloned().collect();
+    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
+    let mut topo_order = Vec::<NodeId>::new();
+
+    while let Some(&n) = stack.last() {
+        let cn = color.get(&n).unwrap();
+        match cn {
+            Color::White => {
+                color.insert(n, Color::Grey);
+                for m in input_mapping.get(&n).unwrap().iter().rev().flatten() {
+                    let cm = color.get(m).unwrap();
+                    match cm {
+                        Color::White => {
+                            stack.push(*m);
+                        },
+                        Color::Grey => {
+                            // This edge creates a cycle! Panic!
+                            panic!("Cycle detected in graph");
+                        },
+                        Color::Black => {
+                            // Already visited; no action necessary
+                        },
+                    }
+                }
+            },
+            Color::Grey => {
+                color.insert(n, Color::Black);
+                stack.pop();
+                topo_order.push(n);
+            },
+            Color::Black => {
+                panic!("DFS integrity error"); // Black nodes should never be pushed to the stack
+            },
+        }
+    }
+    topo_order
+}
+
 impl Graph {
     /// Compute the start nodes and input mapping of a well-formed DAG.
     /// This function may return unexpected results
@@ -303,12 +362,12 @@ impl Graph {
         (start_nodes, input_mapping)
     }
 
-    /// Repair the edges in a graph, if necessary.
+    /// Sort nodes and repair edges in a graph.
     /// If the graph contains edges referencing nonexistant nodes, they will be removed.
     /// If a node input has multiple incoming edges, all but one will be removed.
     /// If the graph is cyclic, repair it by removing edges until it is not cyclic.
-    /// Returns an input mapping (map from NodeIds to their inputs)
-    pub fn fix_edges(&mut self) {
+    /// The node list will be put in topological order.
+    pub fn fix(&mut self) {
         let orig_n_edges = self.edges.len();
         remove_invalid_edges(&self.nodes, &mut self.edges);
         let edges_removed = self.edges.len() - orig_n_edges;
@@ -326,6 +385,9 @@ impl Graph {
 
             println!("Removed {} edges to break cycles", cyclic_edges.len());
         }
+
+        let start_nodes = start_nodes(&self.nodes, &input_mapping);
+        self.nodes = topo_sort_nodes(&start_nodes, &input_mapping);
     }
 
     /// Delete a set of nodes from the graph.
