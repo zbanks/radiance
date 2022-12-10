@@ -6,6 +6,7 @@ authors = ["Zach Banks <zjbanks@gmail.com>", "Eric Van Albert <eric@van.al>"]
 homepage = "https://radiance.video"
 repository = "https://github.com/zbanks/radiance"
 edition = "2021"
+license-file = "LICENSE"
 default-run = "radiance"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
