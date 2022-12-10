@@ -17,7 +17,8 @@ pub struct TileId {
 pub struct Tile {
     id: TileId,
     ui_id: Id,
-    rect: Rect,
+    rect: Rect, // rect contains this tile's laid-out spot in the mosaic
+    offset: Vec2, // offset contains any additional translation due to animation or drag
     inputs: Vec<f32>,
     outputs: Vec<f32>,
     focused: bool,
@@ -62,6 +63,7 @@ impl Tile {
             id,
             ui_id: Id::new(id),
             rect,
+            offset: Vec2::ZERO,
             inputs,
             outputs,
             focused: false,
@@ -80,7 +82,7 @@ impl Tile {
     }
 
     pub fn with_offset(mut self, offset: Vec2) -> Self {
-        self.rect = self.rect.translate(offset);
+        self.offset = offset;
         self
     }
 
@@ -110,6 +112,10 @@ impl Tile {
         self.rect
     }
 
+    pub fn offset(&self) -> Vec2 {
+        self.offset
+    }
+
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
         self.show_dyn(ui, Box::new(add_contents))
     }
@@ -119,11 +125,12 @@ impl Tile {
         ui: &mut Ui,
         add_contents: Box<dyn FnOnce(&mut Ui) -> R + 'c>,
     ) -> InnerResponse<R> {
-        let response = ui.interact(self.rect, self.ui_id(), Sense::click());
+        let rect = self.rect.translate(self.offset);
+        let response = ui.interact(rect, self.ui_id(), Sense::click_and_drag());
         self.paint(&ui);
 
         let mut content_ui = ui.child_ui_with_id_source(
-            self.rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)),
+            rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)),
             Layout::top_down(Align::Center),
             self.ui_id(),
         );
@@ -132,7 +139,8 @@ impl Tile {
     }
 
     fn paint(&self, ui: &Ui) {
-        if !ui.is_rect_visible(self.rect.expand(CHEVRON_SIZE)) {
+        let rect = self.rect.translate(self.offset);
+        if !ui.is_rect_visible(rect.expand(CHEVRON_SIZE)) {
             return;
         }
 
@@ -147,7 +155,7 @@ impl Tile {
                     0.5 * (locations[i - 1] + locations[i])
                 };
                 let right_boundary = if i == locations.len() - 1 {
-                    self.rect.height()
+                    rect.height()
                 } else {
                     0.5 * (locations[i] + locations[i + 1])
                 };
@@ -161,30 +169,30 @@ impl Tile {
 
         // Construct the polygon in CCW order starting with the top left
         let mut vertices = Vec::<Pos2>::new();
-        vertices.push(pos2(self.rect.left(), self.rect.top()));
+        vertices.push(pos2(rect.left(), rect.top()));
         let mut last_loc = *self.inputs.first().unwrap_or(&f32::NAN);
         for (&loc, &size) in self.inputs.iter().zip(input_sizes.iter()) {
             assert!(loc >= last_loc, "Inputs are not sorted");
             if size > 0. {
-                vertices.push(pos2(self.rect.left(), self.rect.top() + loc - size));
-                vertices.push(pos2(self.rect.left() + size, self.rect.top() + loc));
-                vertices.push(pos2(self.rect.left(), self.rect.top() + loc + size));
+                vertices.push(pos2(rect.left(), rect.top() + loc - size));
+                vertices.push(pos2(rect.left() + size, rect.top() + loc));
+                vertices.push(pos2(rect.left(), rect.top() + loc + size));
             }
             last_loc = loc;
         }
-        vertices.push(pos2(self.rect.left(), self.rect.bottom()));
-        vertices.push(pos2(self.rect.right(), self.rect.bottom()));
+        vertices.push(pos2(rect.left(), rect.bottom()));
+        vertices.push(pos2(rect.right(), rect.bottom()));
         let mut last_loc = *self.outputs.last().unwrap_or(&f32::NAN);
         for (&loc, &size) in self.outputs.iter().rev().zip(output_sizes.iter().rev()) {
             assert!(loc <= last_loc, "Outputs are not sorted");
             if size > 0. {
-                vertices.push(pos2(self.rect.right(), self.rect.top() + loc + size));
-                vertices.push(pos2(self.rect.right() + size, self.rect.top() + loc));
-                vertices.push(pos2(self.rect.right(), self.rect.top() + loc - size));
+                vertices.push(pos2(rect.right(), rect.top() + loc + size));
+                vertices.push(pos2(rect.right() + size, rect.top() + loc));
+                vertices.push(pos2(rect.right(), rect.top() + loc - size));
             }
             last_loc = loc;
         }
-        vertices.push(pos2(self.rect.right(), self.rect.top()));
+        vertices.push(pos2(rect.right(), rect.top()));
 
         vertices.dedup_by(|a, b| (a.x - b.x).abs() < EPSILON && (a.y - b.y).abs() < EPSILON);
 

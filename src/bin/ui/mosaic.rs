@@ -333,6 +333,8 @@ struct MosaicAnimationManager {
 struct TileAnimation {
     from_rect: Rect,
     to_rect: Rect,
+    from_offset: Vec2,
+    to_offset: Vec2,
     /// when did `value` last toggle?
     toggle_time: f64,
 }
@@ -355,11 +357,18 @@ fn rect_easing(time_since_toggle: f32, from_rect: Rect, to_rect: Rect) -> Rect {
     }
 }
 
+fn vec_easing(time_since_toggle: f32, from_vec: Vec2, to_vec: Vec2) -> Vec2 {
+    let alpha = ease(time_since_toggle / MOSAIC_ANIMATION_DURATION);
+
+    from_vec + (to_vec - from_vec) * alpha
+}
+
 impl MosaicAnimationManager {
     pub fn animate_tile(
         &mut self,
         input: &InputState,
         tile: Tile,
+        dragging: bool,
     ) -> Tile {
         match self.tiles.get_mut(&tile.ui_id()) {
             None => {
@@ -368,12 +377,20 @@ impl MosaicAnimationManager {
                     TileAnimation {
                         from_rect: tile.rect(),
                         to_rect: tile.rect(),
+                        from_offset: tile.offset(),
+                        to_offset: tile.offset(),
                         toggle_time: -f64::INFINITY, // long time ago
                     },
                 );
                 tile
             }
             Some(anim) => {
+                // Disable repeatedly triggering the offset animation while dragging
+                // by always setting the current value to the target
+                if dragging {
+                    anim.to_offset = tile.offset();
+                }
+
                 let time_since_toggle = (input.time - anim.toggle_time) as f32;
                 // On the frame we toggle we don't want to return the old value,
                 // so we extrapolate forwards:
@@ -383,12 +400,20 @@ impl MosaicAnimationManager {
                     anim.from_rect,
                     anim.to_rect,
                 );
-                if anim.to_rect != tile.rect() {
+                let current_offset = vec_easing(
+                    time_since_toggle,
+                    anim.from_offset,
+                    anim.to_offset,
+                );
+                if anim.to_rect != tile.rect() ||
+                   anim.to_offset != tile.offset() {
                     anim.from_rect = current_rect; //start new animation from current position of playing animation
                     anim.to_rect = tile.rect();
+                    anim.from_offset = current_offset;
+                    anim.to_offset = tile.offset();
                     anim.toggle_time = input.time;
                 }
-                tile.with_rect(current_rect)
+                tile.with_rect(current_rect).with_offset(current_offset)
             }
         }
     }
@@ -407,6 +432,14 @@ struct LayoutCache {
     tiles: Vec<TileInMosaic>,
 }
 
+/// State associated with dragged tiles
+#[derive(Debug)]
+struct DragMemory {
+    pub target: TileId,
+    pub contingent: HashSet<TileId>,
+    pub offset: Vec2,
+}
+
 /// State associated with the mosaic UI, to be preserved between frames,
 /// like which tiles are selected.
 /// Does not include anything associated with the graph (like intensities)
@@ -415,6 +448,7 @@ struct MosaicMemory {
     pub animation_manager: MosaicAnimationManager,
     pub selected: HashSet<NodeId>,
     pub focused: Option<TileId>,
+    pub drag: Option<DragMemory>,
 
     layout_cache: Option<LayoutCache>,
 }
@@ -454,6 +488,29 @@ pub fn mosaic_ui<IdSource>(
             size,
             tiles,
         });
+
+        // Retain only selected / focused / dragged nodes that still exist in the graph
+        let graph_nodes: HashSet<NodeId> = props.graph.nodes.iter().cloned().collect();
+        mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
+        if let Some(focused) = mosaic_memory.focused {
+            if !graph_nodes.contains(&focused.node) {
+                mosaic_memory.focused = None;
+            }
+        }
+        let abort_drag = if let Some(drag) = &mosaic_memory.drag {
+            if !graph_nodes.contains(&drag.target.node) {
+                true // abort drag because primary target tile disappeared
+            } else {
+                // TODO recompute contingent based on
+                // connected component based of the drag target
+                false // don't abort drag
+            }
+        } else {
+            false // no drag in progress
+        };
+        if abort_drag {
+            mosaic_memory.drag = None;
+        }
     }
 
     // Get layout from cache (guaranteed to exist post-refresh)
@@ -461,13 +518,9 @@ pub fn mosaic_ui<IdSource>(
     let layout_size = *layout_size;
     let tiles = tiles.to_vec();
 
-    // Retain only selected nodes that still exist in the graph
-    let graph_nodes: HashSet<NodeId> = props.graph.nodes.iter().cloned().collect();
-    mosaic_memory.selected.retain(|id| graph_nodes.contains(id));
-
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
 
-    // Apply focus
+    // Apply focus, selection, drag, and animation
     insertion_point.clone_from(&Default::default());
     let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, output_insertion_point}| {
         let focused = match mosaic_memory.focused {
@@ -476,6 +529,12 @@ pub fn mosaic_ui<IdSource>(
         };
 
         let selected = mosaic_memory.selected.contains(&tile.id().node);
+
+        let (dragging, drag_offset) = mosaic_memory.drag.as_ref().and_then(|drag|
+            drag.contingent.contains(&tile.id())
+            .then(|| (true, drag.offset - (tile.rect().min - Pos2::ZERO))) // XXX tile.rect().min should be target_tile.min
+        ).unwrap_or((false, Vec2::ZERO));
+
         if focused {
             // Use the focused tile's insertion point
             // as the overall graph's focused_insertion_point
@@ -486,8 +545,9 @@ pub fn mosaic_ui<IdSource>(
             // Right now it's impossible to clear this insertion point.
             insertion_point.clone_from(&output_insertion_point);
         }
-        let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile);
-        tile.with_focus(focused).with_selected(selected)
+        let tile = tile.with_focus(focused).with_selected(selected).with_offset(drag_offset);
+        let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile, dragging);
+        tile
     }).collect();
 
     // Sort
@@ -498,20 +558,32 @@ pub fn mosaic_ui<IdSource>(
     mosaic_memory.animation_manager.retain_tiles(&tile_ids);
 
     // Draw
+
+    // Set this variable when iterating over tiles to describe the drag situation
+    enum DragSituation {
+        None,
+        Started(TileId, Vec2),
+        Delta(Vec2),
+        Released,
+    }
+
+    let mut drag_situation = DragSituation::None;
+
     for tile in tiles.into_iter() {
         let tile_id = tile.id();
+        let tile_rect = tile.rect();
         let node_id = tile_id.node;
         let node_state = node_states.get(&node_id).unwrap();
         let &preview_image = preview_images.get(&node_id).unwrap();
         let node_props = props.node_props.get_mut(&node_id).unwrap();
 
-        let InnerResponse { inner, response } = tile.with_offset(mosaic_rect.min - Pos2::ZERO).show(ui, |ui| {
+        let InnerResponse { inner, response } = tile.show(ui, |ui| {
             match node_props {
                 NodeProps::EffectNode(p) => EffectNodeTile::new(p, node_state.try_into().unwrap(), preview_image).add_contents(ui),
             }
         });
 
-        if response.clicked() {
+        if response.clicked() || response.drag_started() {
             // Focus the mosaic
             mosaic_response.request_focus();
 
@@ -532,10 +604,48 @@ pub fn mosaic_ui<IdSource>(
                     mosaic_memory.selected.insert(node_id);
                 },
             }
+        } else if response.drag_released() {
+            if mosaic_memory.drag.is_some() {
+                drag_situation = DragSituation::Released;
+            }
+        } else if response.dragged() {
+            let delta = response.drag_delta();
+            match &mosaic_memory.drag {
+                Some(_) => {
+                    // We have an existing drag. Apply our delta.
+                    drag_situation = DragSituation::Delta(delta);
+                },
+                None => {
+                    // See if we have moved a nonzero amount. If so, begin the drag.
+                    if delta != Vec2::ZERO {
+                        let offset = delta + (tile_rect.min - Pos2::ZERO);
+                        drag_situation = DragSituation::Started(tile_id, offset);
+                    }
+                },
+            }
         }
     }
 
-    // Check if background was clicked, and if so, blur & deselect tiles
+    match drag_situation {
+        DragSituation::Started(tile_id, offset) => {
+            let contingent: HashSet<TileId> = [tile_id].into_iter().collect(); // XXX calculate connected component
+            mosaic_memory.drag = Some(DragMemory {
+                target: tile_id,
+                contingent,
+                offset,
+            });
+        },
+        DragSituation::Delta(delta) => {
+            let drag = mosaic_memory.drag.as_mut().unwrap(); // Don't emit this drag situation if None
+            drag.offset += delta;
+        },
+        DragSituation::Released => {
+            mosaic_memory.drag = None;
+        },
+        DragSituation::None => {},
+    };
+
+    // Check if background was clicked, and if so, blur, deselect, and drop tiles
     if mosaic_response.clicked() {
         // Focus the mosaic
         mosaic_response.request_focus();
@@ -551,6 +661,9 @@ pub fn mosaic_ui<IdSource>(
                 mosaic_memory.selected.clear();
             },
         }
+
+        // Drop tiles if they are lifted
+        mosaic_memory.drag = None;
     }
 
     // Graph interactions
