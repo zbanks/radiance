@@ -583,6 +583,12 @@ pub fn mosaic_ui<IdSource>(
             }
         });
 
+        if response.dragged() || response.clicked() {
+            // Ensure the mosaic stays focused throughout interaction
+            // so it can pick up keyboard input
+            mosaic_response.request_focus();
+        }
+
         if response.drag_released() {
             if mosaic_memory.drag.is_some() {
                 drag_situation = DragSituation::Released;
@@ -625,9 +631,6 @@ pub fn mosaic_ui<IdSource>(
 
         match selection_action {
             SelectionAction::Clicked | SelectionAction::ClickedEnsureSelected => {
-                // Focus the mosaic
-                mosaic_response.request_focus();
-
                 // Focus the tile
                 mosaic_memory.focused = Some(tile_id);
 
