@@ -21,7 +21,7 @@ struct TileInMosaic {
 }
 
 /// Visually lay out the mosaic (collection of tiles)
-fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
+fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<TileId, Vec<Option<TileId>>>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
@@ -245,7 +245,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
         }
     }).collect();
 
-    (vec2(total_width, total_height), tiles)
+    (vec2(total_width, total_height), tiles, start_tiles, tree)
 }
 
 /// Working from leaves to roots, set each input height to be large enough
@@ -321,6 +321,11 @@ fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileI
     for &child_tile in child_tiles.iter().flatten() {
         set_horizontal_stackup(&child_tile, tree, widths, xs, sub_x);
     }
+}
+
+/// Return a set of tiles that are both selected and connected to the given target tile.
+fn selected_connected_component(target: &TileId, selected: &HashSet<NodeId>, start_tiles: &Vec<TileId>, tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashSet<TileId> {
+    [target.clone()].into_iter().collect() // XXX calculate connected component
 }
 
 // We implement a custom AnimationManager to get easing functions
@@ -430,6 +435,8 @@ struct LayoutCache {
     graph: Graph, // Stored to check equality against subsequent call
     size: Vec2,
     tiles: Vec<TileInMosaic>,
+    start_tiles: Vec<TileId>,
+    tree: HashMap<TileId, Vec<Option<TileId>>>,
 }
 
 /// State associated with dragged tiles
@@ -482,11 +489,13 @@ pub fn mosaic_ui<IdSource>(
 
     if layout_cache_needs_refresh {
         props.graph.fix();
-        let (size, tiles) = layout(props);
+        let (size, tiles, start_tiles, tree) = layout(props);
         mosaic_memory.layout_cache = Some(LayoutCache {
             graph: props.graph.clone(),
             size,
             tiles,
+            start_tiles,
+            tree,
         });
 
         // Retain only selected / focused / dragged nodes that still exist in the graph
@@ -501,8 +510,10 @@ pub fn mosaic_ui<IdSource>(
             if !graph_nodes.contains(&drag.target.node) {
                 true // abort drag because primary target tile disappeared
             } else {
-                // TODO recompute contingent based on
-                // connected component based of the drag target
+                // Recompute contingent based on
+                // connected component from the drag target
+                let new_contingent = selected_connected_component(&drag.target, &mosaic_memory.selected, &mosaic_memory.layout_cache.as_ref().unwrap().start_tiles, &mosaic_memory.layout_cache.as_ref().unwrap().tree);
+                mosaic_memory.drag.as_mut().unwrap().contingent = new_contingent;
                 false // don't abort drag
             }
         } else {
@@ -514,7 +525,7 @@ pub fn mosaic_ui<IdSource>(
     }
 
     // Get layout from cache (guaranteed to exist post-refresh)
-    let LayoutCache {graph: _, size: layout_size, tiles} = &mosaic_memory.layout_cache.as_ref().unwrap();
+    let LayoutCache {size: layout_size, tiles, ..} = &mosaic_memory.layout_cache.as_ref().unwrap();
     let layout_size = *layout_size;
     let tiles = tiles.to_vec();
 
@@ -658,7 +669,9 @@ pub fn mosaic_ui<IdSource>(
 
     match drag_situation {
         DragSituation::Started(tile_id, offset) => {
-            let contingent: HashSet<TileId> = [tile_id].into_iter().collect(); // XXX calculate connected component
+            let LayoutCache {start_tiles, tree, ..} = &mosaic_memory.layout_cache.as_ref().unwrap();
+
+            let contingent = selected_connected_component(&tile_id, &mosaic_memory.selected, start_tiles, tree);
             mosaic_memory.drag = Some(DragMemory {
                 target: tile_id,
                 contingent,
