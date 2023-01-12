@@ -589,6 +589,16 @@ pub fn mosaic_ui<IdSource>(
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
 
     // Apply focus, selection, drag, and animation
+
+    // Find the position of the upper left corner of the tile
+    // that was the target of the drag
+    // so we can reference the whole contingent from this point
+    let drag_target_position = mosaic_memory.drag.as_ref()
+        .map(|drag|
+            tiles.iter().find(|&tile_in_mosaic| tile_in_mosaic.tile.id() == drag.target).unwrap()
+            .tile.rect().min
+        );
+
     insertion_point.clone_from(&Default::default());
     let mut tiles: Vec<Tile> = tiles.into_iter().map(|TileInMosaic {tile, output_insertion_point}| {
         let focused = match mosaic_memory.focused {
@@ -600,7 +610,7 @@ pub fn mosaic_ui<IdSource>(
 
         let (dragging, drag_offset) = mosaic_memory.drag.as_ref().and_then(|drag|
             drag.contingent.contains(&tile.id())
-            .then(|| (true, drag.offset - (tile.rect().min - Pos2::ZERO))) // XXX tile.rect().min should be target_tile.min
+            .then(|| (true, drag.offset - (drag_target_position.unwrap() - Pos2::ZERO)))
         ).unwrap_or((false, Vec2::ZERO));
 
         if focused {
