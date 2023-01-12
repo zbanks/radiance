@@ -196,7 +196,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>) {
     // However, it has the option to make its width dependent on its computed height
     // (that is why we do heights first.)
     let widths: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
-        let height: f32 = input_heights.get(&tile_id).unwrap().iter().sum();
+        let height: f32 = *heights.get(&tile_id).unwrap();
         let node_props = props.node_props.get(&tile_id.node).unwrap();
         let width = match node_props {
             NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(&p, height),
@@ -583,32 +583,22 @@ pub fn mosaic_ui<IdSource>(
             }
         });
 
-        if response.clicked() || response.drag_started() {
-            // Focus the mosaic
-            mosaic_response.request_focus();
-
-            // Focus the tile
-            mosaic_memory.focused = Some(tile_id);
-
-            // Handle node selection
-            match ui.input().modifiers {
-                Modifiers { ctrl: true, .. } => {
-                    if mosaic_memory.selected.contains(&node_id) {
-                        mosaic_memory.selected.remove(&node_id);
-                    } else {
-                        mosaic_memory.selected.insert(node_id);
-                    }
-                },
-                _ => {
-                    mosaic_memory.selected.clear();
-                    mosaic_memory.selected.insert(node_id);
-                },
-            }
-        } else if response.drag_released() {
+        if response.drag_released() {
             if mosaic_memory.drag.is_some() {
                 drag_situation = DragSituation::Released;
             }
-        } else if response.dragged() {
+        }
+
+        // How we need to change selection based on interaction
+        enum SelectionAction {
+            None, // Do not select this tile
+            Clicked, // Act as if this tile was clicked (e.g. deselect it if Ctrl is held)
+            ClickedEnsureSelected, // Act as if this file was clicked, but ensure that it ends up selected
+        }
+
+        let mut selection_action = SelectionAction::None;
+
+        if response.dragged() {
             let delta = response.drag_delta();
             match &mosaic_memory.drag {
                 Some(_) => {
@@ -618,11 +608,48 @@ pub fn mosaic_ui<IdSource>(
                 None => {
                     // See if we have moved a nonzero amount. If so, begin the drag.
                     if delta != Vec2::ZERO {
-                        let offset = delta + (tile_rect.min - Pos2::ZERO);
+                        // Workaround bug in egui: Discard the first delta,
+                        // since it can be inaccurate when mixing touch + mouse
+                        let offset = tile_rect.min - Pos2::ZERO;
                         drag_situation = DragSituation::Started(tile_id, offset);
+                        // Treat starting a drag like a click,
+                        // but ensure the tile is selected
+                        // (so we never drag a deselected tile)
+                        selection_action = SelectionAction::ClickedEnsureSelected;
                     }
                 },
             }
+        } else if response.clicked() && matches!(drag_situation, DragSituation::None) {
+            selection_action = SelectionAction::Clicked;
+        }
+
+        match selection_action {
+            SelectionAction::Clicked | SelectionAction::ClickedEnsureSelected => {
+                // Focus the mosaic
+                mosaic_response.request_focus();
+
+                // Focus the tile
+                mosaic_memory.focused = Some(tile_id);
+
+                match ui.input().modifiers {
+                    Modifiers { ctrl: true, .. } => {
+                        if mosaic_memory.selected.contains(&node_id) {
+                            // Only allow removal from selection
+                            // if we don't need to ensure selected
+                            if !matches!(selection_action, SelectionAction::ClickedEnsureSelected) {
+                                mosaic_memory.selected.remove(&node_id);
+                            }
+                        } else {
+                            mosaic_memory.selected.insert(node_id);
+                        }
+                    },
+                    _ => {
+                        mosaic_memory.selected.clear();
+                        mosaic_memory.selected.insert(node_id);
+                    },
+                }
+            },
+            SelectionAction::None => {},
         }
     }
 
