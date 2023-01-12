@@ -323,9 +323,61 @@ fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileI
     }
 }
 
-/// Return a set of tiles that are both selected and connected to the given target tile.
-fn selected_connected_component(target: &TileId, selected: &HashSet<NodeId>, start_tiles: &Vec<TileId>, tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashSet<TileId> {
-    [target.clone()].into_iter().collect() // XXX calculate connected component
+/// Given a set of start tiles (tiles with no connected outputs)
+/// and a mapping from a given tile to its input tiles,
+/// produce the inverse mapping:
+/// one from a given tile to its output tile.
+fn input_tree_to_output_tree(start_tiles: &Vec<TileId>, input_tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashMap<TileId, Option<TileId>> {
+    let mut stack: Vec<TileId> = start_tiles.clone();
+    let mut output_tree: HashMap<TileId, Option<TileId>> = start_tiles.iter().map(|&tile_id| (tile_id, None)).collect();
+
+    while let Some(tile) = stack.pop() {
+        // For each tile in the stack,
+        for &child_tile in input_tree.get(&tile).unwrap().iter().flatten() {
+            // 1) add an entry for each of its children
+            output_tree.insert(child_tile, Some(tile));
+            // 2) push each child onto the stack
+            stack.push(child_tile);
+        }
+    }
+
+    output_tree
+}
+
+/// Return a set of tiles that are both selected and connected (via other selected tiles) to the given target tile
+fn selected_connected_component(target: &TileId, selected: &HashSet<NodeId>, start_tiles: &Vec<TileId>, input_tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashSet<TileId> {
+    if !selected.contains(&target.node) {
+        println!("Warning--dragging empty set");
+        return HashSet::<TileId>::new();
+    }
+
+    let output_tree = input_tree_to_output_tree(start_tiles, input_tree);
+
+    // 1) Walk downstream to find the "start" tile
+    // of the selected connected component
+    let mut start_tile = *target;
+    while let Some(downstream_tile) = output_tree.get(&start_tile).unwrap() {
+        if !selected.contains(&downstream_tile.node) {
+            // Stop walking if we exited the selection
+            break;
+        }
+        // Otherwise, keep walking
+        start_tile = *downstream_tile;
+    }
+
+    // 2) From there, recursively search upstream
+    // to get the whole subtree
+    let mut result = HashSet::<TileId>::new();
+    fn search_upstream(tile: &TileId, selected: &HashSet<NodeId>, tree: &HashMap<TileId, Vec<Option<TileId>>>, result: &mut HashSet<TileId>) {
+        result.insert(*tile);
+        for &child_tile in tree.get(tile).unwrap().iter().flatten() {
+            if selected.contains(&child_tile.node) {
+                search_upstream(&child_tile, selected, tree, result);
+            }
+        }
+    }
+    search_upstream(&start_tile, selected, input_tree, &mut result);
+    result
 }
 
 // We implement a custom AnimationManager to get easing functions
@@ -512,7 +564,12 @@ pub fn mosaic_ui<IdSource>(
             } else {
                 // Recompute contingent based on
                 // connected component from the drag target
-                let new_contingent = selected_connected_component(&drag.target, &mosaic_memory.selected, &mosaic_memory.layout_cache.as_ref().unwrap().start_tiles, &mosaic_memory.layout_cache.as_ref().unwrap().tree);
+                let new_contingent = selected_connected_component(
+                    &drag.target,
+                    &mosaic_memory.selected,
+                    &mosaic_memory.layout_cache.as_ref().unwrap().start_tiles,
+                    &mosaic_memory.layout_cache.as_ref().unwrap().tree
+                );
                 mosaic_memory.drag.as_mut().unwrap().contingent = new_contingent;
                 false // don't abort drag
             }
