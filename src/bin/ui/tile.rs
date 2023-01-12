@@ -1,5 +1,6 @@
 use radiance::NodeId;
 use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id};
+use std::cmp::Ordering;
 
 /// A unique identifier for a visual tile in the UI.
 /// There may be multiple tiles per node,
@@ -23,18 +24,8 @@ pub struct Tile {
     outputs: Vec<f32>,
     focused: bool,
     selected: bool,
-}
-
-/// An enum that identifies appropriate draw order for tiles
-/// (to sort the result)
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
-enum DrawOrder {
-    // Bottom
-    Normal,         // Normal tile in the mosaic
-    Focused,        // Normal tile in the mosaic with focus (needs to be drawn above surrounding normal tiles)
-    Lifted,         // Tile is being dragged & dropped (needs to be drawn on top of the mosaic)
-    LiftedFocused,  // Tile is being dragged & dropped and is focused (needs to be drawn on top of the surrounding lifted tiles)
-    // Top
+    lifted: bool,
+    z: f32,
 }
 
 fn cross(a: Vec2, b: Vec2) -> f32 {
@@ -68,6 +59,8 @@ impl Tile {
             outputs,
             focused: false,
             selected: false,
+            lifted: false,
+            z: 0.,
         }
     }
 
@@ -81,6 +74,11 @@ impl Tile {
         self
     }
 
+    pub fn with_lifted(mut self, lifted: bool) -> Self {
+        self.lifted = lifted;
+        self
+    }
+
     pub fn with_offset(mut self, offset: Vec2) -> Self {
         self.offset = offset;
         self
@@ -91,17 +89,66 @@ impl Tile {
         self
     }
 
+    pub fn with_z(mut self, z: f32) -> Self {
+        self.z = z;
+        self
+    }
+
+    /// Set this tile's Z index based on whether it is lifted, and focused
+    pub fn with_default_z(self) -> Self {
+        let z = match (self.lifted, self.focused) {
+            (false, false) => 0., // Normal tile in the mosaic
+            (false, true) => 1., // Normal tile in the mosaic with focus (needs to be drawn above surrounding normal tiles)
+            (true, false) => 2., // Tile is being dragged & dropped (needs to be drawn on top of the mosaic)
+            (true, true) => 3., // Tile is being dragged & dropped and is focused (needs to be drawn on top of the surrounding lifted tiles)
+        };
+        self.with_z(z)
+    }
+
     pub fn id(&self) -> TileId {
         self.id
     }
 
-    pub fn draw_order(&self) -> impl Ord {
-        let draw_order = match self.focused {
-            false => DrawOrder::Normal,
-            true => DrawOrder::Focused,
-        };
+    pub fn z(&self) -> f32 {
+        self.z
+    }
 
-        (draw_order, self.id)
+    pub fn draw_order(&self) -> impl Ord {
+        // Compute a default Z index based on whether the tile is lifted and/or focused.
+        // This needs to be a float so we can animate it.
+
+        // Workaround missing Ord for f32
+        struct DrawOrder {
+            pub z: f32,
+            pub id: TileId,
+        }
+
+        impl Ord for DrawOrder {
+            fn cmp(&self, other: &Self) -> Ordering {
+                self.z.partial_cmp(&other.z)
+                    .unwrap_or(Ordering::Equal)
+                    .then(
+                        self.id.cmp(&other.id)
+                    )
+            }
+        }
+
+        impl PartialOrd for DrawOrder {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl PartialEq for DrawOrder {
+            fn eq(&self, other: &Self) -> bool {
+                self.z == other.z && self.id == other.id
+            }
+        }
+
+        impl Eq for DrawOrder {
+        }
+
+        DrawOrder {z: self.z, id: self.id}
     }
 
     pub fn ui_id(&self) -> Id {

@@ -392,6 +392,8 @@ struct TileAnimation {
     to_rect: Rect,
     from_offset: Vec2,
     to_offset: Vec2,
+    from_z: f32,
+    to_z: f32,
     /// when did `value` last toggle?
     toggle_time: f64,
 }
@@ -420,6 +422,12 @@ fn vec_easing(time_since_toggle: f32, from_vec: Vec2, to_vec: Vec2) -> Vec2 {
     from_vec + (to_vec - from_vec) * alpha
 }
 
+fn scalar_easing(time_since_toggle: f32, from_scalar: f32, to_scalar: f32) -> f32 {
+    let alpha = ease(time_since_toggle / MOSAIC_ANIMATION_DURATION);
+
+    from_scalar + (to_scalar - from_scalar) * alpha
+}
+
 impl MosaicAnimationManager {
     pub fn animate_tile(
         &mut self,
@@ -436,6 +444,8 @@ impl MosaicAnimationManager {
                         to_rect: tile.rect(),
                         from_offset: tile.offset(),
                         to_offset: tile.offset(),
+                        from_z: tile.z(),
+                        to_z: tile.z(),
                         toggle_time: -f64::INFINITY, // long time ago
                     },
                 );
@@ -446,6 +456,7 @@ impl MosaicAnimationManager {
                 // by always setting the current value to the target
                 if dragging {
                     anim.to_offset = tile.offset();
+                    anim.to_z = tile.z();
                 }
 
                 let time_since_toggle = (input.time - anim.toggle_time) as f32;
@@ -462,15 +473,23 @@ impl MosaicAnimationManager {
                     anim.from_offset,
                     anim.to_offset,
                 );
+                let current_z = scalar_easing(
+                    time_since_toggle,
+                    anim.from_z,
+                    anim.to_z,
+                );
                 if anim.to_rect != tile.rect() ||
-                   anim.to_offset != tile.offset() {
+                   anim.to_offset != tile.offset() ||
+                   anim.to_z != tile.z() {
                     anim.from_rect = current_rect; //start new animation from current position of playing animation
                     anim.to_rect = tile.rect();
                     anim.from_offset = current_offset;
                     anim.to_offset = tile.offset();
+                    anim.from_z = current_z;
+                    anim.to_z = tile.z();
                     anim.toggle_time = input.time;
                 }
-                tile.with_rect(current_rect).with_offset(current_offset)
+                tile.with_rect(current_rect).with_offset(current_offset).with_z(current_z)
             }
         }
     }
@@ -623,7 +642,7 @@ pub fn mosaic_ui<IdSource>(
             // Right now it's impossible to clear this insertion point.
             insertion_point.clone_from(&output_insertion_point);
         }
-        let tile = tile.with_focus(focused).with_selected(selected).with_offset(drag_offset);
+        let tile = tile.with_focus(focused).with_selected(selected).with_offset(drag_offset).with_lifted(dragging).with_default_z();
         let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile, dragging);
         tile
     }).collect();
