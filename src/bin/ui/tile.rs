@@ -26,6 +26,7 @@ pub struct Tile {
     selected: bool,
     lifted: bool,
     z: f32,
+    alpha: f32,
 }
 
 fn cross(a: Vec2, b: Vec2) -> f32 {
@@ -47,6 +48,7 @@ const MARGIN_HORIZONTAL: f32 = 20.;
 const MARGIN_VERTICAL: f32 = 10.;
 const CHEVRON_SIZE: f32 = 15.;
 const EPSILON: f32 = 0.0001;
+const ALPHA_LIFTED: f32 = 0.3;
 
 impl Tile {
    pub fn new(id: TileId, rect: Rect, inputs: Vec<f32>, outputs: Vec<f32>) -> Self {
@@ -61,6 +63,7 @@ impl Tile {
             selected: false,
             lifted: false,
             z: 0.,
+            alpha: 1.,
         }
     }
 
@@ -94,6 +97,11 @@ impl Tile {
         self
     }
 
+    pub fn with_alpha(mut self, alpha: f32) -> Self {
+        self.alpha = alpha;
+        self
+    }
+
     /// Set this tile's Z index based on whether it is lifted, and focused
     pub fn with_default_z(self) -> Self {
         let z = match (self.lifted, self.focused) {
@@ -105,6 +113,15 @@ impl Tile {
         self.with_z(z)
     }
 
+    /// Set this tile's Z index based on whether it is lifted
+    pub fn with_default_alpha(self) -> Self {
+        let alpha = match self.lifted {
+            false => 1., // Fully opaque if not lifted
+            true => ALPHA_LIFTED, // Slightly transparent if lifted
+        };
+        self.with_alpha(alpha)
+    }
+
     pub fn id(&self) -> TileId {
         self.id
     }
@@ -113,10 +130,11 @@ impl Tile {
         self.z
     }
 
-    pub fn draw_order(&self) -> impl Ord {
-        // Compute a default Z index based on whether the tile is lifted and/or focused.
-        // This needs to be a float so we can animate it.
+    pub fn alpha(&self) -> f32 {
+        self.alpha
+    }
 
+    pub fn draw_order(&self) -> impl Ord {
         // Workaround missing Ord for f32
         struct DrawOrder {
             pub z: f32,
@@ -244,7 +262,7 @@ impl Tile {
         vertices.dedup_by(|a, b| (a.x - b.x).abs() < EPSILON && (a.y - b.y).abs() < EPSILON);
 
         // Push vertices of polygon
-        let fill = if self.selected { FILL_SELECTED } else { FILL_DESELECTED };
+        let fill = (if self.selected { FILL_SELECTED } else { FILL_DESELECTED }).linear_multiply(self.alpha);
         let mut mesh = Mesh::with_texture(TextureId::default());
         for &pos in vertices.iter() {
             mesh.colored_vertex(pos, fill);
@@ -289,6 +307,7 @@ impl Tile {
 
         // Paint stroke
         let stroke = if self.focused { STROKE_FOCUSED } else { STROKE_BLURRED };
+        let stroke = Stroke { width: stroke.width, color: stroke.color.linear_multiply(self.alpha) };
         ui.painter().add(Shape::closed_line(vertices, stroke));
     }
 }

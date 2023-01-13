@@ -390,12 +390,16 @@ struct MosaicAnimationManager {
 struct TileAnimation {
     from_rect: Rect,
     to_rect: Rect,
+    toggle_time_rect: f64,
     from_offset: Vec2,
     to_offset: Vec2,
+    toggle_time_offset: f64,
     from_z: f32,
     to_z: f32,
-    /// when did `value` last toggle?
-    toggle_time: f64,
+    toggle_time_z: f64,
+    from_alpha: f32, // opacity, not to be confused with easing function parameter
+    to_alpha: f32,
+    toggle_time_alpha: f64,
 }
 
 fn ease(x: f32) -> f32 {
@@ -442,11 +446,16 @@ impl MosaicAnimationManager {
                     TileAnimation {
                         from_rect: tile.rect(),
                         to_rect: tile.rect(),
+                        toggle_time_rect: -f64::INFINITY, // long time ago
                         from_offset: tile.offset(),
                         to_offset: tile.offset(),
+                        toggle_time_offset: -f64::INFINITY,
                         from_z: tile.z(),
                         to_z: tile.z(),
-                        toggle_time: -f64::INFINITY, // long time ago
+                        toggle_time_z: -f64::INFINITY,
+                        from_alpha: tile.alpha(),
+                        to_alpha: tile.alpha(),
+                        toggle_time_alpha: -f64::INFINITY,
                     },
                 );
                 tile
@@ -456,40 +465,59 @@ impl MosaicAnimationManager {
                 // by always setting the current value to the target
                 if dragging {
                     anim.to_offset = tile.offset();
-                    anim.to_z = tile.z();
                 }
 
-                let time_since_toggle = (input.time - anim.toggle_time) as f32;
-                // On the frame we toggle we don't want to return the old value,
-                // so we extrapolate forwards:
-                let time_since_toggle = time_since_toggle + input.predicted_dt;
+                let time_since_toggle_rect = (input.time - anim.toggle_time_rect) as f32 + input.predicted_dt;
                 let current_rect = rect_easing(
-                    time_since_toggle,
+                    time_since_toggle_rect,
                     anim.from_rect,
                     anim.to_rect,
                 );
+                let time_since_toggle_offset = (input.time - anim.toggle_time_offset) as f32 + input.predicted_dt;
                 let current_offset = vec_easing(
-                    time_since_toggle,
+                    time_since_toggle_offset,
                     anim.from_offset,
                     anim.to_offset,
                 );
+                let time_since_toggle_z = (input.time - anim.toggle_time_z) as f32 + input.predicted_dt;
                 let current_z = scalar_easing(
-                    time_since_toggle,
+                    time_since_toggle_z,
                     anim.from_z,
                     anim.to_z,
                 );
-                if anim.to_rect != tile.rect() ||
-                   anim.to_offset != tile.offset() ||
-                   anim.to_z != tile.z() {
-                    anim.from_rect = current_rect; //start new animation from current position of playing animation
+                let time_since_toggle_alpha = (input.time - anim.toggle_time_alpha) as f32 + input.predicted_dt;
+                let current_alpha = scalar_easing(
+                    time_since_toggle_alpha,
+                    anim.from_alpha,
+                    anim.to_alpha,
+                );
+
+                if anim.to_rect != tile.rect() {
+                    anim.from_rect = current_rect;
                     anim.to_rect = tile.rect();
+                    anim.toggle_time_rect = input.time;
+                }
+                if anim.to_offset != tile.offset() {
                     anim.from_offset = current_offset;
                     anim.to_offset = tile.offset();
+                    anim.toggle_time_offset = input.time;
+                }
+                if anim.to_z != tile.z() {
                     anim.from_z = current_z;
                     anim.to_z = tile.z();
-                    anim.toggle_time = input.time;
+                    anim.toggle_time_z = input.time;
                 }
-                tile.with_rect(current_rect).with_offset(current_offset).with_z(current_z)
+                if anim.to_alpha != tile.alpha() {
+                    anim.from_alpha = current_alpha;
+                    anim.to_alpha = tile.alpha();
+                    anim.toggle_time_alpha = input.time;
+                }
+
+                tile
+                    .with_rect(current_rect)
+                    .with_offset(current_offset)
+                    .with_z(current_z)
+                    .with_alpha(current_alpha)
             }
         }
     }
@@ -642,7 +670,13 @@ pub fn mosaic_ui<IdSource>(
             // Right now it's impossible to clear this insertion point.
             insertion_point.clone_from(&output_insertion_point);
         }
-        let tile = tile.with_focus(focused).with_selected(selected).with_offset(drag_offset).with_lifted(dragging).with_default_z();
+        let tile = tile
+            .with_focus(focused)
+            .with_selected(selected)
+            .with_offset(drag_offset)
+            .with_lifted(dragging)
+            .with_default_alpha()
+            .with_default_z();
         let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile, dragging);
         tile
     }).collect();
