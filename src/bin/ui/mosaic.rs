@@ -465,6 +465,9 @@ impl MosaicAnimationManager {
                 // by always setting the current value to the target
                 if dragging {
                     anim.to_offset = tile.offset();
+                    // Also disable Z animation on drag start
+                    // so the tiles are "lifted" immediately
+                    anim.to_z = tile.z();
                 }
 
                 let time_since_toggle_rect = (input.time - anim.toggle_time_rect) as f32 + input.predicted_dt;
@@ -730,7 +733,7 @@ pub fn mosaic_ui<IdSource>(
         enum SelectionAction {
             None, // Do not select this tile
             Clicked, // Act as if this tile was clicked (e.g. deselect it if Ctrl is held)
-            ClickedEnsureSelected, // Act as if this file was clicked, but ensure that it ends up selected
+            Dragged, // Act as if this file was clicked, but ensure that it ends up selected
         }
 
         let mut selection_action = SelectionAction::None;
@@ -752,7 +755,7 @@ pub fn mosaic_ui<IdSource>(
                         // Treat starting a drag like a click,
                         // but ensure the tile is selected
                         // (so we never drag a deselected tile)
-                        selection_action = SelectionAction::ClickedEnsureSelected;
+                        selection_action = SelectionAction::Dragged;
                     }
                 },
             }
@@ -761,7 +764,9 @@ pub fn mosaic_ui<IdSource>(
         }
 
         match selection_action {
-            SelectionAction::Clicked | SelectionAction::ClickedEnsureSelected => {
+            // TODO this match is sort of messy, with a lot of internal logic
+            // differentiating between Clicked and Dragged
+            SelectionAction::Clicked | SelectionAction::Dragged => {
                 // Focus the tile
                 mosaic_memory.focused = Some(tile_id);
 
@@ -770,7 +775,7 @@ pub fn mosaic_ui<IdSource>(
                         if mosaic_memory.selected.contains(&node_id) {
                             // Only allow removal from selection
                             // if we don't need to ensure selected
-                            if !matches!(selection_action, SelectionAction::ClickedEnsureSelected) {
+                            if !matches!(selection_action, SelectionAction::Dragged) {
                                 mosaic_memory.selected.remove(&node_id);
                             }
                         } else {
@@ -778,8 +783,14 @@ pub fn mosaic_ui<IdSource>(
                         }
                     },
                     _ => {
-                        mosaic_memory.selected.clear();
-                        mosaic_memory.selected.insert(node_id);
+                        // If we drag an already-selected tile, don't deselet everything else.
+                        if !mosaic_memory.selected.contains(&node_id)
+                           || !matches!(selection_action, SelectionAction::Dragged) {
+                            // If we click, or if we drag on a tile that is not selected,
+                            // then do normal behavior: deselect everything but the target tile.
+                            mosaic_memory.selected.clear();
+                            mosaic_memory.selected.insert(node_id);
+                        }
                     },
                 }
             },
