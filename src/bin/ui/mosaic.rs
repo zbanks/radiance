@@ -4,11 +4,14 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::hash::Hash;
 use crate::ui::tile::{Tile, TileId};
+use crate::ui::drop_target::DropTarget;
 use crate::ui::effect_node_tile::EffectNodeTile;
 
 const MARGIN: f32 = 20.;
 const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
 const INTENSITY_SCROLL_RATE: f32 = 0.001;
+const DROP_TARGET_WIDTH: f32 = 50.;
+const DROP_TARGET_DISPLACEMENT: f32 = 10.;
 
 /// A struct to hold info about a single tile that has been laid out.
 #[derive(Clone, Debug)]
@@ -20,8 +23,18 @@ struct TileInMosaic {
     pub output_insertion_point: InsertionPoint,
 }
 
+/// A struct to hold info about a place in the mosaic where a subgraph may be inserted
+#[derive(Clone, Debug)]
+struct DropTargetInMosaic {
+    /// The visual drop target
+    pub drop_target: DropTarget,
+
+    /// The insertion point that should be used if content is dropped onto this drop target
+    pub insertion_point: InsertionPoint,
+}
+
 /// Visually lay out the mosaic (collection of tiles)
-fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<TileId, Vec<Option<TileId>>>) {
+fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic>, Vec<TileId>, HashMap<TileId, Vec<Option<TileId>>>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
 
@@ -119,28 +132,28 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<T
 
     // The actual input heights may be larger than this.
     // Initialize the actual input heights to the min heights plus some margin.
-    let mut input_heights: HashMap<TileId, Vec<f32>> = min_input_heights.iter().map(|(&tile_id, heights)| {
+    let mut input_heights_full_size: HashMap<TileId, Vec<f32>> = min_input_heights.iter().map(|(&tile_id, heights)| {
         // Each input port will split its margin half above and half below.
         (tile_id, heights.iter().map(|h| h + MARGIN).collect())
     }).collect();
 
     // Also, lets make a mapping of Y coordinates.
     // We will initialize them to NAN to make sure we don't miss anything.
-    let mut ys: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
+    let mut ys_full_size: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
         (tile_id, f32::NAN)
     }).collect();
 
     // Now traverse each tree, computing heights and Y positions in three passes
     let mut y = 0_f32;
     for &start_tile in start_tiles.iter() {
-        set_input_height_fwd(&start_tile, &tree, &mut input_heights);
-        set_input_height_rev(&start_tile, &tree, &mut input_heights);
-        set_vertical_stackup(&start_tile, &tree, &input_heights, &mut ys, &mut y);
+        set_input_height_fwd(&start_tile, &tree, &mut input_heights_full_size);
+        set_input_height_rev(&start_tile, &tree, &mut input_heights_full_size);
+        set_vertical_stackup(&start_tile, &tree, &input_heights_full_size, &mut ys_full_size, &mut y);
     }
     let total_height = y;
 
     // In a fourth pass, shrink nodes that are unnecessarily tall.
-    // Just because a node is connected to a tall input
+    // Just because a node is connected to a tall output
     // and is allocated a large amount of vertical space
     // doesn't mean it has to take it all.
 
@@ -152,9 +165,10 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<T
     let mut inputs = HashMap::<TileId, Vec<f32>>::new();
     let mut outputs = HashMap::<TileId, f32>::new();
     let mut heights = HashMap::<TileId, f32>::new();
+    let mut ys = HashMap::<TileId, f32>::new();
 
     for &tile_id in tree.keys() {
-        let my_input_heights = input_heights.get(&tile_id).unwrap();
+        let my_input_heights = input_heights_full_size.get_mut(&tile_id).unwrap();
         let my_min_input_heights = min_input_heights.get(&tile_id).unwrap();
 
         // See how much we can shrink the top input
@@ -182,8 +196,8 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<T
         outputs.insert(tile_id, 0.5 * allocated_height - shrinkage_top);
 
         // Compute and write the new Y coordinate
-        let y = ys.get_mut(&tile_id).unwrap();
-        *y = *y + shrinkage_top;
+        let &y = ys_full_size.get(&tile_id).unwrap();
+        ys.insert(tile_id, y + shrinkage_top);
 
         // Compute and insert new height
         heights.insert(tile_id, allocated_height - shrinkage_top - shrinkage_bottom);
@@ -222,7 +236,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<T
         *x = total_width - *x - MARGIN * 0.5;
     }
 
-    // Collect and return the result
+    // Collect and return the resulting tiles
     let tiles: Vec<TileInMosaic> = tree.keys().map(|&tile_id| {
         let &x = xs.get(&tile_id).unwrap();
         let &y = ys.get(&tile_id).unwrap();
@@ -245,7 +259,45 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<TileId>, HashMap<T
         }
     }).collect();
 
-    (vec2(total_width, total_height), tiles, start_tiles, tree)
+    // Add drop targets for every input on every tile
+    let mut drop_targets = Vec::<DropTargetInMosaic>::new();
+    for &tile_id in tree.keys() {
+        let my_input_heights = input_heights_full_size.get(&tile_id).unwrap();
+        let &tile_x = xs.get(&tile_id).unwrap();
+        let &tile_y = ys_full_size.get(&tile_id).unwrap();
+        let x = tile_x - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
+        let mut y = tile_y;
+        for &input_height in my_input_heights.iter() {
+            drop_targets.push(DropTargetInMosaic {
+                drop_target: DropTarget::new(
+                    Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, input_height)),
+                    true, // XXX temporary for debugging, don't make active unless hovered
+                ),
+                insertion_point: InsertionPoint::open(), // XXX temporary, make this the actual insertion point 
+            });
+            y += input_height;
+        }
+    }
+
+    // Add drop targets for every output on every start tile
+    for &tile_id in start_tiles.iter() {
+        let height_full_size = input_heights_full_size.get(&tile_id).unwrap().iter().sum();
+        let width = widths.get(&tile_id).unwrap();
+        let &tile_x = xs.get(&tile_id).unwrap();
+        let &tile_y = ys_full_size.get(&tile_id).unwrap();
+        let x = tile_x + width - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
+        let y = tile_y;
+
+        drop_targets.push(DropTargetInMosaic {
+            drop_target: DropTarget::new(
+                Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, height_full_size)),
+                true, // XXX temporary for debugging, don't make active unless hovered
+            ),
+            insertion_point: InsertionPoint::open(), // XXX temporary, make this the actual insertion point 
+        });
+    }
+
+    (vec2(total_width, total_height), tiles, drop_targets, start_tiles, tree)
 }
 
 /// Working from leaves to roots, set each input height to be large enough
@@ -537,6 +589,7 @@ struct LayoutCache {
     graph: Graph, // Stored to check equality against subsequent call
     size: Vec2,
     tiles: Vec<TileInMosaic>,
+    drop_targets: Vec<DropTargetInMosaic>,
     start_tiles: Vec<TileId>,
     tree: HashMap<TileId, Vec<Option<TileId>>>,
 }
@@ -591,11 +644,12 @@ pub fn mosaic_ui<IdSource>(
 
     if layout_cache_needs_refresh {
         props.graph.fix();
-        let (size, tiles, start_tiles, tree) = layout(props);
+        let (size, tiles, drop_targets, start_tiles, tree) = layout(props);
         mosaic_memory.layout_cache = Some(LayoutCache {
             graph: props.graph.clone(),
             size,
             tiles,
+            drop_targets,
             start_tiles,
             tree,
         });
@@ -632,9 +686,10 @@ pub fn mosaic_ui<IdSource>(
     }
 
     // Get layout from cache (guaranteed to exist post-refresh)
-    let LayoutCache {size: layout_size, tiles, ..} = &mosaic_memory.layout_cache.as_ref().unwrap();
+    let LayoutCache {size: layout_size, tiles, drop_targets, ..} = &mosaic_memory.layout_cache.as_ref().unwrap();
     let layout_size = *layout_size;
     let tiles = tiles.to_vec();
+    let drop_targets = drop_targets.to_vec();
 
     let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
 
@@ -818,6 +873,13 @@ pub fn mosaic_ui<IdSource>(
         },
         DragSituation::None => {},
     };
+
+    // If we are dragging, render drop targets
+    if mosaic_memory.drag.is_some() {
+        for drop_target in drop_targets.into_iter() {
+            let response = ui.add(drop_target.drop_target);
+        }
+    }
 
     // Check if background was clicked, and if so, blur, deselect, and drop tiles
     if mosaic_response.clicked() {

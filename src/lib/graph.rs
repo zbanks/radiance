@@ -108,6 +108,15 @@ pub struct InsertionPoint {
     pub to_inputs: Vec<(NodeId, u32)>,
 }
 
+impl InsertionPoint {
+    pub fn open() -> Self {
+        InsertionPoint {
+            from_output: None,
+            to_inputs: Vec::new(),
+        }
+    }
+}
+
 /// Given a list of nodes and edges,
 /// removes edges that reference nonexistant nodes
 /// and edges that connect to an input that already has an edge going to it.
