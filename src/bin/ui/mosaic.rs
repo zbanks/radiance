@@ -63,6 +63,8 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic
 
     // Start an map from a TileId to its output's insertion point.
     let mut output_insertion_points = HashMap::<TileId, InsertionPoint>::new();
+    // Also start an map from a TileId to its inputs' insertion points.
+    let mut input_insertion_points = HashMap::<TileId, Vec<InsertionPoint>>::new();
 
     // Start by allocating tiles for the start nodes
     // (start nodes will necessarily have only one tile)
@@ -90,15 +92,38 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic
             .map(|maybe_child_node| maybe_child_node.as_ref().map(&mut allocate_tile))
             .collect();
 
-        // 2) Create output insertion points for each child
-        for (input, &child_tile) in child_tiles.iter().enumerate() {
-            if let Some(child_tile) = child_tile {
-                output_insertion_points.insert(child_tile, InsertionPoint {
-                    from_output: Some(child_tile.node),
-                    to_inputs: vec![(tile.node, input as u32)],
-                });
+        // Look up the input count
+        let props = props.node_props.get(&tile.node).unwrap();
+        let input_count = CommonNodeProps::from(props).input_count.unwrap_or(1);
+
+        // 2) Create output insertion points for each child,
+        // and input insertion points for this node
+        let mut my_input_insertion_points = Vec::<InsertionPoint>::new();
+        for input in 0..input_count {
+            let child_tile = child_tiles.get(input as usize).cloned().flatten();
+            match child_tile {
+                Some(child_tile) => {
+                    // Add a closed insertion point to both the inputs & outputs
+                    // if the input is connected
+                    let insertion_point = InsertionPoint {
+                        from_output: Some(child_tile.node),
+                        to_inputs: vec![(tile.node, input as u32)],
+                    };
+                    output_insertion_points.insert(child_tile, insertion_point.clone());
+                    my_input_insertion_points.push(insertion_point);
+                },
+                None => {
+                    // Add a half-open insertion point to just the inputs
+                    // if the input is disconnected
+                    let insertion_point = InsertionPoint {
+                        from_output: None,
+                        to_inputs: vec![(tile.node, input as u32)],
+                    };
+                    my_input_insertion_points.push(insertion_point);
+                }
             }
         }
+        input_insertion_points.insert(tile, my_input_insertion_points);
 
         // 3) Push its newly created child tiles onto the stack
         for &child_tile in child_tiles.iter().rev().flatten() {
@@ -265,15 +290,16 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic
         let my_input_heights = input_heights_full_size.get(&tile_id).unwrap();
         let &tile_x = xs.get(&tile_id).unwrap();
         let &tile_y = ys_full_size.get(&tile_id).unwrap();
+        let my_input_insertion_points = input_insertion_points.get(&tile_id).unwrap();
         let x = tile_x - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
         let mut y = tile_y;
-        for &input_height in my_input_heights.iter() {
+        for (&input_height, insertion_point) in my_input_heights.iter().zip(my_input_insertion_points) {
             drop_targets.push(DropTargetInMosaic {
                 drop_target: DropTarget::new(
                     Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, input_height)),
                     true, // XXX temporary for debugging, don't make active unless hovered
                 ),
-                insertion_point: InsertionPoint::open(), // XXX temporary, make this the actual insertion point 
+                insertion_point: insertion_point.clone(),
             });
             y += input_height;
         }
@@ -283,6 +309,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic
     for &tile_id in start_tiles.iter() {
         let height_full_size = input_heights_full_size.get(&tile_id).unwrap().iter().sum();
         let width = widths.get(&tile_id).unwrap();
+        let insertion_point = output_insertion_points.get(&tile_id).unwrap();
         let &tile_x = xs.get(&tile_id).unwrap();
         let &tile_y = ys_full_size.get(&tile_id).unwrap();
         let x = tile_x + width - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
@@ -293,7 +320,7 @@ fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic
                 Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, height_full_size)),
                 true, // XXX temporary for debugging, don't make active unless hovered
             ),
-            insertion_point: InsertionPoint::open(), // XXX temporary, make this the actual insertion point 
+            insertion_point: insertion_point.clone(),
         });
     }
 
@@ -853,6 +880,17 @@ pub fn mosaic_ui<IdSource>(
         }
     }
 
+    // If we are dragging, render drop targets
+    let mut hovered_insertion_point: Option<InsertionPoint> = None;
+    if mosaic_memory.drag.is_some() {
+        for drop_target in drop_targets.into_iter() {
+            let response = ui.add(drop_target.drop_target);
+            if response.hovered() {
+                hovered_insertion_point = Some(drop_target.insertion_point);
+            }
+        }
+    }
+
     match drag_situation {
         DragSituation::Started(tile_id, offset) => {
             let LayoutCache {start_tiles, tree, ..} = &mosaic_memory.layout_cache.as_ref().unwrap();
@@ -869,17 +907,11 @@ pub fn mosaic_ui<IdSource>(
             drag.offset += delta;
         },
         DragSituation::Released => {
+            println!("drop onto {:?}", hovered_insertion_point);
             mosaic_memory.drag = None;
         },
         DragSituation::None => {},
     };
-
-    // If we are dragging, render drop targets
-    if mosaic_memory.drag.is_some() {
-        for drop_target in drop_targets.into_iter() {
-            let response = ui.add(drop_target.drop_target);
-        }
-    }
 
     // Check if background was clicked, and if so, blur, deselect, and drop tiles
     if mosaic_response.clicked() {
