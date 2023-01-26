@@ -907,7 +907,16 @@ pub fn mosaic_ui<IdSource>(
             drag.offset += delta;
         },
         DragSituation::Released => {
-            println!("drop onto {:?}", hovered_insertion_point);
+            match hovered_insertion_point {
+                Some(hovered_insertion_point) => {
+                    // TODO: move_nodes is heavy-handed when applied to a non-tree-like structure.
+                    // Consider figuring out exactly which edges to break (the ones incoming & outgoing to the *tiles* that are dragged)
+                    // instead of breaking all incoming & outgoing edges to the *nodes* that are dragged
+                    let nodes: HashSet<NodeId> = mosaic_memory.drag.as_ref().unwrap().contingent.iter().map(|tile_id| tile_id.node).collect();
+                    props.graph.move_nodes(&nodes, &hovered_insertion_point);
+                },
+                None => {},
+            }
             mosaic_memory.drag = None;
         },
         DragSituation::None => {},

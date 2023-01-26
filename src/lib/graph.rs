@@ -379,7 +379,7 @@ impl Graph {
     pub fn fix(&mut self) {
         let orig_n_edges = self.edges.len();
         remove_invalid_edges(&self.nodes, &mut self.edges);
-        let edges_removed = self.edges.len() - orig_n_edges;
+        let edges_removed = orig_n_edges - self.edges.len();
         if edges_removed > 0 {
             println!("Removed {} invalid edges", edges_removed);
         }
@@ -459,6 +459,67 @@ impl Graph {
                 to,
                 input,
             });
+        }
+    }
+
+    /// Move a subgraph of the graph
+    /// to the given insertion point.
+    /// If the subgraph consists of multiple connected components,
+    /// they will all be moved to the insertion point in parallel.
+    pub fn move_nodes(&mut self, nodes: &HashSet<NodeId>, insertion_point: &InsertionPoint) {
+        let input_mapping = map_inputs(&self.nodes, &self.edges);
+        let output_mapping = map_outputs(&self.nodes, &self.edges);
+
+        let subgraph_nodes: Vec<NodeId> = self.nodes.iter().filter(|n| nodes.contains(n)).cloned().collect();
+        let subgraph_input_mapping = map_inputs(&subgraph_nodes, &self.edges);
+        let start_nodes = start_nodes(&subgraph_nodes, &subgraph_input_mapping);
+
+        for &start_node in start_nodes.iter() {
+            // If we walk the graph, starting from each start node,
+            // we find one connected component of the subgraph to delete
+            let end_node = first_input(&subgraph_input_mapping, start_node);
+            let outgoing_connections = output_mapping.get(&start_node).unwrap();
+            let incoming_connection = input_mapping.get(&end_node).unwrap().get(0).cloned().flatten();
+
+            // Remove all existing edges coming into or out of the connected component,
+            // or edges that intersect the insertion point
+            self.edges.retain(|e| !(
+                e.from == start_node
+                || e.to == end_node
+                || (Some(e.from) == insertion_point.from_output && insertion_point.to_inputs.contains(&(e.to, e.input)))
+            ));
+
+            // Push zero or one "incoming" edges from the insertion point to the nodes being moved
+            match insertion_point.from_output {
+                Some(from_output) => {
+                    self.edges.push(Edge {
+                        from: from_output,
+                        to: end_node,
+                        input: 0,
+                    });
+                },
+                None => {},
+            }
+
+            // Push zero or more "outgoing" edges from the nodes being moved to the insertion point
+            for &(to_node, to_input) in insertion_point.to_inputs.iter() {
+                self.edges.push(Edge {
+                    from: start_node,
+                    to: to_node,
+                    input: to_input,
+                });
+            }
+
+            if let Some(from) = incoming_connection {
+                for &(to, input) in outgoing_connections.iter() {
+                    // Push a "bypass" edge to hop over the nodes being moved
+                    self.edges.push(Edge {
+                        from,
+                        to,
+                        input,
+                    });
+                }
+            }
         }
     }
 }
