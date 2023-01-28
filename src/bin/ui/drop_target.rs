@@ -12,10 +12,19 @@ pub struct DropTarget {
 }
 
 impl DropTarget {
-   pub fn new(rect: Rect, active: bool) -> Self {
+    pub fn new(rect: Rect, active: bool) -> Self {
         Self {
             rect,
         }
+    }
+
+    pub fn rect(&self) -> Rect {
+        self.rect
+    }
+
+    pub fn with_rect(mut self, rect: Rect) -> Self {
+        self.rect = rect;
+        self
     }
 
     fn paint(&self, ui: &Ui) {

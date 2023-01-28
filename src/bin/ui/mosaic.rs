@@ -34,6 +34,7 @@ struct DropTargetInMosaic {
 }
 
 /// Visually lay out the mosaic (collection of tiles)
+// TODO the output tuple here is getting unwieldy
 fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic>, Vec<TileId>, HashMap<TileId, Vec<Option<TileId>>>) {
     // TODO: take, as input, a map NodeId to TileSizeDescriptors
     // and use that instead of the `match` statement below
@@ -718,9 +719,21 @@ pub fn mosaic_ui<IdSource>(
     let tiles = tiles.to_vec();
     let drop_targets = drop_targets.to_vec();
 
-    let (mosaic_rect, mosaic_response) = ui.allocate_exact_size(layout_size, Sense::click());
+    let mosaic_rect = ui.available_rect_before_wrap();
+    let mosaic_response = ui.allocate_rect(mosaic_rect, Sense::click());
+    let scrollarea_offset = (mosaic_rect.min - Pos2::ZERO) + 0.5 * (mosaic_rect.size() - layout_size);
 
     // Apply focus, selection, drag, and animation
+
+    // Translate each tile according to the scrollarea offset
+    let tiles: Vec<TileInMosaic> = tiles.into_iter().map(|TileInMosaic {tile, output_insertion_point}| {
+        let rect = tile.rect();
+        let rect = rect.translate(scrollarea_offset);
+        TileInMosaic {
+            tile: tile.with_rect(rect),
+            output_insertion_point,
+        }
+    }).collect();
 
     // Find the position of the upper left corner of the tile
     // that was the target of the drag
@@ -764,6 +777,16 @@ pub fn mosaic_ui<IdSource>(
             .with_default_z();
         let tile = mosaic_memory.animation_manager.animate_tile(&ui.input(), tile, dragging);
         tile
+    }).collect();
+
+    let drop_targets: Vec<DropTargetInMosaic> = drop_targets.into_iter().map(|DropTargetInMosaic {drop_target, insertion_point}| {
+        let rect = drop_target.rect();
+        let rect = rect.translate(scrollarea_offset);
+        let drop_target = drop_target.with_rect(rect);
+        DropTargetInMosaic {
+            drop_target,
+            insertion_point,
+        }
     }).collect();
 
     // Sort
