@@ -8,6 +8,7 @@ use std::hash::Hash;
 use crate::ui::tile::{Tile, TileId};
 use crate::ui::drop_target::DropTarget;
 use crate::ui::effect_node_tile::EffectNodeTile;
+use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
 
 const MARGIN: f32 = 20.;
 const MOSAIC_ANIMATION_DURATION: f32 = 0.5;
@@ -149,6 +150,7 @@ impl LayoutCache {
             let props = props.node_props.get(&tile_id.node).unwrap();
             let heights = match props {
                 NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(p),
+                NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::min_input_heights(&p),
             };
             // The length of the returned heights array should match the input count,
             // or be 1 if the input count is zero
@@ -241,6 +243,7 @@ impl LayoutCache {
             let node_props = props.node_props.get(&tile_id.node).unwrap();
             let width = match node_props {
                 NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(p, height),
+                NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::width_for_height(p, height),
             };
             (tile_id, width)
         }).collect();
@@ -820,6 +823,7 @@ pub fn mosaic_ui<IdSource>(
         let InnerResponse { inner: _, response } = tile.show(ui, |ui| {
             match node_props {
                 NodeProps::EffectNode(p) => EffectNodeTile::new(p, node_state.try_into().unwrap(), preview_image).add_contents(ui),
+                NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image).add_contents(ui),
             }
         });
 
@@ -977,6 +981,7 @@ pub fn mosaic_ui<IdSource>(
                             node_props.intensity = Some((intensity + intensity_delta).clamp(0., 1.));
                         }
                     },
+                    _ => {},
                 }
             }
         }

@@ -194,6 +194,7 @@ pub async fn run() {
     let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
     let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
     let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
+    let screen_output_node_id: NodeId = serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
     let mut props: Props = serde_json::from_value(json!({
         "graph": {
             "nodes": [
@@ -202,6 +203,7 @@ pub async fn run() {
                 node3_id,
                 node4_id,
                 node5_id,
+                screen_output_node_id,
             ],
             "edges": [
                 {
@@ -222,6 +224,11 @@ pub async fn run() {
                 {
                     "from": node4_id,
                     "to": node5_id,
+                    "input": 0,
+                },
+                {
+                    "from": node5_id,
+                    "to": screen_output_node_id,
                     "input": 0,
                 }
             ],
@@ -259,6 +266,9 @@ pub async fn run() {
                 "input_count": 2,
                 "intensity": 0.2,
                 "frequency": 0.0
+            },
+            screen_output_node_id.to_string(): {
+                "type": "ScreenOutputNode",
             }
         },
         "time": 0.,
@@ -415,7 +425,7 @@ pub async fn run() {
 
                 let results = ctx.paint(&mut encoder, output_render_target_id);
 
-                if let Some(texture) = results.get(&node5_id) {
+                if let Some(texture) = results.get(&screen_output_node_id) {
                     let output_bind_group = device.create_bind_group(
                         &wgpu::BindGroupDescriptor {
                             layout: &output_bind_group_layout,

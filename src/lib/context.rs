@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::{NodeId, Props, Graph, NodeProps};
 use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
 use crate::effect_node::{EffectNodeState};
+use crate::screen_output_node::{ScreenOutputNodeState};
 use rand::Rng;
 use std::fs;
 use std::io;
@@ -78,6 +79,7 @@ pub struct RenderTargetState {
 #[try_into(owned, ref, ref_mut)]
 pub enum NodeState {
     EffectNode(EffectNodeState),
+    ScreenOutputNode(ScreenOutputNodeState),
 }
 
 impl Context {
@@ -216,6 +218,7 @@ impl Context {
     fn new_node_state(&self, node_props: &NodeProps) -> NodeState {
         match node_props {
             NodeProps::EffectNode(props) => NodeState::EffectNode(EffectNodeState::new(self, props)),
+            NodeProps::ScreenOutputNode(props) => NodeState::ScreenOutputNode(ScreenOutputNodeState::new(self, props)),
         }
     }
 
@@ -225,7 +228,13 @@ impl Context {
             NodeState::EffectNode(ref mut state) => {
                 match node_props {
                     NodeProps::EffectNode(ref mut props) => state.update(self, props),
-                    //_ => panic!("Type mismatch between props and state"),
+                    _ => panic!("Type mismatch between props and state"),
+                }
+            },
+            NodeState::ScreenOutputNode(ref mut state) => {
+                match node_props {
+                    NodeProps::ScreenOutputNode(ref mut props) => state.update(self, props),
+                    _ => panic!("Type mismatch between props and state"),
                 }
             },
         };
@@ -236,6 +245,7 @@ impl Context {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
             NodeState::EffectNode(ref mut state) => state.paint(self, encoder, render_target_id, input_textures),
+            NodeState::ScreenOutputNode(ref mut state) => state.paint(self, encoder, render_target_id, input_textures),
         };
         self.node_states.insert(node_id, node_state);
         result
