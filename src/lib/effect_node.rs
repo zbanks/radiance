@@ -116,7 +116,8 @@ impl EffectNodeState {
         let name = &props.name;
 
         // Shader
-        let effect_source = ctx.fetch_content(name).expect("Failed to read effect shader file");
+        let source_name = format!("{name}.wgsl");
+        let effect_source = ctx.fetch_content(&source_name).map_err(|_| format!("Failed to read effect shader file \"{source_name}\""))?;
 
         let (effect_source_processed, shader_input_count, default_frequency) = preprocess_shader(&effect_source)?;
 
@@ -339,6 +340,7 @@ impl EffectNodeState {
                 Self::Ready(new_obj_ready)
             },
             Err(msg) => {
+                eprintln!("Unable to configure EffectNode: {}", msg);
                 Self::Error_(msg)
             }
         }
