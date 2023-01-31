@@ -28,6 +28,7 @@ impl From<&EffectNodeProps> for CommonNodeProps {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum EffectNodeState {
     Uninitialized,
     Ready(EffectNodeStateReady),
@@ -79,7 +80,7 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32, f32), String> 
 
     for l in effect_source.lines() {
         let line_parts: Vec<&str> = l.split_whitespace().collect();
-        if line_parts.len() >= 1 && line_parts[0] == "#property" {
+        if !line_parts.is_empty() && line_parts[0] == "#property" {
             if line_parts.len() >= 2 {
                 if line_parts[1] == "inputCount" {
                     if line_parts.len() >= 3 {
@@ -108,6 +109,8 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32, f32), String> 
     Ok((processed_source, input_count, frequency))
 }
 
+// This is a state machine, it's more natural to use `match` than `if let`
+#[allow(clippy::single_match)]
 impl EffectNodeState {
     fn setup_render_pipeline(ctx: &Context, props: &EffectNodeProps) -> Result<EffectNodeStateReady, String> {
         let name = &props.name;
@@ -480,7 +483,7 @@ impl EffectNodeState {
 }
 
 impl EffectNodeStateReady {
-    fn update_props(&self, props: &mut EffectNodeProps) -> () {
+    fn update_props(&self, props: &mut EffectNodeProps) {
         props.name.clone_from(&self.name);
         props.intensity = Some(self.intensity);
         props.frequency = Some(self.frequency);

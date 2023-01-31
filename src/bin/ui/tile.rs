@@ -192,7 +192,7 @@ impl Tile {
     ) -> InnerResponse<R> {
         let rect = self.rect.translate(self.offset);
         let response = ui.interact(rect, self.ui_id(), Sense::click_and_drag());
-        self.paint(&ui);
+        self.paint(ui);
 
         let mut content_ui = ui.child_ui_with_id_source(
             rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)),

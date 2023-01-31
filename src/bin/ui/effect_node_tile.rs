@@ -21,7 +21,7 @@ impl<'a> EffectNodeTile<'a> {
     }
 
     /// Calculates the width of the tile, given its height.
-    pub fn width_for_height(props: &EffectNodeProps, height: f32) -> f32 {
+    pub fn width_for_height(_props: &EffectNodeProps, height: f32) -> f32 {
         NORMAL_WIDTH.min(0.5 * height)
     }
 

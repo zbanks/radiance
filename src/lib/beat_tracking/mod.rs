@@ -415,7 +415,7 @@ fn transition_model(ss: &BeatStateSpace) -> (
         let prob = prob * row_factor[from];
         // Make sure we did everything right
         // (including avoiding NaNs in the above division)
-        assert!(prob >= 0. && prob <= 1.);
+        assert!((0. ..=1.).contains(&prob));
         (from, to, prob)
     });
 
@@ -426,7 +426,7 @@ fn transition_model(ss: &BeatStateSpace) -> (
         let mut rows: Vec<Vec<(usize, f32)>> = (0..N_STATES).map(|_| Vec::new()).collect();
 
         // Unpack entries into rows
-        for (col, row, value) in entries.into_iter() {
+        for (col, row, value) in entries {
             rows[row].push((col, value));
         }
 
@@ -459,7 +459,7 @@ fn observation_model(ss: &BeatStateSpace) -> DVector<usize> {
     // always point to the non-beat densities
     // unless they are in the beat range of the state space
     let border = 1. / OBSERVATION_LAMBDA;
-    DVector::from_fn(N_STATES, |i, _| if (ss.state_positions[i] as f32) < border {1} else {0})
+    DVector::from_fn(N_STATES, |i, _| usize::from((ss.state_positions[i] as f32) < border))
 }
 
 /// Compute the probability densities of the observations.
@@ -594,6 +594,12 @@ pub struct BeatTracker {
     difference_processor: SpectrogramDifferenceProcessor,
     neural_networks: Vec<NeuralNetwork>,
     hmm: HMMBeatTrackingProcessor,
+}
+
+impl Default for BeatTracker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BeatTracker {

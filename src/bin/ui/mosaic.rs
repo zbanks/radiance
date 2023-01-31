@@ -1,3 +1,5 @@
+#![allow(clippy::single_match)]
+
 use radiance::{Props, Graph, NodeId, NodeProps, CommonNodeProps, NodeState, InsertionPoint};
 use egui::{pos2, vec2, Rect, Ui, Widget, Response, InnerResponse, Vec2, Sense, Pos2, TextureId, Modifiers, IdMap, InputState};
 use std::collections::{HashMap, HashSet};
@@ -33,299 +35,306 @@ struct DropTargetInMosaic {
     pub insertion_point: InsertionPoint,
 }
 
-/// Visually lay out the mosaic (collection of tiles)
-// TODO the output tuple here is getting unwieldy
-fn layout(props: &mut Props) -> (Vec2, Vec<TileInMosaic>, Vec<DropTargetInMosaic>, Vec<TileId>, HashMap<TileId, Vec<Option<TileId>>>) {
-    // TODO: take, as input, a map NodeId to TileSizeDescriptors
-    // and use that instead of the `match` statement below
+impl LayoutCache {
+    fn from_props(props: &mut Props) -> Self {
+        // TODO: take, as input, a map NodeId to TileSizeDescriptors
+        // and use that instead of the `match` statement below
 
-    let (start_nodes, input_mapping) = props.graph.mapping();
+        let (start_nodes, input_mapping) = props.graph.mapping();
 
-    // We will perform a DFS from each start node
-    // to convert the graph (a DAG) into a tree.
-    // Some nodes will be repeated.
+        // We will perform a DFS from each start node
+        // to convert the graph (a DAG) into a tree.
+        // Some nodes will be repeated.
 
-    // Prepare to count repeated nodes
-    // Initialize all node counts to zero
-    let mut instance_count = HashMap::<NodeId, u32>::new();
-    for &node_id in props.graph.nodes.iter() {
-        instance_count.insert(node_id, 0);
-    }
-
-    let mut allocate_tile = |node: &NodeId| -> TileId {
-        let count = instance_count.get_mut(node).unwrap();
-        let orig_count = *count;
-        *count += 1;
-        TileId {
-            node: *node,
-            instance: orig_count,
+        // Prepare to count repeated nodes
+        // Initialize all node counts to zero
+        let mut instance_count = HashMap::<NodeId, u32>::new();
+        for &node_id in props.graph.nodes.iter() {
+            instance_count.insert(node_id, 0);
         }
-    };
 
-    // Start an map from a TileId to its output's insertion point.
-    let mut output_insertion_points = HashMap::<TileId, InsertionPoint>::new();
-    // Also start an map from a TileId to its inputs' insertion points.
-    let mut input_insertion_points = HashMap::<TileId, Vec<InsertionPoint>>::new();
+        let mut allocate_tile = |node: &NodeId| -> TileId {
+            let count = instance_count.get_mut(node).unwrap();
+            let orig_count = *count;
+            *count += 1;
+            TileId {
+                node: *node,
+                instance: orig_count,
+            }
+        };
 
-    // Start by allocating tiles for the start nodes
-    // (start nodes will necessarily have only one tile)
-    let start_tiles: Vec<TileId> = start_nodes.iter().map(&mut allocate_tile).collect();
+        // Start an map from a TileId to its output's insertion point.
+        let mut output_insertion_points = HashMap::<TileId, InsertionPoint>::new();
+        // Also start an map from a TileId to its inputs' insertion points.
+        let mut input_insertion_points = HashMap::<TileId, Vec<InsertionPoint>>::new();
 
-    // Add a half-open output insertion point for each start tile
-    for &tile_id in start_tiles.iter() {
-        output_insertion_points.insert(tile_id, InsertionPoint {
-            from_output: Some(tile_id.node),
-            to_inputs: Default::default(),
-        });
-    }
+        // Start by allocating tiles for the start nodes
+        // (start nodes will necessarily have only one tile)
+        let start_tiles: Vec<TileId> = start_nodes.iter().map(&mut allocate_tile).collect();
 
-    // Note that we frequently reverse the order things are pushed to the stack.
-    // This prioritizes exploring start nodes that appear earlier in the nodes list,
-    // as well as nodes connected to lower-numbered inputs,
-    // causing them to be laid out first / at the top, consistently.
-    let mut stack: Vec<TileId> = start_tiles.iter().rev().cloned().collect();
-    let mut tree = HashMap::<TileId, Vec<Option<TileId>>>::new();
+        // Add a half-open output insertion point for each start tile
+        for &tile_id in start_tiles.iter() {
+            output_insertion_points.insert(tile_id, InsertionPoint {
+                from_output: Some(tile_id.node),
+                to_inputs: Default::default(),
+            });
+        }
 
-    while let Some(tile) = stack.pop() {
-        // For each node in the stack, 1) allocate new tiles for its children
-        let child_tiles: Vec<Option<TileId>> = input_mapping.get(&tile.node).unwrap()
-            .iter()
-            .map(|maybe_child_node| maybe_child_node.as_ref().map(&mut allocate_tile))
-            .collect();
+        // Note that we frequently reverse the order things are pushed to the stack.
+        // This prioritizes exploring start nodes that appear earlier in the nodes list,
+        // as well as nodes connected to lower-numbered inputs,
+        // causing them to be laid out first / at the top, consistently.
+        let mut stack: Vec<TileId> = start_tiles.iter().rev().cloned().collect();
+        let mut tree = HashMap::<TileId, Vec<Option<TileId>>>::new();
 
-        // Look up the input count
-        let props = props.node_props.get(&tile.node).unwrap();
-        let input_count = CommonNodeProps::from(props).input_count.unwrap_or(1);
+        while let Some(tile) = stack.pop() {
+            // For each node in the stack, 1) allocate new tiles for its children
+            let child_tiles: Vec<Option<TileId>> = input_mapping.get(&tile.node).unwrap()
+                .iter()
+                .map(|maybe_child_node| maybe_child_node.as_ref().map(&mut allocate_tile))
+                .collect();
 
-        // 2) Create output insertion points for each child,
-        // and input insertion points for this node
-        let mut my_input_insertion_points = Vec::<InsertionPoint>::new();
-        for input in 0..input_count {
-            let child_tile = child_tiles.get(input as usize).cloned().flatten();
-            match child_tile {
-                Some(child_tile) => {
-                    // Add a closed insertion point to both the inputs & outputs
-                    // if the input is connected
-                    let insertion_point = InsertionPoint {
-                        from_output: Some(child_tile.node),
-                        to_inputs: vec![(tile.node, input as u32)],
-                    };
-                    output_insertion_points.insert(child_tile, insertion_point.clone());
-                    my_input_insertion_points.push(insertion_point);
-                },
-                None => {
-                    // Add a half-open insertion point to just the inputs
-                    // if the input is disconnected
-                    let insertion_point = InsertionPoint {
-                        from_output: None,
-                        to_inputs: vec![(tile.node, input as u32)],
-                    };
-                    my_input_insertion_points.push(insertion_point);
+            // Look up the input count
+            let props = props.node_props.get(&tile.node).unwrap();
+            let input_count = CommonNodeProps::from(props).input_count.unwrap_or(1);
+
+            // 2) Create output insertion points for each child,
+            // and input insertion points for this node
+            let mut my_input_insertion_points = Vec::<InsertionPoint>::new();
+            for input in 0..input_count {
+                let child_tile = child_tiles.get(input as usize).cloned().flatten();
+                match child_tile {
+                    Some(child_tile) => {
+                        // Add a closed insertion point to both the inputs & outputs
+                        // if the input is connected
+                        let insertion_point = InsertionPoint {
+                            from_output: Some(child_tile.node),
+                            to_inputs: vec![(tile.node, input as u32)],
+                        };
+                        output_insertion_points.insert(child_tile, insertion_point.clone());
+                        my_input_insertion_points.push(insertion_point);
+                    },
+                    None => {
+                        // Add a half-open insertion point to just the inputs
+                        // if the input is disconnected
+                        let insertion_point = InsertionPoint {
+                            from_output: None,
+                            to_inputs: vec![(tile.node, input as u32)],
+                        };
+                        my_input_insertion_points.push(insertion_point);
+                    }
                 }
             }
+            input_insertion_points.insert(tile, my_input_insertion_points);
+
+            // 3) Push its newly created child tiles onto the stack
+            for &child_tile in child_tiles.iter().rev().flatten() {
+                stack.push(child_tile);
+            }
+
+            // 4) Insert its child connections into the tree
+            tree.insert(tile, child_tiles);
         }
-        input_insertion_points.insert(tile, my_input_insertion_points);
 
-        // 3) Push its newly created child tiles onto the stack
-        for &child_tile in child_tiles.iter().rev().flatten() {
-            stack.push(child_tile);
-        }
+        // We now have a tree structure of tiles
+        // (technically a forest)
+        // represented by `start_tiles` (roots)
+        // and `tree` (lookup table from tile -> child tiles)
+        // and are ready to begin computing geometry.
 
-        // 4) Insert its child connections into the tree
-        tree.insert(tile, child_tiles);
-    }
+        // We will start with the vertical geometry (heights and Y positions.)
 
-    // We now have a tree structure of tiles
-    // (technically a forest)
-    // represented by `start_tiles` (roots)
-    // and `tree` (lookup table from tile -> child tiles)
-    // and are ready to begin computing geometry.
+        // To begin, lets make a mapping of TileId to its minimum input heights.
+        let min_input_heights: HashMap<TileId, Vec<f32>> = tree.keys().map(|&tile_id| {
+            let props = props.node_props.get(&tile_id.node).unwrap();
+            let heights = match props {
+                NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(p),
+            };
+            // The length of the returned heights array should match the input count,
+            // or be 1 if the input count is zero
+            assert_eq!(heights.len() as u32, 1.max(CommonNodeProps::from(props).input_count.unwrap_or(1)));
 
-    // We will start with the vertical geometry (heights and Y positions.)
-
-    // To begin, lets make a mapping of TileId to its minimum input heights.
-    let min_input_heights: HashMap<TileId, Vec<f32>> = tree.keys().map(|&tile_id| {
-        let props = props.node_props.get(&tile_id.node).unwrap();
-        let heights = match props {
-            NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(&p),
-        };
-        // The length of the returned heights array should match the input count,
-        // or be 1 if the input count is zero
-        assert_eq!(heights.len() as u32, 1.max(CommonNodeProps::from(props).input_count.unwrap_or(1)));
-
-        (tile_id, heights)
-    }).collect();
-
-    // The actual input heights may be larger than this.
-    // Initialize the actual input heights to the min heights plus some margin.
-    let mut input_heights_full_size: HashMap<TileId, Vec<f32>> = min_input_heights.iter().map(|(&tile_id, heights)| {
-        // Each input port will split its margin half above and half below.
-        (tile_id, heights.iter().map(|h| h + MARGIN).collect())
-    }).collect();
-
-    // Also, lets make a mapping of Y coordinates.
-    // We will initialize them to NAN to make sure we don't miss anything.
-    let mut ys_full_size: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
-        (tile_id, f32::NAN)
-    }).collect();
-
-    // Now traverse each tree, computing heights and Y positions in three passes
-    let mut y = 0_f32;
-    for &start_tile in start_tiles.iter() {
-        set_input_height_fwd(&start_tile, &tree, &mut input_heights_full_size);
-        set_input_height_rev(&start_tile, &tree, &mut input_heights_full_size);
-        set_vertical_stackup(&start_tile, &tree, &input_heights_full_size, &mut ys_full_size, &mut y);
-    }
-    let total_height = y;
-
-    // In a fourth pass, shrink nodes that are unnecessarily tall.
-    // Just because a node is connected to a tall output
-    // and is allocated a large amount of vertical space
-    // doesn't mean it has to take it all.
-
-    // We shrink the top-most and bottom-most input.
-    // We can't mess with the inner inputs without messing up the layout.
-    // This operation also won't affect the total height,
-    // since that height was allocated for a reason.
-
-    let mut inputs = HashMap::<TileId, Vec<f32>>::new();
-    let mut outputs = HashMap::<TileId, f32>::new();
-    let mut heights = HashMap::<TileId, f32>::new();
-    let mut ys = HashMap::<TileId, f32>::new();
-
-    for &tile_id in tree.keys() {
-        let my_input_heights = input_heights_full_size.get_mut(&tile_id).unwrap();
-        let my_min_input_heights = min_input_heights.get(&tile_id).unwrap();
-
-        // See how much we can shrink the top input
-        let shrinkage_top = 0.5 * (my_input_heights.first().unwrap() - my_min_input_heights.first().unwrap());
-        assert!(shrinkage_top >= 0.);
-
-        // See how much we can shrink the bottom input
-        let shrinkage_bottom = 0.5 * (my_input_heights.last().unwrap() - my_min_input_heights.last().unwrap());
-        assert!(shrinkage_bottom >= 0.);
-
-        // Convert input heights to chevron locations (midpoint of each input port)
-        let mut last_input_bottom_y = 0.;
-        let my_inputs: Vec<f32> = my_input_heights.iter().map(|&input_height| {
-            let input = last_input_bottom_y + 0.5 * input_height - shrinkage_top;
-            last_input_bottom_y += input_height;
-            input
+            (tile_id, heights)
         }).collect();
-        // Remember this tile's total allocated height
-        let allocated_height = last_input_bottom_y;
 
-        // Compute and write the input chevron locations
-        inputs.insert(tile_id, my_inputs);
+        // The actual input heights may be larger than this.
+        // Initialize the actual input heights to the min heights plus some margin.
+        let mut input_heights_full_size: HashMap<TileId, Vec<f32>> = min_input_heights.iter().map(|(&tile_id, heights)| {
+            // Each input port will split its margin half above and half below.
+            (tile_id, heights.iter().map(|h| h + MARGIN).collect())
+        }).collect();
 
-        // Compute and write the output chevron location
-        outputs.insert(tile_id, 0.5 * allocated_height - shrinkage_top);
+        // Also, lets make a mapping of Y coordinates.
+        // We will initialize them to NAN to make sure we don't miss anything.
+        let mut ys_full_size: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
+            (tile_id, f32::NAN)
+        }).collect();
 
-        // Compute and write the new Y coordinate
-        let &y = ys_full_size.get(&tile_id).unwrap();
-        ys.insert(tile_id, y + shrinkage_top);
-
-        // Compute and insert new height
-        heights.insert(tile_id, allocated_height - shrinkage_top - shrinkage_bottom);
-    }
-
-    // We are done with the vertical geometry! Now for the horizontal geometry.
-
-    // Tile widths are not flexible in the same way the heights are--
-    // each node sets its own width.
-    // However, it has the option to make its width dependent on its computed height
-    // (that is why we do heights first.)
-    let widths: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
-        let height: f32 = *heights.get(&tile_id).unwrap();
-        let node_props = props.node_props.get(&tile_id.node).unwrap();
-        let width = match node_props {
-            NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(&p, height),
-        };
-        (tile_id, width)
-    }).collect();
-
-    // We will initialize these to NAN like the ys
-    let mut xs: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
-        (tile_id, f32::NAN)
-    }).collect();
-
-    // X is simpler than Y, we only need one pass
-    for &start_tile in start_tiles.iter() {
-        set_horizontal_stackup(&start_tile, &tree, &widths, &mut xs, 0.);
-    }
-
-    // Well, three, if you count finding the total width and flipping the coordinate system.
-    // Note that for the horizontal layout, we don't add any margin per-tile like we do for the vertical layout.
-    // We only add 0.5 * MARGIN on the left and right of the entire mosaic.
-    let total_width = *xs.values().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(&0.) + MARGIN;
-    for x in xs.values_mut() {
-        *x = total_width - *x - MARGIN * 0.5;
-    }
-
-    // Collect and return the resulting tiles
-    let tiles: Vec<TileInMosaic> = tree.keys().map(|&tile_id| {
-        let &x = xs.get(&tile_id).unwrap();
-        let &y = ys.get(&tile_id).unwrap();
-        let &width = widths.get(&tile_id).unwrap();
-        let &height = heights.get(&tile_id).unwrap();
-        let my_inputs = inputs.get(&tile_id).unwrap().clone(); // Note: can probably .take instead of .clone
-        let &my_output = outputs.get(&tile_id).unwrap();
-
-        // TODO make outputs a f32 instead of Vec<f32> in Tile
-        let my_outputs: Vec<f32> = [my_output].into();
-
-        TileInMosaic {
-            tile: Tile::new(
-                tile_id,
-                Rect::from_min_size(pos2(x, y), vec2(width, height)),
-                my_inputs,
-                my_outputs,
-            ),
-            output_insertion_point: output_insertion_points.get(&tile_id).unwrap().clone(),
+        // Now traverse each tree, computing heights and Y positions in three passes
+        let mut y = 0_f32;
+        for &start_tile in start_tiles.iter() {
+            set_input_height_fwd(&start_tile, &tree, &mut input_heights_full_size);
+            set_input_height_rev(&start_tile, &tree, &mut input_heights_full_size);
+            set_vertical_stackup(&start_tile, &tree, &input_heights_full_size, &mut ys_full_size, &mut y);
         }
-    }).collect();
+        let total_height = y;
 
-    // Add drop targets for every input on every tile
-    let mut drop_targets = Vec::<DropTargetInMosaic>::new();
-    for &tile_id in tree.keys() {
-        let my_input_heights = input_heights_full_size.get(&tile_id).unwrap();
-        let &tile_x = xs.get(&tile_id).unwrap();
-        let &tile_y = ys_full_size.get(&tile_id).unwrap();
-        let my_input_insertion_points = input_insertion_points.get(&tile_id).unwrap();
-        let x = tile_x - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
-        let mut y = tile_y;
-        for (&input_height, insertion_point) in my_input_heights.iter().zip(my_input_insertion_points) {
+        // In a fourth pass, shrink nodes that are unnecessarily tall.
+        // Just because a node is connected to a tall output
+        // and is allocated a large amount of vertical space
+        // doesn't mean it has to take it all.
+
+        // We shrink the top-most and bottom-most input.
+        // We can't mess with the inner inputs without messing up the layout.
+        // This operation also won't affect the total height,
+        // since that height was allocated for a reason.
+
+        let mut inputs = HashMap::<TileId, Vec<f32>>::new();
+        let mut outputs = HashMap::<TileId, f32>::new();
+        let mut heights = HashMap::<TileId, f32>::new();
+        let mut ys = HashMap::<TileId, f32>::new();
+
+        for &tile_id in tree.keys() {
+            let my_input_heights = input_heights_full_size.get_mut(&tile_id).unwrap();
+            let my_min_input_heights = min_input_heights.get(&tile_id).unwrap();
+
+            // See how much we can shrink the top input
+            let shrinkage_top = 0.5 * (my_input_heights.first().unwrap() - my_min_input_heights.first().unwrap());
+            assert!(shrinkage_top >= 0.);
+
+            // See how much we can shrink the bottom input
+            let shrinkage_bottom = 0.5 * (my_input_heights.last().unwrap() - my_min_input_heights.last().unwrap());
+            assert!(shrinkage_bottom >= 0.);
+
+            // Convert input heights to chevron locations (midpoint of each input port)
+            let mut last_input_bottom_y = 0.;
+            let my_inputs: Vec<f32> = my_input_heights.iter().map(|&input_height| {
+                let input = last_input_bottom_y + 0.5 * input_height - shrinkage_top;
+                last_input_bottom_y += input_height;
+                input
+            }).collect();
+            // Remember this tile's total allocated height
+            let allocated_height = last_input_bottom_y;
+
+            // Compute and write the input chevron locations
+            inputs.insert(tile_id, my_inputs);
+
+            // Compute and write the output chevron location
+            outputs.insert(tile_id, 0.5 * allocated_height - shrinkage_top);
+
+            // Compute and write the new Y coordinate
+            let &y = ys_full_size.get(&tile_id).unwrap();
+            ys.insert(tile_id, y + shrinkage_top);
+
+            // Compute and insert new height
+            heights.insert(tile_id, allocated_height - shrinkage_top - shrinkage_bottom);
+        }
+
+        // We are done with the vertical geometry! Now for the horizontal geometry.
+
+        // Tile widths are not flexible in the same way the heights are--
+        // each node sets its own width.
+        // However, it has the option to make its width dependent on its computed height
+        // (that is why we do heights first.)
+        let widths: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
+            let height: f32 = *heights.get(&tile_id).unwrap();
+            let node_props = props.node_props.get(&tile_id.node).unwrap();
+            let width = match node_props {
+                NodeProps::EffectNode(p) => EffectNodeTile::width_for_height(p, height),
+            };
+            (tile_id, width)
+        }).collect();
+
+        // We will initialize these to NAN like the ys
+        let mut xs: HashMap<TileId, f32> = tree.keys().map(|&tile_id| {
+            (tile_id, f32::NAN)
+        }).collect();
+
+        // X is simpler than Y, we only need one pass
+        for &start_tile in start_tiles.iter() {
+            set_horizontal_stackup(&start_tile, &tree, &widths, &mut xs, 0.);
+        }
+
+        // Well, three, if you count finding the total width and flipping the coordinate system.
+        // Note that for the horizontal layout, we don't add any margin per-tile like we do for the vertical layout.
+        // We only add 0.5 * MARGIN on the left and right of the entire mosaic.
+        let total_width = *xs.values().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap_or(&0.) + MARGIN;
+        for x in xs.values_mut() {
+            *x = total_width - *x - MARGIN * 0.5;
+        }
+
+        // Collect and return the resulting tiles
+        let tiles: Vec<TileInMosaic> = tree.keys().map(|&tile_id| {
+            let &x = xs.get(&tile_id).unwrap();
+            let &y = ys.get(&tile_id).unwrap();
+            let &width = widths.get(&tile_id).unwrap();
+            let &height = heights.get(&tile_id).unwrap();
+            let my_inputs = inputs.get(&tile_id).unwrap().clone(); // Note: can probably .take instead of .clone
+            let &my_output = outputs.get(&tile_id).unwrap();
+
+            // TODO make outputs a f32 instead of Vec<f32> in Tile
+            let my_outputs: Vec<f32> = [my_output].into();
+
+            TileInMosaic {
+                tile: Tile::new(
+                    tile_id,
+                    Rect::from_min_size(pos2(x, y), vec2(width, height)),
+                    my_inputs,
+                    my_outputs,
+                ),
+                output_insertion_point: output_insertion_points.get(&tile_id).unwrap().clone(),
+            }
+        }).collect();
+
+        // Add drop targets for every input on every tile
+        let mut drop_targets = Vec::<DropTargetInMosaic>::new();
+        for &tile_id in tree.keys() {
+            let my_input_heights = input_heights_full_size.get(&tile_id).unwrap();
+            let &tile_x = xs.get(&tile_id).unwrap();
+            let &tile_y = ys_full_size.get(&tile_id).unwrap();
+            let my_input_insertion_points = input_insertion_points.get(&tile_id).unwrap();
+            let x = tile_x - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
+            let mut y = tile_y;
+            for (&input_height, insertion_point) in my_input_heights.iter().zip(my_input_insertion_points) {
+                drop_targets.push(DropTargetInMosaic {
+                    drop_target: DropTarget::new(
+                        Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, input_height)),
+                        true, // XXX temporary for debugging, don't make active unless hovered
+                    ),
+                    insertion_point: insertion_point.clone(),
+                });
+                y += input_height;
+            }
+        }
+
+        // Add drop targets for every output on every start tile
+        for &tile_id in start_tiles.iter() {
+            let height_full_size = input_heights_full_size.get(&tile_id).unwrap().iter().sum();
+            let width = widths.get(&tile_id).unwrap();
+            let insertion_point = output_insertion_points.get(&tile_id).unwrap();
+            let &tile_x = xs.get(&tile_id).unwrap();
+            let &tile_y = ys_full_size.get(&tile_id).unwrap();
+            let x = tile_x + width - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
+            let y = tile_y;
+
             drop_targets.push(DropTargetInMosaic {
                 drop_target: DropTarget::new(
-                    Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, input_height)),
+                    Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, height_full_size)),
                     true, // XXX temporary for debugging, don't make active unless hovered
                 ),
                 insertion_point: insertion_point.clone(),
             });
-            y += input_height;
+        }
+
+        Self {
+            graph: props.graph.clone(),
+            size: vec2(total_width, total_height),
+            tiles,
+            drop_targets,
+            start_tiles,
+            tree
         }
     }
-
-    // Add drop targets for every output on every start tile
-    for &tile_id in start_tiles.iter() {
-        let height_full_size = input_heights_full_size.get(&tile_id).unwrap().iter().sum();
-        let width = widths.get(&tile_id).unwrap();
-        let insertion_point = output_insertion_points.get(&tile_id).unwrap();
-        let &tile_x = xs.get(&tile_id).unwrap();
-        let &tile_y = ys_full_size.get(&tile_id).unwrap();
-        let x = tile_x + width - 0.5 * DROP_TARGET_WIDTH + DROP_TARGET_DISPLACEMENT;
-        let y = tile_y;
-
-        drop_targets.push(DropTargetInMosaic {
-            drop_target: DropTarget::new(
-                Rect::from_min_size(pos2(x, y), vec2(DROP_TARGET_WIDTH, height_full_size)),
-                true, // XXX temporary for debugging, don't make active unless hovered
-            ),
-            insertion_point: insertion_point.clone(),
-        });
-    }
-
-    (vec2(total_width, total_height), tiles, drop_targets, start_tiles, tree)
 }
 
 /// Working from leaves to roots, set each input height to be large enough
@@ -407,8 +416,8 @@ fn set_horizontal_stackup(tile: &TileId, tree: &HashMap<TileId, Vec<Option<TileI
 /// and a mapping from a given tile to its input tiles,
 /// produce the inverse mapping:
 /// one from a given tile to its output tile.
-fn input_tree_to_output_tree(start_tiles: &Vec<TileId>, input_tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashMap<TileId, Option<TileId>> {
-    let mut stack: Vec<TileId> = start_tiles.clone();
+fn input_tree_to_output_tree(start_tiles: &[TileId], input_tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashMap<TileId, Option<TileId>> {
+    let mut stack: Vec<TileId> = start_tiles.to_owned();
     let mut output_tree: HashMap<TileId, Option<TileId>> = start_tiles.iter().map(|&tile_id| (tile_id, None)).collect();
 
     while let Some(tile) = stack.pop() {
@@ -425,7 +434,7 @@ fn input_tree_to_output_tree(start_tiles: &Vec<TileId>, input_tree: &HashMap<Til
 }
 
 /// Return a set of tiles that are both selected and connected (via other selected tiles) to the given target tile
-fn selected_connected_component(target: &TileId, selected: &HashSet<NodeId>, start_tiles: &Vec<TileId>, input_tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashSet<TileId> {
+fn selected_connected_component(target: &TileId, selected: &HashSet<NodeId>, start_tiles: &[TileId], input_tree: &HashMap<TileId, Vec<Option<TileId>>>) -> HashSet<TileId> {
     if !selected.contains(&target.node) {
         println!("Warning--dragging empty set");
         return HashSet::<TileId>::new();
@@ -672,15 +681,7 @@ pub fn mosaic_ui<IdSource>(
 
     if layout_cache_needs_refresh {
         props.graph.fix();
-        let (size, tiles, drop_targets, start_tiles, tree) = layout(props);
-        mosaic_memory.layout_cache = Some(LayoutCache {
-            graph: props.graph.clone(),
-            size,
-            tiles,
-            drop_targets,
-            start_tiles,
-            tree,
-        });
+        mosaic_memory.layout_cache = Some(LayoutCache::from_props(props));
 
         // Retain only selected / focused / dragged nodes that still exist in the graph
         let graph_nodes: HashSet<NodeId> = props.graph.nodes.iter().cloned().collect();
@@ -816,7 +817,7 @@ pub fn mosaic_ui<IdSource>(
         let &preview_image = preview_images.get(&node_id).unwrap();
         let node_props = props.node_props.get_mut(&node_id).unwrap();
 
-        let InnerResponse { inner, response } = tile.show(ui, |ui| {
+        let InnerResponse { inner: _, response } = tile.show(ui, |ui| {
             match node_props {
                 NodeProps::EffectNode(p) => EffectNodeTile::new(p, node_state.try_into().unwrap(), preview_image).add_contents(ui),
             }
@@ -828,10 +829,8 @@ pub fn mosaic_ui<IdSource>(
             mosaic_response.request_focus();
         }
 
-        if response.drag_released() {
-            if mosaic_memory.drag.is_some() {
-                drag_situation = DragSituation::Released;
-            }
+        if response.drag_released() && mosaic_memory.drag.is_some() {
+            drag_situation = DragSituation::Released;
         }
 
         // How we need to change selection based on interaction
@@ -972,13 +971,12 @@ pub fn mosaic_ui<IdSource>(
         let intensity_delta = ui.input().scroll_delta.y * INTENSITY_SCROLL_RATE;
         if intensity_delta != 0. {
             for node in mosaic_memory.selected.iter() {
-                match props.node_props.get_mut(&node).unwrap() {
+                match props.node_props.get_mut(node).unwrap() {
                     NodeProps::EffectNode(node_props) => {
                         if let Some(intensity) = node_props.intensity {
                             node_props.intensity = Some((intensity + intensity_delta).clamp(0., 1.));
                         }
                     },
-                    _ => {},
                 }
             }
         }

@@ -25,7 +25,7 @@ impl fmt::Display for RenderTargetId {
 
 impl fmt::Debug for RenderTargetId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self)
     }
 }
 
@@ -43,8 +43,8 @@ impl<'de> Deserialize<'de> for RenderTargetId {
         where D: serde::Deserializer<'de>
     {
         let s = String::deserialize(deserializer)?;
-        if s.starts_with("rt_") {
-            let decoded_bytes: Vec<u8> = base64::decode(&s[3..]).map_err(D::Error::custom)?;
+        if let Some(suffix) = s.strip_prefix("rt_") {
+            let decoded_bytes: Vec<u8> = base64::decode(suffix).map_err(D::Error::custom)?;
             let decoded_value = <u128>::from_be_bytes(decoded_bytes.try_into().map_err(|_| D::Error::custom("render target id is wrong length"))?);
             Ok(RenderTargetId(decoded_value))
         } else {
@@ -106,7 +106,7 @@ impl RenderTarget {
 /// This `RenderTargetList` object is only a description:
 /// It does not contain any render state or graphics resources.
 /// One use case of a RenderTargetList is passing it to `Context.paint` during rendering.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RenderTargetList {
     #[serde(flatten)]
     render_targets: HashMap<RenderTargetId, RenderTarget>,
@@ -115,9 +115,7 @@ pub struct RenderTargetList {
 impl RenderTargetList {
     /// Create an empty RenderTargetList
     pub fn new() -> Self {
-        Self {
-            render_targets: HashMap::new(),
-        }
+        Self::default()
     }
 
     /// Retrieve a render target from the RenderTargetList by ID

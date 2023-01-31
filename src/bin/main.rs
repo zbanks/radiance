@@ -36,8 +36,8 @@ pub async fn run() {
     let window = WindowBuilder::new().build(&event_loop).unwrap();
     let output_window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    let mut size = window.inner_size();
-    let mut output_size = output_window.inner_size();
+    let size = window.inner_size();
+    let output_size = output_window.inner_size();
 
     // The instance is a handle to our GPU
     // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
@@ -111,7 +111,7 @@ pub async fn run() {
     // Output window WGPU stuff:
 
     let output_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some(&"Output shader"),
+        label: Some("Output shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("output.wgsl").into()),
     });
 
@@ -316,11 +316,11 @@ pub async fn run() {
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
 
-                    let left_panel_response = egui::SidePanel::left("left").show_animated(&egui_ctx, left_panel_expanded, |ui| {
+                    let left_panel_response = egui::SidePanel::left("left").show_animated(egui_ctx, left_panel_expanded, |ui| {
                         ui.text_edit_singleline(&mut node_add_textedit)
                     });
 
-                    egui::CentralPanel::default().show(&egui_ctx, |ui| {
+                    egui::CentralPanel::default().show(egui_ctx, |ui| {
                         let mosaic_response = ui.add(mosaic("mosaic", &mut props, ctx.node_states(), &preview_images, &mut insertion_point));
 
                         if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
@@ -486,7 +486,7 @@ pub async fn run() {
                 window_id,
             } if window_id == window.id() => if !false { // XXX
                 // Pass the winit events to the EGUI platform integration.
-                if platform.on_event(&egui_ctx, &event).consumed {
+                if platform.on_event(&egui_ctx, event).consumed {
                     return; // EGUI wants exclusive use of this event
                 }
                 match event {
@@ -503,11 +503,11 @@ pub async fn run() {
                         *control_flow = ControlFlow::Exit
                     },
                     WindowEvent::Resized(physical_size) => {
-                        size = *physical_size;
+                        let size = *physical_size;
                         resize(size, &mut config, &device, &mut surface, Some(&mut screen_descriptor));
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        size = **new_inner_size;
+                        let size = **new_inner_size;
                         resize(size, &mut config, &device, &mut surface, Some(&mut screen_descriptor));
                     }
                     _ => {}
@@ -519,11 +519,11 @@ pub async fn run() {
             } if window_id == output_window.id() => {
                 match event {
                     WindowEvent::Resized(physical_size) => {
-                        output_size = *physical_size;
+                        let output_size = *physical_size;
                         resize(output_size, &mut output_config, &device, &mut output_surface, None);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        output_size = **new_inner_size;
+                        let output_size = **new_inner_size;
                         resize(output_size, &mut output_config, &device, &mut output_surface, None);
                     }
                     _ => {}

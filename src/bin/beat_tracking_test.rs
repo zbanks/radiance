@@ -2,6 +2,7 @@ use radiance::{BeatTracker, FPS};
 use std::fs::File;
 use std::path::Path;
 
+#[allow(clippy::print_literal)]
 fn main() {
     // Usage: ./beat_tracking_test <filename.wav>
     let mut args = std::env::args();

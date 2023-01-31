@@ -25,7 +25,7 @@ impl fmt::Display for NodeId {
 
 impl fmt::Debug for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self)
     }
 }
 
@@ -43,8 +43,8 @@ impl<'de> Deserialize<'de> for NodeId {
         where D: serde::Deserializer<'de>
     {
         let s = String::deserialize(deserializer)?;
-        if s.starts_with("node_") {
-            let decoded_bytes: Vec<u8> = base64::decode(&s[5..]).map_err(D::Error::custom)?;
+        if let Some(suffix) = s.strip_prefix("node_") {
+            let decoded_bytes: Vec<u8> = base64::decode(suffix).map_err(D::Error::custom)?;
             let decoded_value = <u128>::from_be_bytes(decoded_bytes.try_into().map_err(|_| D::Error::custom("node id is wrong length"))?);
             Ok(NodeId(decoded_value))
         } else {
@@ -295,11 +295,8 @@ fn start_nodes(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
 /// Return the node with disconnected input 0.
 fn first_input(input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>, start_node: NodeId) -> NodeId {
     let mut node = start_node;
-    loop {
-        match input_mapping.get(&node).and_then(|input_vec| input_vec.get(0).cloned().flatten()) {
-            Some(n) => {node = n;}
-            None => {break;}
-        }
+    while let Some(n) = input_mapping.get(&node).and_then(|input_vec| input_vec.get(0).cloned().flatten()) {
+        node = n;
     }
     node
 }
@@ -490,15 +487,12 @@ impl Graph {
             ));
 
             // Push zero or one "incoming" edges from the insertion point to the nodes being moved
-            match insertion_point.from_output {
-                Some(from_output) => {
-                    self.edges.push(Edge {
-                        from: from_output,
-                        to: end_node,
-                        input: 0,
-                    });
-                },
-                None => {},
+            if let Some(from_output) = insertion_point.from_output {
+                self.edges.push(Edge {
+                    from: from_output,
+                    to: end_node,
+                    input: 0,
+                });
             }
 
             // Push zero or more "outgoing" edges from the nodes being moved to the insertion point

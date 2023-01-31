@@ -204,7 +204,7 @@ impl Context {
         }
     }
 
-    fn new_render_target_state(self: &Self, render_target: &RenderTarget) -> RenderTargetState {
+    fn new_render_target_state(&self, render_target: &RenderTarget) -> RenderTargetState {
         RenderTargetState {
             width: render_target.width(),
             height: render_target.height(),
@@ -213,13 +213,13 @@ impl Context {
         }
     }
 
-    fn new_node_state(self: &Self, node_props: &NodeProps) -> NodeState {
+    fn new_node_state(&self, node_props: &NodeProps) -> NodeState {
         match node_props {
             NodeProps::EffectNode(props) => NodeState::EffectNode(EffectNodeState::new(self, props)),
         }
     }
 
-    fn update_node(self: &mut Self, node_id: NodeId, node_props: &mut NodeProps) {
+    fn update_node(&mut self, node_id: NodeId, node_props: &mut NodeProps) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         match node_state {
             NodeState::EffectNode(ref mut state) => {
@@ -232,7 +232,7 @@ impl Context {
         self.node_states.insert(node_id, node_state);
     }
 
-    fn paint_node(self: &mut Self, encoder: &mut wgpu::CommandEncoder, node_id: NodeId, render_target_id: RenderTargetId, input_textures: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
+    fn paint_node(&mut self, encoder: &mut wgpu::CommandEncoder, node_id: NodeId, render_target_id: RenderTargetId, input_textures: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
             NodeState::EffectNode(ref mut state) => state.paint(self, encoder, render_target_id, input_textures),
@@ -319,10 +319,7 @@ impl Context {
 
             let input_nodes = self.graph_input_mapping.get(paint_node_id).unwrap();
             let input_textures: Vec<Option<ArcTextureViewSampler>> = input_nodes.iter().map(
-                |maybe_id| match maybe_id {
-                    Some(id) => Some(result.get(id).unwrap().clone()),
-                   None => None,
-                }
+                |maybe_id| maybe_id.as_ref().map(|id| result.get(id).unwrap().clone())
             ).collect();
 
             let output_texture = self.paint_node(encoder, *paint_node_id, render_target_id, &input_textures);

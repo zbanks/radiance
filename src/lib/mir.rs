@@ -1,5 +1,4 @@
 use crate::beat_tracking::{BeatTracker, SAMPLE_RATE};
-use cpal;
 use cpal::traits::DeviceTrait;
 use std::sync::mpsc;
 use std::time;
@@ -67,6 +66,12 @@ pub struct MusicInfo {
     pub high: f32,
     pub level: f32,
     // TODO: send full spectrogram
+}
+
+impl Default for Mir {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Mir {
@@ -244,9 +249,8 @@ impl Mir {
     pub fn poll(&mut self) -> MusicInfo {
         // Drain the receiver,
         // applying the most recent update from the audio thread
-        match self.receiver.try_iter().last() {
-            Some(update) => {self.last_update = update;},
-            None => {},
+        if let Some(update) = self.receiver.try_iter().last() {
+            self.last_update = update;
         }
 
         // Compute t
