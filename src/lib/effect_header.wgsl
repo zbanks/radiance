@@ -32,6 +32,9 @@ var iInputsTex: binding_array<texture_2d<f32>>;
 @group(0) @binding(3)
 var iNoiseTex: texture_2d<f32>;
 
+@group(0) @binding(4)
+var iChannelsTex: binding_array<texture_2d<f32>>;
+
 var<private> iAudio: vec4<f32>;
 var<private> iTime: f32;
 var<private> iFrequency: f32;
@@ -43,8 +46,6 @@ var<private> iStep: f32;
 var<private> aspectCorrection: vec2<f32>;
 
 var<private> defaultPulse: f32;
-
-// TODO iChannels in binding(4)
 
 //// Outputs of previous patterns
 //layout(set = 1, binding = 1) uniform texture2D iInputsTex[];

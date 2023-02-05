@@ -45,6 +45,12 @@ pub struct EffectNodeStateReady {
     // Computed Info
     intensity_integral: f32,
 
+    // Read from the effect file:
+    // How many buffers this effect uses
+    // Must be at least 1--the output buffer.
+    // 2 or greater means that the effect uses some intermediate buffers
+    buffer_count: u32,
+
     // GPU resources
     bind_group_layout: wgpu::BindGroupLayout,
     uniform_buffer: wgpu::Buffer,
@@ -56,7 +62,8 @@ pub struct EffectNodeStateReady {
 }
 
 struct EffectNodePaintState {
-    output_texture: ArcTextureViewSampler,
+    buffers: Vec<ArcTextureViewSampler>,
+    output_buffer_index: u32,
 }
 
 // The uniform buffer associated with the effect (agnostic to render target)
@@ -133,6 +140,8 @@ impl EffectNodeState {
             },
         };
 
+        let buffer_count: u32 = 1; // XXX allow buffer shaders in effect source code
+
         // Default to 0 intensity if none given
         let intensity = props.intensity.unwrap_or(0.);
         let frequency = props.frequency.unwrap_or(default_frequency);
@@ -148,7 +157,7 @@ impl EffectNodeState {
         // 1: iSampler
         // 2: iInputsTex[]
         // 3: iNoiseTex
-        // 4: iChannelTex[]
+        // 4: iChannelsTex[]
 
         let bind_group_layout = ctx.device().create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
@@ -188,16 +197,16 @@ impl EffectNodeState {
                     },
                     count: None,
                 },
-                //wgpu::BindGroupLayoutEntry {
-                //    binding: 4, // iChannelTex
-                //    visibility: wgpu::ShaderStages::FRAGMENT,
-                //    ty: wgpu::BindingType::Texture {
-                //        multisampled: false,
-                //        view_dimension: wgpu::TextureViewDimension::D2,
-                //        sample_type: wgpu::TextureSampleType::Uint,
-                //    },
-                //    count: NonZeroU32::new(input_count),
-                //},
+                wgpu::BindGroupLayoutEntry {
+                    binding: 4, // iChannelsTex
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: NonZeroU32::new(buffer_count),
+                },
             ],
             label: Some(&format!("EffectNode {} bind group layout", name)),
         });
@@ -274,6 +283,7 @@ impl EffectNodeState {
             frequency,
             input_count,
             intensity_integral: 0.,
+            buffer_count,
             bind_group_layout,
             uniform_buffer,
             sampler,
@@ -282,7 +292,7 @@ impl EffectNodeState {
         })
     }
 
-    fn new_paint_state(_self_ready: &EffectNodeStateReady, ctx: &Context, render_target_state: &RenderTargetState) -> EffectNodePaintState {
+    fn new_paint_state(self_ready: &EffectNodeStateReady, ctx: &Context, render_target_state: &RenderTargetState) -> EffectNodePaintState {
         let texture_desc = wgpu::TextureDescriptor {
             size: wgpu::Extent3d {
                 width: render_target_state.width(),
@@ -300,22 +310,26 @@ impl EffectNodeState {
             label: None,
         };
 
-        let texture = ctx.device().create_texture(&texture_desc);
-        let view = texture.create_view(&Default::default());
-        let sampler = ctx.device().create_sampler(
-            &wgpu::SamplerDescriptor {
-                address_mode_u: wgpu::AddressMode::ClampToEdge,
-                address_mode_v: wgpu::AddressMode::ClampToEdge,
-                address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mag_filter: wgpu::FilterMode::Linear,
-                min_filter: wgpu::FilterMode::Linear,
-                mipmap_filter: wgpu::FilterMode::Linear,
-                ..Default::default()
-            }
-        );
+        let buffers: Vec<ArcTextureViewSampler> = (0..self_ready.buffer_count + 1).map(|i| {
+            let texture = ctx.device().create_texture(&texture_desc);
+            let view = texture.create_view(&Default::default());
+            let sampler = ctx.device().create_sampler(
+                &wgpu::SamplerDescriptor {
+                    address_mode_u: wgpu::AddressMode::ClampToEdge,
+                    address_mode_v: wgpu::AddressMode::ClampToEdge,
+                    address_mode_w: wgpu::AddressMode::ClampToEdge,
+                    mag_filter: wgpu::FilterMode::Linear,
+                    min_filter: wgpu::FilterMode::Linear,
+                    mipmap_filter: wgpu::FilterMode::Linear,
+                    ..Default::default()
+                }
+            );
+            ArcTextureViewSampler::new(texture, view, sampler)
+        }).collect();
 
-        EffectNodePaintState{
-            output_texture: ArcTextureViewSampler::new(texture, view, sampler),
+        EffectNodePaintState {
+            buffers,
+            output_buffer_index: 0,
         }
     }
 
@@ -395,7 +409,7 @@ impl EffectNodeState {
         match self {
             EffectNodeState::Ready(self_ready) => {
                 let render_target_state = ctx.render_target_state(render_target_id).expect("Call to paint() with a render target ID unknown to the context");
-                let paint_state = self_ready.paint_states.get(&render_target_id).expect("Call to paint() with a render target ID unknown to the node (did you call update() first?)");
+                let paint_state = self_ready.paint_states.get_mut(&render_target_id).expect("Call to paint() with a render target ID unknown to the node (did you call update() first?)");
 
                 // Populate the uniforms
                 {
@@ -422,6 +436,17 @@ impl EffectNodeState {
                     }
                 }).collect();
 
+                // Assemble the "channels" texture array
+                let channel0_index = paint_state.output_buffer_index + 1;
+                let channelN_index = paint_state.output_buffer_index + self_ready.buffer_count + 1;
+                let channels: Vec<&wgpu::TextureView> = (channel0_index..channelN_index).map(|i| {
+                    let i = i.rem_euclid(self_ready.buffer_count + 1);
+                    paint_state.buffers[i as usize].view.as_ref()
+                }).collect();
+
+                // The render target is the buffer we didn't include in "channels"
+                let render_target = paint_state.buffers[paint_state.output_buffer_index as usize].view.as_ref();
+
                 let bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
                     layout: &self_ready.bind_group_layout,
                     entries: &[
@@ -441,10 +466,10 @@ impl EffectNodeState {
                             binding: 3, // iNoiseTex
                             resource: wgpu::BindingResource::TextureView(&render_target_state.noise_texture().view)
                         },
-                        //wgpu::BindGroupEntry {
-                        //    binding: 4, // iChannelTex
-                        //    resource: wgpu::BindingResource::TextureViewArray()
-                        //},
+                        wgpu::BindGroupEntry {
+                            binding: 4, // iChannelsTex
+                            resource: wgpu::BindingResource::TextureViewArray(channels.as_slice())
+                        },
                     ],
                     label: Some("EffectNode bind group"),
                 });
@@ -454,17 +479,10 @@ impl EffectNodeState {
                         label: Some("EffectNode render pass"),
                         color_attachments: &[
                             Some(wgpu::RenderPassColorAttachment {
-                                view: &paint_state.output_texture.view,
+                                view: render_target,
                                 resolve_target: None,
                                 ops: wgpu::Operations {
-                                    load: wgpu::LoadOp::Clear(
-                                        wgpu::Color {
-                                            r: 0.9,
-                                            g: 0.2,
-                                            b: 0.3,
-                                            a: 1.0,
-                                        }
-                                    ),
+                                    load: wgpu::LoadOp::Load,
                                     store: true,
                                 }
                             }),
@@ -477,7 +495,10 @@ impl EffectNodeState {
                     render_pass.draw(0..4, 0..1);
                 }
 
-                paint_state.output_texture.clone()
+                // Advance through the circular buffer of buffers
+                paint_state.output_buffer_index = (paint_state.output_buffer_index + self_ready.buffer_count).rem_euclid(self_ready.buffer_count + 1);
+
+                paint_state.buffers[0].clone()
             },
             _ => ctx.blank_texture().clone(),
         }
