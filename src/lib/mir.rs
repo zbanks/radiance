@@ -7,6 +7,13 @@ const MAX_TIME: f32 = 64.;
 // Anticipate beats by this many seconds
 const LATENCY_COMPENSATION: f32 = 0.07;
 
+const DEFAULT_BPM: f32 = 120.;
+
+// These don't necessarily have to match the beat tracking HMM
+// but the HMM parameters are a good starting point
+const MIN_BPS: f32 = 55. / 60.;
+const MAX_BPS: f32 = 215. / 60.;
+
 /// A Mir (Music information retrieval) object
 /// handles listening to the music via the system audio
 /// and generates a global timebase from the beats,
@@ -121,7 +128,6 @@ impl Mir {
 
         // This tempo will be quickly overridden as the audio thread
         // starts tapping out the real beat
-        const DEFAULT_BPM: f32 = 120.;
         let mut update = Update {
             wall_ref: time::Instant::now(),
             t_ref: 0.,
@@ -163,14 +169,15 @@ impl Mir {
                 // Amount of ground we need to cover, in number of beats
                 let beats_to_cover = next_beat - t_ref;
                 // Typically, beats_to_cover should be close to 1.0 if we're doing a good job.
-
                 let tempo = beats_to_cover / last_beat_wall_period;
-                // The beat tracker is good about not tapping beats too fast,
-                // so the denominator should never produce tempos that are too high.
+
+                // Only update the tempo if it's a reasonable value,
+                if tempo >= MIN_BPS && tempo <= MAX_BPS {
+                    update.tempo = tempo;
+                }
 
                 update.wall_ref = wall_ref;
                 update.t_ref = t_ref;
-                update.tempo = tempo;
             }
 
             // For now, simply set lows, mids, and highs to random spectrogram buckets

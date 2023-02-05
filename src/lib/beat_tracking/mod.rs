@@ -39,7 +39,7 @@
 
 use std::sync::Arc;
 use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{DVector, DMatrix, SVector};
+use nalgebra::{DVector, DMatrix, SVector, Matrix2xX, Vector2};
 use itertools::iproduct;
 
 pub const SAMPLE_RATE: f32 = 44100.;
@@ -70,6 +70,10 @@ const N_STATES: usize = ((MAX_INTERVAL + 1) * MAX_INTERVAL - (MIN_INTERVAL - 1) 
 const OBSERVATION_LAMBDA: f32 = 16.;
 const TRANSITION_LAMBDA: f32 = 100.;
 const PROBABILITY_EPSILON: f32 = f64::EPSILON as f32;
+
+const MIN_CONFIDENCE_RADIUS: f32 = 0.8;
+const MIN_TRACKED_BEATS: usize = 3;
+
 
 mod ml_models;
 use ml_models::*;
@@ -462,6 +466,19 @@ fn observation_model(ss: &BeatStateSpace) -> DVector<usize> {
     DVector::from_fn(N_STATES, |i, _| usize::from((ss.state_positions[i] as f32) < border))
 }
 
+/// Compute result model
+/// The result model matrix maps states to X, Y positions
+/// used to calculate the current phase.
+fn result_model(ss: &BeatStateSpace) -> Matrix2xX<f32> {
+    let theta = std::f32::consts::TAU * &ss.state_positions;
+    let x = theta.map(|x| x.cos());
+    let y = theta.map(|x| x.sin());
+
+    let result = Matrix2xX::<f32>::from_rows(&[x.transpose(), y.transpose()]);
+
+    result
+}
+
 /// Compute the probability densities of the observations.
 /// observation: (e.g. beat activation of the RNN).
 /// returns: 2-element vector containing probability densities of the observations
@@ -501,7 +518,13 @@ struct HMMBeatTrackingProcessor {
     // The state of the HMM
     hmm_fwd_prev: DVector<f32>, // size = N_STATES
 
-    debounce_counter: usize,
+    // The result model
+    result_model: Matrix2xX<f32>,
+
+    // Last phase angle of the beat
+    last_theta: f32,
+    // The number of beats we have been solidly tracking
+    tracking: usize,
 }
 
 impl HMMBeatTrackingProcessor {
@@ -509,6 +532,7 @@ impl HMMBeatTrackingProcessor {
         let ss = BeatStateSpace::new();
         let (tm_pointers, tm_states, tm_probabilities) = transition_model(&ss);
         let om_pointers = observation_model(&ss);
+        let result_model = result_model(&ss);
         Self {
             _ss: ss,
             tm_pointers,
@@ -516,13 +540,16 @@ impl HMMBeatTrackingProcessor {
             tm_probabilities,
             om_pointers,
             hmm_fwd_prev: hmm_initial_distribution(),
-            debounce_counter: MIN_INTERVAL,
+            result_model,
+            last_theta: 0.,
+            tracking: 0,
         }
     }
 
     pub fn reset(&mut self) {
         self.hmm_fwd_prev = hmm_initial_distribution();
-        self.debounce_counter = MIN_INTERVAL;
+        self.last_theta = 0.;
+        self.tracking = 0;
     }
 
     /// Take in an observation
@@ -564,25 +591,38 @@ impl HMMBeatTrackingProcessor {
         activation: f32,
     ) -> bool {
         let state_probabilities = self.hmm_forward(activation);
-        let most_probable_state = state_probabilities.iter().enumerate().max_by(
-            |(_, v1), (_, v2)| v1.partial_cmp(v2).unwrap()
-        ).unwrap().0;
-        let beat = self.om_pointers[most_probable_state] == 1;
+        let result: Vector2<f32> = &self.result_model * &state_probabilities;
 
-        // forward path often reports multiple beats close together, thus report
-        // only beats more than the minimum interval apart
-        let filt_beat = beat && {
-            if self.debounce_counter == 0 {
-                self.debounce_counter = MIN_INTERVAL;
-                true // beat after sufficient spacing
-            } else {
-                false // beat in too quick succession
-            }
-        };
-        if self.debounce_counter > 0 {
-            self.debounce_counter -= 1;
+        // Convert the rectangular result into polar coordinates:
+        let r = result.norm();
+        let theta = result.y.atan2(result.x).rem_euclid(std::f32::consts::TAU);
+
+        // A solid beat manifests as a result point that travels around a unit circle.
+        // The result point being close to the origin indicates a lack of confidence.
+        let mut beat = false;
+
+        // Stop tracking if we go near the center:
+        if r < MIN_CONFIDENCE_RADIUS {
+            self.tracking = 0;
         }
-        filt_beat
+
+        // See if we have crossed a beat boundary by looking for discontinuities in theta.
+        // Check if we travelled "backwards" in phase by at half a rotation or more
+        // in a single timetsep.
+        if self.last_theta - theta > 0.5 * std::f32::consts::TAU {
+            // Even if we detect beats,
+            // only emit them if we've been solidly tracking
+            // for a couple previous beats.
+            if self.tracking >= MIN_TRACKED_BEATS {
+                beat = true;
+            } else {
+                self.tracking += 1;
+            }
+        }
+
+        self.last_theta = theta;
+
+        beat
     }
 }
 
@@ -1089,7 +1129,6 @@ mod tests {
         assert_eq!(probs[5191], 0.0068932814);
         assert_eq!(probs[5297], 0.0069466503); // max
         assert_eq!(probs[5616], 3.571157e-8);
-        assert_eq!(hmm.debounce_counter, MIN_INTERVAL - 5);
     }
 
     #[ignore]
@@ -1113,10 +1152,10 @@ mod tests {
 
         // These values were popuated from the Python library output
         let expected_beat_indices = vec![
-            51,  147,  221,  293,  366,  439,  488,  535,  583,  631,  679,
-            727,  777,  825,  873,  921,  970, 1020, 1067, 1115, 1163, 1211,
-            1259, 1307, 1357, 1410, 1458, 1508, 1551, 1599, 1647, 1695, 1744,
-            1794, 1843, 1892, 1938, 1985, 2035, 2084, 2132, 2180
+            294,  366,  679,  729,  777,  825,  873,  922,  971,  1021, 1068,
+            1116, 1164, 1212, 1260, 1308, 1358, 1409, 1459, 1507, 1552, 1599,
+            1647, 1696, 1745, 1795, 1844, 1892, 1939, 1986, 2035, 2084, 2132,
+            2180, 
         ];
 
         for (i, &(_, _, beat)) in beats.iter().enumerate() {
