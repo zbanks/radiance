@@ -46,10 +46,10 @@ pub struct EffectNodeStateReady {
     intensity_integral: f32,
 
     // Read from the effect file:
-    // How many buffers this effect uses
-    // Must be at least 1--the output buffer.
-    // 2 or greater means that the effect uses some intermediate buffers
-    buffer_count: u32,
+    // How many channels this effect uses
+    // Must be at least 1--the output channel.
+    // 2 or greater means that the effect uses some intermediate channels
+    channel_count: u32,
 
     // GPU resources
     bind_group_layout: wgpu::BindGroupLayout,
@@ -62,8 +62,8 @@ pub struct EffectNodeStateReady {
 }
 
 struct EffectNodePaintState {
-    buffers: Vec<ArcTextureViewSampler>,
-    output_buffer_index: u32,
+    channel_textures: Vec<ArcTextureViewSampler>,
+    output_texture: ArcTextureViewSampler,
 }
 
 // The uniform buffer associated with the effect (agnostic to render target)
@@ -145,7 +145,7 @@ impl EffectNodeState {
             },
         };
 
-        let buffer_count: u32 = effect_sources_processed.len() as u32;
+        let channel_count: u32 = effect_sources_processed.len() as u32;
 
         // Default to 0 intensity if none given
         let intensity = props.intensity.unwrap_or(0.);
@@ -210,7 +210,7 @@ impl EffectNodeState {
                         view_dimension: wgpu::TextureViewDimension::D2,
                         sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     },
-                    count: NonZeroU32::new(buffer_count),
+                    count: NonZeroU32::new(channel_count),
                 },
             ],
             label: Some(&format!("EffectNode {} bind group layout", name)),
@@ -288,7 +288,7 @@ impl EffectNodeState {
             frequency,
             input_count,
             intensity_integral: 0.,
-            buffer_count,
+            channel_count,
             bind_group_layout,
             uniform_buffer,
             sampler,
@@ -315,7 +315,7 @@ impl EffectNodeState {
             label: None,
         };
 
-        let buffers: Vec<ArcTextureViewSampler> = (0..self_ready.buffer_count + 1).map(|i| {
+        let make_texture = || {
             let texture = ctx.device().create_texture(&texture_desc);
             let view = texture.create_view(&Default::default());
             let sampler = ctx.device().create_sampler(
@@ -330,11 +330,17 @@ impl EffectNodeState {
                 }
             );
             ArcTextureViewSampler::new(texture, view, sampler)
-        }).collect();
+        };
+
+        let output_texture = make_texture();
+
+        let channel_textures: Vec<ArcTextureViewSampler> = (0..self_ready.channel_count).map(
+            |_| make_texture()
+        ).collect();
 
         EffectNodePaintState {
-            buffers,
-            output_buffer_index: 0,
+            channel_textures,
+            output_texture,
         }
     }
 
@@ -441,70 +447,67 @@ impl EffectNodeState {
                     }
                 }).collect();
 
-                // Assemble the "channels" texture array
-                // TODO differentiate based on which channel we are rendering
-                let channel0_index = paint_state.output_buffer_index + 1;
-                let channelN_index = paint_state.output_buffer_index + self_ready.buffer_count + 1;
-                let channels: Vec<&wgpu::TextureView> = (channel0_index..channelN_index).map(|i| {
-                    let i = i.rem_euclid(self_ready.buffer_count + 1);
-                    paint_state.buffers[i as usize].view.as_ref()
-                }).collect();
+                // Render all channels in reverse order
+                for channel in (0..self_ready.channel_count).rev() {
+                    // Assemble the "channels" texture array binding
+                    let channels: Vec<&wgpu::TextureView> = paint_state.channel_textures.iter().map(
+                        |t| t.view.as_ref()
+                    ).collect();
 
-                // The render target is the buffer we didn't include in "channels"
-                let render_target = paint_state.buffers[paint_state.output_buffer_index as usize].view.as_ref();
-
-                let bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
-                    layout: &self_ready.bind_group_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: self_ready.uniform_buffer.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: wgpu::BindingResource::Sampler(&self_ready.sampler),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2, // iInputsTex
-                            resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3, // iNoiseTex
-                            resource: wgpu::BindingResource::TextureView(&render_target_state.noise_texture().view)
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 4, // iChannelsTex
-                            resource: wgpu::BindingResource::TextureViewArray(channels.as_slice())
-                        },
-                    ],
-                    label: Some("EffectNode bind group"),
-                });
-
-                {
-                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        label: Some("EffectNode render pass"),
-                        color_attachments: &[
-                            Some(wgpu::RenderPassColorAttachment {
-                                view: render_target,
-                                resolve_target: None,
-                                ops: wgpu::Operations {
-                                    load: wgpu::LoadOp::Load,
-                                    store: true,
-                                }
-                            }),
+                    let bind_group = ctx.device().create_bind_group(&wgpu::BindGroupDescriptor {
+                        layout: &self_ready.bind_group_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: self_ready.uniform_buffer.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: wgpu::BindingResource::Sampler(&self_ready.sampler),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 2, // iInputsTex
+                                resource: wgpu::BindingResource::TextureViewArray(input_binding.as_slice())
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 3, // iNoiseTex
+                                resource: wgpu::BindingResource::TextureView(&render_target_state.noise_texture().view)
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 4, // iChannelsTex
+                                resource: wgpu::BindingResource::TextureViewArray(channels.as_slice())
+                            },
                         ],
-                        depth_stencil_attachment: None,
+                        label: Some("EffectNode bind group"),
                     });
 
-                    render_pass.set_pipeline(&self_ready.render_pipelines[0]); // XXX
-                    render_pass.set_bind_group(0, &bind_group, &[]); 
-                    render_pass.draw(0..4, 0..1);
+                    {
+                        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: Some("EffectNode render pass"),
+                            color_attachments: &[
+                                Some(wgpu::RenderPassColorAttachment {
+                                    view: paint_state.output_texture.view.as_ref(),
+                                    resolve_target: None,
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Load,
+                                        store: true,
+                                    }
+                                }),
+                            ],
+                            depth_stencil_attachment: None,
+                        });
+
+                        render_pass.set_pipeline(&self_ready.render_pipelines[channel as usize]);
+                        render_pass.set_bind_group(0, &bind_group, &[]); 
+                        render_pass.draw(0..4, 0..1);
+                    }
+
+                    // Swap buffers: move the output texture we just rendered
+                    // into its proper slot in the channel_textures array
+                    std::mem::swap(&mut paint_state.channel_textures[channel as usize], &mut paint_state.output_texture);
                 }
 
-                // Advance through the circular buffer of buffers
-                paint_state.output_buffer_index = (paint_state.output_buffer_index + self_ready.buffer_count).rem_euclid(self_ready.buffer_count + 1);
-
-                paint_state.buffers[0].clone()
+                paint_state.channel_textures[0].clone()
             },
             _ => ctx.blank_texture().clone(),
         }
