@@ -55,7 +55,7 @@ pub struct EffectNodeStateReady {
     bind_group_layout: wgpu::BindGroupLayout,
     uniform_buffer: wgpu::Buffer,
     sampler: wgpu::Sampler,
-    render_pipeline: wgpu::RenderPipeline,
+    render_pipelines: Vec<wgpu::RenderPipeline>,
 
     // Paint states
     paint_states: HashMap<RenderTargetId, EffectNodePaintState>,
@@ -80,7 +80,8 @@ struct Uniforms {
     _padding: [u8; 4],
 }
 
-fn preprocess_shader(effect_source: &str) -> Result<(String, u32, f32), String> {
+fn preprocess_shader(effect_source: &str) -> Result<(Vec<String>, u32, f32), String> {
+    let mut processed_sources = Vec::<String>::new();
     let mut processed_source = String::new();
     let mut input_count = 1;
     let mut frequency = 0.;
@@ -107,13 +108,17 @@ fn preprocess_shader(effect_source: &str) -> Result<(String, u32, f32), String> 
             } else {
                 return Err(String::from("Missing property name"));
             }
+        } else if !line_parts.is_empty() && line_parts[0] == "#buffershader" {
+            processed_sources.push(std::mem::replace(&mut processed_source, String::new()));
         } else {
             processed_source.push_str(l);
             processed_source.push('\n');
         }
     }
 
-    Ok((processed_source, input_count, frequency))
+    processed_sources.push(processed_source);
+
+    Ok((processed_sources, input_count, frequency))
 }
 
 // This is a state machine, it's more natural to use `match` than `if let`
@@ -126,7 +131,7 @@ impl EffectNodeState {
         let source_name = format!("{name}.wgsl");
         let effect_source = ctx.fetch_content(&source_name).map_err(|_| format!("Failed to read effect shader file \"{source_name}\""))?;
 
-        let (effect_source_processed, shader_input_count, default_frequency) = preprocess_shader(&effect_source)?;
+        let (effect_sources_processed, shader_input_count, default_frequency) = preprocess_shader(&effect_source)?;
 
         let input_count = match props.input_count {
             Some(input_count) => {
@@ -140,17 +145,17 @@ impl EffectNodeState {
             },
         };
 
-        let buffer_count: u32 = 1; // XXX allow buffer shaders in effect source code
+        let buffer_count: u32 = effect_sources_processed.len() as u32;
 
         // Default to 0 intensity if none given
         let intensity = props.intensity.unwrap_or(0.);
         let frequency = props.frequency.unwrap_or(default_frequency);
 
-        let shader_source = &format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source_processed, EFFECT_FOOTER);
-        let shader_module = ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(&format!("EffectNode {} shader", name)),
+        let shader_sources = effect_sources_processed.iter().map(|effect_source_processed| format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source_processed, EFFECT_FOOTER));
+        let shader_modules = shader_sources.enumerate().map(|(i, shader_source)| ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some(&format!("EffectNode {} channel {}", name, i)),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-        });
+        }));
 
         // The uniforms bind group:
         // 0: Uniforms
@@ -218,8 +223,8 @@ impl EffectNodeState {
                 push_constant_ranges: &[],
             });
 
-        // Create a render pipeline, we will eventually want multiple of these for a multi-pass effect
-        let render_pipeline = ctx.device().create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        // Create a render pipeline for each channel in an effect
+        let render_pipelines: Vec<wgpu::RenderPipeline> = shader_modules.map(|shader_module| ctx.device().create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some(&format!("EffectNode {} render pipeline", name)),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
@@ -252,7 +257,7 @@ impl EffectNodeState {
                 alpha_to_coverage_enabled: false,
             },
             multiview: None,
-        });
+        })).collect();
 
         // The update uniform buffer for this effect
         let uniform_buffer = ctx.device().create_buffer(
@@ -287,7 +292,7 @@ impl EffectNodeState {
             bind_group_layout,
             uniform_buffer,
             sampler,
-            render_pipeline,
+            render_pipelines,
             paint_states: HashMap::new(),
         })
     }
@@ -437,6 +442,7 @@ impl EffectNodeState {
                 }).collect();
 
                 // Assemble the "channels" texture array
+                // TODO differentiate based on which channel we are rendering
                 let channel0_index = paint_state.output_buffer_index + 1;
                 let channelN_index = paint_state.output_buffer_index + self_ready.buffer_count + 1;
                 let channels: Vec<&wgpu::TextureView> = (channel0_index..channelN_index).map(|i| {
@@ -490,7 +496,7 @@ impl EffectNodeState {
                         depth_stencil_attachment: None,
                     });
 
-                    render_pass.set_pipeline(&self_ready.render_pipeline);
+                    render_pass.set_pipeline(&self_ready.render_pipelines[0]); // XXX
                     render_pass.set_bind_group(0, &bind_group, &[]); 
                     render_pass.draw(0..4, 0..1);
                 }
