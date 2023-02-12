@@ -381,7 +381,7 @@ impl Graph {
             println!("Removed {} invalid edges", edges_removed);
         }
 
-        let input_mapping = map_inputs(&self.nodes, &self.edges);
+        let mut input_mapping = map_inputs(&self.nodes, &self.edges);
 
         let cyclic_edges = find_cycles(&self.nodes, &input_mapping);
 
@@ -390,6 +390,9 @@ impl Graph {
             self.edges.retain(|e| !cyclic_edges.contains(e));
 
             println!("Removed {} edges to break cycles", cyclic_edges.len());
+
+            // Re-compute input mapping if we removed edges
+            input_mapping = map_inputs(&self.nodes, &self.edges);
         }
 
         let start_nodes = start_nodes(&self.nodes, &input_mapping);
@@ -473,7 +476,7 @@ impl Graph {
 
         for &start_node in start_nodes.iter() {
             // If we walk the graph, starting from each start node,
-            // we find one connected component of the subgraph to delete
+            // we find one connected component of the subgraph to move
             let end_node = first_input(&subgraph_input_mapping, start_node);
             let outgoing_connections = output_mapping.get(&start_node).unwrap();
             let incoming_connection = input_mapping.get(&end_node).unwrap().get(0).cloned().flatten();
