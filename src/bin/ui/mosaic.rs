@@ -908,8 +908,17 @@ pub fn mosaic_ui<IdSource>(
 
     // If we are dragging, render drop targets
     let mut hovered_insertion_point: Option<InsertionPoint> = None;
-    if mosaic_memory.drag.is_some() {
+    if let Some(drag) = &mosaic_memory.drag {
         for drop_target in drop_targets.into_iter() {
+            // Don't show drop targets that are attached to the drag contingent
+            let mut attached_nodes = drop_target.insertion_point.from_output.iter().chain(
+                drop_target.insertion_point.to_inputs.iter().map(|(n, _)| n)
+            );
+            let contingent_nodes: HashSet<NodeId> = drag.contingent.iter().map(|tile_id| tile_id.node).collect();
+            if attached_nodes.any(|n| contingent_nodes.contains(n)) {
+                continue;
+            }
+
             let response = ui.add(drop_target.drop_target);
             if response.hovered() {
                 hovered_insertion_point = Some(drop_target.insertion_point);
