@@ -948,9 +948,7 @@ pub fn mosaic_ui<IdSource>(
                     // Consider figuring out exactly which edges to break (the ones incoming & outgoing to the *tiles* that are dragged)
                     // instead of breaking all incoming & outgoing edges to the *nodes* that are dragged
                     let nodes: HashSet<NodeId> = mosaic_memory.drag.as_ref().unwrap().contingent.iter().map(|tile_id| tile_id.node).collect();
-                    println!("Pre-move nodes: {:?}", props.graph.nodes);
                     props.graph.move_nodes(&nodes, &hovered_insertion_point);
-                    println!("Post-move nodes: {:?}", props.graph.nodes);
                 },
                 None => {},
             }

@@ -485,7 +485,7 @@ impl Graph {
             // or edges that intersect the insertion point
             self.edges.retain(|e| !(
                 e.from == start_node
-                || e.to == end_node
+                || (e.to == end_node && e.input == 0)
                 || (Some(e.from) == insertion_point.from_output && insertion_point.to_inputs.contains(&(e.to, e.input)))
             ));
 
