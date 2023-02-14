@@ -112,6 +112,7 @@ pub struct RenderTargetList {
     render_targets: HashMap<RenderTargetId, RenderTarget>,
 }
 
+// TODO: Can this class be removed in favor of a vanilla HashMap<RenderTargetId, RenderTarget> ?
 impl RenderTargetList {
     /// Create an empty RenderTargetList
     pub fn new() -> Self {

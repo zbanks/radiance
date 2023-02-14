@@ -17,6 +17,9 @@ use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, No
 mod ui;
 use ui::{mosaic};
 
+mod winit_output;
+use winit_output::WinitOutput;
+
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
 pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, surface: &mut wgpu::Surface, screen_descriptor: Option<&mut ScreenDescriptor>) {
@@ -33,17 +36,14 @@ pub fn resize(new_size: winit::dpi::PhysicalSize<u32>, config: &mut wgpu::Surfac
 pub async fn run() {
     env_logger::init();
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
-    let output_window = WindowBuilder::new().build(&event_loop).unwrap();
 
+    let window = WindowBuilder::new().build(&event_loop).unwrap();
     let size = window.inner_size();
-    let output_size = output_window.inner_size();
 
     // The instance is a handle to our GPU
     // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
     let instance = wgpu::Instance::new(wgpu::Backends::all());
     let mut surface = unsafe { instance.create_surface(&window) };
-    let mut output_surface = unsafe { instance.create_surface(&output_window) };
     let adapter = instance.request_adapter(
         &wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
@@ -70,19 +70,13 @@ pub async fn run() {
     let device = Arc::new(device);
     let queue = Arc::new(queue);
 
+    let mut winit_output = WinitOutput::new(&event_loop, &instance, &adapter, device.clone(), queue.clone());
+
     let mut config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: surface.get_supported_formats(&adapter)[0],
         width: size.width,
         height: size.height,
-        present_mode: wgpu::PresentMode::Fifo,
-        alpha_mode: wgpu::CompositeAlphaMode::Auto,
-    };
-    let mut output_config = wgpu::SurfaceConfiguration {
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        format: output_surface.get_supported_formats(&adapter)[0],
-        width: output_size.width,
-        height: output_size.height,
         present_mode: wgpu::PresentMode::Fifo,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
     };
@@ -96,7 +90,6 @@ pub async fn run() {
     };
 
     resize(size, &mut config, &device, &mut surface, Some(&mut screen_descriptor));
-    resize(output_size, &mut output_config, &device, &mut output_surface, None);
 
     // Make a egui context:
     let egui_ctx = egui::Context::default();
@@ -107,78 +100,6 @@ pub async fn run() {
 
     // We use the egui_wgpu_backend crate as the render backend.
     let mut egui_renderer = Renderer::new(&device, config.format, None, 1);
-
-    // Output window WGPU stuff:
-
-    let output_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Output shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("output.wgsl").into()),
-    });
-
-    let output_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    multisampled: false,
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-        ],
-        label: Some("output texture bind group layout"),
-    });
-
-    let output_render_pipeline_layout = device.create_pipeline_layout(
-        &wgpu::PipelineLayoutDescriptor {
-            label: Some("Output Render Pipeline Layout"),
-            bind_group_layouts: &[&output_bind_group_layout],
-            push_constant_ranges: &[],
-        }
-    );
-
-     let output_render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("Output Render Pipeline"),
-        layout: Some(&output_render_pipeline_layout),
-        vertex: wgpu::VertexState {
-            module: &output_shader_module,
-            entry_point: "vs_main",
-            buffers: &[],
-        },
-        fragment: Some(wgpu::FragmentState {
-            module: &output_shader_module,
-            entry_point: "fs_main",
-            targets: &[Some(wgpu::ColorTargetState {
-                format: output_config.format,
-                blend: Some(wgpu::BlendState::REPLACE),
-                write_mask: wgpu::ColorWrites::ALL,
-            })],
-        }),
-        primitive: wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleStrip,
-            strip_index_format: None,
-            front_face: wgpu::FrontFace::Ccw,
-            cull_mode: Some(wgpu::Face::Back),
-            polygon_mode: wgpu::PolygonMode::Fill,
-            unclipped_depth: false,
-            conservative: false,
-        },
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState {
-            count: 1,
-            mask: !0,
-            alpha_to_coverage_enabled: false,
-        },
-        multiview: None,
-    });
 
     // RADIANCE, WOO
 
@@ -277,7 +198,7 @@ pub async fn run() {
 
     println!("Props: {}", serde_json::to_string(&props).unwrap());
 
-    // Make a render targets
+    // Make render targets
     let preview_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_LVrjzxhXrGU7SqFo+85zkw")).unwrap();
     let output_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_vvNth5LO1ZAUNLlJPiddNw")).unwrap();
     let render_target_list: RenderTargetList = serde_json::from_value(json!({
@@ -286,7 +207,7 @@ pub async fn run() {
             "height": 256,
             "dt": 1. / 60.
         },
-        output_render_target_id.to_string(): {
+        output_render_target_id.to_string(): { // TODO: move to winit_output.rs
             "width": 1920,
             "height": 1080,
             "dt": 1. / 60.
@@ -296,12 +217,17 @@ pub async fn run() {
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
 
     // UI state
-    let mut node_add_textedit = String::new();
+    let mut node_add_textedit = String::new(); // TODO: factor this into its own component in ui/
     let mut left_panel_expanded = false;
     let mut node_add_wants_focus = false;
     let mut insertion_point: InsertionPoint = Default::default();
 
     event_loop.run(move |event, _, control_flow| {
+
+        if winit_output.on_event(&event, &mut ctx, output_render_target_id, screen_output_node_id) {
+            return; // Event was consumed by winit_output
+        }
+
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
@@ -417,79 +343,10 @@ pub async fn run() {
                     egui_renderer.free_texture(texture_id);
                 }
             }
-            Event::RedrawRequested(window_id) if window_id == output_window.id() => {
-                // Paint
-                let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Output Encoder"),
-                });
-
-                let results = ctx.paint(&mut encoder, output_render_target_id);
-
-                if let Some(texture) = results.get(&screen_output_node_id) {
-                    let output_bind_group = device.create_bind_group(
-                        &wgpu::BindGroupDescriptor {
-                            layout: &output_bind_group_layout,
-                            entries: &[
-                                wgpu::BindGroupEntry {
-                                    binding: 0,
-                                    resource: wgpu::BindingResource::TextureView(&texture.view),
-                                },
-                                wgpu::BindGroupEntry {
-                                    binding: 1,
-                                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                                }
-                            ],
-                            label: Some("output bind group"),
-                        }
-                    );
-
-                    // Record output render pass.
-                    let output = output_surface.get_current_texture().unwrap();
-                    let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-                    {
-                        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                            label: Some("Output window render pass"),
-                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                view: &view,
-                                resolve_target: None,
-                                ops: wgpu::Operations {
-                                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                                        r: 0.,
-                                        g: 0.,
-                                        b: 0.,
-                                        a: 0.,
-                                    }),
-                                    store: true,
-                                },
-                            })],
-                            depth_stencil_attachment: None,
-                        });
-
-                        render_pass.set_pipeline(&output_render_pipeline);
-                        render_pass.set_bind_group(0, &output_bind_group, &[]);
-                        render_pass.draw(0..4, 0..1);
-
-                        //egui_renderer
-                        //    .render(
-                        //        &mut egui_render_pass,
-                        //        &clipped_primitives,
-                        //        &screen_descriptor,
-                        //    );
-                    }
-
-                    // Submit the commands.
-                    queue.submit(iter::once(encoder.finish()));
-
-                    // Draw
-                    output.present();
-                }
-            }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually
                 // request it.
                 window.request_redraw();
-                output_window.request_redraw();
             }
             Event::WindowEvent {
                 ref event,
@@ -519,22 +376,6 @@ pub async fn run() {
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         let size = **new_inner_size;
                         resize(size, &mut config, &device, &mut surface, Some(&mut screen_descriptor));
-                    }
-                    _ => {}
-                }
-            }
-            Event::WindowEvent {
-                ref event,
-                window_id,
-            } if window_id == output_window.id() => {
-                match event {
-                    WindowEvent::Resized(physical_size) => {
-                        let output_size = *physical_size;
-                        resize(output_size, &mut output_config, &device, &mut output_surface, None);
-                    }
-                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        let output_size = **new_inner_size;
-                        resize(output_size, &mut output_config, &device, &mut output_surface, None);
                     }
                     _ => {}
                 }
