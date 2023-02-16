@@ -218,7 +218,7 @@ pub async fn run() {
 
     event_loop.run(move |event, event_loop, control_flow| {
 
-        if winit_output.on_event(&event, &mut ctx, screen_output_node_id) {
+        if winit_output.on_event(&event, &mut ctx) {
             return; // Event was consumed by winit_output
         }
 

@@ -196,11 +196,11 @@ impl WinitOutput {
         }
     }
 
-    pub fn on_event<T>(&mut self, event: &Event<T>, ctx: &mut radiance::Context, screen_output_node_id: radiance::NodeId) -> bool {
+    pub fn on_event<T>(&mut self, event: &Event<T>, ctx: &mut radiance::Context) -> bool {
         // Return true => event consumed
         // Return false => event continues to be processed
 
-        for screen_output in self.screen_outputs.values_mut() {
+        for (node_id, screen_output) in self.screen_outputs.iter_mut() {
             match event {
                 Event::RedrawRequested(window_id) if window_id == &screen_output.window.id() => {
                     if screen_output.initial_update {
@@ -211,7 +211,7 @@ impl WinitOutput {
 
                         let results = ctx.paint(&mut encoder, screen_output.render_target_id);
 
-                        if let Some(texture) = results.get(&screen_output_node_id) {
+                        if let Some(texture) = results.get(&node_id) {
                             let output_bind_group = self.device.create_bind_group(
                                 &wgpu::BindGroupDescriptor {
                                     layout: &self.bind_group_layout,
