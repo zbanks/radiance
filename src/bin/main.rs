@@ -42,15 +42,15 @@ pub async fn run() {
 
     // The instance is a handle to our GPU
     // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
-    let instance = wgpu::Instance::new(wgpu::Backends::all());
+    let instance = Arc::new(wgpu::Instance::new(wgpu::Backends::all()));
     let mut surface = unsafe { instance.create_surface(&window) };
-    let adapter = instance.request_adapter(
+    let adapter = Arc::new(instance.request_adapter(
         &wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
         },
-    ).await.unwrap();
+    ).await.unwrap());
 
     let (device, queue) = adapter.request_device(
         &wgpu::DeviceDescriptor {
@@ -70,7 +70,7 @@ pub async fn run() {
     let device = Arc::new(device);
     let queue = Arc::new(queue);
 
-    let mut winit_output = WinitOutput::new(&event_loop, &instance, &adapter, device.clone(), queue.clone());
+    let mut winit_output = WinitOutput::new(&event_loop, instance.clone(), adapter.clone(), device.clone(), queue.clone());
 
     let mut config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -216,7 +216,7 @@ pub async fn run() {
     let mut node_add_wants_focus = false;
     let mut insertion_point: InsertionPoint = Default::default();
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, event_loop, control_flow| {
 
         if winit_output.on_event(&event, &mut ctx, screen_output_node_id) {
             return; // Event was consumed by winit_output
@@ -231,7 +231,7 @@ pub async fn run() {
                 // Merge our render list and the winit_output render list into one:
                 let render_target_list = render_target_list.iter().chain(winit_output.render_targets_iter()).map(|(k, v)| (k.clone(), v.clone())).collect();
                 ctx.update(&mut props, &render_target_list);
-                winit_output.update(&mut props);
+                winit_output.update(event_loop, &mut props);
 
                 // Paint
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

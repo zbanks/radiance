@@ -5,6 +5,7 @@ use egui_winit::winit;
 use egui_winit::winit::{
     event::*,
     event_loop::EventLoop,
+    event_loop::EventLoopWindowTarget,
     window::WindowBuilder,
 };
 use std::sync::Arc;
@@ -14,40 +15,39 @@ use serde_json::json;
 
 #[derive(Debug)]
 pub struct WinitOutput {
+    instance: Arc<wgpu::Instance>,
+    adapter: Arc<wgpu::Adapter>,
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    window: egui_winit::winit::window::Window,
-    surface: wgpu::Surface,
-    config: wgpu::SurfaceConfiguration,
-    _shader_module: wgpu::ShaderModule,
+    shader_module: wgpu::ShaderModule,
     bind_group_layout: wgpu::BindGroupLayout,
-    _render_pipeline_layout: wgpu::PipelineLayout,
-    render_pipeline: wgpu::RenderPipeline,
-    render_target_id: radiance::RenderTargetId,
-    render_target_list: HashMap<radiance::RenderTargetId, radiance::RenderTarget>,
+    render_pipeline_layout: wgpu::PipelineLayout,
 
     screen_outputs: HashMap<radiance::NodeId, ScreenOutput>,
 }
 
 #[derive(Debug)]
 struct ScreenOutput {
+    window: egui_winit::winit::window::Window,
+    surface: wgpu::Surface,
+    config: wgpu::SurfaceConfiguration,
+    render_pipeline: wgpu::RenderPipeline,
+    render_target_id: radiance::RenderTargetId,
+    render_target: radiance::RenderTarget,
+}
+
+impl ScreenOutput {
+    fn resize(&mut self, device: &wgpu::Device, new_size: winit::dpi::PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
+            self.surface.configure(device, &self.config);
+        }
+    }
 }
 
 impl WinitOutput {
-    pub fn new<T>(event_loop: &EventLoop<T>, instance: &wgpu::Instance, adapter: &wgpu::Adapter, device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
-        let window = WindowBuilder::new().build(&event_loop).unwrap();
-        let size = window.inner_size();
-        let surface = unsafe { instance.create_surface(&window) };
-
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_supported_formats(&adapter)[0],
-            width: size.width,
-            height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: wgpu::CompositeAlphaMode::Auto,
-        };
-        surface.configure(&device, &config);
+    pub fn new<T>(event_loop: &EventLoop<T>, instance: Arc<wgpu::Instance>, adapter: Arc<wgpu::Adapter>, device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
 
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Output shader"),
@@ -84,16 +84,69 @@ impl WinitOutput {
             }
         );
 
-         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        WinitOutput {
+            instance,
+            adapter,
+            device,
+            queue,
+            shader_module,
+            bind_group_layout,
+            render_pipeline_layout,
+            screen_outputs: HashMap::<radiance::NodeId, ScreenOutput>::new(),
+        }
+    }
+
+    pub fn render_targets_iter(&self) -> impl Iterator<Item=(&radiance::RenderTargetId, &radiance::RenderTarget)> {
+        self.screen_outputs.values().map(|screen_output| (&screen_output.render_target_id, &screen_output.render_target))
+    }
+
+    pub fn update<T>(&mut self, event_loop: &EventLoopWindowTarget<T>, props: &mut radiance::Props) {
+        // Prune screen_outputs of any nodes that are no longer present in the given graph
+
+        self.screen_outputs.retain(|id, _| props.node_props.get(id).map(|node_props| matches!(node_props, radiance::NodeProps::ScreenOutputNode(_))).unwrap_or(false));
+
+        // Construct screen_outputs for any ScreenOutputNodes we didn't know about
+
+        for (node_id, node_props) in props.node_props.iter() {
+            match node_props {
+                radiance::NodeProps::ScreenOutputNode(_) => {
+                    if !self.screen_outputs.contains_key(node_id) {
+                        self.screen_outputs.insert(
+                            *node_id,
+                            self.new_screen_output(event_loop),
+                        );
+                    }
+                },
+                _ => {},
+            }
+        }
+    }
+
+    fn new_screen_output<T>(&self, event_loop: &EventLoopWindowTarget<T>) -> ScreenOutput {
+        let window = WindowBuilder::new().build(&event_loop).unwrap();
+        let size = window.inner_size();
+        let surface = unsafe { self.instance.create_surface(&window) };
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface.get_supported_formats(&self.adapter)[0],
+            width: size.width,
+            height: size.height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        };
+        surface.configure(&self.device, &config);
+
+        let render_pipeline = self.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Output Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
+            layout: Some(&self.render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &shader_module,
+                module: &self.shader_module,
                 entry_point: "vs_main",
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader_module,
+                module: &self.shader_module,
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
@@ -120,157 +173,114 @@ impl WinitOutput {
         });
 
         let render_target_id: radiance::RenderTargetId = serde_json::from_value(json!("rt_vvNth5LO1ZAUNLlJPiddNw")).unwrap();
-        let render_target_list: HashMap<radiance::RenderTargetId, radiance::RenderTarget> = serde_json::from_value(json!({
-            render_target_id.to_string(): {
-                "width": 1920,
-                "height": 1080,
-                "dt": 1. / 60.
-            }
+
+        let render_target: radiance::RenderTarget = serde_json::from_value(json!({
+            "width": 1920,
+            "height": 1080,
+            "dt": 1. / 60.
         })).unwrap();
 
-        WinitOutput {
-            device,
-            queue,
+        ScreenOutput {
             window,
             surface,
             config,
-            _shader_module: shader_module,
-            bind_group_layout,
-            _render_pipeline_layout: render_pipeline_layout,
             render_pipeline,
             render_target_id,
-            render_target_list,
-            screen_outputs: HashMap::<radiance::NodeId, ScreenOutput>::new(),
-        }
-    }
-
-    pub fn render_targets_iter(&self) -> impl Iterator<Item=(&radiance::RenderTargetId, &radiance::RenderTarget)> {
-        self.render_target_list.iter()
-    }
-
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        if new_size.width > 0 && new_size.height > 0 {
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
-            self.surface.configure(&self.device, &self.config);
-        }
-    }
-
-    pub fn update(&mut self, props: &mut radiance::Props) {
-        // Prune screen_outputs of any nodes that are no longer present in the given graph
-
-        self.screen_outputs.retain(|id, _| props.node_props.get(id).map(|node_props| matches!(node_props, radiance::NodeProps::ScreenOutputNode(_))).unwrap_or(false));
-
-        // Construct screen_outputs for any ScreenOutputNodes we didn't know about
-
-        for (node_id, node_props) in props.node_props.iter() {
-            match node_props {
-                radiance::NodeProps::ScreenOutputNode(_) => {
-                    if !self.screen_outputs.contains_key(node_id) {
-                        self.screen_outputs.insert(
-                            *node_id,
-                            self.new_screen_output(),
-                        );
-                    }
-                },
-                _ => {},
-            }
-        }
-    }
-
-    fn new_screen_output(&self) -> ScreenOutput {
-        ScreenOutput {
+            render_target,
         }
     }
 
     pub fn on_event<T>(&mut self, event: &Event<T>, ctx: &mut radiance::Context, screen_output_node_id: radiance::NodeId) -> bool {
         // Return true => event consumed
         // Return false => event continues to be processed
-        match event {
-            Event::RedrawRequested(window_id) if window_id == &self.window.id() => {
-                // Paint
-                let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Output Encoder"),
-                });
 
-                let results = ctx.paint(&mut encoder, self.render_target_id);
+        for screen_output in self.screen_outputs.values_mut() {
+            match event {
+                Event::RedrawRequested(window_id) if window_id == &screen_output.window.id() => {
+                    // Paint
+                    let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Output Encoder"),
+                    });
 
-                if let Some(texture) = results.get(&screen_output_node_id) {
-                    let output_bind_group = self.device.create_bind_group(
-                        &wgpu::BindGroupDescriptor {
-                            layout: &self.bind_group_layout,
-                            entries: &[
-                                wgpu::BindGroupEntry {
-                                    binding: 0,
-                                    resource: wgpu::BindingResource::TextureView(&texture.view),
-                                },
-                                wgpu::BindGroupEntry {
-                                    binding: 1,
-                                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
-                                }
-                            ],
-                            label: Some("output bind group"),
+                    let results = ctx.paint(&mut encoder, screen_output.render_target_id);
+
+                    if let Some(texture) = results.get(&screen_output_node_id) {
+                        let output_bind_group = self.device.create_bind_group(
+                            &wgpu::BindGroupDescriptor {
+                                layout: &self.bind_group_layout,
+                                entries: &[
+                                    wgpu::BindGroupEntry {
+                                        binding: 0,
+                                        resource: wgpu::BindingResource::TextureView(&texture.view),
+                                    },
+                                    wgpu::BindGroupEntry {
+                                        binding: 1,
+                                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                                    }
+                                ],
+                                label: Some("output bind group"),
+                            }
+                        );
+
+                        // Record output render pass.
+                        let output = screen_output.surface.get_current_texture().unwrap();
+                        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+                        {
+                            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: Some("Output window render pass"),
+                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                    view: &view,
+                                    resolve_target: None,
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                                            r: 0.,
+                                            g: 0.,
+                                            b: 0.,
+                                            a: 0.,
+                                        }),
+                                        store: true,
+                                    },
+                                })],
+                                depth_stencil_attachment: None,
+                            });
+
+                            render_pass.set_pipeline(&screen_output.render_pipeline);
+                            render_pass.set_bind_group(0, &output_bind_group, &[]);
+                            render_pass.draw(0..4, 0..1);
                         }
-                    );
 
-                    // Record output render pass.
-                    let output = self.surface.get_current_texture().unwrap();
-                    let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+                        // Submit the commands.
+                        self.queue.submit(iter::once(encoder.finish()));
 
-                    {
-                        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                            label: Some("Output window render pass"),
-                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                view: &view,
-                                resolve_target: None,
-                                ops: wgpu::Operations {
-                                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                                        r: 0.,
-                                        g: 0.,
-                                        b: 0.,
-                                        a: 0.,
-                                    }),
-                                    store: true,
-                                },
-                            })],
-                            depth_stencil_attachment: None,
-                        });
-
-                        render_pass.set_pipeline(&self.render_pipeline);
-                        render_pass.set_bind_group(0, &output_bind_group, &[]);
-                        render_pass.draw(0..4, 0..1);
+                        // Draw
+                        output.present();
                     }
-
-                    // Submit the commands.
-                    self.queue.submit(iter::once(encoder.finish()));
-
-                    // Draw
-                    output.present();
+                    return true;
                 }
-                true
-            }
-            Event::MainEventsCleared => {
-                self.window.request_redraw();
-                false
-            }
-            Event::WindowEvent {
-                ref event,
-                window_id,
-            } if window_id == &self.window.id() => {
-                match event {
-                    WindowEvent::Resized(physical_size) => {
-                        let output_size = *physical_size;
-                        self.resize(output_size);
+                Event::WindowEvent {
+                    ref event,
+                    window_id,
+                } if window_id == &screen_output.window.id() => {
+                    match event {
+                        WindowEvent::Resized(physical_size) => {
+                            let output_size = *physical_size;
+                            screen_output.resize(&self.device, output_size);
+                        }
+                        WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                            let output_size = **new_inner_size;
+                            screen_output.resize(&self.device, output_size);
+                        }
+                        _ => {}
                     }
-                    WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        let output_size = **new_inner_size;
-                        self.resize(output_size);
-                    }
-                    _ => {}
+                    return true;
                 }
-                true
+                Event::MainEventsCleared => {
+                    screen_output.window.request_redraw();
+                }
+                _ => {}
             }
-            _ => {false}
         }
+        false
     }
 }
