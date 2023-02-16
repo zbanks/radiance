@@ -27,12 +27,18 @@ pub struct WinitOutput {
 
 #[derive(Debug)]
 struct ScreenOutput {
+    // Cached props
+    visible: bool,
+
+    // Resources
     window: egui_winit::winit::window::Window,
     surface: wgpu::Surface,
     config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
     render_target_id: radiance::RenderTargetId,
     render_target: radiance::RenderTarget,
+
+    // Internal
     initial_update: bool, // Initialized to false, set to true on first update.
 }
 
@@ -126,6 +132,13 @@ impl WinitOutput {
                 _ => {},
             }
         }
+
+        // Update internal state of screen_outputs from props
+        for (node_id, screen_output) in self.screen_outputs.iter_mut() {
+            let screen_output_props: &radiance::ScreenOutputNodeProps = props.node_props.get(node_id).unwrap().try_into().unwrap();
+
+            screen_output.visible = screen_output_props.visible;
+        }
     }
 
     fn new_screen_output<T>(&self, event_loop: &EventLoopWindowTarget<T>) -> ScreenOutput {
@@ -186,6 +199,7 @@ impl WinitOutput {
         })).unwrap();
 
         ScreenOutput {
+            visible: false,
             window,
             surface,
             config,
@@ -203,7 +217,7 @@ impl WinitOutput {
         for (node_id, screen_output) in self.screen_outputs.iter_mut() {
             match event {
                 Event::RedrawRequested(window_id) if window_id == &screen_output.window.id() => {
-                    if screen_output.initial_update {
+                    if screen_output.initial_update && screen_output.visible {
                         // Paint
                         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                             label: Some("Output Encoder"),

@@ -6,6 +6,8 @@ use serde::{Serialize, Deserialize};
 /// Properties of a ScreenOutputNode.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ScreenOutputNodeProps {
+    #[serde(default)]
+    pub visible: bool,
 }
 
 impl From<&ScreenOutputNodeProps> for CommonNodeProps {

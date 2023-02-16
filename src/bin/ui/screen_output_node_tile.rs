@@ -1,15 +1,16 @@
-use egui::{Ui, TextureId, vec2, Layout, Align};
+use egui::{Ui, TextureId, vec2, Layout, Align, Checkbox};
 use radiance::{ScreenOutputNodeProps, ScreenOutputNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 300.;
 const NORMAL_WIDTH: f32 = 220.;
 
-pub struct ScreenOutputNodeTile {
+pub struct ScreenOutputNodeTile<'a> {
     preview_image: TextureId,
+    visible: &'a mut bool,
 }
 
-impl ScreenOutputNodeTile {
+impl<'a> ScreenOutputNodeTile<'a> {
     /// Returns a Vec with one entry for each props.input_count
     /// corresponding to the minimum allowable height for that input port.
     /// If there are no input ports, this function should return a 1-element Vec.
@@ -25,20 +26,20 @@ impl ScreenOutputNodeTile {
 
     /// Creates a new visual tile
     /// (builder pattern; this is not a stateful UI component)
-    pub fn new(props: &mut ScreenOutputNodeProps, _state: &ScreenOutputNodeState, preview_image: TextureId) -> Self {
+    pub fn new(props: &'a mut ScreenOutputNodeProps, _state: &'a ScreenOutputNodeState, preview_image: TextureId) -> Self {
         ScreenOutputNodeTile {
             preview_image,
+            visible: &mut props.visible,
         }
     }
 
     /// Render the contents of the ScreenOutputNodeTile (presumably into a Tile)
     pub fn add_contents(self, ui: &mut Ui) {
-        let ScreenOutputNodeTile {preview_image} = self;
+        let ScreenOutputNodeTile {preview_image, visible} = self;
         ui.heading("Screen Output");
         // Preserve aspect ratio
         ui.with_layout(Layout::bottom_up(Align::Center).with_cross_justify(true), |ui| {
-            //ui.spacing_mut().slider_width = ui.available_width();
-            //intensity.as_mut().map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
+            ui.add(Checkbox::new(visible, "Visible"));
             ui.centered_and_justified(|ui| {
                 let image_size = ui.available_size();
                 let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem() * vec2(1., PREVIEW_ASPECT_RATIO);
