@@ -12,7 +12,7 @@ use serde_json::json;
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
-use radiance::{Context, RenderTargetList, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps, InsertionPoint};
+use radiance::{Context, RenderTarget, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps, InsertionPoint};
 
 mod ui;
 use ui::{mosaic};
@@ -200,18 +200,12 @@ pub async fn run() {
 
     // Make render targets
     let preview_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_LVrjzxhXrGU7SqFo+85zkw")).unwrap();
-    let output_render_target_id: RenderTargetId = serde_json::from_value(json!("rt_vvNth5LO1ZAUNLlJPiddNw")).unwrap();
-    let render_target_list: RenderTargetList = serde_json::from_value(json!({
+    let render_target_list: HashMap<RenderTargetId, RenderTarget> = serde_json::from_value(json!({
         preview_render_target_id.to_string(): {
             "width": 256,
             "height": 256,
             "dt": 1. / 60.
         },
-        output_render_target_id.to_string(): { // TODO: move to winit_output.rs
-            "width": 1920,
-            "height": 1080,
-            "dt": 1. / 60.
-        }
     })).unwrap();
 
     println!("Render target list: {}", serde_json::to_string(&render_target_list).unwrap());
@@ -224,7 +218,7 @@ pub async fn run() {
 
     event_loop.run(move |event, _, control_flow| {
 
-        if winit_output.on_event(&event, &mut ctx, output_render_target_id, screen_output_node_id) {
+        if winit_output.on_event(&event, &mut ctx, screen_output_node_id) {
             return; // Event was consumed by winit_output
         }
 
@@ -234,7 +228,10 @@ pub async fn run() {
                 let music_info = mir.poll();
                 props.time = music_info.time;
                 props.dt = music_info.tempo * (1. / 60.);
+                // Merge our render list and the winit_output render list into one:
+                let render_target_list = render_target_list.iter().chain(winit_output.render_targets_iter()).map(|(k, v)| (k.clone(), v.clone())).collect();
                 ctx.update(&mut props, &render_target_list);
+                winit_output.update(&mut props);
 
                 // Paint
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

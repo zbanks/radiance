@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use rand::Rng;
 use serde::{Serialize, Deserialize};
 use serde::de::Error;
@@ -99,40 +98,5 @@ impl RenderTarget {
     /// Get the timestep of the render target, in seconds
     pub fn dt(&self) -> f32 {
         self.dt
-    }
-}
-
-/// A `RenderTargetList` represents a set of render targets and their IDs.
-/// This `RenderTargetList` object is only a description:
-/// It does not contain any render state or graphics resources.
-/// One use case of a RenderTargetList is passing it to `Context.paint` during rendering.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct RenderTargetList {
-    #[serde(flatten)]
-    render_targets: HashMap<RenderTargetId, RenderTarget>,
-}
-
-// TODO: Can this class be removed in favor of a vanilla HashMap<RenderTargetId, RenderTarget> ?
-impl RenderTargetList {
-    /// Create an empty RenderTargetList
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Retrieve a render target from the RenderTargetList by ID
-    pub fn get(&self, id: RenderTargetId) -> Option<&RenderTarget> {
-        self.render_targets.get(&id)
-    }
-
-    /// Add a render target to the list.
-    /// The given ID must be unique within the list.
-    pub fn insert(&mut self, id: RenderTargetId, render_target: RenderTarget) {
-        assert!(!self.render_targets.contains_key(&id), "Given render_target ID already exists in render_target list");
-        self.render_targets.insert(id, render_target);
-    }
-
-    /// Retrieve the RenderTargetList as a HashMap of id -> `RenderTarget`
-    pub fn render_targets(&self) -> &HashMap<RenderTargetId, RenderTarget> {
-        &self.render_targets
     }
 }

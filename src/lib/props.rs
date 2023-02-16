@@ -77,11 +77,11 @@ impl Props {
         if nodes_without_props > 0 {
             println!("Removed {} nodes without props", nodes_without_props);
         }
-        // b) remove any nodes from node_props that aren't present in nodes
+        // b) remove any nodes from node_props that aren't present in the graph
         let save_nodes: HashSet<NodeId> = self.graph.nodes.iter().cloned().collect();
         let orig_nodes_len = self.graph.nodes.len();
-        self.graph.nodes.retain(|id| save_nodes.contains(id));
-        let props_not_in_graph = orig_nodes_len - self.graph.nodes.len();
+        self.node_props.retain(|id, _| save_nodes.contains(id));
+        let props_not_in_graph = orig_nodes_len - self.node_props.len();
         if props_not_in_graph > 0 {
             println!("Removed {} node props that weren't in the graph", props_not_in_graph);
         }

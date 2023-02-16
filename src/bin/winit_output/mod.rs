@@ -9,7 +9,10 @@ use egui_winit::winit::{
 };
 use std::sync::Arc;
 use std::iter;
+use std::collections::HashMap;
+use serde_json::json;
 
+#[derive(Debug)]
 pub struct WinitOutput {
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -20,6 +23,14 @@ pub struct WinitOutput {
     bind_group_layout: wgpu::BindGroupLayout,
     _render_pipeline_layout: wgpu::PipelineLayout,
     render_pipeline: wgpu::RenderPipeline,
+    render_target_id: radiance::RenderTargetId,
+    render_target_list: HashMap<radiance::RenderTargetId, radiance::RenderTarget>,
+
+    screen_outputs: HashMap<radiance::NodeId, ScreenOutput>,
+}
+
+#[derive(Debug)]
+struct ScreenOutput {
 }
 
 impl WinitOutput {
@@ -108,6 +119,15 @@ impl WinitOutput {
             multiview: None,
         });
 
+        let render_target_id: radiance::RenderTargetId = serde_json::from_value(json!("rt_vvNth5LO1ZAUNLlJPiddNw")).unwrap();
+        let render_target_list: HashMap<radiance::RenderTargetId, radiance::RenderTarget> = serde_json::from_value(json!({
+            render_target_id.to_string(): {
+                "width": 1920,
+                "height": 1080,
+                "dt": 1. / 60.
+            }
+        })).unwrap();
+
         WinitOutput {
             device,
             queue,
@@ -118,10 +138,17 @@ impl WinitOutput {
             bind_group_layout,
             _render_pipeline_layout: render_pipeline_layout,
             render_pipeline,
+            render_target_id,
+            render_target_list,
+            screen_outputs: HashMap::<radiance::NodeId, ScreenOutput>::new(),
         }
     }
 
-    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    pub fn render_targets_iter(&self) -> impl Iterator<Item=(&radiance::RenderTargetId, &radiance::RenderTarget)> {
+        self.render_target_list.iter()
+    }
+
+    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
@@ -129,7 +156,34 @@ impl WinitOutput {
         }
     }
 
-    pub fn on_event<T>(&mut self, event: &Event<T>, ctx: &mut radiance::Context, render_target_id: radiance::RenderTargetId, screen_output_node_id: radiance::NodeId) -> bool {
+    pub fn update(&mut self, props: &mut radiance::Props) {
+        // Prune screen_outputs of any nodes that are no longer present in the given graph
+
+        self.screen_outputs.retain(|id, _| props.node_props.get(id).map(|node_props| matches!(node_props, radiance::NodeProps::ScreenOutputNode(_))).unwrap_or(false));
+
+        // Construct screen_outputs for any ScreenOutputNodes we didn't know about
+
+        for (node_id, node_props) in props.node_props.iter() {
+            match node_props {
+                radiance::NodeProps::ScreenOutputNode(_) => {
+                    if !self.screen_outputs.contains_key(node_id) {
+                        self.screen_outputs.insert(
+                            *node_id,
+                            self.new_screen_output(),
+                        );
+                    }
+                },
+                _ => {},
+            }
+        }
+    }
+
+    fn new_screen_output(&self) -> ScreenOutput {
+        ScreenOutput {
+        }
+    }
+
+    pub fn on_event<T>(&mut self, event: &Event<T>, ctx: &mut radiance::Context, screen_output_node_id: radiance::NodeId) -> bool {
         // Return true => event consumed
         // Return false => event continues to be processed
         match event {
@@ -139,7 +193,7 @@ impl WinitOutput {
                     label: Some("Output Encoder"),
                 });
 
-                let results = ctx.paint(&mut encoder, render_target_id);
+                let results = ctx.paint(&mut encoder, self.render_target_id);
 
                 if let Some(texture) = results.get(&screen_output_node_id) {
                     let output_bind_group = self.device.create_bind_group(

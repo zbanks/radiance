@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::{NodeId, Props, Graph, NodeProps};
-use crate::render_target::{RenderTargetId, RenderTarget, RenderTargetList};
+use crate::render_target::{RenderTargetId, RenderTarget};
 use crate::effect_node::{EffectNodeState};
 use crate::screen_output_node::{ScreenOutputNodeState};
 use rand::Rng;
@@ -263,7 +263,7 @@ impl Context {
     /// The passed in Props will be mutated to advance its contents by one timestep.
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
-    pub fn update(&mut self, props: &mut Props, render_targets: &RenderTargetList) {
+    pub fn update(&mut self, props: &mut Props, render_targets: &HashMap<RenderTargetId, RenderTarget>) {
         // 1. Store graph topology for rendering
 
         // Make sure the props are well-formed
@@ -285,12 +285,12 @@ impl Context {
 
         // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
-        self.render_target_states.retain(|id, _| render_targets.render_targets().contains_key(id));
+        self.render_target_states.retain(|id, _| render_targets.contains_key(id));
         self.node_states.retain(|id, _| self.graph_input_mapping.contains_key(id));
 
         // 4. Construct any missing render_target_states or node_states (this may kick of background processing)
 
-        for (check_render_target_id, render_target) in render_targets.render_targets().iter() {
+        for (check_render_target_id, render_target) in render_targets.iter() {
             if !self.render_target_states.contains_key(check_render_target_id) {
                 self.render_target_states.insert(*check_render_target_id, self.new_render_target_state(render_target));
             }
