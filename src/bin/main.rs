@@ -12,7 +12,7 @@ use serde_json::json;
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
 use std::collections::HashMap;
 
-use radiance::{Context, RenderTarget, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps, InsertionPoint};
+use radiance::{Context, RenderTarget, RenderTargetId, Props, NodeId, Mir, NodeProps, EffectNodeProps, InsertionPoint, ScreenOutputNodeProps};
 
 mod ui;
 use ui::{mosaic};
@@ -270,15 +270,27 @@ pub async fn run() {
                             }
                             if node_add_response.lost_focus() {
                                 if egui_ctx.input().key_pressed(egui::Key::Enter) {
-                                    let new_node_id = NodeId::gen();
-                                    let new_node_props = NodeProps::EffectNode(EffectNodeProps {
-                                        name: node_add_textedit.clone(),
-                                        ..Default::default()
-                                    });
-                                    props.node_props.insert(new_node_id, new_node_props);
-                                    props.graph.insert_node(new_node_id, &insertion_point);
-                                    // TODO: select and focus the new node
-                                    // (consider making selection & focus part of the explicit state of mosaic, not memory)
+                                    match node_add_textedit.as_str() {
+                                        "ScreenOutput" => {
+                                            let new_node_id = NodeId::gen();
+                                            let new_node_props = NodeProps::ScreenOutputNode(ScreenOutputNodeProps {
+                                                ..Default::default()
+                                            });
+                                            props.node_props.insert(new_node_id, new_node_props);
+                                            props.graph.insert_node(new_node_id, &insertion_point);
+                                        },
+                                        _ => {
+                                            let new_node_id = NodeId::gen();
+                                            let new_node_props = NodeProps::EffectNode(EffectNodeProps {
+                                                name: node_add_textedit.clone(),
+                                                ..Default::default()
+                                            });
+                                            props.node_props.insert(new_node_id, new_node_props);
+                                            props.graph.insert_node(new_node_id, &insertion_point);
+                                            // TODO: select and focus the new node
+                                            // (consider making selection & focus part of the explicit state of mosaic, not memory)
+                                        },
+                                    }
                                 }
                                 node_add_textedit.clear();
                                 left_panel_expanded = false;
