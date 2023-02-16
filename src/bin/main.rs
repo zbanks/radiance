@@ -70,7 +70,7 @@ pub async fn run() {
     let device = Arc::new(device);
     let queue = Arc::new(queue);
 
-    let mut winit_output = WinitOutput::new(&event_loop, instance.clone(), adapter.clone(), device.clone(), queue.clone());
+    let mut winit_output = WinitOutput::new(instance.clone(), adapter.clone(), device.clone(), queue.clone());
 
     let mut config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
