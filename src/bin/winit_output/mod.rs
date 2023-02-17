@@ -164,7 +164,7 @@ impl WinitOutput {
             // Cache props and act on them
             let newly_visible = !screen_output.visible && screen_output_props.visible;
             screen_output.visible = screen_output_props.visible;
-            //screen_output.window.set_visible(screen_output.visible);
+            screen_output.window.set_visible(screen_output.visible);
             if newly_visible {
                 println!("NEWLY VISIBLE!!");
                 let &(target_screen_position, target_screen_size) = self.available_screens.get(&screen_output_props.screen).unwrap();
