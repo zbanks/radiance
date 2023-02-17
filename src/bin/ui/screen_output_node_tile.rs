@@ -8,6 +8,8 @@ const NORMAL_WIDTH: f32 = 220.;
 pub struct ScreenOutputNodeTile<'a> {
     preview_image: TextureId,
     visible: &'a mut bool,
+    screen: &'a mut String,
+    available_screens: &'a [String],
 }
 
 impl<'a> ScreenOutputNodeTile<'a> {
@@ -30,16 +32,28 @@ impl<'a> ScreenOutputNodeTile<'a> {
         ScreenOutputNodeTile {
             preview_image,
             visible: &mut props.visible,
+            screen: &mut props.screen,
+            available_screens: &props.available_screens,
         }
     }
 
     /// Render the contents of the ScreenOutputNodeTile (presumably into a Tile)
     pub fn add_contents(self, ui: &mut Ui) {
-        let ScreenOutputNodeTile {preview_image, visible} = self;
+        let ScreenOutputNodeTile {preview_image, visible, screen, available_screens} = self;
         ui.heading("Screen Output");
         // Preserve aspect ratio
         ui.with_layout(Layout::bottom_up(Align::Center).with_cross_justify(true), |ui| {
             ui.add(Checkbox::new(visible, "Visible"));
+
+            egui::ComboBox::from_id_source(0)
+                .selected_text(screen.as_str())
+                .show_ui(ui, |ui| {
+                    for available_screen in available_screens.iter() {
+                        ui.selectable_value(screen, available_screen.clone(), available_screen);
+                    }
+                }
+            );
+
             ui.centered_and_justified(|ui| {
                 let image_size = ui.available_size();
                 let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem() * vec2(1., PREVIEW_ASPECT_RATIO);

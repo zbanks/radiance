@@ -8,6 +8,10 @@ use serde::{Serialize, Deserialize};
 pub struct ScreenOutputNodeProps {
     #[serde(default)]
     pub visible: bool,
+    #[serde(default)]
+    pub screen: String,
+    #[serde(default)]
+    pub available_screens: Vec<String>,
 }
 
 impl From<&ScreenOutputNodeProps> for CommonNodeProps {

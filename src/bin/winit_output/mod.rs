@@ -6,6 +6,8 @@ use egui_winit::winit::{
     event::*,
     event_loop::EventLoopWindowTarget,
     window::WindowBuilder,
+    monitor::MonitorHandle,
+    dpi::{PhysicalSize, PhysicalPosition},
 };
 use std::sync::Arc;
 use std::iter;
@@ -23,6 +25,7 @@ pub struct WinitOutput {
     render_pipeline_layout: wgpu::PipelineLayout,
 
     screen_outputs: HashMap<radiance::NodeId, ScreenOutput>,
+    available_screens: HashMap<String, (PhysicalPosition<i32>, PhysicalSize<u32>)>,
 }
 
 #[derive(Debug)]
@@ -99,6 +102,7 @@ impl WinitOutput {
             bind_group_layout,
             render_pipeline_layout,
             screen_outputs: HashMap::<radiance::NodeId, ScreenOutput>::new(),
+            available_screens: HashMap::<String, (PhysicalPosition<i32>, PhysicalSize<u32>)>::new(),
         }
     }
 
@@ -133,11 +137,33 @@ impl WinitOutput {
             }
         }
 
+        // See what screens are available for output
+        self.available_screens = event_loop.available_monitors().filter_map(|mh| {
+            let name = mh.name()?;
+            let size = mh.size();
+            if size.width == 0 && size.height == 0 {
+                return None;
+            }
+            Some((name, (mh.position(), size)))
+        }).collect();
+
+        let mut screen_names: Vec<String> = self.available_screens.keys().cloned().collect();
+        screen_names.sort();
+
         // Update internal state of screen_outputs from props
         for (node_id, screen_output) in self.screen_outputs.iter_mut() {
-            let screen_output_props: &radiance::ScreenOutputNodeProps = props.node_props.get(node_id).unwrap().try_into().unwrap();
+            let screen_output_props: &mut radiance::ScreenOutputNodeProps = props.node_props.get_mut(node_id).unwrap().try_into().unwrap();
 
+            // Populate each screen output node props with a list of screens available on the system
+            screen_output_props.available_screens = screen_names.clone();
+            if !self.available_screens.contains_key(&screen_output_props.screen) {
+                // Hide any outputs that point to screens we don't know about
+                screen_output_props.visible = false;
+            }
+
+            // Cache props and act on them
             screen_output.visible = screen_output_props.visible;
+            screen_output.window.set_visible(screen_output_props.visible);
         }
     }
 
