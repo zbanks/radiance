@@ -5,7 +5,7 @@ use egui_winit::winit;
 use egui_winit::winit::{
     event::*,
     event_loop::EventLoopWindowTarget,
-    window::WindowBuilder,
+    window::{WindowBuilder, Fullscreen},
     monitor::MonitorHandle,
     dpi::{PhysicalSize, PhysicalPosition},
 };
@@ -162,8 +162,35 @@ impl WinitOutput {
             }
 
             // Cache props and act on them
+            let newly_visible = !screen_output.visible && screen_output_props.visible;
             screen_output.visible = screen_output_props.visible;
-            screen_output.window.set_visible(screen_output_props.visible);
+            //screen_output.window.set_visible(screen_output.visible);
+            if newly_visible {
+                println!("NEWLY VISIBLE!!");
+                let &(target_screen_position, target_screen_size) = self.available_screens.get(&screen_output_props.screen).unwrap();
+                screen_output.window.set_resizable(false);
+                screen_output.window.set_decorations(false);
+
+                // TODO: do some X11 shit to actually float the window in XMonad
+                //let xconn = screen_output.window.get_xlib_xconnection().unwrap();
+                //let prop_atom = unsafe { xconn.get_atom_unchecked(b"_NET_WM_STATE_ABOVE\0") };
+                //let type_atom = unsafe { xconn.get_atom_unchecked(b"UTF8_STRING\0") };
+                //xconn.change_property(
+                //    screen_output.window.get_xlib_window().unwrap(),
+                //    prop_atom,
+                //    type_atom,
+                //    util::PropMode::Replace,
+                //    b"francesca64\0",
+                //).flush().expect("Failed to set `CUTEST_CONTRIBUTOR` property");
+                //
+                // self.toggle_atom(b"_NET_WM_STATE_ABOVE\0", level == WindowLevel::AlwaysOnTop)
+                //            .queue();
+
+                screen_output.window.set_inner_size(target_screen_size);
+                screen_output.window.set_outer_position(target_screen_position);
+                screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+                println!("Move to: {:?}", target_screen_position);
+            }
         }
     }
 
