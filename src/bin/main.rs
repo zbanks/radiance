@@ -366,16 +366,7 @@ pub async fn run() {
                     return; // EGUI wants exclusive use of this event
                 }
                 match event {
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => {
+                    WindowEvent::CloseRequested => {
                         *control_flow = ControlFlow::Exit
                     },
                     WindowEvent::Resized(physical_size) => {

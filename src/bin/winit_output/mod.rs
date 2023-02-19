@@ -6,8 +6,6 @@ use egui_winit::winit::{
     event::*,
     event_loop::EventLoopWindowTarget,
     window::{WindowBuilder, Fullscreen},
-    monitor::MonitorHandle,
-    dpi::{PhysicalSize, PhysicalPosition},
 };
 use std::sync::Arc;
 use std::iter;
@@ -25,7 +23,6 @@ pub struct WinitOutput {
     render_pipeline_layout: wgpu::PipelineLayout,
 
     screen_outputs: HashMap<radiance::NodeId, Option<VisibleScreenOutput>>,
-    available_screens: HashMap<String, (PhysicalPosition<i32>, PhysicalSize<u32>)>,
 }
 
 #[derive(Debug)]
@@ -100,7 +97,6 @@ impl WinitOutput {
             bind_group_layout,
             render_pipeline_layout,
             screen_outputs: HashMap::<radiance::NodeId, Option<VisibleScreenOutput>>::new(),
-            available_screens: HashMap::<String, (PhysicalPosition<i32>, PhysicalSize<u32>)>::new(),
         }
     }
 
@@ -136,26 +132,21 @@ impl WinitOutput {
         }
 
         // See what screens are available for output
-        self.available_screens = event_loop.available_monitors().filter_map(|mh| {
-            let name = mh.name()?;
-            let size = mh.size();
-            if size.width == 0 && size.height == 0 {
-                return None;
-            }
-            Some((name, (mh.position(), size)))
-        }).collect();
-
-        let mut screen_names: Vec<String> = self.available_screens.keys().cloned().collect();
-        screen_names.sort();
+        let screen_names: Vec<String> = event_loop.available_monitors().filter_map(|mh| mh.name()).collect();
 
         // Update internal state of screen_outputs from props
         let node_ids: Vec<radiance::NodeId> = self.screen_outputs.keys().cloned().collect();
         for node_id in node_ids {
             let screen_output_props: &mut radiance::ScreenOutputNodeProps = props.node_props.get_mut(&node_id).unwrap().try_into().unwrap();
 
+            // If this node's screen list is totally empty, default it to the first screen
+            if screen_output_props.available_screens.is_empty() && screen_output_props.screen.is_empty() && !screen_names.is_empty() {
+                screen_output_props.screen = screen_names.first().unwrap().clone();
+            }
+
             // Populate each screen output node props with a list of screens available on the system
             screen_output_props.available_screens = screen_names.clone();
-            if !self.available_screens.contains_key(&screen_output_props.screen) {
+            if !screen_names.contains(&screen_output_props.screen) {
                 // Hide any outputs that point to screens we don't know about
                 screen_output_props.visible = false;
             }
@@ -168,14 +159,8 @@ impl WinitOutput {
                 if self.screen_outputs.get(&node_id).unwrap().is_none() {
                     // Newly visible window
                     let visible_screen_output = self.new_screen_output(event_loop);
-                    let &(target_screen_position, target_screen_size) = self.available_screens.get(&screen_output_props.screen).unwrap();
-                    visible_screen_output.window.set_resizable(false);
-                    visible_screen_output.window.set_decorations(false);
-                    for _ in 0..2 { // Choose violence
-                        visible_screen_output.window.set_inner_size(target_screen_size);
-                        visible_screen_output.window.set_outer_position(target_screen_position);
-                        visible_screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
-                    }
+                    let mh = event_loop.available_monitors().find(|mh| mh.name().map(|n| &n == &screen_output_props.screen).unwrap_or(false));
+                    visible_screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
                     // Replace None with Some
                     self.screen_outputs.insert(node_id, Some(visible_screen_output));
                 }
@@ -334,7 +319,16 @@ impl WinitOutput {
                     window_id,
                 } if window_id == &screen_output.window.id() => {
                     match event {
-                        WindowEvent::CloseRequested => {
+                        WindowEvent::CloseRequested
+                        | WindowEvent::KeyboardInput {
+                            input:
+                                KeyboardInput {
+                                    state: ElementState::Pressed,
+                                    virtual_keycode: Some(VirtualKeyCode::Escape),
+                                    ..
+                                },
+                            ..
+                        } => {
                             screen_output.request_close = true;
                         }
                         WindowEvent::Resized(physical_size) => {
