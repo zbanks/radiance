@@ -24,15 +24,12 @@ pub struct WinitOutput {
     bind_group_layout: wgpu::BindGroupLayout,
     render_pipeline_layout: wgpu::PipelineLayout,
 
-    screen_outputs: HashMap<radiance::NodeId, ScreenOutput>,
+    screen_outputs: HashMap<radiance::NodeId, Option<VisibleScreenOutput>>,
     available_screens: HashMap<String, (PhysicalPosition<i32>, PhysicalSize<u32>)>,
 }
 
 #[derive(Debug)]
-struct ScreenOutput {
-    // Cached props
-    visible: bool,
-
+struct VisibleScreenOutput {
     // Resources
     window: egui_winit::winit::window::Window,
     surface: wgpu::Surface,
@@ -43,9 +40,10 @@ struct ScreenOutput {
 
     // Internal
     initial_update: bool, // Initialized to false, set to true on first update.
+    request_close: bool, // If set to True, delete this window on the next update
 }
 
-impl ScreenOutput {
+impl VisibleScreenOutput {
     fn resize(&mut self, device: &wgpu::Device, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.config.width = new_size.width;
@@ -101,13 +99,13 @@ impl WinitOutput {
             shader_module,
             bind_group_layout,
             render_pipeline_layout,
-            screen_outputs: HashMap::<radiance::NodeId, ScreenOutput>::new(),
+            screen_outputs: HashMap::<radiance::NodeId, Option<VisibleScreenOutput>>::new(),
             available_screens: HashMap::<String, (PhysicalPosition<i32>, PhysicalSize<u32>)>::new(),
         }
     }
 
     pub fn render_targets_iter(&self) -> impl Iterator<Item=(&radiance::RenderTargetId, &radiance::RenderTarget)> {
-        self.screen_outputs.values().map(|screen_output| (&screen_output.render_target_id, &screen_output.render_target))
+        self.screen_outputs.values().flatten().map(|screen_output| (&screen_output.render_target_id, &screen_output.render_target))
     }
 
     pub fn update<T>(&mut self, event_loop: &EventLoopWindowTarget<T>, props: &mut radiance::Props) {
@@ -115,7 +113,7 @@ impl WinitOutput {
         // Painting is gated on this being true,
         // because otherwise, we might try to paint a render target that the radiance context doesn't know about.
         // After the initial update, the radiance context is guaranteed to know about this screen output's render target.
-        for screen_output in self.screen_outputs.values_mut() {
+        for screen_output in self.screen_outputs.values_mut().flatten() {
             screen_output.initial_update = true;
         }
 
@@ -129,7 +127,7 @@ impl WinitOutput {
                     if !self.screen_outputs.contains_key(node_id) {
                         self.screen_outputs.insert(
                             *node_id,
-                            self.new_screen_output(event_loop),
+                            None,
                         );
                     }
                 },
@@ -151,8 +149,9 @@ impl WinitOutput {
         screen_names.sort();
 
         // Update internal state of screen_outputs from props
-        for (node_id, screen_output) in self.screen_outputs.iter_mut() {
-            let screen_output_props: &mut radiance::ScreenOutputNodeProps = props.node_props.get_mut(node_id).unwrap().try_into().unwrap();
+        let node_ids: Vec<radiance::NodeId> = self.screen_outputs.keys().cloned().collect();
+        for node_id in node_ids {
+            let screen_output_props: &mut radiance::ScreenOutputNodeProps = props.node_props.get_mut(&node_id).unwrap().try_into().unwrap();
 
             // Populate each screen output node props with a list of screens available on the system
             screen_output_props.available_screens = screen_names.clone();
@@ -160,41 +159,36 @@ impl WinitOutput {
                 // Hide any outputs that point to screens we don't know about
                 screen_output_props.visible = false;
             }
+            if self.screen_outputs.get(&node_id).unwrap().as_ref().map(|visible_screen_output| visible_screen_output.request_close).unwrap_or(false) {
+                // Close was requested; set visible to false
+                screen_output_props.visible = false;
+            }
 
-            // Cache props and act on them
-            let newly_visible = !screen_output.visible && screen_output_props.visible;
-            screen_output.visible = screen_output_props.visible;
-            screen_output.window.set_visible(screen_output.visible);
-            if newly_visible {
-                println!("NEWLY VISIBLE!!");
-                let &(target_screen_position, target_screen_size) = self.available_screens.get(&screen_output_props.screen).unwrap();
-                screen_output.window.set_resizable(false);
-                screen_output.window.set_decorations(false);
-
-                // TODO: do some X11 shit to actually float the window in XMonad
-                //let xconn = screen_output.window.get_xlib_xconnection().unwrap();
-                //let prop_atom = unsafe { xconn.get_atom_unchecked(b"_NET_WM_STATE_ABOVE\0") };
-                //let type_atom = unsafe { xconn.get_atom_unchecked(b"UTF8_STRING\0") };
-                //xconn.change_property(
-                //    screen_output.window.get_xlib_window().unwrap(),
-                //    prop_atom,
-                //    type_atom,
-                //    util::PropMode::Replace,
-                //    b"francesca64\0",
-                //).flush().expect("Failed to set `CUTEST_CONTRIBUTOR` property");
-                //
-                // self.toggle_atom(b"_NET_WM_STATE_ABOVE\0", level == WindowLevel::AlwaysOnTop)
-                //            .queue();
-
-                screen_output.window.set_inner_size(target_screen_size);
-                screen_output.window.set_outer_position(target_screen_position);
-                screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
-                println!("Move to: {:?}", target_screen_position);
+            if screen_output_props.visible {
+                if self.screen_outputs.get(&node_id).unwrap().is_none() {
+                    // Newly visible window
+                    let visible_screen_output = self.new_screen_output(event_loop);
+                    let &(target_screen_position, target_screen_size) = self.available_screens.get(&screen_output_props.screen).unwrap();
+                    visible_screen_output.window.set_resizable(false);
+                    visible_screen_output.window.set_decorations(false);
+                    for _ in 0..2 { // Choose violence
+                        visible_screen_output.window.set_inner_size(target_screen_size);
+                        visible_screen_output.window.set_outer_position(target_screen_position);
+                        visible_screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+                    }
+                    // Replace None with Some
+                    self.screen_outputs.insert(node_id, Some(visible_screen_output));
+                }
+            } else {
+                if self.screen_outputs.get(&node_id).unwrap().is_some() {
+                    // Replace Some with None
+                    self.screen_outputs.insert(node_id, None);
+                }
             }
         }
     }
 
-    fn new_screen_output<T>(&self, event_loop: &EventLoopWindowTarget<T>) -> ScreenOutput {
+    fn new_screen_output<T>(&self, event_loop: &EventLoopWindowTarget<T>) -> VisibleScreenOutput {
         let window = WindowBuilder::new().build(&event_loop).unwrap();
         let size = window.inner_size();
         let surface = unsafe { self.instance.create_surface(&window) };
@@ -251,8 +245,7 @@ impl WinitOutput {
             "dt": 1. / 60.
         })).unwrap();
 
-        ScreenOutput {
-            visible: false,
+        VisibleScreenOutput {
             window,
             surface,
             config,
@@ -260,6 +253,7 @@ impl WinitOutput {
             render_target_id,
             render_target,
             initial_update: false,
+            request_close: false,
         }
     }
 
@@ -267,10 +261,12 @@ impl WinitOutput {
         // Return true => event consumed
         // Return false => event continues to be processed
 
-        for (node_id, screen_output) in self.screen_outputs.iter_mut() {
+        for (node_id, screen_output) in self.screen_outputs
+            .iter_mut()
+            .filter_map(|(k, v)| Some((k, v.as_mut()?))) {
             match event {
                 Event::RedrawRequested(window_id) if window_id == &screen_output.window.id() => {
-                    if screen_output.initial_update && screen_output.visible {
+                    if screen_output.initial_update {
                         // Paint
                         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                             label: Some("Output Encoder"),
@@ -338,6 +334,9 @@ impl WinitOutput {
                     window_id,
                 } if window_id == &screen_output.window.id() => {
                     match event {
+                        WindowEvent::CloseRequested => {
+                            screen_output.request_close = true;
+                        }
                         WindowEvent::Resized(physical_size) => {
                             let output_size = *physical_size;
                             screen_output.resize(&self.device, output_size);
