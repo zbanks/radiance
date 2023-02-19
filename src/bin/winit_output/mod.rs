@@ -160,6 +160,7 @@ impl WinitOutput {
                     // Newly visible window
                     let visible_screen_output = self.new_screen_output(event_loop);
                     let mh = event_loop.available_monitors().find(|mh| mh.name().map(|n| &n == &screen_output_props.screen).unwrap_or(false));
+                    visible_screen_output.window.set_title("Radiance Output");
                     visible_screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
                     // Replace None with Some
                     self.screen_outputs.insert(node_id, Some(visible_screen_output));

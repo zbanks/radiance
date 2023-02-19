@@ -38,6 +38,9 @@ pub async fn run() {
     let event_loop = EventLoop::new();
 
     let window = WindowBuilder::new().build(&event_loop).unwrap();
+    window.set_title("Radiance");
+    window.set_maximized(true);
+
     let size = window.inner_size();
 
     // The instance is a handle to our GPU
