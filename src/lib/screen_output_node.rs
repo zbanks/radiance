@@ -3,15 +3,27 @@ use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
 use serde::{Serialize, Deserialize};
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AvailableOutputScreen {
+    pub name: String,
+    pub suggested_resolutions: Vec<[u32; 2]>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SelectedOutputScreen {
+    pub name: String,
+    pub resolution: [u32; 2],
+}
+
 /// Properties of a ScreenOutputNode.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ScreenOutputNodeProps {
     #[serde(default)]
     pub visible: bool,
     #[serde(default)]
-    pub screen: String,
+    pub screen: Option<SelectedOutputScreen>,
     #[serde(default)]
-    pub available_screens: Vec<String>,
+    pub available_screens: Vec<AvailableOutputScreen>,
 }
 
 impl From<&ScreenOutputNodeProps> for CommonNodeProps {

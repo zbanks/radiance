@@ -12,6 +12,50 @@ use std::iter;
 use std::collections::HashMap;
 use serde_json::json;
 
+const COMMON_RESOLUTIONS: &[[u32; 2]] = &[
+    [4096, 2160],
+    [3840, 2160],
+    [2560, 2048],
+    [3440, 1440],
+    [2560, 1600],
+    [2560, 1440],
+    [2048, 1536],
+    [2560, 1080],
+    [1920, 1200],
+    [2048, 1080],
+    [1920, 1080],
+    [1600, 1200],
+    [1680, 1050],
+    [1680, 1050],
+    [1440, 1080],
+    [1400, 1050],
+    [1600, 900],
+    [1440, 960],
+    [1280, 1024],
+    [1440, 900],
+    [1280, 960],
+    [1280, 854],
+    [1366, 768],
+    [1280, 800],
+    [1152, 864],
+    [1280, 768],
+    [1280, 720],
+    [1152, 768],
+    [1024, 768],
+    [1024, 600],
+    [1024, 576],
+    [800, 600],
+    [768, 576],
+    [854, 480],
+    [800, 480],
+    [640, 480],
+    [480, 320],
+    [384, 288],
+    [352, 288],
+    [320, 240],
+    [320, 200],
+];
+
 #[derive(Debug)]
 pub struct WinitOutput {
     instance: Arc<wgpu::Instance>,
@@ -132,7 +176,16 @@ impl WinitOutput {
         }
 
         // See what screens are available for output
-        let screen_names: Vec<String> = event_loop.available_monitors().filter_map(|mh| mh.name()).collect();
+        let available_screens: Vec<radiance::AvailableOutputScreen> = event_loop.available_monitors().filter_map(|mh| {
+            let name = mh.name()?.clone();
+            let suggested_resolutions: Vec<[u32; 2]> = COMMON_RESOLUTIONS.iter().filter(|resolution|
+                true // XXX
+            ).cloned().collect();
+            if suggested_resolutions.is_empty() {
+                return None;
+            }
+            Some(radiance::AvailableOutputScreen { name, suggested_resolutions })
+        }).collect();
 
         // Update internal state of screen_outputs from props
         let node_ids: Vec<radiance::NodeId> = self.screen_outputs.keys().cloned().collect();
@@ -140,13 +193,21 @@ impl WinitOutput {
             let screen_output_props: &mut radiance::ScreenOutputNodeProps = props.node_props.get_mut(&node_id).unwrap().try_into().unwrap();
 
             // If this node's screen list is totally empty, default it to the first screen
-            if screen_output_props.available_screens.is_empty() && screen_output_props.screen.is_empty() && !screen_names.is_empty() {
-                screen_output_props.screen = screen_names.first().unwrap().clone();
+            if screen_output_props.available_screens.is_empty()
+                && screen_output_props.screen.is_none()
+                && available_screens.first().map(|s| s.suggested_resolutions.first()).is_some() {
+                let screen = available_screens.first().unwrap();
+                let name = screen.name.clone();
+                let resolution = screen.suggested_resolutions.first().unwrap().clone();
+                screen_output_props.screen = Some(radiance::SelectedOutputScreen { name, resolution });
             }
 
             // Populate each screen output node props with a list of screens available on the system
-            screen_output_props.available_screens = screen_names.clone();
-            if !screen_names.contains(&screen_output_props.screen) {
+            screen_output_props.available_screens = available_screens.clone();
+            if screen_output_props.screen.is_none() {
+                // Can't output if there's no screen selected
+                screen_output_props.visible = false;
+            } else if !available_screens.iter().any(|available_screen| available_screen.name == screen_output_props.screen.as_ref().unwrap().name) {
                 // Hide any outputs that point to screens we don't know about
                 screen_output_props.visible = false;
             }
@@ -158,8 +219,9 @@ impl WinitOutput {
             if screen_output_props.visible {
                 if self.screen_outputs.get(&node_id).unwrap().is_none() {
                     // Newly visible window
+                    let screen = screen_output_props.screen.as_ref().unwrap();
                     let visible_screen_output = self.new_screen_output(event_loop);
-                    let mh = event_loop.available_monitors().find(|mh| mh.name().map(|n| &n == &screen_output_props.screen).unwrap_or(false));
+                    let mh = event_loop.available_monitors().find(|mh| mh.name().map(|n| &n == &screen.name).unwrap_or(false));
                     visible_screen_output.window.set_title("Radiance Output");
                     visible_screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
                     // Replace None with Some

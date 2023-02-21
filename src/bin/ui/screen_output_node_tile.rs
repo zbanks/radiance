@@ -1,5 +1,5 @@
 use egui::{Ui, TextureId, vec2, Layout, Align, Checkbox};
-use radiance::{ScreenOutputNodeProps, ScreenOutputNodeState};
+use radiance::{ScreenOutputNodeProps, ScreenOutputNodeState, SelectedOutputScreen, AvailableOutputScreen};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 300.;
@@ -8,8 +8,8 @@ const NORMAL_WIDTH: f32 = 220.;
 pub struct ScreenOutputNodeTile<'a> {
     preview_image: TextureId,
     visible: &'a mut bool,
-    screen: &'a mut String,
-    available_screens: &'a [String],
+    screen: &'a mut Option<SelectedOutputScreen>,
+    available_screens: &'a [AvailableOutputScreen],
 }
 
 impl<'a> ScreenOutputNodeTile<'a> {
@@ -40,19 +40,47 @@ impl<'a> ScreenOutputNodeTile<'a> {
     /// Render the contents of the ScreenOutputNodeTile (presumably into a Tile)
     pub fn add_contents(self, ui: &mut Ui) {
         let ScreenOutputNodeTile {preview_image, visible, screen, available_screens} = self;
+
         ui.heading("Screen Output");
         // Preserve aspect ratio
         ui.with_layout(Layout::bottom_up(Align::Center).with_cross_justify(true), |ui| {
             ui.add(Checkbox::new(visible, "Visible"));
 
-            egui::ComboBox::from_id_source(0)
-                .selected_text(screen.as_str())
+            let (mut screen_name, mut screen_resolution) = match screen.as_ref() {
+                Some(screen) => (screen.name.clone(), screen.resolution.clone()),
+                None => ((String::new(), [0, 0]))
+            };
+
+            let available_resolutions: Vec<[u32; 2]> = screen.as_ref().map(|screen| {
+                available_screens.iter().find(|available_screen| available_screen.name == screen.name)
+                .map(|selected_available_screen| selected_available_screen.suggested_resolutions.iter().cloned())
+            }).into_iter().flatten().flatten().collect();
+
+            let format_rez = |rez: &[u32; 2]| format!("{}x{}", rez[0], rez[1]);
+
+            egui::ComboBox::from_id_source(1)
+                .selected_text(format_rez(&screen_resolution))
                 .show_ui(ui, |ui| {
-                    for available_screen in available_screens.iter() {
-                        ui.selectable_value(screen, available_screen.clone(), available_screen);
+                    for available_resolution in available_resolutions.iter() {
+                        ui.selectable_value(&mut screen_resolution, available_resolution.clone(), format_rez(&available_resolution));
                     }
                 }
             );
+            egui::ComboBox::from_id_source(0)
+                .selected_text(screen_name.as_str())
+                .show_ui(ui, |ui| {
+                    for available_screen in available_screens.iter() {
+                        ui.selectable_value(&mut screen_name, available_screen.name.clone(), available_screen.name.as_str());
+                    }
+                }
+            );
+
+            if !screen_name.is_empty() && screen_resolution != [0, 0] {
+                *screen = Some(SelectedOutputScreen {
+                    name: screen_name,
+                    resolution: screen_resolution,
+                });
+            }
 
             ui.centered_and_justified(|ui| {
                 let image_size = ui.available_size();
