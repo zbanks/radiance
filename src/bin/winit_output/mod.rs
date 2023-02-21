@@ -56,6 +56,8 @@ const COMMON_RESOLUTIONS: &[[u32; 2]] = &[
     [320, 200],
 ];
 
+const ALLOW_SQUISH: f32 = 1.1;
+
 #[derive(Debug)]
 pub struct WinitOutput {
     instance: Arc<wgpu::Instance>,
@@ -179,9 +181,20 @@ impl WinitOutput {
         // See what screens are available for output
         let available_screens: Vec<radiance::AvailableOutputScreen> = event_loop.available_monitors().filter_map(|mh| {
             let name = mh.name()?.clone();
-            let suggested_resolutions: Vec<[u32; 2]> = COMMON_RESOLUTIONS.iter().filter(|resolution|
-                true // XXX
-            ).cloned().collect();
+            let native_resolution = mh.size();
+            if native_resolution.width * native_resolution.height == 0 {
+                return None;
+            }
+            let suggested_resolutions = Some([native_resolution.width, native_resolution.height]).into_iter();
+            let aspect = native_resolution.width as f32 / native_resolution.height as f32;
+            let suggested_resolutions = suggested_resolutions.chain(COMMON_RESOLUTIONS.iter().filter(|resolution| {
+                if resolution[0] >= native_resolution.width || resolution[1] >= native_resolution.height {
+                    return false; // Don't recommend higher resolutions than native resolution
+                }
+                let test_aspect = resolution[0] as f32 / resolution[1] as f32;
+                aspect / test_aspect < ALLOW_SQUISH && test_aspect / aspect < ALLOW_SQUISH
+            }).cloned());
+            let suggested_resolutions: Vec<[u32; 2]> = suggested_resolutions.collect();
             if suggested_resolutions.is_empty() {
                 return None;
             }
