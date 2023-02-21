@@ -82,6 +82,7 @@ struct VisibleScreenOutput {
     // Internal
     initial_update: bool, // Initialized to false, set to true on first update.
     request_close: bool, // If set to True, delete this window on the next update
+    resolution: [u32; 2],
 }
 
 impl VisibleScreenOutput {
@@ -217,10 +218,14 @@ impl WinitOutput {
             }
 
             if screen_output_props.visible {
-                if self.screen_outputs.get(&node_id).unwrap().is_none() {
-                    // Newly visible window
-                    let screen = screen_output_props.screen.as_ref().unwrap();
-                    let visible_screen_output = self.new_screen_output(event_loop);
+                let screen = screen_output_props.screen.as_ref().unwrap(); // The selected screen, as per the props
+                // (it is safe to unwrap it because the window would have been set to invisible had it been None)
+                let needs_new_window = match self.screen_outputs.get(&node_id).unwrap() {
+                    None => true, // Make a new window if we weren't visible last frame
+                    Some(screen_output) => screen_output.resolution != screen.resolution, // Make a new window if the resolution changes
+                };
+                if needs_new_window {
+                    let visible_screen_output = self.new_screen_output(event_loop, &screen.resolution);
                     let mh = event_loop.available_monitors().find(|mh| mh.name().map(|n| &n == &screen.name).unwrap_or(false));
                     visible_screen_output.window.set_title("Radiance Output");
                     visible_screen_output.window.set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
@@ -229,14 +234,14 @@ impl WinitOutput {
                 }
             } else {
                 if self.screen_outputs.get(&node_id).unwrap().is_some() {
-                    // Replace Some with None
+                    // Replace Some with None if we aren't supposed to be visible
                     self.screen_outputs.insert(node_id, None);
                 }
             }
         }
     }
 
-    fn new_screen_output<T>(&self, event_loop: &EventLoopWindowTarget<T>) -> VisibleScreenOutput {
+    fn new_screen_output<T>(&self, event_loop: &EventLoopWindowTarget<T>, resolution: &[u32; 2]) -> VisibleScreenOutput {
         let window = WindowBuilder::new().build(&event_loop).unwrap();
         let size = window.inner_size();
         let surface = unsafe { self.instance.create_surface(&window) };
@@ -288,8 +293,8 @@ impl WinitOutput {
 
         let render_target_id = radiance::RenderTargetId::gen();
         let render_target: radiance::RenderTarget = serde_json::from_value(json!({
-            "width": 1920,
-            "height": 1080,
+            "width": resolution[0],
+            "height": resolution[1],
             "dt": 1. / 60.
         })).unwrap();
 
@@ -302,6 +307,7 @@ impl WinitOutput {
             render_target,
             initial_update: false,
             request_close: false,
+            resolution: resolution.clone(),
         }
     }
 
