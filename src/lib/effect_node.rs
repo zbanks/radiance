@@ -80,6 +80,10 @@ struct Uniforms {
     _padding: [u8; 4],
 }
 
+fn handle_shader_error(error: wgpu::Error) {
+    eprintln!("wgpu error: {}\n", error);
+}
+
 fn preprocess_shader(effect_source: &str) -> Result<(Vec<String>, u32, f32), String> {
     let mut processed_sources = Vec::<String>::new();
     let mut processed_source = String::new();
@@ -101,6 +105,12 @@ fn preprocess_shader(effect_source: &str) -> Result<(Vec<String>, u32, f32), Str
                         frequency = line_parts[2].parse::<f32>().map_err(|e| e.to_string())?;
                     } else {
                         return Err(String::from("frequency missing argument"));
+                    }
+                } else if line_parts[1] == "description" {
+                    if line_parts.len() >= 3 {
+                        // TODO parse description and do something with it
+                    } else {
+                        return Err(String::from("description missing argument"));
                     }
                 } else {
                     return Err(format!("Unrecognized property: {}", line_parts[1]));
@@ -128,7 +138,7 @@ impl EffectNodeState {
         let name = &props.name;
 
         // Shader
-        let source_name = format!("{name}.wgsl");
+        let source_name = format!("library/{name}.wgsl");
         let effect_source = ctx.fetch_content(&source_name).map_err(|_| format!("Failed to read effect shader file \"{source_name}\""))?;
 
         let (effect_sources_processed, shader_input_count, default_frequency) = preprocess_shader(&effect_source)?;
@@ -152,10 +162,25 @@ impl EffectNodeState {
         let frequency = props.frequency.unwrap_or(default_frequency);
 
         let shader_sources = effect_sources_processed.iter().map(|effect_source_processed| format!("{}\n{}\n{}\n", EFFECT_HEADER, effect_source_processed, EFFECT_FOOTER));
-        let shader_modules = shader_sources.enumerate().map(|(i, shader_source)| ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(&format!("EffectNode {} channel {}", name, i)),
-            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-        }));
+        let shader_modules = shader_sources.enumerate().map(|(i, shader_source)| {
+            ctx.device().push_error_scope(wgpu::ErrorFilter::Validation);
+            let shader_module = ctx.device().create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some(&format!("EffectNode {} channel {}", name, i)),
+                source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+            });
+            let result = pollster::block_on(ctx.device().pop_error_scope());
+            match result {
+                Some(error) => {
+                    return Err(format!("EffectNode shader compilation error: {} channel {}: {}\n", name, i, error));
+                },
+                None => {},
+            };
+            Ok(shader_module)
+        });
+
+        // This is some serious rust wizardry. A Vec<Result> is quietly made into a Result<Vec>.
+        let shader_modules: Result<Vec<wgpu::ShaderModule>, String> = shader_modules.collect();
+        let shader_modules = shader_modules?;
 
         // The uniforms bind group:
         // 0: Uniforms
@@ -224,7 +249,7 @@ impl EffectNodeState {
             });
 
         // Create a render pipeline for each channel in an effect
-        let render_pipelines: Vec<wgpu::RenderPipeline> = shader_modules.map(|shader_module| ctx.device().create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let render_pipelines: Vec<wgpu::RenderPipeline> = shader_modules.into_iter().map(|shader_module| ctx.device().create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some(&format!("EffectNode {} render pipeline", name)),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
