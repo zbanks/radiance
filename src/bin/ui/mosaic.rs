@@ -999,6 +999,20 @@ pub fn mosaic_ui<IdSource>(
         if ui.input().key_pressed(egui::Key::Delete) {
             props.graph.delete_nodes(&mosaic_memory.selected);
         }
+
+        // Handle R key (reload)
+        if ui.input().key_pressed(egui::Key::R) {
+            // Reload selected nodes
+            mosaic_memory.selected = mosaic_memory.selected.iter().map(|&selected_node_id| {
+                let new_node_id = NodeId::gen();
+                let node_props = props.node_props.get(&selected_node_id).unwrap().clone();
+                props.node_props.insert(new_node_id, node_props);
+                props.node_props.remove(&selected_node_id);
+                props.graph.replace_node(selected_node_id, new_node_id);
+                // Make sure the node stays selected
+                new_node_id
+            }).collect();
+        }
     }
 
     mosaic_response

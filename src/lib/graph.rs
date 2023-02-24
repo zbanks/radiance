@@ -519,4 +519,25 @@ impl Graph {
             }
         }
     }
+
+    /// Replace a node with a new node (deleting the old one)
+    /// The new node will have all the same connections as the old one.
+    /// This is useful for reloading a node
+    /// (replacing it with a new copy of itself)
+    pub fn replace_node(&mut self, old_node: NodeId, new_node: NodeId) {
+        for edge in self.edges.iter_mut() {
+            if edge.from == old_node {
+                edge.from = new_node;
+            }
+            if edge.to == old_node {
+                edge.to = new_node;
+            }
+        }
+        for node in self.nodes.iter_mut() {
+            if node == &old_node {
+                *node = new_node;
+                break;
+            }
+        }
+    }
 }
