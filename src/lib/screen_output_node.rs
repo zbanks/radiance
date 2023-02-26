@@ -1,7 +1,7 @@
-use crate::context::{Context, ArcTextureViewSampler};
+use crate::context::{ArcTextureViewSampler, Context};
 use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AvailableOutputScreen {
@@ -27,25 +27,33 @@ pub struct ScreenOutputNodeProps {
 }
 
 impl From<&ScreenOutputNodeProps> for CommonNodeProps {
-    fn from(props: &ScreenOutputNodeProps) -> Self {
+    fn from(_props: &ScreenOutputNodeProps) -> Self {
         CommonNodeProps {
             input_count: Some(1),
         }
     }
 }
 
-pub struct ScreenOutputNodeState {
-}
+pub struct ScreenOutputNodeState {}
 
 impl ScreenOutputNodeState {
-    pub fn new(ctx: &Context, props: &ScreenOutputNodeProps) -> Self {
+    pub fn new(_ctx: &Context, _props: &ScreenOutputNodeProps) -> Self {
         Self {}
     }
 
-    pub fn update(&mut self, ctx: &Context, props: &mut ScreenOutputNodeProps) {
-    }
+    pub fn update(&mut self, _ctx: &Context, _props: &mut ScreenOutputNodeProps) {}
 
-    pub fn paint(&mut self, ctx: &Context, encoder: &mut wgpu::CommandEncoder, render_target_id: RenderTargetId, inputs: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
-        inputs.first().cloned().flatten().unwrap_or_else(|| ctx.blank_texture().clone())
+    pub fn paint(
+        &mut self,
+        ctx: &Context,
+        _encoder: &mut wgpu::CommandEncoder,
+        _render_target_id: RenderTargetId,
+        inputs: &[Option<ArcTextureViewSampler>],
+    ) -> ArcTextureViewSampler {
+        inputs
+            .first()
+            .cloned()
+            .flatten()
+            .unwrap_or_else(|| ctx.blank_texture().clone())
     }
 }

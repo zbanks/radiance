@@ -1,12 +1,12 @@
 use rand::Rng;
-use std::collections::{HashMap, HashSet};
-use serde::{Serialize, Deserialize};
 use serde::de::Error;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// A unique identifier that can be used to look up a `Node`.
 /// We use 128 bit IDs and assume that, as long as clients generate them randomly,
-/// they will be unique and never collide, even across different application instances. 
+/// they will be unique and never collide, even across different application instances.
 #[derive(Eq, Hash, Clone, Copy, PartialEq, PartialOrd, Ord)]
 pub struct NodeId(u128);
 
@@ -40,15 +40,22 @@ impl Serialize for NodeId {
 
 impl<'de> Deserialize<'de> for NodeId {
     fn deserialize<D>(deserializer: D) -> Result<NodeId, D::Error>
-        where D: serde::Deserializer<'de>
+    where
+        D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         if let Some(suffix) = s.strip_prefix("node_") {
             let decoded_bytes: Vec<u8> = base64::decode(suffix).map_err(D::Error::custom)?;
-            let decoded_value = <u128>::from_be_bytes(decoded_bytes.try_into().map_err(|_| D::Error::custom("node id is wrong length"))?);
+            let decoded_value = <u128>::from_be_bytes(
+                decoded_bytes
+                    .try_into()
+                    .map_err(|_| D::Error::custom("node id is wrong length"))?,
+            );
             Ok(NodeId(decoded_value))
         } else {
-            Err(D::Error::custom("not a valid node id (must start with node_)"))
+            Err(D::Error::custom(
+                "not a valid node id (must start with node_)",
+            ))
         }
     }
 }
@@ -66,7 +73,7 @@ pub struct Edge {
 /// Each node is identified by a `NodeId` and is stored in a sorted list.
 /// The ordering of the list does not affect updating and painting,
 /// but may be used for when visualizing the graph in the UI.
-/// 
+///
 /// The graph topology must be acyclic. Calling fix() will enforce this.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Graph {
@@ -125,9 +132,9 @@ fn remove_invalid_edges(nodes: &[NodeId], edges: &mut Vec<Edge>) {
     let nodes_set: HashSet<NodeId> = nodes.iter().cloned().collect();
 
     edges.retain(|edge| {
-        let valid = nodes_set.contains(&edge.to) &&
-                    nodes_set.contains(&edge.from) &&
-                    !inputs_seen.contains(&(edge.to, edge.input));
+        let valid = nodes_set.contains(&edge.to)
+            && nodes_set.contains(&edge.from)
+            && !inputs_seen.contains(&(edge.to, edge.input));
 
         inputs_seen.insert((edge.to, edge.input));
         valid
@@ -147,16 +154,19 @@ fn map_inputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, Vec<Option<No
 
     // Add every edge to the map
     for edge in edges.iter() {
-        if !input_mapping.contains_key(&edge.to) ||
-           !input_mapping.contains_key(&edge.from)
-        {
+        if !input_mapping.contains_key(&edge.to) || !input_mapping.contains_key(&edge.from) {
             continue;
         }
 
         let input_vec = input_mapping.get_mut(&edge.to).unwrap();
 
         // Ensure this input doesn't already have a connection
-        if input_vec.get(edge.input as usize).cloned().flatten().is_some() {
+        if input_vec
+            .get(edge.input as usize)
+            .cloned()
+            .flatten()
+            .is_some()
+        {
             continue;
         }
 
@@ -187,9 +197,7 @@ fn map_outputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, HashSet<(Nod
 
     // Add every edge to the map
     for edge in edges.iter() {
-        if !output_mapping.contains_key(&edge.to) ||
-           !output_mapping.contains_key(&edge.from)
-        {
+        if !output_mapping.contains_key(&edge.to) || !output_mapping.contains_key(&edge.from) {
             continue;
         }
 
@@ -202,7 +210,10 @@ fn map_outputs(nodes: &[NodeId], edges: &[Edge]) -> HashMap<NodeId, HashSet<(Nod
 
 /// Find cycles in the graph.
 /// Return which edges need to be removed from the graph in order to break all cycles.
-fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> HashSet<Edge> {
+fn find_cycles(
+    nodes: &[NodeId],
+    input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>,
+) -> HashSet<Edge> {
     let mut cyclic_edges = HashSet::<Edge>::new();
 
     // Identify cycles using DFS.
@@ -212,7 +223,7 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
 
     enum Color {
         White, // Node is not visited
-        Grey, // Node is on the path that is being explored
+        Grey,  // Node is on the path that is being explored
         Black, // Node is visited
     }
 
@@ -222,7 +233,8 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
     // on start nodes that appear earlier in the nodes list,
     // and on nodes connected to lower-numbered inputs.
     let mut stack: Vec<NodeId> = nodes.iter().rev().cloned().collect();
-    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
+    let mut color =
+        HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
 
     while let Some(&n) = stack.last() {
         let cn = color.get(&n).unwrap();
@@ -239,7 +251,7 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
                     match cm {
                         Color::White => {
                             stack.push(*m);
-                        },
+                        }
                         Color::Grey => {
                             // This edge creates a cycle! Add it to the list of edges to remove
                             cyclic_edges.insert(Edge {
@@ -247,22 +259,22 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
                                 to: n,
                                 input: i as u32,
                             });
-                        },
+                        }
                         Color::Black => {
                             // Already visited; no action necessary
-                        },
+                        }
                     }
                 }
-            },
+            }
             Color::Grey => {
                 color.insert(n, Color::Black);
                 stack.pop();
-            },
+            }
             Color::Black => {
                 // Some of the original nodes that were pushed will become colored black,
                 // we can ignore them as they have been explored already.
                 stack.pop();
-            },
+            }
         }
     }
 
@@ -272,21 +284,28 @@ fn find_cycles(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
 /// Computes the set of "start nodes", nodes that have no ouputs.
 /// These nodes can be used as a starting point for a DFS,
 /// assuming the graph is acyclic.
-fn start_nodes(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
+fn start_nodes(
+    nodes: &[NodeId],
+    input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>,
+) -> Vec<NodeId> {
     let mut start_nodes: HashSet<NodeId> = input_mapping.keys().cloned().collect();
     for input_vec in input_mapping.values() {
         for maybe_input in input_vec {
             match maybe_input {
                 Some(input) => {
                     start_nodes.remove(input);
-                },
-                None => {},
+                }
+                None => {}
             }
         }
     }
     // Convert start_nodes to vec in a stable fashion
     // (returned start_nodes will appear in same order as the parameter 'nodes')
-    let start_nodes: Vec<NodeId> = nodes.iter().filter(|x| start_nodes.contains(x)).cloned().collect();
+    let start_nodes: Vec<NodeId> = nodes
+        .iter()
+        .filter(|x| start_nodes.contains(x))
+        .cloned()
+        .collect();
 
     start_nodes
 }
@@ -295,7 +314,10 @@ fn start_nodes(nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<Node
 /// Return the node with disconnected input 0.
 fn first_input(input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>, start_node: NodeId) -> NodeId {
     let mut node = start_node;
-    while let Some(n) = input_mapping.get(&node).and_then(|input_vec| input_vec.get(0).cloned().flatten()) {
+    while let Some(n) = input_mapping
+        .get(&node)
+        .and_then(|input_vec| input_vec.get(0).cloned().flatten())
+    {
         node = n;
     }
     node
@@ -304,14 +326,17 @@ fn first_input(input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>, start_node:
 /// Use DFS to compute a topological ordering of the nodes in a graph (represented as a mapping.)
 /// The input mapping must be acyclic or this function will panic.
 /// This sort is stable (calling topo_sort_nodes a second time should be idempotent.)
-pub fn topo_sort_nodes(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>) -> Vec<NodeId> {
+pub fn topo_sort_nodes(
+    start_nodes: &[NodeId],
+    input_mapping: &HashMap<NodeId, Vec<Option<NodeId>>>,
+) -> Vec<NodeId> {
     // Topo-sort using DFS.
     // Use a "white-grey-black" node coloring approach.
     // https://stackoverflow.com/a/62971341
 
     enum Color {
         White, // Node is not visited
-        Grey, // Node is on the path that is being explored
+        Grey,  // Node is on the path that is being explored
         Black, // Node is visited
     }
 
@@ -319,7 +344,8 @@ pub fn topo_sort_nodes(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, V
     // This prioritizes exploring start nodes that appear earlier in the nodes list,
     // as well as nodes connected to lower-numbered inputs.
     let mut stack: Vec<NodeId> = start_nodes.iter().rev().cloned().collect();
-    let mut color = HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
+    let mut color =
+        HashMap::<NodeId, Color>::from_iter(input_mapping.keys().map(|x| (*x, Color::White)));
     let mut topo_order = Vec::<NodeId>::new();
 
     while let Some(&n) = stack.last() {
@@ -332,25 +358,25 @@ pub fn topo_sort_nodes(start_nodes: &[NodeId], input_mapping: &HashMap<NodeId, V
                     match cm {
                         Color::White => {
                             stack.push(*m);
-                        },
+                        }
                         Color::Grey => {
                             // This edge creates a cycle! Panic!
                             panic!("Cycle detected in graph");
-                        },
+                        }
                         Color::Black => {
                             // Already visited; no action necessary
-                        },
+                        }
                     }
                 }
-            },
+            }
             Color::Grey => {
                 color.insert(n, Color::Black);
                 stack.pop();
                 topo_order.push(n);
-            },
+            }
             Color::Black => {
                 panic!("DFS integrity error"); // Black nodes should never be pushed to the stack
-            },
+            }
         }
     }
     topo_order
@@ -404,7 +430,12 @@ impl Graph {
         let input_mapping = map_inputs(&self.nodes, &self.edges);
         let output_mapping = map_outputs(&self.nodes, &self.edges);
 
-        let subgraph_nodes: Vec<NodeId> = self.nodes.iter().filter(|n| nodes.contains(n)).cloned().collect();
+        let subgraph_nodes: Vec<NodeId> = self
+            .nodes
+            .iter()
+            .filter(|n| nodes.contains(n))
+            .cloned()
+            .collect();
         let subgraph_input_mapping = map_inputs(&subgraph_nodes, &self.edges);
         let start_nodes = start_nodes(&subgraph_nodes, &subgraph_input_mapping);
 
@@ -413,22 +444,24 @@ impl Graph {
             // we find one connected component of the subgraph to delete
             let end_node = first_input(&subgraph_input_mapping, start_node);
             let outgoing_connections = output_mapping.get(&start_node).unwrap();
-            let incoming_connection = input_mapping.get(&end_node).unwrap().get(0).cloned().flatten();
+            let incoming_connection = input_mapping
+                .get(&end_node)
+                .unwrap()
+                .get(0)
+                .cloned()
+                .flatten();
 
             if let Some(from) = incoming_connection {
                 for &(to, input) in outgoing_connections.iter() {
                     // Push a "bypass" edge to hop over the nodes being deleted
-                    self.edges.push(Edge {
-                        from,
-                        to,
-                        input,
-                    });
+                    self.edges.push(Edge { from, to, input });
                 }
             }
         }
 
         self.nodes.retain(|n| !nodes.contains(n));
-        self.edges.retain(|e| !nodes.contains(&e.from) && !nodes.contains(&e.to));
+        self.edges
+            .retain(|e| !nodes.contains(&e.from) && !nodes.contains(&e.to));
     }
 
     /// Add a node to the graph
@@ -439,10 +472,9 @@ impl Graph {
         if let Some(from_output) = insertion_point.from_output {
             // If we have both an output and inputs,
             // remove any existing edges in the graph
-            self.edges.retain(|e| 
-                e.from != from_output &&
-                !insertion_point.to_inputs.contains(&(e.to, e.input))
-            );
+            self.edges.retain(|e| {
+                e.from != from_output && !insertion_point.to_inputs.contains(&(e.to, e.input))
+            });
 
             // Wire up the incoming edge
             self.edges.push(Edge {
@@ -470,7 +502,12 @@ impl Graph {
         let input_mapping = map_inputs(&self.nodes, &self.edges);
         let output_mapping = map_outputs(&self.nodes, &self.edges);
 
-        let subgraph_nodes: Vec<NodeId> = self.nodes.iter().filter(|n| nodes.contains(n)).cloned().collect();
+        let subgraph_nodes: Vec<NodeId> = self
+            .nodes
+            .iter()
+            .filter(|n| nodes.contains(n))
+            .cloned()
+            .collect();
         let subgraph_input_mapping = map_inputs(&subgraph_nodes, &self.edges);
         let start_nodes = start_nodes(&subgraph_nodes, &subgraph_input_mapping);
 
@@ -479,15 +516,21 @@ impl Graph {
             // we find one connected component of the subgraph to move
             let end_node = first_input(&subgraph_input_mapping, start_node);
             let outgoing_connections = output_mapping.get(&start_node).unwrap();
-            let incoming_connection = input_mapping.get(&end_node).unwrap().get(0).cloned().flatten();
+            let incoming_connection = input_mapping
+                .get(&end_node)
+                .unwrap()
+                .get(0)
+                .cloned()
+                .flatten();
 
             // Remove all existing edges coming into or out of the connected component,
             // or edges that intersect the insertion point
-            self.edges.retain(|e| !(
-                e.from == start_node
-                || (e.to == end_node && e.input == 0)
-                || (Some(e.from) == insertion_point.from_output && insertion_point.to_inputs.contains(&(e.to, e.input)))
-            ));
+            self.edges.retain(|e| {
+                !(e.from == start_node
+                    || (e.to == end_node && e.input == 0)
+                    || (Some(e.from) == insertion_point.from_output
+                        && insertion_point.to_inputs.contains(&(e.to, e.input))))
+            });
 
             // Push zero or one "incoming" edges from the insertion point to the nodes being moved
             if let Some(from_output) = insertion_point.from_output {
@@ -510,11 +553,7 @@ impl Graph {
             if let Some(from) = incoming_connection {
                 for &(to, input) in outgoing_connections.iter() {
                     // Push a "bypass" edge to hop over the nodes being moved
-                    self.edges.push(Edge {
-                        from,
-                        to,
-                        input,
-                    });
+                    self.edges.push(Edge { from, to, input });
                 }
             }
         }

@@ -1,5 +1,8 @@
+use egui::{
+    pos2, vec2, Align, Color32, Id, InnerResponse, Layout, Mesh, Pos2, Rect, Sense, Shape, Stroke,
+    TextureId, Ui, Vec2,
+};
 use radiance::NodeId;
-use egui::{Vec2, Ui, Sense, Layout, Align, InnerResponse, Color32, Stroke, Rect, TextureId, Mesh, Pos2, Shape, pos2, vec2, Id};
 use std::cmp::Ordering;
 
 /// A unique identifier for a visual tile in the UI.
@@ -18,7 +21,7 @@ pub struct TileId {
 pub struct Tile {
     id: TileId,
     ui_id: Id,
-    rect: Rect, // rect contains this tile's laid-out spot in the mosaic
+    rect: Rect,   // rect contains this tile's laid-out spot in the mosaic
     offset: Vec2, // offset contains any additional translation due to animation or drag
     inputs: Vec<f32>,
     outputs: Vec<f32>,
@@ -51,7 +54,7 @@ const EPSILON: f32 = 0.0001;
 const ALPHA_LIFTED: f32 = 0.3;
 
 impl Tile {
-   pub fn new(id: TileId, rect: Rect, inputs: Vec<f32>, outputs: Vec<f32>) -> Self {
+    pub fn new(id: TileId, rect: Rect, inputs: Vec<f32>, outputs: Vec<f32>) -> Self {
         Self {
             id,
             ui_id: Id::new(id),
@@ -116,7 +119,7 @@ impl Tile {
     /// Set this tile's Z index based on whether it is lifted
     pub fn with_default_alpha(self) -> Self {
         let alpha = match self.lifted {
-            false => 1., // Fully opaque if not lifted
+            false => 1.,          // Fully opaque if not lifted
             true => ALPHA_LIFTED, // Slightly transparent if lifted
         };
         self.with_alpha(alpha)
@@ -143,11 +146,10 @@ impl Tile {
 
         impl Ord for DrawOrder {
             fn cmp(&self, other: &Self) -> Ordering {
-                self.z.partial_cmp(&other.z)
+                self.z
+                    .partial_cmp(&other.z)
                     .unwrap_or(Ordering::Equal)
-                    .then(
-                        self.id.cmp(&other.id)
-                    )
+                    .then(self.id.cmp(&other.id))
             }
         }
 
@@ -163,10 +165,12 @@ impl Tile {
             }
         }
 
-        impl Eq for DrawOrder {
-        }
+        impl Eq for DrawOrder {}
 
-        DrawOrder {z: self.z, id: self.id}
+        DrawOrder {
+            z: self.z,
+            id: self.id,
+        }
     }
 
     pub fn ui_id(&self) -> Id {
@@ -212,21 +216,26 @@ impl Tile {
         // Figure out how big each chevron can be without interfering with the
         // rectangle boundaries or other chevrons
         let calc_chevron_sizes = |locations: &[f32]| {
-            (0..locations.len()).map(|i| {
-                let pos = locations[i];
-                let left_boundary = if i == 0 {
-                    0.
-                } else {
-                    0.5 * (locations[i - 1] + locations[i])
-                };
-                let right_boundary = if i == locations.len() - 1 {
-                    rect.height()
-                } else {
-                    0.5 * (locations[i] + locations[i + 1])
-                };
+            (0..locations.len())
+                .map(|i| {
+                    let pos = locations[i];
+                    let left_boundary = if i == 0 {
+                        0.
+                    } else {
+                        0.5 * (locations[i - 1] + locations[i])
+                    };
+                    let right_boundary = if i == locations.len() - 1 {
+                        rect.height()
+                    } else {
+                        0.5 * (locations[i] + locations[i + 1])
+                    };
 
-                CHEVRON_SIZE.min(pos - left_boundary).min(right_boundary - pos).max(0.)
-            }).collect::<Vec<f32>>()
+                    CHEVRON_SIZE
+                        .min(pos - left_boundary)
+                        .min(right_boundary - pos)
+                        .max(0.)
+                })
+                .collect::<Vec<f32>>()
         };
 
         let input_sizes = calc_chevron_sizes(&self.inputs);
@@ -262,7 +271,12 @@ impl Tile {
         vertices.dedup_by(|a, b| (a.x - b.x).abs() < EPSILON && (a.y - b.y).abs() < EPSILON);
 
         // Push vertices of polygon
-        let fill = (if self.selected { FILL_SELECTED } else { FILL_DESELECTED }).linear_multiply(self.alpha);
+        let fill = (if self.selected {
+            FILL_SELECTED
+        } else {
+            FILL_DESELECTED
+        })
+        .linear_multiply(self.alpha);
         let mut mesh = Mesh::with_texture(TextureId::default());
         for &pos in vertices.iter() {
             mesh.colored_vertex(pos, fill);
@@ -288,7 +302,11 @@ impl Tile {
                 } else if c < -EPSILON {
                     // CCW polygon winding produces negative cross products on interior edges
                     found_interior = true;
-                    mesh.add_triangle((indices[ii1]) as u32, (indices[ii2]) as u32, (indices[ii3]) as u32);
+                    mesh.add_triangle(
+                        (indices[ii1]) as u32,
+                        (indices[ii2]) as u32,
+                        (indices[ii3]) as u32,
+                    );
                     indices.remove(i); // Clip
                     break;
                 }
@@ -299,15 +317,25 @@ impl Tile {
                 // I'd call that a success.
                 break;
             }
-            assert!(found_interior || !found_exterior, "Triangulation failed (malformed polygon?)");
+            assert!(
+                found_interior || !found_exterior,
+                "Triangulation failed (malformed polygon?)"
+            );
         }
 
         // Paint fill
         ui.painter().add(mesh);
 
         // Paint stroke
-        let stroke = if self.focused { STROKE_FOCUSED } else { STROKE_BLURRED };
-        let stroke = Stroke { width: stroke.width, color: stroke.color.linear_multiply(self.alpha) };
+        let stroke = if self.focused {
+            STROKE_FOCUSED
+        } else {
+            STROKE_BLURRED
+        };
+        let stroke = Stroke {
+            width: stroke.width,
+            color: stroke.color.linear_multiply(self.alpha),
+        };
         ui.painter().add(Shape::closed_line(vertices, stroke));
     }
 }

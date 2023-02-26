@@ -37,10 +37,13 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::sync::Arc;
-use rustfft::{FftPlanner, num_complex::{Complex, ComplexFloat}, Fft};
-use nalgebra::{DVector, DMatrix, SVector, Matrix2xX, Vector2};
 use itertools::iproduct;
+use nalgebra::{DMatrix, DVector, Matrix2xX, SVector, Vector2};
+use rustfft::{
+    num_complex::{Complex, ComplexFloat},
+    Fft, FftPlanner,
+};
+use std::sync::Arc;
 
 pub const SAMPLE_RATE: f32 = 44100.;
 pub const FPS: f32 = 100.;
@@ -53,7 +56,7 @@ const SPECTROGRAM_SIZE: usize = FRAME_SIZE / 2;
 // Span a range from 30 Hz to 17000 Hz
 const FILTER_MIN_NOTE: i32 = 23; // 30.87 Hz
 const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
-// Filtering parameters:
+                                  // Filtering parameters:
 const N_FILTERS: usize = 81;
 
 const LOG_OFFSET: f32 = 1.;
@@ -74,7 +77,6 @@ const PROBABILITY_EPSILON: f32 = f64::EPSILON as f32;
 const MIN_CONFIDENCE_RADIUS: f32 = 0.8;
 const MIN_TRACKED_BEATS: usize = 3;
 
-
 mod ml_models;
 use ml_models::*;
 
@@ -90,7 +92,11 @@ impl FramedSignalProcessor {
     const INITIAL_HOP_COUNTER: i32 = (HOP_SIZE as i32) - ((FRAME_SIZE / 2) as i32);
 
     pub fn new() -> Self {
-        assert_eq!(HOP_SIZE, (SAMPLE_RATE / FPS).round() as usize, "Incorrect HOP_SIZE setting");
+        assert_eq!(
+            HOP_SIZE,
+            (SAMPLE_RATE / FPS).round() as usize,
+            "Incorrect HOP_SIZE setting"
+        );
         Self {
             buffer: vec![0_i16; FRAME_SIZE * 2],
             write_pointer: 0,
@@ -105,8 +111,9 @@ impl FramedSignalProcessor {
 
     pub fn process(
         &mut self,
-        samples: &[i16] // this can be any length
-    ) -> Vec<DVector<i16>> { // each DVector has size FRAME_SIZE
+        samples: &[i16], // this can be any length
+    ) -> Vec<DVector<i16>> {
+        // each DVector has size FRAME_SIZE
         let mut result = Vec::<DVector<i16>>::new();
         for sample in samples {
             self.buffer[self.write_pointer] = *sample;
@@ -120,7 +127,9 @@ impl FramedSignalProcessor {
             assert!(self.hop_counter <= HOP_SIZE as i32);
             if self.hop_counter == HOP_SIZE as i32 {
                 self.hop_counter = 0;
-                result.push(DVector::from_column_slice(&self.buffer[self.write_pointer..self.write_pointer + FRAME_SIZE]));
+                result.push(DVector::from_column_slice(
+                    &self.buffer[self.write_pointer..self.write_pointer + FRAME_SIZE],
+                ));
             }
         }
         result
@@ -140,23 +149,29 @@ impl ShortTimeFourierTransformProcessor {
     pub fn new() -> Self {
         // Generate a hann window that also normalizes i16 audio data to the range -1 to 1
 
-        let window = DVector::from_fn(FRAME_SIZE, |i, _| hann(i, FRAME_SIZE) * (1_f32 / (i16::MAX as f32)));
+        let window = DVector::from_fn(FRAME_SIZE, |i, _| {
+            hann(i, FRAME_SIZE) * (1_f32 / (i16::MAX as f32))
+        });
 
         // Plan the FFT
         let mut planner = FftPlanner::<f32>::new();
         let fft = planner.plan_fft_forward(FRAME_SIZE);
 
-        Self {
-            window,
-            fft,
-        }
+        Self { window, fft }
     }
 
     pub fn process(
         &mut self,
-        frame: &DVector<i16> // size = FRAME_SIZE
-    ) -> DVector<f32> { // size = SPECTROGRAM_SIZE
-        let mut buffer = vec![Complex {re: 0_f32, im: 0_f32}; FRAME_SIZE];
+        frame: &DVector<i16>, // size = FRAME_SIZE
+    ) -> DVector<f32> {
+        // size = SPECTROGRAM_SIZE
+        let mut buffer = vec![
+            Complex {
+                re: 0_f32,
+                im: 0_f32
+            };
+            FRAME_SIZE
+        ];
         for i in 0..FRAME_SIZE {
             buffer[i].re = (frame[i] as f32) * self.window[i];
         }
@@ -170,9 +185,8 @@ impl ShortTimeFourierTransformProcessor {
     }
 }
 
-fn triangle_filter(
-    start: i32, center: i32, stop: i32
-) -> DVector<f32> { // size = SPECTROGRAM_SIZE
+fn triangle_filter(start: i32, center: i32, stop: i32) -> DVector<f32> {
+    // size = SPECTROGRAM_SIZE
     assert!(start < center);
     assert!(center < stop);
     assert!(stop <= SPECTROGRAM_SIZE as i32);
@@ -210,14 +224,17 @@ fn note2freq(note: i32) -> f32 {
 }
 
 // Returns the frequency corresponding to each entry in the spectrogram
-fn spectrogram_frequencies() -> DVector<f32> { // size = SPECTROGRAM_SIZE
-    DVector::from_fn(SPECTROGRAM_SIZE, |i, _| i as f32 * SAMPLE_RATE / (SPECTROGRAM_SIZE * 2) as f32)
+fn spectrogram_frequencies() -> DVector<f32> {
+    // size = SPECTROGRAM_SIZE
+    DVector::from_fn(SPECTROGRAM_SIZE, |i, _| {
+        i as f32 * SAMPLE_RATE / (SPECTROGRAM_SIZE * 2) as f32
+    })
 }
 
 // Returns the index of the closest entry in the spectrogram to the given frequency in Hz
 fn freq2bin(
     spectrogram_frequencies: &DVector<f32>, // size = SPECTROGRAM_SIZE
-    freq: f32
+    freq: f32,
 ) -> usize {
     let mut index = SPECTROGRAM_SIZE - 1;
     for i in 1..SPECTROGRAM_SIZE {
@@ -236,7 +253,8 @@ fn freq2bin(
 }
 
 // Returns a filter bank according to the given constants
-pub fn gen_filterbank() -> DMatrix<f32> { // rows = N_FILTERS, cols = SPECTROGRAM_SIZE
+pub fn gen_filterbank() -> DMatrix<f32> {
+    // rows = N_FILTERS, cols = SPECTROGRAM_SIZE
     let freqs = spectrogram_frequencies();
 
     let mut filterbank = DMatrix::<f32>::zeros(N_FILTERS, SPECTROGRAM_SIZE);
@@ -257,7 +275,10 @@ pub fn gen_filterbank() -> DMatrix<f32> { // rows = N_FILTERS, cols = SPECTROGRA
             start = center - 1;
             stop = center + 1;
         }
-        filterbank.set_row(filter_index, &triangle_filter(start, center, stop).transpose());
+        filterbank.set_row(
+            filter_index,
+            &triangle_filter(start, center, stop).transpose(),
+        );
         filter_index += 1;
         previous_center = center;
     }
@@ -268,9 +289,8 @@ pub fn gen_filterbank() -> DMatrix<f32> { // rows = N_FILTERS, cols = SPECTROGRA
     filterbank
 }
 
-
 struct FilteredSpectrogramProcessor {
-    filterbank: DMatrix<f32> // rows = N_FILTERS, cols = SPECTROGRAM_SIZE
+    filterbank: DMatrix<f32>, // rows = N_FILTERS, cols = SPECTROGRAM_SIZE
 }
 
 impl FilteredSpectrogramProcessor {
@@ -283,7 +303,8 @@ impl FilteredSpectrogramProcessor {
     pub fn process(
         &mut self,
         spectrogram: &DVector<f32>, // size = SPECTROGRAM_SIZE
-    ) -> DVector<f32> { // size = N_FILTERS
+    ) -> DVector<f32> {
+        // size = N_FILTERS
         let filter_output = &self.filterbank * spectrogram;
 
         // Slight deviation from madmom: the output of the FilteredSpectrogramProcessor
@@ -301,9 +322,7 @@ struct SpectrogramDifferenceProcessor {
 
 impl SpectrogramDifferenceProcessor {
     pub fn new() -> Self {
-        Self {
-            prev: None,
-        }
+        Self { prev: None }
     }
 
     pub fn reset(&mut self) {
@@ -312,8 +331,9 @@ impl SpectrogramDifferenceProcessor {
 
     pub fn process(
         &mut self,
-        filtered_data: &DVector<f32> // size = N_FILTERS
-    ) -> DVector<f32> { // size = N_FILTERS * 2
+        filtered_data: &DVector<f32>, // size = N_FILTERS
+    ) -> DVector<f32> {
+        // size = N_FILTERS * 2
         let prev = match &self.prev {
             None => filtered_data,
             Some(prev) => prev,
@@ -324,14 +344,18 @@ impl SpectrogramDifferenceProcessor {
         self.prev = Some(filtered_data.clone());
 
         let mut result = DVector::<f32>::zeros(N_FILTERS * 2);
-        result.rows_range_mut(0..N_FILTERS).copy_from_slice(filtered_data.as_slice());
-        result.rows_range_mut(N_FILTERS..N_FILTERS * 2).copy_from_slice(diff.as_slice());
+        result
+            .rows_range_mut(0..N_FILTERS)
+            .copy_from_slice(filtered_data.as_slice());
+        result
+            .rows_range_mut(N_FILTERS..N_FILTERS * 2)
+            .copy_from_slice(diff.as_slice());
         result
     }
 }
 
 struct BeatStateSpace {
-    state_positions: DVector<f32>, // size = N_STATES
+    state_positions: DVector<f32>,   // size = N_STATES
     state_intervals: DVector<usize>, // size = N_STATES
     first_states: Vec<usize>,
     last_states: Vec<usize>,
@@ -340,21 +364,29 @@ struct BeatStateSpace {
 impl BeatStateSpace {
     fn new() -> Self {
         // Check compile-time constants
-        assert_eq!(MIN_INTERVAL, (60. * FPS / MAX_BPM).round() as usize, "MIN_INTERVAL set incorrectly");
-        assert_eq!(MAX_INTERVAL, (60. * FPS / MIN_BPM).round() as usize, "MAX_INTERVAL set incorrectly");
+        assert_eq!(
+            MIN_INTERVAL,
+            (60. * FPS / MAX_BPM).round() as usize,
+            "MIN_INTERVAL set incorrectly"
+        );
+        assert_eq!(
+            MAX_INTERVAL,
+            (60. * FPS / MIN_BPM).round() as usize,
+            "MAX_INTERVAL set incorrectly"
+        );
 
         // intervals = [MIN_INTERVAL, MIN_INTERVAL + 1, ..., MAX_INTERVAL - 1, MAX_INTERVAL]
         let intervals: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL).collect();
 
         // first_states = [0, intervals[0], intervals[1], ..., intervals[intervals.len() - 2]].cumsum()
-        let first_states: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL).map(|i|
-            ((i - 1) * i - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2
-        ).collect();
+        let first_states: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL)
+            .map(|i| ((i - 1) * i - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2)
+            .collect();
 
         // last_states = intervals.cumsum() - 1
-        let last_states: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL).map(|i|
-            ((i + 1) * i - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2 - 1
-        ).collect();
+        let last_states: Vec<usize> = (MIN_INTERVAL..=MAX_INTERVAL)
+            .map(|i| ((i + 1) * i - (MIN_INTERVAL - 1) * MIN_INTERVAL) / 2 - 1)
+            .collect();
 
         let mut state_positions = DVector::<f32>::zeros(N_STATES);
         let mut state_intervals = DVector::<usize>::zeros(N_STATES);
@@ -364,7 +396,10 @@ impl BeatStateSpace {
         // where state[first] corresponds to 0.0
         // and state[last + 1] would correspond to 1.0
         // (we stop slightly short of 1.0)
-        for (&interval, (&first, &last)) in intervals.iter().zip(first_states.iter().zip(last_states.iter())) {
+        for (&interval, (&first, &last)) in intervals
+            .iter()
+            .zip(first_states.iter().zip(last_states.iter()))
+        {
             let inverse_size = 1. / (last + 1 - first) as f32;
             for i in first..=last {
                 state_positions[i] = (i - first) as f32 * inverse_size;
@@ -382,10 +417,12 @@ impl BeatStateSpace {
 }
 
 /// Compute transition model in Compressed Sparse Row (CSR) format
-fn transition_model(ss: &BeatStateSpace) -> (
+fn transition_model(
+    ss: &BeatStateSpace,
+) -> (
     Vec<usize>, // pointers (indptr)
     Vec<usize>, // states (indices)
-    Vec<f32>, // probabilities (data)
+    Vec<f32>,   // probabilities (data)
 ) {
     // same tempo transitions probabilities within the state space is 1
     // Note: use all states, but remove all first states because there are
@@ -399,15 +436,29 @@ fn transition_model(ss: &BeatStateSpace) -> (
     //       transition (with the tempi given as intervals)
     let to_states = &ss.first_states;
     let from_states = &ss.last_states;
-    let from_intervals: Vec<(usize, usize)> = from_states.iter().map(|&s| (s, ss.state_intervals[s])).collect();
-    let to_intervals: Vec<(usize, usize)> = to_states.iter().map(|&s| (s, ss.state_intervals[s])).collect();
+    let from_intervals: Vec<(usize, usize)> = from_states
+        .iter()
+        .map(|&s| (s, ss.state_intervals[s]))
+        .collect();
+    let to_intervals: Vec<(usize, usize)> = to_states
+        .iter()
+        .map(|&s| (s, ss.state_intervals[s]))
+        .collect();
 
     // exponential tempo transition
-    let transition_tempo_entries: Vec<(usize, usize, f32)> = iproduct!(from_intervals, to_intervals).map(|((from_state, from_interval), (to_state, to_interval))| {(
-        from_state,
-        to_state,
-        (-TRANSITION_LAMBDA * ((to_interval as f32) / (from_interval as f32) - 1.).abs()).exp(),
-    )}).filter(|&(_, _, val)| val > PROBABILITY_EPSILON).collect();
+    let transition_tempo_entries: Vec<(usize, usize, f32)> =
+        iproduct!(from_intervals, to_intervals)
+            .map(|((from_state, from_interval), (to_state, to_interval))| {
+                (
+                    from_state,
+                    to_state,
+                    (-TRANSITION_LAMBDA
+                        * ((to_interval as f32) / (from_interval as f32) - 1.).abs())
+                    .exp(),
+                )
+            })
+            .filter(|&(_, _, val)| val > PROBABILITY_EPSILON)
+            .collect();
 
     // Normalize each row
     let mut row_factor = vec![0_f32; N_STATES];
@@ -435,7 +486,8 @@ fn transition_model(ss: &BeatStateSpace) -> (
         }
 
         // Sort each row
-        rows.iter_mut().for_each(|row| row.sort_by_key(|&(col, _)| col));
+        rows.iter_mut()
+            .for_each(|row| row.sort_by_key(|&(col, _)| col));
 
         // Write out resulting CSR representation
         let mut indptr = Vec::<usize>::new();
@@ -463,7 +515,9 @@ fn observation_model(ss: &BeatStateSpace) -> DVector<usize> {
     // always point to the non-beat densities
     // unless they are in the beat range of the state space
     let border = 1. / OBSERVATION_LAMBDA;
-    DVector::from_fn(N_STATES, |i, _| usize::from((ss.state_positions[i] as f32) < border))
+    DVector::from_fn(N_STATES, |i, _| {
+        usize::from((ss.state_positions[i] as f32) < border)
+    })
 }
 
 /// Compute result model
@@ -474,9 +528,7 @@ fn result_model(ss: &BeatStateSpace) -> Matrix2xX<f32> {
     let x = theta.map(|x| x.cos());
     let y = theta.map(|x| x.sin());
 
-    let result = Matrix2xX::<f32>::from_rows(&[x.transpose(), y.transpose()]);
-
-    result
+    Matrix2xX::<f32>::from_rows(&[x.transpose(), y.transpose()])
 }
 
 /// Compute the probability densities of the observations.
@@ -489,7 +541,8 @@ fn om_densities(observation: f32) -> SVector<f32, 2> {
     SVector::<f32, 2>::from([p_no_beat, p_beat])
 }
 
-fn hmm_initial_distribution() -> DVector<f32> { // size = N_STATES
+fn hmm_initial_distribution() -> DVector<f32> {
+    // size = N_STATES
     // Return a uniform distribution
     let fill_value = 1. / N_STATES as f32;
     DVector::from_element(N_STATES, fill_value)
@@ -501,7 +554,6 @@ struct HMMBeatTrackingProcessor {
     // SS = state space
     // OM = observation model
     // TM = transition model
-
     _ss: BeatStateSpace,
 
     // The transition model is defined similar to a scipy compressed sparse row
@@ -554,10 +606,8 @@ impl HMMBeatTrackingProcessor {
 
     /// Take in an observation
     /// Returns the forward variables for this timestep
-    fn hmm_forward(
-        &mut self,
-        observation: f32
-    ) -> DVector<f32> { // size = N_STATES
+    fn hmm_forward(&mut self, observation: f32) -> DVector<f32> {
+        // size = N_STATES
 
         // calculate OM densities
         let densities = om_densities(observation);
@@ -571,7 +621,8 @@ impl HMMBeatTrackingProcessor {
             // sum over all possible predecessors
             let mut fwd_state: f32 = 0.;
             for prev_pointer in self.tm_pointers[state]..self.tm_pointers[state + 1] {
-                fwd_state += self.hmm_fwd_prev[self.tm_states[prev_pointer]] * self.tm_probabilities[prev_pointer];
+                fwd_state += self.hmm_fwd_prev[self.tm_states[prev_pointer]]
+                    * self.tm_probabilities[prev_pointer];
             }
             // multiply with the observation probability
             fwd_state *= densities[self.om_pointers[state]];
@@ -586,10 +637,7 @@ impl HMMBeatTrackingProcessor {
 
     /// Takes in a sample from the beat activation function
     /// Returns true if a beat is detected
-    pub fn process(
-        &mut self,
-        activation: f32,
-    ) -> bool {
+    pub fn process(&mut self, activation: f32) -> bool {
         let state_probabilities = self.hmm_forward(activation);
         let result: Vector2<f32> = &self.result_model * &state_probabilities;
 
@@ -665,27 +713,32 @@ impl BeatTracker {
 
     pub fn process(
         &mut self,
-        samples: &[i16]
+        samples: &[i16],
     ) -> Vec<(
         DVector<f32>, // Spectrogram: size = SPECTROGRAM_SIZE
         f32,          // Activation
         bool,         // Beat
     )> {
         let frames = self.framed_processor.process(samples);
-        frames.iter().map(|frame| {
-            let spectrogram = self.stft_processor.process(frame);
-            let filtered = self.filter_processor.process(&spectrogram);
-            let diff = self.difference_processor.process(&filtered);
-            let ensemble_activations = self.neural_networks.iter_mut().map(|nn| nn.process(&diff));
-            let activation = ensemble_activations.sum::<f32>() / self.neural_networks.len() as f32;
-            let beat = self.hmm.process(activation);
-            (spectrogram, activation, beat)
-        }).collect()
+        frames
+            .iter()
+            .map(|frame| {
+                let spectrogram = self.stft_processor.process(frame);
+                let filtered = self.filter_processor.process(&spectrogram);
+                let diff = self.difference_processor.process(&filtered);
+                let ensemble_activations =
+                    self.neural_networks.iter_mut().map(|nn| nn.process(&diff));
+                let activation =
+                    ensemble_activations.sum::<f32>() / self.neural_networks.len() as f32;
+                let beat = self.hmm.process(activation);
+                (spectrogram, activation, beat)
+            })
+            .collect()
     }
 }
 
 mod layers {
-    use nalgebra::{DVector, DMatrix};
+    use nalgebra::{DMatrix, DVector};
 
     pub fn sigmoid(x: f32) -> f32 {
         0.5_f32 * (1_f32 + (0.5_f32 * x).tanh())
@@ -697,30 +750,28 @@ mod layers {
 
     pub struct FeedForwardLayer {
         weights: DMatrix<f32>, // OUTPUT_SIZE rows x INPUT_SIZE cols
-        bias: DVector<f32>, // OUTPUT_SIZE
+        bias: DVector<f32>,    // OUTPUT_SIZE
     }
 
     impl FeedForwardLayer {
         pub fn new(weights: DMatrix<f32>, bias: DVector<f32>) -> Self {
-            Self {
-                weights,
-                bias,
-            }
+            Self { weights, bias }
         }
 
         pub fn process(
             &self,
-            data: &DVector<f32> // size INPUT_SIZE
-        ) -> DVector<f32> { // size OUTPUT_SIZE
+            data: &DVector<f32>, // size INPUT_SIZE
+        ) -> DVector<f32> {
+            // size OUTPUT_SIZE
             (&self.weights * data + &self.bias).map(sigmoid)
         }
     }
 
     pub struct Gate {
-        weights: DMatrix<f32>, // OUTPUT_SIZE rows x INPUT_SIZE cols
-        bias: DVector<f32>, // OUTPUT_SIZE
+        weights: DMatrix<f32>,           // OUTPUT_SIZE rows x INPUT_SIZE cols
+        bias: DVector<f32>,              // OUTPUT_SIZE
         recurrent_weights: DMatrix<f32>, // OUTPUT_SIZE rows x OUTPUT_SIZE cols
-        peephole_weights: DVector<f32>, // OUTPUT_SIZE
+        peephole_weights: DVector<f32>,  // OUTPUT_SIZE
     }
 
     impl Gate {
@@ -740,22 +791,22 @@ mod layers {
 
         pub fn process(
             &self,
-            data: &DVector<f32>, // size INPUT_SIZE
-            prev: &DVector<f32>, // size OUTPUT_SIZE
+            data: &DVector<f32>,  // size INPUT_SIZE
+            prev: &DVector<f32>,  // size OUTPUT_SIZE
             state: &DVector<f32>, // size OUTPUT_SIZE
-        ) -> DVector<f32> { // size OUTPUT_SIZE
-            (
-                &self.weights * data
+        ) -> DVector<f32> {
+            // size OUTPUT_SIZE
+            (&self.weights * data
                 + state.component_mul(&self.peephole_weights)
                 + &self.recurrent_weights * prev
-                + &self.bias
-            ).map(sigmoid)
+                + &self.bias)
+                .map(sigmoid)
         }
     }
 
     pub struct Cell {
-        weights: DMatrix<f32>, // OUTPUT_SIZE rows x INPUT_SIZE cols
-        bias: DVector<f32>, // OUTPUT_SIZE
+        weights: DMatrix<f32>,           // OUTPUT_SIZE rows x INPUT_SIZE cols
+        bias: DVector<f32>,              // OUTPUT_SIZE
         recurrent_weights: DMatrix<f32>, // OUTPUT_SIZE rows x OUTPUT_SIZE cols
     }
 
@@ -775,12 +826,9 @@ mod layers {
             &self,
             data: &DVector<f32>, // size INPUT_SIZE
             prev: &DVector<f32>, // size OUTPUT_SIZE
-        ) -> DVector<f32> { // size OUTPUT_SIZE
-            (
-                &self.weights * data
-                + &self.recurrent_weights * prev
-                + &self.bias
-            ).map(tanh)
+        ) -> DVector<f32> {
+            // size OUTPUT_SIZE
+            (&self.weights * data + &self.recurrent_weights * prev + &self.bias).map(tanh)
         }
     }
 
@@ -800,12 +848,7 @@ mod layers {
     }
 
     impl LSTMLayer {
-        pub fn new(
-            input_gate: Gate,
-            forget_gate: Gate,
-            cell: Cell,
-            output_gate: Gate,
-        ) -> Self {
+        pub fn new(input_gate: Gate, forget_gate: Gate, cell: Cell, output_gate: Gate) -> Self {
             let output_size = input_gate.weights.nrows();
             Self {
                 prev: DVector::zeros(output_size),
@@ -824,8 +867,9 @@ mod layers {
 
         pub fn process(
             &mut self,
-            data: &DVector<f32> // size INPUT_SIZE
-        ) -> DVector<f32> { // size OUTPUT_SIZE
+            data: &DVector<f32>, // size INPUT_SIZE
+        ) -> DVector<f32> {
+            // size OUTPUT_SIZE
             // Input gate: operate on current data, previous output, and state
             let ig = self.input_gate.process(data, &self.prev, &self.state);
             // Forget gate: operate on current data, previous output and state
@@ -834,7 +878,8 @@ mod layers {
             let cell = self.cell.process(data, &self.prev);
             // Internal state: weight the cell with the input gate
             // and add the previous state weighted by the forget gate
-            self.state.copy_from(&(cell.component_mul(&ig) + self.state.component_mul(&fg)));
+            self.state
+                .copy_from(&(cell.component_mul(&ig) + self.state.component_mul(&fg)));
             // Output gate: operate on current data, previous output and current state
             let og = self.output_gate.process(data, &self.prev, &self.state);
             // Output: apply activation function to state and weight by output gate
@@ -847,7 +892,7 @@ mod layers {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use nalgebra::{dvector, dmatrix};
+        use nalgebra::{dmatrix, dvector};
 
         #[test]
         fn test_sigmoid() {
@@ -907,7 +952,7 @@ mod layers {
             let output3 = l.process(&input3);
 
             assert_eq!(output1, dvector!(0.7614811, -0.74785006));
-            assert_eq!(output2, dvector!(0.9619418 , -0.94699216));
+            assert_eq!(output2, dvector!(0.9619418, -0.94699216));
             assert_eq!(output3, dvector!(0.99459594, -0.4957872));
         }
     }
@@ -1008,12 +1053,12 @@ mod tests {
         let filterbank = gen_filterbank();
 
         // Check triangle filter peaks
-        assert_eq!(filterbank[(0,2)], 1.);
-        assert_eq!(filterbank[(1,3)], 1.);
-        assert_eq!(filterbank[(2,4)], 1.);
-        assert_eq!(filterbank[(78,654)], 0.02631579);
-        assert_eq!(filterbank[(79,693)], 0.025);
-        assert_eq!(filterbank[(80,734)], 0.023529412);
+        assert_eq!(filterbank[(0, 2)], 1.);
+        assert_eq!(filterbank[(1, 3)], 1.);
+        assert_eq!(filterbank[(2, 4)], 1.);
+        assert_eq!(filterbank[(78, 654)], 0.02631579);
+        assert_eq!(filterbank[(79, 693)], 0.025);
+        assert_eq!(filterbank[(80, 734)], 0.023529412);
     }
 
     #[test]
@@ -1097,7 +1142,10 @@ mod tests {
     #[test]
     fn test_om_density() {
         assert_eq!(om_densities(0.), SVector::<f32, 2>::from([0.06666667, 0.]));
-        assert_eq!(om_densities(0.5), SVector::<f32, 2>::from([0.033333335, 0.5]));
+        assert_eq!(
+            om_densities(0.5),
+            SVector::<f32, 2>::from([0.033333335, 0.5])
+        );
         assert_eq!(om_densities(1.), SVector::<f32, 2>::from([0., 1.]));
     }
 
@@ -1152,10 +1200,9 @@ mod tests {
 
         // These values were popuated from the Python library output
         let expected_beat_indices = vec![
-            294,  366,  679,  729,  777,  825,  873,  922,  971,  1021, 1068,
-            1116, 1164, 1212, 1260, 1308, 1358, 1409, 1459, 1507, 1552, 1599,
-            1647, 1696, 1745, 1795, 1844, 1892, 1939, 1986, 2035, 2084, 2132,
-            2180, 
+            294, 366, 679, 729, 777, 825, 873, 922, 971, 1021, 1068, 1116, 1164, 1212, 1260, 1308,
+            1358, 1409, 1459, 1507, 1552, 1599, 1647, 1696, 1745, 1795, 1844, 1892, 1939, 1986,
+            2035, 2084, 2132, 2180,
         ];
 
         for (i, &(_, _, beat)) in beats.iter().enumerate() {

@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use crate::{NodeId, Props, Graph, NodeProps};
-use crate::render_target::{RenderTargetId, RenderTarget};
-use crate::effect_node::{EffectNodeState};
-use crate::screen_output_node::{ScreenOutputNodeState};
+use crate::effect_node::EffectNodeState;
+use crate::render_target::{RenderTarget, RenderTargetId};
+use crate::screen_output_node::ScreenOutputNodeState;
+use crate::{Graph, NodeId, NodeProps, Props};
 use rand::Rng;
+use std::collections::HashMap;
 use std::fs;
 use std::io;
+use std::sync::Arc;
 
 const MAX_TIME: f32 = 64.;
 
@@ -35,7 +35,7 @@ impl ArcTextureViewSampler {
 
 /// A `Context` bundles all of the state and graphics resources
 /// necessary to support iterated rendering of a `Props`.
-/// 
+///
 /// `Props` and `RenderTargetList` are intentionally kept stateless
 /// and untangled from system resources.
 /// We push that complexity into this object.
@@ -77,6 +77,7 @@ pub struct RenderTargetState {
 /// Internal state and resources that is associated with a specific Node
 #[derive(derive_more::TryInto)]
 #[try_into(owned, ref, ref_mut)]
+#[allow(clippy::large_enum_variant)]
 pub enum NodeState {
     EffectNode(EffectNodeState),
     ScreenOutputNode(ScreenOutputNodeState),
@@ -89,17 +90,15 @@ impl Context {
             height: 1,
             depth_or_array_layers: 1,
         };
-        let texture = device.create_texture(
-            &wgpu::TextureDescriptor {
-                size: texture_size,
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                label: Some("blank texture"),
-            }
-        );
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            size: texture_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            label: Some("blank texture"),
+        });
 
         queue.write_texture(
             wgpu::ImageCopyTexture {
@@ -118,22 +117,25 @@ impl Context {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = device.create_sampler(
-            &wgpu::SamplerDescriptor {
-                address_mode_u: wgpu::AddressMode::ClampToEdge,
-                address_mode_v: wgpu::AddressMode::ClampToEdge,
-                address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mag_filter: wgpu::FilterMode::Nearest,
-                min_filter: wgpu::FilterMode::Nearest,
-                mipmap_filter: wgpu::FilterMode::Nearest,
-                ..Default::default()
-            }
-        );
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
 
         ArcTextureViewSampler::new(texture, view, sampler)
     }
 
-    fn create_noise_texture(device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32) -> ArcTextureViewSampler {
+    fn create_noise_texture(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        width: u32,
+        height: u32,
+    ) -> ArcTextureViewSampler {
         // XXX this creates a blank texture!
 
         let texture_size = wgpu::Extent3d {
@@ -141,19 +143,19 @@ impl Context {
             height,
             depth_or_array_layers: 1,
         };
-        let texture = device.create_texture(
-            &wgpu::TextureDescriptor {
-                size: texture_size,
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                label: Some("noise texture"),
-            }
-        );
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            size: texture_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            label: Some("noise texture"),
+        });
 
-        let random_bytes: Vec<u8> = (0 .. width * height * 4).map(|_| { rand::thread_rng().gen::<u8>() }).collect();
+        let random_bytes: Vec<u8> = (0..width * height * 4)
+            .map(|_| rand::thread_rng().gen::<u8>())
+            .collect();
 
         queue.write_texture(
             wgpu::ImageCopyTexture {
@@ -172,17 +174,15 @@ impl Context {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = device.create_sampler(
-            &wgpu::SamplerDescriptor {
-                address_mode_u: wgpu::AddressMode::ClampToEdge,
-                address_mode_v: wgpu::AddressMode::ClampToEdge,
-                address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mag_filter: wgpu::FilterMode::Nearest,
-                min_filter: wgpu::FilterMode::Nearest,
-                mipmap_filter: wgpu::FilterMode::Nearest,
-                ..Default::default()
-            }
-        );
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
 
         ArcTextureViewSampler::new(texture, view, sampler)
     }
@@ -211,41 +211,56 @@ impl Context {
             width: render_target.width(),
             height: render_target.height(),
             dt: render_target.dt(),
-            noise_texture: Self::create_noise_texture(&self.device, &self.queue, render_target.width(), render_target.height()),
+            noise_texture: Self::create_noise_texture(
+                &self.device,
+                &self.queue,
+                render_target.width(),
+                render_target.height(),
+            ),
         }
     }
 
     fn new_node_state(&self, node_props: &NodeProps) -> NodeState {
         match node_props {
-            NodeProps::EffectNode(props) => NodeState::EffectNode(EffectNodeState::new(self, props)),
-            NodeProps::ScreenOutputNode(props) => NodeState::ScreenOutputNode(ScreenOutputNodeState::new(self, props)),
+            NodeProps::EffectNode(props) => {
+                NodeState::EffectNode(EffectNodeState::new(self, props))
+            }
+            NodeProps::ScreenOutputNode(props) => {
+                NodeState::ScreenOutputNode(ScreenOutputNodeState::new(self, props))
+            }
         }
     }
 
     fn update_node(&mut self, node_id: NodeId, node_props: &mut NodeProps) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         match node_state {
-            NodeState::EffectNode(ref mut state) => {
-                match node_props {
-                    NodeProps::EffectNode(ref mut props) => state.update(self, props),
-                    _ => panic!("Type mismatch between props and state"),
-                }
+            NodeState::EffectNode(ref mut state) => match node_props {
+                NodeProps::EffectNode(ref mut props) => state.update(self, props),
+                _ => panic!("Type mismatch between props and state"),
             },
-            NodeState::ScreenOutputNode(ref mut state) => {
-                match node_props {
-                    NodeProps::ScreenOutputNode(ref mut props) => state.update(self, props),
-                    _ => panic!("Type mismatch between props and state"),
-                }
+            NodeState::ScreenOutputNode(ref mut state) => match node_props {
+                NodeProps::ScreenOutputNode(ref mut props) => state.update(self, props),
+                _ => panic!("Type mismatch between props and state"),
             },
         };
         self.node_states.insert(node_id, node_state);
     }
 
-    fn paint_node(&mut self, encoder: &mut wgpu::CommandEncoder, node_id: NodeId, render_target_id: RenderTargetId, input_textures: &[Option<ArcTextureViewSampler>]) -> ArcTextureViewSampler {
+    fn paint_node(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        node_id: NodeId,
+        render_target_id: RenderTargetId,
+        input_textures: &[Option<ArcTextureViewSampler>],
+    ) -> ArcTextureViewSampler {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
-            NodeState::EffectNode(ref mut state) => state.paint(self, encoder, render_target_id, input_textures),
-            NodeState::ScreenOutputNode(ref mut state) => state.paint(self, encoder, render_target_id, input_textures),
+            NodeState::EffectNode(ref mut state) => {
+                state.paint(self, encoder, render_target_id, input_textures)
+            }
+            NodeState::ScreenOutputNode(ref mut state) => {
+                state.paint(self, encoder, render_target_id, input_textures)
+            }
         };
         self.node_states.insert(node_id, node_state);
         result
@@ -263,7 +278,11 @@ impl Context {
     /// The passed in Props will be mutated to advance its contents by one timestep.
     /// It can then be further mutated before calling update() again
     /// (or replaced entirely.)
-    pub fn update(&mut self, props: &mut Props, render_targets: &HashMap<RenderTargetId, RenderTarget>) {
+    pub fn update(
+        &mut self,
+        props: &mut Props,
+        render_targets: &HashMap<RenderTargetId, RenderTarget>,
+    ) {
         // 1. Store graph topology for rendering
 
         // Make sure the props are well-formed
@@ -285,14 +304,22 @@ impl Context {
 
         // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets
 
-        self.render_target_states.retain(|id, _| render_targets.contains_key(id));
-        self.node_states.retain(|id, _| self.graph_input_mapping.contains_key(id));
+        self.render_target_states
+            .retain(|id, _| render_targets.contains_key(id));
+        self.node_states
+            .retain(|id, _| self.graph_input_mapping.contains_key(id));
 
         // 4. Construct any missing render_target_states or node_states (this may kick of background processing)
 
         for (check_render_target_id, render_target) in render_targets.iter() {
-            if !self.render_target_states.contains_key(check_render_target_id) {
-                self.render_target_states.insert(*check_render_target_id, self.new_render_target_state(render_target));
+            if !self
+                .render_target_states
+                .contains_key(check_render_target_id)
+            {
+                self.render_target_states.insert(
+                    *check_render_target_id,
+                    self.new_render_target_state(render_target),
+                );
             }
         }
 
@@ -300,7 +327,7 @@ impl Context {
             if !self.node_states.contains_key(check_node_id) {
                 self.node_states.insert(
                     *check_node_id,
-                    self.new_node_state(props.node_props.get(check_node_id).unwrap())
+                    self.new_node_state(props.node_props.get(check_node_id).unwrap()),
                 );
             }
         }
@@ -320,19 +347,24 @@ impl Context {
     ///  and the resulting textures will be returned, indexed by NodeId.
     /// Typically, but not always, the resulting texture will have a resolution matching the render target resolution.
     /// (the render target resolution is just a hint, and nodes may return what they please.)
-    pub fn paint(&mut self, encoder: &mut wgpu::CommandEncoder, render_target_id: RenderTargetId) -> HashMap<NodeId, ArcTextureViewSampler> {
+    pub fn paint(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        render_target_id: RenderTargetId,
+    ) -> HashMap<NodeId, ArcTextureViewSampler> {
         // Ask the nodes to paint in topo order. Return the resulting textures in a hashmap by node id.
         let mut result: HashMap<NodeId, ArcTextureViewSampler> = HashMap::new();
 
         let node_ids: Vec<NodeId> = self.graph.nodes.clone();
         for paint_node_id in &node_ids {
-
             let input_nodes = self.graph_input_mapping.get(paint_node_id).unwrap();
-            let input_textures: Vec<Option<ArcTextureViewSampler>> = input_nodes.iter().map(
-                |maybe_id| maybe_id.as_ref().map(|id| result.get(id).unwrap().clone())
-            ).collect();
+            let input_textures: Vec<Option<ArcTextureViewSampler>> = input_nodes
+                .iter()
+                .map(|maybe_id| maybe_id.as_ref().map(|id| result.get(id).unwrap().clone()))
+                .collect();
 
-            let output_texture = self.paint_node(encoder, *paint_node_id, render_target_id, &input_textures);
+            let output_texture =
+                self.paint_node(encoder, *paint_node_id, render_target_id, &input_textures);
 
             result.insert(*paint_node_id, output_texture);
         }

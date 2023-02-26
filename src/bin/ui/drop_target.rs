@@ -1,4 +1,4 @@
-use egui::{Ui, Sense, Color32, Rect, Widget, Response, vec2};
+use egui::{vec2, Color32, Rect, Response, Sense, Ui, Widget};
 
 const FILL_ACTIVE: Color32 = Color32::from_rgba_premultiplied(102, 0, 170, 200);
 const DROP_TARGET_SIZE: f32 = 30.;
@@ -13,9 +13,7 @@ pub struct DropTarget {
 
 impl DropTarget {
     pub fn new(rect: Rect, _active: bool) -> Self {
-        Self {
-            rect,
-        }
+        Self { rect }
     }
 
     pub fn rect(&self) -> Rect {
@@ -28,12 +26,14 @@ impl DropTarget {
     }
 
     fn paint(&self, ui: &Ui) {
-        let painted_rect = Rect::from_center_size(self.rect.center(), vec2(DROP_TARGET_SIZE, DROP_TARGET_SIZE));
+        let painted_rect =
+            Rect::from_center_size(self.rect.center(), vec2(DROP_TARGET_SIZE, DROP_TARGET_SIZE));
         if !ui.is_rect_visible(painted_rect) {
             return;
         }
 
-        ui.painter().rect_filled(painted_rect, 0.5 * DROP_TARGET_SIZE, FILL_ACTIVE);
+        ui.painter()
+            .rect_filled(painted_rect, 0.5 * DROP_TARGET_SIZE, FILL_ACTIVE);
     }
 }
 

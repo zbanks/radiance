@@ -1,12 +1,12 @@
-use crate::graph::{Graph, NodeId};
 use crate::effect_node::EffectNodeProps;
+use crate::graph::{Graph, NodeId};
 use crate::screen_output_node::ScreenOutputNodeProps;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use serde::{Serialize, Deserialize};
 
 /// `NodeProps` govern the construction and behavior of a single node.
 /// For example, an `EffectNode` has properties of `name` and `intensity`.
-/// 
+///
 /// Some, but not all fields in `NodeProps` can be edited live.
 /// For instance, editing an EffectNode's `intensity` every frame
 /// is supported, but editing its `name` between successive paint calls
@@ -41,10 +41,10 @@ impl From<&NodeProps> for CommonNodeProps {
 /// `Props` contains nodes (such as effects, movies, and images)
 /// and connectivity information (which nodes feed into which other nodes)
 /// that describe an overall visual composition.
-/// 
+///
 /// Each node has properties, accessed via `node_props`,
 /// describing that node's behavior.
-/// 
+///
 /// This `Props` object is a descriptor:
 /// It does not contain any render state or graphics resources.
 /// One use case of a Props is passing it to `Context.paint` for rendering.
@@ -71,7 +71,13 @@ impl Props {
     /// and that there are no edges to non-existent nodes.
     pub fn fix(&mut self) {
         // a) remove any nodes from the graph that aren't present in node_props
-        let graph_nodes_to_remove: HashSet<NodeId> = self.graph.nodes.iter().filter(|n| !self.node_props.contains_key(n)).cloned().collect();
+        let graph_nodes_to_remove: HashSet<NodeId> = self
+            .graph
+            .nodes
+            .iter()
+            .filter(|n| !self.node_props.contains_key(n))
+            .cloned()
+            .collect();
         self.graph.delete_nodes(&graph_nodes_to_remove);
         let nodes_without_props = graph_nodes_to_remove.len();
         if nodes_without_props > 0 {
@@ -83,21 +89,27 @@ impl Props {
         self.node_props.retain(|id, _| save_nodes.contains(id));
         let props_not_in_graph = orig_nodes_len - self.node_props.len();
         if props_not_in_graph > 0 {
-            println!("Removed {} node props that weren't in the graph", props_not_in_graph);
+            println!(
+                "Removed {} node props that weren't in the graph",
+                props_not_in_graph
+            );
         }
         // c) remove any edges that go to a node input beyond a node's inputCount (if inputCount is Some)
         let orig_edges_len = self.graph.edges.len();
         self.graph.edges.retain(|edge| {
-            save_nodes.contains(&edge.from) &&
-            save_nodes.contains(&edge.to) &&
-            match CommonNodeProps::from(self.node_props.get(&edge.to).unwrap()).input_count {
-                None => true, // Retain all edges if inputCount not yet known
-                Some(count) => edge.input < count,
-            }
+            save_nodes.contains(&edge.from)
+                && save_nodes.contains(&edge.to)
+                && match CommonNodeProps::from(self.node_props.get(&edge.to).unwrap()).input_count {
+                    None => true, // Retain all edges if inputCount not yet known
+                    Some(count) => edge.input < count,
+                }
         });
         let edges_to_nonexistant_inputs = orig_edges_len - self.graph.edges.len();
         if edges_to_nonexistant_inputs > 0 {
-            println!("Removed {} edges to nonexistant inputs", edges_to_nonexistant_inputs);
+            println!(
+                "Removed {} edges to nonexistant inputs",
+                edges_to_nonexistant_inputs
+            );
         }
     }
 }
