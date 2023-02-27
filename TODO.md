@@ -7,14 +7,13 @@ Big features
 * Screen output nodes (they are sort of hacked in right now)
 * Auto-DJ
 * Multi-screen output node (for multiple projectors)
-* Image node
+* Image node: adding, animated gifs
 
 Small features / bugs
 ---------------------
 
-* Failed shader compilation shouldn't crash the whole program
 * Inserting a node should focus & select it (see TODO in main.rs)
-* Reload node with "R"
+* Reload node with "R" should preserve textures
 * Shader compilation should be done in background
 * Implement "shift"-selection (select range)
 * Compute spectrogram and audio levels, and pass to effects
@@ -31,6 +30,7 @@ Nice to have
 * Better drag & drop behavior for DAGs (see TODO in mosaic.rs)
 * Speed up compilation by moving beat tracking NN weights to files that are loaded at runtime
 * Package for crates.io (need to figure out how to integrate custom EGUI)
+* Failed shader compilation should show logs on-screen
 
 Low-priority big features
 -------------------------

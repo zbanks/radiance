@@ -2,6 +2,7 @@
 
 use crate::ui::drop_target::DropTarget;
 use crate::ui::effect_node_tile::EffectNodeTile;
+use crate::ui::image_node_tile::ImageNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
 use crate::ui::tile::{Tile, TileId};
 use egui::{
@@ -161,6 +162,7 @@ impl LayoutCache {
                 let heights = match props {
                     NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(p),
                     NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::min_input_heights(p),
+                    NodeProps::ImageNode(p) => ImageNodeTile::min_input_heights(p),
                 };
                 // The length of the returned heights array should match the input count,
                 // or be 1 if the input count is zero
@@ -275,6 +277,7 @@ impl LayoutCache {
                     NodeProps::ScreenOutputNode(p) => {
                         ScreenOutputNodeTile::width_for_height(p, height)
                     }
+                    NodeProps::ImageNode(p) => ImageNodeTile::width_for_height(p, height),
                 };
                 (tile_id, width)
             })
@@ -940,6 +943,10 @@ where
                 ScreenOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
                     .add_contents(ui)
             }
+            NodeProps::ImageNode(p) => {
+                ImageNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
+                    .add_contents(ui)
+            }
         });
 
         if response.dragged() || response.clicked() {
@@ -1115,6 +1122,12 @@ where
             for node in mosaic_memory.selected.iter() {
                 match props.node_props.get_mut(node).unwrap() {
                     NodeProps::EffectNode(node_props) => {
+                        if let Some(intensity) = node_props.intensity {
+                            node_props.intensity =
+                                Some((intensity + intensity_delta).clamp(0., 1.));
+                        }
+                    }
+                    NodeProps::ImageNode(node_props) => {
                         if let Some(intensity) = node_props.intensity {
                             node_props.intensity =
                                 Some((intensity + intensity_delta).clamp(0., 1.));

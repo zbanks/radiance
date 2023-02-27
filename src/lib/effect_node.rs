@@ -186,15 +186,12 @@ impl EffectNodeState {
                     source: wgpu::ShaderSource::Wgsl(shader_source.into()),
                 });
             let result = pollster::block_on(ctx.device().pop_error_scope());
-            match result {
-                Some(error) => {
-                    return Err(format!(
-                        "EffectNode shader compilation error: {} channel {}: {}\n",
-                        name, i, error
-                    ));
-                }
-                None => {}
-            };
+            if let Some(error) = result {
+                return Err(format!(
+                    "EffectNode shader compilation error: {} channel {}: {}\n",
+                    name, i, error
+                ));
+            }
             Ok(shader_module)
         });
 

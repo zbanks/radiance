@@ -1,5 +1,6 @@
 use crate::effect_node::EffectNodeProps;
 use crate::graph::{Graph, NodeId};
+use crate::image_node::ImageNodeProps;
 use crate::screen_output_node::ScreenOutputNodeProps;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -22,6 +23,7 @@ use std::collections::{HashMap, HashSet};
 pub enum NodeProps {
     EffectNode(EffectNodeProps),
     ScreenOutputNode(ScreenOutputNodeProps),
+    ImageNode(ImageNodeProps),
 }
 
 /// This is a struct of props that are common to every node.
@@ -34,6 +36,7 @@ impl From<&NodeProps> for CommonNodeProps {
         match props {
             NodeProps::EffectNode(p) => p.into(),
             NodeProps::ScreenOutputNode(p) => p.into(),
+            NodeProps::ImageNode(p) => p.into(),
         }
     }
 }
