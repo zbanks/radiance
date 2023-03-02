@@ -173,90 +173,91 @@ fn rand4(c: vec4<f32>) -> f32 {
     return fract(sin(dot(c, vec4(12.9898, 78.233, 52.942, 35.291))) * 43758.5453);
 }
 
-//float noise(float p) {
-//    float i = floor(p);
-//    float x = mod(p, 1.);
-//    // x = .5*(1.-cos(M_PI*x));
-//    x = 3.*x*x-2.*x*x*x;
-//    float a = rand(i+0.);
-//    float b = rand(i+1.);
-//    return mix(a, b, x);
-//}
-//
-//float noise(vec2 p) {
-//    vec2 ij = floor(p);
-//    vec2 xy = mod(p, 1.);
-//    // xy = .5*(1.-cos(M_PI*xy));
-//    xy = 3.*xy*xy-2.*xy*xy*xy;
-//    float a = rand((ij+vec2(0.,0.)));
-//    float b = rand((ij+vec2(1.,0.)));
-//    float c = rand((ij+vec2(0.,1.)));
-//    float d = rand((ij+vec2(1.,1.)));
-//    float x1 = mix(a, b, xy.x);
-//    float x2 = mix(c, d, xy.x);
-//    return mix(x1, x2, xy.y);
-//}
-//
-//float noise(vec3 p) {
-//    vec3 ijk = floor(p);
-//    vec3 xyz = mod(p, 1.);
-//    // xyz = .5*(1.-cos(M_PI*xyz));
-//    xyz = 3.*xyz*xyz-2.*xyz*xyz*xyz;
-//    float a = rand((ijk+vec3(0.,0.,0.)));
-//    float b = rand((ijk+vec3(1.,0.,0.)));
-//    float c = rand((ijk+vec3(0.,1.,0.)));
-//    float d = rand((ijk+vec3(1.,1.,0.)));
-//    float e = rand((ijk+vec3(0.,0.,1.)));
-//    float f = rand((ijk+vec3(1.,0.,1.)));
-//    float g = rand((ijk+vec3(0.,1.,1.)));
-//    float h = rand((ijk+vec3(1.,1.,1.)));
-//    float x1 = mix(a, b, xyz.x);
-//    float x2 = mix(c, d, xyz.x);
-//    float y1 = mix(x1, x2, xyz.y);
-//    float x3 = mix(e, f, xyz.x);
-//    float x4 = mix(g, h, xyz.x);
-//    float y2 = mix(x3, x4, xyz.y);
-//    return mix(y1, y2, xyz.z);
-//}
-//
-//float noise(vec4 p) {
-//    vec4 ijkl = floor(p);
-//    vec4 xyzw = mod(p, 1.);
-//    // xyz = .5*(1.-cos(M_PI*xyz));
-//    xyzw = 3.*xyzw*xyzw-2.*xyzw*xyzw*xyzw;
-//    float a = rand((ijkl+vec4(0.,0.,0.,0.)));
-//    float b = rand((ijkl+vec4(1.,0.,0.,0.)));
-//    float c = rand((ijkl+vec4(0.,1.,0.,0.)));
-//    float d = rand((ijkl+vec4(1.,1.,0.,0.)));
-//    float e = rand((ijkl+vec4(0.,0.,1.,0.)));
-//    float f = rand((ijkl+vec4(1.,0.,1.,0.)));
-//    float g = rand((ijkl+vec4(0.,1.,1.,0.)));
-//    float h = rand((ijkl+vec4(1.,1.,1.,0.)));
-//    float i = rand((ijkl+vec4(0.,0.,0.,1.)));
-//    float j = rand((ijkl+vec4(1.,0.,0.,1.)));
-//    float k = rand((ijkl+vec4(0.,1.,0.,1.)));
-//    float l = rand((ijkl+vec4(1.,1.,0.,1.)));
-//    float m = rand((ijkl+vec4(0.,0.,1.,1.)));
-//    float n = rand((ijkl+vec4(1.,0.,1.,1.)));
-//    float o = rand((ijkl+vec4(0.,1.,1.,1.)));
-//    float q = rand((ijkl+vec4(1.,1.,1.,1.)));
-//    float x1 = mix(a, b, xyzw.x);
-//    float x2 = mix(c, d, xyzw.x);
-//    float y1 = mix(x1, x2, xyzw.y);
-//    float x3 = mix(e, f, xyzw.x);
-//    float x4 = mix(g, h, xyzw.x);
-//    float y2 = mix(x3, x4, xyzw.y);
-//    float z1 = mix(y1, y2, xyzw.z);
-//
-//    float x5 = mix(i, j, xyzw.x);
-//    float x6 = mix(k, l, xyzw.x);
-//    float y3 = mix(x5, x6, xyzw.y);
-//    float x7 = mix(m, n, xyzw.x);
-//    float x8 = mix(o, q, xyzw.x);
-//    float y4 = mix(x7, x8, xyzw.y);
-//    float z2 = mix(y3, y4, xyzw.z);
-//    return mix(z1, z2, xyzw.w);
-//}
+fn noise(p: f32) -> f32 {
+    let i = floor(p);
+    let x = fract(p);
+    // x = .5*(1.-cos(M_PI*x));
+    let x = 3. * x * x - 2. * x * x * x;
+    let a = rand(i + 0.);
+    let b = rand(i + 1.);
+    return mix(a, b, x);
+}
+
+fn noise2(p: vec2<f32>) -> f32 {
+    let ij = floor(p);
+    let xy = fract(p);
+    // xy = .5*(1.-cos(M_PI*xy));
+    let xy = 3. * xy * xy - 2. * xy * xy * xy;
+    let a = rand2((ij+vec2<f32>(0.,0.)));
+    let b = rand2((ij+vec2<f32>(1.,0.)));
+    let c = rand2((ij+vec2<f32>(0.,1.)));
+    let d = rand2((ij+vec2<f32>(1.,1.)));
+    let x1 = mix(a, b, xy.x);
+    let x2 = mix(c, d, xy.x);
+    return mix(x1, x2, xy.y);
+}
+
+fn noise3(p: vec3<f32>) -> f32 {
+    let ijk = floor(p);
+    let xyz = fract(p);
+    // xyz = .5*(1.-cos(M_PI*xyz));
+    let xyz = 3. * xyz * xyz - 2. * xyz * xyz * xyz;
+    let a = rand3((ijk+vec3<f32>(0.,0.,0.)));
+    let b = rand3((ijk+vec3<f32>(1.,0.,0.)));
+    let c = rand3((ijk+vec3<f32>(0.,1.,0.)));
+    let d = rand3((ijk+vec3<f32>(1.,1.,0.)));
+    let e = rand3((ijk+vec3<f32>(0.,0.,1.)));
+    let f = rand3((ijk+vec3<f32>(1.,0.,1.)));
+    let g = rand3((ijk+vec3<f32>(0.,1.,1.)));
+    let h = rand3((ijk+vec3<f32>(1.,1.,1.)));
+    let x1 = mix(a, b, xyz.x);
+    let x2 = mix(c, d, xyz.x);
+    let y1 = mix(x1, x2, xyz.y);
+    let x3 = mix(e, f, xyz.x);
+    let x4 = mix(g, h, xyz.x);
+    let y2 = mix(x3, x4, xyz.y);
+    return mix(y1, y2, xyz.z);
+}
+
+fn noise4(p: vec4<f32>) -> f32 {
+    let ijkl = floor(p);
+    let xyzw = fract(p);
+    // xyz = .5*(1.-cos(M_PI*xyz));
+    let xyzw = 3. * xyzw * xyzw - 2. * xyzw * xyzw * xyzw;
+    let a = rand4((ijkl+vec4<f32>(0.,0.,0.,0.)));
+    let b = rand4((ijkl+vec4<f32>(1.,0.,0.,0.)));
+    let c = rand4((ijkl+vec4<f32>(0.,1.,0.,0.)));
+    let d = rand4((ijkl+vec4<f32>(1.,1.,0.,0.)));
+    let e = rand4((ijkl+vec4<f32>(0.,0.,1.,0.)));
+    let f = rand4((ijkl+vec4<f32>(1.,0.,1.,0.)));
+    let g = rand4((ijkl+vec4<f32>(0.,1.,1.,0.)));
+    let h = rand4((ijkl+vec4<f32>(1.,1.,1.,0.)));
+    let i = rand4((ijkl+vec4<f32>(0.,0.,0.,1.)));
+    let j = rand4((ijkl+vec4<f32>(1.,0.,0.,1.)));
+    let k = rand4((ijkl+vec4<f32>(0.,1.,0.,1.)));
+    let l = rand4((ijkl+vec4<f32>(1.,1.,0.,1.)));
+    let m = rand4((ijkl+vec4<f32>(0.,0.,1.,1.)));
+    let n = rand4((ijkl+vec4<f32>(1.,0.,1.,1.)));
+    let o = rand4((ijkl+vec4<f32>(0.,1.,1.,1.)));
+    let q = rand4((ijkl+vec4<f32>(1.,1.,1.,1.)));
+    let x1 = mix(a, b, xyzw.x);
+    let x2 = mix(c, d, xyzw.x);
+    let y1 = mix(x1, x2, xyzw.y);
+    let x3 = mix(e, f, xyzw.x);
+    let x4 = mix(g, h, xyzw.x);
+    let y2 = mix(x3, x4, xyzw.y);
+    let z1 = mix(y1, y2, xyzw.z);
+
+    let x5 = mix(i, j, xyzw.x);
+    let x6 = mix(k, l, xyzw.x);
+    let y3 = mix(x5, x6, xyzw.y);
+    let x7 = mix(m, n, xyzw.x);
+    let x8 = mix(o, q, xyzw.x);
+    let y4 = mix(x7, x8, xyzw.y);
+    let z2 = mix(y3, y4, xyzw.z);
+    return mix(z1, z2, xyzw.w);
+}
+
 //float hmax(vec2 v) {
 //    return max(v.r,v.g);
 //}
