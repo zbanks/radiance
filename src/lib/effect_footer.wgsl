@@ -36,6 +36,10 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
 
     aspectCorrection = iResolution / min(iResolution.x, iResolution.y);
     defaultPulse = sawtooth(iTime * iFrequency, 0.1);
+    iAudioLow = iAudio.x;
+    iAudioMid = iAudio.y;
+    iAudioHi = iAudio.z;
+    iAudioLevel = iAudio.w;
 
     return main(vertex.uv);
 }

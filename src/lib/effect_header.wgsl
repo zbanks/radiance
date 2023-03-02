@@ -47,29 +47,11 @@ var<private> aspectCorrection: vec2<f32>;
 
 var<private> defaultPulse: f32;
 
-//// Outputs of previous patterns
-//layout(set = 1, binding = 1) uniform texture2D iInputsTex[];
-//
-//// Full frame RGBA noise
-//layout(set = 1, binding = 2) uniform texture2D iNoiseTex;
-//
-//// Previous outputs of the other channels (e.g. foo.1.glsl)
-////layout(set = 1, binding = 3) uniform texture2D iChannelTexXXX[];
-//
-//// Macros to approximate the OpenGL syntax
-//#define iInputs(X) (sampler2D(iInputsTex[(X)], iSampler))
-//#define iNoise (sampler2D(iNoiseTex, iSampler))
-//#define iChannel(X) (sampler2D(iChannelTex[(X)], iSampler))
-//
-//// Output of the previous pattern.  Alias to iInputs(0)
-//#define iInput iInputs(0)
-//
-//// Aliases to audio levels
-//#define iAudioLow   iAudio.x
-//#define iAudioMid   iAudio.y
-//#define iAudioHi    iAudio.z
-//#define iAudioLevel iAudio.w
-//
+// Aliases to audio levels
+var<private> iAudioLow: f32;
+var<private> iAudioMid: f32;
+var<private> iAudioHi: f32;
+var<private> iAudioLevel: f32;
 
 let pi: f32 = 3.1415926535897932384626433832795;
 
@@ -149,12 +131,12 @@ fn sawtooth(x: f32, t_up: f32) -> f32 {
            (1. - x) / (1. - t_up) * (1. - step(x, t_up));
 }
 
-//// Box from [0, 0] to (1, 1)
-//float box(vec2 p) {
-//    vec2 b = step(0., p) - step(1., p);
-//    return b.x * b.y;
-//}
-//
+// Box from [0, 0] to (1, 1)
+fn box(p: vec2<f32>) -> f32 {
+    let b = step(vec2<f32>(0.), p) - step(vec2<f32>(1.), p);
+    return b.x * b.y;
+}
+
 
 // Predictable randomness
 fn rand(c: f32) -> f32 {
