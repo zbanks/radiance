@@ -155,23 +155,24 @@ fn sawtooth(x: f32, t_up: f32) -> f32 {
 //    return b.x * b.y;
 //}
 //
-//// Predictable randomness
-//float rand(float c){
-//    return fract(sin(c * 12.9898) * 43758.5453);
-//}
-//
-//float rand(vec2 c){
-//    return fract(sin(dot(c, vec2(12.9898,78.233))) * 43758.5453);
-//}
-//
-//float rand(vec3 c){
-//    return fract(sin(dot(c, vec3(12.9898,78.233, 52.942))) * 43758.5453);
-//}
-//
-//float rand(vec4 c){
-//    return fract(sin(dot(c, vec4(12.9898, 78.233, 52.942, 35.291))) * 43758.5453);
-//}
-//
+
+// Predictable randomness
+fn rand(c: f32) -> f32 {
+    return fract(sin(c * 12.9898) * 43758.5453);
+}
+
+fn rand2(c: vec2<f32>) -> f32 {
+    return fract(sin(dot(c, vec2(12.9898,78.233))) * 43758.5453);
+}
+
+fn rand3(c: vec3<f32>) -> f32 {
+    return fract(sin(dot(c, vec3(12.9898,78.233, 52.942))) * 43758.5453);
+}
+
+fn rand4(c: vec4<f32>) -> f32 {
+    return fract(sin(dot(c, vec4(12.9898, 78.233, 52.942, 35.291))) * 43758.5453);
+}
+
 //float noise(float p) {
 //    float i = floor(p);
 //    float x = mod(p, 1.);
