@@ -131,10 +131,10 @@ fn premultiply(c: vec4<f32>) -> vec4<f32> {
     return vec4<f32>(c.rgb * c.a, c.a);
 }
 
-//// Turn premultipled alpha RGBA into non-premultipled alpha RGBA
-//vec4 demultiply(vec4 c) {
-//    return clamp(vec4(c.rgb / c.a, c.a), vec4(0.), vec4(1.));
-//}
+// Turn premultipled alpha RGBA into non-premultipled alpha RGBA
+fn demultiply(c: vec4<f32>) -> vec4<f32> {
+    return clamp(vec4<f32>(c.rgb / c.a, c.a), vec4<f32>(0.), vec4<f32>(1.));
+}
 
 // Alpha-compsite two colors, putting one on top of the other. Everything is premultipled
 fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
