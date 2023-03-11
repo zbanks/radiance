@@ -5,10 +5,17 @@ const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
 const NORMAL_WIDTH: f32 = 120.;
 
+pub enum EffectNodeTileState {
+    Initializing,
+    Ready,
+    Error,
+}
+
 pub struct EffectNodeTile<'a> {
     title: RichText,
     preview_image: TextureId,
     intensity: &'a mut Option<f32>, // TODO turn this Option into a more holistic enum based on EffectNodeState
+    state: EffectNodeTileState,
 }
 
 impl<'a> EffectNodeTile<'a> {
@@ -31,13 +38,20 @@ impl<'a> EffectNodeTile<'a> {
     /// (builder pattern; this is not a stateful UI component)
     pub fn new(
         props: &'a mut EffectNodeProps,
-        _state: &'a EffectNodeState,
+        state: &'a EffectNodeState,
         preview_image: TextureId,
     ) -> Self {
+        let tile_state = match state {
+            EffectNodeState::Uninitialized => EffectNodeTileState::Initializing,
+            EffectNodeState::Ready(_) => EffectNodeTileState::Ready,
+            EffectNodeState::Error_(_) => EffectNodeTileState::Error,
+        };
+
         EffectNodeTile {
             title: (&props.name).into(),
             preview_image,
             intensity: &mut props.intensity,
+            state: tile_state,
         }
     }
 
@@ -47,16 +61,27 @@ impl<'a> EffectNodeTile<'a> {
             title,
             preview_image,
             intensity,
+            state,
         } = self;
         ui.heading(title);
         // Preserve aspect ratio
         ui.with_layout(
             Layout::bottom_up(Align::Center).with_cross_justify(true),
             |ui| {
-                ui.spacing_mut().slider_width = ui.available_width();
-                intensity
-                    .as_mut()
-                    .map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
+                match state {
+                    EffectNodeTileState::Initializing => {
+                        ui.label("Loading");
+                    }
+                    EffectNodeTileState::Ready => {
+                        ui.spacing_mut().slider_width = ui.available_width();
+                        intensity.as_mut().map(|intensity| {
+                            ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false))
+                        });
+                    }
+                    EffectNodeTileState::Error => {
+                        ui.label("Error");
+                    }
+                }
                 ui.centered_and_justified(|ui| {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()

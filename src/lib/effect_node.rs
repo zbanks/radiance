@@ -594,7 +594,11 @@ impl EffectNodeState {
 
                 paint_state.channel_textures[0].clone()
             }
-            _ => ctx.blank_texture().clone(),
+            _ => inputs
+                .first()
+                .cloned()
+                .flatten()
+                .unwrap_or_else(|| ctx.blank_texture().clone()),
         }
     }
 }

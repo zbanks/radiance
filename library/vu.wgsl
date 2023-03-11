@@ -5,7 +5,7 @@ fn main(uv: vec2<f32>) -> vec4<f32> {
     let audio = vec3<f32>(iAudioLow, iAudioMid, iAudioHi);
 
     let audio = audio * (2. * iIntensity);
-    //let audio = audio * (0.3 + 0.7 * pow(defaultPulse, 2.));
+    let audio = audio * (0.5 + 0.5 * pow(defaultPulse, 2.));
 
     let draw = 1. - smoothstep(audio - onePixel.x, audio, vec3(abs(normCoord.x)));
     let dLow = vec4<f32>(0.0, 0.0, 0.5, 1.0) * draw.x;
