@@ -275,6 +275,7 @@ pub async fn run() {
                 let music_info = mir.poll();
                 props.time = music_info.time;
                 props.dt = music_info.tempo * (1. / 60.);
+                props.audio = music_info.audio.clone();
                 // Merge our render list and the winit_output render list into one:
                 let render_target_list = render_target_list
                     .iter()

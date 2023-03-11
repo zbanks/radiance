@@ -44,8 +44,8 @@ var<private> iResolution: vec2<f32>;
 var<private> iStep: f32;
 
 var<private> aspectCorrection: vec2<f32>;
-
 var<private> defaultPulse: f32;
+var<private> onePixel: vec2<f32>;
 
 // Aliases to audio levels
 var<private> iAudioLow: f32;
@@ -250,7 +250,6 @@ fn noise4(p: vec4<f32>) -> f32 {
 //    return hmax(max(v.rg,v.ba));
 //}
 
-//float onePixel = 1. / min(iResolution.x, iResolution.y);
 //
 
 //#line 1

@@ -43,6 +43,7 @@ use rustfft::{
     num_complex::{Complex, ComplexFloat},
     Fft, FftPlanner,
 };
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub const SAMPLE_RATE: f32 = 44100.;
@@ -52,11 +53,11 @@ const HOP_SIZE: usize = 441;
 const FRAME_SIZE: usize = 2048;
 const SPECTROGRAM_SIZE: usize = FRAME_SIZE / 2;
 
+// Filtering parameters:
 // MIDI notes corresponding to the low and high filters
 // Span a range from 30 Hz to 17000 Hz
 const FILTER_MIN_NOTE: i32 = 23; // 30.87 Hz
 const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
-                                  // Filtering parameters:
 const N_FILTERS: usize = 81;
 
 const LOG_OFFSET: f32 = 1.;
@@ -74,8 +75,39 @@ const OBSERVATION_LAMBDA: f32 = 16.;
 const TRANSITION_LAMBDA: f32 = 100.;
 const PROBABILITY_EPSILON: f32 = f64::EPSILON as f32;
 
+// Beat tapping parameters:
 const MIN_CONFIDENCE_RADIUS: f32 = 0.8;
 const MIN_TRACKED_BEATS: usize = 3;
+
+// Audio levels calculation:
+// Highest filter to use for calculating the "low" level
+const FILTER_LOW_CUTOFF: usize = 7;
+// Lowest filter to use for calculating the "high" level
+const FILTER_HIGH_CUTOFF: usize = 70;
+// Gain applied to filterbank filters to make their values approximately 0 - 1
+const SPECTRUM_GAIN: f32 = 0.2;
+// Diode-LPF constants
+const SPECTRUM_UP_ALPHA: f32 = 0.8;
+const SPECTRUM_DOWN_ALPHA: f32 = 0.3;
+const LEVEL_UP_ALPHA: f32 = 0.9;
+const LEVEL_DOWN_ALPHA: f32 = 0.1;
+
+/// A struct to hold information about the current audio levels
+/// at different frequencies
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct AudioLevels {
+    /// Audio level of low frequencies
+    pub low: f32,
+
+    /// Audio level of mid frequencies
+    pub mid: f32,
+
+    /// Audio level of high frequencies
+    pub high: f32,
+
+    /// Overall audio level
+    pub level: f32,
+}
 
 mod ml_models;
 use ml_models::*;
@@ -674,6 +706,90 @@ impl HMMBeatTrackingProcessor {
     }
 }
 
+// Compute levels from spectrogram
+pub struct LevelsProcessor {
+    spectrum: DVector<f32>, // size = N_FILTERS
+    audio: AudioLevels,
+}
+
+impl LevelsProcessor {
+    pub fn new() -> Self {
+        Self {
+            spectrum: DVector::<f32>::zeros(N_FILTERS),
+            audio: Default::default(),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.spectrum = DVector::<f32>::zeros(N_FILTERS);
+        self.audio = Default::default();
+    }
+
+    pub fn process(
+        &mut self,
+        filtered: &DVector<f32>, // size = N_FILTERS
+    ) -> (DVector<f32>, AudioLevels) {
+        // Apply diode LPF to filtered spectrogram
+        for i in 0..N_FILTERS {
+            let f = filtered[i] * SPECTRUM_GAIN;
+            if f > self.spectrum[i] {
+                self.spectrum[i] =
+                    f * SPECTRUM_UP_ALPHA + self.spectrum[i] * (1. - SPECTRUM_UP_ALPHA);
+            } else {
+                self.spectrum[i] =
+                    f * SPECTRUM_DOWN_ALPHA + self.spectrum[i] * (1. - SPECTRUM_DOWN_ALPHA);
+            }
+        }
+
+        let mut low = 0_f32;
+        let mut mid = 0_f32;
+        let mut high = 0_f32;
+
+        let mut n_low = 0_usize;
+        let mut n_mid = 0_usize;
+        let mut n_high = 0_usize;
+
+        for i in 0..N_FILTERS {
+            if i < FILTER_LOW_CUTOFF {
+                low += self.spectrum[i];
+                n_low += 1;
+            } else if i > FILTER_HIGH_CUTOFF {
+                high += self.spectrum[i];
+                n_high += 1;
+            } else {
+                mid += self.spectrum[i];
+                n_mid += 1;
+            }
+        }
+
+        // Ensure filter cutoffs are such that
+        // there is at least one sample in each range
+        assert!(n_low > 0);
+        assert!(n_mid > 0);
+        assert!(n_high > 0);
+
+        low /= n_low as f32;
+        mid /= n_mid as f32;
+        high /= n_high as f32;
+
+        let diode_lpf = |stored_val: &mut f32, val| {
+            if val > *stored_val {
+                *stored_val = val * LEVEL_UP_ALPHA + *stored_val * (1. - LEVEL_UP_ALPHA);
+            } else {
+                *stored_val = val * LEVEL_DOWN_ALPHA + *stored_val * (1. - LEVEL_DOWN_ALPHA);
+            }
+        };
+
+        diode_lpf(&mut self.audio.low, low);
+        diode_lpf(&mut self.audio.mid, mid);
+        diode_lpf(&mut self.audio.high, high);
+
+        self.audio.level = self.audio.low.max(self.audio.mid.max(self.audio.high));
+
+        (self.spectrum.clone(), self.audio.clone())
+    }
+}
+
 // Put everything together
 pub struct BeatTracker {
     framed_processor: FramedSignalProcessor,
@@ -682,6 +798,7 @@ pub struct BeatTracker {
     difference_processor: SpectrogramDifferenceProcessor,
     neural_networks: Vec<NeuralNetwork>,
     hmm: HMMBeatTrackingProcessor,
+    levels: LevelsProcessor,
 }
 
 impl Default for BeatTracker {
@@ -699,6 +816,7 @@ impl BeatTracker {
             difference_processor: SpectrogramDifferenceProcessor::new(),
             neural_networks: models(),
             hmm: HMMBeatTrackingProcessor::new(),
+            levels: LevelsProcessor::new(),
         }
     }
 
@@ -709,12 +827,14 @@ impl BeatTracker {
             nn.reset();
         }
         self.hmm.reset();
+        self.levels.reset();
     }
 
     pub fn process(
         &mut self,
         samples: &[i16],
     ) -> Vec<(
+        AudioLevels,
         DVector<f32>, // Spectrogram: size = SPECTROGRAM_SIZE
         f32,          // Activation
         bool,         // Beat
@@ -731,7 +851,8 @@ impl BeatTracker {
                 let activation =
                     ensemble_activations.sum::<f32>() / self.neural_networks.len() as f32;
                 let beat = self.hmm.process(activation);
-                (spectrogram, activation, beat)
+                let (spectrum, audio) = self.levels.process(&filtered);
+                (audio, spectrum, activation, beat)
             })
             .collect()
     }

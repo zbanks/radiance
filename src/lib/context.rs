@@ -2,7 +2,7 @@ use crate::effect_node::EffectNodeState;
 use crate::image_node::ImageNodeState;
 use crate::render_target::{RenderTarget, RenderTargetId};
 use crate::screen_output_node::ScreenOutputNodeState;
-use crate::{Graph, NodeId, NodeProps, Props};
+use crate::{AudioLevels, Graph, NodeId, NodeProps, Props};
 use rand::Rng;
 use std::collections::HashMap;
 use std::fs;
@@ -58,6 +58,7 @@ pub struct Context {
     // Cached props from the last update()
     pub time: f32,
     pub dt: f32,
+    pub audio: AudioLevels,
     graph: Graph,
     graph_input_mapping: HashMap<NodeId, Vec<Option<NodeId>>>,
 
@@ -201,6 +202,7 @@ impl Context {
             blank_texture,
             time: 0.,
             dt: 0.,
+            audio: Default::default(),
             graph: Default::default(),
             graph_input_mapping: Default::default(),
             render_target_states: Default::default(),
@@ -310,6 +312,8 @@ impl Context {
         // 2. Sample-and-hold global props like `time` and `dt`, then update them
         self.time = props.time;
         self.dt = props.dt;
+        self.audio = props.audio.clone();
+
         props.time = (props.time + props.dt).rem_euclid(MAX_TIME);
 
         // 3. Prune render_target_states and node_states of any nodes or render_targets that are no longer present in the given graph/render_targets

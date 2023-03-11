@@ -493,7 +493,12 @@ impl EffectNodeState {
                     let width = render_target_state.width();
                     let height = render_target_state.height();
                     let uniforms = Uniforms {
-                        audio: [0., 0., 0., 0.],
+                        audio: [
+                            ctx.audio.low,
+                            ctx.audio.mid,
+                            ctx.audio.high,
+                            ctx.audio.level,
+                        ],
                         time: ctx.time,
                         frequency: self_ready.frequency,
                         intensity: self_ready.intensity,

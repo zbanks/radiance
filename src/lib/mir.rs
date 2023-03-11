@@ -1,3 +1,4 @@
+pub use crate::beat_tracking::AudioLevels;
 use crate::beat_tracking::{BeatTracker, SAMPLE_RATE};
 use cpal::traits::DeviceTrait;
 use std::sync::mpsc;
@@ -48,10 +49,7 @@ struct Update {
     tempo: f32,              // beats per second
 
     // For computing the audio levels
-    low: f32,
-    mid: f32,
-    high: f32,
-    level: f32,
+    audio: AudioLevels,
 }
 
 impl Update {
@@ -68,11 +66,8 @@ impl Update {
 pub struct MusicInfo {
     pub time: f32,  // time in beats
     pub tempo: f32, // beats per second
-    pub low: f32,
-    pub mid: f32,
-    pub high: f32,
-    pub level: f32,
-    // TODO: send full spectrogram
+    pub audio: AudioLevels,
+    // TODO: send full spectrum
 }
 
 impl Default for Mir {
@@ -137,10 +132,7 @@ impl Mir {
             wall_ref: time::Instant::now(),
             t_ref: 0.,
             tempo: DEFAULT_BPM / 60.,
-            low: 0.,
-            mid: 0.,
-            high: 0.,
-            level: 0.,
+            audio: Default::default(),
         };
 
         let mut process_audio_i16_mono = move |data: &[i16]| {
@@ -149,11 +141,11 @@ impl Mir {
             // but we do this reduction just to be safe,
             // in case the audio frames returned are really large
             let recent_result = bt.process(data).into_iter().reduce(
-                |(_, _, beat_acc), (spectrogram, activation, beat)| {
-                    (spectrogram, activation, beat_acc && beat)
+                |(_, _, _, beat_acc), (audio, spectrum, activation, beat)| {
+                    (audio, spectrum, activation, beat_acc || beat)
                 },
             );
-            let (spectrogram, _activation, beat) = match recent_result {
+            let (audio, spectrum, _activation, beat) = match recent_result {
                 Some(result) => result,
                 None => {
                     return;
@@ -191,11 +183,7 @@ impl Mir {
                 update.t_ref = t_ref;
             }
 
-            // For now, simply set lows, mids, and highs to random spectrogram buckets
-            update.low = spectrogram[2];
-            update.mid = spectrogram[100];
-            update.high = spectrogram[800];
-            update.level = update.mid;
+            update.audio = audio;
 
             // Send an update back to the main thread
             if let Err(err) = sender.try_send(update.clone()) {
@@ -262,10 +250,7 @@ impl Mir {
                 wall_ref: time::Instant::now(),
                 t_ref: 0.,
                 tempo: 0., // This will hold t at 0 until the audio thread starts up
-                low: 0.,
-                mid: 0.,
-                high: 0.,
-                level: 0.,
+                audio: Default::default(),
             },
         }
     }
@@ -285,10 +270,7 @@ impl Mir {
         MusicInfo {
             time: t,
             tempo: self.last_update.tempo,
-            low: self.last_update.low,
-            mid: self.last_update.mid,
-            high: self.last_update.high,
-            level: self.last_update.level,
+            audio: self.last_update.audio.clone(),
         }
     }
 }

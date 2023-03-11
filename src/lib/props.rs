@@ -1,6 +1,7 @@
 use crate::effect_node::EffectNodeProps;
 use crate::graph::{Graph, NodeId};
 use crate::image_node::ImageNodeProps;
+pub use crate::mir::AudioLevels;
 use crate::screen_output_node::ScreenOutputNodeProps;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -62,10 +63,16 @@ pub struct Props {
     pub node_props: HashMap<NodeId, NodeProps>,
 
     /// Time, in beats. Wraps around at 64 beats.
+    #[serde(default)]
     pub time: f32,
 
     /// Time between successive calls to `update()`, in beats
+    #[serde(default)]
     pub dt: f32,
+
+    /// Audio levels
+    #[serde(default)]
+    pub audio: AudioLevels,
 }
 
 impl Props {
