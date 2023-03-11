@@ -145,7 +145,7 @@ impl Mir {
                     (audio, spectrum, activation, beat_acc || beat)
                 },
             );
-            let (audio, spectrum, _activation, beat) = match recent_result {
+            let (audio, _spectrum, _activation, beat) = match recent_result {
                 Some(result) => result,
                 None => {
                     return;

@@ -19,6 +19,7 @@ use radiance::{
 
 mod ui;
 use ui::mosaic;
+use ui::Widgets;
 
 mod winit_output;
 use winit_output::WinitOutput;
@@ -137,6 +138,9 @@ pub async fn run() {
 
     // Make context
     let mut ctx = Context::new(device.clone(), queue.clone());
+
+    // Make widgets
+    let mut widgets = Widgets::new(device.clone(), queue.clone(), pixels_per_point);
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
@@ -306,6 +310,11 @@ pub async fn run() {
                     })
                     .collect();
 
+                // Update & paint widgets
+                let waveform_size = egui::vec2(400., 70.);
+                let waveform_texture =
+                    widgets.waveform(&mut egui_renderer, waveform_size, music_info.audio);
+
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
                 let full_output = egui_ctx.run(raw_input, |egui_ctx| {
@@ -316,6 +325,8 @@ pub async fn run() {
                     );
 
                     egui::CentralPanel::default().show(egui_ctx, |ui| {
+                        ui.image(waveform_texture, waveform_size);
+
                         let mosaic_response = ui.add(mosaic(
                             "mosaic",
                             &mut props,
