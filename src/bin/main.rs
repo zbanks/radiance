@@ -311,9 +311,13 @@ pub async fn run() {
                     .collect();
 
                 // Update & paint widgets
-                let waveform_size = egui::vec2(330., 65.);
-                let waveform_texture =
-                    widgets.waveform(&mut egui_renderer, waveform_size, music_info.audio);
+                let waveform_size = egui::vec2(660., 130.);
+                let waveform_texture = widgets.waveform(
+                    &mut egui_renderer,
+                    waveform_size,
+                    music_info.audio,
+                    music_info.uncompensated_time,
+                );
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);

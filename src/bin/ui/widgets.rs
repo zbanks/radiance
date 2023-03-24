@@ -23,6 +23,8 @@ pub struct Widgets {
     waveform_render_pipeline: wgpu::RenderPipeline,
     waveform_data: Vec<WaveformSample>,
     waveform_data_texture: ArcTextureViewSampler,
+    waveform_beat_data: Vec<WaveformBeatSample>,
+    waveform_beat_data_texture: ArcTextureViewSampler,
 }
 
 // The uniform buffer associated with the waveform
@@ -41,6 +43,13 @@ struct WaveformSample {
     pub mid: u8,
     pub high: u8,
     pub level: u8,
+}
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct WaveformBeatSample {
+    pub beat: u8,
+    _padding: [u8; 3],
 }
 
 impl Widgets {
@@ -125,6 +134,8 @@ impl Widgets {
         let waveform_texture = Self::make_texture(&device, &queue, waveform_width, waveform_height);
         let waveform_data_texture = Self::make_data_texture(&device, &queue, WAVEFORM_LENGTH);
         let waveform_data = vec![Default::default(); WAVEFORM_LENGTH as usize];
+        let waveform_beat_data_texture = Self::make_data_texture(&device, &queue, WAVEFORM_LENGTH);
+        let waveform_beat_data = vec![Default::default(); WAVEFORM_LENGTH as usize];
 
         let waveform_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(&"Waveform widget shader module"),
@@ -169,6 +180,16 @@ impl Widgets {
                         },
                         count: None,
                     },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3, // iBeatTex
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D1,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
                 ],
             });
 
@@ -186,6 +207,10 @@ impl Widgets {
                 wgpu::BindGroupEntry {
                     binding: 2, // iWaveformTex
                     resource: wgpu::BindingResource::TextureView(&waveform_data_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3, // iBeatTex
+                    resource: wgpu::BindingResource::TextureView(&waveform_beat_data_texture.view),
                 },
             ],
             label: Some("waveform bind group"),
@@ -248,6 +273,8 @@ impl Widgets {
             waveform_render_pipeline,
             waveform_data_texture,
             waveform_data,
+            waveform_beat_data_texture,
+            waveform_beat_data,
         }
     }
 
@@ -256,6 +283,7 @@ impl Widgets {
         renderer: &mut Renderer,
         size: Vec2,
         audio: AudioLevels,
+        time: f32,
     ) -> TextureId {
         // Possibly remake the texture if the size has changed
         let width = (size.x * self.pixels_per_point) as u32;
@@ -281,6 +309,7 @@ impl Widgets {
 
         for i in (1..WAVEFORM_LENGTH as usize).rev() {
             self.waveform_data[i] = self.waveform_data[i - 1];
+            self.waveform_beat_data[i] = self.waveform_beat_data[i - 1];
         }
 
         fn u8norm(x: f32) -> u8 {
@@ -292,6 +321,11 @@ impl Widgets {
             mid: u8norm(audio.mid),
             high: u8norm(audio.high),
             level: u8norm(audio.level),
+        };
+
+        self.waveform_beat_data[0] = WaveformBeatSample {
+            beat: u8norm(time.fract()),
+            ..Default::default()
         };
 
         self.queue.write_buffer(
@@ -308,6 +342,22 @@ impl Widgets {
                 aspect: wgpu::TextureAspect::All,
             },
             bytemuck::cast_slice(&self.waveform_data),
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: std::num::NonZeroU32::new(4 * WAVEFORM_LENGTH),
+                rows_per_image: std::num::NonZeroU32::new(1),
+            },
+            waveform_data_texture_size,
+        );
+
+        self.queue.write_texture(
+            wgpu::ImageCopyTexture {
+                texture: &self.waveform_beat_data_texture.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            bytemuck::cast_slice(&self.waveform_beat_data),
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: std::num::NonZeroU32::new(4 * WAVEFORM_LENGTH),

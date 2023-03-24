@@ -64,8 +64,9 @@ impl Update {
 /// containing real-time information about the audio.
 #[derive(Clone, Debug)]
 pub struct MusicInfo {
-    pub time: f32,  // time in beats
-    pub tempo: f32, // beats per second
+    pub time: f32,               // time in beats
+    pub uncompensated_time: f32, // time in beats, without latency compensation (so it aligns with reported audio levels)
+    pub tempo: f32,              // beats per second
     pub audio: AudioLevels,
     // TODO: send full spectrum
 }
@@ -263,12 +264,15 @@ impl Mir {
         }
 
         // Compute t
-        let t = self
+        let uncompensated_time = self.last_update.t(time::Instant::now());
+
+        let time = self
             .last_update
             .t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION));
 
         MusicInfo {
-            time: t,
+            time,
+            uncompensated_time,
             tempo: self.last_update.tempo,
             audio: self.last_update.audio.clone(),
         }

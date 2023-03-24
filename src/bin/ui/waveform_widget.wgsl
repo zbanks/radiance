@@ -12,6 +12,9 @@ var iSampler: sampler;
 @group(0) @binding(2)
 var iWaveformTex: texture_1d<f32>;
 
+@group(0) @binding(3)
+var iBeatTex: texture_1d<f32>;
+
 struct VertexOutput {
     @builtin(position) gl_Position: vec4<f32>,
     @location(0) uv: vec2<f32>,
@@ -55,15 +58,19 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let oneYPoint = 1. / global.size.y;
 
     let audio = textureSample(iWaveformTex, iSampler, 1. - vertex.uv.x);
+    let beat = textureSample(iBeatTex, iSampler, 1. - vertex.uv.x).x;
 
     let wfDist = audio - abs(vertex.uv.y - 0.5) * 2.;
     let wfDist = wfDist + vec4<f32>(0., 0., 0., oneYPoint * 2.);
     let wf = smoothstep(vec4<f32>(0.), vec4<f32>(oneYPixel), wfDist);
 
+    let beat = beat * max(max(wf.x, wf.y), wf.z);
+
     let c = levelColor * wf.w;
     let c = composite(c, lowColor * wf.x);
     let c = composite(c, midColor * wf.y);
     let c = composite(c, highColor * wf.z);
+    let c = composite(c, vec4(0., 0., 0., 0.5 * beat));
 
     return c;
 }
