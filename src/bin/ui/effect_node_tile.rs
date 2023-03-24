@@ -1,12 +1,14 @@
-use egui::{pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, TextureId, Ui};
+use egui::{
+    pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, Spinner, TextureId, Ui,
+};
 use radiance::{EffectNodeProps, EffectNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
 const NORMAL_WIDTH: f32 = 120.;
 
-const ERROR_SCRIM: Color32 = Color32::from_rgba_premultiplied(144, 144, 144, 230);
-const ERROR_ICON: Color32 = Color32::from_rgb(102, 0, 170);
+const SCRIM: Color32 = Color32::from_rgba_premultiplied(144, 144, 144, 230);
+const ICON: Color32 = Color32::from_rgb(102, 0, 170);
 
 pub enum EffectNodeTileState {
     Initializing,
@@ -71,18 +73,11 @@ impl<'a> EffectNodeTile<'a> {
         ui.with_layout(
             Layout::bottom_up(Align::Center).with_cross_justify(true),
             |ui| {
-                match state {
-                    EffectNodeTileState::Initializing => {
-                        ui.label("Loading");
-                    }
-                    EffectNodeTileState::Ready => {
-                        ui.spacing_mut().slider_width = ui.available_width();
-                        intensity.as_mut().map(|intensity| {
-                            ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false))
-                        });
-                    }
-                    EffectNodeTileState::Error => {}
-                }
+                ui.spacing_mut().slider_width = ui.available_width();
+                intensity
+                    .as_mut()
+                    .map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
+
                 ui.horizontal_centered(|ui| {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
@@ -91,23 +86,29 @@ impl<'a> EffectNodeTile<'a> {
                     let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
                     ui.painter()
                         .add(Shape::image(preview_image, image_rect, uv, Color32::WHITE));
+                    let image_rect = image_rect.expand(1.); // Sometimes the preview creeps out from under the scrim
                     match state {
                         EffectNodeTileState::Error => {
                             // Show scrim and ! icon if node is in an error state
-                            let image_rect = image_rect.expand(1.); // Sometimes the preview creeps out from under the scrim
-                            ui.painter()
-                                .add(Shape::rect_filled(image_rect, 0., ERROR_SCRIM));
+                            ui.painter().add(Shape::rect_filled(image_rect, 0., SCRIM));
                             ui.allocate_ui_at_rect(image_rect, |ui| {
                                 ui.centered_and_justified(|ui| {
                                     ui.label(
-                                        RichText::new("!")
-                                            .color(ERROR_ICON)
-                                            .size(0.9 * image_size.y),
+                                        RichText::new("!").color(ICON).size(0.9 * image_size.y),
                                     );
                                 });
                             });
                         }
-                        _ => {}
+                        EffectNodeTileState::Initializing => {
+                            // Show scrim and spinner if node is loading
+                            ui.painter().add(Shape::rect_filled(image_rect, 0., SCRIM));
+                            ui.allocate_ui_at_rect(image_rect, |ui| {
+                                ui.centered_and_justified(|ui| {
+                                    ui.add(Spinner::new().size(0.5 * image_size.y).color(ICON));
+                                });
+                            });
+                        }
+                        EffectNodeTileState::Ready => {}
                     }
                 });
             },
