@@ -311,7 +311,7 @@ pub async fn run() {
                     .collect();
 
                 // Update & paint widgets
-                let waveform_size = egui::vec2(400., 70.);
+                let waveform_size = egui::vec2(330., 65.);
                 let waveform_texture =
                     widgets.waveform(&mut egui_renderer, waveform_size, music_info.audio);
 

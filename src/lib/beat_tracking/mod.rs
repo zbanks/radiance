@@ -89,8 +89,10 @@ const SPECTRUM_GAIN: f32 = 0.2;
 // Diode-LPF constants
 const SPECTRUM_UP_ALPHA: f32 = 0.8;
 const SPECTRUM_DOWN_ALPHA: f32 = 0.3;
-const LEVEL_UP_ALPHA: f32 = 0.9;
-const LEVEL_DOWN_ALPHA: f32 = 0.1;
+const LEVEL_FREQ_UP_ALPHA: f32 = 0.9;
+const LEVEL_FREQ_DOWN_ALPHA: f32 = 0.1;
+const LEVEL_OVERALL_UP_ALPHA: f32 = 0.9;
+const LEVEL_OVERALL_DOWN_ALPHA: f32 = 0.01;
 
 /// A struct to hold information about the current audio levels
 /// at different frequencies
@@ -774,9 +776,10 @@ impl LevelsProcessor {
 
         let diode_lpf = |stored_val: &mut f32, val| {
             if val > *stored_val {
-                *stored_val = val * LEVEL_UP_ALPHA + *stored_val * (1. - LEVEL_UP_ALPHA);
+                *stored_val = val * LEVEL_FREQ_UP_ALPHA + *stored_val * (1. - LEVEL_FREQ_UP_ALPHA);
             } else {
-                *stored_val = val * LEVEL_DOWN_ALPHA + *stored_val * (1. - LEVEL_DOWN_ALPHA);
+                *stored_val =
+                    val * LEVEL_FREQ_DOWN_ALPHA + *stored_val * (1. - LEVEL_FREQ_DOWN_ALPHA);
             }
         };
 
@@ -784,7 +787,14 @@ impl LevelsProcessor {
         diode_lpf(&mut self.audio.mid, mid);
         diode_lpf(&mut self.audio.high, high);
 
-        self.audio.level = self.audio.low.max(self.audio.mid.max(self.audio.high));
+        let level = self.audio.low.max(self.audio.mid.max(self.audio.high));
+        if level > self.audio.level {
+            self.audio.level =
+                level * LEVEL_OVERALL_UP_ALPHA + self.audio.level * (1. - LEVEL_OVERALL_UP_ALPHA);
+        } else {
+            self.audio.level = level * LEVEL_OVERALL_DOWN_ALPHA
+                + self.audio.level * (1. - LEVEL_OVERALL_DOWN_ALPHA);
+        }
 
         (self.spectrum.clone(), self.audio.clone())
     }

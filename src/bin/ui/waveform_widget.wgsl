@@ -1,9 +1,16 @@
 struct Uniforms {
     resolution: vec2<f32>,
+    size: vec2<f32>,
 }
 
 @group(0) @binding(0)
 var<uniform> global: Uniforms;
+
+@group(0) @binding(1)
+var iSampler: sampler;
+
+@group(0) @binding(2)
+var iWaveformTex: texture_1d<f32>;
 
 struct VertexOutput {
     @builtin(position) gl_Position: vec4<f32>,
@@ -31,7 +38,32 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     );
 }
 
+// Alpha-compsite two colors, putting one on top of the other
+fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
+    let a_out = 1. - (1. - over.a) * (1. - under.a);
+    return clamp(vec4<f32>((over.rgb + under.rgb * (1. - over.a)), a_out), vec4<f32>(0.), vec4<f32>(1.));
+}
+
 @fragment
 fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(0., 0., 1., 1.);
+    let levelColor = vec4<f32>(0.667, 0.667, 0.667, 1.);
+    let lowColor = vec4<f32>(0.267, 0., 0.444, 1.);
+    let midColor = vec4<f32>(0.4, 0., 0.667, 1.);
+    let highColor = vec4<f32>(0.667, 0., 1., 1.);
+
+    let oneYPixel = 1. / global.resolution.y;
+    let oneYPoint = 1. / global.size.y;
+
+    let audio = textureSample(iWaveformTex, iSampler, 1. - vertex.uv.x);
+
+    let wfDist = audio - abs(vertex.uv.y - 0.5) * 2.;
+    let wfDist = wfDist + vec4<f32>(0., 0., 0., oneYPoint * 2.);
+    let wf = smoothstep(vec4<f32>(0.), vec4<f32>(oneYPixel), wfDist);
+
+    let c = levelColor * wf.w;
+    let c = composite(c, lowColor * wf.x);
+    let c = composite(c, midColor * wf.y);
+    let c = composite(c, highColor * wf.z);
+
+    return c;
 }

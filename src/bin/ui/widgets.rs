@@ -4,6 +4,9 @@ use radiance::{ArcTextureViewSampler, AudioLevels};
 use std::iter;
 use std::sync::Arc;
 
+// How many video frames long the waveform is
+const WAVEFORM_LENGTH: u32 = 300;
+
 pub struct Widgets {
     // Constructor arguments:
     device: Arc<wgpu::Device>,
@@ -14,18 +17,30 @@ pub struct Widgets {
     waveform_width: u32,
     waveform_height: u32,
     waveform_texture: ArcTextureViewSampler,
-    waveform_shader_module: wgpu::ShaderModule,
+    _waveform_shader_module: wgpu::ShaderModule,
     waveform_uniform_buffer: wgpu::Buffer,
     waveform_bind_group: wgpu::BindGroup,
     waveform_render_pipeline: wgpu::RenderPipeline,
+    waveform_data: Vec<WaveformSample>,
+    waveform_data_texture: ArcTextureViewSampler,
 }
 
 // The uniform buffer associated with the waveform
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct WaveformUniforms {
-    resolution: [f32; 2],
+    resolution: [f32; 2], // in pixels
+    size: [f32; 2],       // in points
     _padding: [u8; 8],
+}
+
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct WaveformSample {
+    pub low: u8,
+    pub mid: u8,
+    pub high: u8,
+    pub level: u8,
 }
 
 impl Widgets {
@@ -68,10 +83,48 @@ impl Widgets {
         ArcTextureViewSampler::new(texture, view, sampler)
     }
 
+    fn make_data_texture(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        size: u32,
+    ) -> ArcTextureViewSampler {
+        let texture_size = wgpu::Extent3d {
+            width: size,
+            height: 1,
+            depth_or_array_layers: 1,
+        };
+
+        let texture_desc = wgpu::TextureDescriptor {
+            size: texture_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D1,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+            label: None,
+        };
+
+        let texture = device.create_texture(&texture_desc);
+
+        let view = texture.create_view(&Default::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+        ArcTextureViewSampler::new(texture, view, sampler)
+    }
+
     pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, pixels_per_point: f32) -> Self {
         let waveform_width = 1;
         let waveform_height = 1;
         let waveform_texture = Self::make_texture(&device, &queue, waveform_width, waveform_height);
+        let waveform_data_texture = Self::make_data_texture(&device, &queue, WAVEFORM_LENGTH);
+        let waveform_data = vec![Default::default(); WAVEFORM_LENGTH as usize];
 
         let waveform_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(&"Waveform widget shader module"),
@@ -100,7 +153,7 @@ impl Widgets {
                         },
                         count: None,
                     },
-                    /*wgpu::BindGroupLayoutEntry {
+                    wgpu::BindGroupLayoutEntry {
                         binding: 1, // iSampler
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
@@ -111,21 +164,31 @@ impl Widgets {
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Texture {
                             multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
+                            view_dimension: wgpu::TextureViewDimension::D1,
                             sample_type: wgpu::TextureSampleType::Float { filterable: true },
                         },
                         count: None,
-                    },*/
+                    },
                 ],
             });
 
         let waveform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &waveform_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: waveform_uniform_buffer.as_entire_binding(),
-            }],
-            label: Some("output bind group"),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: waveform_uniform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1, // iSampler
+                    resource: wgpu::BindingResource::Sampler(&waveform_data_texture.sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2, // iWaveformTex
+                    resource: wgpu::BindingResource::TextureView(&waveform_data_texture.view),
+                },
+            ],
+            label: Some("waveform bind group"),
         });
 
         let waveform_render_pipeline_layout =
@@ -179,10 +242,12 @@ impl Widgets {
             waveform_width,
             waveform_height,
             waveform_texture,
-            waveform_shader_module,
+            _waveform_shader_module: waveform_shader_module,
             waveform_bind_group,
             waveform_uniform_buffer,
             waveform_render_pipeline,
+            waveform_data_texture,
+            waveform_data,
         }
     }
 
@@ -201,15 +266,54 @@ impl Widgets {
             self.waveform_texture = Self::make_texture(&self.device, &self.queue, width, height);
         }
 
+        let waveform_data_texture_size = wgpu::Extent3d {
+            width: WAVEFORM_LENGTH,
+            height: 1,
+            depth_or_array_layers: 1,
+        };
+
         // Populate the uniforms and waveform data
         let uniforms = WaveformUniforms {
+            resolution: [width as f32, height as f32],
+            size: [size.x as f32, size.y as f32],
             ..Default::default()
+        };
+
+        for i in (1..WAVEFORM_LENGTH as usize).rev() {
+            self.waveform_data[i] = self.waveform_data[i - 1];
+        }
+
+        fn u8norm(x: f32) -> u8 {
+            (x * 255.).clamp(0., 255.) as u8
+        }
+
+        self.waveform_data[0] = WaveformSample {
+            low: u8norm(audio.low),
+            mid: u8norm(audio.mid),
+            high: u8norm(audio.high),
+            level: u8norm(audio.level),
         };
 
         self.queue.write_buffer(
             &self.waveform_uniform_buffer,
             0,
             bytemuck::cast_slice(&[uniforms]),
+        );
+
+        self.queue.write_texture(
+            wgpu::ImageCopyTexture {
+                texture: &self.waveform_data_texture.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            bytemuck::cast_slice(&self.waveform_data),
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: std::num::NonZeroU32::new(4 * WAVEFORM_LENGTH),
+                rows_per_image: std::num::NonZeroU32::new(1),
+            },
+            waveform_data_texture_size,
         );
 
         let mut encoder = self
