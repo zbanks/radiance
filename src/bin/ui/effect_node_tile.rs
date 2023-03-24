@@ -1,9 +1,12 @@
-use egui::{vec2, Align, Layout, RichText, Slider, TextureId, Ui};
+use egui::{pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, TextureId, Ui};
 use radiance::{EffectNodeProps, EffectNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
 const NORMAL_WIDTH: f32 = 120.;
+
+const ERROR_SCRIM: Color32 = Color32::from_rgba_premultiplied(144, 144, 144, 230);
+const ERROR_ICON: Color32 = Color32::from_rgb(102, 0, 170);
 
 pub enum EffectNodeTileState {
     Initializing,
@@ -78,15 +81,34 @@ impl<'a> EffectNodeTile<'a> {
                             ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false))
                         });
                     }
-                    EffectNodeTileState::Error => {
-                        ui.label("Error");
-                    }
+                    EffectNodeTileState::Error => {}
                 }
-                ui.centered_and_justified(|ui| {
+                ui.horizontal_centered(|ui| {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
                         * vec2(1., PREVIEW_ASPECT_RATIO);
-                    ui.image(preview_image, image_size);
+                    let (_, image_rect) = ui.allocate_space(image_size);
+                    let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                    ui.painter()
+                        .add(Shape::image(preview_image, image_rect, uv, Color32::WHITE));
+                    match state {
+                        EffectNodeTileState::Error => {
+                            // Show scrim and ! icon if node is in an error state
+                            let image_rect = image_rect.expand(1.); // Sometimes the preview creeps out from under the scrim
+                            ui.painter()
+                                .add(Shape::rect_filled(image_rect, 0., ERROR_SCRIM));
+                            ui.allocate_ui_at_rect(image_rect, |ui| {
+                                ui.centered_and_justified(|ui| {
+                                    ui.label(
+                                        RichText::new("!")
+                                            .color(ERROR_ICON)
+                                            .size(0.9 * image_size.y),
+                                    );
+                                });
+                            });
+                        }
+                        _ => {}
+                    }
                 });
             },
         );
