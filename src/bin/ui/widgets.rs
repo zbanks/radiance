@@ -1,5 +1,4 @@
-use egui::{TextureId, Vec2};
-use egui_wgpu::renderer::Renderer;
+use egui::Vec2;
 use radiance::{ArcTextureViewSampler, AudioLevels};
 use std::iter;
 use std::sync::Arc;
@@ -278,13 +277,7 @@ impl Widgets {
         }
     }
 
-    pub fn waveform(
-        &mut self,
-        renderer: &mut Renderer,
-        size: Vec2,
-        audio: AudioLevels,
-        time: f32,
-    ) -> TextureId {
+    pub fn waveform(&mut self, size: Vec2, audio: AudioLevels, time: f32) -> ArcTextureViewSampler {
         // Possibly remake the texture if the size has changed
         let width = (size.x * self.pixels_per_point) as u32;
         let height = (size.y * self.pixels_per_point) as u32;
@@ -399,10 +392,6 @@ impl Widgets {
         // Submit the commands.
         self.queue.submit(iter::once(encoder.finish()));
 
-        renderer.register_native_texture(
-            &self.device,
-            &self.waveform_texture.view,
-            wgpu::FilterMode::Linear,
-        )
+        self.waveform_texture.clone()
     }
 }

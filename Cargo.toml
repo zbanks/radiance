@@ -51,6 +51,11 @@ wav = "1.0"
 # https://github.com/diwic/alsa-rs/issues/90
 alsa = "=0.6.0"
 
+# For memory profiling (see also src/bin/main.rs)
+#[dependencies.jemallocator]
+#version = "0.3.2"
+#features = ["profiling"]
+
 [dev-dependencies]
 wav = "1.0"
 

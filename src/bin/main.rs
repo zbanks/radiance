@@ -1,3 +1,9 @@
+// For profiling (see also Cargo.toml)
+//use jemallocator::Jemalloc;
+//
+//#[global_allocator]
+//static GLOBAL: Jemalloc = Jemalloc;
+
 extern crate nalgebra as na;
 
 use egui_wgpu::renderer::{Renderer, ScreenDescriptor};
@@ -268,6 +274,8 @@ pub async fn run() {
     let mut node_add_wants_focus = false;
     let mut insertion_point: InsertionPoint = Default::default();
 
+    let mut waveform_texture: Option<egui::TextureId> = None;
+
     event_loop.run(move |event, event_loop, control_flow| {
         if winit_output.on_event(&event, &mut ctx) {
             return; // Event was consumed by winit_output
@@ -312,12 +320,28 @@ pub async fn run() {
 
                 // Update & paint widgets
                 let waveform_size = egui::vec2(660., 130.);
-                let waveform_texture = widgets.waveform(
-                    &mut egui_renderer,
+                let waveform_native_texture = widgets.waveform(
                     waveform_size,
                     music_info.audio,
                     music_info.uncompensated_time,
                 );
+                match waveform_texture {
+                    None => {
+                        waveform_texture = Some(egui_renderer.register_native_texture(
+                            &device,
+                            &waveform_native_texture.view,
+                            wgpu::FilterMode::Linear,
+                        ));
+                    }
+                    Some(waveform_texture) => {
+                        egui_renderer.update_egui_texture_from_wgpu_texture(
+                            &device,
+                            &waveform_native_texture.view,
+                            wgpu::FilterMode::Linear,
+                            waveform_texture,
+                        );
+                    }
+                }
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
@@ -329,7 +353,7 @@ pub async fn run() {
                     );
 
                     egui::CentralPanel::default().show(egui_ctx, |ui| {
-                        ui.image(waveform_texture, waveform_size);
+                        ui.image(waveform_texture.unwrap(), waveform_size);
 
                         let mosaic_response = ui.add(mosaic(
                             "mosaic",
@@ -446,6 +470,12 @@ pub async fn run() {
                 // Draw
                 output.present();
 
+                // Clear out all native textures for the next frame
+                for texture_id in preview_images.values() {
+                    egui_renderer.free_texture(texture_id);
+                }
+
+                // Clear out egui textures for the next frame
                 for texture_id in tdelta.free.iter() {
                     egui_renderer.free_texture(texture_id);
                 }
