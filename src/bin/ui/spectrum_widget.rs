@@ -3,10 +3,10 @@ use radiance::{ArcTextureViewSampler, AudioLevels};
 use std::iter;
 use std::sync::Arc;
 
-// How many video frames long the waveform is
+// How many video frames long the spectrum is
 const LENGTH: u32 = 300;
 
-pub struct WaveformWidget {
+pub struct SpectrumWidget {
     // Constructor arguments:
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
@@ -26,7 +26,7 @@ pub struct WaveformWidget {
     beat_data_texture: ArcTextureViewSampler,
 }
 
-// The uniform buffer associated with the waveform
+// The uniform buffer associated with the spectrum
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniforms {
@@ -51,7 +51,7 @@ struct BeatSample {
     _padding: [u8; 3],
 }
 
-impl WaveformWidget {
+impl SpectrumWidget {
     fn make_texture(
         device: &wgpu::Device,
         width: u32,
@@ -135,13 +135,13 @@ impl WaveformWidget {
         let beat_data = vec![Default::default(); LENGTH as usize];
 
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some(&"waveform widget shader module"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("waveform_widget.wgsl").into()),
+            label: Some(&"spectrum widget shader module"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("spectrum_widget.wgsl").into()),
         });
 
         // The update uniform buffer for this effect
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some(&"waveform widget uniform buffer"),
+            label: Some(&"spectrum widget uniform buffer"),
             size: std::mem::size_of::<Uniforms>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -149,7 +149,7 @@ impl WaveformWidget {
 
         let bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some(&"waveform widget bind group layout"),
+                label: Some(&"spectrum widget bind group layout"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0, // Uniforms
@@ -168,7 +168,7 @@ impl WaveformWidget {
                         count: None,
                     },
                     wgpu::BindGroupLayoutEntry {
-                        binding: 2, // iWaveformTex
+                        binding: 2, // iSpectrumTex
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Texture {
                             multisampled: false,
@@ -202,7 +202,7 @@ impl WaveformWidget {
                     resource: wgpu::BindingResource::Sampler(&data_texture.sampler),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 2, // iWaveformTex
+                    binding: 2, // iSpectrumTex
                     resource: wgpu::BindingResource::TextureView(&data_texture.view),
                 },
                 wgpu::BindGroupEntry {
@@ -210,19 +210,19 @@ impl WaveformWidget {
                     resource: wgpu::BindingResource::TextureView(&beat_data_texture.view),
                 },
             ],
-            label: Some("waveform bind group"),
+            label: Some("spectrum bind group"),
         });
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Waveform widget render pipeline layout"),
+                label: Some("Spectrum widget render pipeline layout"),
                 bind_group_layouts: &[&bind_group_layout],
                 push_constant_ranges: &[],
             });
 
         let render_pipeline =
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Waveform widget render pipeline"),
+                label: Some("Spectrum widget render pipeline"),
                 layout: Some(&render_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader_module,
@@ -291,7 +291,7 @@ impl WaveformWidget {
             depth_or_array_layers: 1,
         };
 
-        // Populate the uniforms and waveform data
+        // Populate the uniforms and spectrum data
         let uniforms = Uniforms {
             resolution: [width as f32, height as f32],
             size: [size.x as f32, size.y as f32],
@@ -360,7 +360,7 @@ impl WaveformWidget {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Waveform widget encoder"),
+                label: Some("Spectrum widget encoder"),
             });
         // Record output render pass.
         {

@@ -275,6 +275,7 @@ pub async fn run() {
     let mut insertion_point: InsertionPoint = Default::default();
 
     let mut waveform_texture: Option<egui::TextureId> = None;
+    let mut spectrum_texture: Option<egui::TextureId> = None;
 
     event_loop.run(move |event, event_loop, control_flow| {
         if winit_output.on_event(&event, &mut ctx) {
@@ -340,14 +341,23 @@ pub async fn run() {
                     }
                 }
 
-                let waveform_size = egui::vec2(660., 130.);
+                let waveform_size = egui::vec2(330., 65.);
                 let waveform_native_texture = waveform_widget.paint(
                     waveform_size,
-                    music_info.audio,
+                    &music_info.audio,
                     music_info.uncompensated_time,
                 );
 
                 update_or_register_native_texture(&mut egui_renderer, &device, &waveform_native_texture.view, &mut waveform_texture);
+
+                let spectrum_size = egui::vec2(330., 65.);
+                let spectrum_native_texture = waveform_widget.paint(
+                    spectrum_size,
+                    &music_info.audio,
+                    music_info.uncompensated_time,
+                );
+
+                update_or_register_native_texture(&mut egui_renderer, &device, &spectrum_native_texture.view, &mut spectrum_texture);
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
@@ -359,7 +369,10 @@ pub async fn run() {
                     );
 
                     egui::CentralPanel::default().show(egui_ctx, |ui| {
-                        ui.image(waveform_texture.unwrap(), waveform_size);
+                        ui.horizontal(|ui| {
+                            ui.image(waveform_texture.unwrap(), waveform_size);
+                            ui.image(spectrum_texture.unwrap(), spectrum_size);
+                        });
 
                         let mosaic_response = ui.add(mosaic(
                             "mosaic",
