@@ -25,7 +25,7 @@ use radiance::{
 
 mod ui;
 use ui::mosaic;
-use ui::Widgets;
+use ui::WaveformWidget;
 
 mod winit_output;
 use winit_output::WinitOutput;
@@ -146,7 +146,7 @@ pub async fn run() {
     let mut ctx = Context::new(device.clone(), queue.clone());
 
     // Make widgets
-    let mut widgets = Widgets::new(device.clone(), queue.clone(), pixels_per_point);
+    let mut waveform_widget = WaveformWidget::new(device.clone(), queue.clone(), pixels_per_point);
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
@@ -319,29 +319,35 @@ pub async fn run() {
                     .collect();
 
                 // Update & paint widgets
+
+                fn update_or_register_native_texture(egui_renderer: &mut egui_wgpu::Renderer, device: &wgpu::Device, native_texture: &wgpu::TextureView, egui_texture: &mut Option<egui::TextureId>) {
+                    match egui_texture {
+                        None => {
+                            *egui_texture = Some(egui_renderer.register_native_texture(
+                                device,
+                                native_texture,
+                                wgpu::FilterMode::Linear,
+                            ));
+                        }
+                        Some(egui_texture) => {
+                            egui_renderer.update_egui_texture_from_wgpu_texture(
+                                device,
+                                native_texture,
+                                wgpu::FilterMode::Linear,
+                                *egui_texture,
+                            );
+                        }
+                    }
+                }
+
                 let waveform_size = egui::vec2(660., 130.);
-                let waveform_native_texture = widgets.waveform(
+                let waveform_native_texture = waveform_widget.paint(
                     waveform_size,
                     music_info.audio,
                     music_info.uncompensated_time,
                 );
-                match waveform_texture {
-                    None => {
-                        waveform_texture = Some(egui_renderer.register_native_texture(
-                            &device,
-                            &waveform_native_texture.view,
-                            wgpu::FilterMode::Linear,
-                        ));
-                    }
-                    Some(waveform_texture) => {
-                        egui_renderer.update_egui_texture_from_wgpu_texture(
-                            &device,
-                            &waveform_native_texture.view,
-                            wgpu::FilterMode::Linear,
-                            waveform_texture,
-                        );
-                    }
-                }
+
+                update_or_register_native_texture(&mut egui_renderer, &device, &waveform_native_texture.view, &mut waveform_texture);
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);
