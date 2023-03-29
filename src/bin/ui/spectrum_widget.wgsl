@@ -12,9 +12,6 @@ var iSampler: sampler;
 @group(0) @binding(2)
 var iSpectrumTex: texture_1d<f32>;
 
-@group(0) @binding(3)
-var iBeatTex: texture_1d<f32>;
-
 struct VertexOutput {
     @builtin(position) gl_Position: vec4<f32>,
     @location(0) uv: vec2<f32>,
@@ -49,28 +46,18 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 
 @fragment
 fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
-    let levelColor = vec4<f32>(0.667, 0.667, 0.667, 1.);
-    let lowColor = vec4<f32>(0.267, 0., 0.444, 1.);
-    let midColor = vec4<f32>(0.4, 0., 0.667, 1.);
-    let highColor = vec4<f32>(0.667, 0., 1., 1.);
+    let spectrumColorOutline = vec4<f32>(0.667, 0.667, 0.667, 1.);
+    let spectrumColorBottom = vec4<f32>(0.4, 0., 0.667, 1.);
+    let spectrumColorTop = vec4<f32>(0.667, 0., 1., 1.);
 
-    let oneYPixel = 1. / global.resolution.y;
-    let oneYPoint = 1. / global.size.y;
+    let freq = vertex.uv.x;
+    let h = textureSample(iSpectrumTex, iSampler, freq).r;
 
-    let audio = textureSample(iSpectrumTex, iSampler, 1. - vertex.uv.x);
-    let beat = textureSample(iBeatTex, iSampler, 1. - vertex.uv.x).x;
-
-    let wfDist = audio - abs(vertex.uv.y - 0.5) * 2.;
-    let wfDist = wfDist + vec4<f32>(0., 0., 0., oneYPoint * 2.);
-    let wf = smoothstep(vec4<f32>(0.), vec4<f32>(oneYPixel), wfDist);
-
-    let beat = beat * max(max(wf.x, wf.y), wf.z);
-
-    let c = levelColor * wf.w;
-    let c = composite(c, lowColor * wf.x);
-    let c = composite(c, midColor * wf.y);
-    let c = composite(c, highColor * wf.z);
-    let c = composite(c, vec4(0., 0., 0., 0.5 * beat));
+    let smoothEdge = 0.04;
+    let h = h * smoothstep(0., smoothEdge, freq) - smoothstep(1. - smoothEdge, 1., freq);
+    let d = (vertex.uv.y - (1. - h)) * 90.; // TODO this 1 - h is weird
+    let c = mix(spectrumColorTop, spectrumColorBottom, clamp(d / 30., 0., 1.)) * step(1., d);
+    let c = composite(c, spectrumColorOutline * (smoothstep(0., 1., d) - smoothstep(3., 4., d) ));
 
     return c;
 }

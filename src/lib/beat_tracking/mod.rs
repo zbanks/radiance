@@ -58,7 +58,7 @@ const SPECTROGRAM_SIZE: usize = FRAME_SIZE / 2;
 // Span a range from 30 Hz to 17000 Hz
 const FILTER_MIN_NOTE: i32 = 23; // 30.87 Hz
 const FILTER_MAX_NOTE: i32 = 132; // 16744 Hz
-const N_FILTERS: usize = 81;
+pub const N_FILTERS: usize = 81;
 
 const LOG_OFFSET: f32 = 1.;
 

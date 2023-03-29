@@ -25,7 +25,7 @@ use radiance::{
 
 mod ui;
 use ui::mosaic;
-use ui::WaveformWidget;
+use ui::{WaveformWidget, SpectrumWidget};
 
 mod winit_output;
 use winit_output::WinitOutput;
@@ -147,6 +147,7 @@ pub async fn run() {
 
     // Make widgets
     let mut waveform_widget = WaveformWidget::new(device.clone(), queue.clone(), pixels_per_point);
+    let mut spectrum_widget = SpectrumWidget::new(device.clone(), queue.clone(), pixels_per_point);
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
@@ -351,10 +352,9 @@ pub async fn run() {
                 update_or_register_native_texture(&mut egui_renderer, &device, &waveform_native_texture.view, &mut waveform_texture);
 
                 let spectrum_size = egui::vec2(330., 65.);
-                let spectrum_native_texture = waveform_widget.paint(
+                let spectrum_native_texture = spectrum_widget.paint(
                     spectrum_size,
-                    &music_info.audio,
-                    music_info.uncompensated_time,
+                    &music_info.spectrum,
                 );
 
                 update_or_register_native_texture(&mut egui_renderer, &device, &spectrum_native_texture.view, &mut spectrum_texture);

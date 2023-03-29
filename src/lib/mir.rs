@@ -1,5 +1,5 @@
 pub use crate::beat_tracking::AudioLevels;
-use crate::beat_tracking::{BeatTracker, SAMPLE_RATE};
+use crate::beat_tracking::{BeatTracker, SAMPLE_RATE, N_FILTERS};
 use cpal::traits::DeviceTrait;
 use std::sync::mpsc;
 use std::time;
@@ -14,6 +14,8 @@ const DEFAULT_BPM: f32 = 120.;
 // but the HMM parameters are a good starting point
 const MIN_BPS: f32 = 55. / 60.;
 const MAX_BPS: f32 = 215. / 60.;
+
+pub const SPECTRUM_LENGTH: usize = N_FILTERS;
 
 /// A Mir (Music information retrieval) object
 /// handles listening to the music via the system audio
@@ -50,6 +52,7 @@ struct Update {
 
     // For computing the audio levels
     audio: AudioLevels,
+    spectrum: [f32; SPECTRUM_LENGTH],
 }
 
 impl Update {
@@ -68,7 +71,7 @@ pub struct MusicInfo {
     pub uncompensated_time: f32, // time in beats, without latency compensation (so it aligns with reported audio levels)
     pub tempo: f32,              // beats per second
     pub audio: AudioLevels,
-    // TODO: send full spectrum
+    pub spectrum: [f32; SPECTRUM_LENGTH],
 }
 
 impl Default for Mir {
@@ -134,6 +137,7 @@ impl Mir {
             t_ref: 0.,
             tempo: DEFAULT_BPM / 60.,
             audio: Default::default(),
+            spectrum: [0.; SPECTRUM_LENGTH],
         };
 
         let mut process_audio_i16_mono = move |data: &[i16]| {
@@ -146,7 +150,7 @@ impl Mir {
                     (audio, spectrum, activation, beat_acc || beat)
                 },
             );
-            let (audio, _spectrum, _activation, beat) = match recent_result {
+            let (audio, spectrum, _activation, beat) = match recent_result {
                 Some(result) => result,
                 None => {
                     return;
@@ -185,6 +189,7 @@ impl Mir {
             }
 
             update.audio = audio;
+            update.spectrum = spectrum.data.as_vec().to_vec().try_into().unwrap();
 
             // Send an update back to the main thread
             if let Err(err) = sender.try_send(update.clone()) {
@@ -252,6 +257,7 @@ impl Mir {
                 t_ref: 0.,
                 tempo: 0., // This will hold t at 0 until the audio thread starts up
                 audio: Default::default(),
+                spectrum: [0.; SPECTRUM_LENGTH],
             },
         }
     }
@@ -275,6 +281,7 @@ impl Mir {
             uncompensated_time,
             tempo: self.last_update.tempo,
             audio: self.last_update.audio.clone(),
+            spectrum: self.last_update.spectrum.clone(),
         }
     }
 }

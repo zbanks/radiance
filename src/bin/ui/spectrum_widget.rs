@@ -1,10 +1,7 @@
 use egui::Vec2;
-use radiance::{ArcTextureViewSampler, AudioLevels};
+use radiance::{ArcTextureViewSampler, SPECTRUM_LENGTH};
 use std::iter;
 use std::sync::Arc;
-
-// How many video frames long the spectrum is
-const LENGTH: u32 = 300;
 
 pub struct SpectrumWidget {
     // Constructor arguments:
@@ -20,10 +17,7 @@ pub struct SpectrumWidget {
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     render_pipeline: wgpu::RenderPipeline,
-    data: Vec<Sample>,
     data_texture: ArcTextureViewSampler,
-    beat_data: Vec<BeatSample>,
-    beat_data_texture: ArcTextureViewSampler,
 }
 
 // The uniform buffer associated with the spectrum
@@ -38,16 +32,7 @@ struct Uniforms {
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Sample {
-    pub low: u8,
-    pub mid: u8,
-    pub high: u8,
-    pub level: u8,
-}
-
-#[repr(C)]
-#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct BeatSample {
-    pub beat: u8,
+    pub spectrum: u8,
     _padding: [u8; 3],
 }
 
@@ -129,10 +114,7 @@ impl SpectrumWidget {
         let width = 1;
         let height = 1;
         let texture = Self::make_texture(&device, width, height);
-        let data_texture = Self::make_data_texture(&device, LENGTH);
-        let data = vec![Default::default(); LENGTH as usize];
-        let beat_data_texture = Self::make_data_texture(&device, LENGTH);
-        let beat_data = vec![Default::default(); LENGTH as usize];
+        let data_texture = Self::make_data_texture(&device, SPECTRUM_LENGTH as u32);
 
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(&"spectrum widget shader module"),
@@ -177,16 +159,6 @@ impl SpectrumWidget {
                         },
                         count: None,
                     },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3, // iBeatTex
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D1,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
                 ],
             });
 
@@ -204,10 +176,6 @@ impl SpectrumWidget {
                 wgpu::BindGroupEntry {
                     binding: 2, // iSpectrumTex
                     resource: wgpu::BindingResource::TextureView(&data_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3, // iBeatTex
-                    resource: wgpu::BindingResource::TextureView(&beat_data_texture.view),
                 },
             ],
             label: Some("spectrum bind group"),
@@ -269,13 +237,10 @@ impl SpectrumWidget {
             uniform_buffer,
             render_pipeline,
             data_texture,
-            data,
-            beat_data_texture,
-            beat_data,
         }
     }
 
-    pub fn paint(&mut self, size: Vec2, audio: &AudioLevels, time: f32) -> ArcTextureViewSampler {
+    pub fn paint(&mut self, size: Vec2, spectrum: &[f32; SPECTRUM_LENGTH]) -> ArcTextureViewSampler {
         // Possibly remake the texture if the size has changed
         let width = (size.x * self.pixels_per_point) as u32;
         let height = (size.y * self.pixels_per_point) as u32;
@@ -286,7 +251,7 @@ impl SpectrumWidget {
         }
 
         let data_texture_size = wgpu::Extent3d {
-            width: LENGTH,
+            width: SPECTRUM_LENGTH as u32,
             height: 1,
             depth_or_array_layers: 1,
         };
@@ -298,26 +263,14 @@ impl SpectrumWidget {
             ..Default::default()
         };
 
-        for i in (1..LENGTH as usize).rev() {
-            self.data[i] = self.data[i - 1];
-            self.beat_data[i] = self.beat_data[i - 1];
-        }
-
         fn u8norm(x: f32) -> u8 {
             (x * 255.).clamp(0., 255.) as u8
         }
 
-        self.data[0] = Sample {
-            low: u8norm(audio.low),
-            mid: u8norm(audio.mid),
-            high: u8norm(audio.high),
-            level: u8norm(audio.level),
-        };
-
-        self.beat_data[0] = BeatSample {
-            beat: u8norm(time.fract()),
+        let buffer: Vec<Sample> = spectrum.iter().map(|&s| Sample {
+            spectrum: u8norm(s),
             ..Default::default()
-        };
+        }).collect();
 
         self.queue.write_buffer(
             &self.uniform_buffer,
@@ -332,26 +285,10 @@ impl SpectrumWidget {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            bytemuck::cast_slice(&self.data),
+            bytemuck::cast_slice(&buffer),
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4 * LENGTH),
-                rows_per_image: std::num::NonZeroU32::new(1),
-            },
-            data_texture_size,
-        );
-
-        self.queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &self.beat_data_texture.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            bytemuck::cast_slice(&self.beat_data),
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4 * LENGTH),
+                bytes_per_row: std::num::NonZeroU32::new(4 * SPECTRUM_LENGTH as u32),
                 rows_per_image: std::num::NonZeroU32::new(1),
             },
             data_texture_size,
