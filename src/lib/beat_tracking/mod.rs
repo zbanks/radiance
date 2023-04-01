@@ -88,7 +88,7 @@ const FILTER_HIGH_CUTOFF: usize = 70;
 const SPECTRUM_GAIN: f32 = 0.2;
 // Diode-LPF constants
 const SPECTRUM_UP_ALPHA: f32 = 0.8;
-const SPECTRUM_DOWN_ALPHA: f32 = 0.3;
+const SPECTRUM_DOWN_ALPHA: f32 = 0.1;
 const LEVEL_FREQ_UP_ALPHA: f32 = 0.9;
 const LEVEL_FREQ_DOWN_ALPHA: f32 = 0.1;
 const LEVEL_OVERALL_UP_ALPHA: f32 = 0.9;

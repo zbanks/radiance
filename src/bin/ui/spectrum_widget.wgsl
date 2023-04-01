@@ -47,17 +47,20 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 @fragment
 fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let spectrumColorOutline = vec4<f32>(0.667, 0.667, 0.667, 1.);
-    let spectrumColorBottom = vec4<f32>(0.4, 0., 0.667, 1.);
+    let spectrumColorBottom = vec4<f32>(0.267, 0., 0.444, 1.);
     let spectrumColorTop = vec4<f32>(0.667, 0., 1., 1.);
+
+    let oneYPixel = 1. / global.resolution.y;
+    let oneYPoint = 1. / global.size.y;
 
     let freq = vertex.uv.x;
     let h = textureSample(iSpectrumTex, iSampler, freq).r;
 
-    let smoothEdge = 0.04;
-    let h = h * smoothstep(0., smoothEdge, freq) - smoothstep(1. - smoothEdge, 1., freq);
-    let d = (vertex.uv.y - (1. - h)) * 90.; // TODO this 1 - h is weird
-    let c = mix(spectrumColorTop, spectrumColorBottom, clamp(d / 30., 0., 1.)) * step(1., d);
-    let c = composite(c, spectrumColorOutline * (smoothstep(0., 1., d) - smoothstep(3., 4., d) ));
+    //let smoothEdge = 0.04;
+    //let h = h * smoothstep(0., smoothEdge, freq) - smoothstep(1. - smoothEdge, 1., freq);
+    let d = (vertex.uv.y - (1. - h)); // TODO this 1 - h is weird
+    let c = mix(spectrumColorTop, spectrumColorBottom, clamp(d * 5., 0., 1.)) * step(0., d);
+    let c = composite(c, spectrumColorOutline * (smoothstep(-oneYPoint - oneYPixel, -oneYPoint, d) - smoothstep(0., oneYPixel, d) ));
 
     return c;
 }
