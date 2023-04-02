@@ -952,7 +952,7 @@ where
                 ImageNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
                     .add_contents(ui)
             }
-            NodeProps::PlaceholderNode(p) => {} // Empty tile
+            NodeProps::PlaceholderNode(_) => {} // Empty tile
         });
 
         if response.dragged() || response.clicked() {

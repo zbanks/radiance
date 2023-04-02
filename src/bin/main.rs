@@ -19,7 +19,7 @@ use std::iter;
 use std::sync::Arc;
 
 use radiance::{
-    Context, EffectNodeProps, InsertionPoint, Mir, NodeId, NodeProps, Props, RenderTarget,
+    AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, NodeId, NodeProps, Props, RenderTarget,
     RenderTargetId, ScreenOutputNodeProps,
 };
 
@@ -149,6 +149,9 @@ pub async fn run() {
     let mut waveform_widget = WaveformWidget::new(device.clone(), queue.clone(), pixels_per_point);
     let mut spectrum_widget = SpectrumWidget::new(device.clone(), queue.clone(), pixels_per_point);
 
+    // Make an AutoDJ
+    let mut auto_dj: Option<AutoDJ> = None;
+
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
     let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
@@ -156,7 +159,6 @@ pub async fn run() {
     let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
     let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
     let node6_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
-    let node7_id: NodeId = NodeId::gen();
     let screen_output_node_id: NodeId =
         serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
     let mut props: Props = serde_json::from_value(json!({
@@ -168,7 +170,6 @@ pub async fn run() {
                 node4_id,
                 node5_id,
                 node6_id,
-                node7_id,
                 screen_output_node_id,
             ],
             "edges": [
@@ -194,11 +195,6 @@ pub async fn run() {
                 },
                 {
                     "from": node5_id,
-                    "to": node7_id,
-                    "input": 0,
-                },
-                {
-                    "from": node7_id,
                     "to": screen_output_node_id,
                     "input": 0,
                 },
@@ -248,9 +244,6 @@ pub async fn run() {
                 "name": "nyancat.gif",
                 "intensity": 1.0,
             },
-            node7_id.to_string(): {
-                "type": "PlaceholderNode",
-            },
             screen_output_node_id.to_string(): {
                 "type": "ScreenOutputNode",
             }
@@ -284,6 +277,7 @@ pub async fn run() {
     let mut left_panel_expanded = false;
     let mut node_add_wants_focus = false;
     let mut insertion_point: InsertionPoint = Default::default();
+    let mut auto_dj_enabled = false;
 
     let mut waveform_texture: Option<egui::TextureId> = None;
     let mut spectrum_texture: Option<egui::TextureId> = None;
@@ -306,8 +300,17 @@ pub async fn run() {
                     .chain(winit_output.render_targets_iter())
                     .map(|(k, v)| (*k, v.clone()))
                     .collect();
-                ctx.update(&mut props, &render_target_list);
                 winit_output.update(event_loop, &mut props);
+                auto_dj.as_mut().map(|a| {
+                    a.update(&mut props);
+
+                    // Uncheck the checkbox if we broke the AutoDJ
+                    if a.is_broken() {
+                        auto_dj_enabled = false;
+                    }
+                });
+
+                ctx.update(&mut props, &render_target_list);
 
                 // Paint
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -395,6 +398,7 @@ pub async fn run() {
                         ui.horizontal(|ui| {
                             ui.image(waveform_texture.unwrap(), waveform_size);
                             ui.image(spectrum_texture.unwrap(), spectrum_size);
+                            ui.checkbox(&mut auto_dj_enabled, "Auto DJ");
                         });
 
                         let mosaic_response = ui.add(mosaic(
@@ -455,6 +459,17 @@ pub async fn run() {
                         }
                     });
                 });
+
+                // Construct or destroy the AutoDJ
+                match (auto_dj_enabled, &mut auto_dj) {
+                    (false, Some(_)) => {
+                        auto_dj = None;
+                    }
+                    (true, None) => {
+                        auto_dj = Some(AutoDJ::new());
+                    }
+                    _ => {}
+                }
 
                 platform.handle_platform_output(&window, &egui_ctx, full_output.platform_output);
                 let clipped_primitives = egui_ctx.tessellate(full_output.shapes); // create triangles to paint
