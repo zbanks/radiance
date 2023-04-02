@@ -25,7 +25,7 @@ use radiance::{
 
 mod ui;
 use ui::mosaic;
-use ui::{WaveformWidget, SpectrumWidget};
+use ui::{SpectrumWidget, WaveformWidget};
 
 mod winit_output;
 use winit_output::WinitOutput;
@@ -156,6 +156,7 @@ pub async fn run() {
     let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
     let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
     let node6_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
+    let node7_id: NodeId = NodeId::gen();
     let screen_output_node_id: NodeId =
         serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
     let mut props: Props = serde_json::from_value(json!({
@@ -167,6 +168,7 @@ pub async fn run() {
                 node4_id,
                 node5_id,
                 node6_id,
+                node7_id,
                 screen_output_node_id,
             ],
             "edges": [
@@ -192,6 +194,11 @@ pub async fn run() {
                 },
                 {
                     "from": node5_id,
+                    "to": node7_id,
+                    "input": 0,
+                },
+                {
+                    "from": node7_id,
                     "to": screen_output_node_id,
                     "input": 0,
                 },
@@ -240,6 +247,9 @@ pub async fn run() {
                 "type": "ImageNode",
                 "name": "nyancat.gif",
                 "intensity": 1.0,
+            },
+            node7_id.to_string(): {
+                "type": "PlaceholderNode",
             },
             screen_output_node_id.to_string(): {
                 "type": "ScreenOutputNode",
@@ -322,7 +332,12 @@ pub async fn run() {
 
                 // Update & paint widgets
 
-                fn update_or_register_native_texture(egui_renderer: &mut egui_wgpu::Renderer, device: &wgpu::Device, native_texture: &wgpu::TextureView, egui_texture: &mut Option<egui::TextureId>) {
+                fn update_or_register_native_texture(
+                    egui_renderer: &mut egui_wgpu::Renderer,
+                    device: &wgpu::Device,
+                    native_texture: &wgpu::TextureView,
+                    egui_texture: &mut Option<egui::TextureId>,
+                ) {
                     match egui_texture {
                         None => {
                             *egui_texture = Some(egui_renderer.register_native_texture(
@@ -349,15 +364,23 @@ pub async fn run() {
                     music_info.uncompensated_time,
                 );
 
-                update_or_register_native_texture(&mut egui_renderer, &device, &waveform_native_texture.view, &mut waveform_texture);
-
-                let spectrum_size = egui::vec2(330., 65.);
-                let spectrum_native_texture = spectrum_widget.paint(
-                    spectrum_size,
-                    &music_info.spectrum,
+                update_or_register_native_texture(
+                    &mut egui_renderer,
+                    &device,
+                    &waveform_native_texture.view,
+                    &mut waveform_texture,
                 );
 
-                update_or_register_native_texture(&mut egui_renderer, &device, &spectrum_native_texture.view, &mut spectrum_texture);
+                let spectrum_size = egui::vec2(330., 65.);
+                let spectrum_native_texture =
+                    spectrum_widget.paint(spectrum_size, &music_info.spectrum);
+
+                update_or_register_native_texture(
+                    &mut egui_renderer,
+                    &device,
+                    &spectrum_native_texture.view,
+                    &mut spectrum_texture,
+                );
 
                 // EGUI update
                 let raw_input = platform.take_egui_input(&window);

@@ -3,6 +3,7 @@
 use crate::ui::drop_target::DropTarget;
 use crate::ui::effect_node_tile::EffectNodeTile;
 use crate::ui::image_node_tile::ImageNodeTile;
+use crate::ui::placeholder_node_tile::PlaceholderNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
 use crate::ui::tile::{Tile, TileId};
 use egui::{
@@ -163,6 +164,7 @@ impl LayoutCache {
                     NodeProps::EffectNode(p) => EffectNodeTile::min_input_heights(p),
                     NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::min_input_heights(p),
                     NodeProps::ImageNode(p) => ImageNodeTile::min_input_heights(p),
+                    NodeProps::PlaceholderNode(p) => PlaceholderNodeTile::min_input_heights(p),
                 };
                 // The length of the returned heights array should match the input count,
                 // or be 1 if the input count is zero
@@ -278,6 +280,9 @@ impl LayoutCache {
                         ScreenOutputNodeTile::width_for_height(p, height)
                     }
                     NodeProps::ImageNode(p) => ImageNodeTile::width_for_height(p, height),
+                    NodeProps::PlaceholderNode(p) => {
+                        PlaceholderNodeTile::width_for_height(p, height)
+                    }
                 };
                 (tile_id, width)
             })
@@ -947,6 +952,7 @@ where
                 ImageNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
                     .add_contents(ui)
             }
+            NodeProps::PlaceholderNode(p) => {} // Empty tile
         });
 
         if response.dragged() || response.clicked() {

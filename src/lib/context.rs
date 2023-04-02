@@ -1,5 +1,6 @@
 use crate::effect_node::EffectNodeState;
 use crate::image_node::ImageNodeState;
+use crate::placeholder_node::PlaceholderNodeState;
 use crate::render_target::{RenderTarget, RenderTargetId};
 use crate::screen_output_node::ScreenOutputNodeState;
 use crate::{AudioLevels, Graph, NodeId, NodeProps, Props};
@@ -84,6 +85,7 @@ pub enum NodeState {
     EffectNode(EffectNodeState),
     ScreenOutputNode(ScreenOutputNodeState),
     ImageNode(ImageNodeState),
+    PlaceholderNode(PlaceholderNodeState),
 }
 
 impl Context {
@@ -233,6 +235,9 @@ impl Context {
                 NodeState::ScreenOutputNode(ScreenOutputNodeState::new(self, props))
             }
             NodeProps::ImageNode(props) => NodeState::ImageNode(ImageNodeState::new(self, props)),
+            NodeProps::PlaceholderNode(props) => {
+                NodeState::PlaceholderNode(PlaceholderNodeState::new(self, props))
+            }
         }
     }
 
@@ -249,6 +254,10 @@ impl Context {
             },
             NodeState::ImageNode(ref mut state) => match node_props {
                 NodeProps::ImageNode(ref mut props) => state.update(self, props),
+                _ => panic!("Type mismatch between props and state"),
+            },
+            NodeState::PlaceholderNode(ref mut state) => match node_props {
+                NodeProps::PlaceholderNode(ref mut props) => state.update(self, props),
                 _ => panic!("Type mismatch between props and state"),
             },
         };
@@ -271,6 +280,9 @@ impl Context {
                 state.paint(self, encoder, render_target_id, input_textures)
             }
             NodeState::ImageNode(ref mut state) => {
+                state.paint(self, encoder, render_target_id, input_textures)
+            }
+            NodeState::PlaceholderNode(ref mut state) => {
                 state.paint(self, encoder, render_target_id, input_textures)
             }
         };

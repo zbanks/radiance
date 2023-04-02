@@ -2,6 +2,7 @@ use crate::effect_node::EffectNodeProps;
 use crate::graph::{Graph, NodeId};
 use crate::image_node::ImageNodeProps;
 pub use crate::mir::AudioLevels;
+use crate::placeholder_node::PlaceholderNodeProps;
 use crate::screen_output_node::ScreenOutputNodeProps;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -25,6 +26,7 @@ pub enum NodeProps {
     EffectNode(EffectNodeProps),
     ScreenOutputNode(ScreenOutputNodeProps),
     ImageNode(ImageNodeProps),
+    PlaceholderNode(PlaceholderNodeProps),
 }
 
 /// This is a struct of props that are common to every node.
@@ -38,6 +40,7 @@ impl From<&NodeProps> for CommonNodeProps {
             NodeProps::EffectNode(p) => p.into(),
             NodeProps::ScreenOutputNode(p) => p.into(),
             NodeProps::ImageNode(p) => p.into(),
+            NodeProps::PlaceholderNode(p) => p.into(),
         }
     }
 }

@@ -1,21 +1,23 @@
+mod auto_dj;
 mod beat_tracking;
 mod context;
 mod effect_node;
 mod graph;
 mod image_node;
 mod mir;
+mod placeholder_node;
 mod props;
 mod render_target;
 mod screen_output_node;
-mod auto_dj;
 
+pub use crate::auto_dj::*;
 pub use crate::beat_tracking::*;
 pub use crate::context::*;
 pub use crate::effect_node::*;
 pub use crate::graph::*;
 pub use crate::image_node::*;
 pub use crate::mir::*;
+pub use crate::placeholder_node::*;
 pub use crate::props::*;
 pub use crate::render_target::*;
 pub use crate::screen_output_node::*;
-pub use crate::auto_dj::*;

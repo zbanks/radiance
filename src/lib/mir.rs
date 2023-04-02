@@ -1,5 +1,5 @@
 pub use crate::beat_tracking::AudioLevels;
-use crate::beat_tracking::{BeatTracker, SAMPLE_RATE, N_FILTERS};
+use crate::beat_tracking::{BeatTracker, N_FILTERS, SAMPLE_RATE};
 use cpal::traits::DeviceTrait;
 use std::sync::mpsc;
 use std::time;
