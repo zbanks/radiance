@@ -4,7 +4,7 @@ Radiance TODO list
 Shader porting
 --------------
 
-* 21 / 174
+* 40 / 174
 
 Big features
 ------------
@@ -21,9 +21,9 @@ Small features / bugs
 * [ ] Reload node with "R" should preserve textures
 * [ ] Shader compilation should be done in background
 * [ ] Implement "shift"-selection (select range)
-* [ ] Compute audio levels and pass to effects
+* [X] Compute audio levels and pass to effects
 * [ ] Bouncing ball UI widget
-* [ ] Spectrogram UI widget
+* [X] Spectrogram UI widget
 * [X] Waveform UI widget
 * [ ] Make mosaic scrollable
 
