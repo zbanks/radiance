@@ -19,8 +19,8 @@ use std::iter;
 use std::sync::Arc;
 
 use radiance::{
-    AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, NodeId, NodeProps, Props, RenderTarget,
-    RenderTargetId, ScreenOutputNodeProps,
+    AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId, NodeProps,
+    Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps,
 };
 
 mod ui;
@@ -240,9 +240,8 @@ pub async fn run() {
                 "frequency": 0.0
             },
             node6_id.to_string(): {
-                "type": "MovieNode",
-                "name": "cycles.mp4",
-                //"name": "nyancat.gif",
+                "type": "ImageNode",
+                "name": "nyancat.gif",
                 "intensity": 1.0,
             },
             screen_output_node_id.to_string(): {
@@ -428,28 +427,52 @@ pub async fn run() {
                             }
                             if node_add_response.lost_focus() {
                                 if egui_ctx.input().key_pressed(egui::Key::Enter) {
-                                    match node_add_textedit.as_str() {
-                                        "ScreenOutput" => {
-                                            let new_node_id = NodeId::gen();
-                                            let new_node_props = NodeProps::ScreenOutputNode(
-                                                ScreenOutputNodeProps {
-                                                    ..Default::default()
-                                                },
-                                            );
-                                            props.node_props.insert(new_node_id, new_node_props);
-                                            props.graph.insert_node(new_node_id, &insertion_point);
-                                        }
-                                        _ => {
-                                            let new_node_id = NodeId::gen();
-                                            let new_node_props =
-                                                NodeProps::EffectNode(EffectNodeProps {
-                                                    name: node_add_textedit.clone(),
-                                                    ..Default::default()
-                                                });
-                                            props.node_props.insert(new_node_id, new_node_props);
-                                            props.graph.insert_node(new_node_id, &insertion_point);
-                                            // TODO: select and focus the new node
-                                            // (consider making selection & focus part of the explicit state of mosaic, not memory)
+                                    let node_add_textedit_str = node_add_textedit.as_str();
+                                    if node_add_textedit_str.starts_with("http:")
+                                        || node_add_textedit_str.starts_with("https:")
+                                        || node_add_textedit_str.ends_with(".mp4")
+                                        || node_add_textedit_str.ends_with(".mkv")
+                                        || node_add_textedit_str.ends_with(".avi")
+                                    {
+                                        let new_node_id = NodeId::gen();
+                                        let new_node_props = NodeProps::MovieNode(MovieNodeProps {
+                                            name: node_add_textedit.clone(),
+                                            ..Default::default()
+                                        });
+                                        props.node_props.insert(new_node_id, new_node_props);
+                                        props.graph.insert_node(new_node_id, &insertion_point);
+                                    } else {
+                                        match node_add_textedit.as_str() {
+                                            "ScreenOutput" => {
+                                                let new_node_id = NodeId::gen();
+                                                let new_node_props = NodeProps::ScreenOutputNode(
+                                                    ScreenOutputNodeProps {
+                                                        ..Default::default()
+                                                    },
+                                                );
+                                                props
+                                                    .node_props
+                                                    .insert(new_node_id, new_node_props);
+                                                props
+                                                    .graph
+                                                    .insert_node(new_node_id, &insertion_point);
+                                            }
+                                            _ => {
+                                                let new_node_id = NodeId::gen();
+                                                let new_node_props =
+                                                    NodeProps::EffectNode(EffectNodeProps {
+                                                        name: node_add_textedit.clone(),
+                                                        ..Default::default()
+                                                    });
+                                                props
+                                                    .node_props
+                                                    .insert(new_node_id, new_node_props);
+                                                props
+                                                    .graph
+                                                    .insert_node(new_node_id, &insertion_point);
+                                                // TODO: select and focus the new node
+                                                // (consider making selection & focus part of the explicit state of mosaic, not memory)
+                                            }
                                         }
                                     }
                                 }

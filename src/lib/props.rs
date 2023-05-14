@@ -2,9 +2,9 @@ use crate::effect_node::EffectNodeProps;
 use crate::graph::{Graph, NodeId};
 use crate::image_node::ImageNodeProps;
 pub use crate::mir::AudioLevels;
+use crate::movie_node::MovieNodeProps;
 use crate::placeholder_node::PlaceholderNodeProps;
 use crate::screen_output_node::ScreenOutputNodeProps;
-use crate::movie_node::MovieNodeProps;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 

@@ -1,23 +1,30 @@
 use crate::context::{ArcTextureViewSampler, Context, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
+use glutin::platform::unix::HeadlessContextExt;
 use image::GenericImageView;
+use libmpv::{
+    events::Event,
+    render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
+    FileState, Mpv,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::string::String;
-use libmpv::{Mpv, FileState, events::Event, render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType}};
-use std::thread;
-use std::sync::mpsc;
 use std::ffi;
-use glutin::platform::unix::HeadlessContextExt;
-use std::sync::Arc;
 use std::mem::transmute;
+use std::string::String;
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::thread;
 
 const SHADER_SOURCE: &str = include_str!("movie_shader.wgsl");
 
-fn get_proc_address(context: &Arc<glutin::Context<glutin::PossiblyCurrent>>, name: &str) -> *mut ffi::c_void {
+fn get_proc_address(
+    context: &Arc<glutin::Context<glutin::PossiblyCurrent>>,
+    name: &str,
+) -> *mut ffi::c_void {
     context.get_proc_address(name) as *mut ffi::c_void
-} 
+}
 
 /// Properties of an MovieNode.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -64,7 +71,9 @@ impl Drop for MovieNodeStateReady {
     fn drop(&mut self) {
         println!("Dropping MovieNode, closing MPV thread");
         // TODO signal thread to shutdown
-        self.mpv_thread.take().map(|mpv_thread| mpv_thread.join().unwrap());
+        self.mpv_thread
+            .take()
+            .map(|mpv_thread| mpv_thread.join().unwrap());
     }
 }
 
@@ -131,171 +140,192 @@ impl MovieNodeState {
         let (mpv_thread, mpv_tx) = {
             // Variables that will be moved into thread:
             let (tx, rx) = mpsc::channel();
-            let name = format!("library/{name}");
+            let name = name.clone();
             let tx_return = tx.clone();
             let frame_texture = frame_texture.clone();
             let queue = ctx.queue().clone();
-            (thread::spawn(move || {
-                // Initialize OpenGL
-                let cb = glutin::ContextBuilder::new();
-                let context = cb.build_osmesa(glutin::dpi::PhysicalSize { width, height }).unwrap();
-                let context = unsafe {
-                    context.make_current()
-                }.unwrap();
-                let context = Arc::new(context);
+            (
+                thread::spawn(move || {
+                    // Initialize OpenGL
+                    let cb = glutin::ContextBuilder::new();
+                    let context = cb
+                        .build_osmesa(glutin::dpi::PhysicalSize { width, height })
+                        .unwrap();
+                    let context = unsafe { context.make_current() }.unwrap();
+                    let context = Arc::new(context);
 
-                let gl = unsafe { glow::Context::from_loader_function(|s| context.get_proc_address(s)) };
-                use glow::HasContext;
+                    let gl = unsafe {
+                        glow::Context::from_loader_function(|s| context.get_proc_address(s))
+                    };
+                    use glow::HasContext;
 
-                let (fbo, texture) = unsafe {
-                    let fbo = gl.create_framebuffer().unwrap();
-                    gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
+                    let (fbo, texture) = unsafe {
+                        let fbo = gl.create_framebuffer().unwrap();
+                        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
 
-                    let texture = gl.create_texture().unwrap();
-                    gl.bind_texture(glow::TEXTURE_2D, Some(texture));
-                    gl.tex_image_2d(
-                        glow::TEXTURE_2D,
-                        0,
-                        glow::RGBA as i32,
-                        width as _,
-                        height as _,
-                        0,
-                        glow::RGBA,
-                        glow::UNSIGNED_BYTE,
-                        None,
-                    );
-                    gl.tex_parameter_i32(
-                        glow::TEXTURE_2D,
-                        glow::TEXTURE_MIN_FILTER,
-                        glow::LINEAR as i32,
-                    );
-                    gl.tex_parameter_i32(
-                        glow::TEXTURE_2D,
-                        glow::TEXTURE_MAG_FILTER,
-                        glow::LINEAR as i32,
-                    );
+                        let texture = gl.create_texture().unwrap();
+                        gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+                        gl.tex_image_2d(
+                            glow::TEXTURE_2D,
+                            0,
+                            glow::RGBA as i32,
+                            width as _,
+                            height as _,
+                            0,
+                            glow::RGBA,
+                            glow::UNSIGNED_BYTE,
+                            None,
+                        );
+                        gl.tex_parameter_i32(
+                            glow::TEXTURE_2D,
+                            glow::TEXTURE_MIN_FILTER,
+                            glow::LINEAR as i32,
+                        );
+                        gl.tex_parameter_i32(
+                            glow::TEXTURE_2D,
+                            glow::TEXTURE_MAG_FILTER,
+                            glow::LINEAR as i32,
+                        );
 
-                    gl.framebuffer_texture_2d(
-                        glow::FRAMEBUFFER,
-                        glow::COLOR_ATTACHMENT0,
-                        glow::TEXTURE_2D,
-                        Some(texture),
-                        0,
-                    );
+                        gl.framebuffer_texture_2d(
+                            glow::FRAMEBUFFER,
+                            glow::COLOR_ATTACHMENT0,
+                            glow::TEXTURE_2D,
+                            Some(texture),
+                            0,
+                        );
 
-                    assert_eq!(
-                        gl.check_framebuffer_status(glow::FRAMEBUFFER),
-                        glow::FRAMEBUFFER_COMPLETE
-                    );
+                        assert_eq!(
+                            gl.check_framebuffer_status(glow::FRAMEBUFFER),
+                            glow::FRAMEBUFFER_COMPLETE
+                        );
 
-                    gl.bind_framebuffer(glow::FRAMEBUFFER, None);
-                    gl.bind_texture(glow::TEXTURE_2D, None);
+                        gl.bind_framebuffer(glow::FRAMEBUFFER, None);
+                        gl.bind_texture(glow::TEXTURE_2D, None);
 
-                    (fbo, texture)
-                };
+                        (fbo, texture)
+                    };
 
-                //let cb = glutin::ContextBuilder::new();
-                //let context = cb.build_osmesa(glutin::dpi::PhysicalSize { width: 800, height: 600}).unwrap();
-                //let context = unsafe {
-                //    context.treat_as_current()
-                //};
-                //let display = glium::backend::glutin::headless::Headless::new(context).unwrap();
+                    //let cb = glutin::ContextBuilder::new();
+                    //let context = cb.build_osmesa(glutin::dpi::PhysicalSize { width: 800, height: 600}).unwrap();
+                    //let context = unsafe {
+                    //    context.treat_as_current()
+                    //};
+                    //let display = glium::backend::glutin::headless::Headless::new(context).unwrap();
 
-                //let texture = glium::Texture2d::empty(&display, 800, 600).unwrap();
-                //let framebuffer = glium::framebuffer::SimpleFrameBuffer::new(&display, &texture);
+                    //let texture = glium::Texture2d::empty(&display, 800, 600).unwrap();
+                    //let framebuffer = glium::framebuffer::SimpleFrameBuffer::new(&display, &texture);
 
-                //let pixels: glium::texture::RawImage2d<u8> = texture.read();
+                    //let pixels: glium::texture::RawImage2d<u8> = texture.read();
 
-                let mut pixels = vec![0; (width * height * 4) as usize];
+                    let mut pixels = vec![0; (width * height * 4) as usize];
 
-                // Initialize MPV
-                let mut mpv = Mpv::new().unwrap();
-                let mut render_context = RenderContext::new(
-                    unsafe { mpv.ctx.as_mut() },
-                    vec![
-                        RenderParam::ApiType(RenderParamApiType::OpenGl),
-                        RenderParam::InitParams(OpenGLInitParams {
-                            get_proc_address,
-                            ctx: context.clone(),
-                        }),
-                    ],
-                )
-                .expect("Failed creating render context");
+                    // Initialize MPV
+                    let mut mpv = Mpv::new().unwrap();
+                    let mut render_context = RenderContext::new(
+                        unsafe { mpv.ctx.as_mut() },
+                        vec![
+                            RenderParam::ApiType(RenderParamApiType::OpenGl),
+                            RenderParam::InitParams(OpenGLInitParams {
+                                get_proc_address,
+                                ctx: context.clone(),
+                            }),
+                        ],
+                    )
+                    .expect("Failed creating render context");
 
-                {
-                    let render_tx = tx.clone();
-                    render_context.set_update_callback(move || {
-                        render_tx.send(MpvThreadEvent::RedrawRequested).unwrap();
-                    });
-                }
+                    {
+                        let render_tx = tx.clone();
+                        render_context.set_update_callback(move || {
+                            render_tx.send(MpvThreadEvent::RedrawRequested).unwrap();
+                        });
+                    }
 
-                let mut ev_ctx = mpv.create_event_context();
-                {
-                    let ev_tx = tx.clone();
-                    ev_ctx.disable_deprecated_events().unwrap();
-                    ev_ctx.set_wakeup_callback(move || {
-                        ev_tx.send(MpvThreadEvent::MpvEventAvailable).unwrap();
-                    });
-                }
+                    let mut ev_ctx = mpv.create_event_context();
+                    {
+                        let ev_tx = tx.clone();
+                        ev_ctx.disable_deprecated_events().unwrap();
+                        ev_ctx.set_wakeup_callback(move || {
+                            ev_tx.send(MpvThreadEvent::MpvEventAvailable).unwrap();
+                        });
+                    }
 
-                mpv.playlist_load_files(&[(&name, FileState::AppendPlay, None)]).unwrap();
-                println!("MPV event loop starting");
+                    mpv.playlist_load_files(&[(&name, FileState::AppendPlay, None)])
+                        .unwrap();
+                    println!("MPV event loop starting");
 
-                loop {
-                    let ev = rx.recv().unwrap();
+                    loop {
+                        let ev = rx.recv().unwrap();
 
-                    match ev {
-                        MpvThreadEvent::RedrawRequested => {
-                            // Tell MPV to render into our FBO
-                            render_context
-                                .render::<Arc<glutin::Context<glutin::PossiblyCurrent>>>(unsafe { transmute(fbo) }, width as _, height as _, true)
-                                .expect("Failed to render MPV frame into framebuffer");
+                        match ev {
+                            MpvThreadEvent::RedrawRequested => {
+                                // Tell MPV to render into our FBO
+                                render_context
+                                    .render::<Arc<glutin::Context<glutin::PossiblyCurrent>>>(
+                                        unsafe { transmute(fbo) },
+                                        width as _,
+                                        height as _,
+                                        true,
+                                    )
+                                    .expect("Failed to render MPV frame into framebuffer");
 
-                            // Read pixels out of the corresponding OpenGL texture
-                            unsafe {
-                                gl.bind_texture(glow::TEXTURE_2D, Some(texture));
-                                gl.get_tex_image(glow::TEXTURE_2D, 0, glow::RGBA, glow::UNSIGNED_BYTE, glow::PixelPackData::Slice(&mut pixels));
-                                gl.bind_texture(glow::TEXTURE_2D, None);
+                                // Read pixels out of the corresponding OpenGL texture
+                                unsafe {
+                                    gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+                                    gl.get_tex_image(
+                                        glow::TEXTURE_2D,
+                                        0,
+                                        glow::RGBA,
+                                        glow::UNSIGNED_BYTE,
+                                        glow::PixelPackData::Slice(&mut pixels),
+                                    );
+                                    gl.bind_texture(glow::TEXTURE_2D, None);
+                                }
+
+                                // Write pixels into WGPU texture
+                                let frame_size = wgpu::Extent3d {
+                                    width,
+                                    height,
+                                    depth_or_array_layers: 1,
+                                };
+                                queue.write_texture(
+                                    wgpu::ImageCopyTexture {
+                                        texture: &frame_texture.texture,
+                                        mip_level: 0,
+                                        origin: wgpu::Origin3d::ZERO,
+                                        aspect: wgpu::TextureAspect::All,
+                                    },
+                                    &pixels,
+                                    wgpu::ImageDataLayout {
+                                        offset: 0,
+                                        bytes_per_row: std::num::NonZeroU32::new(
+                                            4 * frame_size.width,
+                                        ),
+                                        rows_per_image: std::num::NonZeroU32::new(
+                                            frame_size.height,
+                                        ),
+                                    },
+                                    frame_size,
+                                );
                             }
-
-                            // Write pixels into WGPU texture
-                            let frame_size = wgpu::Extent3d {
-                                width,
-                                height,
-                                depth_or_array_layers: 1,
-                            };
-                            queue.write_texture(
-                                wgpu::ImageCopyTexture {
-                                    texture: &frame_texture.texture,
-                                    mip_level: 0,
-                                    origin: wgpu::Origin3d::ZERO,
-                                    aspect: wgpu::TextureAspect::All,
-                                },
-                                &pixels,
-                                wgpu::ImageDataLayout {
-                                    offset: 0,
-                                    bytes_per_row: std::num::NonZeroU32::new(4 * frame_size.width),
-                                    rows_per_image: std::num::NonZeroU32::new(frame_size.height),
-                                },
-                                frame_size,
-                            );
-                        }
-                        MpvThreadEvent::MpvEventAvailable => {
-                            if let Some(mpv_ev) = ev_ctx.wait_event(0.) {
-                                match mpv_ev {
-                                    Ok(Event::EndFile(r)) => {
-                                        println!("Exiting! Reason: {:?}", r);
-                                        break;
+                            MpvThreadEvent::MpvEventAvailable => {
+                                if let Some(mpv_ev) = ev_ctx.wait_event(0.) {
+                                    match mpv_ev {
+                                        Ok(Event::EndFile(r)) => {
+                                            println!("Exiting! Reason: {:?}", r);
+                                            break;
+                                        }
+                                        Ok(e) => println!("Event triggered: {:?}", e),
+                                        Err(e) => println!("Event errored: {:?}", e),
                                     }
-                                    Ok(e) => println!("Event triggered: {:?}", e),
-                                    Err(e) => println!("Event errored: {:?}", e),
                                 }
                             }
                         }
                     }
-                }
-                println!("MPV thread done");
-            }), tx_return)
+                    println!("MPV thread done");
+                }),
+                tx_return,
+            )
         };
 
         // Image

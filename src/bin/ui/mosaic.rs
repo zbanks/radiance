@@ -3,9 +3,9 @@
 use crate::ui::drop_target::DropTarget;
 use crate::ui::effect_node_tile::EffectNodeTile;
 use crate::ui::image_node_tile::ImageNodeTile;
+use crate::ui::movie_node_tile::MovieNodeTile;
 use crate::ui::placeholder_node_tile::PlaceholderNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
-use crate::ui::movie_node_tile::MovieNodeTile;
 use crate::ui::tile::{Tile, TileId};
 use egui::{
     pos2, vec2, IdMap, InnerResponse, InputState, Modifiers, Pos2, Rect, Response, Sense,
