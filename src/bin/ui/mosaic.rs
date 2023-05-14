@@ -5,6 +5,7 @@ use crate::ui::effect_node_tile::EffectNodeTile;
 use crate::ui::image_node_tile::ImageNodeTile;
 use crate::ui::placeholder_node_tile::PlaceholderNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
+use crate::ui::movie_node_tile::MovieNodeTile;
 use crate::ui::tile::{Tile, TileId};
 use egui::{
     pos2, vec2, IdMap, InnerResponse, InputState, Modifiers, Pos2, Rect, Response, Sense,
@@ -165,6 +166,7 @@ impl LayoutCache {
                     NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::min_input_heights(p),
                     NodeProps::ImageNode(p) => ImageNodeTile::min_input_heights(p),
                     NodeProps::PlaceholderNode(p) => PlaceholderNodeTile::min_input_heights(p),
+                    NodeProps::MovieNode(p) => MovieNodeTile::min_input_heights(p),
                 };
                 // The length of the returned heights array should match the input count,
                 // or be 1 if the input count is zero
@@ -283,6 +285,7 @@ impl LayoutCache {
                     NodeProps::PlaceholderNode(p) => {
                         PlaceholderNodeTile::width_for_height(p, height)
                     }
+                    NodeProps::MovieNode(p) => MovieNodeTile::width_for_height(p, height),
                 };
                 (tile_id, width)
             })
@@ -953,6 +956,10 @@ where
                     .add_contents(ui)
             }
             NodeProps::PlaceholderNode(_) => {} // Empty tile
+            NodeProps::MovieNode(p) => {
+                MovieNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
+                    .add_contents(ui)
+            }
         });
 
         if response.dragged() || response.clicked() {

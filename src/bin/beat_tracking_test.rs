@@ -24,7 +24,7 @@ fn main() {
 
     // Print results as a TSV
     println!("{}\t{}\t{}", "t", "beat", "activation");
-    for (i, &(_, activation, beat)) in beats.iter().enumerate() {
+    for (i, &(_, _, activation, beat)) in beats.iter().enumerate() {
         println!("{}\t{}\t{}", (i as f32) / FPS, beat, activation);
     }
 }

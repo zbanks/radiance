@@ -1336,7 +1336,7 @@ mod tests {
             2035, 2084, 2132, 2180,
         ];
 
-        for (i, &(_, _, beat)) in beats.iter().enumerate() {
+        for (i, &(_, _, _, beat)) in beats.iter().enumerate() {
             //println!("{}: expected {}, got {}", i, expected_beat_indices.contains(&i), beat);
             assert_eq!(beat, expected_beat_indices.contains(&i));
         }

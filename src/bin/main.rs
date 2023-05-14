@@ -240,8 +240,9 @@ pub async fn run() {
                 "frequency": 0.0
             },
             node6_id.to_string(): {
-                "type": "ImageNode",
-                "name": "nyancat.gif",
+                "type": "MovieNode",
+                "name": "cycles.mp4",
+                //"name": "nyancat.gif",
                 "intensity": 1.0,
             },
             screen_output_node_id.to_string(): {
