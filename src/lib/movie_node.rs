@@ -7,11 +7,12 @@ use libmpv::{
     events::Event,
     render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
     FileState, Mpv,
+    Format,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ffi;
-use std::mem::transmute;
+use std::mem::{transmute, transmute_copy};
 use std::string::String;
 use std::sync::mpsc;
 use std::sync::Arc;
@@ -48,6 +49,12 @@ pub enum MovieNodeState {
     Error_(String), // ambiguous_associated_items error triggered by derive_more::TryInto without the _
 }
 
+enum MpvThreadEvent {
+    RedrawRequested,
+    MpvEventAvailable,
+    Terminate,
+}
+
 pub struct MovieNodeStateReady {
     // Cached props
     name: String,
@@ -65,15 +72,15 @@ pub struct MovieNodeStateReady {
 
     // MPV thread
     mpv_thread: Option<thread::JoinHandle<()>>,
+    mpv_tx: mpsc::Sender<MpvThreadEvent>,
 }
 
 impl Drop for MovieNodeStateReady {
     fn drop(&mut self) {
-        println!("Dropping MovieNode, closing MPV thread");
-        // TODO signal thread to shutdown
-        self.mpv_thread
-            .take()
-            .map(|mpv_thread| mpv_thread.join().unwrap());
+        self.mpv_tx.send(MpvThreadEvent::Terminate).unwrap();
+        //self.mpv_thread
+        //    .take()
+        //    .map(|mpv_thread| mpv_thread.join().unwrap());
     }
 }
 
@@ -131,11 +138,6 @@ impl MovieNodeState {
         };
 
         // Spin up MPV thread
-
-        enum MpvThreadEvent {
-            RedrawRequested,
-            MpvEventAvailable,
-        }
 
         let (mpv_thread, mpv_tx) = {
             // Variables that will be moved into thread:
@@ -206,22 +208,27 @@ impl MovieNodeState {
                         (fbo, texture)
                     };
 
-                    //let cb = glutin::ContextBuilder::new();
-                    //let context = cb.build_osmesa(glutin::dpi::PhysicalSize { width: 800, height: 600}).unwrap();
-                    //let context = unsafe {
-                    //    context.treat_as_current()
-                    //};
-                    //let display = glium::backend::glutin::headless::Headless::new(context).unwrap();
-
-                    //let texture = glium::Texture2d::empty(&display, 800, 600).unwrap();
-                    //let framebuffer = glium::framebuffer::SimpleFrameBuffer::new(&display, &texture);
-
-                    //let pixels: glium::texture::RawImage2d<u8> = texture.read();
-
                     let mut pixels = vec![0; (width * height * 4) as usize];
 
                     // Initialize MPV
-                    let mut mpv = Mpv::new().unwrap();
+                    let mut mpv = Mpv::with_initializer(|mpv_init| {
+                        {
+                            let opt = ffi::CString::new("terminal").unwrap();
+                            let val = ffi::CString::new("yes").unwrap();
+                            unsafe { libmpv_sys::mpv_set_option_string(transmute_copy(&mpv_init), opt.as_ptr(), val.as_ptr()); }
+                        }
+                        {
+                            let opt = ffi::CString::new("msg-level").unwrap();
+                            let val = ffi::CString::new("all=v").unwrap();
+                            unsafe { libmpv_sys::mpv_set_option_string(transmute_copy(&mpv_init), opt.as_ptr(), val.as_ptr()); }
+                        }
+                        {
+                            let opt = ffi::CString::new("ytdl").unwrap();
+                            let val = ffi::CString::new("yes").unwrap();
+                            unsafe { libmpv_sys::mpv_set_option_string(transmute_copy(&mpv_init), opt.as_ptr(), val.as_ptr()); }
+                        }
+                        Ok(())
+                    }).unwrap();
                     let mut render_context = RenderContext::new(
                         unsafe { mpv.ctx.as_mut() },
                         vec![
@@ -250,10 +257,17 @@ impl MovieNodeState {
                         });
                     }
 
+                    mpv.set_property("loop", "inf").unwrap();
+
+                    ev_ctx.observe_property("duration", Format::Double, 0).unwrap();
+                    ev_ctx.observe_property("time-pos", Format::Double, 0).unwrap();
+                    ev_ctx.observe_property("video-params/w", Format::Int64, 0).unwrap();
+                    ev_ctx.observe_property("video-params/h", Format::Int64, 0).unwrap();
+                    ev_ctx.observe_property("mute", Format::Flag, 0).unwrap();
+                    ev_ctx.observe_property("pause", Format::Flag, 0).unwrap();
+
                     mpv.playlist_load_files(&[(&name, FileState::AppendPlay, None)])
                         .unwrap();
-                    println!("MPV event loop starting");
-
                     loop {
                         let ev = rx.recv().unwrap();
 
@@ -268,6 +282,9 @@ impl MovieNodeState {
                                         true,
                                     )
                                     .expect("Failed to render MPV frame into framebuffer");
+
+                                // TODO: Replace this with a memory copy that never leaves the GPU
+                                // (this approach is SLOW!)
 
                                 // Read pixels out of the corresponding OpenGL texture
                                 unsafe {
@@ -320,6 +337,9 @@ impl MovieNodeState {
                                     }
                                 }
                             }
+                            MpvThreadEvent::Terminate => {
+                                break;
+                            }
                         }
                     }
                     println!("MPV thread done");
@@ -327,90 +347,6 @@ impl MovieNodeState {
                 tx_return,
             )
         };
-
-        // Image
-        //let image_name = format!("library/{name}");
-        //let image_data = ctx
-        //    .fetch_content_bytes(&image_name)
-        //    .map_err(|_| format!("Failed to read image file \"{image_name}\""))?;
-
-        //let image_obj = image::load_from_memory(&image_data).unwrap();
-        //let image_rgba = image_obj.to_rgba8();
-        //let image_size = wgpu::Extent3d {
-        //    width: image_obj.dimensions().0,
-        //    height: image_obj.dimensions().1,
-        //    depth_or_array_layers: 1,
-        //};
-
-        //let image_texture = {
-        //    let texture_desc = wgpu::TextureDescriptor {
-        //        size: image_size,
-        //        mip_level_count: 1,
-        //        sample_count: 1,
-        //        dimension: wgpu::TextureDimension::D2,
-        //        format: wgpu::TextureFormat::Rgba8UnormSrgb,
-        //        usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
-        //        label: Some("image"),
-        //    };
-        //    let texture = ctx.device().create_texture(&texture_desc);
-        //    let view = texture.create_view(&Default::default());
-        //    let sampler = ctx.device().create_sampler(&wgpu::SamplerDescriptor {
-        //        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        //        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        //        address_mode_w: wgpu::AddressMode::ClampToEdge,
-        //        mag_filter: wgpu::FilterMode::Linear,
-        //        min_filter: wgpu::FilterMode::Linear,
-        //        mipmap_filter: wgpu::FilterMode::Linear,
-        //        ..Default::default()
-        //    });
-        //    ArcTextureViewSampler::new(texture, view, sampler)
-        //};
-
-        //// Write the image
-        //ctx.queue().write_texture(
-        //    wgpu::ImageCopyTexture {
-        //        texture: &image_texture.texture,
-        //        mip_level: 0,
-        //        origin: wgpu::Origin3d::ZERO,
-        //        aspect: wgpu::TextureAspect::All,
-        //    },
-        //    &image_rgba,
-        //    wgpu::ImageDataLayout {
-        //        offset: 0,
-        //        bytes_per_row: std::num::NonZeroU32::new(4 * image_size.width),
-        //        rows_per_image: std::num::NonZeroU32::new(image_size.height),
-        //    },
-        //    image_size,
-        //);
-
-        //// Dummy image texture
-        //let image_texture = {
-        //    let texture_desc = wgpu::TextureDescriptor {
-        //        size: wgpu::Extent3d {
-        //            width: 100,
-        //            height: 100,
-        //            depth_or_array_layers: 1,
-        //        },
-        //        mip_level_count: 1,
-        //        sample_count: 1,
-        //        dimension: wgpu::TextureDimension::D2,
-        //        format: wgpu::TextureFormat::Rgba8UnormSrgb,
-        //        usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
-        //        label: Some("image"),
-        //    };
-        //    let texture = ctx.device().create_texture(&texture_desc);
-        //    let view = texture.create_view(&Default::default());
-        //    let sampler = ctx.device().create_sampler(&wgpu::SamplerDescriptor {
-        //        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        //        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        //        address_mode_w: wgpu::AddressMode::ClampToEdge,
-        //        mag_filter: wgpu::FilterMode::Linear,
-        //        min_filter: wgpu::FilterMode::Linear,
-        //        mipmap_filter: wgpu::FilterMode::Linear,
-        //        ..Default::default()
-        //    });
-        //    ArcTextureViewSampler::new(texture, view, sampler)
-        //};
 
         let shader_module = ctx
             .device()
@@ -544,6 +480,7 @@ impl MovieNodeState {
             render_pipeline,
             paint_states: HashMap::new(),
             mpv_thread: Some(mpv_thread),
+            mpv_tx,
         })
     }
 

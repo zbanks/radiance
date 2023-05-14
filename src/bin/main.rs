@@ -433,6 +433,7 @@ pub async fn run() {
                                         || node_add_textedit_str.ends_with(".mp4")
                                         || node_add_textedit_str.ends_with(".mkv")
                                         || node_add_textedit_str.ends_with(".avi")
+                                        || node_add_textedit_str.ends_with(".gif")
                                     {
                                         let new_node_id = NodeId::gen();
                                         let new_node_props = NodeProps::MovieNode(MovieNodeProps {

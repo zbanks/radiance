@@ -35,10 +35,10 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         vec2<f32>(-1., -1.),
     );
     var uv_array = array<vec2<f32>, 4>(
-        vec2<f32>(1., 1.),
-        vec2<f32>(0., 1.),
         vec2<f32>(1., 0.),
         vec2<f32>(0., 0.),
+        vec2<f32>(1., 1.),
+        vec2<f32>(0., 1.),
     );
 
     return VertexOutput(
@@ -50,6 +50,7 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
 @fragment
 fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let bg = textureSample(iInputTex, iSampler, vertex.uv);
-    let fg = textureSample(iImageTex, iSampler, vertex.uv);
+    let movie_uv = vec2<f32>(vertex.uv.x, 1. - vertex.uv.y);
+    let fg = textureSample(iImageTex, iSampler, movie_uv);
     return composite(bg, fg * global.iIntensity);
 }
