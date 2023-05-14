@@ -91,6 +91,36 @@ impl MovieNodeState {
         // Default to 0 intensity if none given
         let intensity = props.intensity.unwrap_or(0.);
 
+        let (width, height) = (800, 600);
+        // WGPU texture to store the frame in
+        let frame_texture = {
+            let texture_desc = wgpu::TextureDescriptor {
+                size: wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+                label: Some("image"),
+            };
+            let texture = ctx.device().create_texture(&texture_desc);
+            let view = texture.create_view(&Default::default());
+            let sampler = ctx.device().create_sampler(&wgpu::SamplerDescriptor {
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                mipmap_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            });
+            ArcTextureViewSampler::new(texture, view, sampler)
+        };
+
         // Spin up MPV thread
 
         enum MpvThreadEvent {
@@ -103,9 +133,10 @@ impl MovieNodeState {
             let (tx, rx) = mpsc::channel();
             let name = format!("library/{name}");
             let tx_return = tx.clone();
+            let frame_texture = frame_texture.clone();
+            let queue = ctx.queue().clone();
             (thread::spawn(move || {
                 // Initialize OpenGL
-                let (width, height) = (800, 600);
                 let cb = glutin::ContextBuilder::new();
                 let context = cb.build_osmesa(glutin::dpi::PhysicalSize { width, height }).unwrap();
                 let context = unsafe {
@@ -228,8 +259,26 @@ impl MovieNodeState {
                             }
 
                             // Write pixels into WGPU texture
-                            println!("Pixels: {:?}", pixels[961600..961630].to_vec());
-
+                            let frame_size = wgpu::Extent3d {
+                                width,
+                                height,
+                                depth_or_array_layers: 1,
+                            };
+                            queue.write_texture(
+                                wgpu::ImageCopyTexture {
+                                    texture: &frame_texture.texture,
+                                    mip_level: 0,
+                                    origin: wgpu::Origin3d::ZERO,
+                                    aspect: wgpu::TextureAspect::All,
+                                },
+                                &pixels,
+                                wgpu::ImageDataLayout {
+                                    offset: 0,
+                                    bytes_per_row: std::num::NonZeroU32::new(4 * frame_size.width),
+                                    rows_per_image: std::num::NonZeroU32::new(frame_size.height),
+                                },
+                                frame_size,
+                            );
                         }
                         MpvThreadEvent::MpvEventAvailable => {
                             if let Some(mpv_ev) = ev_ctx.wait_event(0.) {
@@ -304,34 +353,34 @@ impl MovieNodeState {
         //    image_size,
         //);
 
-        // Dummy image texture
-        let image_texture = {
-            let texture_desc = wgpu::TextureDescriptor {
-                size: wgpu::Extent3d {
-                    width: 100,
-                    height: 100,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
-                label: Some("image"),
-            };
-            let texture = ctx.device().create_texture(&texture_desc);
-            let view = texture.create_view(&Default::default());
-            let sampler = ctx.device().create_sampler(&wgpu::SamplerDescriptor {
-                address_mode_u: wgpu::AddressMode::ClampToEdge,
-                address_mode_v: wgpu::AddressMode::ClampToEdge,
-                address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mag_filter: wgpu::FilterMode::Linear,
-                min_filter: wgpu::FilterMode::Linear,
-                mipmap_filter: wgpu::FilterMode::Linear,
-                ..Default::default()
-            });
-            ArcTextureViewSampler::new(texture, view, sampler)
-        };
+        //// Dummy image texture
+        //let image_texture = {
+        //    let texture_desc = wgpu::TextureDescriptor {
+        //        size: wgpu::Extent3d {
+        //            width: 100,
+        //            height: 100,
+        //            depth_or_array_layers: 1,
+        //        },
+        //        mip_level_count: 1,
+        //        sample_count: 1,
+        //        dimension: wgpu::TextureDimension::D2,
+        //        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        //        usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
+        //        label: Some("image"),
+        //    };
+        //    let texture = ctx.device().create_texture(&texture_desc);
+        //    let view = texture.create_view(&Default::default());
+        //    let sampler = ctx.device().create_sampler(&wgpu::SamplerDescriptor {
+        //        address_mode_u: wgpu::AddressMode::ClampToEdge,
+        //        address_mode_v: wgpu::AddressMode::ClampToEdge,
+        //        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        //        mag_filter: wgpu::FilterMode::Linear,
+        //        min_filter: wgpu::FilterMode::Linear,
+        //        mipmap_filter: wgpu::FilterMode::Linear,
+        //        ..Default::default()
+        //    });
+        //    ArcTextureViewSampler::new(texture, view, sampler)
+        //};
 
         let shader_module = ctx
             .device()
@@ -458,7 +507,7 @@ impl MovieNodeState {
         Ok(MovieNodeStateReady {
             name: name.clone(),
             intensity,
-            frame_texture: image_texture,
+            frame_texture,
             bind_group_layout,
             uniform_buffer,
             sampler,

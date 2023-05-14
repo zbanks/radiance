@@ -35,10 +35,10 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         vec2<f32>(-1., -1.),
     );
     var uv_array = array<vec2<f32>, 4>(
-        vec2<f32>(1., 0.),
-        vec2<f32>(0., 0.),
         vec2<f32>(1., 1.),
         vec2<f32>(0., 1.),
+        vec2<f32>(1., 0.),
+        vec2<f32>(0., 0.),
     );
 
     return VertexOutput(
