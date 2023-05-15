@@ -52,10 +52,14 @@ enum MpvThreadEvent {
     RedrawRequested,
     Resize(u32, u32),
     Terminate,
+    Duration(f64),
+    Position(f64),
 }
 
 enum MpvThreadStatusUpdate {
-    NewTexture(ArcTextureViewSampler),
+    Texture(ArcTextureViewSampler),
+    Duration(f64),
+    Position(f64),
 }
 
 pub struct MovieNodeStateReady {
@@ -77,6 +81,10 @@ pub struct MovieNodeStateReady {
     mpv_thread: Option<thread::JoinHandle<()>>,
     mpv_tx: mpsc::Sender<MpvThreadEvent>,
     mpv_rx: mpsc::Receiver<MpvThreadStatusUpdate>,
+
+    // Status
+    duration: f64,
+    position: f64,
 }
 
 impl Drop for MovieNodeStateReady {
@@ -111,7 +119,6 @@ impl MovieNodeState {
         // Default to 0 intensity if none given
         let intensity = props.intensity.unwrap_or(0.);
 
-        //let (width, height) = (800, 600);
         // Temporary 1x1 texture since we don't know the width & height yet
         let initial_frame_texture = {
             let texture_desc = wgpu::TextureDescriptor {
@@ -274,10 +281,17 @@ impl MovieNodeState {
                                     }
                                     Ok(Event::PropertyChange {
                                         name: "duration",
-                                        change: PropertyData::Double(duration),
+                                        change: PropertyData::Double(d),
                                         ..
                                     }) => {
-                                        println!("Event! Duration property updated: {:?}", duration);
+                                        event_tx.send(MpvThreadEvent::Duration(d)).unwrap();
+                                    }
+                                    Ok(Event::PropertyChange {
+                                        name: "time-pos",
+                                        change: PropertyData::Double(p),
+                                        ..
+                                    }) => {
+                                        event_tx.send(MpvThreadEvent::Position(p)).unwrap();
                                     }
                                     Ok(Event::PropertyChange {
                                         name: "video-params/w",
@@ -391,7 +405,7 @@ impl MovieNodeState {
 
                                     let pixels = vec![0; (width * height * 4) as usize];
 
-                                    status_tx.send(MpvThreadStatusUpdate::NewTexture(wgpu_texture.clone())).unwrap();
+                                    status_tx.send(MpvThreadStatusUpdate::Texture(wgpu_texture.clone())).unwrap();
                                     frame_resources = Some(FrameResources {
                                         width,
                                         height,
@@ -458,6 +472,12 @@ impl MovieNodeState {
                                 }
                                 MpvThreadEvent::Terminate => {
                                     break;
+                                }
+                                MpvThreadEvent::Duration(d) => {
+                                    status_tx.send(MpvThreadStatusUpdate::Duration(d)).unwrap();
+                                }
+                                MpvThreadEvent::Position(p) => {
+                                    status_tx.send(MpvThreadStatusUpdate::Position(p)).unwrap();
                                 }
                             }
                         }
@@ -604,6 +624,8 @@ impl MovieNodeState {
             mpv_thread: Some(mpv_thread),
             mpv_tx,
             mpv_rx,
+            duration: 0.,
+            position: 0.,
         })
     }
 
@@ -700,8 +722,14 @@ impl MovieNodeState {
                 // Process any MPV status messages we have recieved
                 while let Ok(mpv_status) = self_ready.mpv_rx.try_recv() {
                     match mpv_status {
-                        MpvThreadStatusUpdate::NewTexture(t) => {
+                        MpvThreadStatusUpdate::Texture(t) => {
                             self_ready.frame_texture = t;
+                        }
+                        MpvThreadStatusUpdate::Duration(d) => {
+                            self_ready.duration = d;
+                        }
+                        MpvThreadStatusUpdate::Position(p) => {
+                            self_ready.position = p;
                         }
                     }
                 }
