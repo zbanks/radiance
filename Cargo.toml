@@ -54,6 +54,7 @@ libmpv = { git = "https://github.com/ervanalb/libmpv-rs", rev = "69bb8aec97f8d25
 libmpv-sys = { git = "git+https://github.com/ervanalb/libmpv-rs", rev="69bb8aec97f8d251bfaf18560e6cd6a6dda5c6a3"}
 glutin = "0.26.0" # Kept back: 0.30.0 introduces a big refactor and drops os-mesa support
 glow = "0.12.1"
+crossbeam = "0.8.2"
 
 # For memory profiling (see also src/bin/main.rs)
 #[dependencies.jemallocator]
