@@ -1,6 +1,5 @@
 struct Uniforms {
-    // Intensity slider, [0.0, 1.0]
-    iIntensity: f32,
+    factor: vec2<f32>,
 }
 
 @group(0) @binding(0)
@@ -52,5 +51,5 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let bg = textureSample(iInputTex, iSampler, vertex.uv);
     let movie_uv = vec2<f32>(vertex.uv.x, 1. - vertex.uv.y);
     let fg = textureSample(iImageTex, iSampler, movie_uv);
-    return composite(bg, fg * global.iIntensity);
+    return composite(bg, fg);
 }

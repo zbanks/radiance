@@ -1,7 +1,7 @@
 use egui::{
     pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, Spinner, TextureId, Ui,
 };
-use radiance::{MovieNodeProps, MovieNodeState};
+use radiance::{MovieNodeProps, MovieNodeState, MovieNodeStateReady};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
@@ -19,8 +19,11 @@ pub enum MovieNodeTileState {
 pub struct MovieNodeTile<'a> {
     title: RichText,
     preview_image: TextureId,
-    intensity: &'a mut Option<f32>, // TODO turn this Option into a more holistic enum based on MovieNodeState
     state: MovieNodeTileState,
+    mute: &'a mut Option<bool>,
+    pause: &'a mut Option<bool>,
+    position: Option<f64>, // TODO make this mut ref?
+    duration: Option<f64>,
 }
 
 impl<'a> MovieNodeTile<'a> {
@@ -45,16 +48,28 @@ impl<'a> MovieNodeTile<'a> {
         preview_image: TextureId,
     ) -> Self {
         let tile_state = match state {
-            MovieNodeState::Uninitialized => MovieNodeTileState::Initializing,
+            MovieNodeState::Uninitialized
+            | MovieNodeState::Ready(MovieNodeStateReady { playing: false, .. }) => {
+                MovieNodeTileState::Initializing
+            }
             MovieNodeState::Ready(_) => MovieNodeTileState::Ready,
             MovieNodeState::Error_(_) => MovieNodeTileState::Error,
+        };
+
+        let (position, duration) = if let MovieNodeState::Ready(ready_state) = state {
+            (Some(ready_state.position), Some(ready_state.duration))
+        } else {
+            (None, None)
         };
 
         MovieNodeTile {
             title: (&props.name).into(),
             preview_image,
-            intensity: &mut props.intensity,
             state: tile_state,
+            mute: &mut props.mute,
+            pause: &mut props.pause,
+            position,
+            duration,
         }
     }
 
@@ -63,21 +78,38 @@ impl<'a> MovieNodeTile<'a> {
         let MovieNodeTile {
             title,
             preview_image,
-            intensity,
             state,
+            mute,
+            pause,
+            position,
+            duration,
         } = self;
         ui.heading(title);
         // Preserve aspect ratio
         ui.with_layout(
             Layout::bottom_up(Align::Center).with_cross_justify(true),
             |ui| {
+                let image_size = ui.available_size();
                 ui.spacing_mut().slider_width = ui.available_width();
-                intensity
-                    .as_mut()
-                    .map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
-
+                if let (Some(position), Some(duration)) = (position, duration) {
+                    let mut position = position;
+                    ui.push_id("slider", |ui| {
+                        ui.add(Slider::new(&mut position, 0.0..=duration).show_value(false));
+                    });
+                }
+                ui.horizontal(|ui| {
+                    if let Some(mute) = mute {
+                        ui.push_id("mute", |ui| {
+                            ui.checkbox(mute, "M");
+                        });
+                    }
+                    if let Some(pause) = pause {
+                        ui.push_id("pause", |ui| {
+                            ui.checkbox(pause, "P");
+                        });
+                    }
+                });
                 ui.horizontal_centered(|ui| {
-                    let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
                         * vec2(1., PREVIEW_ASPECT_RATIO);
                     let (_, image_rect) = ui.allocate_space(image_size);

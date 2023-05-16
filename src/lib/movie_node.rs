@@ -30,7 +30,8 @@ fn get_proc_address(
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MovieNodeProps {
     pub name: String,
-    pub intensity: Option<f32>,
+    pub mute: Option<bool>,
+    pub pause: Option<bool>,
 }
 
 impl From<&MovieNodeProps> for CommonNodeProps {
@@ -54,18 +55,25 @@ enum MpvThreadEvent {
     Terminate,
     Duration(f64),
     Position(f64),
+    Playing,
+    Error(String),
+    Mute(bool),
+    Pause(bool),
 }
 
 enum MpvThreadStatusUpdate {
     Texture(ArcTextureViewSampler),
     Duration(f64),
     Position(f64),
+    Playing,
+    Error(String),
 }
 
 pub struct MovieNodeStateReady {
     // Cached props
     name: String,
-    intensity: f32,
+    mute: bool,
+    pause: bool,
 
     // GPU resources
     frame_texture: ArcTextureViewSampler,
@@ -83,13 +91,14 @@ pub struct MovieNodeStateReady {
     mpv_rx: mpsc::Receiver<MpvThreadStatusUpdate>,
 
     // Status
-    duration: f64,
-    position: f64,
+    pub playing: bool,
+    pub duration: f64,
+    pub position: f64,
 }
 
 impl Drop for MovieNodeStateReady {
     fn drop(&mut self) {
-        let r = self.mpv_tx.send(MpvThreadEvent::Terminate);
+        let _ = self.mpv_tx.send(MpvThreadEvent::Terminate);
         self.mpv_thread
             .take()
             .map(|mpv_thread| mpv_thread.join().unwrap());
@@ -103,7 +112,7 @@ struct MovieNodePaintState {
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniforms {
-    intensity: f32,
+    factor: [f32; 2],
     _padding: [u8; 4],
 }
 
@@ -115,9 +124,6 @@ impl MovieNodeState {
         props: &MovieNodeProps,
     ) -> Result<MovieNodeStateReady, String> {
         let name = &props.name;
-
-        // Default to 0 intensity if none given
-        let intensity = props.intensity.unwrap_or(0.);
 
         // Temporary 1x1 texture since we don't know the width & height yet
         let initial_frame_texture = {
@@ -244,23 +250,22 @@ impl MovieNodeState {
                     });
 
                     mpv.set_property("loop", "inf").unwrap();
+                    mpv.set_property("mute", true).unwrap();
 
                     let mut ev_ctx = mpv.create_event_context();
                     ev_ctx.disable_deprecated_events().unwrap();
                     ev_ctx
-                        .observe_property("duration", Format::Double, 100)
+                        .observe_property("duration", Format::Double, 0)
                         .unwrap();
                     ev_ctx
-                        .observe_property("time-pos", Format::Double, 101)
+                        .observe_property("time-pos", Format::Double, 0)
                         .unwrap();
                     ev_ctx
-                        .observe_property("video-params/w", Format::Int64, 102)
+                        .observe_property("video-params/w", Format::Int64, 0)
                         .unwrap();
                     ev_ctx
-                        .observe_property("video-params/h", Format::Int64, 103)
+                        .observe_property("video-params/h", Format::Int64, 0)
                         .unwrap();
-                    ev_ctx.observe_property("mute", Format::Flag, 104).unwrap();
-                    ev_ctx.observe_property("pause", Format::Flag, 105).unwrap();
 
                     mpv.playlist_load_files(&[(&name, FileState::AppendPlay, None)])
                         .unwrap();
@@ -272,7 +277,7 @@ impl MovieNodeState {
                             let mut h: Option<u32> = None;
                             loop {
                                 let ev = ev_ctx.wait_event(10.);
-                                if ev.is_none() { continue; } // XXX
+                                if ev.is_none() { continue; }
                                 match ev.unwrap() {
                                     Ok(Event::EndFile(r)) => {
                                         eprintln!("MPV Exiting. Reason: {:?}", r);
@@ -313,9 +318,13 @@ impl MovieNodeState {
                                             event_tx.send(MpvThreadEvent::Resize(have_w, have_h)).unwrap();
                                         }
                                     }
+                                    Ok(Event::PlaybackRestart) => {
+                                            event_tx.send(MpvThreadEvent::Playing).unwrap();
+                                    }
                                     Ok(e) => eprintln!("Event triggered: {:?}", e),
                                     Err(e) => {
                                         eprintln!("MPV Error: {:?}", e);
+                                        event_tx.send(MpvThreadEvent::Error(String::from("MPV Error"))).unwrap();
                                         event_tx.send(MpvThreadEvent::Terminate).unwrap();
                                         break;
                                     }
@@ -479,6 +488,18 @@ impl MovieNodeState {
                                 MpvThreadEvent::Position(p) => {
                                     status_tx.send(MpvThreadStatusUpdate::Position(p)).unwrap();
                                 }
+                                MpvThreadEvent::Playing => {
+                                    status_tx.send(MpvThreadStatusUpdate::Playing).unwrap();
+                                }
+                                MpvThreadEvent::Error(e) => {
+                                    status_tx.send(MpvThreadStatusUpdate::Error(e)).unwrap();
+                                }
+                                MpvThreadEvent::Mute(mute) => {
+                                    mpv.set_property("mute", mute).unwrap();
+                                }
+                                MpvThreadEvent::Pause(pause) => {
+                                    mpv.set_property("pause", pause).unwrap();
+                                }
                             }
                         }
 
@@ -614,7 +635,8 @@ impl MovieNodeState {
 
         Ok(MovieNodeStateReady {
             name: name.clone(),
-            intensity,
+            mute: true,
+            pause: false,
             frame_texture: initial_frame_texture,
             bind_group_layout,
             uniform_buffer,
@@ -624,6 +646,7 @@ impl MovieNodeState {
             mpv_thread: Some(mpv_thread),
             mpv_tx,
             mpv_rx,
+            playing: false,
             duration: 0.,
             position: 0.,
         })
@@ -703,6 +726,7 @@ impl MovieNodeState {
     }
 
     pub fn update(&mut self, ctx: &Context, props: &mut MovieNodeProps) {
+        let mut set_error: Option<String> = None;
         match self {
             MovieNodeState::Ready(self_ready) => {
                 if props.name != self_ready.name {
@@ -711,10 +735,21 @@ impl MovieNodeState {
                     );
                     return;
                 }
-                match props.intensity {
-                    Some(intensity) => {
-                        // Cache the intensity for when paint() is called
-                        self_ready.intensity = intensity;
+                match props.mute {
+                    Some(mute) => {
+                        if self_ready.mute != mute {
+                            let _ = self_ready.mpv_tx.send(MpvThreadEvent::Mute(mute));
+                            self_ready.mute = mute;
+                        }
+                    }
+                    _ => {}
+                }
+                match props.pause {
+                    Some(pause) => {
+                        if self_ready.pause != pause {
+                            let _ = self_ready.mpv_tx.send(MpvThreadEvent::Pause(pause));
+                            self_ready.pause = pause;
+                        }
                     }
                     _ => {}
                 }
@@ -731,6 +766,12 @@ impl MovieNodeState {
                         MpvThreadStatusUpdate::Position(p) => {
                             self_ready.position = p;
                         }
+                        MpvThreadStatusUpdate::Playing => {
+                            self_ready.playing = true;
+                        }
+                        MpvThreadStatusUpdate::Error(err) => {
+                            set_error = Some(err);
+                        }
                     }
                 }
 
@@ -740,6 +781,10 @@ impl MovieNodeState {
                 Self::update_paint_states(self_ready, ctx);
             }
             _ => {}
+        }
+
+        if let Some(err) = set_error {
+            *self = Self::Error_(err);
         }
     }
 
@@ -757,7 +802,7 @@ impl MovieNodeState {
                 // Populate the uniforms
                 {
                     let uniforms = Uniforms {
-                        intensity: self_ready.intensity,
+                        factor: [1., 1.],
                         ..Default::default()
                     };
                     ctx.queue().write_buffer(
@@ -829,6 +874,7 @@ impl MovieNodeState {
 impl MovieNodeStateReady {
     fn update_props(&self, props: &mut MovieNodeProps) {
         props.name.clone_from(&self.name);
-        props.intensity = Some(self.intensity);
+        props.mute = Some(self.mute);
+        props.pause = Some(self.pause);
     }
 }
