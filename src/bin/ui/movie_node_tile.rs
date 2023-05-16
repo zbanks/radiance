@@ -22,7 +22,7 @@ pub struct MovieNodeTile<'a> {
     state: MovieNodeTileState,
     mute: &'a mut Option<bool>,
     pause: &'a mut Option<bool>,
-    position: Option<f64>, // TODO make this mut ref?
+    position: &'a mut Option<f64>,
     duration: Option<f64>,
 }
 
@@ -56,10 +56,10 @@ impl<'a> MovieNodeTile<'a> {
             MovieNodeState::Error_(_) => MovieNodeTileState::Error,
         };
 
-        let (position, duration) = if let MovieNodeState::Ready(ready_state) = state {
-            (Some(ready_state.position), Some(ready_state.duration))
+        let duration = if let MovieNodeState::Ready(ready_state) = state {
+            Some(ready_state.duration)
         } else {
-            (None, None)
+            None
         };
 
         MovieNodeTile {
@@ -68,7 +68,7 @@ impl<'a> MovieNodeTile<'a> {
             state: tile_state,
             mute: &mut props.mute,
             pause: &mut props.pause,
-            position,
+            position: &mut props.position,
             duration,
         }
     }
@@ -92,9 +92,8 @@ impl<'a> MovieNodeTile<'a> {
                 let image_size = ui.available_size();
                 ui.spacing_mut().slider_width = ui.available_width();
                 if let (Some(position), Some(duration)) = (position, duration) {
-                    let mut position = position;
                     ui.push_id("slider", |ui| {
-                        ui.add(Slider::new(&mut position, 0.0..=duration).show_value(false));
+                        ui.add(Slider::new(position, 0.0..=duration).show_value(false));
                     });
                 }
                 ui.horizontal(|ui| {

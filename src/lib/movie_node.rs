@@ -32,6 +32,7 @@ pub struct MovieNodeProps {
     pub name: String,
     pub mute: Option<bool>,
     pub pause: Option<bool>,
+    pub position: Option<f64>,
 }
 
 impl From<&MovieNodeProps> for CommonNodeProps {
@@ -59,6 +60,7 @@ enum MpvThreadEvent {
     Error(String),
     Mute(bool),
     Pause(bool),
+    Seek(f64),
 }
 
 enum MpvThreadStatusUpdate {
@@ -220,6 +222,17 @@ impl MovieNodeState {
                         {
                             let opt = ffi::CString::new("ytdl").unwrap();
                             let val = ffi::CString::new("yes").unwrap();
+                            unsafe {
+                                libmpv_sys::mpv_set_option_string(
+                                    transmute_copy(&mpv_init),
+                                    opt.as_ptr(),
+                                    val.as_ptr(),
+                                );
+                            }
+                        }
+                        {
+                            let opt = ffi::CString::new("osd-level").unwrap();
+                            let val = ffi::CString::new("0").unwrap();
                             unsafe {
                                 libmpv_sys::mpv_set_option_string(
                                     transmute_copy(&mpv_init),
@@ -500,6 +513,10 @@ impl MovieNodeState {
                                 MpvThreadEvent::Pause(pause) => {
                                     mpv.set_property("pause", pause).unwrap();
                                 }
+                                MpvThreadEvent::Seek(position) => {
+                                    let position_str = format!("{}", position);
+                                    mpv.command("seek", &[&position_str, "absolute"]).unwrap();
+                                }
                             }
                         }
 
@@ -753,6 +770,15 @@ impl MovieNodeState {
                     }
                     _ => {}
                 }
+                match props.position {
+                    Some(position) => {
+                        if self_ready.position != position {
+                            let _ = self_ready.mpv_tx.send(MpvThreadEvent::Seek(position));
+                            self_ready.position = position;
+                        }
+                    }
+                    _ => {}
+                }
 
                 // Process any MPV status messages we have recieved
                 while let Ok(mpv_status) = self_ready.mpv_rx.try_recv() {
@@ -876,5 +902,6 @@ impl MovieNodeStateReady {
         props.name.clone_from(&self.name);
         props.mute = Some(self.mute);
         props.pause = Some(self.pause);
+        props.position = Some(self.position);
     }
 }
