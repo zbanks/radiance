@@ -2,7 +2,6 @@ use crate::context::{ArcTextureViewSampler, Context, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
 use glutin::platform::unix::HeadlessContextExt;
-use image::GenericImageView;
 use libmpv::{
     events::{Event, PropertyData},
     render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
@@ -19,6 +18,11 @@ use std::thread;
 
 const SHADER_SOURCE: &str = include_str!("movie_shader.wgsl");
 
+// This zoom factor eliminates top / bottom black bars
+// on videos that are recorded in 21:9 aspect
+// and letterboxed to 16:9
+const ZOOM_FACTOR: f32 = 16. / 21.;
+
 fn get_proc_address(
     context: &Arc<glutin::Context<glutin::PossiblyCurrent>>,
     name: &str,
@@ -33,6 +37,7 @@ pub struct MovieNodeProps {
     pub mute: Option<bool>,
     pub pause: Option<bool>,
     pub position: Option<f64>,
+    pub fit: Option<MovieNodeFit>,
 }
 
 impl From<&MovieNodeProps> for CommonNodeProps {
@@ -41,6 +46,13 @@ impl From<&MovieNodeProps> for CommonNodeProps {
             input_count: Some(1),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MovieNodeFit {
+    Crop,
+    Shrink,
+    Zoom,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -64,7 +76,7 @@ enum MpvThreadEvent {
 }
 
 enum MpvThreadStatusUpdate {
-    Texture(ArcTextureViewSampler),
+    Texture(ArcTextureViewSampler, u32, u32),
     Duration(f64),
     Position(f64),
     Playing,
@@ -76,9 +88,12 @@ pub struct MovieNodeStateReady {
     name: String,
     mute: bool,
     pause: bool,
+    fit: MovieNodeFit,
 
     // GPU resources
     frame_texture: ArcTextureViewSampler,
+    frame_width: u32,
+    frame_height: u32,
     bind_group_layout: wgpu::BindGroupLayout,
     uniform_buffer: wgpu::Buffer,
     sampler: wgpu::Sampler,
@@ -427,7 +442,7 @@ impl MovieNodeState {
 
                                     let pixels = vec![0; (width * height * 4) as usize];
 
-                                    status_tx.send(MpvThreadStatusUpdate::Texture(wgpu_texture.clone())).unwrap();
+                                    status_tx.send(MpvThreadStatusUpdate::Texture(wgpu_texture.clone(), width, height)).unwrap();
                                     frame_resources = Some(FrameResources {
                                         width,
                                         height,
@@ -547,7 +562,7 @@ impl MovieNodeState {
                     entries: &[
                         wgpu::BindGroupLayoutEntry {
                             binding: 0, // UpdateUniforms
-                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            visibility: wgpu::ShaderStages::VERTEX,
                             ty: wgpu::BindingType::Buffer {
                                 ty: wgpu::BufferBindingType::Uniform,
                                 has_dynamic_offset: false,
@@ -654,7 +669,10 @@ impl MovieNodeState {
             name: name.clone(),
             mute: true,
             pause: false,
+            fit: MovieNodeFit::Crop,
             frame_texture: initial_frame_texture,
+            frame_width: 1,
+            frame_height: 1,
             bind_group_layout,
             uniform_buffer,
             sampler,
@@ -779,12 +797,20 @@ impl MovieNodeState {
                     }
                     _ => {}
                 }
+                match &props.fit {
+                    Some(fit) => {
+                        self_ready.fit = fit.clone();
+                    }
+                    _ => {}
+                }
 
                 // Process any MPV status messages we have recieved
                 while let Ok(mpv_status) = self_ready.mpv_rx.try_recv() {
                     match mpv_status {
-                        MpvThreadStatusUpdate::Texture(t) => {
+                        MpvThreadStatusUpdate::Texture(t, width, height) => {
                             self_ready.frame_texture = t;
+                            self_ready.frame_width = width;
+                            self_ready.frame_height = height;
                         }
                         MpvThreadStatusUpdate::Duration(d) => {
                             self_ready.duration = d;
@@ -825,10 +851,28 @@ impl MovieNodeState {
             MovieNodeState::Ready(self_ready) => {
                 let paint_state = self_ready.paint_states.get_mut(&render_target_id).expect("Call to paint() with a render target ID unknown to the node (did you call update() first?)");
 
+                let render_target_state = ctx
+                    .render_target_state(render_target_id)
+                    .expect("Call to paint() with a render target ID unknown to the context");
+
+                let paint_width = render_target_state.width() as f32;
+                let paint_height = render_target_state.height() as f32;
+                let frame_width = self_ready.frame_width as f32;
+                let frame_height = self_ready.frame_height as f32;
+
+                let factor_fit_x = frame_height * paint_width / frame_width / paint_height;
+                let factor_fit_y = frame_width * paint_height / frame_height / paint_width;
+
+                let (factor_fit_x, factor_fit_y) = match self_ready.fit {
+                    MovieNodeFit::Shrink => (factor_fit_x.max(1.), factor_fit_x.max(1.)),
+                    MovieNodeFit::Zoom => (factor_fit_x * ZOOM_FACTOR, ZOOM_FACTOR),
+                    MovieNodeFit::Crop => (factor_fit_x.min(1.), factor_fit_x.min(1.)),
+                };
+
                 // Populate the uniforms
                 {
                     let uniforms = Uniforms {
-                        factor: [1., 1.],
+                        factor: [factor_fit_x, factor_fit_y],
                         ..Default::default()
                     };
                     ctx.queue().write_buffer(
@@ -903,5 +947,6 @@ impl MovieNodeStateReady {
         props.mute = Some(self.mute);
         props.pause = Some(self.pause);
         props.position = Some(self.position);
+        props.fit = Some(self.fit.clone());
     }
 }

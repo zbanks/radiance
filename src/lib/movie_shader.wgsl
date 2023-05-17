@@ -23,6 +23,7 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 struct VertexOutput {
     @builtin(position) gl_Position: vec4<f32>,
     @location(0) uv: vec2<f32>,
+    @location(1) movie_uv: vec2<f32>,
 };
 
 @vertex
@@ -40,16 +41,24 @@ fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
         vec2<f32>(0., 1.),
     );
 
+    let uv = uv_array[vertex_index];
+    let movie_uv = (uv - 0.5) * vec2<f32>(1., -1.) * global.factor + 0.5;
+
     return VertexOutput(
         vec4<f32>(pos_array[vertex_index], 0., 1.),
-        uv_array[vertex_index],
+        uv,
+        movie_uv,
     );
+}
+
+fn box(p: vec2<f32>) -> f32 {
+    let b = step(vec2<f32>(0.), p) - step(vec2<f32>(1.), p);
+    return b.x * b.y;
 }
 
 @fragment
 fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let bg = textureSample(iInputTex, iSampler, vertex.uv);
-    let movie_uv = vec2<f32>(vertex.uv.x, 1. - vertex.uv.y);
-    let fg = textureSample(iImageTex, iSampler, movie_uv);
+    let fg = textureSample(iImageTex, iSampler, vertex.movie_uv) * box(vertex.movie_uv);
     return composite(bg, fg);
 }
