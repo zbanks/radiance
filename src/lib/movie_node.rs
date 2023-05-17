@@ -48,7 +48,7 @@ impl From<&MovieNodeProps> for CommonNodeProps {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum MovieNodeFit {
     Crop,
     Shrink,
@@ -864,9 +864,9 @@ impl MovieNodeState {
                 let factor_fit_y = frame_width * paint_height / frame_height / paint_width;
 
                 let (factor_fit_x, factor_fit_y) = match self_ready.fit {
-                    MovieNodeFit::Shrink => (factor_fit_x.max(1.), factor_fit_x.max(1.)),
+                    MovieNodeFit::Shrink => (factor_fit_x.max(1.), factor_fit_y.max(1.)),
                     MovieNodeFit::Zoom => (factor_fit_x * ZOOM_FACTOR, ZOOM_FACTOR),
-                    MovieNodeFit::Crop => (factor_fit_x.min(1.), factor_fit_x.min(1.)),
+                    MovieNodeFit::Crop => (factor_fit_x.min(1.), factor_fit_y.min(1.)),
                 };
 
                 // Populate the uniforms

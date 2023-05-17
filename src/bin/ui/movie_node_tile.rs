@@ -1,7 +1,7 @@
 use egui::{
-    pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, Spinner, TextureId, Ui,
+    pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, Spinner, TextureId, Ui, ComboBox
 };
-use radiance::{MovieNodeProps, MovieNodeState, MovieNodeStateReady};
+use radiance::{MovieNodeProps, MovieNodeState, MovieNodeStateReady, MovieNodeFit};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
@@ -24,6 +24,7 @@ pub struct MovieNodeTile<'a> {
     pause: &'a mut Option<bool>,
     position: &'a mut Option<f64>,
     duration: Option<f64>,
+    fit: &'a mut Option<MovieNodeFit>,
 }
 
 impl<'a> MovieNodeTile<'a> {
@@ -70,6 +71,7 @@ impl<'a> MovieNodeTile<'a> {
             pause: &mut props.pause,
             position: &mut props.position,
             duration,
+            fit: &mut props.fit,
         }
     }
 
@@ -83,6 +85,7 @@ impl<'a> MovieNodeTile<'a> {
             pause,
             position,
             duration,
+            fit,
         } = self;
         ui.heading(title);
         // Preserve aspect ratio
@@ -108,6 +111,33 @@ impl<'a> MovieNodeTile<'a> {
                         });
                     }
                 });
+
+                if let Some(fit) = fit {
+                    ComboBox::from_id_source("fit")
+                        .selected_text(match fit {
+                            MovieNodeFit::Crop => "Crop",
+                            MovieNodeFit::Shrink => "Shrink",
+                            MovieNodeFit::Zoom => "Zoom",
+                        })
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                fit,
+                                MovieNodeFit::Crop,
+                                "Crop",
+                            );
+                            ui.selectable_value(
+                                fit,
+                                MovieNodeFit::Shrink,
+                                "Shrink",
+                            );
+                            ui.selectable_value(
+                                fit,
+                                MovieNodeFit::Zoom,
+                                "Zoom",
+                            );
+                        });
+                }
+
                 ui.horizontal_centered(|ui| {
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
                         * vec2(1., PREVIEW_ASPECT_RATIO);
