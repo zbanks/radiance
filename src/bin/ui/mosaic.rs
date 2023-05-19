@@ -6,6 +6,7 @@ use crate::ui::image_node_tile::ImageNodeTile;
 use crate::ui::movie_node_tile::MovieNodeTile;
 use crate::ui::placeholder_node_tile::PlaceholderNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
+use crate::ui::projection_mapped_output_node_tile::ProjectionMappedOutputNodeTile;
 use crate::ui::tile::{Tile, TileId};
 use egui::{
     pos2, vec2, IdMap, InnerResponse, InputState, Modifiers, Pos2, Rect, Response, Sense,
@@ -167,6 +168,7 @@ impl LayoutCache {
                     NodeProps::ImageNode(p) => ImageNodeTile::min_input_heights(p),
                     NodeProps::PlaceholderNode(p) => PlaceholderNodeTile::min_input_heights(p),
                     NodeProps::MovieNode(p) => MovieNodeTile::min_input_heights(p),
+                    NodeProps::ProjectionMappedOutputNode(p) => ProjectionMappedOutputNodeTile::min_input_heights(p),
                 };
                 // The length of the returned heights array should match the input count,
                 // or be 1 if the input count is zero
@@ -286,6 +288,9 @@ impl LayoutCache {
                         PlaceholderNodeTile::width_for_height(p, height)
                     }
                     NodeProps::MovieNode(p) => MovieNodeTile::width_for_height(p, height),
+                    NodeProps::ProjectionMappedOutputNode(p) => {
+                        ProjectionMappedOutputNodeTile::width_for_height(p, height)
+                    }
                 };
                 (tile_id, width)
             })
@@ -958,6 +963,10 @@ where
             NodeProps::PlaceholderNode(_) => {} // Empty tile
             NodeProps::MovieNode(p) => {
                 MovieNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
+                    .add_contents(ui)
+            }
+            NodeProps::ProjectionMappedOutputNode(p) => {
+                ProjectionMappedOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
                     .add_contents(ui)
             }
         });

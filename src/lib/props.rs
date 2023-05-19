@@ -5,6 +5,7 @@ pub use crate::mir::AudioLevels;
 use crate::movie_node::MovieNodeProps;
 use crate::placeholder_node::PlaceholderNodeProps;
 use crate::screen_output_node::ScreenOutputNodeProps;
+use crate::projection_mapped_output_node::ProjectionMappedOutputNodeProps;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -29,6 +30,7 @@ pub enum NodeProps {
     ImageNode(ImageNodeProps),
     PlaceholderNode(PlaceholderNodeProps),
     MovieNode(MovieNodeProps),
+    ProjectionMappedOutputNode(ProjectionMappedOutputNodeProps),
 }
 
 /// This is a struct of props that are common to every node.
@@ -44,6 +46,7 @@ impl From<&NodeProps> for CommonNodeProps {
             NodeProps::ImageNode(p) => p.into(),
             NodeProps::PlaceholderNode(p) => p.into(),
             NodeProps::MovieNode(p) => p.into(),
+            NodeProps::ProjectionMappedOutputNode(p) => p.into(),
         }
     }
 }

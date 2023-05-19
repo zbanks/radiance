@@ -4,6 +4,7 @@ use crate::movie_node::MovieNodeState;
 use crate::placeholder_node::PlaceholderNodeState;
 use crate::render_target::{RenderTarget, RenderTargetId};
 use crate::screen_output_node::ScreenOutputNodeState;
+use crate::projection_mapped_output_node::ProjectionMappedOutputNodeState;
 use crate::{AudioLevels, Graph, NodeId, NodeProps, Props};
 use rand::Rng;
 use std::collections::HashMap;
@@ -88,6 +89,7 @@ pub enum NodeState {
     ImageNode(ImageNodeState),
     PlaceholderNode(PlaceholderNodeState),
     MovieNode(MovieNodeState),
+    ProjectionMappedOutputNode(ProjectionMappedOutputNodeState),
 }
 
 impl Context {
@@ -241,6 +243,9 @@ impl Context {
                 NodeState::PlaceholderNode(PlaceholderNodeState::new(self, props))
             }
             NodeProps::MovieNode(props) => NodeState::MovieNode(MovieNodeState::new(self, props)),
+            NodeProps::ProjectionMappedOutputNode(props) => {
+                NodeState::ProjectionMappedOutputNode(ProjectionMappedOutputNodeState::new(self, props))
+            }
         }
     }
 
@@ -265,6 +270,10 @@ impl Context {
             },
             NodeState::MovieNode(ref mut state) => match node_props {
                 NodeProps::MovieNode(ref mut props) => state.update(self, props),
+                _ => panic!("Type mismatch between props and state"),
+            },
+            NodeState::ProjectionMappedOutputNode(ref mut state) => match node_props {
+                NodeProps::ProjectionMappedOutputNode(ref mut props) => state.update(self, props),
                 _ => panic!("Type mismatch between props and state"),
             },
         };
@@ -293,6 +302,9 @@ impl Context {
                 state.paint(self, encoder, render_target_id, input_textures)
             }
             NodeState::MovieNode(ref mut state) => {
+                state.paint(self, encoder, render_target_id, input_textures)
+            }
+            NodeState::ProjectionMappedOutputNode(ref mut state) => {
                 state.paint(self, encoder, render_target_id, input_textures)
             }
         };

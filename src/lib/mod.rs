@@ -10,6 +10,7 @@ mod placeholder_node;
 mod props;
 mod render_target;
 mod screen_output_node;
+mod projection_mapped_output_node;
 
 pub use crate::auto_dj::*;
 pub use crate::beat_tracking::*;
@@ -23,3 +24,4 @@ pub use crate::placeholder_node::*;
 pub use crate::props::*;
 pub use crate::render_target::*;
 pub use crate::screen_output_node::*;
+pub use crate::projection_mapped_output_node::*;

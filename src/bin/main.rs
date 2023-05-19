@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use radiance::{
     AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId, NodeProps,
-    Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps,
+    Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps, ProjectionMappedOutputNodeProps,
 };
 
 mod ui;
@@ -159,7 +159,7 @@ pub async fn run() {
     let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
     let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
     let node6_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
-    let screen_output_node_id: NodeId =
+    let output_node_id: NodeId =
         serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
     let mut props: Props = serde_json::from_value(json!({
         "graph": {
@@ -170,7 +170,7 @@ pub async fn run() {
                 node4_id,
                 node5_id,
                 node6_id,
-                screen_output_node_id,
+                output_node_id,
             ],
             "edges": [
                 {
@@ -195,7 +195,7 @@ pub async fn run() {
                 },
                 {
                     "from": node5_id,
-                    "to": screen_output_node_id,
+                    "to": output_node_id,
                     "input": 0,
                 },
                 {
@@ -244,8 +244,8 @@ pub async fn run() {
                 "name": "nyancat.gif",
                 "intensity": 1.0,
             },
-            screen_output_node_id.to_string(): {
-                "type": "ScreenOutputNode",
+            output_node_id.to_string(): {
+                "type": "ProjectionMappedOutputNode",
             }
         },
         "time": 0.,
@@ -448,6 +448,20 @@ pub async fn run() {
                                                 let new_node_id = NodeId::gen();
                                                 let new_node_props = NodeProps::ScreenOutputNode(
                                                     ScreenOutputNodeProps {
+                                                        ..Default::default()
+                                                    },
+                                                );
+                                                props
+                                                    .node_props
+                                                    .insert(new_node_id, new_node_props);
+                                                props
+                                                    .graph
+                                                    .insert_node(new_node_id, &insertion_point);
+                                            }
+                                            "ProjectionMappedOutput" => {
+                                                let new_node_id = NodeId::gen();
+                                                let new_node_props = NodeProps::ProjectionMappedOutputNode(
+                                                    ProjectionMappedOutputNodeProps {
                                                         ..Default::default()
                                                     },
                                                 );

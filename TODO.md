@@ -42,5 +42,5 @@ Low-priority big features
 
 * [ ] Node Library
 * [ ] Animated GIF support for image node
-* [ ] Movie node (with libmpv)
+* [X] Movie node (with libmpv)
 * [ ] MIDI controller support
