@@ -9,6 +9,7 @@ mod spectrum_widget;
 mod tile;
 mod waveform_widget;
 mod projection_mapped_output_node_tile;
+mod modal;
 
 pub use drop_target::*;
 pub use effect_node_tile::*;
@@ -21,3 +22,4 @@ pub use spectrum_widget::*;
 pub use tile::*;
 pub use waveform_widget::*;
 pub use projection_mapped_output_node_tile::*;
+pub use modal::*;

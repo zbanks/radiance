@@ -1,4 +1,5 @@
-use egui::{vec2, Align, Checkbox, Layout, TextureId, Ui, Button};
+use egui::{vec2, Align, Checkbox, Layout, TextureId, Ui, Id};
+use crate::ui::{set_modal, ModalMemory};
 use radiance::{
     AvailableOutputScreen, ProjectionMappedOutputNodeProps, ProjectionMappedOutputNodeState,
 };
@@ -11,6 +12,7 @@ pub struct ProjectionMappedOutputNodeTile<'a> {
     preview_image: TextureId,
     visible: &'a mut bool,
     available_screens: &'a [AvailableOutputScreen],
+    modal_id: Id,
 }
 
 impl<'a> ProjectionMappedOutputNodeTile<'a> {
@@ -33,11 +35,13 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
         props: &'a mut ProjectionMappedOutputNodeProps,
         _state: &'a ProjectionMappedOutputNodeState,
         preview_image: TextureId,
+        modal_id: Id,
     ) -> Self {
         ProjectionMappedOutputNodeTile {
             preview_image,
             visible: &mut props.visible,
             available_screens: &props.available_screens,
+            modal_id,
         }
     }
 
@@ -47,6 +51,7 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
             preview_image,
             visible,
             available_screens,
+            modal_id,
         } = self;
 
         ui.heading("Projection Mapped Output");
@@ -56,7 +61,9 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
             |ui| {
                 ui.add(Checkbox::new(visible, "Visible"));
 
-                ui.add(Button::new("Edit..."));
+                if ui.button("Edit...").clicked() {
+                    set_modal(ui.ctx(), modal_id, Some(ModalMemory::ProjectionMapEditor));
+                }
 
                 ui.centered_and_justified(|ui| {
                     let image_size = ui.available_size();

@@ -10,7 +10,7 @@ use crate::ui::projection_mapped_output_node_tile::ProjectionMappedOutputNodeTil
 use crate::ui::tile::{Tile, TileId};
 use egui::{
     pos2, vec2, IdMap, InnerResponse, InputState, Modifiers, Pos2, Rect, Response, Sense,
-    TextureId, Ui, Vec2, Widget,
+    TextureId, Ui, Vec2, Widget, Id
 };
 use radiance::{CommonNodeProps, Graph, InsertionPoint, NodeId, NodeProps, NodeState, Props};
 use std::collections::{HashMap, HashSet};
@@ -738,6 +738,7 @@ pub fn mosaic_ui<IdSource>(
     node_states: &HashMap<NodeId, NodeState>,
     preview_images: &HashMap<NodeId, TextureId>,
     insertion_point: &mut InsertionPoint,
+    modal_id: Id,
 ) -> Response
 where
     IdSource: Hash + std::fmt::Debug,
@@ -966,7 +967,7 @@ where
                     .add_contents(ui)
             }
             NodeProps::ProjectionMappedOutputNode(p) => {
-                ProjectionMappedOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
+                ProjectionMappedOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image, modal_id)
                     .add_contents(ui)
             }
         });
@@ -1193,6 +1194,7 @@ pub fn mosaic<'a, IdSource>(
     node_states: &'a HashMap<NodeId, NodeState>,
     preview_images: &'a HashMap<NodeId, TextureId>,
     insertion_point: &'a mut InsertionPoint,
+    modal_id: Id,
 ) -> impl Widget + 'a
 where
     IdSource: Hash + std::fmt::Debug + 'a,
@@ -1205,6 +1207,7 @@ where
             node_states,
             preview_images,
             insertion_point,
+            modal_id,
         )
     }
 }

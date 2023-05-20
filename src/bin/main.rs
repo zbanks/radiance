@@ -24,7 +24,7 @@ use radiance::{
 };
 
 mod ui;
-use ui::mosaic;
+use ui::{mosaic, modal, modal_shown};
 use ui::{SpectrumWidget, WaveformWidget};
 
 mod winit_output;
@@ -394,107 +394,126 @@ pub async fn run() {
                         |ui| ui.text_edit_singleline(&mut node_add_textedit),
                     );
 
+                    let full_rect = egui_ctx.available_rect();
                     egui::CentralPanel::default().show(egui_ctx, |ui| {
-                        ui.horizontal(|ui| {
-                            ui.image(waveform_texture.unwrap(), waveform_size);
-                            ui.image(spectrum_texture.unwrap(), spectrum_size);
-                            ui.checkbox(&mut auto_dj_enabled, "Auto DJ");
-                        });
+                        let modal_id = ui.make_persistent_id("modal");
+                        let modal_shown = modal_shown(egui_ctx, modal_id);
 
-                        let mosaic_response = ui.add(mosaic(
-                            "mosaic",
-                            &mut props,
-                            ctx.node_states(),
-                            &preview_images,
-                            &mut insertion_point,
-                        ));
+                        ui.allocate_ui_at_rect(full_rect, |ui| {
+                            ui.set_enabled(!modal_shown);
+                            ui.horizontal(|ui| {
+                                ui.image(waveform_texture.unwrap(), waveform_size);
+                                ui.image(spectrum_texture.unwrap(), spectrum_size);
+                                ui.checkbox(&mut auto_dj_enabled, "Auto DJ");
+                            });
 
-                        if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
-                            left_panel_expanded = true;
-                            node_add_wants_focus = true;
-                        }
+                            let mosaic_response = ui.add(mosaic(
+                                "mosaic",
+                                &mut props,
+                                ctx.node_states(),
+                                &preview_images,
+                                &mut insertion_point,
+                                modal_id,
+                            ));
 
-                        if let Some(egui::InnerResponse {
-                            inner: node_add_response,
-                            response: _,
-                        }) = left_panel_response
-                        {
-                            // TODO all this side-panel handling is wonky. It is done, in part, to avoid mutating the props before it's drawn.
-                            // This needs to be factored out into a real "library" component.
-                            if node_add_wants_focus {
-                                node_add_response.request_focus();
-                                node_add_wants_focus = false;
+                            if !left_panel_expanded && ui.input().key_pressed(egui::Key::A) {
+                                left_panel_expanded = true;
+                                node_add_wants_focus = true;
                             }
-                            if node_add_response.lost_focus() {
-                                if egui_ctx.input().key_pressed(egui::Key::Enter) {
-                                    let node_add_textedit_str = node_add_textedit.as_str();
-                                    if node_add_textedit_str.starts_with("http:")
-                                        || node_add_textedit_str.starts_with("https:")
-                                        || node_add_textedit_str.ends_with(".mp4")
-                                        || node_add_textedit_str.ends_with(".mkv")
-                                        || node_add_textedit_str.ends_with(".avi")
-                                        || node_add_textedit_str.ends_with(".gif")
-                                    {
-                                        let new_node_id = NodeId::gen();
-                                        let new_node_props = NodeProps::MovieNode(MovieNodeProps {
-                                            name: node_add_textedit.clone(),
-                                            ..Default::default()
-                                        });
-                                        props.node_props.insert(new_node_id, new_node_props);
-                                        props.graph.insert_node(new_node_id, &insertion_point);
-                                    } else {
-                                        match node_add_textedit.as_str() {
-                                            "ScreenOutput" => {
-                                                let new_node_id = NodeId::gen();
-                                                let new_node_props = NodeProps::ScreenOutputNode(
-                                                    ScreenOutputNodeProps {
-                                                        ..Default::default()
-                                                    },
-                                                );
-                                                props
-                                                    .node_props
-                                                    .insert(new_node_id, new_node_props);
-                                                props
-                                                    .graph
-                                                    .insert_node(new_node_id, &insertion_point);
-                                            }
-                                            "ProjectionMappedOutput" => {
-                                                let new_node_id = NodeId::gen();
-                                                let new_node_props = NodeProps::ProjectionMappedOutputNode(
-                                                    ProjectionMappedOutputNodeProps {
-                                                        ..Default::default()
-                                                    },
-                                                );
-                                                props
-                                                    .node_props
-                                                    .insert(new_node_id, new_node_props);
-                                                props
-                                                    .graph
-                                                    .insert_node(new_node_id, &insertion_point);
-                                            }
-                                            _ => {
-                                                let new_node_id = NodeId::gen();
-                                                let new_node_props =
-                                                    NodeProps::EffectNode(EffectNodeProps {
-                                                        name: node_add_textedit.clone(),
-                                                        ..Default::default()
-                                                    });
-                                                props
-                                                    .node_props
-                                                    .insert(new_node_id, new_node_props);
-                                                props
-                                                    .graph
-                                                    .insert_node(new_node_id, &insertion_point);
-                                                // TODO: select and focus the new node
-                                                // (consider making selection & focus part of the explicit state of mosaic, not memory)
+
+                            if let Some(egui::InnerResponse {
+                                inner: node_add_response,
+                                response: _,
+                            }) = left_panel_response
+                            {
+                                // TODO all this side-panel handling is wonky. It is done, in part, to avoid mutating the props before it's drawn.
+                                // This needs to be factored out into a real "library" component.
+                                if node_add_wants_focus {
+                                    node_add_response.request_focus();
+                                    node_add_wants_focus = false;
+                                }
+                                if node_add_response.lost_focus() {
+                                    if egui_ctx.input().key_pressed(egui::Key::Enter) {
+                                        let node_add_textedit_str = node_add_textedit.as_str();
+                                        if node_add_textedit_str.starts_with("http:")
+                                            || node_add_textedit_str.starts_with("https:")
+                                            || node_add_textedit_str.ends_with(".mp4")
+                                            || node_add_textedit_str.ends_with(".mkv")
+                                            || node_add_textedit_str.ends_with(".avi")
+                                            || node_add_textedit_str.ends_with(".gif")
+                                        {
+                                            let new_node_id = NodeId::gen();
+                                            let new_node_props = NodeProps::MovieNode(MovieNodeProps {
+                                                name: node_add_textedit.clone(),
+                                                ..Default::default()
+                                            });
+                                            props.node_props.insert(new_node_id, new_node_props);
+                                            props.graph.insert_node(new_node_id, &insertion_point);
+                                        } else {
+                                            match node_add_textedit.as_str() {
+                                                "ScreenOutput" => {
+                                                    let new_node_id = NodeId::gen();
+                                                    let new_node_props = NodeProps::ScreenOutputNode(
+                                                        ScreenOutputNodeProps {
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                    props
+                                                        .node_props
+                                                        .insert(new_node_id, new_node_props);
+                                                    props
+                                                        .graph
+                                                        .insert_node(new_node_id, &insertion_point);
+                                                }
+                                                "ProjectionMappedOutput" => {
+                                                    let new_node_id = NodeId::gen();
+                                                    let new_node_props = NodeProps::ProjectionMappedOutputNode(
+                                                        ProjectionMappedOutputNodeProps {
+                                                            ..Default::default()
+                                                        },
+                                                    );
+                                                    props
+                                                        .node_props
+                                                        .insert(new_node_id, new_node_props);
+                                                    props
+                                                        .graph
+                                                        .insert_node(new_node_id, &insertion_point);
+                                                }
+                                                _ => {
+                                                    let new_node_id = NodeId::gen();
+                                                    let new_node_props =
+                                                        NodeProps::EffectNode(EffectNodeProps {
+                                                            name: node_add_textedit.clone(),
+                                                            ..Default::default()
+                                                        });
+                                                    props
+                                                        .node_props
+                                                        .insert(new_node_id, new_node_props);
+                                                    props
+                                                        .graph
+                                                        .insert_node(new_node_id, &insertion_point);
+                                                    // TODO: select and focus the new node
+                                                    // (consider making selection & focus part of the explicit state of mosaic, not memory)
+                                                }
                                             }
                                         }
                                     }
+                                    node_add_textedit.clear();
+                                    left_panel_expanded = false;
+                                    mosaic_response.request_focus();
                                 }
-                                node_add_textedit.clear();
-                                left_panel_expanded = false;
-                                mosaic_response.request_focus();
                             }
+                        });
+
+                        if modal_shown {
+                            ui.allocate_ui_at_rect(full_rect, |ui| {
+                                ui.add(modal(
+                                    modal_id,
+                                    &mut props,
+                                    ctx.node_states(),
+                                    &preview_images,
+                                ));
+                            });
                         }
                     });
                 });
