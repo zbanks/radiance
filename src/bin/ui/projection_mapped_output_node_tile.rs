@@ -1,5 +1,5 @@
 use egui::{vec2, Align, Checkbox, Layout, TextureId, Ui, Id};
-use crate::ui::{set_modal, ModalMemory};
+use crate::ui::{set_modal, ModalMemory, TileId};
 use radiance::{
     AvailableOutputScreen, ProjectionMappedOutputNodeProps, ProjectionMappedOutputNodeState,
 };
@@ -13,6 +13,7 @@ pub struct ProjectionMappedOutputNodeTile<'a> {
     visible: &'a mut bool,
     available_screens: &'a [AvailableOutputScreen],
     modal_id: Id,
+    tile_id: TileId,
 }
 
 impl<'a> ProjectionMappedOutputNodeTile<'a> {
@@ -36,12 +37,14 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
         _state: &'a ProjectionMappedOutputNodeState,
         preview_image: TextureId,
         modal_id: Id,
+        tile_id: TileId,
     ) -> Self {
         ProjectionMappedOutputNodeTile {
             preview_image,
             visible: &mut props.visible,
             available_screens: &props.available_screens,
             modal_id,
+            tile_id,
         }
     }
 
@@ -52,6 +55,7 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
             visible,
             available_screens,
             modal_id,
+            tile_id,
         } = self;
 
         ui.heading("Projection Mapped Output");
@@ -62,7 +66,7 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
                 ui.add(Checkbox::new(visible, "Visible"));
 
                 if ui.button("Edit...").clicked() {
-                    set_modal(ui.ctx(), modal_id, Some(ModalMemory::ProjectionMapEditor));
+                    set_modal(ui.ctx(), modal_id, Some(ModalMemory::ProjectionMapEditor(tile_id.node)));
                 }
 
                 ui.centered_and_justified(|ui| {

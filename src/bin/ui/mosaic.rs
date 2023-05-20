@@ -967,7 +967,7 @@ where
                     .add_contents(ui)
             }
             NodeProps::ProjectionMappedOutputNode(p) => {
-                ProjectionMappedOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image, modal_id)
+                ProjectionMappedOutputNodeTile::new(p, node_state.try_into().unwrap(), preview_image, modal_id, tile_id)
                     .add_contents(ui)
             }
         });

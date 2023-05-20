@@ -1,5 +1,5 @@
 use egui::{
-    Ui, Widget, Sense, Rect, TextureId, Response, Id, Context, Layout, Align, Shape, Stroke, Color32
+    Ui, Widget, Sense, Rect, TextureId, Response, Id, Context, Layout, Align, Shape, Stroke, Color32, pos2
 };
 use std::sync::{Arc, Mutex};
 use std::collections::{HashMap};
@@ -16,7 +16,7 @@ const SCRIM_PADDING: f32 = 5.;
 /// State associated with the modal UI being shown, to be preserved between frames.
 #[derive(Debug)]
 pub enum ModalMemory {
-    ProjectionMapEditor, // TODO add node ID
+    ProjectionMapEditor(NodeId), // TODO add node ID
 }
 
 pub fn modal_shown(ctx: &Context, id: Id) -> bool {
@@ -63,9 +63,32 @@ pub fn modal_ui(
 
     let mut ui = ui.child_ui(ui_rect, Layout::top_down(Align::Center));
     match modal_memory.as_ref().expect("Tried to display modal but nothing currently shown") {
-        ModalMemory::ProjectionMapEditor => {
-            ui.heading("Projection Map Editor");
-            if ui.button("Close").clicked() {
+        ModalMemory::ProjectionMapEditor(node_id) => {
+            if let Some(props) = props.node_props.get(node_id) {
+                let preview_image = preview_images.get(node_id).unwrap().clone();
+
+                ui.heading("Projection Map Editor");
+                // TODO: Add & remove screens
+                // TODO: screen selector combobox
+                ui.with_layout(
+                    Layout::bottom_up(Align::Center).with_cross_justify(true),
+                    |ui| {
+                        if ui.button("Close").clicked() {
+                            *modal_memory = None;
+                        }
+                        let available = ui.available_rect_before_wrap();
+                        let midpoint = available.center().x;
+                        let left = available.intersect(Rect::everything_left_of(midpoint - 0.5 * SCRIM_PADDING));
+                        let right = available.intersect(Rect::everything_right_of(midpoint + 0.5 * SCRIM_PADDING));
+
+                        // Draw left side (global view)
+                        let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                        ui.painter()
+                            .add(Shape::image(preview_image, left, uv, Color32::DARK_GRAY));
+
+                });
+            } else {
+                // Node was deleted; close modal
                 *modal_memory = None;
             }
         },

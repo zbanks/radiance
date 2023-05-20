@@ -246,6 +246,7 @@ pub async fn run() {
             },
             output_node_id.to_string(): {
                 "type": "ProjectionMappedOutputNode",
+                "resolution": [1000, 1000],
             }
         },
         "time": 0.,
