@@ -247,6 +247,14 @@ pub async fn run() {
             output_node_id.to_string(): {
                 "type": "ProjectionMappedOutputNode",
                 "resolution": [1000, 1000],
+                "screens": [
+                    {
+                        "name": "eDP1",
+                        "resolution": [1920, 1080],
+                        "crop": [[0.2,0.8], [0.8,0.8], [0.5, 0.2]],
+                        "map": [1, 0.2, 0, -0.2, 1, 0, 0, 0, 1],
+                    }
+                ],
             }
         },
         "time": 0.,
