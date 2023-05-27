@@ -144,14 +144,15 @@ pub fn modal_ui(
                         let right = available.intersect(Rect::everything_right_of(midpoint + 0.5 * SCRIM_PADDING));
 
                         let selected_screen_index = 0;
+                        let locked_point_indices = [0, 1, 2, 3];
 
+                        // Left side UI (virtual view)
                         {
                             let mut ui = ui.child_ui_with_id_source(left, Layout::top_down(Align::Center).with_cross_justify(true), "virtual");
                             ui.heading("Virtual:");
 
                             let left = ui.available_rect_before_wrap();
 
-                            // Draw left side (virtual view)
                             let factor_fit_x = (props.resolution[0] as f32 * left.height() / props.resolution[1] as f32 / left.width()).min(1.);
                             let factor_fit_y = (props.resolution[1] as f32 * left.width() / props.resolution[0] as f32 / left.height()).min(1.);
                             let left = Rect::from_center_size(left.center(), left.size() * vec2(factor_fit_x, factor_fit_y));
@@ -187,7 +188,7 @@ pub fn modal_ui(
                                     Vector2::<f32>::new(delta_uvw[0], delta_uvw[1])
                                 };
 
-                                // Convert a point physical UV space
+                                // Convert a point in physical UV space
                                 // to a point in virtual UV space
                                 let physical_uv_to_virtual_uv = |physical_uv: Vector2<f32>| {
                                     let uvw = Vector3::<f32>::new(physical_uv[0], physical_uv[1], 1.);
@@ -200,24 +201,27 @@ pub fn modal_ui(
                                     let pt = physical_uv_to_pt(*vertex);
                                     let handle_rect = Rect::from_center_size(pt, Vec2::splat(EDITOR_PT_SIZE));
 
-                                    let handle_response = ui.interact(handle_rect, Id::new(("virtual handle", j)), Sense::click_and_drag());
-                                    if handle_response.dragged() {
-                                        let delta_pt = handle_response.drag_delta();
-                                        let delta_uv = delta_pt_to_delta_virtual_uv(delta_pt);
-                                        handle_drag = Some((j, delta_uv));
+                                    if i == selected_screen_index {
+                                        let handle_response = ui.interact(handle_rect, Id::new(("virtual handle", j)), Sense::click_and_drag());
+                                        if handle_response.dragged() {
+                                            let delta_pt = handle_response.drag_delta();
+                                            let delta_uv = delta_pt_to_delta_virtual_uv(delta_pt);
+                                            handle_drag = Some((j, delta_uv));
+                                        }
                                     }
 
+                                    if locked_point_indices.contains(&j) {
+                                        ui.painter().rect_filled(handle_rect, 0., if i == selected_screen_index {EDITOR_STROKE_SELECTED.color} else {EDITOR_STROKE_BLURRED.color});
+                                    }
                                     ui.painter().rect_stroke(handle_rect, 0., if i == selected_screen_index {EDITOR_STROKE_SELECTED} else {EDITOR_STROKE_BLURRED});
                                     let last_uv = screen.crop[if j > 0 {j - 1} else {screen.crop.len() - 1}];
                                     let last_pt = physical_uv_to_pt(last_uv);
                                     ui.painter().line_segment([last_pt, pt], if i == selected_screen_index {EDITOR_STROKE_SELECTED} else {EDITOR_STROKE_BLURRED});
                                 }
 
-                                // Handle dragging of handles
+                                // Handle dragging of virtual handles
                                 if let Some((handle_index, delta_uv)) = handle_drag {
-                                    let locked_point_indices = [0, 1, 2, 3];
-
-                                    // Get the locked physical UVs that we don't want these to move
+                                    // Get the locked physical UVs. We don't want these to move
                                     let locked_physical_uvs = locked_point_indices.map(|j| screen.crop[j]);
 
                                     // Convert physical to virtual UVs and move the dragged one:
@@ -227,7 +231,7 @@ pub fn modal_ui(
                                     // Now get the locked virtual UVs post-drag:
                                     let locked_virtual_uvs = locked_point_indices.map(|j| virtual_uvs[j]);
 
-                                    // Compute the new perspective matrix that keeps the locked physical points still
+                                    // Compute the new perspective matrix that keeps the locked points still
                                     let virtual_to_physical = four_point_mapping(locked_virtual_uvs, locked_physical_uvs).unwrap();
                                     screen.map = virtual_to_physical;
 
@@ -244,26 +248,87 @@ pub fn modal_ui(
                             ui.painter().rect_stroke(left, 0., EDITOR_OUTLINE_STROKE);
                         }
 
+                        // Right side UI (physical view)
                         {
                             let mut ui = ui.child_ui_with_id_source(right, Layout::top_down(Align::Center).with_cross_justify(true), "physical");
                             ui.heading("Physical:");
 
                             let right = ui.available_rect_before_wrap();
-                            let screen = &props.screens[selected_screen_index];
+                            let screen = &mut props.screens[selected_screen_index];
 
-                            // Draw right side (physical view)
                             let factor_fit_x = (screen.resolution[0] as f32 * right.height() / screen.resolution[1] as f32 / right.width()).min(1.);
                             let factor_fit_y = (screen.resolution[1] as f32 * right.width() / screen.resolution[0] as f32 / right.height()).min(1.);
                             let right = Rect::from_center_size(right.center(), right.size() * vec2(factor_fit_x, factor_fit_y));
-                            let uv_to_pt = |uv| (right.min + uv * (right.max - right.min));
+
+                            let virtual_to_physical = screen.map;
+                            let physical_to_virtual = virtual_to_physical.try_inverse().unwrap(); // Calling unwrap on user data
+                            let physical_to_pt = Matrix3::<f32>::new(
+                                right.max.x - right.min.x, 0., right.min.x,
+                                0., right.max.y - right.min.y, right.min.y,
+                                0., 0., 1.);
+                            let pt_to_physical = physical_to_pt.try_inverse().unwrap();
+
+                            // Convert a point in physical UV space
+                            // to egui pt coordinates
+                            let physical_uv_to_pt = |uv: Vector2<f32>| {
+                                let uvw = Vector3::<f32>::new(uv[0], uv[1], 1.);
+                                let pt = physical_to_pt * uvw;
+                                pos2(pt[0] / pt[2], pt[1] / pt[2])
+                            };
+
+                            // Convert a vector in egui pt coordiantes
+                            // to a vector in physical UV space
+                            let delta_pt_to_delta_physical_uv = |delta_pt: Vec2| {
+                                let delta_pt = Vector3::<f32>::new(delta_pt.x, delta_pt.y, 0.);
+                                let delta_uvw = pt_to_physical * delta_pt;
+                                Vector2::<f32>::new(delta_uvw[0], delta_uvw[1])
+                            };
+
+                            // Convert a point in physical UV space
+                            // to a point in virtual UV space
+                            let physical_uv_to_virtual_uv = |physical_uv: Vector2<f32>| {
+                                let uvw = Vector3::<f32>::new(physical_uv[0], physical_uv[1], 1.);
+                                let uvw = physical_to_virtual * uvw;
+                                Vector2::<f32>::new(uvw[0] / uvw[2], uvw[1] / uvw[2])
+                            };
 
                             // Draw the crop bounds
+                            let mut handle_drag = None;
                             for (i, vertex) in screen.crop.iter().enumerate() {
-                                let pt = uv_to_pt(vec2(vertex[0], vertex[1]));
-                                ui.painter().rect_stroke(Rect::from_center_size(pt, Vec2::splat(EDITOR_PT_SIZE)), 0., EDITOR_STROKE_SELECTED);
+                                let pt = physical_uv_to_pt(*vertex);
+                                let handle_rect = Rect::from_center_size(pt, Vec2::splat(EDITOR_PT_SIZE));
+
+                                let handle_response = ui.interact(handle_rect, Id::new(("physical handle", i)), Sense::click_and_drag());
+                                if handle_response.dragged() {
+                                    let delta_pt = handle_response.drag_delta();
+                                    let delta_uv = delta_pt_to_delta_physical_uv(delta_pt);
+                                    handle_drag = Some((i, delta_uv));
+                                }
+
+                                if locked_point_indices.contains(&i) {
+                                    ui.painter().rect_filled(handle_rect, 0., EDITOR_STROKE_SELECTED.color);
+                                }
+
+                                ui.painter().rect_stroke(handle_rect, 0., EDITOR_STROKE_SELECTED);
                                 let last_uv = screen.crop[if i > 0 {i - 1} else {screen.crop.len() - 1}];
-                                let last_pt = uv_to_pt(vec2(last_uv[0], last_uv[1]));
+                                let last_pt = physical_uv_to_pt(last_uv);
                                 ui.painter().line_segment([last_pt, pt], EDITOR_STROKE_SELECTED);
+                            }
+
+                            // Handle dragging of physical handles
+                            if let Some((handle_index, delta_uv)) = handle_drag {
+                                // Get the locked virtual UVs. We don't want these to move
+                                let locked_virtual_uvs = locked_point_indices.map(|j| physical_uv_to_virtual_uv(screen.crop[j]));
+
+                                // Move the dragged physical UV:
+                                screen.crop[handle_index] += delta_uv;
+
+                                // Now get the locked physical UVs post-drag:
+                                let locked_physical_uvs = locked_point_indices.map(|j| screen.crop[j]);
+
+                                // Compute the new perspective matrix that keeps the locked points still
+                                let virtual_to_physical = four_point_mapping(locked_virtual_uvs, locked_physical_uvs).unwrap();
+                                screen.map = virtual_to_physical;
                             }
 
                             // Draw the outline
