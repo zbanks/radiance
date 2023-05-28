@@ -63,11 +63,17 @@ pub struct WinitOutput {
     adapter: Arc<wgpu::Adapter>,
     device: Arc<wgpu::Device>,
     queue: Arc<wgpu::Queue>,
-    shader_module: wgpu::ShaderModule,
-    bind_group_layout: wgpu::BindGroupLayout,
-    render_pipeline_layout: wgpu::PipelineLayout,
+
+    screen_output_shader_module: wgpu::ShaderModule,
+    screen_output_bind_group_layout: wgpu::BindGroupLayout,
+    screen_output_render_pipeline_layout: wgpu::PipelineLayout,
+
+    projection_mapped_output_shader_module: wgpu::ShaderModule,
+    projection_mapped_output_bind_group_layout: wgpu::BindGroupLayout,
+    projection_mapped_output_render_pipeline_layout: wgpu::PipelineLayout,
 
     screen_outputs: HashMap<radiance::NodeId, Option<VisibleScreenOutput>>,
+    projection_mapped_outputs: HashMap<radiance::NodeId, Option<VisibleProjectionMappedOutput>>,
 }
 
 #[derive(Debug)]
@@ -83,7 +89,27 @@ struct VisibleScreenOutput {
     // Internal
     initial_update: bool, // Initialized to false, set to true on first update.
     request_close: bool,  // If set to True, delete this window on the next update
+    name: String,
     resolution: [u32; 2],
+}
+
+#[derive(Debug)]
+struct VisibleProjectionMappedSingleOutput {
+    window: egui_winit::winit::window::Window,
+    surface: wgpu::Surface,
+    config: wgpu::SurfaceConfiguration,
+    render_pipeline: wgpu::RenderPipeline,
+}
+
+#[derive(Debug)]
+struct VisibleProjectionMappedOutput {
+    // Resources
+    screens: HashMap<String, VisibleProjectionMappedSingleOutput>,
+    render_target_id: radiance::RenderTargetId,
+    render_target: radiance::RenderTarget,
+    resolution: [u32; 2],
+    initial_update: bool, // Initialized to false, set to true on first update.
+    request_close: bool,  // If set to True, delete this window on the next update
 }
 
 impl VisibleScreenOutput {
@@ -96,6 +122,17 @@ impl VisibleScreenOutput {
     }
 }
 
+impl VisibleProjectionMappedSingleOutput {
+    fn resize(&mut self, device: &wgpu::Device, new_size: winit::dpi::PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
+            self.surface.configure(device, &self.config);
+        }
+    }
+}
+
+
 impl WinitOutput {
     pub fn new(
         instance: Arc<wgpu::Instance>,
@@ -103,12 +140,17 @@ impl WinitOutput {
         device: Arc<wgpu::Device>,
         queue: Arc<wgpu::Queue>,
     ) -> Self {
-        let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("Output shader"),
+        let screen_output_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Screen output shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("output.wgsl").into()),
         });
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let projection_mapped_output_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Projection mapped output shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("projection_map.wgsl").into()),
+        });
+
+        let screen_output_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -127,13 +169,42 @@ impl WinitOutput {
                     count: None,
                 },
             ],
-            label: Some("output texture bind group layout"),
+            label: Some("screen output texture bind group layout"),
         });
 
-        let render_pipeline_layout =
+        let projection_mapped_output_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("screen output texture bind group layout"),
+        });
+
+        let screen_output_render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Output Render Pipeline Layout"),
-                bind_group_layouts: &[&bind_group_layout],
+                label: Some("Screen output Render Pipeline Layout"),
+                bind_group_layouts: &[&screen_output_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let projection_mapped_output_render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Projection mapped output Render Pipeline Layout"),
+                bind_group_layouts: &[&projection_mapped_output_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -142,10 +213,17 @@ impl WinitOutput {
             adapter,
             device,
             queue,
-            shader_module,
-            bind_group_layout,
-            render_pipeline_layout,
+
+            screen_output_shader_module,
+            screen_output_bind_group_layout,
+            screen_output_render_pipeline_layout,
+
+            projection_mapped_output_shader_module,
+            projection_mapped_output_bind_group_layout,
+            projection_mapped_output_render_pipeline_layout,
+
             screen_outputs: HashMap::<radiance::NodeId, Option<VisibleScreenOutput>>::new(),
+            projection_mapped_outputs: HashMap::<radiance::NodeId, Option<VisibleProjectionMappedOutput>>::new(),
         }
     }
 
@@ -157,7 +235,9 @@ impl WinitOutput {
                 &screen_output.render_target_id,
                 &screen_output.render_target,
             )
-        })
+        }).chain(self.projection_mapped_outputs.values().flatten().map(|projection_mapped_output| {
+            (&projection_mapped_output.render_target_id, &projection_mapped_output.render_target)
+        }))
     }
 
     pub fn update<T>(
@@ -172,8 +252,11 @@ impl WinitOutput {
         for screen_output in self.screen_outputs.values_mut().flatten() {
             screen_output.initial_update = true;
         }
+        for projection_mapped_output in self.projection_mapped_outputs.values_mut().flatten() {
+            projection_mapped_output.initial_update = true;
+        }
 
-        // Prune screen_outputs of any nodes that are no longer present in the given graph
+        // Prune screen_outputs and projection_mapped_outputs of any nodes that are no longer present in the given graph
         self.screen_outputs.retain(|id, _| {
             props
                 .node_props
@@ -181,13 +264,28 @@ impl WinitOutput {
                 .map(|node_props| matches!(node_props, radiance::NodeProps::ScreenOutputNode(_)))
                 .unwrap_or(false)
         });
+        self.projection_mapped_outputs.retain(|id, _| {
+            props
+                .node_props
+                .get(id)
+                .map(|node_props| matches!(node_props, radiance::NodeProps::ProjectionMappedOutputNode(_)))
+                .unwrap_or(false)
+        });
 
-        // Construct screen_outputs for any ScreenOutputNodes we didn't know about
+        // Construct screen_outputs and projection_mapped_outputs for any ScreenOutputNodes we didn't know about
         for (node_id, node_props) in props.node_props.iter() {
-            if let radiance::NodeProps::ScreenOutputNode(_) = node_props {
-                if !self.screen_outputs.contains_key(node_id) {
-                    self.screen_outputs.insert(*node_id, None);
-                }
+            match node_props {
+                radiance::NodeProps::ScreenOutputNode(_) => {
+                    if !self.screen_outputs.contains_key(node_id) {
+                        self.screen_outputs.insert(*node_id, None);
+                    }
+                },
+                radiance::NodeProps::ProjectionMappedOutputNode(_) => {
+                    if !self.projection_mapped_outputs.contains_key(node_id) {
+                        self.projection_mapped_outputs.insert(*node_id, None);
+                    }
+                },
+                _ => {}
             }
         }
 
@@ -283,18 +381,12 @@ impl WinitOutput {
                                                                            // (it is safe to unwrap it because the window would have been set to invisible had it been None)
                 let needs_new_window = match self.screen_outputs.get(&node_id).unwrap() {
                     None => true, // Make a new window if we weren't visible last frame
-                    Some(screen_output) => screen_output.resolution != screen.resolution, // Make a new window if the resolution changes
+                    Some(screen_output) => screen_output.resolution != screen.resolution, // Make a new window if the resolution changes TODO also make a new window if screen name changes
                 };
                 if needs_new_window {
                     let visible_screen_output =
-                        self.new_screen_output(event_loop, &screen.resolution);
-                    let mh = event_loop
-                        .available_monitors()
-                        .find(|mh| mh.name().map(|n| n == screen.name).unwrap_or(false));
+                        self.new_screen_output(event_loop, &screen.name, &screen.resolution);
                     visible_screen_output.window.set_title("Radiance Output");
-                    visible_screen_output
-                        .window
-                        .set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
                     // Replace None with Some
                     self.screen_outputs
                         .insert(node_id, Some(visible_screen_output));
@@ -304,11 +396,71 @@ impl WinitOutput {
                 self.screen_outputs.insert(node_id, None);
             }
         }
+
+        // Update internal state of projection_mapped_outputs from props
+        let node_ids: Vec<radiance::NodeId> = self.projection_mapped_outputs.keys().cloned().collect();
+        for node_id in node_ids {
+            let projection_mapped_output_props: &mut radiance::ProjectionMappedOutputNodeProps = props
+                .node_props
+                .get_mut(&node_id)
+                .unwrap()
+                .try_into()
+                .unwrap();
+
+            // Populate each projection mapped output node props with a list of screens available on the system
+            projection_mapped_output_props.available_screens = available_screens.clone();
+
+            if self
+                .projection_mapped_outputs
+                .get(&node_id)
+                .unwrap()
+                .as_ref()
+                .map(|visible_projection_mapped_output| visible_projection_mapped_output.request_close)
+                .unwrap_or(false)
+            {
+                // Close was requested; set visible to false
+                projection_mapped_output_props.visible = false;
+            }
+
+            if projection_mapped_output_props.visible {
+                let needs_new_windows = match self.projection_mapped_outputs.get(&node_id).unwrap() {
+                    None => true, // Make new resources if we weren't visible last frame
+                    Some(projection_mapped_output) => projection_mapped_output.resolution != projection_mapped_output_props.resolution, // Make new resources if the resolution changes OR (TODO) screen list changes
+                };
+                if needs_new_windows {
+                    let render_target_id = radiance::RenderTargetId::gen();
+                    let render_target: radiance::RenderTarget = serde_json::from_value(json!({
+                        "width": projection_mapped_output_props.resolution[0],
+                        "height": projection_mapped_output_props.resolution[1],
+                        "dt": 1. / 60.
+                    }))
+                    .unwrap();
+                    let visible_projection_mapped_output = VisibleProjectionMappedOutput {
+                        screens: projection_mapped_output_props.screens.iter().map(|single_screen_props| {
+                            let single_output =
+                                self.new_projection_mapped_single_output(event_loop);
+                            single_output.window.set_title("Radiance Output");
+                            (single_screen_props.name.clone(), single_output)
+                        }).collect(),
+                        render_target_id,
+                        render_target,
+                        initial_update: false,
+                        request_close: false,
+                        resolution: projection_mapped_output_props.resolution,
+                    };
+                    self.projection_mapped_outputs.insert(node_id, Some(visible_projection_mapped_output));
+                }
+            } else if self.projection_mapped_outputs.get(&node_id).unwrap().is_some() {
+                // Replace Some with None if we aren't supposed to be visible
+                self.projection_mapped_outputs.insert(node_id, None);
+            }
+        }
     }
 
     fn new_screen_output<T>(
         &self,
         event_loop: &EventLoopWindowTarget<T>,
+        name: &str,
         resolution: &[u32; 2],
     ) -> VisibleScreenOutput {
         let window = WindowBuilder::new().build(event_loop).unwrap();
@@ -329,14 +481,14 @@ impl WinitOutput {
             .device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("Output Render Pipeline"),
-                layout: Some(&self.render_pipeline_layout),
+                layout: Some(&self.screen_output_render_pipeline_layout),
                 vertex: wgpu::VertexState {
-                    module: &self.shader_module,
+                    module: &self.screen_output_shader_module,
                     entry_point: "vs_main",
                     buffers: &[],
                 },
                 fragment: Some(wgpu::FragmentState {
-                    module: &self.shader_module,
+                    module: &self.screen_output_shader_module,
                     entry_point: "fs_main",
                     targets: &[Some(wgpu::ColorTargetState {
                         format: config.format,
@@ -379,11 +531,75 @@ impl WinitOutput {
             render_target,
             initial_update: false,
             request_close: false,
+            name: name.to_owned(),
             resolution: *resolution,
         }
     }
 
-    pub fn on_event<T>(&mut self, event: &Event<T>, ctx: &mut radiance::Context) -> bool {
+    fn new_projection_mapped_single_output<T>(
+        &self,
+        event_loop: &EventLoopWindowTarget<T>,
+    ) -> VisibleProjectionMappedSingleOutput {
+        let window = WindowBuilder::new().build(event_loop).unwrap();
+        let size = window.inner_size();
+        let surface = unsafe { self.instance.create_surface(&window) };
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface.get_supported_formats(&self.adapter)[0],
+            width: size.width,
+            height: size.height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+        };
+        surface.configure(&self.device, &config);
+
+        let render_pipeline = self
+            .device
+            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Output Render Pipeline"),
+                layout: Some(&self.projection_mapped_output_render_pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &self.projection_mapped_output_shader_module,
+                    entry_point: "vs_main",
+                    buffers: &[],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &self.projection_mapped_output_shader_module,
+                    entry_point: "fs_main",
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: config.format,
+                        blend: Some(wgpu::BlendState::REPLACE),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleStrip,
+                    strip_index_format: None,
+                    front_face: wgpu::FrontFace::Ccw,
+                    cull_mode: Some(wgpu::Face::Back),
+                    polygon_mode: wgpu::PolygonMode::Fill,
+                    unclipped_depth: false,
+                    conservative: false,
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState {
+                    count: 1,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
+                multiview: None,
+            });
+
+        VisibleProjectionMappedSingleOutput {
+            window,
+            surface,
+            config,
+            render_pipeline,
+        }
+    }
+
+    pub fn on_event<T>(&mut self, event: &Event<T>, event_loop: &EventLoopWindowTarget<T>, ctx: &mut radiance::Context) -> bool {
         // Return true => event consumed
         // Return false => event continues to be processed
 
@@ -395,6 +611,16 @@ impl WinitOutput {
             match event {
                 Event::RedrawRequested(window_id) if window_id == &screen_output.window.id() => {
                     if screen_output.initial_update {
+                        // Fullscreen
+                        let mh = event_loop
+                            .available_monitors()
+                            .find(|mh| mh.name().map(|n| &n == &screen_output.name).unwrap_or(false));
+                        if mh.is_some() {
+                            screen_output
+                                .window
+                                .set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
+                        }
+
                         // Paint
                         let mut encoder =
                             self.device
@@ -407,7 +633,7 @@ impl WinitOutput {
                         if let Some(texture) = results.get(node_id) {
                             let output_bind_group =
                                 self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                                    layout: &self.bind_group_layout,
+                                    layout: &self.screen_output_bind_group_layout,
                                     entries: &[
                                         wgpu::BindGroupEntry {
                                             binding: 0,
@@ -500,6 +726,133 @@ impl WinitOutput {
                     screen_output.window.request_redraw();
                 }
                 _ => {}
+            }
+        }
+        for (node_id, output) in self
+            .projection_mapped_outputs
+            .iter_mut()
+            .filter_map(|(k, v)| Some((k, v.as_mut()?)))
+        {
+            for (screen_name, single_output) in output.screens.iter_mut() {
+                match event {
+                    Event::RedrawRequested(window_id) if window_id == &single_output.window.id() => {
+                        if output.initial_update {
+                            // Fullscreen
+                            let mh = event_loop
+                                .available_monitors()
+                                .find(|mh| mh.name().map(|n| &n == screen_name).unwrap_or(false));
+                            if mh.is_some() {
+                                single_output
+                                    .window
+                                    .set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
+                            }
+
+                            // Paint
+                            let mut encoder =
+                                self.device
+                                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                        label: Some("Output Encoder"),
+                                    });
+
+                            let results = ctx.paint(&mut encoder, output.render_target_id);
+
+                            if let Some(texture) = results.get(node_id) {
+                                let output_bind_group =
+                                    self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                                        layout: &self.projection_mapped_output_bind_group_layout,
+                                        entries: &[
+                                            wgpu::BindGroupEntry {
+                                                binding: 0,
+                                                resource: wgpu::BindingResource::TextureView(
+                                                    &texture.view,
+                                                ),
+                                            },
+                                            wgpu::BindGroupEntry {
+                                                binding: 1,
+                                                resource: wgpu::BindingResource::Sampler(
+                                                    &texture.sampler,
+                                                ),
+                                            },
+                                        ],
+                                        label: Some("output bind group"),
+                                    });
+
+                                // Record output render pass.
+                                let output = single_output.surface.get_current_texture().unwrap();
+                                let view = output
+                                    .texture
+                                    .create_view(&wgpu::TextureViewDescriptor::default());
+
+                                {
+                                    let mut render_pass =
+                                        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                            label: Some("Output window render pass"),
+                                            color_attachments: &[Some(
+                                                wgpu::RenderPassColorAttachment {
+                                                    view: &view,
+                                                    resolve_target: None,
+                                                    ops: wgpu::Operations {
+                                                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                                                            r: 0.,
+                                                            g: 0.,
+                                                            b: 0.,
+                                                            a: 0.,
+                                                        }),
+                                                        store: true,
+                                                    },
+                                                },
+                                            )],
+                                            depth_stencil_attachment: None,
+                                        });
+
+                                    render_pass.set_pipeline(&single_output.render_pipeline);
+                                    render_pass.set_bind_group(0, &output_bind_group, &[]);
+                                    render_pass.draw(0..4, 0..1);
+                                }
+
+                                // Submit the commands.
+                                self.queue.submit(iter::once(encoder.finish()));
+
+                                // Draw
+                                output.present();
+                            }
+                        }
+                        return true;
+                    }
+                    Event::WindowEvent {
+                        ref event,
+                        window_id,
+                    } if window_id == &single_output.window.id() => {
+                        match event {
+                            WindowEvent::CloseRequested
+                            | WindowEvent::KeyboardInput {
+                                input:
+                                    KeyboardInput {
+                                        state: ElementState::Pressed,
+                                        virtual_keycode: Some(VirtualKeyCode::Escape),
+                                        ..
+                                    },
+                                ..
+                            } => {
+                                output.request_close = true;
+                            }
+                            WindowEvent::Resized(physical_size) => {
+                                let output_size = *physical_size;
+                                single_output.resize(&self.device, output_size);
+                            }
+                            WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                                let output_size = **new_inner_size;
+                                single_output.resize(&self.device, output_size);
+                            }
+                            _ => {}
+                        }
+                        return true;
+                    }
+                    Event::MainEventsCleared => {
+                        single_output.window.request_redraw();
+                    }
+                    _ => {}
+                }
             }
         }
         false

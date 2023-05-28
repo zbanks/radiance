@@ -249,23 +249,17 @@ pub async fn run() {
                 "resolution": [1000, 1000],
                 "screens": [
                     {
-                        "name": "eDP1",
+                        "name": "fake1",
                         "resolution": [1920, 1080],
                         "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
                         "map": [1, 0.2, 0, -0.2, 1, 0, 0, 0, 1],
                     },
                     {
-                        "name": "eDP2",
-                        "resolution": [2040, 1080],
-                        "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
-                        "map": [1, 0.2, 0, -0.2, 1, 0, 0, 0, 1],
-                    },
-                    {
-                        "name": "eDP3",
+                        "name": "fake2",
                         "resolution": [1920, 1080],
                         "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
                         "map": [1, 0.2, 0, -0.2, 1, 0, 0, 0, 1],
-                    }
+                    },
                 ],
             }
         },
@@ -304,7 +298,7 @@ pub async fn run() {
     let mut spectrum_texture: Option<egui::TextureId> = None;
 
     event_loop.run(move |event, event_loop, control_flow| {
-        if winit_output.on_event(&event, &mut ctx) {
+        if winit_output.on_event(&event, &event_loop, &mut ctx) {
             return; // Event was consumed by winit_output
         }
 
