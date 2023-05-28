@@ -34,6 +34,12 @@ pub enum ModalMemory {
     ProjectionMapEditor(NodeId),
 }
 
+/// State associated with the projection map editor modal UI being shown, to be preserved between frames.
+#[derive(Debug, Default)]
+pub struct ModalProjectionMapEditorMemory {
+    selected_screen: usize,
+}
+
 pub fn modal_shown(ctx: &Context, id: Id) -> bool {
    ctx 
     .memory()
@@ -131,15 +137,36 @@ pub fn modal_ui(
     ui.painter().add(scrim_border);
     let ui_rect = scrim_rect.shrink(SCRIM_PADDING);
 
-    let mut ui = ui.child_ui(ui_rect, Layout::top_down(Align::Center));
+    let mut ui = ui.child_ui_with_id_source(ui_rect, Layout::top_down(Align::Center), "modal");
     match modal_memory.as_ref().expect("Tried to display modal but nothing currently shown") {
         ModalMemory::ProjectionMapEditor(node_id) => {
             if let Some(NodeProps::ProjectionMappedOutputNode(props)) = props.node_props.get_mut(node_id) {
                 let preview_image = preview_images.get(node_id).unwrap().clone();
 
+                let projection_map_editor_memory = ui
+                    .ctx()
+                    .memory()
+                    .data
+                    .get_temp_mut_or_default::<Arc<Mutex<ModalProjectionMapEditorMemory>>>(Id::new(("projection map editor modal", node_id)))
+                    .clone();
+
+                let mut projection_map_editor_memory = projection_map_editor_memory.lock().unwrap();
+
                 ui.heading("Projection Map Editor");
-                // TODO: Add & remove screens
-                // TODO: screen selector combobox
+                egui::ComboBox::from_id_source(0)
+                    .selected_text(props.screens.get(projection_map_editor_memory.selected_screen).map(|s| s.name.as_str()).unwrap_or(&""))
+                    .show_ui(&mut ui, |ui| {
+                        for (i, screen) in props.screens.iter().enumerate() {
+                            ui.selectable_value(
+                                &mut projection_map_editor_memory.selected_screen,
+                                i,
+                                screen.name.as_str(),
+                            );
+                        }
+                    });
+
+                let selected_screen_index = projection_map_editor_memory.selected_screen;
+
                 ui.with_layout(
                     Layout::bottom_up(Align::Center).with_cross_justify(true),
                     |ui| {
@@ -151,8 +178,7 @@ pub fn modal_ui(
                         let left = available.intersect(Rect::everything_left_of(midpoint - 0.5 * SCRIM_PADDING));
                         let right = available.intersect(Rect::everything_right_of(midpoint + 0.5 * SCRIM_PADDING));
 
-                        let selected_screen_index = 0;
-                        let locked_point_indices = vec![0, 1, 2];
+                        let locked_point_indices = vec![0, 1, 2, 3];
 
                         // Left side UI (virtual view)
                         {
