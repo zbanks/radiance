@@ -10,6 +10,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
+use nalgebra::Vector2;
 
 const COMMON_RESOLUTIONS: &[[u32; 2]] = &[
     [4096, 2160],
@@ -57,8 +58,14 @@ const COMMON_RESOLUTIONS: &[[u32; 2]] = &[
 
 const ALLOW_SQUISH: f32 = 1.1;
 
+const EPSILON: f32 = 0.0001;
+
+fn cross(a: Vector2<f32>, b: Vector2<f32>) -> f32 {
+    a[0] * b[1] - a[1] * b[0]
+}
+
 #[derive(Debug)]
-pub struct WinitOutput {
+pub struct WinitOutput<'a> {
     instance: Arc<wgpu::Instance>,
     adapter: Arc<wgpu::Adapter>,
     device: Arc<wgpu::Device>,
@@ -71,6 +78,7 @@ pub struct WinitOutput {
     projection_mapped_output_shader_module: wgpu::ShaderModule,
     projection_mapped_output_bind_group_layout: wgpu::BindGroupLayout,
     projection_mapped_output_render_pipeline_layout: wgpu::PipelineLayout,
+    projection_mapped_output_vertex_buffer_layout: wgpu::VertexBufferLayout<'a>,
 
     screen_outputs: HashMap<radiance::NodeId, Option<VisibleScreenOutput>>,
     projection_mapped_outputs: HashMap<radiance::NodeId, Option<VisibleProjectionMappedOutput>>,
@@ -101,6 +109,11 @@ struct VisibleProjectionMappedSingleOutput {
     render_pipeline: wgpu::RenderPipeline,
     uniform_buffer: wgpu::Buffer,
     uniforms: ProjectionMapUniforms,
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    vertices: Vec<ProjectionMapVertex>,
+    indices: Vec<u16>,
+    indices_count: u32,
 }
 
 #[derive(Debug)]
@@ -141,7 +154,18 @@ struct ProjectionMapUniforms {
     inv_map: [f32; 12],
 }
 
-impl WinitOutput {
+// The vertex data associated with the projection mapped shader
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct ProjectionMapVertex {
+    uv: [f32; 2],
+}
+
+// Max vertices in a single crop polygon
+const MAX_VERTICES: usize = 128;
+const MAX_INDICES: usize = 128;
+
+impl WinitOutput<'_> {
     pub fn new(
         instance: Arc<wgpu::Instance>,
         adapter: Arc<wgpu::Adapter>,
@@ -226,6 +250,18 @@ impl WinitOutput {
                 push_constant_ranges: &[],
             });
 
+        let projection_mapped_output_vertex_buffer_layout = wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<ProjectionMapVertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+            ]
+        };
+
         WinitOutput {
             instance,
             adapter,
@@ -239,6 +275,7 @@ impl WinitOutput {
             projection_mapped_output_shader_module,
             projection_mapped_output_bind_group_layout,
             projection_mapped_output_render_pipeline_layout,
+            projection_mapped_output_vertex_buffer_layout,
 
             screen_outputs: HashMap::<radiance::NodeId, Option<VisibleScreenOutput>>::new(),
             projection_mapped_outputs: HashMap::<radiance::NodeId, Option<VisibleProjectionMappedOutput>>::new(),
@@ -480,8 +517,69 @@ impl WinitOutput {
                         ];
                         single_output.uniforms = ProjectionMapUniforms {
                             inv_map: inv_map_padded,
+                        };
+
+                        single_output.vertices = screen_props.crop.iter().map(|uv| ProjectionMapVertex { uv: [ uv[0], uv[1] ] }).collect();
+                        // Ear-clip polygon from props to get the index list
+
+                        let mut indices: Vec<usize> = (0..screen_props.crop.len()).collect();
+                        single_output.indices.clear();
+                        while indices.len() > 2 {
+                            // Find an ear
+                            let mut found_ear = false;
+                            for i in 0..indices.len() {
+                                let ii1 = (indices.len() + i - 1) % indices.len();
+                                let ii2 = i;
+                                let ii3 = (i + 1) % indices.len();
+                                let p1 = screen_props.crop[indices[ii1]];
+                                let p2 = screen_props.crop[indices[ii2]];
+                                let p3 = screen_props.crop[indices[ii3]];
+                                let c = cross(p2 - p1, p3 - p2);
+                                // CCW polygon winding produces negative cross products on interior edges
+                                if c < -EPSILON {
+                                    // This vertex is an ear tip if there all vertices are outside the ear
+                                    let edge_inside_polygon = indices.iter().all(|&test_ix| {
+                                        let test_vertex = screen_props.crop[test_ix];
+
+                                        // Inside triangle test, from http://blackpawn.com/texts/pointinpoly/
+                                        let v0 = p3 - p1;
+                                        let v1 = p2 - p1;
+                                        let v2 = test_vertex - p1;
+
+                                        // Compute dot products
+                                        let dot00 = v0.dot(&v0);
+                                        let dot01 = v0.dot(&v1);
+                                        let dot02 = v0.dot(&v2);
+                                        let dot11 = v1.dot(&v1);
+                                        let dot12 = v1.dot(&v2);
+
+                                        // Compute barycentric coordinates
+                                        let inv_denom = 1. / (dot00 * dot11 - dot01 * dot01);
+                                        let u = (dot11 * dot02 - dot01 * dot12) * inv_denom;
+                                        let v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
+
+                                        // Check if point is outside triangle
+                                        !((u >= EPSILON) && (v >= EPSILON) && (u + v < 1. - EPSILON))
+                                    });
+                                    if edge_inside_polygon {
+                                        found_ear = true;
+                                        single_output.indices.push(indices[ii1] as u16);
+                                        single_output.indices.push(indices[ii2] as u16);
+                                        single_output.indices.push(indices[ii3] as u16);
+                                        indices.remove(i); // Clip
+                                        break;
+                                    }
+                                }
+                            }
+                            if !found_ear {
+                                // We have clipped the polygon to the point that it has no ears
+                                break;
+                            }
                         }
-                        // TODO send polygons too
+                        single_output.indices_count = single_output.indices.len() as u32;
+                        if single_output.indices_count % 2 == 1 {
+                            single_output.indices.push(0); // Add padding to get to a multiple of 4 bytes
+                        }
                     }
                 }
 
@@ -597,7 +695,7 @@ impl WinitOutput {
                 vertex: wgpu::VertexState {
                     module: &self.projection_mapped_output_shader_module,
                     entry_point: "vs_main",
-                    buffers: &[],
+                    buffers: &[self.projection_mapped_output_vertex_buffer_layout.clone()],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &self.projection_mapped_output_shader_module,
@@ -609,7 +707,7 @@ impl WinitOutput {
                     })],
                 }),
                 primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleStrip,
+                    topology: wgpu::PrimitiveTopology::TriangleList,
                     strip_index_format: None,
                     front_face: wgpu::FrontFace::Ccw,
                     cull_mode: Some(wgpu::Face::Back),
@@ -633,6 +731,20 @@ impl WinitOutput {
             mapped_at_creation: false,
         });
 
+        let vertex_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Projection mapped output vertex buffer"),
+            size: (std::mem::size_of::<ProjectionMapVertex>() * MAX_VERTICES) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let index_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Projection mapped output index buffer"),
+            size: (std::mem::size_of::<u16>() * MAX_INDICES) as u64,
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         VisibleProjectionMappedSingleOutput {
             window,
             surface,
@@ -640,6 +752,11 @@ impl WinitOutput {
             render_pipeline,
             uniform_buffer,
             uniforms: ProjectionMapUniforms {inv_map: [0.; 12]},
+            vertex_buffer,
+            index_buffer,
+            vertices: Vec::<_>::new(),
+            indices: Vec::<_>::new(),
+            indices_count: 0,
         }
     }
 
@@ -725,7 +842,7 @@ impl WinitOutput {
 
                                 render_pass.set_pipeline(&screen_output.render_pipeline);
                                 render_pass.set_bind_group(0, &output_bind_group, &[]);
-                                render_pass.draw(0..4, 0..1);
+                                render_pass.draw(0..6, 0..1);
                             }
 
                             // Submit the commands.
@@ -798,6 +915,18 @@ impl WinitOutput {
                                 bytemuck::cast_slice(&[single_output.uniforms]),
                             );
 
+                            // Write vertices
+                            self.queue.write_buffer(
+                                &single_output.vertex_buffer,
+                                0,
+                                bytemuck::cast_slice(&single_output.vertices),
+                            );
+                            self.queue.write_buffer(
+                                &single_output.index_buffer,
+                                0,
+                                bytemuck::cast_slice(&single_output.indices),
+                            );
+
                             // Paint
                             let mut encoder =
                                 self.device
@@ -862,7 +991,9 @@ impl WinitOutput {
 
                                     render_pass.set_pipeline(&single_output.render_pipeline);
                                     render_pass.set_bind_group(0, &output_bind_group, &[]);
-                                    render_pass.draw(0..4, 0..1);
+                                    render_pass.set_vertex_buffer(0, single_output.vertex_buffer.slice(..));
+                                    render_pass.set_index_buffer(single_output.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                                    render_pass.draw_indexed(0..single_output.indices_count, 0, 0..1);
                                 }
 
                                 // Submit the commands.

@@ -6,6 +6,11 @@ struct Uniforms {
     inv_map: mat3x3<f32>
 }
 
+struct Vertex {
+    // Coordinate of the crop polygon in physical UV space
+    @location(0) uv: vec2<f32>
+}
+
 @group(0) @binding(1)
 var iSampler: sampler;
 
@@ -18,23 +23,13 @@ struct VertexOutput {
 };
 
 @vertex
-fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
-    var pos_array = array<vec2<f32>, 4>(
-        vec2<f32>(1., 1.),
-        vec2<f32>(-1., 1.),
-        vec2<f32>(1., -1.),
-        vec2<f32>(-1., -1.),
-    );
-    var uv_array = array<vec3<f32>, 4>(
-        vec3<f32>(1., 0., 1.),
-        vec3<f32>(0., 0., 1.),
-        vec3<f32>(1., 1., 1.),
-        vec3<f32>(0., 1., 1.),
-    );
+fn vs_main(vertex: Vertex) -> VertexOutput {
+    let pos = vec4<f32>(vertex.uv.x * 2. - 1., 1. - vertex.uv.y * 2., 0., 1.);
+    let mapped_uv = global.inv_map * vec3<f32>(vertex.uv, 1.);
 
     return VertexOutput(
-        vec4<f32>(pos_array[vertex_index], 0., 1.),
-        global.inv_map * uv_array[vertex_index],
+        pos,
+        mapped_uv,
     );
 }
 

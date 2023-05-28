@@ -301,6 +301,8 @@ impl Tile {
                     found_exterior = true;
                 } else if c < -EPSILON {
                     // CCW polygon winding produces negative cross products on interior edges
+                    // NOTE: this ear clipping method is incomplete; we still need to check that the edge p1-p3
+                    // lies fully inside the polygon. See winit_output/mod.rs for a complete implementation
                     found_interior = true;
                     mesh.add_triangle(
                         (indices[ii1]) as u32,
