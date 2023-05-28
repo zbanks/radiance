@@ -49,6 +49,14 @@ pub fn set_modal(ctx: &Context, id: Id, mm: Option<ModalMemory>) {
     ctx.memory().data.insert_temp(id, Arc::new(Mutex::new(mm)));
 }
 
+/// Extend a pair of triangles with a fourth point to make them a parallelograms
+fn triangle_to_parallelogram(a: [Vector2<f32>; 3], b: [Vector2<f32>; 3]) -> ([Vector2<f32>; 4], [Vector2<f32>; 4]) {
+    (
+        [a[0], a[1], a[2], a[0] + a[1] - a[2]],
+        [b[0], b[1], b[2], b[0] + b[1] - b[2]],
+    )
+}
+
 /// Find the 3x3 transformation matrix such that M * A1 = B1, M * A2 = B2, etc.
 #[rustfmt::skip]
 fn four_point_mapping(a: [Vector2<f32>; 4], b: [Vector2<f32>; 4]) -> Option<Matrix3<f32>> {
@@ -144,7 +152,7 @@ pub fn modal_ui(
                         let right = available.intersect(Rect::everything_right_of(midpoint + 0.5 * SCRIM_PADDING));
 
                         let selected_screen_index = 0;
-                        let locked_point_indices = [0, 1, 2, 3];
+                        let locked_point_indices = vec![0, 1, 2];
 
                         // Left side UI (virtual view)
                         {
@@ -222,16 +230,22 @@ pub fn modal_ui(
                                 // Handle dragging of virtual handles
                                 if let Some((handle_index, delta_uv)) = handle_drag {
                                     // Get the locked physical UVs. We don't want these to move
-                                    let locked_physical_uvs = locked_point_indices.map(|j| screen.crop[j]);
+                                    let locked_physical_uvs: Vec<_> = locked_point_indices.iter().map(|&j| screen.crop[j]).collect();
 
                                     // Convert physical to virtual UVs and move the dragged one:
                                     let mut virtual_uvs: Vec<_> = screen.crop.iter().cloned().map(physical_uv_to_virtual_uv).collect();
                                     virtual_uvs[handle_index] += delta_uv;
 
                                     // Now get the locked virtual UVs post-drag:
-                                    let locked_virtual_uvs = locked_point_indices.map(|j| virtual_uvs[j]);
+                                    let locked_virtual_uvs: Vec<_> = locked_point_indices.iter().map(|&j| virtual_uvs[j]).collect();
 
                                     // Compute the new perspective matrix that keeps the locked points still
+                                    let (locked_virtual_uvs, locked_physical_uvs) = match locked_point_indices.len() {
+                                        3 => triangle_to_parallelogram(locked_virtual_uvs.try_into().unwrap(), locked_physical_uvs.try_into().unwrap()),
+                                        4 => (locked_virtual_uvs.try_into().unwrap(), locked_physical_uvs.try_into().unwrap()),
+                                        _ => panic!("Expected 3 or 4 locked points")
+                                    };
+
                                     let virtual_to_physical = four_point_mapping(locked_virtual_uvs, locked_physical_uvs).unwrap();
                                     screen.map = virtual_to_physical;
 
@@ -318,15 +332,20 @@ pub fn modal_ui(
                             // Handle dragging of physical handles
                             if let Some((handle_index, delta_uv)) = handle_drag {
                                 // Get the locked virtual UVs. We don't want these to move
-                                let locked_virtual_uvs = locked_point_indices.map(|j| physical_uv_to_virtual_uv(screen.crop[j]));
+                                let locked_virtual_uvs: Vec<_> = locked_point_indices.iter().map(|&j| physical_uv_to_virtual_uv(screen.crop[j])).collect();
 
                                 // Move the dragged physical UV:
                                 screen.crop[handle_index] += delta_uv;
 
                                 // Now get the locked physical UVs post-drag:
-                                let locked_physical_uvs = locked_point_indices.map(|j| screen.crop[j]);
+                                let locked_physical_uvs: Vec<_> = locked_point_indices.iter().map(|&j| screen.crop[j]).collect();
 
                                 // Compute the new perspective matrix that keeps the locked points still
+                                let (locked_virtual_uvs, locked_physical_uvs) = match locked_point_indices.len() {
+                                    3 => triangle_to_parallelogram(locked_virtual_uvs.try_into().unwrap(), locked_physical_uvs.try_into().unwrap()),
+                                    4 => (locked_virtual_uvs.try_into().unwrap(), locked_physical_uvs.try_into().unwrap()),
+                                    _ => panic!("Expected 3 or 4 locked points")
+                                };
                                 let virtual_to_physical = four_point_mapping(locked_virtual_uvs, locked_physical_uvs).unwrap();
                                 screen.map = virtual_to_physical;
                             }
