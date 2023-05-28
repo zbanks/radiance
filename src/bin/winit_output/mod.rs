@@ -99,6 +99,8 @@ struct VisibleProjectionMappedSingleOutput {
     surface: wgpu::Surface,
     config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
+    uniform_buffer: wgpu::Buffer,
+    uniforms: ProjectionMapUniforms,
 }
 
 #[derive(Debug)]
@@ -132,6 +134,12 @@ impl VisibleProjectionMappedSingleOutput {
     }
 }
 
+// The uniform buffer associated with the projection mapped shader
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct ProjectionMapUniforms {
+    inv_map: [f32; 12],
+}
 
 impl WinitOutput {
     pub fn new(
@@ -188,6 +196,16 @@ impl WinitOutput {
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2, // ProjectionMapUniforms
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
                     count: None,
                 },
             ],
@@ -450,6 +468,23 @@ impl WinitOutput {
                     };
                     self.projection_mapped_outputs.insert(node_id, Some(visible_projection_mapped_output));
                 }
+
+                let output = self.projection_mapped_outputs.get_mut(&node_id).unwrap().as_mut().unwrap();
+                for screen_props in projection_mapped_output_props.screens.iter() {
+                    if let Some(single_output) = output.screens.get_mut(&screen_props.name) {
+                        let inv_map = screen_props.map.try_inverse().unwrap();
+                        let inv_map_padded = [
+                            inv_map[(0, 0)], inv_map[(1, 0)], inv_map[(2, 0)], 0.,
+                            inv_map[(0, 1)], inv_map[(1, 1)], inv_map[(2, 1)], 0.,
+                            inv_map[(0, 2)], inv_map[(1, 2)], inv_map[(2, 2)], 0.,
+                        ];
+                        single_output.uniforms = ProjectionMapUniforms {
+                            inv_map: inv_map_padded,
+                        }
+                        // TODO send polygons too
+                    }
+                }
+
             } else if self.projection_mapped_outputs.get(&node_id).unwrap().is_some() {
                 // Replace Some with None if we aren't supposed to be visible
                 self.projection_mapped_outputs.insert(node_id, None);
@@ -591,11 +626,20 @@ impl WinitOutput {
                 multiview: None,
             });
 
+        let uniform_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Projection mapped output uniform buffer"),
+            size: std::mem::size_of::<ProjectionMapUniforms>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         VisibleProjectionMappedSingleOutput {
             window,
             surface,
             config,
             render_pipeline,
+            uniform_buffer,
+            uniforms: ProjectionMapUniforms {inv_map: [0.; 12]},
         }
     }
 
@@ -747,6 +791,13 @@ impl WinitOutput {
                                     .set_fullscreen(Some(Fullscreen::Borderless(mh.clone())));
                             }
 
+                            // Write uniforms
+                            self.queue.write_buffer(
+                                &single_output.uniform_buffer,
+                                0,
+                                bytemuck::cast_slice(&[single_output.uniforms]),
+                            );
+
                             // Paint
                             let mut encoder =
                                 self.device
@@ -772,6 +823,10 @@ impl WinitOutput {
                                                 resource: wgpu::BindingResource::Sampler(
                                                     &texture.sampler,
                                                 ),
+                                            },
+                                            wgpu::BindGroupEntry {
+                                                binding: 2,
+                                                resource: single_output.uniform_buffer.as_entire_binding(),
                                             },
                                         ],
                                         label: Some("output bind group"),
