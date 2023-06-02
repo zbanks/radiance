@@ -84,29 +84,28 @@ fn hsv2rgb(c: vec3<f32>) -> vec3<f32> {
     return c.z * mix(K.xxx, clamp(p - K.xxx, vec3<f32>(0.0), vec3<f32>(1.0)), c.y);
 }
 
-//// Utilities to convert from an RGB vec3 to a YUV vec3
-//// 0 <= Y, U, V <= 1 (*not* -1 <= U, V <= 1)
-//// U is greenish<->bluish; V is bluish<->redish
-//// https://en.wikipedia.org/wiki/YUV#Full_swing_for_BT.601
-//vec3 rgb2yuv(vec3 rgb) {
-//    vec3 yuv = vec3(0.);
-//    yuv.x = rgb.r *  0.2126  + rgb.g *  0.7152  + rgb.b *  0.0722;
-//    yuv.y = rgb.r * -0.09991 + rgb.g * -0.33609 + rgb.b *  0.436;
-//    yuv.z = rgb.r *  0.615   + rgb.g * -0.55861 + rgb.b * -0.05639;
-//    yuv.yz += 1.0;
-//    yuv.yz *= 0.5;
-//    return yuv;
-//}
-//vec3 yuv2rgb(vec3 yuv) {
-//    yuv.yz /= 0.5;
-//    yuv.yz -= 1.0;
-//    vec3 rgb = vec3(0.);
-//    rgb.r = yuv.x +                    yuv.z *  1.28033;
-//    rgb.g = yuv.x + yuv.y * -0.21482 + yuv.z * -0.38059;
-//    rgb.b = yuv.x + yuv.y *  2.12798;
-//    return clamp(rgb, 0.0, 1.0);
-//}
-//
+// Utilities to convert from an RGB vec3 to a YUV vec3
+// 0 <= Y, U, V <= 1 (*not* -1 <= U, V <= 1)
+// U is greenish<->bluish; V is bluish<->redish
+// https://en.wikipedia.org/wiki/YUV#Full_swing_for_BT.601
+fn rgb2yuv(rgb: vec3<f32>) -> vec3<f32> {
+    let y = rgb.r *  0.2126  + rgb.g *  0.7152  + rgb.b *  0.0722;
+    let u = rgb.r * -0.09991 + rgb.g * -0.33609 + rgb.b *  0.436;
+    let v = rgb.r *  0.615   + rgb.g * -0.55861 + rgb.b * -0.05639;
+    return vec3(y, (u + 1.) * 0.5, (v + 1.) * 0.5);
+}
+fn yuv2rgb(yuv: vec3<f32>) -> vec3<f32> {
+    let y = yuv.x;
+    let u = yuv.y * 2. - 1.;
+    let v = yuv.z * 2. - 1.;
+
+    let r = y                + v *  1.28033;
+    let g = y + u * -0.21482 + v * -0.38059;
+    let b = y + u *  2.12798;
+    let rgb = vec3<f32>(r, g, b);
+    return clamp(rgb, vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
 
 // Turn non-premultipled alpha RGBA into premultipled alpha RGBA
 fn premultiply(c: vec4<f32>) -> vec4<f32> {
