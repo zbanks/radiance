@@ -6,11 +6,11 @@ use egui_winit::winit::{
     event_loop::EventLoopWindowTarget,
     window::{Fullscreen, WindowBuilder},
 };
+use nalgebra::Vector2;
 use serde_json::json;
 use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
-use nalgebra::Vector2;
 
 const COMMON_RESOLUTIONS: &[[u32; 2]] = &[
     [4096, 2160],
@@ -172,69 +172,73 @@ impl WinitOutput<'_> {
         device: Arc<wgpu::Device>,
         queue: Arc<wgpu::Queue>,
     ) -> Self {
-        let screen_output_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("Screen output shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("output.wgsl").into()),
-        });
+        let screen_output_shader_module =
+            device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Screen output shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("output.wgsl").into()),
+            });
 
-        let projection_mapped_output_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("Projection mapped output shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("projection_map.wgsl").into()),
-        });
+        let projection_mapped_output_shader_module =
+            device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Projection mapped output shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("projection_map.wgsl").into()),
+            });
 
-        let screen_output_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+        let screen_output_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("screen output texture bind group layout"),
-        });
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("screen output texture bind group layout"),
+            });
 
-        let projection_mapped_output_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+        let projection_mapped_output_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2, // ProjectionMapUniforms
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-            label: Some("screen output texture bind group layout"),
-        });
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2, // ProjectionMapUniforms
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+                label: Some("screen output texture bind group layout"),
+            });
 
         let screen_output_render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -253,13 +257,11 @@ impl WinitOutput<'_> {
         let projection_mapped_output_vertex_buffer_layout = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<ProjectionMapVertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-            ]
+            attributes: &[wgpu::VertexAttribute {
+                offset: 0,
+                shader_location: 0,
+                format: wgpu::VertexFormat::Float32x2,
+            }],
         };
 
         WinitOutput {
@@ -278,21 +280,33 @@ impl WinitOutput<'_> {
             projection_mapped_output_vertex_buffer_layout,
 
             screen_outputs: HashMap::<radiance::NodeId, Option<VisibleScreenOutput>>::new(),
-            projection_mapped_outputs: HashMap::<radiance::NodeId, Option<VisibleProjectionMappedOutput>>::new(),
+            projection_mapped_outputs: HashMap::<
+                radiance::NodeId,
+                Option<VisibleProjectionMappedOutput>,
+            >::new(),
         }
     }
 
     pub fn render_targets_iter(
         &self,
     ) -> impl Iterator<Item = (&radiance::RenderTargetId, &radiance::RenderTarget)> {
-        self.screen_outputs.values().flatten().map(|screen_output| {
-            (
-                &screen_output.render_target_id,
-                &screen_output.render_target,
-            )
-        }).chain(self.projection_mapped_outputs.values().flatten().map(|projection_mapped_output| {
-            (&projection_mapped_output.render_target_id, &projection_mapped_output.render_target)
-        }))
+        self.screen_outputs
+            .values()
+            .flatten()
+            .map(|screen_output| {
+                (
+                    &screen_output.render_target_id,
+                    &screen_output.render_target,
+                )
+            })
+            .chain(self.projection_mapped_outputs.values().flatten().map(
+                |projection_mapped_output| {
+                    (
+                        &projection_mapped_output.render_target_id,
+                        &projection_mapped_output.render_target,
+                    )
+                },
+            ))
     }
 
     pub fn update<T>(
@@ -323,7 +337,12 @@ impl WinitOutput<'_> {
             props
                 .node_props
                 .get(id)
-                .map(|node_props| matches!(node_props, radiance::NodeProps::ProjectionMappedOutputNode(_)))
+                .map(|node_props| {
+                    matches!(
+                        node_props,
+                        radiance::NodeProps::ProjectionMappedOutputNode(_)
+                    )
+                })
                 .unwrap_or(false)
         });
 
@@ -334,12 +353,12 @@ impl WinitOutput<'_> {
                     if !self.screen_outputs.contains_key(node_id) {
                         self.screen_outputs.insert(*node_id, None);
                     }
-                },
+                }
                 radiance::NodeProps::ProjectionMappedOutputNode(_) => {
                     if !self.projection_mapped_outputs.contains_key(node_id) {
                         self.projection_mapped_outputs.insert(*node_id, None);
                     }
-                },
+                }
                 _ => {}
             }
         }
@@ -453,14 +472,16 @@ impl WinitOutput<'_> {
         }
 
         // Update internal state of projection_mapped_outputs from props
-        let node_ids: Vec<radiance::NodeId> = self.projection_mapped_outputs.keys().cloned().collect();
+        let node_ids: Vec<radiance::NodeId> =
+            self.projection_mapped_outputs.keys().cloned().collect();
         for node_id in node_ids {
-            let projection_mapped_output_props: &mut radiance::ProjectionMappedOutputNodeProps = props
-                .node_props
-                .get_mut(&node_id)
-                .unwrap()
-                .try_into()
-                .unwrap();
+            let projection_mapped_output_props: &mut radiance::ProjectionMappedOutputNodeProps =
+                props
+                    .node_props
+                    .get_mut(&node_id)
+                    .unwrap()
+                    .try_into()
+                    .unwrap();
 
             // Populate each projection mapped output node props with a list of screens available on the system
             projection_mapped_output_props.available_screens = available_screens.clone();
@@ -470,7 +491,9 @@ impl WinitOutput<'_> {
                 .get(&node_id)
                 .unwrap()
                 .as_ref()
-                .map(|visible_projection_mapped_output| visible_projection_mapped_output.request_close)
+                .map(|visible_projection_mapped_output| {
+                    visible_projection_mapped_output.request_close
+                })
                 .unwrap_or(false)
             {
                 // Close was requested; set visible to false
@@ -478,9 +501,13 @@ impl WinitOutput<'_> {
             }
 
             if projection_mapped_output_props.visible {
-                let needs_new_windows = match self.projection_mapped_outputs.get(&node_id).unwrap() {
+                let needs_new_windows = match self.projection_mapped_outputs.get(&node_id).unwrap()
+                {
                     None => true, // Make new resources if we weren't visible last frame
-                    Some(projection_mapped_output) => projection_mapped_output.resolution != projection_mapped_output_props.resolution, // Make new resources if the resolution changes OR (TODO) screen list changes
+                    Some(projection_mapped_output) => {
+                        projection_mapped_output.resolution
+                            != projection_mapped_output_props.resolution
+                    } // Make new resources if the resolution changes OR (TODO) screen list changes
                 };
                 if needs_new_windows {
                     let render_target_id = radiance::RenderTargetId::gen();
@@ -491,35 +518,58 @@ impl WinitOutput<'_> {
                     }))
                     .unwrap();
                     let visible_projection_mapped_output = VisibleProjectionMappedOutput {
-                        screens: projection_mapped_output_props.screens.iter().map(|single_screen_props| {
-                            let single_output =
-                                self.new_projection_mapped_single_output(event_loop);
-                            single_output.window.set_title("Radiance Output");
-                            (single_screen_props.name.clone(), single_output)
-                        }).collect(),
+                        screens: projection_mapped_output_props
+                            .screens
+                            .iter()
+                            .map(|single_screen_props| {
+                                let single_output =
+                                    self.new_projection_mapped_single_output(event_loop);
+                                single_output.window.set_title("Radiance Output");
+                                (single_screen_props.name.clone(), single_output)
+                            })
+                            .collect(),
                         render_target_id,
                         render_target,
                         initial_update: false,
                         request_close: false,
                         resolution: projection_mapped_output_props.resolution,
                     };
-                    self.projection_mapped_outputs.insert(node_id, Some(visible_projection_mapped_output));
+                    self.projection_mapped_outputs
+                        .insert(node_id, Some(visible_projection_mapped_output));
                 }
 
-                let output = self.projection_mapped_outputs.get_mut(&node_id).unwrap().as_mut().unwrap();
+                let output = self
+                    .projection_mapped_outputs
+                    .get_mut(&node_id)
+                    .unwrap()
+                    .as_mut()
+                    .unwrap();
                 for screen_props in projection_mapped_output_props.screens.iter() {
                     if let Some(single_output) = output.screens.get_mut(&screen_props.name) {
                         let inv_map = screen_props.map.try_inverse().unwrap();
                         let inv_map_padded = [
-                            inv_map[(0, 0)], inv_map[(1, 0)], inv_map[(2, 0)], 0.,
-                            inv_map[(0, 1)], inv_map[(1, 1)], inv_map[(2, 1)], 0.,
-                            inv_map[(0, 2)], inv_map[(1, 2)], inv_map[(2, 2)], 0.,
+                            inv_map[(0, 0)],
+                            inv_map[(1, 0)],
+                            inv_map[(2, 0)],
+                            0.,
+                            inv_map[(0, 1)],
+                            inv_map[(1, 1)],
+                            inv_map[(2, 1)],
+                            0.,
+                            inv_map[(0, 2)],
+                            inv_map[(1, 2)],
+                            inv_map[(2, 2)],
+                            0.,
                         ];
                         single_output.uniforms = ProjectionMapUniforms {
                             inv_map: inv_map_padded,
                         };
 
-                        single_output.vertices = screen_props.crop.iter().map(|uv| ProjectionMapVertex { uv: [ uv[0], uv[1] ] }).collect();
+                        single_output.vertices = screen_props
+                            .crop
+                            .iter()
+                            .map(|uv| ProjectionMapVertex { uv: [uv[0], uv[1]] })
+                            .collect();
                         // Ear-clip polygon from props to get the index list
 
                         let mut indices: Vec<usize> = (0..screen_props.crop.len()).collect();
@@ -559,7 +609,9 @@ impl WinitOutput<'_> {
                                         let v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
 
                                         // Check if point is outside triangle
-                                        !((u >= EPSILON) && (v >= EPSILON) && (u + v < 1. - EPSILON))
+                                        !((u >= EPSILON)
+                                            && (v >= EPSILON)
+                                            && (u + v < 1. - EPSILON))
                                     });
                                     if edge_inside_polygon {
                                         found_ear = true;
@@ -582,8 +634,12 @@ impl WinitOutput<'_> {
                         }
                     }
                 }
-
-            } else if self.projection_mapped_outputs.get(&node_id).unwrap().is_some() {
+            } else if self
+                .projection_mapped_outputs
+                .get(&node_id)
+                .unwrap()
+                .is_some()
+            {
                 // Replace Some with None if we aren't supposed to be visible
                 self.projection_mapped_outputs.insert(node_id, None);
             }
@@ -751,7 +807,7 @@ impl WinitOutput<'_> {
             config,
             render_pipeline,
             uniform_buffer,
-            uniforms: ProjectionMapUniforms {inv_map: [0.; 12]},
+            uniforms: ProjectionMapUniforms { inv_map: [0.; 12] },
             vertex_buffer,
             index_buffer,
             vertices: Vec::<_>::new(),
@@ -760,7 +816,12 @@ impl WinitOutput<'_> {
         }
     }
 
-    pub fn on_event<T>(&mut self, event: &Event<T>, event_loop: &EventLoopWindowTarget<T>, ctx: &mut radiance::Context) -> bool {
+    pub fn on_event<T>(
+        &mut self,
+        event: &Event<T>,
+        event_loop: &EventLoopWindowTarget<T>,
+        ctx: &mut radiance::Context,
+    ) -> bool {
         // Return true => event consumed
         // Return false => event continues to be processed
 
@@ -773,9 +834,11 @@ impl WinitOutput<'_> {
                 Event::RedrawRequested(window_id) if window_id == &screen_output.window.id() => {
                     if screen_output.initial_update {
                         // Fullscreen
-                        let mh = event_loop
-                            .available_monitors()
-                            .find(|mh| mh.name().map(|n| &n == &screen_output.name).unwrap_or(false));
+                        let mh = event_loop.available_monitors().find(|mh| {
+                            mh.name()
+                                .map(|n| &n == &screen_output.name)
+                                .unwrap_or(false)
+                        });
                         if mh.is_some() {
                             screen_output
                                 .window
@@ -896,7 +959,9 @@ impl WinitOutput<'_> {
         {
             for (screen_name, single_output) in output.screens.iter_mut() {
                 match event {
-                    Event::RedrawRequested(window_id) if window_id == &single_output.window.id() => {
+                    Event::RedrawRequested(window_id)
+                        if window_id == &single_output.window.id() =>
+                    {
                         if output.initial_update {
                             // Fullscreen
                             let mh = event_loop
@@ -928,11 +993,11 @@ impl WinitOutput<'_> {
                             );
 
                             // Paint
-                            let mut encoder =
-                                self.device
-                                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                        label: Some("Output Encoder"),
-                                    });
+                            let mut encoder = self.device.create_command_encoder(
+                                &wgpu::CommandEncoderDescriptor {
+                                    label: Some("Output Encoder"),
+                                },
+                            );
 
                             let results = ctx.paint(&mut encoder, output.render_target_id);
 
@@ -955,7 +1020,9 @@ impl WinitOutput<'_> {
                                             },
                                             wgpu::BindGroupEntry {
                                                 binding: 2,
-                                                resource: single_output.uniform_buffer.as_entire_binding(),
+                                                resource: single_output
+                                                    .uniform_buffer
+                                                    .as_entire_binding(),
                                             },
                                         ],
                                         label: Some("output bind group"),
@@ -991,9 +1058,19 @@ impl WinitOutput<'_> {
 
                                     render_pass.set_pipeline(&single_output.render_pipeline);
                                     render_pass.set_bind_group(0, &output_bind_group, &[]);
-                                    render_pass.set_vertex_buffer(0, single_output.vertex_buffer.slice(..));
-                                    render_pass.set_index_buffer(single_output.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                                    render_pass.draw_indexed(0..single_output.indices_count, 0, 0..1);
+                                    render_pass.set_vertex_buffer(
+                                        0,
+                                        single_output.vertex_buffer.slice(..),
+                                    );
+                                    render_pass.set_index_buffer(
+                                        single_output.index_buffer.slice(..),
+                                        wgpu::IndexFormat::Uint16,
+                                    );
+                                    render_pass.draw_indexed(
+                                        0..single_output.indices_count,
+                                        0,
+                                        0..1,
+                                    );
                                 }
 
                                 // Submit the commands.

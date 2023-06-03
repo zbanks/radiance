@@ -2,9 +2,9 @@ use crate::effect_node::EffectNodeState;
 use crate::image_node::ImageNodeState;
 use crate::movie_node::MovieNodeState;
 use crate::placeholder_node::PlaceholderNodeState;
+use crate::projection_mapped_output_node::ProjectionMappedOutputNodeState;
 use crate::render_target::{RenderTarget, RenderTargetId};
 use crate::screen_output_node::ScreenOutputNodeState;
-use crate::projection_mapped_output_node::ProjectionMappedOutputNodeState;
 use crate::{AudioLevels, Graph, NodeId, NodeProps, Props};
 use rand::Rng;
 use std::collections::HashMap;
@@ -243,9 +243,9 @@ impl Context {
                 NodeState::PlaceholderNode(PlaceholderNodeState::new(self, props))
             }
             NodeProps::MovieNode(props) => NodeState::MovieNode(MovieNodeState::new(self, props)),
-            NodeProps::ProjectionMappedOutputNode(props) => {
-                NodeState::ProjectionMappedOutputNode(ProjectionMappedOutputNodeState::new(self, props))
-            }
+            NodeProps::ProjectionMappedOutputNode(props) => NodeState::ProjectionMappedOutputNode(
+                ProjectionMappedOutputNodeState::new(self, props),
+            ),
         }
     }
 

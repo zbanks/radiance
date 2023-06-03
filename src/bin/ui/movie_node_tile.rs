@@ -1,7 +1,8 @@
 use egui::{
-    pos2, vec2, Align, Color32, Layout, Rect, RichText, Shape, Slider, Spinner, TextureId, Ui, ComboBox
+    pos2, vec2, Align, Color32, ComboBox, Layout, Rect, RichText, Shape, Slider, Spinner,
+    TextureId, Ui,
 };
-use radiance::{MovieNodeProps, MovieNodeState, MovieNodeStateReady, MovieNodeFit};
+use radiance::{MovieNodeFit, MovieNodeProps, MovieNodeState, MovieNodeStateReady};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
@@ -120,21 +121,9 @@ impl<'a> MovieNodeTile<'a> {
                             MovieNodeFit::Zoom => "Zoom",
                         })
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(
-                                fit,
-                                MovieNodeFit::Crop,
-                                "Crop",
-                            );
-                            ui.selectable_value(
-                                fit,
-                                MovieNodeFit::Shrink,
-                                "Shrink",
-                            );
-                            ui.selectable_value(
-                                fit,
-                                MovieNodeFit::Zoom,
-                                "Zoom",
-                            );
+                            ui.selectable_value(fit, MovieNodeFit::Crop, "Crop");
+                            ui.selectable_value(fit, MovieNodeFit::Shrink, "Shrink");
+                            ui.selectable_value(fit, MovieNodeFit::Zoom, "Zoom");
                         });
                 }
 

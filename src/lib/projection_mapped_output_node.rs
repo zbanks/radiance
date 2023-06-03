@@ -2,8 +2,8 @@ use crate::context::{ArcTextureViewSampler, Context};
 use crate::render_target::RenderTargetId;
 use crate::screen_output_node::AvailableOutputScreen;
 use crate::CommonNodeProps;
-use serde::{Deserialize, Serialize};
 use nalgebra::{Matrix3, Vector2};
+use serde::{Deserialize, Serialize};
 
 /// A single projector output
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

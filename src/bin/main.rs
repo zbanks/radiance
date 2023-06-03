@@ -20,11 +20,11 @@ use std::sync::Arc;
 
 use radiance::{
     AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId, NodeProps,
-    Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps, ProjectionMappedOutputNodeProps,
+    ProjectionMappedOutputNodeProps, Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps,
 };
 
 mod ui;
-use ui::{mosaic, modal, modal_shown};
+use ui::{modal, modal_shown, mosaic};
 use ui::{SpectrumWidget, WaveformWidget};
 
 mod winit_output;
@@ -458,21 +458,23 @@ pub async fn run() {
                                             || node_add_textedit_str.ends_with(".gif")
                                         {
                                             let new_node_id = NodeId::gen();
-                                            let new_node_props = NodeProps::MovieNode(MovieNodeProps {
-                                                name: node_add_textedit.clone(),
-                                                ..Default::default()
-                                            });
+                                            let new_node_props =
+                                                NodeProps::MovieNode(MovieNodeProps {
+                                                    name: node_add_textedit.clone(),
+                                                    ..Default::default()
+                                                });
                                             props.node_props.insert(new_node_id, new_node_props);
                                             props.graph.insert_node(new_node_id, &insertion_point);
                                         } else {
                                             match node_add_textedit.as_str() {
                                                 "ScreenOutput" => {
                                                     let new_node_id = NodeId::gen();
-                                                    let new_node_props = NodeProps::ScreenOutputNode(
-                                                        ScreenOutputNodeProps {
-                                                            ..Default::default()
-                                                        },
-                                                    );
+                                                    let new_node_props =
+                                                        NodeProps::ScreenOutputNode(
+                                                            ScreenOutputNodeProps {
+                                                                ..Default::default()
+                                                            },
+                                                        );
                                                     props
                                                         .node_props
                                                         .insert(new_node_id, new_node_props);
@@ -482,11 +484,12 @@ pub async fn run() {
                                                 }
                                                 "ProjectionMappedOutput" => {
                                                     let new_node_id = NodeId::gen();
-                                                    let new_node_props = NodeProps::ProjectionMappedOutputNode(
-                                                        ProjectionMappedOutputNodeProps {
-                                                            ..Default::default()
-                                                        },
-                                                    );
+                                                    let new_node_props =
+                                                        NodeProps::ProjectionMappedOutputNode(
+                                                            ProjectionMappedOutputNodeProps {
+                                                                ..Default::default()
+                                                            },
+                                                        );
                                                     props
                                                         .node_props
                                                         .insert(new_node_id, new_node_props);

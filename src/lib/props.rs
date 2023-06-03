@@ -4,8 +4,8 @@ use crate::image_node::ImageNodeProps;
 pub use crate::mir::AudioLevels;
 use crate::movie_node::MovieNodeProps;
 use crate::placeholder_node::PlaceholderNodeProps;
-use crate::screen_output_node::ScreenOutputNodeProps;
 use crate::projection_mapped_output_node::ProjectionMappedOutputNodeProps;
+use crate::screen_output_node::ScreenOutputNodeProps;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 

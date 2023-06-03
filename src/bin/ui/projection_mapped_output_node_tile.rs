@@ -1,5 +1,5 @@
-use egui::{vec2, Align, Checkbox, Layout, TextureId, Ui, Id};
 use crate::ui::{set_modal, ModalMemory, TileId};
+use egui::{vec2, Align, Checkbox, Id, Layout, TextureId, Ui};
 use radiance::{
     AvailableOutputScreen, ProjectionMappedOutputNodeProps, ProjectionMappedOutputNodeState,
 };
@@ -66,7 +66,11 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
                 ui.add(Checkbox::new(visible, "Visible"));
 
                 if ui.button("Edit...").clicked() {
-                    set_modal(ui.ctx(), modal_id, Some(ModalMemory::ProjectionMapEditor(tile_id.node)));
+                    set_modal(
+                        ui.ctx(),
+                        modal_id,
+                        Some(ModalMemory::ProjectionMapEditor(tile_id.node)),
+                    );
                 }
 
                 ui.centered_and_justified(|ui| {
