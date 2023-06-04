@@ -32,6 +32,8 @@ use winit_output::WinitOutput;
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
+const GLOBAL_TIMESCALE: f32 = 0.25;
+
 pub fn resize(
     new_size: winit::dpi::PhysicalSize<u32>,
     config: &mut wgpu::SurfaceConfiguration,
@@ -306,8 +308,8 @@ pub async fn run() {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
                 let music_info = mir.poll();
-                props.time = music_info.time;
-                props.dt = music_info.tempo * (1. / 60.);
+                props.time = music_info.time * GLOBAL_TIMESCALE;
+                props.dt = music_info.tempo * (1. / 60.) * GLOBAL_TIMESCALE;
                 props.audio = music_info.audio.clone();
                 // Merge our render list and the winit_output render list into one:
                 let render_target_list = render_target_list
