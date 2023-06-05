@@ -17,6 +17,8 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
+use std::fs::{File, read_to_string};
+use std::io::Write;
 
 use radiance::{
     AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId, NodeProps,
@@ -29,6 +31,9 @@ use ui::{SpectrumWidget, WaveformWidget};
 
 mod winit_output;
 use winit_output::WinitOutput;
+
+const AUTOSAVE_INTERVAL_FRAMES: usize = 60 * 10;
+const AUTOSAVE_FILENAME: &str = "radiance_autosave.json";
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
@@ -47,6 +52,20 @@ pub fn resize(
             screen_descriptor.size_in_pixels = [config.width, config.height]
         }
     }
+}
+
+fn autosave(props: &Props) {
+    fn inner(props: &Props) -> Result<(), String> {
+        let contents = serde_json::to_string(props).map_err(|e| format!("{:?}", e))?;
+        let mut file = File::create(AUTOSAVE_FILENAME).map_err(|e| format!("{:?}", e))?;
+        file.write_all(contents.as_bytes()).map_err(|e| format!("{:?}", e))?;
+        Ok(())
+    };
+
+    match inner(&props) {
+        Ok(_) => {},
+        Err(msg) => {println!("Failed to write autosave file: {}", msg)},
+    };
 }
 
 pub async fn run() {
@@ -153,121 +172,130 @@ pub async fn run() {
     let mut auto_dj_1: Option<AutoDJ> = None;
     let mut auto_dj_2: Option<AutoDJ> = None;
 
-    // Make a graph
-    let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
-    let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
-    let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
-    let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
-    let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
-    let node6_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
-    let output_node_id: NodeId =
-        serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
-    let mut props: Props = serde_json::from_value(json!({
-        "graph": {
-            "nodes": [
-                node1_id,
-                node2_id,
-                node3_id,
-                node4_id,
-                node5_id,
-                node6_id,
-                output_node_id,
-            ],
-            "edges": [
-                {
-                    "from": node1_id,
-                    "to": node2_id,
-                    "input": 0,
-                },
-                {
-                    "from": node2_id,
-                    "to": node5_id,
-                    "input": 1,
-                },
-                {
-                    "from": node3_id,
-                    "to": node4_id,
-                    "input": 0,
-                },
-                {
-                    "from": node4_id,
-                    "to": node5_id,
-                    "input": 0,
-                },
-                {
-                    "from": node5_id,
-                    "to": output_node_id,
-                    "input": 0,
-                },
-                {
-                    "from": node6_id,
-                    "to": node1_id,
-                    "input": 0,
-                },
-            ],
-        },
-        "node_props": {
-            node1_id.to_string(): {
-                "type": "EffectNode",
-                "name": "purple",
-                "input_count": 1,
-                "intensity": 1.0,
-            },
-            node2_id.to_string(): {
-                "type": "EffectNode",
-                "name": "droste",
-                "input_count": 1,
-                "intensity": 1.0,
-            },
-            node3_id.to_string(): {
-                "type": "EffectNode",
-                "name": "wwave",
-                "input_count": 1,
-                "intensity": 0.6,
-                "frequency": 0.25,
-            },
-            node4_id.to_string(): {
-                "type": "EffectNode",
-                "name": "zoomin",
-                "input_count": 1,
-                "intensity": 0.3,
-                "frequency": 1.0
-            },
-            node5_id.to_string(): {
-                "type": "EffectNode",
-                "name": "uvmap",
-                "input_count": 2,
-                "intensity": 0.2,
-                "frequency": 0.0
-            },
-            node6_id.to_string(): {
-                "type": "ImageNode",
-                "name": "nyancat.gif",
-                "intensity": 1.0,
-            },
-            output_node_id.to_string(): {
-                "type": "ProjectionMappedOutputNode",
-                "resolution": [1000, 1000],
-                "screens": [
+    fn read_autosave_file() -> Result<Props, String> {
+        let contents = read_to_string(AUTOSAVE_FILENAME).map_err(|e| format!("{:?}", e))?;
+        serde_json::from_str(contents.as_str()).map_err(|e| format!("{:?}", e))
+    }
+
+    let mut props = read_autosave_file().unwrap_or_else(|err_string| {
+        println!("Failed to read autosave file ({})", err_string);
+
+        // Make a graph
+        let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
+        let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
+        let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
+        let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
+        let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
+        let node6_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
+        let output_node_id: NodeId =
+            serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
+        serde_json::from_value(json!({
+            "graph": {
+                "nodes": [
+                    node1_id,
+                    node2_id,
+                    node3_id,
+                    node4_id,
+                    node5_id,
+                    node6_id,
+                    output_node_id,
+                ],
+                "edges": [
                     {
-                        "name": "fake1",
-                        "resolution": [1920, 1080],
-                        "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
-                        "map": [1, 0.2, 0, -0.2, 1, 0, 0, 0, 1],
+                        "from": node1_id,
+                        "to": node2_id,
+                        "input": 0,
                     },
                     {
-                        "name": "fake2",
-                        "resolution": [1920, 1080],
-                        "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
-                        "map": [1.5, 0.2, 0, -0.2, 1.5, 0, 0, 0, 1],
+                        "from": node2_id,
+                        "to": node5_id,
+                        "input": 1,
+                    },
+                    {
+                        "from": node3_id,
+                        "to": node4_id,
+                        "input": 0,
+                    },
+                    {
+                        "from": node4_id,
+                        "to": node5_id,
+                        "input": 0,
+                    },
+                    {
+                        "from": node5_id,
+                        "to": output_node_id,
+                        "input": 0,
+                    },
+                    {
+                        "from": node6_id,
+                        "to": node1_id,
+                        "input": 0,
                     },
                 ],
-            }
-        },
-        "time": 0.,
-        "dt": 0.03,
-    }))
-    .unwrap();
+            },
+            "node_props": {
+                node1_id.to_string(): {
+                    "type": "EffectNode",
+                    "name": "purple",
+                    "input_count": 1,
+                    "intensity": 1.0,
+                },
+                node2_id.to_string(): {
+                    "type": "EffectNode",
+                    "name": "droste",
+                    "input_count": 1,
+                    "intensity": 1.0,
+                },
+                node3_id.to_string(): {
+                    "type": "EffectNode",
+                    "name": "wwave",
+                    "input_count": 1,
+                    "intensity": 0.6,
+                    "frequency": 0.25,
+                },
+                node4_id.to_string(): {
+                    "type": "EffectNode",
+                    "name": "zoomin",
+                    "input_count": 1,
+                    "intensity": 0.3,
+                    "frequency": 1.0
+                },
+                node5_id.to_string(): {
+                    "type": "EffectNode",
+                    "name": "uvmap",
+                    "input_count": 2,
+                    "intensity": 0.2,
+                    "frequency": 0.0
+                },
+                node6_id.to_string(): {
+                    "type": "ImageNode",
+                    "name": "nyancat.gif",
+                    "intensity": 1.0,
+                },
+                output_node_id.to_string(): {
+                    "type": "ProjectionMappedOutputNode",
+                    "resolution": [1000, 1000],
+                    "screens": [
+                        {
+                            "name": "fake1",
+                            "resolution": [1920, 1080],
+                            "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
+                            "map": [1, 0.2, 0, -0.2, 1, 0, 0, 0, 1],
+                        },
+                        {
+                            "name": "fake2",
+                            "resolution": [1920, 1080],
+                            "crop": [[0.2,0.8], [0.8,0.8], [0.8, 0.3], [0.5, 0.2], [0.2, 0.5]],
+                            "map": [1.5, 0.2, 0, -0.2, 1.5, 0, 0, 0, 1],
+                        },
+                    ],
+                }
+            },
+            "time": 0.,
+            "dt": 0.03,
+        }))
+        .unwrap()
+    });
 
     println!("Props: {}", serde_json::to_string(&props).unwrap());
 
@@ -300,6 +328,8 @@ pub async fn run() {
     let mut spectrum_texture: Option<egui::TextureId> = None;
 
     let mut global_timescale: f32 = 1.;
+
+    let mut autosave_timer: usize = 0;
 
     event_loop.run(move |event, event_loop, control_flow| {
         if winit_output.on_event(&event, &event_loop, &mut ctx) {
@@ -338,6 +368,15 @@ pub async fn run() {
                 });
 
                 ctx.update(&mut props, &render_target_list);
+
+                // Autosave if necessary
+                // TODO: consider moving this to a background thread
+                if autosave_timer == 0 {
+                    autosave(&props);
+                    autosave_timer = AUTOSAVE_INTERVAL_FRAMES;
+                } else {
+                    autosave_timer -= 1;
+                }
 
                 // Paint
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -676,7 +715,10 @@ pub async fn run() {
                         return; // EGUI wants exclusive use of this event
                     }
                     match event {
-                        WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                        WindowEvent::CloseRequested => {
+                            autosave(&props);
+                            *control_flow = ControlFlow::Exit;
+                        },
                         WindowEvent::Resized(physical_size) => {
                             let size = *physical_size;
                             resize(
