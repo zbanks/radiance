@@ -66,17 +66,18 @@ fn modulo(x: f32, y: f32) -> f32 {
 //    return pow(v, iStep * iFPS);
 //}
 //
-//// Utilities to convert from an RGB vec3 to an HSV vec3
-//// 0 <= H, S, V <= 1
-//vec3 rgb2hsv(vec3 c) {
-//    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-//    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-//    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-//
-//    float d = q.x - min(q.w, q.y);
-//    float e = 1.0e-10;
-//    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-//}
+
+// Utilities to convert from an RGB vec3 to an HSV vec3
+// 0 <= H, S, V <= 1
+fn rgb2hsv(c: vec3<f32>) -> vec3<f32> {
+    let K = vec4<f32>(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    let p = mix(vec4<f32>(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    let q = mix(vec4<f32>(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+    let d = q.x - min(q.w, q.y);
+    let e = 1.0e-10;
+    return vec3<f32>(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
 
 fn hsv2rgb(c: vec3<f32>) -> vec3<f32> {
     let K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -249,7 +250,16 @@ fn noise4(p: vec4<f32>) -> f32 {
 //    return hmax(max(v.rg,v.ba));
 //}
 
-//
+fn inverse2(m: mat2x2<f32>) -> mat2x2<f32> {
+    let a = m[0][0];
+    let b = m[1][0];
+    let c = m[0][1];
+    let d = m[1][1];
+
+    let det = a * d - b * c;
+
+    return mat2x2<f32>(d, -c, -b, a) * (1. / det);
+}
 
 // Source adapted from https://github.com/glslify/glsl-inverse/blob/master/index.glsl
 fn inverse3(m: mat3x3<f32>) -> mat3x3<f32> {

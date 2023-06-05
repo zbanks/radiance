@@ -1,4 +1,4 @@
-//#property description Smooth output, or first order (expontential) hold to the beat
+#property description Smooth output, or first order (expontential) hold to the beat
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
     let prev = textureSample(iChannelsTex[0], iSampler, uv);

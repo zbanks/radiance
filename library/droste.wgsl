@@ -39,7 +39,7 @@ fn droste(z: vec2<f32>) -> vec2<f32> {
     let angle = atan(scale/(2.0*pi));
     var z = cdiv(z, cexp(vec2(0.0,angle))*cos(angle)); 
     // 2. Tile the strips
-    z.x -= iTime * iFrequency;
+    z.x -= iTime * iFrequency * scale * 0.25;
     z.x = modulo(z.x, scale);
     // 1. Take the annulus to a strip
     let z = cexp(z)*r1;

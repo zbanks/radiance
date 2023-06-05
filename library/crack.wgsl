@@ -44,7 +44,7 @@ fn main(uv: vec2<f32>) -> vec4<f32> {
         perturb += perturbDir * perturbAmt;
 
         // If the dot product is close to zero, we are on the crack line
-        line_ += 1. - smoothstep(0., crackWidth, abs(side));
+        //line_ += 1. - smoothstep(0., crackWidth, abs(side));
     }
     line_ = min(line_, 1.);
 

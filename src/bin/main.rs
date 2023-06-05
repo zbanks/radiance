@@ -32,8 +32,6 @@ use winit_output::WinitOutput;
 
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(51, 51, 51);
 
-const GLOBAL_TIMESCALE: f32 = 0.25;
-
 pub fn resize(
     new_size: winit::dpi::PhysicalSize<u32>,
     config: &mut wgpu::SurfaceConfiguration,
@@ -152,7 +150,8 @@ pub async fn run() {
     let mut spectrum_widget = SpectrumWidget::new(device.clone(), queue.clone(), pixels_per_point);
 
     // Make an AutoDJ
-    let mut auto_dj: Option<AutoDJ> = None;
+    let mut auto_dj_1: Option<AutoDJ> = None;
+    let mut auto_dj_2: Option<AutoDJ> = None;
 
     // Make a graph
     let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
@@ -294,10 +293,13 @@ pub async fn run() {
     let mut left_panel_expanded = false;
     let mut node_add_wants_focus = false;
     let mut insertion_point: InsertionPoint = Default::default();
-    let mut auto_dj_enabled = false;
+    let mut auto_dj_1_enabled = false;
+    let mut auto_dj_2_enabled = false;
 
     let mut waveform_texture: Option<egui::TextureId> = None;
     let mut spectrum_texture: Option<egui::TextureId> = None;
+
+    let mut global_timescale: f32 = 1.;
 
     event_loop.run(move |event, event_loop, control_flow| {
         if winit_output.on_event(&event, &event_loop, &mut ctx) {
@@ -308,8 +310,8 @@ pub async fn run() {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
                 let music_info = mir.poll();
-                props.time = music_info.time * GLOBAL_TIMESCALE;
-                props.dt = music_info.tempo * (1. / 60.) * GLOBAL_TIMESCALE;
+                props.time = music_info.time * global_timescale;
+                props.dt = music_info.tempo * (1. / 60.) * global_timescale;
                 props.audio = music_info.audio.clone();
                 // Merge our render list and the winit_output render list into one:
                 let render_target_list = render_target_list
@@ -318,12 +320,20 @@ pub async fn run() {
                     .map(|(k, v)| (*k, v.clone()))
                     .collect();
                 winit_output.update(event_loop, &mut props);
-                auto_dj.as_mut().map(|a| {
+                auto_dj_1.as_mut().map(|a| {
                     a.update(&mut props);
 
                     // Uncheck the checkbox if we broke the AutoDJ
                     if a.is_broken() {
-                        auto_dj_enabled = false;
+                        auto_dj_1_enabled = false;
+                    }
+                });
+                auto_dj_2.as_mut().map(|a| {
+                    a.update(&mut props);
+
+                    // Uncheck the checkbox if we broke the AutoDJ
+                    if a.is_broken() {
+                        auto_dj_2_enabled = false;
                     }
                 });
 
@@ -421,7 +431,33 @@ pub async fn run() {
                             ui.horizontal(|ui| {
                                 ui.image(waveform_texture.unwrap(), waveform_size);
                                 ui.image(spectrum_texture.unwrap(), spectrum_size);
-                                ui.checkbox(&mut auto_dj_enabled, "Auto DJ");
+                                ui.checkbox(&mut auto_dj_1_enabled, "Auto DJ 1");
+                                ui.checkbox(&mut auto_dj_2_enabled, "Auto DJ 2");
+
+                                ui.label("Global timescale:");
+                                let timescales: &[f32] = &[0.125, 0.25, 0.5, 1., 2., 4., 8.];
+                                fn str_for_timescale(timescale: f32) -> String {
+                                    if timescale < 1. {
+                                        format!("{}x slower", 1. / timescale)
+                                    } else if timescale == 1. {
+                                        "1x".to_owned()
+                                    } else if timescale > 1. {
+                                        format!("{}x faster", timescale)
+                                    } else {
+                                        format!("{}", timescale)
+                                    }
+                                }
+                                egui::ComboBox::from_id_source("global timescale")
+                                    .selected_text(str_for_timescale(global_timescale).as_str())
+                                    .show_ui(ui, |ui| {
+                                        for &timescale in timescales.iter() {
+                                            ui.selectable_value(
+                                                &mut global_timescale,
+                                                timescale,
+                                                str_for_timescale(timescale).as_str(),
+                                            );
+                                        }
+                                    });
                             });
 
                             let mosaic_response = ui.add(mosaic(
@@ -538,13 +574,22 @@ pub async fn run() {
                     });
                 });
 
-                // Construct or destroy the AutoDJ
-                match (auto_dj_enabled, &mut auto_dj) {
+                // Construct or destroy the AutoDJs
+                match (auto_dj_1_enabled, &mut auto_dj_1) {
                     (false, Some(_)) => {
-                        auto_dj = None;
+                        auto_dj_1 = None;
                     }
                     (true, None) => {
-                        auto_dj = Some(AutoDJ::new());
+                        auto_dj_1 = Some(AutoDJ::new());
+                    }
+                    _ => {}
+                }
+                match (auto_dj_2_enabled, &mut auto_dj_2) {
+                    (false, Some(_)) => {
+                        auto_dj_2 = None;
+                    }
+                    (true, None) => {
+                        auto_dj_2 = Some(AutoDJ::new());
                     }
                     _ => {}
                 }
