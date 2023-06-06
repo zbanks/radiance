@@ -4,14 +4,14 @@ Radiance TODO list
 Shader porting
 --------------
 
-* 40 / 174
+* 73 / 174
 
 Big features
 ------------
 
 * [X] Screen output nodes (they are sort of hacked in right now)
-* [ ] Auto-DJ
-* [ ] Multi-screen output node (for multiple projectors)
+* [X] Auto-DJ
+* [X] Multi-screen output node (for multiple projectors)
 * [X] Image node
 
 Small features / bugs

@@ -15,10 +15,10 @@ use egui_winit::winit::{
 };
 use serde_json::json;
 use std::collections::HashMap;
+use std::fs::{read_to_string, File};
+use std::io::Write;
 use std::iter;
 use std::sync::Arc;
-use std::fs::{File, read_to_string};
-use std::io::Write;
 
 use radiance::{
     AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId, NodeProps,
@@ -58,13 +58,16 @@ fn autosave(props: &Props) {
     fn inner(props: &Props) -> Result<(), String> {
         let contents = serde_json::to_string(props).map_err(|e| format!("{:?}", e))?;
         let mut file = File::create(AUTOSAVE_FILENAME).map_err(|e| format!("{:?}", e))?;
-        file.write_all(contents.as_bytes()).map_err(|e| format!("{:?}", e))?;
+        file.write_all(contents.as_bytes())
+            .map_err(|e| format!("{:?}", e))?;
         Ok(())
-    };
+    }
 
     match inner(&props) {
-        Ok(_) => {},
-        Err(msg) => {println!("Failed to write autosave file: {}", msg)},
+        Ok(_) => {}
+        Err(msg) => {
+            println!("Failed to write autosave file: {}", msg)
+        }
     };
 }
 
@@ -181,12 +184,18 @@ pub async fn run() {
         println!("Failed to read autosave file ({})", err_string);
 
         // Make a graph
-        let node1_id: NodeId = serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
-        let node2_id: NodeId = serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
-        let node3_id: NodeId = serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
-        let node4_id: NodeId = serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
-        let node5_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
-        let node6_id: NodeId = serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
+        let node1_id: NodeId =
+            serde_json::from_value(json!("node_TW+qCFNoz81wTMca9jRIBg")).unwrap();
+        let node2_id: NodeId =
+            serde_json::from_value(json!("node_IjPuN2HID3ydxcd4qOsCuQ")).unwrap();
+        let node3_id: NodeId =
+            serde_json::from_value(json!("node_mW00lTCmDH/03tGyNv3iCQ")).unwrap();
+        let node4_id: NodeId =
+            serde_json::from_value(json!("node_EdpVLI4KG5JEBRNSgKUzsw")).unwrap();
+        let node5_id: NodeId =
+            serde_json::from_value(json!("node_I6AAXBaZKvSUfArs2vBr4A")).unwrap();
+        let node6_id: NodeId =
+            serde_json::from_value(json!("node_I6AAXBaZKvSUfAxs2vBr4A")).unwrap();
         let output_node_id: NodeId =
             serde_json::from_value(json!("node_KSvPLGkiJDT+3FvPLf9JYQ")).unwrap();
         serde_json::from_value(json!({
@@ -718,7 +727,7 @@ pub async fn run() {
                         WindowEvent::CloseRequested => {
                             autosave(&props);
                             *control_flow = ControlFlow::Exit;
-                        },
+                        }
                         WindowEvent::Resized(physical_size) => {
                             let size = *physical_size;
                             resize(

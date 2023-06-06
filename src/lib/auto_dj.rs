@@ -3,7 +3,7 @@ use crate::graph::{Edge, NodeId};
 use crate::placeholder_node::PlaceholderNodeProps;
 use crate::props::{NodeProps, Props};
 
-use rand::{Rng, prelude::SliceRandom};
+use rand::{prelude::SliceRandom, Rng};
 
 const STABLE_EFFECT_COUNT: usize = 6;
 
@@ -37,64 +37,298 @@ const EFFECT_DESCRIPTOR_DEFAULT: AutoDJEffectDescriptor = AutoDJEffectDescriptor
 };
 
 const EFFECTS: &[AutoDJEffectDescriptor] = &[
-    AutoDJEffectDescriptor {name: "afix", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "afixhighlight", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "allwhite", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "attractor", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "bespeckle", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "bespecklep", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "blowout", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "brighten", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "broken", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "bstrobe", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "bumpsphere", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "bwave", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "cedge", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "cga1", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "chansep", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "circle", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "coin", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "color", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "composite", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "count", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "crack", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT}, // Doesn't blend well
-    AutoDJEffectDescriptor {name: "crossfader", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "crt", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "csmooth", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT}, // Could use, maybe
-    AutoDJEffectDescriptor {name: "cube", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "cyan", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "cycle2", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "cylinder", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "deblack", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "delace", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "delay", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "depolar", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "desat", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "diodefoh", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "diodelpf", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "distort", category: AutoDJEffectCategory::Complecting, random_frequency: false, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "droste", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "dunkirk", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "dwwave", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "edge", category: AutoDJEffectCategory::Simplifying, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "emboss", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "eye", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "filmstop", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "fire", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "fireball", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "flippy", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "flow", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "flower", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "flowing", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "fly", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "fractalzoom", category: AutoDJEffectCategory::Complecting, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "lpf", category: AutoDJEffectCategory::Simplifying, random_frequency: false, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "purple", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "test", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "uvmap", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "vu", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "wwave", category: AutoDJEffectCategory::Generative, ..EFFECT_DESCRIPTOR_DEFAULT},
-    AutoDJEffectDescriptor {name: "zoomin", category: AutoDJEffectCategory::DontUse, ..EFFECT_DESCRIPTOR_DEFAULT}, // Could use, maybe
+    AutoDJEffectDescriptor {
+        name: "afix",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "afixhighlight",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "allwhite",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "attractor",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "bespeckle",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "bespecklep",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "blowout",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "brighten",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "broken",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "bstrobe",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "bumpsphere",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "bwave",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "cedge",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "cga1",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "chansep",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "circle",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "coin",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "color",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "composite",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "count",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "crack",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Doesn't blend well
+    AutoDJEffectDescriptor {
+        name: "crossfader",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "crt",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "csmooth",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Could use, maybe
+    AutoDJEffectDescriptor {
+        name: "cube",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "cyan",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "cycle2",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "cylinder",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "deblack",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "delace",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "delay",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "depolar",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "desat",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "diodefoh",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "diodelpf",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "distort",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "droste",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "dunkirk",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "dwwave",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "edge",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "emboss",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "eye",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "filmstop",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "fire",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "fireball",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "flippy",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "flow",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "flower",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "flowing",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "fly",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "fractalzoom",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "lpf",
+        category: AutoDJEffectCategory::Simplifying,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "purple",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "test",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "uvmap",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "vu",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "wwave",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "zoomin",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Could use, maybe
 ];
 
 // Frequency options for randomly selected frequency
@@ -157,12 +391,39 @@ impl AutoDJ {
         let mut rng = rand::thread_rng();
 
         let descriptor_options = match ix {
-            0 => EFFECTS.iter().filter(|e| e.category == AutoDJEffectCategory::Generative).collect::<Vec<_>>(),
-            1 => EFFECTS.iter().filter(|e| e.category == AutoDJEffectCategory::Generative || e.category == AutoDJEffectCategory::Complecting).collect::<Vec<_>>(),
-            2 => EFFECTS.iter().filter(|e| e.category == AutoDJEffectCategory::Complecting).collect::<Vec<_>>(),
-            3 => EFFECTS.iter().filter(|e| e.category == AutoDJEffectCategory::Complecting || e.category == AutoDJEffectCategory::Simplifying).collect::<Vec<_>>(),
-            4 => EFFECTS.iter().filter(|e| e.category == AutoDJEffectCategory::Complecting || e.category == AutoDJEffectCategory::Simplifying).collect::<Vec<_>>(),
-            5 => EFFECTS.iter().filter(|e| e.category == AutoDJEffectCategory::Simplifying).collect::<Vec<_>>(),
+            0 => EFFECTS
+                .iter()
+                .filter(|e| e.category == AutoDJEffectCategory::Generative)
+                .collect::<Vec<_>>(),
+            1 => EFFECTS
+                .iter()
+                .filter(|e| {
+                    e.category == AutoDJEffectCategory::Generative
+                        || e.category == AutoDJEffectCategory::Complecting
+                })
+                .collect::<Vec<_>>(),
+            2 => EFFECTS
+                .iter()
+                .filter(|e| e.category == AutoDJEffectCategory::Complecting)
+                .collect::<Vec<_>>(),
+            3 => EFFECTS
+                .iter()
+                .filter(|e| {
+                    e.category == AutoDJEffectCategory::Complecting
+                        || e.category == AutoDJEffectCategory::Simplifying
+                })
+                .collect::<Vec<_>>(),
+            4 => EFFECTS
+                .iter()
+                .filter(|e| {
+                    e.category == AutoDJEffectCategory::Complecting
+                        || e.category == AutoDJEffectCategory::Simplifying
+                })
+                .collect::<Vec<_>>(),
+            5 => EFFECTS
+                .iter()
+                .filter(|e| e.category == AutoDJEffectCategory::Simplifying)
+                .collect::<Vec<_>>(),
             _ => panic!("Don't know how to handle AutoDJ slot {}", ix),
         };
         let descriptor = descriptor_options.choose(&mut rng).unwrap();
@@ -194,6 +455,51 @@ impl AutoDJ {
     }
 
     pub fn update(&mut self, props: &mut Props) {
+        match self.try_update(props) {
+            Some(_) => {}
+            None => {
+                self.state = AutoDJState::Broken;
+            }
+        }
+    }
+
+    fn try_update(&mut self, props: &mut Props) -> Option<()> {
+        fn check_integrity<const N: usize>(
+            left_placeholder: NodeId,
+            right_placeholder: NodeId,
+            props: &Props,
+            effects: &[AutoDJEffect; N],
+        ) -> Option<()> {
+            // Check the integrity of the Auto DJ
+            // We expect N + 2 nodes and N + 1 edges to exist.
+
+            let ensure_nodes = &[left_placeholder, right_placeholder];
+            for node_id in ensure_nodes.iter().chain(effects.iter().map(|e| &e.id)) {
+                props.graph.nodes.iter().find(|&n| n == node_id)?;
+                props.node_props.get(node_id)?;
+            }
+
+            for i in 0..N + 1 {
+                let from = if i == 0 {
+                    left_placeholder
+                } else {
+                    effects[i - 1].id
+                };
+                let to = if i == N {
+                    right_placeholder
+                } else {
+                    effects[i].id
+                };
+                props
+                    .graph
+                    .edges
+                    .iter()
+                    .find(|&e| e == &Edge { from, to, input: 0 })?;
+            }
+
+            Some(())
+        }
+
         match &mut self.state {
             AutoDJState::Pending => {
                 let left_placeholder = NodeId::gen();
@@ -245,6 +551,13 @@ impl AutoDJ {
             AutoDJState::Running(running_state) => {
                 match &mut running_state.action {
                     AutoDJAction::Stable(stable_state) => {
+                        check_integrity(
+                            running_state.left_placeholder,
+                            running_state.right_placeholder,
+                            props,
+                            &stable_state.effects,
+                        )?;
+
                         // Decrement the stable timer
                         // If we have hit 0, transition to crossfade
                         if stable_state.timer > 0 {
@@ -275,7 +588,8 @@ impl AutoDJ {
                             let delete_edge = Edge { from, to, input: 0 };
                             props.graph.edges.retain(|e| e != &delete_edge);
 
-                            let effects: [_; STABLE_EFFECT_COUNT + 1] = (0..STABLE_EFFECT_COUNT + 1)
+                            let mut effects: [_; STABLE_EFFECT_COUNT + 1] = (0
+                                ..STABLE_EFFECT_COUNT + 1)
                                 .map(|i| {
                                     if i < fade_in_ix {
                                         stable_state.effects[i].clone()
@@ -288,12 +602,21 @@ impl AutoDJ {
                                 .collect::<Vec<_>>()
                                 .try_into()
                                 .unwrap();
+
                             // Apply correction to fade_out_ix so it points to the right index in the new array
                             let fade_out_ix = if fade_in_ix <= fade_out_ix {
                                 fade_out_ix + 1
                             } else {
                                 fade_out_ix
                             };
+
+                            // Take the current (possibly altered) intensity value of the "fade out" effect as its target
+                            let fade_out_props = props.node_props.get(&effects[fade_out_ix].id)?;
+                            if let NodeProps::EffectNode(p) = fade_out_props {
+                                if let Some(i) = p.intensity {
+                                    effects[fade_out_ix].target_intensity = i;
+                                }
+                            }
 
                             // Add new node
                             props.node_props.insert(new_effect.id, new_props);
@@ -334,6 +657,13 @@ impl AutoDJ {
                         }
                     }
                     AutoDJAction::Crossfade(crossfade_state) => {
+                        check_integrity(
+                            running_state.left_placeholder,
+                            running_state.right_placeholder,
+                            props,
+                            &crossfade_state.effects,
+                        )?;
+
                         // Decrement the stable timer
                         // If we have hit 0, transition to stable
                         if crossfade_state.timer > 0 {
@@ -342,15 +672,14 @@ impl AutoDJ {
                                 crossfade_state.timer as f32 / crossfade_state.start_timer as f32;
                             let fade_in_effect =
                                 &crossfade_state.effects[crossfade_state.fade_in_ix];
-                            let mut fade_in_props =
-                                props.node_props.get_mut(&fade_in_effect.id).unwrap(); // XXX don't unwrap; become broken if missing
+                            let mut fade_in_props = props.node_props.get_mut(&fade_in_effect.id)?;
                             if let NodeProps::EffectNode(e) = &mut fade_in_props {
                                 e.intensity = Some(fade_in_effect.target_intensity * (1. - alpha));
                             }
                             let fade_out_effect =
                                 &crossfade_state.effects[crossfade_state.fade_out_ix];
                             let mut fade_out_props =
-                                props.node_props.get_mut(&fade_out_effect.id).unwrap(); // XXX don't unwrap; become broken if missing
+                                props.node_props.get_mut(&fade_out_effect.id)?;
                             if let NodeProps::EffectNode(e) = &mut fade_out_props {
                                 e.intensity = Some(fade_out_effect.target_intensity * alpha);
                             }
@@ -417,6 +746,7 @@ impl AutoDJ {
             }
             AutoDJState::Broken => {}
         }
+        Some(())
     }
 
     pub fn is_broken(&self) -> bool {
