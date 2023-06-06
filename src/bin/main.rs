@@ -336,8 +336,6 @@ pub async fn run() {
     let mut waveform_texture: Option<egui::TextureId> = None;
     let mut spectrum_texture: Option<egui::TextureId> = None;
 
-    let mut global_timescale: f32 = 1.;
-
     let mut autosave_timer: usize = 0;
 
     event_loop.run(move |event, event_loop, control_flow| {
@@ -349,8 +347,8 @@ pub async fn run() {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 // Update
                 let music_info = mir.poll();
-                props.time = music_info.time * global_timescale;
-                props.dt = music_info.tempo * (1. / 60.) * global_timescale;
+                props.time = music_info.time;
+                props.dt = music_info.tempo * (1. / 60.);
                 props.audio = music_info.audio.clone();
                 // Merge our render list and the winit_output render list into one:
                 let render_target_list = render_target_list
@@ -496,11 +494,11 @@ pub async fn run() {
                                     }
                                 }
                                 egui::ComboBox::from_id_source("global timescale")
-                                    .selected_text(str_for_timescale(global_timescale).as_str())
+                                    .selected_text(str_for_timescale(mir.global_timescale).as_str())
                                     .show_ui(ui, |ui| {
                                         for &timescale in timescales.iter() {
                                             ui.selectable_value(
-                                                &mut global_timescale,
+                                                &mut mir.global_timescale,
                                                 timescale,
                                                 str_for_timescale(timescale).as_str(),
                                             );

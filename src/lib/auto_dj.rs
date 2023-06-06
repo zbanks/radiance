@@ -104,7 +104,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "cga1",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::DontUse, // Needs work
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -330,7 +330,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "halftone",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::DontUse, // Exaerbates high spatial frequencies
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -350,6 +350,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "hpixelate",
+        random_frequency: false, // Too bouncy
         category: AutoDJEffectCategory::Simplifying,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -380,9 +381,60 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
+        name: "jet",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "kaleidoscope",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "kmeans",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "lathe",
+        category: AutoDJEffectCategory::DontUse, // Exacerbates high spatial frequencies
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "life",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "litebrite",
+        category: AutoDJEffectCategory::DontUse, // Exacerbates high spatial frequencies
+        random_frequency: false,                 // Too bouncey
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "loopy",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "lorenz",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "lpass",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
         name: "lpf",
         category: AutoDJEffectCategory::Simplifying,
         random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "ltohs",
+        category: AutoDJEffectCategory::Complecting,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {

@@ -3,7 +3,7 @@
 // AKA "Chromatic Aberration"
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
-    let spin = iTime * 0.25;
+    let spin = iTime * pi * 0.0625;
     let separate = iIntensity * 0.1 * cos(iTime * pi * 0.25 * iFrequency);
     let normCoord = (uv - 0.5) * aspectCorrection;
     let redOffset = normCoord - separate * vec2<f32>(cos(spin), sin(spin));

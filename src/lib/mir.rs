@@ -31,6 +31,7 @@ pub struct Mir {
     _stream: cpal::Stream,
     receiver: mpsc::Receiver<Update>,
     last_update: Update,
+    pub global_timescale: f32,
 }
 
 /// Updates sent over a queue
@@ -59,7 +60,7 @@ impl Update {
     fn t(&self, wall: time::Instant) -> f32 {
         let elapsed = (wall - self.wall_ref).as_secs_f32();
         let t = self.tempo * elapsed + self.t_ref;
-        t.rem_euclid(MAX_TIME)
+        t.rem_euclid(MAX_TIME * MAX_TIME) // MAX_TIME^2 is sort of arbitrary, just don't let it grow too big
     }
 }
 
@@ -259,6 +260,7 @@ impl Mir {
                 audio: Default::default(),
                 spectrum: [0.; SPECTRUM_LENGTH],
             },
+            global_timescale: 1.,
         }
     }
 
@@ -270,16 +272,19 @@ impl Mir {
         }
 
         // Compute t
-        let uncompensated_time = self.last_update.t(time::Instant::now());
+        let uncompensated_time =
+            (self.last_update.t(time::Instant::now()) * self.global_timescale).rem_euclid(MAX_TIME);
 
-        let time = self
+        let time = (self
             .last_update
-            .t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION));
+            .t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION))
+            * self.global_timescale)
+            .rem_euclid(MAX_TIME);
 
         MusicInfo {
             time,
             uncompensated_time,
-            tempo: self.last_update.tempo,
+            tempo: self.last_update.tempo * self.global_timescale,
             audio: self.last_update.audio.clone(),
             spectrum: self.last_update.spectrum.clone(),
         }
