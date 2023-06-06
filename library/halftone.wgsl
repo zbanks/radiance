@@ -1,4 +1,5 @@
 #property description CMYK halftoning, like a printer
+#property frequency 1
 
 fn rgb2cmyk(rgb: vec3<f32>) -> vec4<f32> {
     let k = 1. - max(max(rgb.r, rgb.g), rgb.b);
@@ -12,7 +13,7 @@ fn cmyk2rgb(cmyk: vec4<f32>) -> vec3<f32> {
 
 fn grid(basis: mat2x2<f32>, cmykMask: vec4<f32>, uv: vec2<f32>, offset: vec2<f32>) -> vec3<f32> {
     let points = 300. * pow(2., -9. * iIntensity) + 5.;
-    let points = points / (0.7 + 0.3 * pow(defaultPulse, 2.));
+    //let points = points / (0.7 + 0.3 * pow(defaultPulse, 2.));
     let r = 0.5 / points;
 
     let invBasis = inverse2(basis);
@@ -38,19 +39,30 @@ fn basis(t: f32) -> mat2x2<f32> {
 }
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
-    let b1 = basis(15.);
-    let b2 = basis(75.);
-    let b3 = basis(0.);
-    let b4 = basis(45.);
+    let b1 = basis(15. / 180. * pi);
+    let b2 = basis(75. / 180. * pi);
+    let b3 = basis(0. / 180. * pi);
+    let b4 = basis(45. / 180. * pi);
 
-    let c1 = grid(b1, vec4<f32>(1., 0., 0., 0.), uv, vec2<f32>(0.));
-    let m1 = grid(b2, vec4<f32>(0., 1., 0., 0.), uv, vec2<f32>(0.));
-    let y1 = grid(b3, vec4<f32>(0., 0., 1., 0.), uv, vec2<f32>(0.));
-    let k1 = grid(b4, vec4<f32>(0., 0., 0., 1.), uv, vec2<f32>(0.));
-    let c2 = grid(b1, vec4<f32>(1., 0., 0., 0.), uv, vec2<f32>(0.5));
-    let m2 = grid(b2, vec4<f32>(0., 1., 0., 0.), uv, vec2<f32>(0.5));
-    let y2 = grid(b3, vec4<f32>(0., 0., 1., 0.), uv, vec2<f32>(0.5));
-    let k2 = grid(b4, vec4<f32>(0., 0., 0., 1.), uv, vec2<f32>(0.5));
+    let spin = iTime * iFrequency * pi * 0.25;
+    let c = cos(spin);
+    let s = sin(spin);
+    let c2 = cos(-spin * 0.5);
+    let s2 = sin(-spin * 0.5);
+
+    let o1 = vec2<f32>(c, s) * 0.25;
+    let o2 = vec2<f32>(s, -c) * 0.25;
+    let o3 = vec2<f32>(-c, -s) * 0.25;
+    let o4 = vec2<f32>(c2, s2) * 0.25;
+
+    let c1 = grid(b1, vec4<f32>(1., 0., 0., 0.), uv, o1 + vec2<f32>(0.));
+    let m1 = grid(b2, vec4<f32>(0., 1., 0., 0.), uv, o2 + vec2<f32>(0.));
+    let y1 = grid(b3, vec4<f32>(0., 0., 1., 0.), uv, o3 + vec2<f32>(0.));
+    let k1 = grid(b4, vec4<f32>(0., 0., 0., 1.), uv, o4 + vec2<f32>(0.));
+    let c2 = grid(b1, vec4<f32>(1., 0., 0., 0.), uv, o1 + vec2<f32>(0.5));
+    let m2 = grid(b2, vec4<f32>(0., 1., 0., 0.), uv, o2 + vec2<f32>(0.5));
+    let y2 = grid(b3, vec4<f32>(0., 0., 1., 0.), uv, o3 + vec2<f32>(0.5));
+    let k2 = grid(b4, vec4<f32>(0., 0., 0., 1.), uv, o4 + vec2<f32>(0.5));
     let total = vec3<f32>(1.);
     let total = min(total, c1);
     let total = min(total, m1);

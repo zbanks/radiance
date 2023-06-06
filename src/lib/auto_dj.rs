@@ -294,6 +294,92 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
+        name: "gamma",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "gay",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "glitch",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "greenaway",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "greenscreen",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "green",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "gstrobe",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "halftone",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "heart",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "hpass",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "hpf",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "hpixelate",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "hue",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "id",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "inception",
+        category: AutoDJEffectCategory::DontUse, // Some weird high frequencies when ramping up
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "interstellar",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "invertl",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false, // Too strobey
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
         name: "lpf",
         category: AutoDJEffectCategory::Simplifying,
         random_frequency: false,
