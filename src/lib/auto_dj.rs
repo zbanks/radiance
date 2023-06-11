@@ -430,10 +430,93 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         name: "lpf",
         category: AutoDJEffectCategory::Simplifying,
         random_frequency: false,
+        intensity_max: 0.8, // Don't let it completely stop the image
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "ltohs",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "maze",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "melt",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "mirror",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "monochrome",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "negative",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "nibble",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "nogreen",
+        category: AutoDJEffectCategory::Simplifying,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "no",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "onblack",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "oscope",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "outline",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "pan",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "pink",
+        category: AutoDJEffectCategory::Generative,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "pixelate",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Actually simplifying but looks cooler earlier in the chain
+    AutoDJEffectDescriptor {
+        name: "polar",
         category: AutoDJEffectCategory::Complecting,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -454,7 +537,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "vu",
-        category: AutoDJEffectCategory::Generative,
+        category: AutoDJEffectCategory::DontUse, // In the doghouse--it can be very bouncy/strobey since it can change faster than the chosen frequency
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {

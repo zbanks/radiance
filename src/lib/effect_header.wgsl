@@ -343,4 +343,18 @@ fn inverse4(m: mat4x4<f32>) -> mat4x4<f32> {
     ) * (1.0 / det);
 }
 
+// Adds back in the alpha channel for a modified RGB color
+// dimming the color as necessary
+fn add_alpha_dimming(rgb: vec3<f32>, a: f32) -> vec4<f32> {
+    let min_new_alpha = max(max(rgb.r, rgb.g), rgb.b);
+    let scale = min(1., a / min_new_alpha);
+    return vec4<f32>(rgb * scale, a);
+}
+
+// Adds back in the alpha channel for a modified RGB color
+// increasing opacity as necessary
+fn add_alpha(rgb: vec3<f32>, a: f32) -> vec4<f32> {
+    return vec4<f32>(rgb, max(max(max(rgb.r, rgb.g), rgb.b), a));
+}
+
 //#line 1
