@@ -7,8 +7,6 @@ fn main(uv: vec2<f32>) -> vec4<f32> {
     let lengthFactor = sqrt(2.);
     //let lengthFactor = 1.0;
 
-    let angle  = (uv.y + 0.25 * iTime * iFrequency) * pi;
-
     let newUV = vec2<f32>(length(normCoord) / lengthFactor, abs(((atan2(normCoord.x, -normCoord.y) / pi + 1. + 0.25 * iTime * iFrequency) % 2.) - 1.)) - 0.5;
     let newUV = newUV / aspectCorrection + 0.5;
 

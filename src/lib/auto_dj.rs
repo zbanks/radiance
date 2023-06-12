@@ -305,7 +305,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "glitch",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::DontUse, // Too good--makes radiance look broken
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -376,8 +376,8 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "invertl",
-        category: AutoDJEffectCategory::Complecting,
-        random_frequency: false, // Too strobey
+        category: AutoDJEffectCategory::DontUse,
+        random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -461,7 +461,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "negative",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::DontUse,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -521,8 +521,236 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
+        name: "polygon",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "posterh",
+        category: AutoDJEffectCategory::Simplifying,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "posterize",
+        category: AutoDJEffectCategory::Simplifying,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "projector",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Too computationally intensive
+    AutoDJEffectDescriptor {
         name: "purple",
         category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "qcircle",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Not generative enough
+    AutoDJEffectDescriptor {
+        name: "qlpf",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Prefer lpf
+    AutoDJEffectDescriptor {
+        name: "rainblur",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rainbow",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "random",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "randy",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rblurb",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rblur",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Prefer rblurb
+    AutoDJEffectDescriptor {
+        name: "red",
+        category: AutoDJEffectCategory::Simplifying,
+        random_frequency: false,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rekt",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    }, // Not generative enough
+    AutoDJEffectDescriptor {
+        name: "resat",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "resistor",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rfuzz",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rgbmask",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rjump",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rolling",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rotate",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "rsheen",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "saturate",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "scramble",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "sethue",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "shake",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "slide",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "smoke",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "smoky",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "smooth",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "snowcrash",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "solitaire",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "speckle",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "spin",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "squares",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "sscan",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "starfield",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "still",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "strange",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "stripes",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "stripey",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "strobe",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "subpixel",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "survey",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "swipe",
+        category: AutoDJEffectCategory::Simplifying,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
