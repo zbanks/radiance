@@ -351,6 +351,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     AutoDJEffectDescriptor {
         name: "hpixelate",
         random_frequency: false, // Too bouncy
+        intensity_max: 0.5, // Boring at higher intensities
         category: AutoDJEffectCategory::Simplifying,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -467,7 +468,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "nibble",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::DontUse,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -511,10 +512,10 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "pixelate",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::DontUse,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
-    }, // Actually simplifying but looks cooler earlier in the chain
+    }, // Amplifies high frequencies
     AutoDJEffectDescriptor {
         name: "polar",
         category: AutoDJEffectCategory::Complecting,
@@ -625,7 +626,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "rolling",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::DontUse, // Boring
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -636,6 +637,8 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     AutoDJEffectDescriptor {
         name: "rsheen",
         category: AutoDJEffectCategory::Complecting,
+        intensity_min: 0.1,
+        intensity_max: 0.2, // Too powerful
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -675,7 +678,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "smooth",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::DontUse, // Boring
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -720,12 +723,12 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "strange",
-        category: AutoDJEffectCategory::Generative,
+        category: AutoDJEffectCategory::Complecting,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "stripes",
-        category: AutoDJEffectCategory::Generative,
+        category: AutoDJEffectCategory::DontUse, // Too high frequency
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -750,12 +753,69 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "swipe",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::DontUse, // Boring
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "tesselate.wgsl",
+        category: AutoDJEffectCategory::DontUse,
+        random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "test",
         category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "threedee",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "tileable",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "tile",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "tilt",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "tunnel",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "uvmapcross",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "uvmapcycle4",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "uvmapid",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "uvmapselfn",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "uvmapself",
+        category: AutoDJEffectCategory::Complecting,
+        random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -769,8 +829,78 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
+        name: "warble",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "wave",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "wavy",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "wobsphere",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
         name: "wwave",
         category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yaw",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yellow",
+        category: AutoDJEffectCategory::Generative,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvblur",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvchansep",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvmapd",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvmapid",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvmap",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvposter",
+        category: AutoDJEffectCategory::Simplifying,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvrot",
+        category: AutoDJEffectCategory::Complecting,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
+    AutoDJEffectDescriptor {
+        name: "yuvsat",
+        category: AutoDJEffectCategory::Simplifying,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -778,6 +908,11 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         category: AutoDJEffectCategory::DontUse,
         ..EFFECT_DESCRIPTOR_DEFAULT
     }, // Could use, maybe
+    AutoDJEffectDescriptor {
+        name: "zoomout",
+        category: AutoDJEffectCategory::DontUse,
+        ..EFFECT_DESCRIPTOR_DEFAULT
+    },
 ];
 
 // Frequency options for randomly selected frequency
@@ -853,25 +988,22 @@ impl AutoDJ {
                 .collect::<Vec<_>>(),
             2 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::Complecting)
+                .filter(|e| {
+                    e.category == AutoDJEffectCategory::Complecting
+                        || e.category == AutoDJEffectCategory::Simplifying
+                })
                 .collect::<Vec<_>>(),
             3 => EFFECTS
                 .iter()
-                .filter(|e| {
-                    e.category == AutoDJEffectCategory::Complecting
-                        || e.category == AutoDJEffectCategory::Simplifying
-                })
+                .filter(|e| e.category == AutoDJEffectCategory::Simplifying)
                 .collect::<Vec<_>>(),
             4 => EFFECTS
                 .iter()
-                .filter(|e| {
-                    e.category == AutoDJEffectCategory::Complecting
-                        || e.category == AutoDJEffectCategory::Simplifying
-                })
+                .filter(|e| e.category == AutoDJEffectCategory::Simplifying)
                 .collect::<Vec<_>>(),
             5 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::Simplifying)
+                .filter(|e| e.category == AutoDJEffectCategory::Complecting)
                 .collect::<Vec<_>>(),
             _ => panic!("Don't know how to handle AutoDJ slot {}", ix),
         };
