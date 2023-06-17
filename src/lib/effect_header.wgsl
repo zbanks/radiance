@@ -156,42 +156,42 @@ fn rand4(c: vec4<f32>) -> f32 {
 }
 
 fn noise(p: f32) -> f32 {
-    let i = floor(p);
+    let i = i32(floor(p));
     let x = fract(p);
     // x = .5*(1.-cos(M_PI*x));
     let x = 3. * x * x - 2. * x * x * x;
-    let a = rand(i + 0.);
-    let b = rand(i + 1.);
+    let a = rand(f32(i + 0));
+    let b = rand(f32(i + 1));
     return mix(a, b, x);
 }
 
 fn noise2(p: vec2<f32>) -> f32 {
-    let ij = floor(p);
+    let ij = vec2<i32>(floor(p));
     let xy = fract(p);
     // xy = .5*(1.-cos(M_PI*xy));
     let xy = 3. * xy * xy - 2. * xy * xy * xy;
-    let a = rand2((ij+vec2<f32>(0.,0.)));
-    let b = rand2((ij+vec2<f32>(1.,0.)));
-    let c = rand2((ij+vec2<f32>(0.,1.)));
-    let d = rand2((ij+vec2<f32>(1.,1.)));
+    let a = rand2(vec2<f32>(ij+vec2<i32>(0, 0)));
+    let b = rand2(vec2<f32>(ij+vec2<i32>(1, 0)));
+    let c = rand2(vec2<f32>(ij+vec2<i32>(0, 1)));
+    let d = rand2(vec2<f32>(ij+vec2<i32>(1, 1)));
     let x1 = mix(a, b, xy.x);
     let x2 = mix(c, d, xy.x);
     return mix(x1, x2, xy.y);
 }
 
 fn noise3(p: vec3<f32>) -> f32 {
-    let ijk = floor(p);
+    let ijk = vec3<i32>(floor(p));
     let xyz = fract(p);
     // xyz = .5*(1.-cos(M_PI*xyz));
     let xyz = 3. * xyz * xyz - 2. * xyz * xyz * xyz;
-    let a = rand3((ijk+vec3<f32>(0.,0.,0.)));
-    let b = rand3((ijk+vec3<f32>(1.,0.,0.)));
-    let c = rand3((ijk+vec3<f32>(0.,1.,0.)));
-    let d = rand3((ijk+vec3<f32>(1.,1.,0.)));
-    let e = rand3((ijk+vec3<f32>(0.,0.,1.)));
-    let f = rand3((ijk+vec3<f32>(1.,0.,1.)));
-    let g = rand3((ijk+vec3<f32>(0.,1.,1.)));
-    let h = rand3((ijk+vec3<f32>(1.,1.,1.)));
+    let a = rand3(vec3<f32>(ijk+vec3<i32>(0, 0, 0)));
+    let b = rand3(vec3<f32>(ijk+vec3<i32>(1, 0, 0)));
+    let c = rand3(vec3<f32>(ijk+vec3<i32>(0, 1, 0)));
+    let d = rand3(vec3<f32>(ijk+vec3<i32>(1, 1, 0)));
+    let e = rand3(vec3<f32>(ijk+vec3<i32>(0, 0, 1)));
+    let f = rand3(vec3<f32>(ijk+vec3<i32>(1, 0, 1)));
+    let g = rand3(vec3<f32>(ijk+vec3<i32>(0, 1, 1)));
+    let h = rand3(vec3<f32>(ijk+vec3<i32>(1, 1, 1)));
     let x1 = mix(a, b, xyz.x);
     let x2 = mix(c, d, xyz.x);
     let y1 = mix(x1, x2, xyz.y);
@@ -202,26 +202,26 @@ fn noise3(p: vec3<f32>) -> f32 {
 }
 
 fn noise4(p: vec4<f32>) -> f32 {
-    let ijkl = floor(p);
+    let ijkl = vec4<i32>(floor(p));
     let xyzw = fract(p);
     // xyz = .5*(1.-cos(M_PI*xyz));
     let xyzw = 3. * xyzw * xyzw - 2. * xyzw * xyzw * xyzw;
-    let a = rand4((ijkl+vec4<f32>(0.,0.,0.,0.)));
-    let b = rand4((ijkl+vec4<f32>(1.,0.,0.,0.)));
-    let c = rand4((ijkl+vec4<f32>(0.,1.,0.,0.)));
-    let d = rand4((ijkl+vec4<f32>(1.,1.,0.,0.)));
-    let e = rand4((ijkl+vec4<f32>(0.,0.,1.,0.)));
-    let f = rand4((ijkl+vec4<f32>(1.,0.,1.,0.)));
-    let g = rand4((ijkl+vec4<f32>(0.,1.,1.,0.)));
-    let h = rand4((ijkl+vec4<f32>(1.,1.,1.,0.)));
-    let i = rand4((ijkl+vec4<f32>(0.,0.,0.,1.)));
-    let j = rand4((ijkl+vec4<f32>(1.,0.,0.,1.)));
-    let k = rand4((ijkl+vec4<f32>(0.,1.,0.,1.)));
-    let l = rand4((ijkl+vec4<f32>(1.,1.,0.,1.)));
-    let m = rand4((ijkl+vec4<f32>(0.,0.,1.,1.)));
-    let n = rand4((ijkl+vec4<f32>(1.,0.,1.,1.)));
-    let o = rand4((ijkl+vec4<f32>(0.,1.,1.,1.)));
-    let q = rand4((ijkl+vec4<f32>(1.,1.,1.,1.)));
+    let a = rand4(vec4<f32>(ijkl+vec4<i32>(0, 0, 0, 0)));
+    let b = rand4(vec4<f32>(ijkl+vec4<i32>(1, 0, 0, 0)));
+    let c = rand4(vec4<f32>(ijkl+vec4<i32>(0, 1, 0, 0)));
+    let d = rand4(vec4<f32>(ijkl+vec4<i32>(1, 1, 0, 0)));
+    let e = rand4(vec4<f32>(ijkl+vec4<i32>(0, 0, 1, 0)));
+    let f = rand4(vec4<f32>(ijkl+vec4<i32>(1, 0, 1, 0)));
+    let g = rand4(vec4<f32>(ijkl+vec4<i32>(0, 1, 1, 0)));
+    let h = rand4(vec4<f32>(ijkl+vec4<i32>(1, 1, 1, 0)));
+    let i = rand4(vec4<f32>(ijkl+vec4<i32>(0, 0, 0, 1)));
+    let j = rand4(vec4<f32>(ijkl+vec4<i32>(1, 0, 0, 1)));
+    let k = rand4(vec4<f32>(ijkl+vec4<i32>(0, 1, 0, 1)));
+    let l = rand4(vec4<f32>(ijkl+vec4<i32>(1, 1, 0, 1)));
+    let m = rand4(vec4<f32>(ijkl+vec4<i32>(0, 0, 1, 1)));
+    let n = rand4(vec4<f32>(ijkl+vec4<i32>(1, 0, 1, 1)));
+    let o = rand4(vec4<f32>(ijkl+vec4<i32>(0, 1, 1, 1)));
+    let q = rand4(vec4<f32>(ijkl+vec4<i32>(1, 1, 1, 1)));
     let x1 = mix(a, b, xyzw.x);
     let x2 = mix(c, d, xyzw.x);
     let y1 = mix(x1, x2, xyzw.y);

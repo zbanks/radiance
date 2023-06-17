@@ -10,5 +10,5 @@ fn main(uv: vec2<f32>) -> vec4<f32> {
 
     let newUV = uv + shift * iIntensity * pow(defaultPulse, 2.) * 5.;
 
-    return textureSample(iInputsTex[0], iSampler,  newUV) * box(newUV);
+    return textureSample(iInputsTex[0], iSampler,  newUV);
 }

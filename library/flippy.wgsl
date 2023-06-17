@@ -1,7 +1,7 @@
 #property description Turns the image into tiles and flips each one along a diagonal
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
-    let timeOffset = vec2<f32>(iTime * iFrequency * (1. / 64.)) * sign(uv.x + uv.y - 1.);
+    let timeOffset = vec2<f32>(iTime * iFrequency * (1. / 64.));// * sign(uv.x + uv.y - 1.);
     let timeOffset = (timeOffset + 1.) % 2. - 1.;
     let newPt = (uv - 0.5 - timeOffset) * aspectCorrection;
 

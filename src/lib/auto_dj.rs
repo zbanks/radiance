@@ -24,8 +24,10 @@ struct AutoDJEffectDescriptor {
 enum AutoDJEffectCategory {
     DontUse,
     Generative,
-    Complecting,
-    Simplifying,
+    ComplectSpace,
+    ComplectColor,
+    SimplifySpace,
+    SimplifyColor,
 }
 
 const EFFECT_DESCRIPTOR_DEFAULT: AutoDJEffectDescriptor = AutoDJEffectDescriptor {
@@ -59,17 +61,17 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "bespeckle",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "bespecklep",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "blowout",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -94,12 +96,12 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "bwave",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "cedge",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -109,7 +111,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "chansep",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -149,7 +151,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "crt",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -174,7 +176,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "cylinder",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -184,7 +186,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "delace",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -194,12 +196,12 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "depolar",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "desat",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -209,23 +211,23 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "diodelpf",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "distort",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "droste",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "dunkirk",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -235,7 +237,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "edge",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -245,7 +247,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "eye",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -265,32 +267,32 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "flippy",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "flow",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "flower",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "flowing",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "fly",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "fractalzoom",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -310,7 +312,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "greenaway",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -320,7 +322,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "green",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -345,19 +347,19 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "hpf",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::DontUse, // Too darkening
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "hpixelate",
         random_frequency: false, // Too bouncy
-        intensity_max: 0.5, // Boring at higher intensities
-        category: AutoDJEffectCategory::Simplifying,
+        intensity_max: 0.5,      // Boring at higher intensities
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "hue",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -388,7 +390,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "kaleidoscope",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -403,7 +405,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "life",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -419,7 +421,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "lorenz",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -429,14 +431,14 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "lpf",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         random_frequency: false,
         intensity_max: 0.8, // Don't let it completely stop the image
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "ltohs",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -446,18 +448,18 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "melt",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "mirror",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "monochrome",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -474,7 +476,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "nogreen",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -495,7 +497,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "outline",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -518,23 +520,23 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     }, // Amplifies high frequencies
     AutoDJEffectDescriptor {
         name: "polar",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "polygon",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "posterh",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "posterize",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -560,12 +562,12 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     }, // Prefer lpf
     AutoDJEffectDescriptor {
         name: "rainblur",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "rainbow",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -580,7 +582,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "rblurb",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -590,7 +592,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     }, // Prefer rblurb
     AutoDJEffectDescriptor {
         name: "red",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -601,7 +603,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     }, // Not generative enough
     AutoDJEffectDescriptor {
         name: "resat",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -611,7 +613,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "rfuzz",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -621,7 +623,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "rjump",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -636,24 +638,24 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "rsheen",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         intensity_min: 0.1,
         intensity_max: 0.2, // Too powerful
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "saturate",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "scramble",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "sethue",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -663,7 +665,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "slide",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -673,7 +675,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "smoky",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -693,7 +695,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "speckle",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -723,7 +725,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "strange",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -733,7 +735,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "stripey",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifySpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -769,17 +771,17 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "threedee",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "tileable",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "tile",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::DontUse, // Tesselate is better
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -789,7 +791,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "tunnel",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -814,7 +816,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "uvmapself",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         random_frequency: false,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -825,12 +827,12 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "vu",
-        category: AutoDJEffectCategory::DontUse, // In the doghouse--it can be very bouncy/strobey since it can change faster than the chosen frequency
+        category: AutoDJEffectCategory::DontUse, // It can be very bouncy/strobey since it can change faster than the chosen frequency
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "warble",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -840,7 +842,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "wavy",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -870,7 +872,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "yuvchansep",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -890,17 +892,17 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "yuvposter",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "yuvrot",
-        category: AutoDJEffectCategory::Complecting,
+        category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
         name: "yuvsat",
-        category: AutoDJEffectCategory::Simplifying,
+        category: AutoDJEffectCategory::SimplifyColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -977,33 +979,30 @@ impl AutoDJ {
         let descriptor_options = match ix {
             0 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::Generative)
+                .filter(|e| e.category == AutoDJEffectCategory::ComplectSpace)
                 .collect::<Vec<_>>(),
             1 => EFFECTS
                 .iter()
-                .filter(|e| {
-                    e.category == AutoDJEffectCategory::Generative
-                        || e.category == AutoDJEffectCategory::Complecting
-                })
+                .filter(|e| e.category == AutoDJEffectCategory::ComplectColor)
                 .collect::<Vec<_>>(),
             2 => EFFECTS
                 .iter()
-                .filter(|e| {
-                    e.category == AutoDJEffectCategory::Complecting
-                        || e.category == AutoDJEffectCategory::Simplifying
-                })
+                .filter(|e| e.category == AutoDJEffectCategory::ComplectSpace)
                 .collect::<Vec<_>>(),
             3 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::Simplifying)
+                .filter(|e| e.category == AutoDJEffectCategory::SimplifyColor)
                 .collect::<Vec<_>>(),
             4 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::Simplifying)
+                .filter(|e| e.category == AutoDJEffectCategory::SimplifySpace)
                 .collect::<Vec<_>>(),
             5 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::Complecting)
+                .filter(|e| {
+                    e.category == AutoDJEffectCategory::ComplectSpace
+                        || e.category == AutoDJEffectCategory::ComplectColor
+                })
                 .collect::<Vec<_>>(),
             _ => panic!("Don't know how to handle AutoDJ slot {}", ix),
         };
