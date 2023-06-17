@@ -1,7 +1,6 @@
 use crate::context::{ArcTextureViewSampler, Context, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
-use glutin::platform::unix::HeadlessContextExt;
 use libmpv::{
     events::{Event, PropertyData},
     render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
@@ -24,10 +23,11 @@ const SHADER_SOURCE: &str = include_str!("movie_shader.wgsl");
 const ZOOM_FACTOR: f32 = 16. / 21.;
 
 fn get_proc_address(
-    context: &Arc<glutin::Context<glutin::PossiblyCurrent>>,
+    ctx: &(Arc<surfman::Device>, Arc<surfman::Context>),
     name: &str,
 ) -> *mut ffi::c_void {
-    context.get_proc_address(name) as *mut ffi::c_void
+    let (device, context) = ctx;
+    device.get_proc_address(&context, name) as *mut ffi::c_void
 }
 
 /// Properties of an MovieNode.
@@ -103,7 +103,7 @@ pub struct MovieNodeStateReady {
     paint_states: HashMap<RenderTargetId, MovieNodePaintState>,
 
     // MPV thread
-    mpv_thread: Option<thread::JoinHandle<()>>,
+    _mpv_thread: Option<thread::JoinHandle<()>>,
     mpv_tx: mpsc::Sender<MpvThreadEvent>,
     mpv_rx: mpsc::Receiver<MpvThreadStatusUpdate>,
 
@@ -116,9 +116,9 @@ pub struct MovieNodeStateReady {
 impl Drop for MovieNodeStateReady {
     fn drop(&mut self) {
         let _ = self.mpv_tx.send(MpvThreadEvent::Terminate);
-        self.mpv_thread
-            .take()
-            .map(|mpv_thread| mpv_thread.join().unwrap());
+        //self.mpv_thread
+        //    .take()
+        //    .map(|mpv_thread| mpv_thread.join().unwrap());
     }
 }
 
@@ -193,18 +193,29 @@ impl MovieNodeState {
                     }
 
                     // Initialize OpenGL
-                    let cb = glutin::ContextBuilder::new();
-                    let context = cb
-                        .build_osmesa(glutin::dpi::PhysicalSize {
-                            width: 1,
-                            height: 1,
-                        })
+                    let gl_connection = surfman::Connection::new().unwrap();
+                    let gl_adapter = gl_connection.create_adapter().unwrap();
+                    let mut gl_device = gl_connection.create_device(&gl_adapter).unwrap();
+                    let gl_context_attributes = surfman::ContextAttributes {
+                        version: surfman::GLVersion::new(3, 3),
+                        flags: surfman::ContextAttributeFlags::empty(),
+                    };
+
+                    let gl_context_descriptor = gl_device
+                        .create_context_descriptor(&gl_context_attributes)
                         .unwrap();
-                    let context = unsafe { context.make_current() }.unwrap();
-                    let context = Arc::new(context);
+                    let gl_context = gl_device
+                        .create_context(&gl_context_descriptor, None)
+                        .unwrap();
+                    let gl_device = Arc::new(gl_device);
+                    let gl_context = Arc::new(gl_context);
+
+                    gl_device.make_context_current(&gl_context).unwrap();
 
                     let gl = unsafe {
-                        glow::Context::from_loader_function(|s| context.get_proc_address(s))
+                        glow::Context::from_loader_function(|s| {
+                            gl_device.get_proc_address(&gl_context, s)
+                        })
                     };
                     use glow::HasContext;
 
@@ -260,17 +271,17 @@ impl MovieNodeState {
                     })
                     .unwrap();
 
-                    let mut render_context = RenderContext::new(
-                        unsafe { mpv.ctx.as_mut() },
-                        vec![
-                            RenderParam::ApiType(RenderParamApiType::OpenGl),
-                            RenderParam::InitParams(OpenGLInitParams {
-                                get_proc_address,
-                                ctx: context.clone(),
-                            }),
-                        ],
-                    )
-                    .expect("Failed creating render context");
+                    let create_render_context_args = vec![
+                        RenderParam::ApiType(RenderParamApiType::OpenGl),
+                        RenderParam::InitParams(OpenGLInitParams {
+                            get_proc_address,
+                            ctx: (gl_device.clone(), gl_context.clone()),
+                        }),
+                    ];
+
+                    let mut render_context =
+                        RenderContext::new(unsafe { mpv.ctx.as_mut() }, create_render_context_args)
+                            .expect("Failed creating render context");
 
                     let render_tx = event_tx.clone();
                     render_context.set_update_callback(move || {
@@ -456,7 +467,7 @@ impl MovieNodeState {
                                     if let Some(frame_resources) = frame_resources.as_mut() {
                                         // Tell MPV to render into our FBO
                                         render_context
-                                            .render::<Arc<glutin::Context<glutin::PossiblyCurrent>>>(
+                                            .render::<(Arc<surfman::Device>, Arc<surfman::Context>)>(
                                                 unsafe { transmute(frame_resources.fbo) },
                                                 frame_resources.width as i32,
                                                 frame_resources.height as i32,
@@ -678,7 +689,7 @@ impl MovieNodeState {
             sampler,
             render_pipeline,
             paint_states: HashMap::new(),
-            mpv_thread: Some(mpv_thread),
+            _mpv_thread: Some(mpv_thread),
             mpv_tx,
             mpv_rx,
             playing: false,

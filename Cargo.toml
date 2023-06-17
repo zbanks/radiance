@@ -50,9 +50,9 @@ image = "0.24"
 alsa = "=0.6.0"
 
 # mpv / MovieNode dependencies
-libmpv = { git = "https://github.com/ervanalb/libmpv-rs", rev = "69bb8aec97f8d251bfaf18560e6cd6a6dda5c6a3", features = ["render"]}
-libmpv-sys = { git = "git+https://github.com/ervanalb/libmpv-rs", rev="69bb8aec97f8d251bfaf18560e6cd6a6dda5c6a3"}
-glutin = "0.26.0" # Kept back: 0.30.0 introduces a big refactor and drops os-mesa support
+libmpv = { git = "https://github.com/ervanalb/libmpv-rs", rev = "8f79ae86411ff4226288c836e18fbc80b0f636fb", features = ["render"]}
+libmpv-sys = { git = "git+https://github.com/ervanalb/libmpv-rs", rev="8f79ae86411ff4226288c836e18fbc80b0f636fb"}
+surfman = { version = "0.7.0", features = ["sm-x11"] }
 glow = "0.12.1"
 crossbeam = "0.8.2"
 

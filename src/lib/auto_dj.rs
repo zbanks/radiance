@@ -277,6 +277,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "flower",
+        intensity_min: 0.4, // Looks like a penis at <0.3
         category: AutoDJEffectCategory::ComplectSpace,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -438,6 +439,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "ltohs",
+        random_frequency: false, // Too strobey
         category: AutoDJEffectCategory::ComplectColor,
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
@@ -995,14 +997,14 @@ impl AutoDJ {
                 .collect::<Vec<_>>(),
             4 => EFFECTS
                 .iter()
-                .filter(|e| e.category == AutoDJEffectCategory::SimplifySpace)
+                .filter(|e| {
+                    e.category == AutoDJEffectCategory::SimplifySpace
+                        || e.category == AutoDJEffectCategory::ComplectColor
+                })
                 .collect::<Vec<_>>(),
             5 => EFFECTS
                 .iter()
-                .filter(|e| {
-                    e.category == AutoDJEffectCategory::ComplectSpace
-                        || e.category == AutoDJEffectCategory::ComplectColor
-                })
+                .filter(|e| e.category == AutoDJEffectCategory::SimplifySpace)
                 .collect::<Vec<_>>(),
             _ => panic!("Don't know how to handle AutoDJ slot {}", ix),
         };
