@@ -4,7 +4,7 @@ Radiance TODO list
 Shader porting
 --------------
 
-* 73 / 174
+* [X] DONE
 
 Big features
 ------------

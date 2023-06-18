@@ -8,8 +8,8 @@ use rand::{prelude::SliceRandom, Rng};
 const STABLE_EFFECT_COUNT: usize = 6;
 
 const STABLE_TIMER_MIN: usize = 100;
-const STABLE_TIMER_MAX: usize = 300;
-const CROSSFADE_TIMER: usize = 200;
+const STABLE_TIMER_MAX: usize = 400;
+const CROSSFADE_TIMER: usize = 400;
 
 #[derive(Debug)]
 struct AutoDJEffectDescriptor {
@@ -355,7 +355,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
         name: "hpixelate",
         random_frequency: false, // Too bouncy
         intensity_max: 0.5,      // Boring at higher intensities
-        category: AutoDJEffectCategory::SimplifySpace,
+        category: AutoDJEffectCategory::ComplectSpace, // Too powerful for late in the chain
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
@@ -737,7 +737,7 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "stripey",
-        category: AutoDJEffectCategory::SimplifySpace,
+        category: AutoDJEffectCategory::DontUse, // Breaks aesthetic a bit too much
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
     AutoDJEffectDescriptor {
