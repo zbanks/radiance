@@ -19,7 +19,8 @@ pub enum EffectNodeTileState {
 pub struct EffectNodeTile<'a> {
     title: RichText,
     preview_image: TextureId,
-    intensity: &'a mut Option<f32>, // TODO turn this Option into a more holistic enum based on EffectNodeState
+    intensity: &'a mut Option<f32>, // TODO turn these Options into a more holistic enum based on EffectNodeState
+    frequency: &'a mut Option<f32>,
     state: EffectNodeTileState,
 }
 
@@ -56,6 +57,7 @@ impl<'a> EffectNodeTile<'a> {
             title: (&props.name).into(),
             preview_image,
             intensity: &mut props.intensity,
+            frequency: &mut props.frequency,
             state: tile_state,
         }
     }
@@ -66,6 +68,7 @@ impl<'a> EffectNodeTile<'a> {
             title,
             preview_image,
             intensity,
+            frequency,
             state,
         } = self;
         ui.heading(title);
@@ -77,6 +80,28 @@ impl<'a> EffectNodeTile<'a> {
                 intensity
                     .as_mut()
                     .map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
+
+                frequency.as_mut().map(|frequency| {
+                    let frequencies: &[f32] = &[0.125, 0.25, 0.5, 1., 2., 4., 8.];
+                    fn str_for_frequency(frequency: f32) -> String {
+                        if frequency > 0. && frequency < 1. {
+                            format!("1/{}", 1. / frequency)
+                        } else {
+                            format!("{}", frequency)
+                        }
+                    }
+                    egui::ComboBox::from_id_source("frequency")
+                        .selected_text(format!("f={}", str_for_frequency(*frequency)).as_str())
+                        .show_ui(ui, |ui| {
+                            for &option in frequencies.iter() {
+                                ui.selectable_value(
+                                    frequency,
+                                    option,
+                                    str_for_frequency(option).as_str(),
+                                );
+                            }
+                        });
+                });
 
                 ui.horizontal_centered(|ui| {
                     let image_size = ui.available_size();

@@ -62,6 +62,7 @@ pub enum MovieNodeState {
     Error_(String), // ambiguous_associated_items error triggered by derive_more::TryInto without the _
 }
 
+#[derive(Debug)]
 enum MpvThreadEvent {
     RedrawRequested,
     Resize(u32, u32),
@@ -75,6 +76,7 @@ enum MpvThreadEvent {
     Seek(f64),
 }
 
+#[derive(Debug)]
 enum MpvThreadStatusUpdate {
     Texture(ArcTextureViewSampler, u32, u32),
     Duration(f64),
@@ -83,6 +85,7 @@ enum MpvThreadStatusUpdate {
     Error(String),
 }
 
+#[derive(Debug)]
 pub struct MovieNodeStateReady {
     // Cached props
     name: String,
@@ -116,12 +119,13 @@ pub struct MovieNodeStateReady {
 impl Drop for MovieNodeStateReady {
     fn drop(&mut self) {
         let _ = self.mpv_tx.send(MpvThreadEvent::Terminate);
-        //self.mpv_thread
+        //self._mpv_thread
         //    .take()
         //    .map(|mpv_thread| mpv_thread.join().unwrap());
     }
 }
 
+#[derive(Debug)]
 struct MovieNodePaintState {
     output_texture: ArcTextureViewSampler,
 }
@@ -781,32 +785,34 @@ impl MovieNodeState {
                     );
                     return;
                 }
-                match props.mute {
-                    Some(mute) => {
-                        if self_ready.mute != mute {
-                            let _ = self_ready.mpv_tx.send(MpvThreadEvent::Mute(mute));
-                            self_ready.mute = mute;
+                if self_ready.playing {
+                    match props.mute {
+                        Some(mute) => {
+                            if self_ready.mute != mute {
+                                let _ = self_ready.mpv_tx.send(MpvThreadEvent::Mute(mute));
+                                self_ready.mute = mute;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
-                }
-                match props.pause {
-                    Some(pause) => {
-                        if self_ready.pause != pause {
-                            let _ = self_ready.mpv_tx.send(MpvThreadEvent::Pause(pause));
-                            self_ready.pause = pause;
+                    match props.pause {
+                        Some(pause) => {
+                            if self_ready.pause != pause {
+                                let _ = self_ready.mpv_tx.send(MpvThreadEvent::Pause(pause));
+                                self_ready.pause = pause;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
-                }
-                match props.position {
-                    Some(position) => {
-                        if self_ready.position != position {
-                            let _ = self_ready.mpv_tx.send(MpvThreadEvent::Seek(position));
-                            self_ready.position = position;
+                    match props.position {
+                        Some(position) => {
+                            if self_ready.position != position {
+                                let _ = self_ready.mpv_tx.send(MpvThreadEvent::Seek(position));
+                                self_ready.position = position;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
                 match &props.fit {
                     Some(fit) => {

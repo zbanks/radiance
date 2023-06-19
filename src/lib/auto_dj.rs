@@ -353,8 +353,8 @@ const EFFECTS: &[AutoDJEffectDescriptor] = &[
     },
     AutoDJEffectDescriptor {
         name: "hpixelate",
-        random_frequency: false, // Too bouncy
-        intensity_max: 0.5,      // Boring at higher intensities
+        random_frequency: false,                       // Too bouncy
+        intensity_max: 0.5,                            // Boring at higher intensities
         category: AutoDJEffectCategory::ComplectSpace, // Too powerful for late in the chain
         ..EFFECT_DESCRIPTOR_DEFAULT
     },
