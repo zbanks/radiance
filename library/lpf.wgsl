@@ -11,7 +11,7 @@ fn main(uv: vec2<f32>) -> vec4<f32> {
 fn main(uv: vec2<f32>) -> vec4<f32> {
     let transVec = textureSample(iChannelsTex[2], iSampler, vec2(0.));
     let trans = step(0.5, transVec.r - transVec.g) + step(0., -iFrequency);
-    let a = 1. - (1. - trans) * smoothstep(0., 0.2, iIntensity);
+    let a = clamp(1. - (1. - trans) * smoothstep(0., 0.2, iIntensity), 0., 1.);
     return mix(textureSample(iChannelsTex[1], iSampler, uv), textureSample(iInputsTex[0], iSampler, uv), a);
 }
 

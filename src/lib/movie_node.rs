@@ -310,8 +310,12 @@ impl MovieNodeState {
                         .observe_property("video-params/h", Format::Int64, 0)
                         .unwrap();
 
-                    mpv.playlist_load_files(&[(&name, FileState::AppendPlay, None)])
-                        .unwrap();
+                    mpv.playlist_load_files(&[(
+                        &format!("library/{}", name),
+                        FileState::AppendPlay,
+                        None,
+                    )])
+                    .unwrap();
 
                     // The wakeup callback doesn't seem to work right, so we spawn a new thread
                     crossbeam::thread::scope(|s| {

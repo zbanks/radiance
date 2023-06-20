@@ -1027,9 +1027,23 @@ where
             // differentiating between Clicked and Dragged
             SelectionAction::Clicked | SelectionAction::Dragged => {
                 // Focus the tile
+                let old_focused_tile = mosaic_memory.focused;
                 mosaic_memory.focused = Some(tile_id);
 
                 match ui.input().modifiers {
+                    Modifiers { shift: true, .. } => {
+                        // Definitely insert the endpoints,
+                        // even if they are not related
+                        mosaic_memory.selected.insert(node_id);
+                        if let Some(old_focused_tile) = old_focused_tile {
+                            let old_node_id = old_focused_tile.node;
+                            mosaic_memory.selected.insert(old_node_id);
+                            // Insert all nodes "between" the focused node and this node
+                            // if they are part of the same connected component
+                            let nodes_between = props.graph.nodes_between(node_id, old_node_id);
+                            mosaic_memory.selected.extend(nodes_between);
+                        }
+                    }
                     Modifiers { ctrl: true, .. } => {
                         if mosaic_memory.selected.contains(&node_id) {
                             // Only allow removal from selection

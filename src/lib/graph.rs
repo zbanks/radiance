@@ -579,4 +579,38 @@ impl Graph {
             }
         }
     }
+
+    /// Return all nodes between the two given nodes
+    /// (e.g. for shift-select)
+    pub fn nodes_between(&self, a: NodeId, b: NodeId) -> HashSet<NodeId> {
+        let output_mapping = map_outputs(&self.nodes, &self.edges);
+
+        fn walk_dependents_of(
+            output_mapping: &HashMap<NodeId, HashSet<(NodeId, u32)>>,
+            dependents: &mut HashSet<NodeId>,
+            node: NodeId,
+        ) {
+            dependents.insert(node);
+
+            let outgoing_connections = output_mapping.get(&node).unwrap();
+            for &(next_node, _) in outgoing_connections.iter() {
+                walk_dependents_of(output_mapping, dependents, next_node);
+            }
+        }
+
+        let mut dependents_of_a = HashSet::<NodeId>::new();
+        walk_dependents_of(&output_mapping, &mut dependents_of_a, a);
+        let mut dependents_of_b = HashSet::<NodeId>::new();
+        walk_dependents_of(&output_mapping, &mut dependents_of_b, b);
+
+        if !dependents_of_a.contains(&b) && !dependents_of_b.contains(&a) {
+            // a and b are not related
+            return HashSet::<_>::new();
+        }
+
+        dependents_of_a
+            .symmetric_difference(&dependents_of_b)
+            .cloned()
+            .collect()
+    }
 }
