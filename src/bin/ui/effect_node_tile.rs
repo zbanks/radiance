@@ -82,7 +82,7 @@ impl<'a> EffectNodeTile<'a> {
                     .map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
 
                 frequency.as_mut().map(|frequency| {
-                    let frequencies: &[f32] = &[0.125, 0.25, 0.5, 1., 2., 4., 8.];
+                    let frequencies: &[f32] = &[0., 0.125, 0.25, 0.5, 1., 2., 4., 8.];
                     fn str_for_frequency(frequency: f32) -> String {
                         if frequency > 0. && frequency < 1. {
                             format!("1/{}", 1. / frequency)
