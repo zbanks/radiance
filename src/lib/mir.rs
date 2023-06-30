@@ -5,8 +5,6 @@ use std::sync::mpsc;
 use std::time;
 
 const MAX_TIME: f32 = 64.;
-// Anticipate beats by this many seconds
-const LATENCY_COMPENSATION: f32 = 0.10;
 
 const DEFAULT_BPM: f32 = 120.;
 
@@ -32,6 +30,7 @@ pub struct Mir {
     receiver: mpsc::Receiver<Update>,
     last_update: Update,
     pub global_timescale: f32,
+    pub latency_compensation: f32, // Anticipate beats by this many seconds
 }
 
 /// Updates sent over a queue
@@ -264,6 +263,7 @@ impl Mir {
                 spectrum: [0.; SPECTRUM_LENGTH],
             },
             global_timescale: 1.,
+            latency_compensation: 0.1,
         }
     }
 
@@ -282,12 +282,12 @@ impl Mir {
 
         let unscaled_time = self
             .last_update
-            .t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION))
+            .t(time::Instant::now() + time::Duration::from_secs_f32(self.latency_compensation))
             .rem_euclid(MAX_TIME);
 
         let time = (self
             .last_update
-            .t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION))
+            .t(time::Instant::now() + time::Duration::from_secs_f32(self.latency_compensation))
             * self.global_timescale)
             .rem_euclid(MAX_TIME);
 

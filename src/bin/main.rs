@@ -518,6 +518,14 @@ pub async fn run() {
                                             );
                                         }
                                     });
+                                ui.label("Latency compensation:");
+                                ui.add(
+                                    egui::DragValue::new(&mut mir.latency_compensation)
+                                        .speed(0.001)
+                                        .fixed_decimals(3)
+                                        .suffix("s")
+                                        .clamp_range(0. ..=1.),
+                                );
                             });
 
                             let mosaic_response = ui.add(mosaic(
