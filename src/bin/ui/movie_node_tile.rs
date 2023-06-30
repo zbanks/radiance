@@ -2,7 +2,7 @@ use egui::{
     pos2, vec2, Align, Color32, ComboBox, Layout, Rect, RichText, Shape, Slider, Spinner,
     TextureId, Ui,
 };
-use radiance::{MovieNodeFit, MovieNodeProps, MovieNodeState, MovieNodeStateReady};
+use radiance::{Fit, MovieNodeProps, MovieNodeState, MovieNodeStateReady};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
@@ -25,7 +25,7 @@ pub struct MovieNodeTile<'a> {
     pause: &'a mut Option<bool>,
     position: &'a mut Option<f64>,
     duration: Option<f64>,
-    fit: &'a mut Option<MovieNodeFit>,
+    fit: &'a mut Option<Fit>,
 }
 
 impl<'a> MovieNodeTile<'a> {
@@ -116,14 +116,14 @@ impl<'a> MovieNodeTile<'a> {
                 if let Some(fit) = fit {
                     ComboBox::from_id_source("fit")
                         .selected_text(match fit {
-                            MovieNodeFit::Crop => "Crop",
-                            MovieNodeFit::Shrink => "Shrink",
-                            MovieNodeFit::Zoom => "Zoom",
+                            Fit::Crop => "Crop",
+                            Fit::Shrink => "Shrink",
+                            Fit::Zoom => "Zoom",
                         })
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(fit, MovieNodeFit::Crop, "Crop");
-                            ui.selectable_value(fit, MovieNodeFit::Shrink, "Shrink");
-                            ui.selectable_value(fit, MovieNodeFit::Zoom, "Zoom");
+                            ui.selectable_value(fit, Fit::Crop, "Crop");
+                            ui.selectable_value(fit, Fit::Shrink, "Shrink");
+                            ui.selectable_value(fit, Fit::Zoom, "Zoom");
                         });
                 }
 

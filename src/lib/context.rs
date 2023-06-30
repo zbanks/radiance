@@ -7,6 +7,7 @@ use crate::render_target::{RenderTarget, RenderTargetId};
 use crate::screen_output_node::ScreenOutputNodeState;
 use crate::{AudioLevels, Graph, NodeId, NodeProps, Props};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
@@ -33,6 +34,36 @@ impl ArcTextureViewSampler {
             texture: Arc::new(texture),
             view: Arc::new(view),
             sampler: Arc::new(sampler),
+        }
+    }
+}
+
+/// An enum describing how media fits to a screen with a different aspect ratio
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Fit {
+    Crop,
+    Shrink,
+    Zoom,
+}
+
+impl Fit {
+    /// This zoom factor eliminates top / bottom black bars
+    /// on videos that are recorded in 21:9 aspect
+    /// and letterboxed to 16:9
+    pub const ZOOM_FACTOR: f32 = 16. / 21.;
+
+    /// Returns the necessary scale factor to paint media of the given size onto a canvas of the
+    /// given size (using the given mode)
+    pub fn factor(&self, media_size: (f32, f32), canvas_size: (f32, f32)) -> (f32, f32) {
+        let (media_width, media_height) = media_size;
+        let (canvas_width, canvas_height) = canvas_size;
+        let factor_fit_x = media_height * canvas_width / media_width / canvas_height;
+        let factor_fit_y = media_width * canvas_height / media_height / canvas_width;
+
+        match &self {
+            Self::Shrink => (factor_fit_x.max(1.), factor_fit_y.max(1.)),
+            Self::Zoom => (factor_fit_x * Self::ZOOM_FACTOR, Self::ZOOM_FACTOR),
+            Self::Crop => (factor_fit_x.min(1.), factor_fit_y.min(1.)),
         }
     }
 }

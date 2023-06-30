@@ -1,4 +1,4 @@
-use crate::context::{ArcTextureViewSampler, Context, RenderTargetState};
+use crate::context::{ArcTextureViewSampler, Context, Fit, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
 use image::GenericImageView;
@@ -12,7 +12,7 @@ const SHADER_SOURCE: &str = include_str!("image_shader.wgsl");
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ImageNodeProps {
     pub name: String,
-    pub intensity: Option<f32>,
+    pub fit: Option<Fit>,
 }
 
 impl From<&ImageNodeProps> for CommonNodeProps {
@@ -33,7 +33,11 @@ pub enum ImageNodeState {
 pub struct ImageNodeStateReady {
     // Cached props
     name: String,
-    intensity: f32,
+    fit: Fit,
+
+    // Derived from file
+    image_width: u32,
+    image_height: u32,
 
     // GPU resources
     image_texture: ArcTextureViewSampler,
@@ -53,7 +57,7 @@ struct ImageNodePaintState {
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniforms {
-    intensity: f32,
+    factor: [f32; 2],
     _padding: [u8; 4],
 }
 
@@ -66,9 +70,6 @@ impl ImageNodeState {
     ) -> Result<ImageNodeStateReady, String> {
         let name = &props.name;
 
-        // Default to 0 intensity if none given
-        let intensity = props.intensity.unwrap_or(0.);
-
         // Image
         let image_name = format!("library/{name}");
         let image_data = ctx
@@ -77,9 +78,10 @@ impl ImageNodeState {
 
         let image_obj = image::load_from_memory(&image_data).unwrap();
         let image_rgba = image_obj.to_rgba8();
+        let (image_width, image_height) = image_obj.dimensions();
         let image_size = wgpu::Extent3d {
-            width: image_obj.dimensions().0,
-            height: image_obj.dimensions().1,
+            width: image_width,
+            height: image_height,
             depth_or_array_layers: 1,
         };
 
@@ -148,8 +150,8 @@ impl ImageNodeState {
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     entries: &[
                         wgpu::BindGroupLayoutEntry {
-                            binding: 0, // UpdateUniforms
-                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            binding: 0, // Uniforms
+                            visibility: wgpu::ShaderStages::VERTEX,
                             ty: wgpu::BindingType::Buffer {
                                 ty: wgpu::BufferBindingType::Uniform,
                                 has_dynamic_offset: false,
@@ -254,7 +256,9 @@ impl ImageNodeState {
 
         Ok(ImageNodeStateReady {
             name: name.clone(),
-            intensity,
+            fit: Fit::Shrink,
+            image_width,
+            image_height,
             image_texture,
             bind_group_layout,
             uniform_buffer,
@@ -346,10 +350,9 @@ impl ImageNodeState {
                     );
                     return;
                 }
-                match props.intensity {
-                    Some(intensity) => {
-                        // Cache the intensity for when paint() is called
-                        self_ready.intensity = intensity;
+                match &props.fit {
+                    Some(fit) => {
+                        self_ready.fit = fit.clone();
                     }
                     _ => {}
                 }
@@ -374,10 +377,24 @@ impl ImageNodeState {
             ImageNodeState::Ready(self_ready) => {
                 let paint_state = self_ready.paint_states.get_mut(&render_target_id).expect("Call to paint() with a render target ID unknown to the node (did you call update() first?)");
 
+                let render_target_state = ctx
+                    .render_target_state(render_target_id)
+                    .expect("Call to paint() with a render target ID unknown to the context");
+
+                let media_size = (
+                    self_ready.image_width as f32,
+                    self_ready.image_height as f32,
+                );
+                let canvas_size = (
+                    render_target_state.width() as f32,
+                    render_target_state.height() as f32,
+                );
+                let (factor_fit_x, factor_fit_y) = self_ready.fit.factor(media_size, canvas_size);
+
                 // Populate the uniforms
                 {
                     let uniforms = Uniforms {
-                        intensity: self_ready.intensity,
+                        factor: [factor_fit_x, factor_fit_y],
                         ..Default::default()
                     };
                     ctx.queue().write_buffer(
@@ -449,6 +466,6 @@ impl ImageNodeState {
 impl ImageNodeStateReady {
     fn update_props(&self, props: &mut ImageNodeProps) {
         props.name.clone_from(&self.name);
-        props.intensity = Some(self.intensity);
+        props.fit = Some(self.fit.clone());
     }
 }

@@ -1170,12 +1170,6 @@ where
                                 Some((intensity + intensity_delta).clamp(0., 1.));
                         }
                     }
-                    NodeProps::ImageNode(node_props) => {
-                        if let Some(intensity) = node_props.intensity {
-                            node_props.intensity =
-                                Some((intensity + intensity_delta).clamp(0., 1.));
-                        }
-                    }
                     _ => {}
                 }
             }

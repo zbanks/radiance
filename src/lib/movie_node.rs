@@ -1,4 +1,4 @@
-use crate::context::{ArcTextureViewSampler, Context, RenderTargetState};
+use crate::context::{ArcTextureViewSampler, Context, Fit, RenderTargetState};
 use crate::render_target::RenderTargetId;
 use crate::CommonNodeProps;
 use libmpv::{
@@ -15,12 +15,7 @@ use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
 
-const SHADER_SOURCE: &str = include_str!("movie_shader.wgsl");
-
-// This zoom factor eliminates top / bottom black bars
-// on videos that are recorded in 21:9 aspect
-// and letterboxed to 16:9
-const ZOOM_FACTOR: f32 = 16. / 21.;
+const SHADER_SOURCE: &str = include_str!("image_shader.wgsl");
 
 fn get_proc_address(
     ctx: &(Arc<surfman::Device>, Arc<surfman::Context>),
@@ -37,7 +32,7 @@ pub struct MovieNodeProps {
     pub mute: Option<bool>,
     pub pause: Option<bool>,
     pub position: Option<f64>,
-    pub fit: Option<MovieNodeFit>,
+    pub fit: Option<Fit>,
 }
 
 impl From<&MovieNodeProps> for CommonNodeProps {
@@ -46,13 +41,6 @@ impl From<&MovieNodeProps> for CommonNodeProps {
             input_count: Some(1),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum MovieNodeFit {
-    Crop,
-    Shrink,
-    Zoom,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -91,7 +79,7 @@ pub struct MovieNodeStateReady {
     name: String,
     mute: bool,
     pause: bool,
-    fit: MovieNodeFit,
+    fit: Fit,
 
     // GPU resources
     frame_texture: ArcTextureViewSampler,
@@ -580,7 +568,7 @@ impl MovieNodeState {
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     entries: &[
                         wgpu::BindGroupLayoutEntry {
-                            binding: 0, // UpdateUniforms
+                            binding: 0, // Uniforms
                             visibility: wgpu::ShaderStages::VERTEX,
                             ty: wgpu::BindingType::Buffer {
                                 ty: wgpu::BufferBindingType::Uniform,
@@ -688,7 +676,7 @@ impl MovieNodeState {
             name: name.clone(),
             mute: true,
             pause: false,
-            fit: MovieNodeFit::Crop,
+            fit: Fit::Crop,
             frame_texture: initial_frame_texture,
             frame_width: 1,
             frame_height: 1,
@@ -876,19 +864,16 @@ impl MovieNodeState {
                     .render_target_state(render_target_id)
                     .expect("Call to paint() with a render target ID unknown to the context");
 
-                let paint_width = render_target_state.width() as f32;
-                let paint_height = render_target_state.height() as f32;
-                let frame_width = self_ready.frame_width as f32;
-                let frame_height = self_ready.frame_height as f32;
-
-                let factor_fit_x = frame_height * paint_width / frame_width / paint_height;
-                let factor_fit_y = frame_width * paint_height / frame_height / paint_width;
-
-                let (factor_fit_x, factor_fit_y) = match self_ready.fit {
-                    MovieNodeFit::Shrink => (factor_fit_x.max(1.), factor_fit_y.max(1.)),
-                    MovieNodeFit::Zoom => (factor_fit_x * ZOOM_FACTOR, ZOOM_FACTOR),
-                    MovieNodeFit::Crop => (factor_fit_x.min(1.), factor_fit_y.min(1.)),
-                };
+                let media_size = (
+                    self_ready.frame_width as f32,
+                    self_ready.frame_height as f32,
+                );
+                let canvas_size = (
+                    render_target_state.width() as f32,
+                    render_target_state.height() as f32,
+                );
+                let (factor_fit_x, factor_fit_y) = self_ready.fit.factor(media_size, canvas_size);
+                let factor_fit_y = -factor_fit_y; // MPV writes frames that are vertically mirrored
 
                 // Populate the uniforms
                 {

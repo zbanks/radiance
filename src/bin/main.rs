@@ -21,8 +21,9 @@ use std::iter;
 use std::sync::Arc;
 
 use radiance::{
-    AutoDJ, Context, EffectNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId, NodeProps,
-    ProjectionMappedOutputNodeProps, Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps,
+    AutoDJ, Context, EffectNodeProps, ImageNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId,
+    NodeProps, ProjectionMappedOutputNodeProps, Props, RenderTarget, RenderTargetId,
+    ScreenOutputNodeProps,
 };
 
 mod ui;
@@ -539,11 +540,22 @@ pub async fn run() {
                                             || node_add_textedit_str.ends_with(".mp4")
                                             || node_add_textedit_str.ends_with(".mkv")
                                             || node_add_textedit_str.ends_with(".avi")
-                                            || node_add_textedit_str.ends_with(".gif")
                                         {
                                             let new_node_id = NodeId::gen();
                                             let new_node_props =
                                                 NodeProps::MovieNode(MovieNodeProps {
+                                                    name: node_add_textedit.clone(),
+                                                    ..Default::default()
+                                                });
+                                            props.node_props.insert(new_node_id, new_node_props);
+                                            props.graph.insert_node(new_node_id, &insertion_point);
+                                        } else if node_add_textedit_str.ends_with(".png")
+                                            || node_add_textedit_str.starts_with(".jpg")
+                                            || node_add_textedit_str.ends_with(".gif")
+                                        {
+                                            let new_node_id = NodeId::gen();
+                                            let new_node_props =
+                                                NodeProps::ImageNode(ImageNodeProps {
                                                     name: node_add_textedit.clone(),
                                                     ..Default::default()
                                                 });

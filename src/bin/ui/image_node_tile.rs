@@ -1,5 +1,5 @@
-use egui::{vec2, Align, Layout, RichText, Slider, TextureId, Ui};
-use radiance::{ImageNodeProps, ImageNodeState};
+use egui::{vec2, Align, ComboBox, Layout, RichText, TextureId, Ui};
+use radiance::{Fit, ImageNodeProps, ImageNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
@@ -8,7 +8,7 @@ const NORMAL_WIDTH: f32 = 120.;
 pub struct ImageNodeTile<'a> {
     title: RichText,
     preview_image: TextureId,
-    intensity: &'a mut Option<f32>, // TODO turn this Option into a more holistic enum based on ImageNodeState
+    fit: &'a mut Option<Fit>,
 }
 
 impl<'a> ImageNodeTile<'a> {
@@ -35,7 +35,7 @@ impl<'a> ImageNodeTile<'a> {
         ImageNodeTile {
             title: (&props.name).into(),
             preview_image,
-            intensity: &mut props.intensity,
+            fit: &mut props.fit,
         }
     }
 
@@ -44,17 +44,28 @@ impl<'a> ImageNodeTile<'a> {
         let ImageNodeTile {
             title,
             preview_image,
-            intensity,
+            fit,
         } = self;
         ui.heading(title);
         // Preserve aspect ratio
         ui.with_layout(
             Layout::bottom_up(Align::Center).with_cross_justify(true),
             |ui| {
-                ui.spacing_mut().slider_width = ui.available_width();
-                intensity
-                    .as_mut()
-                    .map(|intensity| ui.add(Slider::new(intensity, 0.0..=1.0).show_value(false)));
+                if let Some(fit) = fit {
+                    ComboBox::from_id_source("fit")
+                        .selected_text(match fit {
+                            Fit::Crop => "Crop",
+                            Fit::Shrink => "Shrink",
+                            Fit::Zoom => "Zoom",
+                        })
+                        .width(ui.available_size().x)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(fit, Fit::Crop, "Crop");
+                            ui.selectable_value(fit, Fit::Shrink, "Shrink");
+                            ui.selectable_value(fit, Fit::Zoom, "Zoom");
+                        });
+                }
+
                 ui.centered_and_justified(|ui| {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
