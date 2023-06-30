@@ -6,7 +6,7 @@ use std::time;
 
 const MAX_TIME: f32 = 64.;
 // Anticipate beats by this many seconds
-const LATENCY_COMPENSATION: f32 = 0.07;
+const LATENCY_COMPENSATION: f32 = 0.10;
 
 const DEFAULT_BPM: f32 = 120.;
 
@@ -68,9 +68,12 @@ impl Update {
 /// containing real-time information about the audio.
 #[derive(Clone, Debug)]
 pub struct MusicInfo {
-    pub time: f32,               // time in beats
-    pub uncompensated_time: f32, // time in beats, without latency compensation (so it aligns with reported audio levels)
-    pub tempo: f32,              // beats per second
+    pub time: f32,          // time in beats
+    pub unscaled_time: f32, // time in beats, without the global timescale applied
+    // (for widgets that shouldn't be affected by global
+    // timescale)
+    pub uncompensated_unscaled_time: f32, // time in beats, without the global timescale or latency compensation (so it aligns with reported audio levels)
+    pub tempo: f32,                       // beats per second
     pub audio: AudioLevels,
     pub spectrum: [f32; SPECTRUM_LENGTH],
 }
@@ -272,8 +275,15 @@ impl Mir {
         }
 
         // Compute t
-        let uncompensated_time =
-            (self.last_update.t(time::Instant::now()) * self.global_timescale).rem_euclid(MAX_TIME);
+        let uncompensated_unscaled_time = self
+            .last_update
+            .t(time::Instant::now())
+            .rem_euclid(MAX_TIME);
+
+        let unscaled_time = self
+            .last_update
+            .t(time::Instant::now() + time::Duration::from_secs_f32(LATENCY_COMPENSATION))
+            .rem_euclid(MAX_TIME);
 
         let time = (self
             .last_update
@@ -283,7 +293,8 @@ impl Mir {
 
         MusicInfo {
             time,
-            uncompensated_time,
+            unscaled_time,
+            uncompensated_unscaled_time,
             tempo: self.last_update.tempo * self.global_timescale,
             audio: self.last_update.audio.clone(),
             spectrum: self.last_update.spectrum.clone(),

@@ -32,7 +32,6 @@ pub struct WaveformWidget {
 struct Uniforms {
     resolution: [f32; 2], // in pixels
     size: [f32; 2],       // in points
-    _padding: [u8; 8],
 }
 
 #[repr(C)]

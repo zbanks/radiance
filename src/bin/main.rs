@@ -28,7 +28,7 @@ use radiance::{
 
 mod ui;
 use ui::{modal, modal_shown, mosaic};
-use ui::{SpectrumWidget, WaveformWidget};
+use ui::{BeatWidget, SpectrumWidget, WaveformWidget};
 
 mod winit_output;
 use winit_output::WinitOutput;
@@ -171,6 +171,7 @@ pub async fn run() {
     // Make widgets
     let mut waveform_widget = WaveformWidget::new(device.clone(), queue.clone(), pixels_per_point);
     let mut spectrum_widget = SpectrumWidget::new(device.clone(), queue.clone(), pixels_per_point);
+    let mut beat_widget = BeatWidget::new(device.clone(), queue.clone(), pixels_per_point);
 
     // Make an AutoDJ
     let mut auto_dj_1: Option<AutoDJ> = None;
@@ -336,6 +337,7 @@ pub async fn run() {
 
     let mut waveform_texture: Option<egui::TextureId> = None;
     let mut spectrum_texture: Option<egui::TextureId> = None;
+    let mut beat_texture: Option<egui::TextureId> = None;
 
     let mut autosave_timer: usize = 0;
 
@@ -438,7 +440,7 @@ pub async fn run() {
                 let waveform_native_texture = waveform_widget.paint(
                     waveform_size,
                     &music_info.audio,
-                    music_info.uncompensated_time,
+                    music_info.uncompensated_unscaled_time,
                 );
 
                 update_or_register_native_texture(
@@ -457,6 +459,16 @@ pub async fn run() {
                     &device,
                     &spectrum_native_texture.view,
                     &mut spectrum_texture,
+                );
+
+                let beat_size = egui::vec2(65., 65.);
+                let beat_native_texture = beat_widget.paint(beat_size, music_info.unscaled_time);
+
+                update_or_register_native_texture(
+                    &mut egui_renderer,
+                    &device,
+                    &beat_native_texture.view,
+                    &mut beat_texture,
                 );
 
                 // EGUI update
@@ -478,6 +490,7 @@ pub async fn run() {
                             ui.horizontal(|ui| {
                                 ui.image(waveform_texture.unwrap(), waveform_size);
                                 ui.image(spectrum_texture.unwrap(), spectrum_size);
+                                ui.image(beat_texture.unwrap(), beat_size);
                                 ui.checkbox(&mut auto_dj_1_enabled, "Auto DJ 1");
                                 ui.checkbox(&mut auto_dj_2_enabled, "Auto DJ 2");
 
