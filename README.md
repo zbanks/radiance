@@ -2,6 +2,22 @@ NOTES FOR THIS FORK
 ===================
 This fork is an attempt to revive this project. `qthelper.hpp` has been added under `src/` from [mpv-examples](https://github.com/mpv-player/mpv-examples/blob/bd0b42e5bd47c22592760a244f80e49ec0222892/libmpv/common/qthelper.hpp) which is covered under GPL-2.0, LGPL-2.1 licenses.
 
+Running with Docker
+-------------------
+
+The aim of this dockerfile is to build and run Radiance through docker alone. For that reason, since we will be running an X window through docker, you probably will have to first `docker` to `xhost` with:
+
+```$ xhost +local:docker```
+
+After that, you can simply run:
+```
+$ docker-compose build
+$ docker-compose run
+```
+
+and Radiance will run. 
+
+> Note: There still are some issues with stability which need work.
 
 Radiance
 ========
