@@ -1,3 +1,8 @@
+NOTES FOR THIS FORK
+===================
+This fork is an attempt to revive this project. `qthelper.hpp` has been added under `src/` from [mpv-examples](https://github.com/mpv-player/mpv-examples/blob/bd0b42e5bd47c22592760a244f80e49ec0222892/libmpv/common/qthelper.hpp) which is covered under GPL-2.0, LGPL-2.1 licenses.
+
+
 Radiance
 ========
 

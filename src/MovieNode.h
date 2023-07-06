@@ -9,7 +9,7 @@
 #include <QOpenGLShaderProgram>
 #include <mpv/client.h>
 #include <mpv/opengl_cb.h>
-#include <mpv/qthelper.hpp>
+#include "qthelper.hpp"
 #include <vector>
 #include <array>
 
