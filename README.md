@@ -11,6 +11,9 @@ The aim of this dockerfile is to build and run Radiance through docker alone. Fo
 
 After that, you can simply run:
 ```
+$ git clone https://github.com/iakovts/radiance
+$ git checkout dockerfile_supp
+$ git submodule update --init
 $ docker-compose build
 $ docker-compose run
 ```
