@@ -4,7 +4,7 @@ This fork is an attempt to revive this project. `qthelper.hpp` has been added un
 
 Running with Docker
 -------------------
-
+> NOTE: This dockerfile have only been verified to work under ubuntu 22.04 with an nvidia gpu (with non-free drivers) and `nvidia-container-toolkit` package installed. This should be probably change.
 The aim of this dockerfile is to build and run Radiance through docker alone. For that reason, since we will be running an X window through docker, you probably will have to first `docker` to `xhost` with:
 
 ```$ xhost +local:docker```
