@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  app:
+    image: rad_lib2
+    build: .
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_DEBUG_PLUGINS=1
+      - QT_QPA_PLATFORM=xcb
+      - QT_QPA_PLATFORM_PLUGIN_PATH=/opt/qt59/plugins
+      - QT_PLUGIN_PATH=/opt/qt59/plugins
+      - XDG_SESSION_TYPE=x11
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/root/.Xauthority
+    network_mode: "host"
