@@ -9,9 +9,6 @@ edition = "2021"
 license-file = "LICENSE"
 default-run = "radiance"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-
 [lib]
 name = "radiance"
 path = "src/lib/mod.rs"
@@ -20,9 +17,9 @@ path = "src/lib/mod.rs"
 name = "radiance"
 path = "src/bin/main.rs"
 
-[[bin]]
+[[bench]]
 name = "beat_tracking_test"
-path = "src/bin/beat_tracking_test.rs"
+harness = false
 
 [dependencies]
 env_logger = "0.9"

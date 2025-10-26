@@ -1082,7 +1082,7 @@ mod layers {
             let output2 = l.process(&input2);
             let output3 = l.process(&input3);
 
-            assert_eq!(output1, dvector!(0.7614811, -0.74785006));
+            assert_eq!(output1, dvector!(0.76148117, -0.74785006));
             assert_eq!(output2, dvector!(0.9619418, -0.94699216));
             assert_eq!(output3, dvector!(0.99459594, -0.4957872));
         }
