@@ -1,4 +1,4 @@
-use egui::{vec2, Color32, Rect, Response, Sense, Ui, Widget};
+use eframe::egui::{vec2, Color32, Rect, Response, Sense, Ui, Widget};
 
 const FILL_ACTIVE: Color32 = Color32::from_rgba_premultiplied(102, 0, 170, 200);
 const DROP_TARGET_SIZE: f32 = 30.;

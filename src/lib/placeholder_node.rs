@@ -18,15 +18,29 @@ impl From<&PlaceholderNodeProps> for CommonNodeProps {
 pub struct PlaceholderNodeState {}
 
 impl PlaceholderNodeState {
-    pub fn new(_ctx: &Context, _props: &PlaceholderNodeProps) -> Self {
+    pub fn new(
+        _ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _props: &PlaceholderNodeProps,
+    ) -> Self {
         Self {}
     }
 
-    pub fn update(&mut self, _ctx: &Context, _props: &mut PlaceholderNodeProps) {}
+    pub fn update(
+        &mut self,
+        _ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _props: &mut PlaceholderNodeProps,
+    ) {
+    }
 
     pub fn paint(
         &mut self,
         ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
         _encoder: &mut wgpu::CommandEncoder,
         _render_target_id: RenderTargetId,
         inputs: &[Option<ArcTextureViewSampler>],

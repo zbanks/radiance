@@ -1,5 +1,5 @@
 use crate::ui::{set_modal, ModalMemory, TileId};
-use egui::{vec2, Align, Checkbox, Id, Layout, TextureId, Ui};
+use eframe::egui::{vec2, Align, Checkbox, Id, Layout, TextureId, Ui};
 use radiance::{
     AvailableOutputScreen, ProjectionMappedOutputNodeProps, ProjectionMappedOutputNodeState,
 };
@@ -53,7 +53,7 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
         let ProjectionMappedOutputNodeTile {
             preview_image,
             visible,
-            available_screens,
+            available_screens: _available_screens,
             modal_id,
             tile_id,
         } = self;
@@ -77,7 +77,7 @@ impl<'a> ProjectionMappedOutputNodeTile<'a> {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
                         * vec2(1., PREVIEW_ASPECT_RATIO);
-                    ui.image(preview_image, image_size);
+                    ui.image((preview_image, image_size));
                 });
             },
         );

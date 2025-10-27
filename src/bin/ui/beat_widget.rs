@@ -1,12 +1,9 @@
-use egui::Vec2;
+use eframe::egui::Vec2;
 use radiance::ArcTextureViewSampler;
 use std::iter;
-use std::sync::Arc;
 
 pub struct BeatWidget {
     // Constructor arguments:
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
     pixels_per_point: f32,
 
     // Internal state:
@@ -47,6 +44,7 @@ impl BeatWidget {
                 | wgpu::TextureUsages::RENDER_ATTACHMENT
                 | wgpu::TextureUsages::TEXTURE_BINDING,
             label: None,
+            view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
         };
 
         let texture = device.create_texture(&texture_desc);
@@ -64,7 +62,7 @@ impl BeatWidget {
         ArcTextureViewSampler::new(texture, view, sampler)
     }
 
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, pixels_per_point: f32) -> Self {
+    pub fn new(device: &wgpu::Device, pixels_per_point: f32) -> Self {
         let width = 1;
         let height = 1;
         let texture = Self::make_texture(&device, width, height);
@@ -117,17 +115,19 @@ impl BeatWidget {
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader_module,
-                entry_point: "vs_main",
+                entry_point: Some("vs_main"),
                 buffers: &[],
+                compilation_options: Default::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader_module,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: wgpu::TextureFormat::Rgba8Unorm,
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: Default::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -145,11 +145,10 @@ impl BeatWidget {
                 alpha_to_coverage_enabled: false,
             },
             multiview: None,
+            cache: None,
         });
 
         Self {
-            device,
-            queue,
             pixels_per_point,
 
             width,
@@ -162,14 +161,20 @@ impl BeatWidget {
         }
     }
 
-    pub fn paint(&mut self, size: Vec2, beat: f32) -> ArcTextureViewSampler {
+    pub fn paint(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        size: Vec2,
+        beat: f32,
+    ) -> ArcTextureViewSampler {
         // Possibly remake the texture if the size has changed
         let width = (size.x * self.pixels_per_point) as u32;
         let height = (size.y * self.pixels_per_point) as u32;
         if width != self.width || height != self.height {
             self.width = width;
             self.height = height;
-            self.texture = Self::make_texture(&self.device, width, height);
+            self.texture = Self::make_texture(&device, width, height);
         }
 
         // Populate the uniforms
@@ -180,14 +185,11 @@ impl BeatWidget {
             ..Default::default()
         };
 
-        self.queue
-            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Beat widget encoder"),
-            });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Beat widget encoder"),
+        });
         // Record output render pass.
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -202,10 +204,13 @@ impl BeatWidget {
                             b: 0.,
                             a: 0.,
                         }),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
+                    depth_slice: None,
                 })],
                 depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
@@ -214,7 +219,7 @@ impl BeatWidget {
         }
 
         // Submit the commands.
-        self.queue.submit(iter::once(encoder.finish()));
+        queue.submit(iter::once(encoder.finish()));
 
         self.texture.clone()
     }

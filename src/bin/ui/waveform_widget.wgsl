@@ -58,19 +58,19 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let oneYPoint = 1. / global.size.y;
 
     let audio = textureSample(iWaveformTex, iSampler, 1. - vertex.uv.x);
-    let beat = textureSample(iBeatTex, iSampler, 1. - vertex.uv.x).x;
+    let beat1 = textureSample(iBeatTex, iSampler, 1. - vertex.uv.x).x;
 
-    let wfDist = audio - abs(vertex.uv.y - 0.5) * 2.;
-    let wfDist = wfDist + vec4<f32>(0., 0., 0., oneYPoint * 2.);
-    let wf = smoothstep(vec4<f32>(0.), vec4<f32>(oneYPixel), wfDist);
+    let wfDist1 = audio - abs(vertex.uv.y - 0.5) * 2.;
+    let wfDist2 = wfDist1 + vec4<f32>(0., 0., 0., oneYPoint * 2.);
+    let wf = smoothstep(vec4<f32>(0.), vec4<f32>(oneYPixel), wfDist2);
 
-    let beat = beat * max(max(wf.x, wf.y), wf.z);
+    let beat2 = beat1 * max(max(wf.x, wf.y), wf.z);
 
-    let c = levelColor * wf.w;
-    let c = composite(c, lowColor * wf.x);
-    let c = composite(c, midColor * wf.y);
-    let c = composite(c, highColor * wf.z);
-    let c = composite(c, vec4(0., 0., 0., 0.5 * beat));
+    let c1 = levelColor * wf.w;
+    let c2 = composite(c1, lowColor * wf.x);
+    let c3 = composite(c2, midColor * wf.y);
+    let c4 = composite(c3, highColor * wf.z);
+    let c5 = composite(c4, vec4(0., 0., 0., 0.5 * beat2));
 
-    return c;
+    return c5;
 }

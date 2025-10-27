@@ -1,3 +1,5 @@
+#![cfg(any())] // TODO
+
 /// This module handles radiance output through winit
 /// (e.g. actually displaying ScreenOutputNode to a screen)
 use egui_winit::winit;
@@ -66,11 +68,6 @@ fn cross(a: Vector2<f32>, b: Vector2<f32>) -> f32 {
 
 #[derive(Debug)]
 pub struct WinitOutput<'a> {
-    instance: Arc<wgpu::Instance>,
-    adapter: Arc<wgpu::Adapter>,
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-
     screen_output_shader_module: wgpu::ShaderModule,
     screen_output_bind_group_layout: wgpu::BindGroupLayout,
     screen_output_render_pipeline_layout: wgpu::PipelineLayout,
@@ -673,17 +670,19 @@ impl WinitOutput<'_> {
                 layout: Some(&self.screen_output_render_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &self.screen_output_shader_module,
-                    entry_point: "vs_main",
+                    entry_point: Some("vs_main"),
                     buffers: &[],
+                    compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &self.screen_output_shader_module,
-                    entry_point: "fs_main",
+                    entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: config.format,
                         blend: Some(wgpu::BlendState::REPLACE),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
+                    compilation_options: Default::default(),
                 }),
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -701,6 +700,7 @@ impl WinitOutput<'_> {
                     alpha_to_coverage_enabled: false,
                 },
                 multiview: None,
+                cache: None,
             });
 
         let render_target_id = radiance::RenderTargetId::gen();
@@ -750,17 +750,19 @@ impl WinitOutput<'_> {
                 layout: Some(&self.projection_mapped_output_render_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &self.projection_mapped_output_shader_module,
-                    entry_point: "vs_main",
+                    entry_point: Some("vs_main"),
                     buffers: &[self.projection_mapped_output_vertex_buffer_layout.clone()],
+                    compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &self.projection_mapped_output_shader_module,
-                    entry_point: "fs_main",
+                    entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: config.format,
                         blend: Some(wgpu::BlendState::REPLACE),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
+                    compilation_options: Default::default(),
                 }),
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleList,
@@ -778,6 +780,7 @@ impl WinitOutput<'_> {
                     alpha_to_coverage_enabled: false,
                 },
                 multiview: None,
+                cache: None,
             });
 
         let uniform_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -896,11 +899,14 @@ impl WinitOutput<'_> {
                                                         b: 0.,
                                                         a: 0.,
                                                     }),
-                                                    store: true,
+                                                    store: wgpu::StoreOp::Store,
                                                 },
+                                                depth_slice: None,
                                             },
                                         )],
                                         depth_stencil_attachment: None,
+                                        timestamp_writes: None,
+                                        occlusion_query_set: None,
                                     });
 
                                 render_pass.set_pipeline(&screen_output.render_pipeline);
@@ -1049,11 +1055,14 @@ impl WinitOutput<'_> {
                                                             b: 0.,
                                                             a: 0.,
                                                         }),
-                                                        store: true,
+                                                        store: wgpu::StoreOp::Store,
                                                     },
+                                                    depth_slice: None,
                                                 },
                                             )],
                                             depth_stencil_attachment: None,
+                                            timestamp_writes: None,
+                                            occlusion_query_set: None,
                                         });
 
                                     render_pass.set_pipeline(&single_output.render_pipeline);

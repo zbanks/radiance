@@ -1,6 +1,6 @@
-use egui::{
+use eframe::egui::{
     pos2, vec2, Align, Color32, Id, InnerResponse, Layout, Mesh, Pos2, Rect, Sense, Shape, Stroke,
-    TextureId, Ui, Vec2,
+    TextureId, Ui, UiBuilder, Vec2,
 };
 use radiance::NodeId;
 use std::cmp::Ordering;
@@ -198,10 +198,11 @@ impl Tile {
         let response = ui.interact(rect, self.ui_id(), Sense::click_and_drag());
         self.paint(ui);
 
-        let mut content_ui = ui.child_ui_with_id_source(
-            rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)),
-            Layout::top_down(Align::Center),
-            self.ui_id(),
+        let mut content_ui = ui.new_child(
+            UiBuilder::default()
+                .max_rect(rect.shrink2(vec2(MARGIN_HORIZONTAL, MARGIN_VERTICAL)))
+                .layout(Layout::top_down(Align::Center))
+                .id_salt(self.ui_id()),
         );
         let inner = add_contents(&mut content_ui);
         InnerResponse::new(inner, response)

@@ -1,6 +1,6 @@
-use egui::{
+use eframe::egui::{
     pos2, vec2, Align, Color32, ComboBox, Layout, Rect, RichText, Shape, Slider, Spinner,
-    TextureId, Ui,
+    TextureId, Ui, UiBuilder,
 };
 use radiance::{Fit, MovieNodeProps, MovieNodeState, MovieNodeStateReady};
 
@@ -114,7 +114,7 @@ impl<'a> MovieNodeTile<'a> {
                 });
 
                 if let Some(fit) = fit {
-                    ComboBox::from_id_source("fit")
+                    ComboBox::from_id_salt("fit")
                         .selected_text(match fit {
                             Fit::Crop => "Crop",
                             Fit::Shrink => "Shrink",
@@ -139,7 +139,7 @@ impl<'a> MovieNodeTile<'a> {
                         MovieNodeTileState::Error => {
                             // Show scrim and ! icon if node is in an error state
                             ui.painter().add(Shape::rect_filled(image_rect, 0., SCRIM));
-                            ui.allocate_ui_at_rect(image_rect, |ui| {
+                            ui.scope_builder(UiBuilder::default().max_rect(image_rect), |ui| {
                                 ui.centered_and_justified(|ui| {
                                     ui.label(
                                         RichText::new("!").color(ICON).size(0.9 * image_size.y),
@@ -150,7 +150,7 @@ impl<'a> MovieNodeTile<'a> {
                         MovieNodeTileState::Initializing => {
                             // Show scrim and spinner if node is loading
                             ui.painter().add(Shape::rect_filled(image_rect, 0., SCRIM));
-                            ui.allocate_ui_at_rect(image_rect, |ui| {
+                            ui.scope_builder(UiBuilder::default().max_rect(image_rect), |ui| {
                                 ui.centered_and_justified(|ui| {
                                     ui.add(Spinner::new().size(0.5 * image_size.y).color(ICON));
                                 });

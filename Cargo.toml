@@ -24,7 +24,7 @@ harness = false
 [dependencies]
 env_logger = "0.9"
 log = "0.4"
-wgpu = "0.14"
+wgpu = "27.0.1"
 pollster = "0.2"
 rand = "0.8"
 bytemuck = { version = "1.10", features = [ "derive" ] }
@@ -35,9 +35,12 @@ nalgebra = { version = "0.31.0", features = [ "serde-serialize" ] }
 rustfft = "6.0"
 itertools = "0.10"
 cpal = "0.14"
-egui = "0.19"
-egui-wgpu = "0.19"
-egui-winit = "0.19"
+eframe = { version = "0.33.0", default-features = false, features = [
+    "default_fonts",
+    "wgpu",
+    "wayland",
+    "x11",
+] }
 derive_more = "0.99"
 image = "0.24"
 
@@ -64,7 +67,7 @@ wav = "1.0"
 [profile.dev]
 opt-level = 1
 
-[patch.crates-io]
-egui = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
-egui-wgpu = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
-egui-winit = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
+#[patch.crates-io]
+#egui = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
+#egui-wgpu = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
+#egui-winit = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }

@@ -52,16 +52,16 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     let ballColorTop = vec4<f32>(0.667, 0., 1., 1.);
     let floorColor = vec4<f32>(0.667, 0.667, 0.667, 1.);
 
-    let height = 1. - pow(abs(2. * (fract(global.beat) - 0.5)), 2.);
-    let height = height * (1. - 0.4 * (1. - step(3., global.beat % 4.)));
-    let ballLoc = vec2<f32>(0.5, 0.8 - 0.6 * height);
+    let height1 = 1. - pow(abs(2. * (fract(global.beat) - 0.5)), 2.);
+    let height2 = height1 * (1. - 0.4 * (1. - step(3., global.beat % 4.)));
+    let ballLoc = vec2<f32>(0.5, 0.8 - 0.6 * height2);
     let ballColor = mix(ballColorBottom, ballColorTop, clamp(10. * (ballLoc.y - vertex.uv.y), 0., 1.));
     let ball = 1. - smoothstep(0.08, 0.09, length(vertex.uv - ballLoc));
     let ballOutline = 1. - smoothstep(0.09, 0.1, length(vertex.uv - ballLoc));
     let floorBox = box((vertex.uv - vec2(0.2, 0.9)) / vec2(0.6, 0.05));
 
-    let fragColor = floorBox * floorColor;
-    let fragColor = composite(fragColor, ballOutline * ballOutlineColor);
-    let fragColor = composite(fragColor, ball * ballColor);
-    return fragColor;
+    let fragColor1 = floorBox * floorColor;
+    let fragColor2 = composite(fragColor1, ballOutline * ballOutlineColor);
+    let fragColor3 = composite(fragColor2, ball * ballColor);
+    return fragColor3;
 }

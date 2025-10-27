@@ -85,8 +85,6 @@ impl Fit {
 /// the `Context` will drop their state.
 pub struct Context {
     // Graphics resources
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
     blank_texture: ArcTextureViewSampler,
 
     // Cached props from the last update()
@@ -138,20 +136,21 @@ impl Context {
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             label: Some("blank texture"),
+            view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
         });
 
         queue.write_texture(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             &[0, 0, 0, 0],
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4),
-                rows_per_image: std::num::NonZeroU32::new(1),
+                bytes_per_row: Some(4),
+                rows_per_image: Some(1),
             },
             texture_size,
         );
@@ -189,6 +188,7 @@ impl Context {
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             label: Some("noise texture"),
+            view_formats: &[wgpu::TextureFormat::Rgba8Unorm],
         });
 
         let random_bytes: Vec<u8> = (0..width * height * 4)
@@ -196,17 +196,17 @@ impl Context {
             .collect();
 
         queue.write_texture(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             &random_bytes,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4 * width),
-                rows_per_image: std::num::NonZeroU32::new(height),
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
             },
             texture_size,
         );
@@ -229,11 +229,9 @@ impl Context {
     /// dt is the expected period (in seconds) with which update() will be called.
     /// This is distinct from the period at which paint() may be called,
     /// and the period for that is set in the render target.
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> Self {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
         let blank_texture = Self::create_blank_texture(&device, &queue);
         Self {
-            device,
-            queue,
             blank_texture,
             time: 0.,
             dt: 0.,
@@ -245,64 +243,90 @@ impl Context {
         }
     }
 
-    fn new_render_target_state(&self, render_target: &RenderTarget) -> RenderTargetState {
+    fn new_render_target_state(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        render_target: &RenderTarget,
+    ) -> RenderTargetState {
         RenderTargetState {
             width: render_target.width(),
             height: render_target.height(),
             dt: render_target.dt(),
             noise_texture: Self::create_noise_texture(
-                &self.device,
-                &self.queue,
+                device,
+                queue,
                 render_target.width(),
                 render_target.height(),
             ),
         }
     }
 
-    fn new_node_state(&self, node_props: &NodeProps) -> NodeState {
+    fn new_node_state(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        node_props: &NodeProps,
+    ) -> NodeState {
         match node_props {
             NodeProps::EffectNode(props) => {
-                NodeState::EffectNode(EffectNodeState::new(self, props))
+                NodeState::EffectNode(EffectNodeState::new(self, device, queue, props))
             }
             NodeProps::ScreenOutputNode(props) => {
-                NodeState::ScreenOutputNode(ScreenOutputNodeState::new(self, props))
+                NodeState::ScreenOutputNode(ScreenOutputNodeState::new(self, device, queue, props))
             }
-            NodeProps::ImageNode(props) => NodeState::ImageNode(ImageNodeState::new(self, props)),
+            NodeProps::ImageNode(props) => {
+                NodeState::ImageNode(ImageNodeState::new(self, device, queue, props))
+            }
             NodeProps::PlaceholderNode(props) => {
-                NodeState::PlaceholderNode(PlaceholderNodeState::new(self, props))
+                NodeState::PlaceholderNode(PlaceholderNodeState::new(self, device, queue, props))
             }
-            NodeProps::MovieNode(props) => NodeState::MovieNode(MovieNodeState::new(self, props)),
+            NodeProps::MovieNode(props) => {
+                NodeState::MovieNode(MovieNodeState::new(self, device, queue, props))
+            }
             NodeProps::ProjectionMappedOutputNode(props) => NodeState::ProjectionMappedOutputNode(
-                ProjectionMappedOutputNodeState::new(self, props),
+                ProjectionMappedOutputNodeState::new(self, device, queue, props),
             ),
         }
     }
 
-    fn update_node(&mut self, node_id: NodeId, node_props: &mut NodeProps) {
+    fn update_node(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        node_id: NodeId,
+        node_props: &mut NodeProps,
+    ) {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         match node_state {
             NodeState::EffectNode(ref mut state) => match node_props {
-                NodeProps::EffectNode(ref mut props) => state.update(self, props),
+                NodeProps::EffectNode(ref mut props) => state.update(self, device, queue, props),
                 _ => panic!("Type mismatch between props and state"),
             },
             NodeState::ScreenOutputNode(ref mut state) => match node_props {
-                NodeProps::ScreenOutputNode(ref mut props) => state.update(self, props),
+                NodeProps::ScreenOutputNode(ref mut props) => {
+                    state.update(self, device, queue, props)
+                }
                 _ => panic!("Type mismatch between props and state"),
             },
             NodeState::ImageNode(ref mut state) => match node_props {
-                NodeProps::ImageNode(ref mut props) => state.update(self, props),
+                NodeProps::ImageNode(ref mut props) => state.update(self, device, queue, props),
                 _ => panic!("Type mismatch between props and state"),
             },
             NodeState::PlaceholderNode(ref mut state) => match node_props {
-                NodeProps::PlaceholderNode(ref mut props) => state.update(self, props),
+                NodeProps::PlaceholderNode(ref mut props) => {
+                    state.update(self, device, queue, props)
+                }
                 _ => panic!("Type mismatch between props and state"),
             },
             NodeState::MovieNode(ref mut state) => match node_props {
-                NodeProps::MovieNode(ref mut props) => state.update(self, props),
+                NodeProps::MovieNode(ref mut props) => state.update(self, device, queue, props),
                 _ => panic!("Type mismatch between props and state"),
             },
             NodeState::ProjectionMappedOutputNode(ref mut state) => match node_props {
-                NodeProps::ProjectionMappedOutputNode(ref mut props) => state.update(self, props),
+                NodeProps::ProjectionMappedOutputNode(ref mut props) => {
+                    state.update(self, device, queue, props)
+                }
                 _ => panic!("Type mismatch between props and state"),
             },
         };
@@ -311,6 +335,8 @@ impl Context {
 
     fn paint_node(
         &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         node_id: NodeId,
         render_target_id: RenderTargetId,
@@ -318,24 +344,54 @@ impl Context {
     ) -> ArcTextureViewSampler {
         let mut node_state = self.node_states.remove(&node_id).unwrap();
         let result = match node_state {
-            NodeState::EffectNode(ref mut state) => {
-                state.paint(self, encoder, render_target_id, input_textures)
-            }
-            NodeState::ScreenOutputNode(ref mut state) => {
-                state.paint(self, encoder, render_target_id, input_textures)
-            }
-            NodeState::ImageNode(ref mut state) => {
-                state.paint(self, encoder, render_target_id, input_textures)
-            }
-            NodeState::PlaceholderNode(ref mut state) => {
-                state.paint(self, encoder, render_target_id, input_textures)
-            }
-            NodeState::MovieNode(ref mut state) => {
-                state.paint(self, encoder, render_target_id, input_textures)
-            }
-            NodeState::ProjectionMappedOutputNode(ref mut state) => {
-                state.paint(self, encoder, render_target_id, input_textures)
-            }
+            NodeState::EffectNode(ref mut state) => state.paint(
+                self,
+                device,
+                queue,
+                encoder,
+                render_target_id,
+                input_textures,
+            ),
+            NodeState::ScreenOutputNode(ref mut state) => state.paint(
+                self,
+                device,
+                queue,
+                encoder,
+                render_target_id,
+                input_textures,
+            ),
+            NodeState::ImageNode(ref mut state) => state.paint(
+                self,
+                device,
+                queue,
+                encoder,
+                render_target_id,
+                input_textures,
+            ),
+            NodeState::PlaceholderNode(ref mut state) => state.paint(
+                self,
+                device,
+                queue,
+                encoder,
+                render_target_id,
+                input_textures,
+            ),
+            NodeState::MovieNode(ref mut state) => state.paint(
+                self,
+                device,
+                queue,
+                encoder,
+                render_target_id,
+                input_textures,
+            ),
+            NodeState::ProjectionMappedOutputNode(ref mut state) => state.paint(
+                self,
+                device,
+                queue,
+                encoder,
+                render_target_id,
+                input_textures,
+            ),
         };
         self.node_states.insert(node_id, node_state);
         result
@@ -355,6 +411,8 @@ impl Context {
     /// (or replaced entirely.)
     pub fn update(
         &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         props: &mut Props,
         render_targets: &HashMap<RenderTargetId, RenderTarget>,
     ) {
@@ -395,7 +453,7 @@ impl Context {
             {
                 self.render_target_states.insert(
                     *check_render_target_id,
-                    self.new_render_target_state(render_target),
+                    self.new_render_target_state(device, queue, render_target),
                 );
             }
         }
@@ -404,7 +462,11 @@ impl Context {
             if !self.node_states.contains_key(check_node_id) {
                 self.node_states.insert(
                     *check_node_id,
-                    self.new_node_state(props.node_props.get(check_node_id).unwrap()),
+                    self.new_node_state(
+                        device,
+                        queue,
+                        props.node_props.get(check_node_id).unwrap(),
+                    ),
                 );
             }
         }
@@ -413,7 +475,7 @@ impl Context {
         let nodes: Vec<NodeId> = props.graph.nodes.clone();
         for update_node_id in nodes.iter() {
             let node_props = props.node_props.get_mut(update_node_id).unwrap();
-            self.update_node(*update_node_id, node_props);
+            self.update_node(device, queue, *update_node_id, node_props);
         }
     }
 
@@ -426,6 +488,8 @@ impl Context {
     /// (the render target resolution is just a hint, and nodes may return what they please.)
     pub fn paint(
         &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         render_target_id: RenderTargetId,
     ) -> HashMap<NodeId, ArcTextureViewSampler> {
@@ -440,23 +504,19 @@ impl Context {
                 .map(|maybe_id| maybe_id.as_ref().map(|id| result.get(id).unwrap().clone()))
                 .collect();
 
-            let output_texture =
-                self.paint_node(encoder, *paint_node_id, render_target_id, &input_textures);
+            let output_texture = self.paint_node(
+                device,
+                queue,
+                encoder,
+                *paint_node_id,
+                render_target_id,
+                &input_textures,
+            );
 
             result.insert(*paint_node_id, output_texture);
         }
 
         result
-    }
-
-    /// Get the WGPU device associated with this context
-    pub fn device(&self) -> &Arc<wgpu::Device> {
-        &self.device
-    }
-
-    /// Get the WGPU queue associated with this context
-    pub fn queue(&self) -> &Arc<wgpu::Queue> {
-        &self.queue
     }
 
     /// Get a blank (transparent) texture

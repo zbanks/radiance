@@ -60,7 +60,7 @@ fn fs_main(vertex: VertexOutput) -> @location(0) vec4<f32> {
     //let h = h * smoothstep(0., smoothEdge, freq) - smoothstep(1. - smoothEdge, 1., freq);
     let d = (vertex.uv.y - (1. - h)); // TODO this 1 - h is weird
     let c = mix(spectrumColorTop, spectrumColorBottom, clamp(d * 5., 0., 1.)) * step(0., d);
-    let c = composite(c, spectrumColorOutline * (smoothstep(-oneYPoint - oneYPixel, -oneYPoint, d) - smoothstep(0., oneYPixel, d) ));
+    let c2 = composite(c, spectrumColorOutline * (smoothstep(-oneYPoint - oneYPixel, -oneYPoint, d) - smoothstep(0., oneYPixel, d) ));
 
     return c;
 }

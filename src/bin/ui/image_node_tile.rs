@@ -1,4 +1,4 @@
-use egui::{vec2, Align, ComboBox, Layout, RichText, TextureId, Ui};
+use eframe::egui::{vec2, Align, ComboBox, Layout, RichText, TextureId, Ui};
 use radiance::{Fit, ImageNodeProps, ImageNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
@@ -52,7 +52,7 @@ impl<'a> ImageNodeTile<'a> {
             Layout::bottom_up(Align::Center).with_cross_justify(true),
             |ui| {
                 if let Some(fit) = fit {
-                    ComboBox::from_id_source("fit")
+                    ComboBox::from_id_salt("fit")
                         .selected_text(match fit {
                             Fit::Crop => "Crop",
                             Fit::Shrink => "Shrink",
@@ -70,7 +70,7 @@ impl<'a> ImageNodeTile<'a> {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
                         * vec2(1., PREVIEW_ASPECT_RATIO);
-                    ui.image(preview_image, image_size);
+                    ui.image((preview_image, image_size));
                 });
             },
         );

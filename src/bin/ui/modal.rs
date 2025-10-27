@@ -1,6 +1,6 @@
-use egui::{
-    pos2, vec2, Align, Color32, Context, Id, Layout, Rect, Response, Sense, Shape, Stroke,
-    TextureId, Ui, Vec2, Widget,
+use eframe::egui::{
+    pos2, vec2, Align, Color32, ComboBox, Context, Id, Layout, Rect, Response, Sense, Shape,
+    Stroke, StrokeKind, TextureId, Ui, UiBuilder, Vec2, Widget,
 };
 use nalgebra::{Matrix3, SMatrix, SVector, Vector2, Vector3};
 use radiance::{NodeId, NodeProps, NodeState, Props};
@@ -42,17 +42,18 @@ pub struct ModalProjectionMapEditorMemory {
 }
 
 pub fn modal_shown(ctx: &Context, id: Id) -> bool {
-    ctx.memory()
-        .data
-        .get_temp_mut_or_default::<Arc<Mutex<Option<ModalMemory>>>>(id)
-        .clone()
-        .lock()
-        .unwrap()
-        .is_some()
+    ctx.memory_mut(|m| {
+        m.data
+            .get_temp_mut_or_default::<Arc<Mutex<Option<ModalMemory>>>>(id)
+            .clone()
+            .lock()
+            .unwrap()
+            .is_some()
+    })
 }
 
 pub fn set_modal(ctx: &Context, id: Id, mm: Option<ModalMemory>) {
-    ctx.memory().data.insert_temp(id, Arc::new(Mutex::new(mm)));
+    ctx.memory_mut(|m| m.data.insert_temp(id, Arc::new(Mutex::new(mm))));
 }
 
 /// Extend a pair of triangles with a fourth point to make them a parallelograms
@@ -117,17 +118,16 @@ pub fn modal_ui(
     ui: &mut Ui,
     id: Id,
     props: &mut Props,
-    node_states: &HashMap<NodeId, NodeState>,
+    _node_states: &HashMap<NodeId, NodeState>,
     preview_images: &HashMap<NodeId, TextureId>,
 ) -> Response {
     // Load state from memory
 
-    let modal_memory = ui
-        .ctx()
-        .memory()
-        .data
-        .get_temp_mut_or_default::<Arc<Mutex<Option<ModalMemory>>>>(id)
-        .clone();
+    let modal_memory = ui.ctx().memory_mut(|m| {
+        m.data
+            .get_temp_mut_or_default::<Arc<Mutex<Option<ModalMemory>>>>(id)
+            .clone()
+    });
 
     let mut modal_memory = modal_memory.lock().unwrap();
 
@@ -135,11 +135,16 @@ pub fn modal_ui(
     let scrim_rect = available.shrink(SCRIM_MARGIN);
     let scrim = Shape::rect_filled(scrim_rect, 0., SCRIM_FILL_COLOR);
     ui.painter().add(scrim);
-    let scrim_border = Shape::rect_stroke(scrim_rect, 0., SCRIM_STROKE);
+    let scrim_border = Shape::rect_stroke(scrim_rect, 0., SCRIM_STROKE, StrokeKind::Inside);
     ui.painter().add(scrim_border);
     let ui_rect = scrim_rect.shrink(SCRIM_PADDING);
 
-    let mut ui = ui.child_ui_with_id_source(ui_rect, Layout::top_down(Align::Center), "modal");
+    let mut ui = ui.new_child(
+        UiBuilder::new()
+            .max_rect(ui_rect)
+            .layout(Layout::top_down(Align::Center))
+            .id_salt("modal"),
+    );
     match modal_memory
         .as_ref()
         .expect("Tried to display modal but nothing currently shown")
@@ -150,19 +155,18 @@ pub fn modal_ui(
             {
                 let preview_image = preview_images.get(node_id).unwrap().clone();
 
-                let projection_map_editor_memory = ui
-                    .ctx()
-                    .memory()
-                    .data
-                    .get_temp_mut_or_default::<Arc<Mutex<ModalProjectionMapEditorMemory>>>(Id::new(
-                        ("projection map editor modal", node_id),
-                    ))
-                    .clone();
+                let projection_map_editor_memory = ui.ctx().memory_mut(|m| {
+                    m.data
+                        .get_temp_mut_or_default::<Arc<Mutex<ModalProjectionMapEditorMemory>>>(
+                            Id::new(("projection map editor modal", node_id)),
+                        )
+                        .clone()
+                });
 
                 let mut projection_map_editor_memory = projection_map_editor_memory.lock().unwrap();
 
                 ui.heading("Projection Map Editor");
-                egui::ComboBox::from_id_source(0)
+                ComboBox::from_id_salt(0)
                     .selected_text(
                         props
                             .screens
@@ -199,10 +203,13 @@ pub fn modal_ui(
 
                         // Left side UI (virtual view)
                         {
-                            let mut ui = ui.child_ui_with_id_source(
-                                left,
-                                Layout::top_down(Align::Center).with_cross_justify(true),
-                                "virtual",
+                            let mut ui = ui.new_child(
+                                UiBuilder::default()
+                                    .max_rect(left)
+                                    .layout(
+                                        Layout::top_down(Align::Center).with_cross_justify(true),
+                                    )
+                                    .id_salt("virtual"),
                             );
                             ui.heading("Virtual:");
 
@@ -311,6 +318,7 @@ pub fn modal_ui(
                                         } else {
                                             EDITOR_STROKE_BLURRED
                                         },
+                                        StrokeKind::Inside,
                                     );
                                     let last_uv = screen.crop
                                         [if j > 0 { j - 1 } else { screen.crop.len() - 1 }];
@@ -384,15 +392,23 @@ pub fn modal_ui(
                             }
 
                             // Draw the outline
-                            ui.painter().rect_stroke(left, 0., EDITOR_OUTLINE_STROKE);
+                            ui.painter().rect_stroke(
+                                left,
+                                0.,
+                                EDITOR_OUTLINE_STROKE,
+                                StrokeKind::Inside,
+                            );
                         }
 
                         // Right side UI (physical view)
                         {
-                            let mut ui = ui.child_ui_with_id_source(
-                                right,
-                                Layout::top_down(Align::Center).with_cross_justify(true),
-                                "physical",
+                            let mut ui = ui.new_child(
+                                UiBuilder::default()
+                                    .max_rect(right)
+                                    .layout(
+                                        Layout::top_down(Align::Center).with_cross_justify(true),
+                                    )
+                                    .id_salt("physical"),
                             );
                             ui.heading("Physical:");
 
@@ -477,8 +493,12 @@ pub fn modal_ui(
                                     );
                                 }
 
-                                ui.painter()
-                                    .rect_stroke(handle_rect, 0., EDITOR_STROKE_SELECTED);
+                                ui.painter().rect_stroke(
+                                    handle_rect,
+                                    0.,
+                                    EDITOR_STROKE_SELECTED,
+                                    StrokeKind::Inside,
+                                );
                                 let last_uv =
                                     screen.crop[if i > 0 { i - 1 } else { screen.crop.len() - 1 }];
                                 let last_pt = physical_uv_to_pt(last_uv);
@@ -523,7 +543,12 @@ pub fn modal_ui(
                             }
 
                             // Draw the outline
-                            ui.painter().rect_stroke(right, 0., EDITOR_OUTLINE_STROKE);
+                            ui.painter().rect_stroke(
+                                right,
+                                0.,
+                                EDITOR_OUTLINE_STROKE,
+                                StrokeKind::Inside,
+                            );
                         }
                     },
                 );
@@ -534,15 +559,7 @@ pub fn modal_ui(
         }
     }
 
-    return ui.interact(
-        Rect::NOTHING,
-        id,
-        Sense {
-            click: false,
-            drag: false,
-            focusable: false,
-        },
-    );
+    return ui.interact(Rect::NOTHING, id, Sense::empty());
 }
 
 pub fn modal<'a>(

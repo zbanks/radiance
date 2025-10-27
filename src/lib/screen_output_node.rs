@@ -37,15 +37,29 @@ impl From<&ScreenOutputNodeProps> for CommonNodeProps {
 pub struct ScreenOutputNodeState {}
 
 impl ScreenOutputNodeState {
-    pub fn new(_ctx: &Context, _props: &ScreenOutputNodeProps) -> Self {
+    pub fn new(
+        _ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _props: &ScreenOutputNodeProps,
+    ) -> Self {
         Self {}
     }
 
-    pub fn update(&mut self, _ctx: &Context, _props: &mut ScreenOutputNodeProps) {}
+    pub fn update(
+        &mut self,
+        _ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _props: &mut ScreenOutputNodeProps,
+    ) {
+    }
 
     pub fn paint(
         &mut self,
         ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
         _encoder: &mut wgpu::CommandEncoder,
         _render_target_id: RenderTargetId,
         inputs: &[Option<ArcTextureViewSampler>],

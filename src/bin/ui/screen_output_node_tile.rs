@@ -1,4 +1,4 @@
-use egui::{vec2, Align, Checkbox, Layout, TextureId, Ui};
+use eframe::egui::{vec2, Align, Checkbox, ComboBox, Layout, TextureId, Ui};
 use radiance::{
     AvailableOutputScreen, ScreenOutputNodeProps, ScreenOutputNodeState, SelectedOutputScreen,
 };
@@ -84,7 +84,7 @@ impl<'a> ScreenOutputNodeTile<'a> {
 
                 let format_rez = |rez: &[u32; 2]| format!("{}x{}", rez[0], rez[1]);
 
-                egui::ComboBox::from_id_source(1)
+                ComboBox::from_id_salt(1)
                     .selected_text(format_rez(&screen_resolution))
                     .show_ui(ui, |ui| {
                         for available_resolution in available_resolutions.iter() {
@@ -95,7 +95,7 @@ impl<'a> ScreenOutputNodeTile<'a> {
                             );
                         }
                     });
-                egui::ComboBox::from_id_source(0)
+                ComboBox::from_id_salt(0)
                     .selected_text(screen_name.as_str())
                     .show_ui(ui, |ui| {
                         for available_screen in available_screens.iter() {
@@ -118,7 +118,7 @@ impl<'a> ScreenOutputNodeTile<'a> {
                     let image_size = ui.available_size();
                     let image_size = (image_size * vec2(1., 1. / PREVIEW_ASPECT_RATIO)).min_elem()
                         * vec2(1., PREVIEW_ASPECT_RATIO);
-                    ui.image(preview_image, image_size);
+                    ui.image((preview_image, image_size));
                 });
             },
         );

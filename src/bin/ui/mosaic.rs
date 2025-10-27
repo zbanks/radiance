@@ -8,9 +8,9 @@ use crate::ui::placeholder_node_tile::PlaceholderNodeTile;
 use crate::ui::projection_mapped_output_node_tile::ProjectionMappedOutputNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
 use crate::ui::tile::{Tile, TileId};
-use egui::{
-    pos2, vec2, Id, IdMap, InnerResponse, InputState, Modifiers, Pos2, Rect, Response, Sense,
-    TextureId, Ui, Vec2, Widget,
+use eframe::egui::{
+    pos2, vec2, Id, IdMap, InnerResponse, Key, Modifiers, Pos2, Rect, Response, Sense, TextureId,
+    Ui, Vec2, Widget,
 };
 use radiance::{CommonNodeProps, Graph, InsertionPoint, NodeId, NodeProps, NodeState, Props};
 use std::collections::{HashMap, HashSet};
@@ -618,7 +618,13 @@ fn scalar_easing(time_since_toggle: f32, from_scalar: f32, to_scalar: f32) -> f3
 }
 
 impl MosaicAnimationManager {
-    pub fn animate_tile(&mut self, input: &InputState, tile: Tile, dragging: bool) -> Tile {
+    pub fn animate_tile(
+        &mut self,
+        time: f64,
+        predicted_dt: f32,
+        tile: Tile,
+        dragging: bool,
+    ) -> Tile {
         match self.tiles.get_mut(&tile.ui_id()) {
             None => {
                 self.tiles.insert(
@@ -650,41 +656,38 @@ impl MosaicAnimationManager {
                     anim.to_z = tile.z();
                 }
 
-                let time_since_toggle_rect =
-                    (input.time - anim.toggle_time_rect) as f32 + input.predicted_dt;
+                let time_since_toggle_rect = (time - anim.toggle_time_rect) as f32 + predicted_dt;
                 let current_rect =
                     rect_easing(time_since_toggle_rect, anim.from_rect, anim.to_rect);
                 let time_since_toggle_offset =
-                    (input.time - anim.toggle_time_offset) as f32 + input.predicted_dt;
+                    (time - anim.toggle_time_offset) as f32 + predicted_dt;
                 let current_offset =
                     vec_easing(time_since_toggle_offset, anim.from_offset, anim.to_offset);
-                let time_since_toggle_z =
-                    (input.time - anim.toggle_time_z) as f32 + input.predicted_dt;
+                let time_since_toggle_z = (time - anim.toggle_time_z) as f32 + predicted_dt;
                 let current_z = scalar_easing(time_since_toggle_z, anim.from_z, anim.to_z);
-                let time_since_toggle_alpha =
-                    (input.time - anim.toggle_time_alpha) as f32 + input.predicted_dt;
+                let time_since_toggle_alpha = (time - anim.toggle_time_alpha) as f32 + predicted_dt;
                 let current_alpha =
                     scalar_easing(time_since_toggle_alpha, anim.from_alpha, anim.to_alpha);
 
                 if anim.to_rect != tile.rect() {
                     anim.from_rect = current_rect;
                     anim.to_rect = tile.rect();
-                    anim.toggle_time_rect = input.time;
+                    anim.toggle_time_rect = time;
                 }
                 if anim.to_offset != tile.offset() {
                     anim.from_offset = current_offset;
                     anim.to_offset = tile.offset();
-                    anim.toggle_time_offset = input.time;
+                    anim.toggle_time_offset = time;
                 }
                 if anim.to_z != tile.z() {
                     anim.from_z = current_z;
                     anim.to_z = tile.z();
-                    anim.toggle_time_z = input.time;
+                    anim.toggle_time_z = time;
                 }
                 if anim.to_alpha != tile.alpha() {
                     anim.from_alpha = current_alpha;
                     anim.to_alpha = tile.alpha();
-                    anim.toggle_time_alpha = input.time;
+                    anim.toggle_time_alpha = time;
                 }
 
                 tile.with_rect(current_rect)
@@ -695,7 +698,7 @@ impl MosaicAnimationManager {
         }
     }
 
-    pub fn retain_tiles(&mut self, tile_ids: &HashSet<egui::Id>) {
+    pub fn retain_tiles(&mut self, tile_ids: &HashSet<Id>) {
         self.tiles.retain(|id, _| tile_ids.contains(id));
     }
 }
@@ -750,12 +753,11 @@ where
 
     // Load state from memory
 
-    let mosaic_memory = ui
-        .ctx()
-        .memory()
-        .data
-        .get_temp_mut_or_default::<Arc<Mutex<MosaicMemory>>>(mosaic_id)
-        .clone();
+    let mosaic_memory = ui.ctx().memory_mut(|m| {
+        m.data
+            .get_temp_mut_or_default::<Arc<Mutex<MosaicMemory>>>(mosaic_id)
+            .clone()
+    });
 
     let mut mosaic_memory = mosaic_memory.lock().unwrap();
 
@@ -809,14 +811,13 @@ where
         drop_targets,
         ..
     } = &mosaic_memory.layout_cache.as_ref().unwrap();
-    let layout_size = *layout_size;
     let tiles = tiles.to_vec();
     let drop_targets = drop_targets.to_vec();
 
     let mosaic_rect = ui.available_rect_before_wrap();
     let mosaic_response = ui.allocate_rect(mosaic_rect, Sense::click());
     let scrollarea_offset =
-        (mosaic_rect.min - Pos2::ZERO) + 0.5 * (mosaic_rect.size() - layout_size);
+        (mosaic_rect.min - Pos2::ZERO) + 0.5 * (mosaic_rect.size() - *layout_size);
 
     // Apply focus, selection, drag, and animation
 
@@ -896,10 +897,13 @@ where
                     .with_lifted(dragging)
                     .with_default_alpha()
                     .with_default_z();
-                let tile =
-                    mosaic_memory
-                        .animation_manager
-                        .animate_tile(&ui.input(), tile, dragging);
+                let (time, predicted_dt) = ui.input(|i| (i.time, i.predicted_dt));
+                let tile = mosaic_memory.animation_manager.animate_tile(
+                    time,
+                    predicted_dt,
+                    tile,
+                    dragging,
+                );
                 tile
             },
         )
@@ -984,7 +988,7 @@ where
             mosaic_response.request_focus();
         }
 
-        if response.drag_released() && mosaic_memory.drag.is_some() {
+        if response.drag_stopped() && mosaic_memory.drag.is_some() {
             drag_situation = DragSituation::Released;
         }
 
@@ -1030,7 +1034,7 @@ where
                 let old_focused_tile = mosaic_memory.focused;
                 mosaic_memory.focused = Some(tile_id);
 
-                match ui.input().modifiers {
+                ui.input(|i| match i.modifiers {
                     Modifiers { shift: true, .. } => {
                         // Definitely insert the endpoints,
                         // even if they are not related
@@ -1066,7 +1070,7 @@ where
                             mosaic_memory.selected.insert(node_id);
                         }
                     }
-                }
+                });
             }
             SelectionAction::None => {}
         }
@@ -1101,8 +1105,12 @@ where
                 start_tiles, tree, ..
             } = &mosaic_memory.layout_cache.as_ref().unwrap();
 
-            let contingent =
-                selected_connected_component(&tile_id, &mosaic_memory.selected, start_tiles, tree);
+            let contingent = selected_connected_component(
+                &tile_id,
+                &mosaic_memory.selected,
+                &start_tiles,
+                &tree,
+            );
             mosaic_memory.drag = Some(DragMemory {
                 target: tile_id,
                 contingent,
@@ -1143,7 +1151,7 @@ where
 
         // No tile is focused
         mosaic_memory.focused = None;
-        match ui.input().modifiers {
+        ui.input(|i| match i.modifiers {
             Modifiers { ctrl: true, .. } => {
                 // Do nothing if Ctrl-click
             }
@@ -1151,7 +1159,7 @@ where
                 // Deselect all tiles for normal click
                 mosaic_memory.selected.clear();
             }
-        }
+        });
 
         // Drop tiles if they are lifted
         mosaic_memory.drag = None;
@@ -1160,7 +1168,7 @@ where
     // Graph interactions
     if mosaic_response.has_focus() {
         // Handle scroll wheel
-        let intensity_delta = ui.input().scroll_delta.y * INTENSITY_SCROLL_RATE;
+        let intensity_delta = ui.input(|i| i.smooth_scroll_delta.y) * INTENSITY_SCROLL_RATE;
         if intensity_delta != 0. {
             for node in mosaic_memory.selected.iter() {
                 match props.node_props.get_mut(node).unwrap() {
@@ -1176,12 +1184,12 @@ where
         }
 
         // Handle delete key
-        if ui.input().key_pressed(egui::Key::Delete) {
+        if ui.input(|i| i.key_pressed(Key::Delete)) {
             props.graph.delete_nodes(&mosaic_memory.selected);
         }
 
         // Handle R key (reload)
-        if ui.input().key_pressed(egui::Key::R) {
+        if ui.input(|i| i.key_pressed(Key::R)) {
             // Reload selected nodes
             mosaic_memory.selected = mosaic_memory
                 .selected

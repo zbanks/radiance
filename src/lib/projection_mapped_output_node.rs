@@ -45,15 +45,29 @@ impl From<&ProjectionMappedOutputNodeProps> for CommonNodeProps {
 pub struct ProjectionMappedOutputNodeState {}
 
 impl ProjectionMappedOutputNodeState {
-    pub fn new(_ctx: &Context, _props: &ProjectionMappedOutputNodeProps) -> Self {
+    pub fn new(
+        _ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _props: &ProjectionMappedOutputNodeProps,
+    ) -> Self {
         Self {}
     }
 
-    pub fn update(&mut self, _ctx: &Context, _props: &mut ProjectionMappedOutputNodeProps) {}
+    pub fn update(
+        &mut self,
+        _ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _props: &mut ProjectionMappedOutputNodeProps,
+    ) {
+    }
 
     pub fn paint(
         &mut self,
         ctx: &Context,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
         _encoder: &mut wgpu::CommandEncoder,
         _render_target_id: RenderTargetId,
         inputs: &[Option<ArcTextureViewSampler>],
