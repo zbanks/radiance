@@ -6,7 +6,7 @@ use radiance::{EffectNodeProps, EffectNodeState};
 
 const PREVIEW_ASPECT_RATIO: f32 = 1.;
 const NORMAL_HEIGHT: f32 = 200.;
-const NORMAL_WIDTH: f32 = 120.;
+const NORMAL_WIDTH: f32 = 150.;
 
 const SCRIM: Color32 = Color32::from_rgba_premultiplied(144, 144, 144, 230);
 const ICON: Color32 = Color32::from_rgb(102, 0, 170);
@@ -38,7 +38,7 @@ impl<'a> EffectNodeTile<'a> {
 
     /// Calculates the width of the tile, given its height.
     pub fn width_for_height(_props: &EffectNodeProps, height: f32) -> f32 {
-        NORMAL_WIDTH.min(0.5 * height)
+        NORMAL_WIDTH.min(0.6 * height)
     }
 
     /// Creates a new visual tile
@@ -92,6 +92,7 @@ impl<'a> EffectNodeTile<'a> {
                         }
                     }
                     ComboBox::from_id_salt("frequency")
+                        .width(ui.available_width())
                         .selected_text(format!("f={}", str_for_frequency(*frequency)).as_str())
                         .show_ui(ui, |ui| {
                             for &option in frequencies.iter() {

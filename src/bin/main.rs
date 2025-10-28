@@ -176,6 +176,14 @@ impl App {
         let egui_wgpu::RenderState { device, queue, .. } = cc.wgpu_render_state.as_ref().unwrap();
         let pixels_per_point = cc.egui_ctx.pixels_per_point();
 
+        // Style
+
+        cc.egui_ctx.set_theme(egui::Theme::Dark);
+        cc.egui_ctx.style_mut(|style| {
+            style.interaction.selectable_labels = false;
+            style.visuals.handle_shape = egui::style::HandleShape::Circle;
+        });
+
         // RADIANCE, WOO
 
         // Make a Mir

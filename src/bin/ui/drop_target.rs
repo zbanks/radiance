@@ -39,9 +39,9 @@ impl DropTarget {
 
 impl Widget for DropTarget {
     fn ui(self, ui: &mut Ui) -> Response {
-        let response = ui.allocate_rect(self.rect, Sense::hover());
+        let response = ui.allocate_rect(self.rect, Sense::empty());
 
-        if response.hovered() {
+        if response.contains_pointer() {
             self.paint(ui);
         }
 

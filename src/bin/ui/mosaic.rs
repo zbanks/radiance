@@ -996,7 +996,7 @@ where
         enum SelectionAction {
             None,    // Do not select this tile
             Clicked, // Act as if this tile was clicked (e.g. deselect it if Ctrl is held)
-            Dragged, // Act as if this file was clicked, but ensure that it ends up selected
+            Dragged, // Act as if this tile was clicked, but ensure that it ends up selected
         }
 
         let mut selection_action = SelectionAction::None;
@@ -1093,7 +1093,7 @@ where
             }
 
             let response = ui.add(drop_target.drop_target);
-            if response.hovered() {
+            if response.contains_pointer() {
                 hovered_insertion_point = Some(drop_target.insertion_point);
             }
         }
