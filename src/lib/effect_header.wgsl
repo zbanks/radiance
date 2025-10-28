@@ -23,16 +23,16 @@ struct Uniforms {
 @group(0) @binding(0)
 var<uniform> global: Uniforms;
 
-@group(0) @binding(1)
+@group(1) @binding(0)
 var iSampler: sampler;
 
-@group(0) @binding(2)
+@group(1) @binding(1)
 var iInputsTex: binding_array<texture_2d<f32>>;
 
-@group(0) @binding(3)
+@group(1) @binding(2)
 var iNoiseTex: texture_2d<f32>;
 
-@group(0) @binding(4)
+@group(1) @binding(3)
 var iChannelsTex: binding_array<texture_2d<f32>>;
 
 var<private> iAudio: vec4<f32>;
@@ -53,7 +53,7 @@ var<private> iAudioMid: f32;
 var<private> iAudioHi: f32;
 var<private> iAudioLevel: f32;
 
-let pi: f32 = 3.1415926535897932384626433832795;
+const pi: f32 = 3.1415926535897932384626433832795;
 
 fn modulo(x: f32, y: f32) -> f32 {
     return x - y * floor(x / y);
@@ -126,9 +126,9 @@ fn composite(under: vec4<f32>, over: vec4<f32>) -> vec4<f32> {
 
 // Sawtooth wave
 fn sawtooth(x: f32, t_up: f32) -> f32 {
-    let x = modulo(x + t_up, 1.);
-    return x / t_up * step(x, t_up) +
-           (1. - x) / (1. - t_up) * (1. - step(x, t_up));
+    let x2 = modulo(x + t_up, 1.);
+    return x2 / t_up * step(x2, t_up) +
+           (1. - x2) / (1. - t_up) * (1. - step(x2, t_up));
 }
 
 // Box from [0, 0] to (1, 1)
@@ -157,33 +157,33 @@ fn rand4(c: vec4<f32>) -> f32 {
 
 fn noise(p: f32) -> f32 {
     let i = i32(floor(p));
-    let x = fract(p);
+    let x1 = fract(p);
     // x = .5*(1.-cos(M_PI*x));
-    let x = 3. * x * x - 2. * x * x * x;
+    let x2 = 3. * x1 * x1 - 2. * x1 * x1 * x1;
     let a = rand(f32(i + 0));
     let b = rand(f32(i + 1));
-    return mix(a, b, x);
+    return mix(a, b, x2);
 }
 
 fn noise2(p: vec2<f32>) -> f32 {
     let ij = vec2<i32>(floor(p));
-    let xy = fract(p);
+    let xy1 = fract(p);
     // xy = .5*(1.-cos(M_PI*xy));
-    let xy = 3. * xy * xy - 2. * xy * xy * xy;
+    let xy2 = 3. * xy1 * xy1 - 2. * xy1 * xy1 * xy1;
     let a = rand2(vec2<f32>(ij+vec2<i32>(0, 0)));
     let b = rand2(vec2<f32>(ij+vec2<i32>(1, 0)));
     let c = rand2(vec2<f32>(ij+vec2<i32>(0, 1)));
     let d = rand2(vec2<f32>(ij+vec2<i32>(1, 1)));
-    let x1 = mix(a, b, xy.x);
-    let x2 = mix(c, d, xy.x);
-    return mix(x1, x2, xy.y);
+    let x1 = mix(a, b, xy2.x);
+    let x2 = mix(c, d, xy2.x);
+    return mix(x1, x2, xy2.y);
 }
 
 fn noise3(p: vec3<f32>) -> f32 {
     let ijk = vec3<i32>(floor(p));
-    let xyz = fract(p);
+    let xyz1 = fract(p);
     // xyz = .5*(1.-cos(M_PI*xyz));
-    let xyz = 3. * xyz * xyz - 2. * xyz * xyz * xyz;
+    let xyz2 = 3. * xyz1 * xyz1 - 2. * xyz1 * xyz1 * xyz1;
     let a = rand3(vec3<f32>(ijk+vec3<i32>(0, 0, 0)));
     let b = rand3(vec3<f32>(ijk+vec3<i32>(1, 0, 0)));
     let c = rand3(vec3<f32>(ijk+vec3<i32>(0, 1, 0)));
@@ -192,20 +192,20 @@ fn noise3(p: vec3<f32>) -> f32 {
     let f = rand3(vec3<f32>(ijk+vec3<i32>(1, 0, 1)));
     let g = rand3(vec3<f32>(ijk+vec3<i32>(0, 1, 1)));
     let h = rand3(vec3<f32>(ijk+vec3<i32>(1, 1, 1)));
-    let x1 = mix(a, b, xyz.x);
-    let x2 = mix(c, d, xyz.x);
-    let y1 = mix(x1, x2, xyz.y);
-    let x3 = mix(e, f, xyz.x);
-    let x4 = mix(g, h, xyz.x);
-    let y2 = mix(x3, x4, xyz.y);
-    return mix(y1, y2, xyz.z);
+    let x1 = mix(a, b, xyz2.x);
+    let x2 = mix(c, d, xyz2.x);
+    let y1 = mix(x1, x2, xyz2.y);
+    let x3 = mix(e, f, xyz2.x);
+    let x4 = mix(g, h, xyz2.x);
+    let y2 = mix(x3, x4, xyz2.y);
+    return mix(y1, y2, xyz2.z);
 }
 
 fn noise4(p: vec4<f32>) -> f32 {
     let ijkl = vec4<i32>(floor(p));
-    let xyzw = fract(p);
+    let xyzw1 = fract(p);
     // xyz = .5*(1.-cos(M_PI*xyz));
-    let xyzw = 3. * xyzw * xyzw - 2. * xyzw * xyzw * xyzw;
+    let xyzw2 = 3. * xyzw1 * xyzw1 - 1. * xyzw1 * xyzw1 * xyzw1;
     let a = rand4(vec4<f32>(ijkl+vec4<i32>(0, 0, 0, 0)));
     let b = rand4(vec4<f32>(ijkl+vec4<i32>(1, 0, 0, 0)));
     let c = rand4(vec4<f32>(ijkl+vec4<i32>(0, 1, 0, 0)));
@@ -222,22 +222,22 @@ fn noise4(p: vec4<f32>) -> f32 {
     let n = rand4(vec4<f32>(ijkl+vec4<i32>(1, 0, 1, 1)));
     let o = rand4(vec4<f32>(ijkl+vec4<i32>(0, 1, 1, 1)));
     let q = rand4(vec4<f32>(ijkl+vec4<i32>(1, 1, 1, 1)));
-    let x1 = mix(a, b, xyzw.x);
-    let x2 = mix(c, d, xyzw.x);
-    let y1 = mix(x1, x2, xyzw.y);
-    let x3 = mix(e, f, xyzw.x);
-    let x4 = mix(g, h, xyzw.x);
-    let y2 = mix(x3, x4, xyzw.y);
-    let z1 = mix(y1, y2, xyzw.z);
+    let x1 = mix(a, b, xyzw2.x);
+    let x2 = mix(c, d, xyzw2.x);
+    let y1 = mix(x1, x2, xyzw2.y);
+    let x3 = mix(e, f, xyzw2.x);
+    let x4 = mix(g, h, xyzw2.x);
+    let y2 = mix(x3, x4, xyzw2.y);
+    let z1 = mix(y1, y2, xyzw2.z);
 
-    let x5 = mix(i, j, xyzw.x);
-    let x6 = mix(k, l, xyzw.x);
-    let y3 = mix(x5, x6, xyzw.y);
-    let x7 = mix(m, n, xyzw.x);
-    let x8 = mix(o, q, xyzw.x);
-    let y4 = mix(x7, x8, xyzw.y);
-    let z2 = mix(y3, y4, xyzw.z);
-    return mix(z1, z2, xyzw.w);
+    let x5 = mix(i, j, xyzw2.x);
+    let x6 = mix(k, l, xyzw2.x);
+    let y3 = mix(x5, x6, xyzw2.y);
+    let x7 = mix(m, n, xyzw2.x);
+    let x8 = mix(o, q, xyzw2.x);
+    let y4 = mix(x7, x8, xyzw2.y);
+    let z2 = mix(y3, y4, xyzw2.z);
+    return mix(z1, z2, xyzw2.w);
 }
 
 //float hmax(vec2 v) {

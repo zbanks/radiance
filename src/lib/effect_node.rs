@@ -52,7 +52,8 @@ pub struct EffectNodeStateReady {
     channel_count: u32,
 
     // GPU resources
-    bind_group_layout: wgpu::BindGroupLayout,
+    bind_group_1_layout: wgpu::BindGroupLayout,
+    bind_group_2_layout: wgpu::BindGroupLayout,
     uniform_buffer: wgpu::Buffer,
     sampler: wgpu::Sampler,
     render_pipelines: Vec<wgpu::RenderPipeline>,
@@ -206,9 +207,9 @@ impl EffectNodeState {
         // 3: iNoiseTex
         // 4: iChannelsTex[]
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
+        let bind_group_1_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
                     binding: 0, // UpdateUniforms
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
@@ -217,51 +218,62 @@ impl EffectNodeState {
                         min_binding_size: None,
                     },
                     count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1, // iSampler
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2, // iInputsTex
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                }],
+                label: Some(&format!(
+                    "EffectNode {} bind group layout 1 (uniforms)",
+                    name
+                )),
+            });
+        let bind_group_2_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0, // iSampler
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
                     },
-                    count: NonZeroU32::new(input_count),
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3, // iNoiseTex
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1, // iInputsTex
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: NonZeroU32::new(input_count),
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 4, // iChannelsTex
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2, // iNoiseTex
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
                     },
-                    count: NonZeroU32::new(channel_count),
-                },
-            ],
-            label: Some(&format!("EffectNode {} bind group layout", name)),
-        });
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3, // iChannelsTex
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: NonZeroU32::new(channel_count),
+                    },
+                ],
+                label: Some(&format!(
+                    "EffectNode {} bind group layout 2 (textures)",
+                    name
+                )),
+            });
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&bind_group_layout],
+                bind_group_layouts: &[&bind_group_1_layout, &bind_group_2_layout],
                 push_constant_ranges: &[],
             });
 
@@ -335,7 +347,8 @@ impl EffectNodeState {
             input_count,
             intensity_integral: 0.,
             channel_count,
-            bind_group_layout,
+            bind_group_1_layout,
+            bind_group_2_layout,
             uniform_buffer,
             sampler,
             render_pipelines,
@@ -551,37 +564,41 @@ impl EffectNodeState {
                         .map(|t| t.view.as_ref())
                         .collect();
 
-                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        layout: &self_ready.bind_group_layout,
+                    let bind_group_1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        layout: &self_ready.bind_group_1_layout,
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: self_ready.uniform_buffer.as_entire_binding(),
+                        }],
+                        label: Some("EffectNode bind group 1 (uniforms)"),
+                    });
+                    let bind_group_2 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        layout: &self_ready.bind_group_2_layout,
                         entries: &[
                             wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: self_ready.uniform_buffer.as_entire_binding(),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 1,
+                                binding: 0, // iSampler
                                 resource: wgpu::BindingResource::Sampler(&self_ready.sampler),
                             },
                             wgpu::BindGroupEntry {
-                                binding: 2, // iInputsTex
+                                binding: 1, // iInputsTex
                                 resource: wgpu::BindingResource::TextureViewArray(
                                     input_binding.as_slice(),
                                 ),
                             },
                             wgpu::BindGroupEntry {
-                                binding: 3, // iNoiseTex
+                                binding: 2, // iNoiseTex
                                 resource: wgpu::BindingResource::TextureView(
                                     &render_target_state.noise_texture().view,
                                 ),
                             },
                             wgpu::BindGroupEntry {
-                                binding: 4, // iChannelsTex
+                                binding: 3, // iChannelsTex
                                 resource: wgpu::BindingResource::TextureViewArray(
                                     channels.as_slice(),
                                 ),
                             },
                         ],
-                        label: Some("EffectNode bind group"),
+                        label: Some("EffectNode bind group 2 (textures)"),
                     });
 
                     {
@@ -603,7 +620,8 @@ impl EffectNodeState {
                             });
 
                         render_pass.set_pipeline(&self_ready.render_pipelines[channel as usize]);
-                        render_pass.set_bind_group(0, &bind_group, &[]);
+                        render_pass.set_bind_group(0, &bind_group_1, &[]);
+                        render_pass.set_bind_group(1, &bind_group_2, &[]);
                         render_pass.draw(0..4, 0..1);
                     }
 

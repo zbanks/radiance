@@ -64,6 +64,9 @@ crossbeam = "0.8.2"
 [dev-dependencies]
 wav = "1.0"
 
+[build-dependencies]
+naga = { version = "27.0.3", features = ["wgsl-in"] }
+
 [profile.dev]
 opt-level = 1
 

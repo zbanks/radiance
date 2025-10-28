@@ -8,9 +8,11 @@ extern crate nalgebra as na;
 
 use eframe::{egui, egui_wgpu};
 use serde_json::json;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs::{read_to_string, File};
 use std::io::Write;
+use std::iter;
 
 use radiance::{
     AutoDJ, Context, EffectNodeProps, ImageNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId,
@@ -87,7 +89,10 @@ fn main() -> eframe::Result {
         required_limits: if cfg!(target_arch = "wasm32") {
             wgpu::Limits::downlevel_webgl2_defaults()
         } else {
-            wgpu::Limits::default()
+            wgpu::Limits {
+                max_binding_array_elements_per_shader_stage: 500_000,
+                ..Default::default()
+            }
         },
         label: None,
         memory_hints: Default::default(),
@@ -139,6 +144,7 @@ struct App {
     left_panel_expanded: bool,
     node_add_wants_focus: bool,
     insertion_point: InsertionPoint,
+    preview_images: HashMap<NodeId, egui::TextureId>,
 }
 
 impl App {
@@ -355,6 +361,7 @@ impl App {
             left_panel_expanded: false,
             node_add_wants_focus: false,
             insertion_point: Default::default(),
+            preview_images: Default::default(),
         }
     }
 }
@@ -415,30 +422,18 @@ impl eframe::App for App {
         }
 
         // Paint
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Encoder"),
-        });
+        let results = {
+            let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Encoder"),
+            });
 
-        let results = self
-            .ctx
-            .paint(device, queue, &mut encoder, self.preview_render_target_id);
+            let results =
+                self.ctx
+                    .paint(device, queue, &mut encoder, self.preview_render_target_id);
 
-        let preview_images: HashMap<NodeId, egui::TextureId> = self
-            .props
-            .graph
-            .nodes
-            .iter()
-            .map(|&node_id| {
-                let tex_id = renderer.write().register_native_texture(
-                    &device,
-                    &results.get(&node_id).unwrap().view,
-                    wgpu::FilterMode::Linear,
-                );
-                (node_id, tex_id)
-            })
-            .collect();
-
-        // Update & paint widgets
+            queue.submit(iter::once(encoder.finish()));
+            results
+        };
 
         fn update_or_register_native_texture(
             egui_renderer: &mut egui_wgpu::Renderer,
@@ -465,45 +460,96 @@ impl eframe::App for App {
             }
         }
 
+        // Get new native textures for preview images
+        /*
+        let new_preview_images = self
+            .props
+            .graph
+            .nodes
+            .iter()
+            .map(|&node_id| {
+                let tex_id = renderer.write().register_native_texture(
+                    &device,
+                    &results.get(&node_id).unwrap().view,
+                    wgpu::FilterMode::Linear,
+                );
+                (node_id, tex_id)
+            })
+            .collect();
+        */
+
         let waveform_size = egui::vec2(330., 65.);
-        let waveform_native_texture = self.waveform_widget.paint(
-            &device,
-            &queue,
-            waveform_size,
-            &music_info.audio,
-            music_info.uncompensated_unscaled_time,
-        );
-
-        update_or_register_native_texture(
-            &mut renderer.write(),
-            &device,
-            &waveform_native_texture.view,
-            &mut self.waveform_texture,
-        );
-
         let spectrum_size = egui::vec2(330., 65.);
-        let spectrum_native_texture =
-            self.spectrum_widget
-                .paint(&device, &queue, spectrum_size, &music_info.spectrum);
-
-        update_or_register_native_texture(
-            &mut renderer.write(),
-            &device,
-            &spectrum_native_texture.view,
-            &mut self.spectrum_texture,
-        );
-
         let beat_size = egui::vec2(65., 65.);
-        let beat_native_texture =
-            self.beat_widget
-                .paint(device, queue, beat_size, music_info.unscaled_time);
+        {
+            let mut r = renderer.write();
 
-        update_or_register_native_texture(
-            &mut renderer.write(),
-            device,
-            &beat_native_texture.view,
-            &mut self.beat_texture,
-        );
+            for node_id in self.props.graph.nodes.iter() {
+                let native_texture = &results.get(&node_id).unwrap().view;
+                match self.preview_images.entry(*node_id) {
+                    Entry::Vacant(e) => {
+                        e.insert(r.register_native_texture(
+                            device,
+                            native_texture,
+                            wgpu::FilterMode::Linear,
+                        ));
+                    }
+                    Entry::Occupied(e) => {
+                        r.update_egui_texture_from_wgpu_texture(
+                            device,
+                            native_texture,
+                            wgpu::FilterMode::Linear,
+                            *e.get(),
+                        );
+                    }
+                }
+            }
+
+            for (node_id, egui_texture_id) in self.preview_images.iter() {
+                if !self.props.graph.nodes.contains(node_id) {
+                    r.free_texture(egui_texture_id);
+                }
+            }
+
+            // Update & paint widgets
+
+            let waveform_native_texture = self.waveform_widget.paint(
+                &device,
+                &queue,
+                waveform_size,
+                &music_info.audio,
+                music_info.uncompensated_unscaled_time,
+            );
+
+            update_or_register_native_texture(
+                &mut r,
+                &device,
+                &waveform_native_texture.view,
+                &mut self.waveform_texture,
+            );
+
+            let spectrum_native_texture =
+                self.spectrum_widget
+                    .paint(&device, &queue, spectrum_size, &music_info.spectrum);
+
+            update_or_register_native_texture(
+                &mut r,
+                &device,
+                &spectrum_native_texture.view,
+                &mut self.spectrum_texture,
+            );
+
+            let beat_native_texture =
+                self.beat_widget
+                    .paint(device, queue, beat_size, music_info.unscaled_time);
+
+            update_or_register_native_texture(
+                &mut r,
+                device,
+                &beat_native_texture.view,
+                &mut self.beat_texture,
+            );
+        }
 
         // EGUI update
         let left_panel_response =
@@ -568,7 +614,7 @@ impl eframe::App for App {
                         "mosaic",
                         &mut self.props,
                         self.ctx.node_states(),
-                        &preview_images,
+                        &self.preview_images,
                         &mut self.insertion_point,
                         modal_id,
                     ));
@@ -684,7 +730,7 @@ impl eframe::App for App {
                         modal_id,
                         &mut self.props,
                         self.ctx.node_states(),
-                        &preview_images,
+                        &self.preview_images,
                     ));
                 });
             }
@@ -769,14 +815,6 @@ impl eframe::App for App {
         // Draw
         output.present();
         */
-
-        // Clear out all native textures for the next frame
-        {
-            let mut r = renderer.write();
-            for texture_id in preview_images.values() {
-                r.free_texture(texture_id);
-            }
-        }
 
         /*
         // Clear out egui textures for the next frame
