@@ -34,7 +34,7 @@ base64 = "0.13"
 nalgebra = { version = "0.31.0", features = [ "serde-serialize" ] }
 rustfft = "6.0"
 itertools = "0.10"
-cpal = "0.14"
+cpal = "0.16.0"
 eframe = { version = "0.33.0", default-features = false, features = [
     "default_fonts",
     "wgpu",
@@ -43,11 +43,6 @@ eframe = { version = "0.33.0", default-features = false, features = [
 ] }
 derive_more = "0.99"
 image = "0.24"
-
-# There was a breaking change to `alsa` introduced in v0.6.1,
-# temporarily pin it to v0.6.0 until this has been fixed, see:
-# https://github.com/diwic/alsa-rs/issues/90
-alsa = "=0.6.0"
 
 # mpv / MovieNode dependencies
 libmpv = { git = "https://github.com/ervanalb/libmpv-rs", rev = "8f79ae86411ff4226288c836e18fbc80b0f636fb", features = ["render"]}
@@ -69,8 +64,3 @@ naga = { version = "27.0.3", features = ["wgsl-in"] }
 
 [profile.dev]
 opt-level = 1
-
-#[patch.crates-io]
-#egui = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
-#egui-wgpu = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }
-#egui-winit = { git = "https://github.com/ervanalb/egui", rev = "0253560d" }

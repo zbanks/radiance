@@ -216,6 +216,7 @@ impl Mir {
                     process_audio_i16_mono(data);
                 },
                 process_error,
+                None,
             ),
             (cpal::SampleFormat::I16, 2) => device.build_input_stream(
                 &config,
@@ -227,6 +228,7 @@ impl Mir {
                     process_audio_i16_mono(&data);
                 },
                 process_error,
+                None,
             ),
             (cpal::SampleFormat::U16, 1) => device.build_input_stream(
                 &config,
@@ -236,6 +238,7 @@ impl Mir {
                     process_audio_i16_mono(&data);
                 },
                 process_error,
+                None,
             ),
             (cpal::SampleFormat::U16, 2) => device.build_input_stream(
                 &config,
@@ -247,6 +250,7 @@ impl Mir {
                     process_audio_i16_mono(&data);
                 },
                 process_error,
+                None,
             ),
             _ => panic!("unexpected sample format or channel count"),
         }

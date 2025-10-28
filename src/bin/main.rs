@@ -29,26 +29,6 @@ mod winit_output;
 const AUTOSAVE_INTERVAL_FRAMES: usize = 60 * 10;
 const AUTOSAVE_FILENAME: &str = "radiance_autosave.json";
 
-/*
-pub fn resize(
-    new_size: winit::dpi::PhysicalSize<u32>,
-    config: &mut wgpu::SurfaceConfiguration,
-    device: &wgpu::Device,
-    surface: &mut wgpu::Surface,
-    screen_descriptor: Option<&mut ScreenDescriptor>,
-) {
-    if new_size.width > 0 && new_size.height > 0 {
-        config.width = new_size.width;
-        config.height = new_size.height;
-        surface.configure(device, config);
-        if let Some(screen_descriptor) = screen_descriptor {
-            screen_descriptor.physical_width = config.width;
-            screen_descriptor.physical_height = config.height;
-        }
-    }
-}
-*/
-
 fn autosave(props: &Props) {
     fn inner(props: &Props) -> Result<(), String> {
         let contents = serde_json::to_string(props).map_err(|e| format!("{:?}", e))?;
@@ -149,30 +129,6 @@ struct App {
 
 impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        /*
-                let mut config = wgpu::SurfaceConfiguration {
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    format: surface_format,
-                    width: size.width,
-                    height: size.height,
-                    present_mode: wgpu::PresentMode::Fifo,
-                    alpha_mode: wgpu::CompositeAlphaMode::Auto,
-                    desired_maximum_frame_latency: 2,
-                    view_formats: vec![],
-                };
-
-                resize(
-                    size,
-                    &mut config,
-                    &device,
-                    &mut surface,
-                    Some(&mut screen_descriptor),
-                );
-
-        // We use the egui_wgpu_backend crate as the render backend.
-        let mut egui_renderer = RenderPass::new(device.as_ref(), surface_format, 1);
-        */
-
         let egui_wgpu::RenderState { device, queue, .. } = cc.wgpu_render_state.as_ref().unwrap();
         let pixels_per_point = cc.egui_ctx.pixels_per_point();
 
@@ -468,24 +424,6 @@ impl eframe::App for App {
             }
         }
 
-        // Get new native textures for preview images
-        /*
-        let new_preview_images = self
-            .props
-            .graph
-            .nodes
-            .iter()
-            .map(|&node_id| {
-                let tex_id = renderer.write().register_native_texture(
-                    &device,
-                    &results.get(&node_id).unwrap().view,
-                    wgpu::FilterMode::Linear,
-                );
-                (node_id, tex_id)
-            })
-            .collect();
-        */
-
         let waveform_size = egui::vec2(330., 65.);
         let spectrum_size = egui::vec2(330., 65.);
         let beat_size = egui::vec2(65., 65.);
@@ -763,73 +701,6 @@ impl eframe::App for App {
             }
             _ => {}
         }
-
-        /*
-        platform.handle_platform_output(&window, &ctx, full_output.platform_output);
-        let clipped_primitives = ctx.tessellate(full_output.shapes); // create triangles to paint
-
-        // EGUI paint
-        let output = surface.get_current_texture().unwrap();
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-
-        // Upload all resources for the GPU.
-        let tdelta: egui::TexturesDelta = full_output.textures_delta;
-        for (texture_id, image_delta) in tdelta.set.iter() {
-            egui_renderer.update_texture(&device, &queue, *texture_id, image_delta);
-        }
-        egui_renderer.update_buffers(
-            &device,
-            &queue,
-            &mut encoder,
-            &clipped_primitives,
-            &screen_descriptor,
-        );
-
-        // Record UI render pass.
-        {
-            let mut egui_render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("EGUI Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: BACKGROUND_COLOR.r() as f64 / 255.,
-                            g: BACKGROUND_COLOR.g() as f64 / 255.,
-                            b: BACKGROUND_COLOR.b() as f64 / 255.,
-                            a: BACKGROUND_COLOR.a() as f64 / 255.,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                    depth_slice: None,
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
-
-            egui_renderer.render(
-                &mut egui_render_pass,
-                &clipped_primitives,
-                &screen_descriptor,
-            );
-        }
-
-        // Submit the commands.
-        queue.submit(iter::once(encoder.finish()));
-
-        // Draw
-        output.present();
-        */
-
-        /*
-        // Clear out egui textures for the next frame
-        for texture_id in tdelta.free.iter() {
-            egui_renderer.free_texture(texture_id);
-        }
-        */
 
         egui_ctx.request_repaint();
     }

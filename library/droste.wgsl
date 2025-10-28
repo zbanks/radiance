@@ -27,24 +27,24 @@ fn cexp(z: vec2<f32>) -> vec2<f32> {
 	return circle(z.y) * exp(z.x);
 }
 
-let r1: f32 = 0.1;
-let r2: f32 = 2.0;
+const r1: f32 = 0.1;
+const r2: f32 = 2.0;
 
 fn droste(z: vec2<f32>) -> vec2<f32> {
     // 4. Take the tiled strips back to ordinary space.
-    let z = clog(z);
+    let z2 = clog(z);
     // 3. Scale and rotate the strips
     let scale = log(r2/r1);
     // Negate the angle to twist the other way
     let angle = atan(scale/(2.0*pi));
-    var z = cdiv(z, cexp(vec2(0.0,angle))*cos(angle)); 
+    var z3 = cdiv(z2, cexp(vec2(0.0,angle))*cos(angle)); 
     // 2. Tile the strips
-    z.x -= iTime * iFrequency * scale * 0.25;
-    z.x = modulo(z.x, scale);
+    z3.x -= iTime * iFrequency * scale * 0.25;
+    z3.x = modulo(z3.x, scale);
     // 1. Take the annulus to a strip
-    let z = cexp(z)*r1;
-    let z = z / (r2 * 2.0);
-    return z;
+    let z4 = cexp(z3)*r1;
+    let z5 = z4 / (r2 * 2.0);
+    return z5;
 }
 
 fn f(x: f32, n: f32) -> f32{
@@ -62,8 +62,8 @@ fn f(x: f32, n: f32) -> f32{
 
 fn main(uv: vec2<f32>) -> vec4<f32> {
     let normCoord = 2. * (uv - 0.5) * aspectCorrection;
-    let newUV = droste(normCoord);
-    let newUV = newUV / aspectCorrection + 0.5;
+    let newUV1 = droste(normCoord);
+    let newUV2 = newUV1 / aspectCorrection + 0.5;
 
-    return textureSample(iInputsTex[0], iSampler, mix(uv, newUV, iIntensity));
+    return textureSample(iInputsTex[0], iSampler, mix(uv, newUV2, iIntensity));
 }
