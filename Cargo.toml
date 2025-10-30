@@ -65,3 +65,7 @@ naga = { version = "27.0.3", features = ["wgsl-in"] }
 
 [profile.dev]
 opt-level = 1
+
+[features]
+default = ["mpv"]
+mpv = []

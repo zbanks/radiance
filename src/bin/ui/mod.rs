@@ -4,6 +4,7 @@ mod effect_node_tile;
 mod image_node_tile;
 mod modal;
 mod mosaic;
+#[cfg(feature = "mpv")]
 mod movie_node_tile;
 mod placeholder_node_tile;
 mod projection_mapped_output_node_tile;

@@ -46,6 +46,7 @@ Build
 ### Dependencies
 
 - `rust` and `cargo`
+- `libmpv` (dynamically linked)
 
 ### Building Radiance
 

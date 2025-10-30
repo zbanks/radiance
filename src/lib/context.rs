@@ -1,6 +1,9 @@
 use crate::effect_node::EffectNodeState;
 use crate::image_node::ImageNodeState;
+
+#[cfg(feature = "mpv")]
 use crate::movie_node::MovieNodeState;
+
 use crate::placeholder_node::PlaceholderNodeState;
 use crate::projection_mapped_output_node::ProjectionMappedOutputNodeState;
 use crate::render_target::{RenderTarget, RenderTargetId};
@@ -121,6 +124,7 @@ pub enum NodeState {
     ScreenOutputNode(ScreenOutputNodeState),
     ImageNode(ImageNodeState),
     PlaceholderNode(PlaceholderNodeState),
+    #[cfg(feature = "mpv")]
     MovieNode(MovieNodeState),
     ProjectionMappedOutputNode(ProjectionMappedOutputNodeState),
 }
@@ -286,6 +290,7 @@ impl Context {
             NodeProps::PlaceholderNode(props) => {
                 NodeState::PlaceholderNode(PlaceholderNodeState::new(self, device, queue, props))
             }
+            #[cfg(feature = "mpv")]
             NodeProps::MovieNode(props) => {
                 NodeState::MovieNode(MovieNodeState::new(self, device, queue, props))
             }
@@ -324,6 +329,7 @@ impl Context {
                 }
                 _ => panic!("Type mismatch between props and state"),
             },
+            #[cfg(feature = "mpv")]
             NodeState::MovieNode(ref mut state) => match node_props {
                 NodeProps::MovieNode(ref mut props) => state.update(self, device, queue, props),
                 _ => panic!("Type mismatch between props and state"),
@@ -381,6 +387,7 @@ impl Context {
                 render_target_id,
                 input_textures,
             ),
+            #[cfg(feature = "mpv")]
             NodeState::MovieNode(ref mut state) => state.paint(
                 self,
                 device,

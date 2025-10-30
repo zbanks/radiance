@@ -3,7 +3,10 @@
 use crate::ui::drop_target::DropTarget;
 use crate::ui::effect_node_tile::EffectNodeTile;
 use crate::ui::image_node_tile::ImageNodeTile;
+
+#[cfg(feature = "mpv")]
 use crate::ui::movie_node_tile::MovieNodeTile;
+
 use crate::ui::placeholder_node_tile::PlaceholderNodeTile;
 use crate::ui::projection_mapped_output_node_tile::ProjectionMappedOutputNodeTile;
 use crate::ui::screen_output_node_tile::ScreenOutputNodeTile;
@@ -167,6 +170,7 @@ impl LayoutCache {
                     NodeProps::ScreenOutputNode(p) => ScreenOutputNodeTile::min_input_heights(p),
                     NodeProps::ImageNode(p) => ImageNodeTile::min_input_heights(p),
                     NodeProps::PlaceholderNode(p) => PlaceholderNodeTile::min_input_heights(p),
+                    #[cfg(feature = "mpv")]
                     NodeProps::MovieNode(p) => MovieNodeTile::min_input_heights(p),
                     NodeProps::ProjectionMappedOutputNode(p) => {
                         ProjectionMappedOutputNodeTile::min_input_heights(p)
@@ -289,6 +293,7 @@ impl LayoutCache {
                     NodeProps::PlaceholderNode(p) => {
                         PlaceholderNodeTile::width_for_height(p, height)
                     }
+                    #[cfg(feature = "mpv")]
                     NodeProps::MovieNode(p) => MovieNodeTile::width_for_height(p, height),
                     NodeProps::ProjectionMappedOutputNode(p) => {
                         ProjectionMappedOutputNodeTile::width_for_height(p, height)
@@ -968,6 +973,7 @@ where
                     .add_contents(ui)
             }
             NodeProps::PlaceholderNode(_) => {} // Empty tile
+            #[cfg(feature = "mpv")]
             NodeProps::MovieNode(p) => {
                 MovieNodeTile::new(p, node_state.try_into().unwrap(), preview_image)
                     .add_contents(ui)

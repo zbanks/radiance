@@ -2,6 +2,7 @@ use crate::effect_node::EffectNodeProps;
 use crate::graph::{Graph, NodeId};
 use crate::image_node::ImageNodeProps;
 pub use crate::mir::AudioLevels;
+#[cfg(feature = "mpv")]
 use crate::movie_node::MovieNodeProps;
 use crate::placeholder_node::PlaceholderNodeProps;
 use crate::projection_mapped_output_node::ProjectionMappedOutputNodeProps;
@@ -29,6 +30,7 @@ pub enum NodeProps {
     ScreenOutputNode(ScreenOutputNodeProps),
     ImageNode(ImageNodeProps),
     PlaceholderNode(PlaceholderNodeProps),
+    #[cfg(feature = "mpv")]
     MovieNode(MovieNodeProps),
     ProjectionMappedOutputNode(ProjectionMappedOutputNodeProps),
 }
@@ -45,6 +47,7 @@ impl From<&NodeProps> for CommonNodeProps {
             NodeProps::ScreenOutputNode(p) => p.into(),
             NodeProps::ImageNode(p) => p.into(),
             NodeProps::PlaceholderNode(p) => p.into(),
+            #[cfg(feature = "mpv")]
             NodeProps::MovieNode(p) => p.into(),
             NodeProps::ProjectionMappedOutputNode(p) => p.into(),
         }

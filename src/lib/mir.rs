@@ -26,7 +26,7 @@ pub const SPECTRUM_LENGTH: usize = N_FILTERS;
 /// It has a buffer of about a second or so,
 /// but should be polled frequently to avoid dropped updates.
 pub struct Mir {
-    _stream: cpal::Stream,
+    _stream: Option<cpal::Stream>,
     receiver: mpsc::Receiver<Update>,
     last_update: Update,
     pub global_timescale: f32,
@@ -84,26 +84,29 @@ impl Default for Mir {
 }
 
 impl Mir {
-    pub fn new() -> Self {
-        // Make a new beat tracker
-        let mut bt = BeatTracker::new();
-
-        // Make a communication channel to communicate with the audio thread
-        const MESSAGE_BUFFER_SIZE: usize = 16;
-        let (sender, receiver) = mpsc::sync_channel(MESSAGE_BUFFER_SIZE);
-
-        // Set up system audio
+    fn audio_input(sender: mpsc::SyncSender<Update>) -> Result<cpal::Stream, String> {
         use cpal::traits::HostTrait;
+
         let host = cpal::default_host();
         let device = host
-            .default_output_device()
-            .expect("no output device available");
+            .default_input_device()
+            .ok_or("No audio input devices found")?;
 
         const MIN_USEFUL_BUFFER_SIZE: cpal::FrameCount = 256; // Lower actually would be useful, but CPAL lies about the min size, so this ought to be safe
         const SAMPLE_RATE_CPAL: cpal::SampleRate = cpal::SampleRate(SAMPLE_RATE as u32);
+        let supported_input_configs = device.supported_input_configs().map_err(|e| {
+            format!(
+                "Could not query audio device for supported input configs: {:?}",
+                e
+            )
+        })?;
+        let supported_input_configs_str = supported_input_configs
+            .map(|c| format!("{:?}", c))
+            .collect::<Vec<_>>()
+            .join(", ");
         let config_range = device
             .supported_input_configs()
-            .expect("error while querying configs")
+            .unwrap()
             .filter(|config| {
                 (config.sample_format() == cpal::SampleFormat::I16
                     || config.sample_format() == cpal::SampleFormat::U16)
@@ -121,10 +124,14 @@ impl Mir {
                 cpal::SupportedBufferSize::Range { min, .. } => MIN_USEFUL_BUFFER_SIZE.max(min),
                 cpal::SupportedBufferSize::Unknown => 8192, // Large but not unreasonable
             })
-            .expect("no supported config")
+            .ok_or_else(|| {
+                format!(
+                    "No supported audio input configs were found. Options were: {}",
+                    supported_input_configs_str,
+                )
+            })?
             .with_sample_rate(SAMPLE_RATE_CPAL);
 
-        println!("MIR: Found supported audio config: {:?}", config_range);
         let mut config = config_range.config();
 
         if let cpal::SupportedBufferSize::Range { min, .. } = *config_range.buffer_size() {
@@ -142,6 +149,9 @@ impl Mir {
             audio: Default::default(),
             spectrum: [0.; SPECTRUM_LENGTH],
         };
+
+        // Make a new beat tracker
+        let mut bt = BeatTracker::new();
 
         let mut process_audio_i16_mono = move |data: &[i16]| {
             // Reduce all of the returned results into just the most recent
@@ -210,62 +220,106 @@ impl Mir {
         let process_error = move |err| println!("MIR: audio stream error: {:?}", err);
 
         let stream = match (config_range.sample_format(), config.channels) {
-            (cpal::SampleFormat::I16, 1) => device.build_input_stream(
-                &config,
-                move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                    process_audio_i16_mono(data);
-                },
-                process_error,
-                None,
-            ),
-            (cpal::SampleFormat::I16, 2) => device.build_input_stream(
-                &config,
-                move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                    let data: Vec<i16> = data
-                        .chunks(2)
-                        .map(|pair| ((pair[0] as i32 + pair[1] as i32) / 2) as i16)
-                        .collect();
-                    process_audio_i16_mono(&data);
-                },
-                process_error,
-                None,
-            ),
-            (cpal::SampleFormat::U16, 1) => device.build_input_stream(
-                &config,
-                move |data: &[u16], _: &cpal::InputCallbackInfo| {
-                    let data: Vec<i16> =
-                        data.iter().map(|&x| ((x as i32) - 32768) as i16).collect();
-                    process_audio_i16_mono(&data);
-                },
-                process_error,
-                None,
-            ),
-            (cpal::SampleFormat::U16, 2) => device.build_input_stream(
-                &config,
-                move |data: &[u16], _: &cpal::InputCallbackInfo| {
-                    let data: Vec<i16> = data
-                        .chunks(2)
-                        .map(|pair| ((pair[0] as i32 + pair[1] as i32) / 2 - 32768) as i16)
-                        .collect();
-                    process_audio_i16_mono(&data);
-                },
-                process_error,
-                None,
-            ),
-            _ => panic!("unexpected sample format or channel count"),
-        }
-        .expect("failed to open input stream");
+            (cpal::SampleFormat::I16, 1) => device
+                .build_input_stream(
+                    &config,
+                    move |data: &[i16], _: &cpal::InputCallbackInfo| {
+                        process_audio_i16_mono(data);
+                    },
+                    process_error,
+                    None,
+                )
+                .map_err(|e| format!("Failed to start audio input stream: {:?}", e)),
+            (cpal::SampleFormat::I16, 2) => device
+                .build_input_stream(
+                    &config,
+                    move |data: &[i16], _: &cpal::InputCallbackInfo| {
+                        let data: Vec<i16> = data
+                            .chunks(2)
+                            .map(|pair| ((pair[0] as i32 + pair[1] as i32) / 2) as i16)
+                            .collect();
+                        process_audio_i16_mono(&data);
+                    },
+                    process_error,
+                    None,
+                )
+                .map_err(|e| format!("Failed to start audio input stream: {:?}", e)),
+            (cpal::SampleFormat::U16, 1) => device
+                .build_input_stream(
+                    &config,
+                    move |data: &[u16], _: &cpal::InputCallbackInfo| {
+                        let data: Vec<i16> =
+                            data.iter().map(|&x| ((x as i32) - 32768) as i16).collect();
+                        process_audio_i16_mono(&data);
+                    },
+                    process_error,
+                    None,
+                )
+                .map_err(|e| format!("Failed to start audio input stream: {:?}", e)),
+            (cpal::SampleFormat::U16, 2) => device
+                .build_input_stream(
+                    &config,
+                    move |data: &[u16], _: &cpal::InputCallbackInfo| {
+                        let data: Vec<i16> = data
+                            .chunks(2)
+                            .map(|pair| ((pair[0] as i32 + pair[1] as i32) / 2 - 32768) as i16)
+                            .collect();
+                        process_audio_i16_mono(&data);
+                    },
+                    process_error,
+                    None,
+                )
+                .map_err(|e| format!("Failed to start audio input stream: {:?}", e)),
+            (s, c) => Err(format!(
+                "Unexpected sample format (s={s:?}, must be I16 or U16) or channel count (c={c:?}, must be 1 or 2)"
+            )),
+        }?;
+
+        Ok(stream)
+    }
+
+    pub fn new() -> Self {
+        // Make a communication channel to communicate with the audio thread
+        const MESSAGE_BUFFER_SIZE: usize = 16;
+        let (sender, receiver) = mpsc::sync_channel(MESSAGE_BUFFER_SIZE);
+
+        // Set up system audio
+        let (stream, last_update) = match Self::audio_input(sender) {
+            Ok(stream) => {
+                (
+                    Some(stream),
+                    Update {
+                        wall_ref: time::Instant::now(),
+                        t_ref: 0.,
+                        tempo: 0., // This will hold t at 0 until the audio thread starts up
+                        audio: Default::default(),
+                        spectrum: [0.; SPECTRUM_LENGTH],
+                    },
+                )
+            }
+            Err(e) => {
+                println!("MIR: {}", e);
+                println!(
+                    "MIR: Proceeding with no audio input at a constant BPM of {}",
+                    DEFAULT_BPM
+                );
+                (
+                    None,
+                    Update {
+                        wall_ref: time::Instant::now(),
+                        t_ref: 0.,
+                        tempo: DEFAULT_BPM / 60., // Run at a constant BPM
+                        audio: Default::default(),
+                        spectrum: [0.; SPECTRUM_LENGTH],
+                    },
+                )
+            }
+        };
 
         Self {
             _stream: stream,
             receiver,
-            last_update: Update {
-                wall_ref: time::Instant::now(),
-                t_ref: 0.,
-                tempo: 0., // This will hold t at 0 until the audio thread starts up
-                audio: Default::default(),
-                spectrum: [0.; SPECTRUM_LENGTH],
-            },
+            last_update,
             global_timescale: 1.,
             latency_compensation: 0.1,
         }

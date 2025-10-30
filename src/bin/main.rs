@@ -15,10 +15,11 @@ use std::io::Write;
 use std::iter;
 use std::path::Path;
 
+#[cfg(feature = "mpv")]
+use radiance::MovieNodeProps;
 use radiance::{
-    AutoDJ, Context, EffectNodeProps, ImageNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId,
-    NodeProps, ProjectionMappedOutputNodeProps, Props, RenderTarget, RenderTargetId,
-    ScreenOutputNodeProps,
+    AutoDJ, Context, EffectNodeProps, ImageNodeProps, InsertionPoint, Mir, NodeId, NodeProps,
+    ProjectionMappedOutputNodeProps, Props, RenderTarget, RenderTargetId, ScreenOutputNodeProps,
 };
 
 mod ui;
@@ -135,7 +136,7 @@ impl App {
             .to_owned();
 
         if !resource_dir.exists() {
-            fs::create_dir(&resource_dir).unwrap();
+            fs::create_dir_all(&resource_dir).expect("Failed to create resource directory");
         }
 
         println!("Resource directory is: {}", resource_dir.display());
@@ -604,15 +605,22 @@ impl eframe::App for App {
                                     || node_add_textedit_str.ends_with(".mkv")
                                     || node_add_textedit_str.ends_with(".avi")
                                 {
-                                    let new_node_id = NodeId::gen();
-                                    let new_node_props = NodeProps::MovieNode(MovieNodeProps {
-                                        name: self.node_add_textedit.clone(),
-                                        ..Default::default()
-                                    });
-                                    self.props.node_props.insert(new_node_id, new_node_props);
-                                    self.props
-                                        .graph
-                                        .insert_node(new_node_id, &self.insertion_point);
+                                    #[cfg(feature = "mpv")]
+                                    {
+                                        let new_node_id = NodeId::gen();
+                                        let new_node_props = NodeProps::MovieNode(MovieNodeProps {
+                                            name: self.node_add_textedit.clone(),
+                                            ..Default::default()
+                                        });
+                                        self.props.node_props.insert(new_node_id, new_node_props);
+                                        self.props
+                                            .graph
+                                            .insert_node(new_node_id, &self.insertion_point);
+                                    }
+                                    #[cfg(not(feature = "mpv"))]
+                                    {
+                                        println!("Cannot instantiate MovieNode for {}, mpv support is not enabled", node_add_textedit_str)
+                                    }
                                 } else if node_add_textedit_str.ends_with(".png")
                                     || node_add_textedit_str.starts_with(".jpg")
                                     || node_add_textedit_str.ends_with(".gif")
