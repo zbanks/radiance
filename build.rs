@@ -1,7 +1,16 @@
+use std::env;
 use std::fs;
+use std::io::Write;
+use std::path;
 use std::path::Path;
 
 fn main() {
+    check_builtin_shaders();
+    //check_library_shaders();
+    embed_default_library();
+}
+
+fn check_builtin_shaders() {
     // Builtin shader files to validate
     let shader_files = vec![
         "src/lib/image_shader.wgsl",
@@ -59,8 +68,14 @@ fn main() {
             }
         }
     }
+    if had_errors {
+        panic!("Shader validation failed!");
+    }
+}
 
-    /*
+/*
+fn check_library_shaders() {
+    let mut had_errors = false;
 
     // Validate all .wgsl files in library/ directory
     let library_dir = Path::new("library");
@@ -150,9 +165,51 @@ fn main() {
         println!("cargo:warning=Library directory 'library/' not found, skipping library shaders");
     }
 
-    */
-
     if had_errors {
         panic!("Shader validation failed!");
     }
+}
+*/
+
+fn embed_default_library() {
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let dest_path = Path::new(&out_dir).join("embedded_library.rs");
+    let mut f = fs::File::create(&dest_path).unwrap();
+
+    // Read all files from library/ directory
+    let library_dir = Path::new("library");
+
+    if !library_dir.exists() {
+        panic!("Could not find library/ directory");
+    }
+
+    // Generate the code
+    writeln!(f, "pub const EMBEDDED_LIBRARY: &[(&str, &[u8])] = &[").unwrap();
+
+    for entry in fs::read_dir(library_dir).unwrap().flatten() {
+        if !entry.file_type().unwrap().is_file() {
+            continue;
+        }
+        let filename = entry.file_name().display().to_string();
+        let abs_path = path::absolute(entry.path())
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+
+        writeln!(
+            f,
+            "    (\"{}\", include_bytes!(\"{}\")),",
+            filename.replace('\\', "/"),    // Normalize path separators
+            abs_path.replace('\\', "\\\\")  // Escape backslashes for Windows
+        )
+        .unwrap();
+
+        // Tell Cargo to rerun build.rs if this file changes
+        println!("cargo:rerun-if-changed={}", abs_path);
+    }
+
+    writeln!(f, "];").unwrap();
+
+    // Tell Cargo to rerun if library directory structure changes
+    println!("cargo:rerun-if-changed=library");
 }

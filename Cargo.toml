@@ -43,6 +43,7 @@ eframe = { version = "0.33.0", default-features = false, features = [
 ] }
 derive_more = "0.99"
 image = "0.24"
+directories = "6.0.0"
 
 # mpv / MovieNode dependencies
 libmpv = { git = "https://github.com/ervanalb/libmpv-rs", rev = "8f79ae86411ff4226288c836e18fbc80b0f636fb", features = ["render"]}

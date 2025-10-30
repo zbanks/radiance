@@ -10,9 +10,10 @@ use eframe::{egui, egui_wgpu};
 use serde_json::json;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::fs::{read_to_string, File};
+use std::fs::{self, read_to_string, File};
 use std::io::Write;
 use std::iter;
+use std::path::Path;
 
 use radiance::{
     AutoDJ, Context, EffectNodeProps, ImageNodeProps, InsertionPoint, Mir, MovieNodeProps, NodeId,
@@ -24,26 +25,25 @@ mod ui;
 use ui::{modal, modal_shown, mosaic};
 use ui::{BeatWidget, SpectrumWidget, WaveformWidget};
 
+mod setup;
+use setup::load_default_library;
+
 mod winit_output;
 
 const AUTOSAVE_INTERVAL_FRAMES: usize = 60 * 10;
-const AUTOSAVE_FILENAME: &str = "radiance_autosave.json";
+const AUTOSAVE_FILENAME: &str = "autosave.json";
 
-fn autosave(props: &Props) {
-    fn inner(props: &Props) -> Result<(), String> {
+fn autosave(resource_dir: &Path, props: &Props) {
+    let inner = || {
         let contents = serde_json::to_string(props).map_err(|e| format!("{:?}", e))?;
-        let mut file = File::create(AUTOSAVE_FILENAME).map_err(|e| format!("{:?}", e))?;
+        let mut file =
+            File::create(resource_dir.join(AUTOSAVE_FILENAME)).map_err(|e| format!("{:?}", e))?;
         file.write_all(contents.as_bytes())
             .map_err(|e| format!("{:?}", e))?;
         Ok(())
-    }
-
-    match inner(&props) {
-        Ok(_) => {}
-        Err(msg) => {
-            println!("Failed to write autosave file: {}", msg)
-        }
     };
+
+    inner().unwrap_or_else(|msg: String| println!("Failed to write autosave file: {}", msg));
 }
 
 fn main() -> eframe::Result {
@@ -129,6 +129,19 @@ struct App {
 
 impl App {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let resource_dir = directories::ProjectDirs::from("", "", "Radiance")
+            .unwrap()
+            .data_local_dir()
+            .to_owned();
+
+        if !resource_dir.exists() {
+            fs::create_dir(&resource_dir).unwrap();
+        }
+
+        println!("Resource directory is: {}", resource_dir.display());
+
+        load_default_library(&resource_dir);
+
         let egui_wgpu::RenderState { device, queue, .. } = cc.wgpu_render_state.as_ref().unwrap();
         let pixels_per_point = cc.egui_ctx.pixels_per_point();
 
@@ -146,17 +159,18 @@ impl App {
         let mir = Mir::new();
 
         // Make context
-        let ctx = Context::new(device, queue);
+        let ctx = Context::new(resource_dir.clone(), device, queue);
 
         // Make widgets
         let waveform_widget = WaveformWidget::new(device, pixels_per_point);
         let spectrum_widget = SpectrumWidget::new(device, pixels_per_point);
         let beat_widget = BeatWidget::new(&device, pixels_per_point);
 
-        fn read_autosave_file() -> Result<Props, String> {
-            let contents = read_to_string(AUTOSAVE_FILENAME).map_err(|e| format!("{:?}", e))?;
+        let read_autosave_file = || {
+            let contents = read_to_string(resource_dir.join(AUTOSAVE_FILENAME))
+                .map_err(|e| format!("{:?}", e))?;
             serde_json::from_str(contents.as_str()).map_err(|e| format!("{:?}", e))
-        }
+        };
 
         let props = read_autosave_file().unwrap_or_else(|err_string| {
             println!("Failed to read autosave file ({})", err_string);
@@ -379,7 +393,7 @@ impl eframe::App for App {
         // Autosave if necessary
         // TODO: consider moving this to a background thread
         if self.autosave_timer == 0 {
-            autosave(&self.props);
+            autosave(&self.ctx.resource_dir, &self.props);
             self.autosave_timer = AUTOSAVE_INTERVAL_FRAMES;
         } else {
             self.autosave_timer -= 1;

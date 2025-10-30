@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 const MAX_TIME: f32 = 64.;
@@ -84,6 +85,9 @@ impl Fit {
 /// in a subsequent `paint` call,
 /// the `Context` will drop their state.
 pub struct Context {
+    // OS resources
+    pub resource_dir: PathBuf,
+
     // Graphics resources
     blank_texture: ArcTextureViewSampler,
 
@@ -229,9 +233,10 @@ impl Context {
     /// dt is the expected period (in seconds) with which update() will be called.
     /// This is distinct from the period at which paint() may be called,
     /// and the period for that is set in the render target.
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+    pub fn new(resource_dir: PathBuf, device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
         let blank_texture = Self::create_blank_texture(&device, &queue);
         Self {
+            resource_dir,
             blank_texture,
             time: 0.,
             dt: 0.,
@@ -536,12 +541,12 @@ impl Context {
 
     /// Load content from disk or the library or something
     pub fn fetch_content(&self, filename: &str) -> io::Result<String> {
-        fs::read_to_string(filename)
+        fs::read_to_string(self.resource_dir.join(filename))
     }
 
     /// Load content from disk or the library or something as raw bytes
     pub fn fetch_content_bytes(&self, filename: &str) -> io::Result<Vec<u8>> {
-        fs::read(filename)
+        fs::read(self.resource_dir.join(filename))
     }
 
     /// Get all node states

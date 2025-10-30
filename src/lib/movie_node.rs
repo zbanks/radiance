@@ -129,7 +129,7 @@ struct Uniforms {
 #[allow(clippy::single_match)]
 impl MovieNodeState {
     fn setup_render_pipeline(
-        _ctx: &Context,
+        ctx: &Context,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         props: &MovieNodeProps,
@@ -167,13 +167,17 @@ impl MovieNodeState {
         };
 
         // Spin up MPV thread
+        let file_path = ctx
+            .resource_dir
+            .join(format!("library/{}", name))
+            .to_string_lossy()
+            .to_string();
 
         let (mpv_thread, mpv_tx, mpv_rx) = {
             // Variables that will be moved into thread:
             let (event_tx, event_rx) = mpsc::channel();
             let return_tx = event_tx.clone();
             let (status_tx, status_rx) = mpsc::channel();
-            let name = name.clone();
             let queue = queue.clone();
             let device = device.clone();
             (
@@ -301,12 +305,8 @@ impl MovieNodeState {
                         .observe_property("video-params/h", Format::Int64, 0)
                         .unwrap();
 
-                    mpv.playlist_load_files(&[(
-                        &format!("library/{}", name),
-                        FileState::AppendPlay,
-                        None,
-                    )])
-                    .unwrap();
+                    mpv.playlist_load_files(&[(&file_path, FileState::AppendPlay, None)])
+                        .unwrap();
 
                     // The wakeup callback doesn't seem to work right, so we spawn a new thread
                     crossbeam::thread::scope(|s| {
