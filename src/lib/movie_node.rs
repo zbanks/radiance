@@ -266,6 +266,17 @@ impl MovieNodeState {
                                 );
                             }
                         }
+                        {
+                            let opt = ffi::CString::new("vo").unwrap();
+                            let val = ffi::CString::new("libmpv").unwrap();
+                            unsafe {
+                                libmpv_sys::mpv_set_option_string(
+                                    transmute_copy(&mpv_init),
+                                    opt.as_ptr(),
+                                    val.as_ptr(),
+                                );
+                            }
+                        }
                         Ok(())
                     })
                     .unwrap();

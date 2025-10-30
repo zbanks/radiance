@@ -270,7 +270,7 @@ impl App {
                     },
                     node6_id.to_string(): {
                         "type": "ImageNode",
-                        "name": "nyancat.gif",
+                        "name": "logo.png",
                         "intensity": 1.0,
                     },
                     output_node_id.to_string(): {
