@@ -118,7 +118,7 @@ impl Mir {
             )
         })?;
 
-        let config_range = supported_input_configs
+		let config_range = supported_input_configs
             .filter(|config| {
                 (config.sample_format() == cpal::SampleFormat::I16
                     || config.sample_format() == cpal::SampleFormat::U16
@@ -135,22 +135,33 @@ impl Mir {
             })
             .min_by_key(|config| match *config.buffer_size() {
                 cpal::SupportedBufferSize::Range { min, .. } => MIN_USEFUL_BUFFER_SIZE.max(min),
-                cpal::SupportedBufferSize::Unknown => 8192, // Large but not unreasonable
-            })
-            .ok_or_else(|| {
-                let supported_input_configs_str = device
-                    .supported_input_configs()
-                    .unwrap()
-                    .map(|c| format!("{:?}", c))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!(
-                    "No supported audio input configs were found. Options were: {}",
-                    supported_input_configs_str,
-                )
-            })?
-            .with_sample_rate(SAMPLE_RATE_CPAL);
+                cpal::SupportedBufferSize::Unknown => 8192,
+            }); 
 
+		//Find best config on the current system
+        let config_range = match config_range {
+            Some(cfg) => cfg.with_sample_rate(SAMPLE_RATE_CPAL),
+            None => {
+                eprintln!("MIR: Configurazione ideale non supportata. Tento il fallback selettivo del formato.");
+                
+                let raw_cfg = device.supported_input_configs()
+                    .unwrap()
+                    .find(|c| c.sample_format() != cpal::SampleFormat::U8)
+                    .or_else(|| device.supported_input_configs().unwrap().next()) // Extreme Fallback
+                    .unwrap();
+                
+                let safe_sample_rate = if SAMPLE_RATE_CPAL >= raw_cfg.min_sample_rate() 
+                    && SAMPLE_RATE_CPAL <= raw_cfg.max_sample_rate() 
+                {
+                    SAMPLE_RATE_CPAL
+                } else {
+                    raw_cfg.max_sample_rate()
+                };
+
+                raw_cfg.with_sample_rate(safe_sample_rate)
+            }
+        };
+		
         let mut config = config_range.config();
 
         if let cpal::SupportedBufferSize::Range { min, .. } = *config_range.buffer_size() {
