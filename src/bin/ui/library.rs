@@ -53,7 +53,7 @@ fn node_type_index(props: &NodeProps) -> u8 {
 #[derive(Debug, Default)]
 struct LibraryMemory {
     textedit: String,
-    cached_url: String, // <--- NUOVO: Memorizza l'ultimo URL salvato
+    cached_url: String, // Stores the last cached URL / path
     contents: Vec<LibraryItem>,
     filtered_items: Vec<LibraryItem>,
     selected_index: Option<usize>,
@@ -67,7 +67,6 @@ pub enum LibraryResponse {
     AddNode(NodeProps),
 }
 
-/// Renders the library widget
 /// Renders the library widget
 pub fn library_ui(ui: &mut egui::Ui, ctx: &Context, newly_opened: bool) -> LibraryResponse {
     let library_id = ui.make_persistent_id("library");
@@ -135,21 +134,28 @@ pub fn library_ui(ui: &mut egui::Ui, ctx: &Context, newly_opened: bool) -> Libra
             if library_memory.cached_url.is_empty() {
                 "No URL saved in cache".to_string()
             } else {
-                format!("Paste cached URL: {}", library_memory.cached_url)
+                format!("Left-click: Paste cached URL ({})\nRight-click: Clear cache", library_memory.cached_url)
             }
         } else {
-            "Save current URL to cache".to_string()
+            if library_memory.cached_url.is_empty() {
+                "Left-click: Save current URL to cache".to_string()
+            } else {
+                "Left-click: Save current URL to cache\nRight-click: Clear cache".to_string()
+            }
         };
 
         let has_cached_url = !library_memory.cached_url.is_empty();
         
         let mut cache_btn = egui::Button::new(cache_icon);
         if has_cached_url {
-            // Highlight in green if there is an URL saved in cache
+            // Highlight in green if there is a URL saved in cache
             cache_btn = cache_btn.fill(egui::Color32::from_rgb(0, 130, 60));
         }
 
-        if ui.add(cache_btn).on_hover_text(tooltip).clicked() {
+        let cache_btn_response = ui.add(cache_btn).on_hover_text(tooltip);
+
+        // Left-click: Save to cache or Paste from cache
+        if cache_btn_response.clicked() {
             let current_text = library_memory.textedit.trim().to_string();
 
             if current_text.is_empty() {
@@ -161,6 +167,11 @@ pub fn library_ui(ui: &mut egui::Ui, ctx: &Context, newly_opened: bool) -> Libra
                 // If input has text, save it to cache
                 library_memory.cached_url = current_text;
             }
+        }
+
+        // Right-click: Clear cached URL
+        if cache_btn_response.secondary_clicked() {
+            library_memory.cached_url.clear();
         }
 
         text_res
