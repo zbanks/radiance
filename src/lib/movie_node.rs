@@ -168,6 +168,8 @@ impl MovieNodeState {
         let file_path = if name.starts_with("file:")
             || name.starts_with("http:")
             || name.starts_with("https:")
+            || name.starts_with("rtsp:")
+            || name.starts_with("rtmp:")
             || name.starts_with("ytdl:")
             || name.starts_with("lavf:")
             || name.starts_with("av:")
@@ -281,6 +283,62 @@ impl MovieNodeState {
                         {
                             let opt = ffi::CString::new("vo").unwrap();
                             let val = ffi::CString::new("libmpv").unwrap();
+                            unsafe {
+                                libmpv_sys::mpv_set_option_string(
+                                    transmute_copy(&mpv_init),
+                                    opt.as_ptr(),
+                                    val.as_ptr(),
+                                );
+                            }
+                        }
+                        // --- OPZIONI LOW-LATENCY E TIMING FIX ---
+                        // {
+                        //     let opt = ffi::CString::new("correct-pts").unwrap();
+                        //     let val = ffi::CString::new("no").unwrap();
+                        //     unsafe {
+                        //         libmpv_sys::mpv_set_option_string(
+                        //             transmute_copy(&mpv_init),
+                        //             opt.as_ptr(),
+                        //             val.as_ptr(),
+                        //         );
+                        //     }
+                        // }
+                        // {
+                        //     let opt = ffi::CString::new("untimed").unwrap();
+                        //     let val = ffi::CString::new("yes").unwrap();
+                        //     unsafe {
+                        //         libmpv_sys::mpv_set_option_string(
+                        //             transmute_copy(&mpv_init),
+                        //             opt.as_ptr(),
+                        //             val.as_ptr(),
+                        //         );
+                        //     }
+                        // }
+                        {
+                            let opt = ffi::CString::new("container-fps-override").unwrap();
+                            let val = ffi::CString::new("30").unwrap();
+                            unsafe {
+                                libmpv_sys::mpv_set_option_string(
+                                    transmute_copy(&mpv_init),
+                                    opt.as_ptr(),
+                                    val.as_ptr(),
+                                );
+                            }
+                        }
+                        {
+                            let opt = ffi::CString::new("profile").unwrap();
+                            let val = ffi::CString::new("low-latency").unwrap();
+                            unsafe {
+                                libmpv_sys::mpv_set_option_string(
+                                    transmute_copy(&mpv_init),
+                                    opt.as_ptr(),
+                                    val.as_ptr(),
+                                );
+                            }
+                        }
+                        {
+                            let opt = ffi::CString::new("demuxer-lavf-o").unwrap();
+                            let val = ffi::CString::new("fflags=nobuffer").unwrap();
                             unsafe {
                                 libmpv_sys::mpv_set_option_string(
                                     transmute_copy(&mpv_init),

@@ -53,6 +53,8 @@ fn node_type_index(props: &NodeProps) -> u8 {
 #[derive(Debug, Default)]
 struct LibraryMemory {
     textedit: String,
+    cached_url: String, // Stores the last cached URL / path
+    bookmarks: [String; 8], // Array for 8 quick bookmark slots
     contents: Vec<LibraryItem>,
     filtered_items: Vec<LibraryItem>,
     selected_index: Option<usize>,
@@ -70,13 +72,17 @@ pub enum LibraryResponse {
 pub fn library_ui(ui: &mut egui::Ui, ctx: &Context, newly_opened: bool) -> LibraryResponse {
     let library_id = ui.make_persistent_id("library");
 
-    let library_memory = ui.ctx().memory_mut(|m| {
+    let library_memory_arc = ui.ctx().memory_mut(|m| {
         m.data
             .get_temp_mut_or_default::<Arc<Mutex<LibraryMemory>>>(library_id)
             .clone()
     });
 
-    let mut library_memory = library_memory.lock().unwrap();
+    // Keep an Arc clone to pass to the file picker thread
+    let library_memory_ref = library_memory_arc.clone();
+
+    // Acquire lock for main UI thread
+    let mut library_memory = library_memory_arc.lock().unwrap();
 
     if newly_opened {
         library_memory.textedit.clear();
@@ -88,9 +94,141 @@ pub fn library_ui(ui: &mut egui::Ui, ctx: &Context, newly_opened: bool) -> Libra
 
     let mut response = LibraryResponse::None;
 
-    // Draw UI
+    // Draw UI: Single input box with "Browse" and "Quick Cache/Paste" buttons
+    let textbox_response = ui.horizontal(|ui| {
+        // Space reserved for two action buttons on the right (30px + 30px + item spacing)
+        let buttons_width = 65.0;
+        let text_edit_width = (ui.available_width() - buttons_width - ui.spacing().item_spacing.x).max(50.0);
 
-    let textbox_response = ui.text_edit_singleline(&mut library_memory.textedit);
+        let text_res = ui.add_sized(
+            [text_edit_width, 20.0],
+            egui::TextEdit::singleline(&mut library_memory.textedit),
+        );
+
+        // 1. File Dialog Button (Yellow background)
+        let browse_btn = egui::Button::new("📁")
+            .fill(egui::Color32::from_rgb(200, 160, 0)); // Warm yellow background
+
+        if ui.add(browse_btn).on_hover_text("Browse files...").clicked() {
+            let library_memory_clone = library_memory_ref.clone();
+
+            std::thread::spawn(move || {
+                if let Some(file) = rfd::FileDialog::new()
+                    .add_filter("Video & Media", &["mp4", "mkv", "avi", "mov", "webm", "png", "jpg", "m3u", "m3u8"])
+                    .pick_file() 
+                {
+                    if let Ok(mut mem) = library_memory_clone.lock() {
+                        mem.textedit = file.to_string_lossy().to_string();
+                    }
+                }
+            });
+        }
+
+        // 2. Stream URL Quick Cache / Paste Button (Green background when cache is populated)
+        let cache_icon = if library_memory.textedit.trim().is_empty() {
+            "📋" // Paste icon when text field is empty
+        } else {
+            "💾" // Save icon when text field contains a path/URL
+        };
+
+        let tooltip = if library_memory.textedit.trim().is_empty() {
+            if library_memory.cached_url.is_empty() {
+                "No URL saved in cache".to_string()
+            } else {
+                format!("Left-click: Paste cached URL ({})\nRight-click: Clear cache", library_memory.cached_url)
+            }
+        } else {
+            if library_memory.cached_url.is_empty() {
+                "Left-click: Save current URL to cache".to_string()
+            } else {
+                "Left-click: Save current URL to cache\nRight-click: Clear cache".to_string()
+            }
+        };
+
+        let has_cached_url = !library_memory.cached_url.is_empty();
+        
+        let mut cache_btn = egui::Button::new(cache_icon);
+        if has_cached_url {
+            // Highlight in green if there is a URL saved in cache
+            cache_btn = cache_btn.fill(egui::Color32::from_rgb(0, 130, 60));
+        }
+
+        let cache_btn_response = ui.add(cache_btn).on_hover_text(tooltip);
+
+        // Left-click: Save to cache or Paste from cache
+        if cache_btn_response.clicked() {
+            let current_text = library_memory.textedit.trim().to_string();
+
+            if current_text.is_empty() {
+                // If input is empty, paste from cache
+                if !library_memory.cached_url.is_empty() {
+                    library_memory.textedit = library_memory.cached_url.clone();
+                }
+            } else {
+                // If input has text, save it to cache
+                library_memory.cached_url = current_text;
+            }
+        }
+
+        // Right-click: Clear cached URL
+        if cache_btn_response.secondary_clicked() {
+            library_memory.cached_url.clear();
+        }
+
+        text_res
+    }).inner;
+
+    // Draw row for 8 Bookmark buttons (B1 .. B8)
+    ui.horizontal(|ui| {
+        let current_text = library_memory.textedit.trim().to_string();
+
+        for i in 0..8 {
+            let bookmark_val = &library_memory.bookmarks[i];
+            let has_bookmark = !bookmark_val.is_empty();
+
+            let bm_label = format!("B{}", i + 1);
+            let mut bm_btn = egui::Button::new(&bm_label);
+
+            if has_bookmark {
+                // Highlight in green if the bookmark slot is populated
+                bm_btn = bm_btn.fill(egui::Color32::from_rgb(0, 130, 60));
+            }
+
+            let tooltip = if current_text.is_empty() {
+                if has_bookmark {
+                    format!("Left-click: Paste bookmark {}\nRight-click: Clear bookmark {}", bookmark_val, bm_label)
+                } else {
+                    format!("Bookmark {} (Empty)\nType/paste a URL in text edit and left-click to save", bm_label)
+                }
+            } else {
+                if has_bookmark {
+                    format!("Left-click: Overwrite bookmark {}\nRight-click: Clear bookmark {}", bm_label, bm_label)
+                } else {
+                    format!("Left-click: Save current URL to bookmark {}", bm_label)
+                }
+            };
+
+            let bm_response = ui.add(bm_btn).on_hover_text(tooltip);
+
+            // Left-click: Save to bookmark or Paste from bookmark
+            if bm_response.clicked() {
+                if current_text.is_empty() {
+                    if has_bookmark {
+                        library_memory.textedit = bookmark_val.clone();
+                    }
+                } else {
+                    library_memory.bookmarks[i] = current_text.clone();
+                }
+            }
+
+            // Right-click: Clear single bookmark slot
+            if bm_response.secondary_clicked() {
+                library_memory.bookmarks[i].clear();
+            }
+        }
+    });
+
+    ui.add_space(4.0);
 
     // Filter items and find best match
     let filter_text = library_memory.textedit.to_lowercase();
