@@ -54,6 +54,7 @@ fn node_type_index(props: &NodeProps) -> u8 {
 struct LibraryMemory {
     textedit: String,
     cached_url: String, // Stores the last cached URL / path
+    bookmarks: [String; 8], // Array for 8 quick bookmark slots
     contents: Vec<LibraryItem>,
     filtered_items: Vec<LibraryItem>,
     selected_index: Option<usize>,
@@ -176,6 +177,58 @@ pub fn library_ui(ui: &mut egui::Ui, ctx: &Context, newly_opened: bool) -> Libra
 
         text_res
     }).inner;
+
+    // Draw row for 8 Bookmark buttons (B1 .. B8)
+    ui.horizontal(|ui| {
+        let current_text = library_memory.textedit.trim().to_string();
+
+        for i in 0..8 {
+            let bookmark_val = &library_memory.bookmarks[i];
+            let has_bookmark = !bookmark_val.is_empty();
+
+            let bm_label = format!("B{}", i + 1);
+            let mut bm_btn = egui::Button::new(&bm_label);
+
+            if has_bookmark {
+                // Highlight in green if the bookmark slot is populated
+                bm_btn = bm_btn.fill(egui::Color32::from_rgb(0, 130, 60));
+            }
+
+            let tooltip = if current_text.is_empty() {
+                if has_bookmark {
+                    format!("Left-click: Paste bookmark {}\nRight-click: Clear bookmark {}", bookmark_val, bm_label)
+                } else {
+                    format!("Bookmark {} (Empty)\nType/paste a URL in text edit and left-click to save", bm_label)
+                }
+            } else {
+                if has_bookmark {
+                    format!("Left-click: Overwrite bookmark {}\nRight-click: Clear bookmark {}", bm_label, bm_label)
+                } else {
+                    format!("Left-click: Save current URL to bookmark {}", bm_label)
+                }
+            };
+
+            let bm_response = ui.add(bm_btn).on_hover_text(tooltip);
+
+            // Left-click: Save to bookmark or Paste from bookmark
+            if bm_response.clicked() {
+                if current_text.is_empty() {
+                    if has_bookmark {
+                        library_memory.textedit = bookmark_val.clone();
+                    }
+                } else {
+                    library_memory.bookmarks[i] = current_text.clone();
+                }
+            }
+
+            // Right-click: Clear single bookmark slot
+            if bm_response.secondary_clicked() {
+                library_memory.bookmarks[i].clear();
+            }
+        }
+    });
+
+    ui.add_space(4.0);
 
     // Filter items and find best match
     let filter_text = library_memory.textedit.to_lowercase();
